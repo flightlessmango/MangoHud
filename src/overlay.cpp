@@ -1181,6 +1181,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
          if (s == OVERLAY_PARAM_ENABLED_gpu_timing)
             data->time_dividor = 1000000.0f;
 
+         ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
          if (s == OVERLAY_PARAM_ENABLED_frame_timing ||
             s == OVERLAY_PARAM_ENABLED_acquire_timing ||
             s == OVERLAY_PARAM_ENABLED_present_timing ||
@@ -1207,6 +1208,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
             //             get_stat(data, ARRAY_SIZE(data->frames_stats) - 1),
             //             data->stats_min.stats[s], data->stats_max.stats[s]);
          }
+         ImGui::PopStyleColor();
       }
       data->window_size = ImVec2(data->window_size.x, ImGui::GetCursorPosY() + 10.0f);
    }
@@ -1885,6 +1887,10 @@ static void setup_swapchain_data(struct swapchain_data *data,
 
    ImGui::GetIO().IniFilename = NULL;
    ImGui::GetIO().DisplaySize = ImVec2((float)data->width, (float)data->height);
+
+   ImGuiStyle& style = ImGui::GetStyle();
+   //style.Colors[ImGuiCol_FrameBg]   = ImVec4(0.0f, 0.0f, 0.0f, 0.00f); // Setting temporarily with PushStyleColor()
+   style.Colors[ImGuiCol_PlotLines] = ImVec4(0.0f, 1.0f, 0.0f, 1.00f);
 
    struct device_data *device_data = data->device;
 
