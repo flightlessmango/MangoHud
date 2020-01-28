@@ -36,7 +36,7 @@ install() {
 }
 
 clean() {
-    rm -r make
+    rm -r build
 }
 
 uninstall() {
