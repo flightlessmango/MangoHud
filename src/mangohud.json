@@ -1,0 +1,18 @@
+{
+    "file_format_version" : "1.0.0",
+    "layer" : {
+      "name": "MangoHud 64bit",
+      "type": "GLOBAL",
+      "api_version": "1.1.125",
+      "library_path": "libMangoHud.so",
+      "implementation_version": "1",
+      "description": "Vulkan Hud Overlay",
+      "enable_environment": {
+        "MANGOHUD": "1"
+      },
+      "disable_environment": {
+        "DISABLE_MANGOHUD": "1"
+      }
+    }
+}
+  
