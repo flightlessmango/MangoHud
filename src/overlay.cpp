@@ -1062,7 +1062,6 @@ static void compute_swapchain_display(struct swapchain_data *data)
    ImGui::SetCurrentContext(data->imgui_context);
    ImGui::NewFrame();
    position_layer(data);
-   ImGui::PushFont(font);
    if (instance_data->params.font_size > 0 && instance_data->params.width == 280)
       instance_data->params.width = hudFirstRow + hudSecondRow;
 
@@ -1224,7 +1223,6 @@ static void compute_swapchain_display(struct swapchain_data *data)
       ImGui::End();
    }  
    ImGui::PopStyleVar(2);
-   ImGui::PopFont();
    ImGui::EndFrame();
    ImGui::Render();
 
