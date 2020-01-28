@@ -33,6 +33,7 @@
 #include "imgui.h"
 
 #include "overlay_params.h"
+#include "font_default.h"
 
 // #include "util/debug.h"
 #include "mesa/util/hash_table.h"
@@ -56,7 +57,8 @@ int hudFirstRow, hudSecondRow;
 const char* offset_x_env = std::getenv("X_OFFSET");
 const char* offset_y_env = std::getenv("Y_OFFSET");
 string engineName, engineVersion;
-ImFont* font1;
+ImFont* font = nullptr;
+ImFont* font1 = nullptr;
 
 /* Mapped from VkInstace/VkPhysicalDevice */
 struct instance_data {
@@ -1059,6 +1061,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
    ImGui::SetCurrentContext(data->imgui_context);
    ImGui::NewFrame();
    position_layer(data);
+   ImGui::PushFont(font);
    if (instance_data->params.font_size > 0 && instance_data->params.width == 280)
       instance_data->params.width = hudFirstRow + hudSecondRow;
 
@@ -1220,6 +1223,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
       ImGui::End();
    }  
    ImGui::PopStyleVar();
+   ImGui::PopFont();
    ImGui::EndFrame();
    ImGui::Render();
 
@@ -1791,6 +1795,22 @@ static void setup_swapchain_data_pipeline(struct swapchain_data *data)
    device_data->vtable.DestroyShaderModule(device_data->device, frag_module, NULL);
 
    ImGuiIO& io = ImGui::GetIO();
+   int font_size = device_data->instance->params.font_size;
+   if (!font_size)
+      font_size = 24;
+
+   const char* mangohud_font = getenv("MANGOHUD_FONT");
+   if(mangohud_font) {
+      font = io.Fonts->AddFontFromFileTTF(mangohud_font, font_size);
+      font1 = io.Fonts->AddFontFromFileTTF(mangohud_font, font_size * 0.55f);
+   } else {
+      ImFontConfig font_cfg = ImFontConfig();
+      const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
+      const ImWchar* glyph_ranges = io.Fonts->GetGlyphRangesDefault();
+
+      font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size, &font_cfg, glyph_ranges);
+      font1 = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size * 0.55, &font_cfg, glyph_ranges);
+   }
    unsigned char* pixels;
    int width, height;
    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
