@@ -1026,6 +1026,7 @@ static void position_layer(struct swapchain_data *data)
    ImGui::SetNextWindowBgAlpha(0.5);
    ImGui::SetNextWindowSize(ImVec2(instance_data->params.width, instance_data->params.height), ImGuiCond_Always);
    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+   ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,-3));
 
    if (!offset_x_env == NULL)
      offset_x = std::stof(offset_x_env);
@@ -1222,7 +1223,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
       ImGui::Text("Elapsed: %isec", int((elapsedLog) / 1000000));
       ImGui::End();
    }  
-   ImGui::PopStyleVar();
+   ImGui::PopStyleVar(2);
    ImGui::PopFont();
    ImGui::EndFrame();
    ImGui::Render();
