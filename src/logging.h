@@ -22,7 +22,7 @@ struct logData{
 double fps, elapsedLog;
 std::vector<logData> logArray;
 ofstream out;
-const char* duration_env = std::getenv("LOG_DURATION");
+const char* log_duration_env = std::getenv("LOG_DURATION");
 const char* mangohud_output_env = std::getenv("MANGOHUD_OUTPUT");
 const char* log_period_env = std::getenv("LOG_PERIOD");
 int duration, num;
@@ -53,7 +53,7 @@ void *logging(void *){
     out << fps << "," << cpuLoadLog << "," << gpuLoadLog << "," <<  now - log_start << endl;
 		// logArray.push_back({fps, cpuLoadLog, gpuLoadLog, 0.0f});
 
-    if ((elapsedLog) >= duration * 1000000 && duration_env)
+    if ((elapsedLog) >= duration * 1000000 && log_duration_env)
       loggingOn = false;
     
     this_thread::sleep_for(chrono::milliseconds(log_period));

@@ -42,7 +42,7 @@
 #include "mesa/util/simple_mtx.h"
 
 #include "vk_enum_to_str.h"
-#include "../include/vulkan/vk_util.h"
+#include <vulkan/vk_util.h>
 
 #include "cpu_gpu.h"
 #include "logging.h"
@@ -847,8 +847,8 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
       if (log_period == 0)
          out.open("/tmp/mango", ios::out | ios::app);
 
-      if(duration_env)
-		   duration = std::stoi(duration_env);
+      if(log_duration_env)
+		   duration = std::stoi(log_duration_env);
       
       coreCounting();
       if (deviceName.find("Radeon") != std::string::npos || deviceName.find("AMD") != std::string::npos) {
