@@ -165,8 +165,6 @@ void PrintStats(const std::vector<CPUData> & entries1, const std::vector<CPUData
 }
 
 void *cpuInfo(void *){
-	checkNvidia();
-
 	FILE *cpuInfo = fopen("/proc/cpuinfo", "r");
     char line[256];
 	int i = 0;
@@ -192,18 +190,28 @@ void *cpuInfo(void *){
 	return NULL;
 }
 
-void *queryNvidiaSmi(void *){
-	vector<string> smiArray;
-	string nvidiaSmi = exec("nvidia-smi --query-gpu=utilization.gpu,temperature.gpu --format=csv,noheader | tr -d ' ' | head -n1 | tr -d '%'");
-	istringstream f(nvidiaSmi);
-	string s;
-	while (getline(f, s, ',')) {
-        smiArray.push_back(s);
-    }
-	gpuLoadDisplay = smiArray[0];
-	gpuLoad = stoi(smiArray[0]);
-	gpuTemp = stoi(smiArray[1]);
+// void *queryNvidiaSmi(void *){
+// 	vector<string> smiArray;
+// 	string nvidiaSmi = exec("nvidia-smi --query-gpu=utilization.gpu,temperature.gpu --format=csv,noheader | tr -d ' ' | head -n1 | tr -d '%'");
+// 	istringstream f(nvidiaSmi);
+// 	string s;
+// 	while (getline(f, s, ',')) {
+//         smiArray.push_back(s);
+//     }
+// 	gpuLoadDisplay = smiArray[0];
+// 	gpuLoad = stoi(smiArray[0]);
+// 	gpuTemp = stoi(smiArray[1]);
 	
+// 	pthread_detach(nvidiaSmiThread);
+// 	return NULL;
+// }
+
+void *getNvidiaGpuInfo(void *){
+	checkNvidia();
+	gpuLoad = nvidiaUtilization.gpu;
+	gpuLoadDisplay = gpuLoad;
+	gpuTemp = nvidiaTemp;
+
 	pthread_detach(nvidiaSmiThread);
 	return NULL;
 }

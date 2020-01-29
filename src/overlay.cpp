@@ -914,7 +914,7 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
             
             // get gpu usage
             if (deviceName.find("GeForce") != std::string::npos)
-               pthread_create(&nvidiaSmiThread, NULL, &queryNvidiaSmi, NULL);
+               pthread_create(&nvidiaSmiThread, NULL, &getNvidiaGpuInfo, NULL);
 
             if (deviceName.find("Radeon") != std::string::npos || deviceName.find("AMD") != std::string::npos)
               pthread_create(&gpuThread, NULL, &getAmdGpuUsage, NULL);
@@ -1071,7 +1071,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
       if (deviceName.find("GeForce") != std::string::npos || deviceName.find("Radeon") != std::string::npos || deviceName.find("AMD") != std::string::npos){
          ImGui::TextColored(ImVec4(0.0, 0.502, 0.25, 1.00f), "GPU");
          ImGui::SameLine(hudFirstRow);
-         ImGui::Text("%s%%", gpuLoadDisplay.c_str());
+         ImGui::Text("%i%%", gpuLoad);
          // ImGui::SameLine(150);
          // ImGui::Text("%s", "%");
          if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_gpu_temp]){
