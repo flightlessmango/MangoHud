@@ -9,7 +9,10 @@ A modification of the Mesa Vulkan overlay. Including GUI improvements, temperatu
 
 First, clone this repository and cd into it:
 
-`git clone https://github.com/flightlessmango/MangoHud.git; cd MangoHud`
+```
+git clone --recurse-submodules https://github.com/flightlessmango/MangoHud.git
+cd MangoHud
+```
 
 Then simply run the following command:
 
