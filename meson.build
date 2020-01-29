@@ -90,55 +90,19 @@ vulkan_wsi_deps = []
 
 with_platform_x11 = true
 with_platform_wayland = false
-with_xlib_lease = true
 
 dep_x11 = dependency('x11')
-dep_xext = dependency('xext')
-dep_xcb = dependency('xcb')
-dep_x11_xcb = dependency('x11-xcb')
-dep_xcb_dri2 = dependency('xcb-dri2', version : '>= 1.8')
-dep_libdrm = dependency(
-  'libdrm', version : '>=' + '2.4.81',
-  required : true
-)
-
-pre_args += '-DHAVE_DRI3'
-dep_xcb_dri3 = dependency('xcb-dri3')
-dep_xcb_present = dependency('xcb-present')
-# until xcb-dri3 has been around long enough to make a hard-dependency:
-if (dep_xcb_dri3.version().version_compare('>= 1.13') and
-  dep_xcb_present.version().version_compare('>= 1.13'))
-pre_args += '-DHAVE_DRI3_MODIFIERS'
-endif
-dep_xcb_sync = dependency('xcb-sync')
-dep_xshmfence = dependency('xshmfence', version : '>= 1.1')
 
 if with_platform_x11
-  vulkan_wsi_args += ['-DVK_USE_PLATFORM_XCB_KHR', '-DVK_USE_PLATFORM_XLIB_KHR']
+  vulkan_wsi_args += ['-DVK_USE_PLATFORM_XLIB_KHR']
   vulkan_wsi_deps += [
-    dep_xcb,
-    dep_x11_xcb,
-    dep_xcb_dri2,
-    dep_xcb_dri3,
-    dep_xcb_present,
-    dep_xcb_sync,
-    dep_xshmfence,
+    dep_x11,
   ]
 endif
 if with_platform_wayland
   dep_wayland_client = dependency('wayland-client', version : '>=1.11')
   vulkan_wsi_args += ['-DVK_USE_PLATFORM_WAYLAND_KHR']
   vulkan_wsi_deps += dep_wayland_client
-endif
-
-vulkan_wsi_args += '-DVK_USE_PLATFORM_DISPLAY_KHR'
-vulkan_wsi_deps += [dep_libdrm]
-
-if with_xlib_lease
-  dep_xcb_xrandr = dependency('xcb-randr')
-  dep_xlib_xrandr = dependency('xrandr', version : '>= 1.3')
-  vulkan_wsi_args += '-DVK_USE_PLATFORM_XLIB_XRANDR_EXT'
-  vulkan_wsi_deps += [dep_xcb_xrandr, dep_xlib_xrandr]
 endif
 
 inc_common = [
