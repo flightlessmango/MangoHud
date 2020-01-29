@@ -13,6 +13,10 @@
 #include <string>
 #include <sstream>
 #include <regex>
+extern "C"
+{
+	#include "nvidia_info.h"
+}
 using namespace std;
 
 int gpuLoad, gpuTemp, cpuTemp;
@@ -161,6 +165,8 @@ void PrintStats(const std::vector<CPUData> & entries1, const std::vector<CPUData
 }
 
 void *cpuInfo(void *){
+	checkNvidia();
+
 	FILE *cpuInfo = fopen("/proc/cpuinfo", "r");
     char line[256];
 	int i = 0;
