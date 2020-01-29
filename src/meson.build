@@ -69,10 +69,3 @@ install_data(
   files('mangohud.json'),
   install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
 )
-
-configure_file(
-  input : files('mesa-overlay-control.py'),
-  output : '@PLAINNAME@',
-  configuration : configuration_data(), # only copy the file
-  install_dir: get_option('bindir'),
-)
