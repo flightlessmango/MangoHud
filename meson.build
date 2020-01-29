@@ -141,7 +141,7 @@ endforeach
 # For some reason, the test for -Wno-foo always succeeds with gcc, even if the
 # option is not supported. Hence, check for -Wfoo instead.
 
-foreach a : ['non-virtual-dtor', 'missing-field-initializers', 'format-truncation', 'pointer-arith', 'unused-variable']
+foreach a : ['non-virtual-dtor', 'missing-field-initializers', 'format-truncation']
   if cpp.has_argument('-W' + a)
     cpp_args += '-Wno-' + a
   endif
