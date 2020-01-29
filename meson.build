@@ -22,8 +22,7 @@ project('mangohud',
   ['c', 'cpp'],
   version : 'v1.0.0',
   license : 'MIT',
-  meson_version : '>= 0.46',
-  default_options : ['buildtype=release', 'b_ndebug=if-release', 'c_std=c99', 'cpp_std=c++14']
+  default_options : ['buildtype=release', 'c_std=c99', 'cpp_std=c++14']
 )
 
 cc = meson.get_compiler('c')
@@ -40,6 +39,8 @@ pre_args = [
 # Define DEBUG for debug builds only (debugoptimized is not included on this one)
 if get_option('buildtype') == 'debug'
   pre_args += '-DDEBUG'
+else
+  pre_args += '-DNDEBUG'
 endif
 
 # TODO: this is very incomplete
@@ -83,21 +84,16 @@ foreach b : ['bswap32', 'bswap64', 'clz', 'clzll', 'ctz', 'expect', 'ffs',
   endif
 endforeach
 
-null_dep = dependency('', required : false)
-
 vulkan_wsi_args = []
 vulkan_wsi_deps = []
 
 with_platform_x11 = true
 with_platform_wayland = false
 
-dep_x11 = dependency('x11')
-
 if with_platform_x11
+  dep_x11 = dependency('x11')
   vulkan_wsi_args += ['-DVK_USE_PLATFORM_XLIB_KHR']
-  vulkan_wsi_deps += [
-    dep_x11,
-  ]
+  vulkan_wsi_deps += dep_x11
 endif
 if with_platform_wayland
   dep_wayland_client = dependency('wayland-client', version : '>=1.11')
@@ -175,6 +171,7 @@ endforeach
 
 # check for dl support
 if cc.has_function('dlopen')
+  null_dep = dependency('', required : false)
   dep_dl = null_dep
 else
   dep_dl = cc.find_library('dl')

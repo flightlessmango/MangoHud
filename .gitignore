@@ -1,5 +1,7 @@
 build/
 __pycache__/
+.vscode/
+MangoHud*.tar.gz
 
 # Prerequisites
 *.d
