@@ -182,14 +182,6 @@ endif
 
 dep_pthread = cc.find_library('pthread')
 
-git_sha1_gen_py = files('bin/git_sha1_gen.py')
-sha1_h = custom_target(
-  'git_sha1.h',
-  output : 'git_sha1.h',
-  command : [prog_python, git_sha1_gen_py, '--output', '@OUTPUT@'],
-  build_always : true, # commit sha1 can change without having touched these files
-)
-
 vk_layer_table_helpers = []
 loader_genvk_py = files('modules/Vulkan-Loader/scripts/loader_genvk.py')
 foreach s : ['vk_dispatch_table_helper.h', 'vk_layer_dispatch_table.h']#, 'vk_loader_extensions.h', 'vk_loader_extensions.c']
