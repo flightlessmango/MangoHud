@@ -29,7 +29,7 @@ struct Cpus{
   int freq;
 };
 
-size_t numCpuCores = std::thread::hardware_concurrency();
+int numCpuCores = std::thread::hardware_concurrency();
 size_t arraySize = numCpuCores + 1;
 std::vector<Cpus> cpuArray;
 pthread_t cpuThread, gpuThread, cpuInfoThread, nvidiaSmiThread;

@@ -807,7 +807,7 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
       data->accumulated_stats.stats[s] += device_data->frame_stats.stats[s] + data->frame_stats.stats[s];
    }
 
-   if (elapsedF2 >= 500000 && !mangohud_output_env == NULL){
+   if (elapsedF2 >= 500000 && mangohud_output_env){
      if (key_is_pressed(XK_F2)){
        last_f2_press = now;
        log_start = now;
@@ -1017,7 +1017,7 @@ static void position_layer(struct swapchain_data *data)
    struct device_data *device_data = data->device;
    struct instance_data *instance_data = device_data->instance;
    float margin = 10.0f;
-   if (!offset_x_env == NULL)
+   if (offset_x_env)
       margin = 0.0f;
 
 
@@ -1026,10 +1026,10 @@ static void position_layer(struct swapchain_data *data)
    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,-3));
 
-   if (!offset_x_env == NULL)
+   if (offset_x_env)
      offset_x = std::stof(offset_x_env);
 
-   if (!offset_y_env == NULL)
+   if (offset_y_env)
      offset_y = std::stof(offset_y_env);
 
    switch (instance_data->params.position) {
@@ -1073,7 +1073,6 @@ static void compute_swapchain_display(struct swapchain_data *data)
    
    if (displayHud){
       if (deviceName.find("GeForce") != std::string::npos || deviceName.find("Radeon") != std::string::npos || deviceName.find("AMD") != std::string::npos){
-         int gpuloadLength = gpuLoadDisplay.length();
          ImGui::TextColored(ImVec4(0.0, 0.502, 0.25, 1.00f), "GPU");
          ImGui::SameLine(hudFirstRow);
          ImGui::Text("%s%%", gpuLoadDisplay.c_str());
@@ -1084,7 +1083,6 @@ static void compute_swapchain_display(struct swapchain_data *data)
             ImGui::Text("%i%s", gpuTemp, "°C");
          }
       }    
-      int cpuloadLength = to_string(cpuLoadLog).length();
       ImGui::TextColored(ImVec4(0.0, 0.502, 0.753, 1.00f), "CPU");
       ImGui::SameLine(hudFirstRow);
       ImGui::Text("%d%%", cpuLoadLog);
@@ -1098,7 +1096,6 @@ static void compute_swapchain_display(struct swapchain_data *data)
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_core_load]){
          for (int i = 0; i < numCpuCores; i++)
          {
-            int cpuCoreLoadLength = to_string(cpuArray[i + 1].value).length();
             ImGui::TextColored(ImVec4(0.0, 0.502, 0.753, 1.00f), "CPU");
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(font1);
@@ -1115,8 +1112,6 @@ static void compute_swapchain_display(struct swapchain_data *data)
          }
       }
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_fps]){
-         int fpsLength = to_string(int(data->fps)).length();
-         int msLength = to_string(1000 / data->fps).length();
          ImGui::TextColored(ImVec4(0.753, 0.502, 0.502, 1.00f), "%s", engineName.c_str());
          ImGui::SameLine(hudFirstRow);
          ImGui::Text("%.0f", data->fps);
