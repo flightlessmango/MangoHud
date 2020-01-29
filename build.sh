@@ -36,8 +36,9 @@ install() {
 }
 
 package() {
+    VERSION=$(printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)")
     cd build/release
-    tar czf ../../MangoHud.tar.gz *
+    tar czf ../../MangoHud-$VERSION.tar.gz *
 }
 
 clean() {
