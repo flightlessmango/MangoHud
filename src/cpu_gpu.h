@@ -191,15 +191,17 @@ void *cpuInfo(void *){
 }
 
 void *getNvidiaGpuInfo(void *){
-	if (!nvmlSuccess)
-		checkNvidia();
+	#ifdef HAVE_NVML
+		if (!nvmlSuccess)
+			checkNvidia();
 
-	if (nvmlSuccess){
-		getNvidiaInfo();	
-		gpuLoad = nvidiaUtilization.gpu;
-		gpuLoadDisplay = gpuLoad;
-		gpuTemp = nvidiaTemp;
-	}
+		if (nvmlSuccess){
+			getNvidiaInfo();	
+			gpuLoad = nvidiaUtilization.gpu;
+			gpuLoadDisplay = gpuLoad;
+			gpuTemp = nvidiaTemp;
+		}
+	#endif
 	
 	pthread_detach(nvidiaSmiThread);
 	return NULL;

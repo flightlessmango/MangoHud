@@ -35,10 +35,14 @@ vklayer_files = files(
   'overlay.cpp',
   'overlay_params.c',
   'font_unispace.c',
-  'nvml.c',
 )
 
-dep_nvml = cc.find_library('nvidia-ml')
+dep_nvml = cc.find_library('nvidia-ml', required: false)
+if dep_nvml.found()
+  vklayer_files += 'nvml.c'
+  pre_args += '-DHAVE_NVML'
+endif
+
 vklayer_mesa_overlay = shared_library(
   'MangoHud',
   util_files,
