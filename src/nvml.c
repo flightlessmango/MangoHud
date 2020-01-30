@@ -4,10 +4,14 @@
 void checkNvidia(){
     result = nvmlInit();
     if (NVML_SUCCESS != result) {
-        
+        printf("MANGOHUD: Nvidia module not loaded\n");
     } else {
-        nvmlDeviceGetHandleByIndex(0, &nvidiaDevice);
-        nvmlDeviceGetUtilizationRates(nvidiaDevice, &nvidiaUtilization);
-        nvmlDeviceGetTemperature(nvidiaDevice, NVML_TEMPERATURE_GPU, &nvidiaTemp);
+        nvmlSuccess = true;
     }
 } 
+
+void getNvidiaInfo(){
+    nvmlDeviceGetHandleByIndex(0, &nvidiaDevice);
+    nvmlDeviceGetUtilizationRates(nvidiaDevice, &nvidiaUtilization);
+    nvmlDeviceGetTemperature(nvidiaDevice, NVML_TEMPERATURE_GPU, &nvidiaTemp);
+}

@@ -190,28 +190,17 @@ void *cpuInfo(void *){
 	return NULL;
 }
 
-// void *queryNvidiaSmi(void *){
-// 	vector<string> smiArray;
-// 	string nvidiaSmi = exec("nvidia-smi --query-gpu=utilization.gpu,temperature.gpu --format=csv,noheader | tr -d ' ' | head -n1 | tr -d '%'");
-// 	istringstream f(nvidiaSmi);
-// 	string s;
-// 	while (getline(f, s, ',')) {
-//         smiArray.push_back(s);
-//     }
-// 	gpuLoadDisplay = smiArray[0];
-// 	gpuLoad = stoi(smiArray[0]);
-// 	gpuTemp = stoi(smiArray[1]);
-	
-// 	pthread_detach(nvidiaSmiThread);
-// 	return NULL;
-// }
-
 void *getNvidiaGpuInfo(void *){
-	checkNvidia();
-	gpuLoad = nvidiaUtilization.gpu;
-	gpuLoadDisplay = gpuLoad;
-	gpuTemp = nvidiaTemp;
+	if (!nvmlSuccess)
+		checkNvidia();
 
+	if (nvmlSuccess){
+		getNvidiaInfo();	
+		gpuLoad = nvidiaUtilization.gpu;
+		gpuLoadDisplay = gpuLoad;
+		gpuTemp = nvidiaTemp;
+	}
+	
 	pthread_detach(nvidiaSmiThread);
 	return NULL;
 }
