@@ -104,6 +104,7 @@ endif
 
 inc_common = [
     include_directories('include'),
+    include_directories('modules/Vulkan-Headers/include'),
 ]
 
 # Check for generic C arguments
