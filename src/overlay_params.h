@@ -36,32 +36,7 @@ extern "C" {
    OVERLAY_PARAM_BOOL(fps)                           \
    OVERLAY_PARAM_BOOL(frame)                         \
    OVERLAY_PARAM_BOOL(frame_timing)                  \
-   OVERLAY_PARAM_BOOL(submit)                        \
-   OVERLAY_PARAM_BOOL(draw)                          \
-   OVERLAY_PARAM_BOOL(draw_indexed)                  \
-   OVERLAY_PARAM_BOOL(draw_indirect)                 \
-   OVERLAY_PARAM_BOOL(draw_indexed_indirect)         \
-   OVERLAY_PARAM_BOOL(draw_indirect_count)           \
-   OVERLAY_PARAM_BOOL(draw_indexed_indirect_count)   \
-   OVERLAY_PARAM_BOOL(dispatch)                      \
-   OVERLAY_PARAM_BOOL(dispatch_indirect)             \
-   OVERLAY_PARAM_BOOL(pipeline_graphics)             \
-   OVERLAY_PARAM_BOOL(pipeline_compute)              \
-   OVERLAY_PARAM_BOOL(pipeline_raytracing)           \
-   OVERLAY_PARAM_BOOL(acquire)                       \
-   OVERLAY_PARAM_BOOL(acquire_timing)                \
    OVERLAY_PARAM_BOOL(present_timing)                \
-   OVERLAY_PARAM_BOOL(vertices)                      \
-   OVERLAY_PARAM_BOOL(primitives)                    \
-   OVERLAY_PARAM_BOOL(vert_invocations)              \
-   OVERLAY_PARAM_BOOL(geom_invocations)              \
-   OVERLAY_PARAM_BOOL(geom_primitives)               \
-   OVERLAY_PARAM_BOOL(clip_invocations)              \
-   OVERLAY_PARAM_BOOL(clip_primitives)               \
-   OVERLAY_PARAM_BOOL(frag_invocations)              \
-   OVERLAY_PARAM_BOOL(tess_ctrl_patches)             \
-   OVERLAY_PARAM_BOOL(tess_eval_invocations)         \
-   OVERLAY_PARAM_BOOL(compute_invocations)           \
    OVERLAY_PARAM_BOOL(gpu_timing)                    \
    OVERLAY_PARAM_BOOL(core_load)                     \
    OVERLAY_PARAM_BOOL(cpu_temp)                      \
