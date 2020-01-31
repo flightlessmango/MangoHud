@@ -15,7 +15,8 @@ pkgver() {
 
 build() {
     cd $startdir
-    ./build.sh clean
+    git submodule update --init --depth 50
+    # ./build.sh clean
     ./build.sh build
 }
 
