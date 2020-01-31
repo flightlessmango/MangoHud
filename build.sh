@@ -5,6 +5,7 @@ LAYER=build/release/usr/share/vulkan/implicit_layer.d/mangohud.json
 IMPLICIT_LAYER_DIR=$HOME/.local/share/vulkan/implicit_layer.d 
 
 configure() {
+    git pull
     if [[ ! -d build/meson64 ]]; then
         meson build/meson64 --libdir lib64 --prefix $PWD/build/release/usr
 
