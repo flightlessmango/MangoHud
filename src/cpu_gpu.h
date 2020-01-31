@@ -13,6 +13,10 @@
 #include <string>
 #include <sstream>
 #include <regex>
+extern "C"
+{
+	#include "nvidia_info.h"
+}
 using namespace std;
 
 int gpuLoad, gpuTemp, cpuTemp;
@@ -186,17 +190,18 @@ void *cpuInfo(void *){
 	return NULL;
 }
 
-void *queryNvidiaSmi(void *){
-	vector<string> smiArray;
-	string nvidiaSmi = exec("nvidia-smi --query-gpu=utilization.gpu,temperature.gpu --format=csv,noheader | tr -d ' ' | head -n1 | tr -d '%'");
-	istringstream f(nvidiaSmi);
-	string s;
-	while (getline(f, s, ',')) {
-        smiArray.push_back(s);
-    }
-	gpuLoadDisplay = smiArray[0];
-	gpuLoad = stoi(smiArray[0]);
-	gpuTemp = stoi(smiArray[1]);
+void *getNvidiaGpuInfo(void *){
+	#ifdef HAVE_NVML
+		if (!nvmlSuccess)
+			checkNvidia();
+
+		if (nvmlSuccess){
+			getNvidiaInfo();	
+			gpuLoad = nvidiaUtilization.gpu;
+			gpuLoadDisplay = gpuLoad;
+			gpuTemp = nvidiaTemp;
+		}
+	#endif
 	
 	pthread_detach(nvidiaSmiThread);
 	return NULL;

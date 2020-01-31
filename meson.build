@@ -28,6 +28,7 @@ project('mangohud',
 cc = meson.get_compiler('c')
 cpp = meson.get_compiler('cpp')
 prog_python = import('python').find_installation('python3')
+null_dep = dependency('', required : false)
 
 pre_args = [
   '-D__STDC_CONSTANT_MACROS',
@@ -103,6 +104,7 @@ endif
 
 inc_common = [
     include_directories('include'),
+    include_directories('modules/Vulkan-Headers/include'),
 ]
 
 # Check for generic C arguments
@@ -171,7 +173,6 @@ endforeach
 
 # check for dl support
 if cc.has_function('dlopen')
-  null_dep = dependency('', required : false)
   dep_dl = null_dep
 else
   dep_dl = cc.find_library('dl')
