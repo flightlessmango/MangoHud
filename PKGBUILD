@@ -5,7 +5,7 @@ pkgdesc="Vulkan overlay layer to display information about the application"
 arch=('x86_64')
 makedepends=('gcc' 'meson' 'python-mako' 'libx11' 'lib32-libx11')
 depends=('glslang' 'libglvnd' 'lib32-libglvnd' 'vulkan-headers')
-replaces=('vulkan-mesa-layer-mango' 'lib32-mesa-layer-mango')
+replaces=('vulkan-mesa-layer-mango' 'lib32-vulkan-mesa-layer-mango')
 url="https://github.com/flightlessmango/MangoHud"
 
 pkgver() {
