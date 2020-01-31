@@ -13,9 +13,12 @@ pkgver() {
     printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
+prepare() {
+  git submodule update --init --depth 50
+}
+
 build() {
     cd $startdir
-    git submodule update --init --depth 50
     # ./build.sh clean
     ./build.sh build
 }
