@@ -3,8 +3,11 @@
 #include <cstring>
 #include <stdio.h>
 #include <iostream>
+#include <thread>
 
 struct memory_information mem_info;
+pthread_t memoryThread;
+float memused, memmax;
 
 FILE *open_file(const char *file, int *reported) {
   FILE *fp = nullptr;
@@ -22,7 +25,7 @@ FILE *open_file(const char *file, int *reported) {
   return fp;
 }
 
-void update_meminfo() {
+void *update_meminfo(void *) {
   FILE *meminfo_fp;
   static int reported = 0;
 
@@ -90,7 +93,9 @@ void update_meminfo() {
   mem_info.bufmem = curbufmem;
   mem_info.memeasyfree = cureasyfree;
 	
-  std::cout << (float(mem_info.memmax) - float(mem_info.memeasyfree)) / (1024 * 1024) << " / " << float(mem_info.memmax) / (1024 * 1024) << std::endl;
+  memused = (float(mem_info.memmax) - float(mem_info.memeasyfree)) / (1024 * 1024);
+  memmax = float(mem_info.memmax) / (1024 * 1024);
 
   fclose(meminfo_fp);
+  return NULL;
 }

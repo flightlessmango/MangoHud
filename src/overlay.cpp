@@ -976,6 +976,9 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
                 pthread_create(&gpuThread, NULL, &getAmdGpuUsage, NULL);
             }
 
+            // get ram usage/max
+               pthread_create(&memoryThread, NULL, &update_meminfo, NULL);
+
             // update variables for logging
             // cpuLoadLog = cpuArray[0].value;
             gpuLoadLog = gpuLoad;
@@ -1169,6 +1172,9 @@ static void compute_swapchain_display(struct swapchain_data *data)
             i++;
          }
       }
+      ImGui::TextColored(ImVec4(0.671, 0.251, 0.753, 1.00f), "MEM");
+      ImGui::SameLine(hudFirstRow);
+      ImGui::Text("%.1fG/%.1fG", memused, memmax);
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_fps]){
          ImGui::TextColored(ImVec4(0.925, 0.411, 0.411, 1.00f), "%s", engineName.c_str());
          ImGui::SameLine(hudFirstRow);
@@ -1189,7 +1195,6 @@ static void compute_swapchain_display(struct swapchain_data *data)
             ImGui::PopFont();
          }
       }
-
       // ImGui::ProgressBar(float(0.5), ImVec2(ImGui::GetContentRegionAvailWidth(), 21), NULL);
       ImGui::Dummy(ImVec2(0.0f, 20.0f));
 
