@@ -977,7 +977,7 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
             }
 
             // get ram usage/max
-               pthread_create(&memoryThread, NULL, &update_meminfo, NULL);
+            pthread_create(&memoryThread, NULL, &update_meminfo, NULL);
 
             // update variables for logging
             // cpuLoadLog = cpuArray[0].value;
@@ -1172,7 +1172,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
             i++;
          }
       }
-      ImGui::TextColored(ImVec4(0.671, 0.251, 0.753, 1.00f), "MEM");
+      ImGui::TextColored(ImVec4(0.502, 0.502, 0.753, 1.00f), "MEM");
       ImGui::SameLine(hudFirstRow);
       ImGui::Text("%.1fG/%.1fG", memused, memmax);
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_fps]){
