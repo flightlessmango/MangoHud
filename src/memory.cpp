@@ -97,5 +97,6 @@ void *update_meminfo(void *) {
   memmax = float(mem_info.memmax) / (1024 * 1024);
 
   fclose(meminfo_fp);
+  pthread_detach(memoryThread);
   return NULL;
 }
