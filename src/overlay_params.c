@@ -209,7 +209,9 @@ parse_overlay_env(struct overlay_params *params,
    if (params->height != 140)
       heightChanged = true;
 
-   int FrameTimeGraphHeight = 50;
+   int FrameTimeGraphHeight = 0;
+   if (params->enabled[OVERLAY_PARAM_ENABLED_frame_timing])
+    FrameTimeGraphHeight = 50;
 
    if (!params->font_size)
       params->font_size = 24.0f;
