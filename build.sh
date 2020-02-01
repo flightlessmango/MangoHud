@@ -39,7 +39,7 @@ dependencies() {
                 fi
                 ;;
             "Ubuntu"|"Linux Mint"|"Debian")
-                for i in {gcc,g++,gcc-multilib,g++-multilib,ninja-build,python3-pip,python3-setuptools,python3-wheel,pkg-config,mesa-common-dev}; do
+                for i in {gcc,g++,gcc-multilib,g++-multilib,ninja-build,python3-pip,python3-setuptools,python3-wheel,pkg-config,mesa-common-dev,libx11-dev:i386}; do
                     dpkg-query -l $i &> /dev/null
                     if [[ $? == 1 ]]; then
                         INSTALL=$INSTALL" "$i
@@ -70,10 +70,10 @@ configure() {
     if [[ ! -d build/meson64 ]]; then
         meson build/meson64 --libdir lib64 --prefix $PWD/build/release/usr
 
-        CC="gcc -m32"
-        CXX="g++ -m32"
-        PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:${PKG_CONFIG_PATH_32}"
-        LLVM_CONFIG="/usr/bin/llvm-config32"
+        CC="gcc -m32" \
+        CXX="g++ -m32" \
+        PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:${PKG_CONFIG_PATH_32}" \
+        LLVM_CONFIG="/usr/bin/llvm-config32" \
         meson build/meson32 --libdir lib32 --prefix $PWD/build/release/usr
     fi
 }
