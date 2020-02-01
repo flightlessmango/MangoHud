@@ -5,7 +5,7 @@ libnvml_loader nvml("libnvidia-ml.so.1");
 
 nvmlReturn_t result;
 nvmlDevice_t nvidiaDevice;
-bool nvmlSuccess;
+bool nvmlSuccess = false;
 unsigned int nvidiaTemp;
 struct nvmlUtilization_st nvidiaUtilization;
 
