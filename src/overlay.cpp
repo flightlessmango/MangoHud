@@ -47,6 +47,7 @@
 #include "cpu_gpu.h"
 #include "logging.h"
 #include "keybinds.h"
+#include "loaders/loader_nvml.h"
 
 bool open = false, displayHud = true;
 string gpuString;
@@ -885,6 +886,12 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
          } else {
             instance_data->params.height += 24 / 2;
          }
+      }
+      
+      if (device_data->properties.vendorID == 0x8086){
+         libnvml_loader nvml("libnvidia-ml.so.1");
+         if (nvml.IsLoaded())
+            device_data->properties.vendorID = 0x10de;
       }
 
       sysInfoFetched = true;
