@@ -2,12 +2,12 @@
 #include <stdio.h>
 #include <nvml.h>
 
-nvmlReturn_t result;
-unsigned int nvidiaTemp, processSamplesCount, lastSeenTimeStamp, *vgpuInstanceSamplesCount;
-nvmlValueType_t *sampleValType;
-nvmlDevice_t nvidiaDevice;
-struct nvmlUtilization_st nvidiaUtilization;
-bool nvmlSuccess;
+extern nvmlReturn_t result;
+extern unsigned int nvidiaTemp, processSamplesCount, lastSeenTimeStamp, *vgpuInstanceSamplesCount;
+extern nvmlValueType_t *sampleValType;
+extern nvmlDevice_t nvidiaDevice;
+extern struct nvmlUtilization_st nvidiaUtilization;
+extern bool nvmlSuccess;
 
 void checkNvidia(void);
 void getNvidiaInfo(void);
