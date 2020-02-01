@@ -913,10 +913,10 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
             pthread_create(&cpuInfoThread, NULL, &cpuInfo, NULL);
             
             // get gpu usage
-            if (deviceName.find("GeForce") != std::string::npos)
+            if (device_data->properties.vendorID == 0x10de)
                pthread_create(&nvidiaSmiThread, NULL, &getNvidiaGpuInfo, NULL);
 
-            if (deviceName.find("Radeon") != std::string::npos || deviceName.find("AMD") != std::string::npos)
+            if (device_data->properties.vendorID == 0x1002)
               pthread_create(&gpuThread, NULL, &getAmdGpuUsage, NULL);
 
             // update variables for logging
@@ -1068,7 +1068,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
    }
    
    if (displayHud){
-      if (deviceName.find("GeForce") != std::string::npos || deviceName.find("Radeon") != std::string::npos || deviceName.find("AMD") != std::string::npos){
+      if (device_data->properties.vendorID == 0x10de || device_data->properties.vendorID == 0x1002){
          ImGui::TextColored(ImVec4(0.0, 0.502, 0.25, 1.00f), "GPU");
          ImGui::SameLine(hudFirstRow);
          ImGui::Text("%i%%", gpuLoad);
