@@ -70,10 +70,10 @@ configure() {
     if [[ ! -d build/meson64 ]]; then
         meson build/meson64 --libdir lib64 --prefix $PWD/build/release/usr
 
-        CC="gcc -m32" \
-        CXX="g++ -m32" \
-        PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:${PKG_CONFIG_PATH_32}" \
-        LLVM_CONFIG="/usr/bin/llvm-config32" \
+        export CC="gcc -m32"
+        export CXX="g++ -m32"
+        export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:${PKG_CONFIG_PATH_32}"
+        export LLVM_CONFIG="/usr/bin/llvm-config32"
         meson build/meson32 --libdir lib32 --prefix $PWD/build/release/usr
     fi
 }
