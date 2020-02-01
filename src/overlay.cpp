@@ -1171,30 +1171,13 @@ static void compute_swapchain_display(struct swapchain_data *data)
             data->time_dividor = 1000000.0f;
 
          ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-         if (s == OVERLAY_PARAM_ENABLED_frame_timing ||
-            s == OVERLAY_PARAM_ENABLED_present_timing ||
-            s == OVERLAY_PARAM_ENABLED_gpu_timing) {
-            // double min_time = data->stats_min.stats[s] / data->time_dividor;
-            // double max_time = data->stats_max.stats[s] / data->time_dividor;
+         if (s == OVERLAY_PARAM_ENABLED_frame_timing) {
             double min_time = 0.0f;
             double max_time = 50.0f;
             ImGui::PlotLines(hash, get_time_stat, data,
                                  ARRAY_SIZE(data->frames_stats), 0,
                                  NULL, min_time, max_time,
                                  ImVec2(ImGui::GetContentRegionAvailWidth(), 50));
-            // ImGui::Text("%s: %.3fms [%.3f, %.3f]", overlay_param_names[s],
-            //             get_time_stat(data, ARRAY_SIZE(data->frames_stats) - 1),
-            //             min_time, max_time);
-         } else {
-            ImGui::PlotHistogram(hash, get_stat, data,
-                                 ARRAY_SIZE(data->frames_stats), 0,
-                                 NULL,
-                                 data->stats_min.stats[s],
-                                 data->stats_max.stats[s],
-                                 ImVec2(ImGui::GetContentRegionAvailWidth(), 50));
-            // ImGui::Text("%s: %.0f [%" PRIu64 ", %" PRIu64 "]", overlay_param_names[s],
-            //             get_stat(data, ARRAY_SIZE(data->frames_stats) - 1),
-            //             data->stats_min.stats[s], data->stats_max.stats[s]);
          }
          ImGui::PopStyleColor();
       }
