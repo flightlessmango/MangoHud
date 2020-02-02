@@ -3,10 +3,10 @@
 DATA_DIR=$HOME/.local/share/MangoHud
 LAYER=build/release/usr/share/vulkan/implicit_layer.d/mangohud.json
 IMPLICIT_LAYER_DIR=$HOME/.local/share/vulkan/implicit_layer.d 
+DISTRO=$(sed 1q /etc/os-release | sed 's/NAME=//g' | sed 's/"//g')
 
 dependencies() {
     if [[ ! -f build/release/usr/lib64/libMangoHud.so ]]; then
-        DISTRO=$(sed 1q /etc/os-release | sed 's/NAME=//g' | sed 's/"//g')
         echo "# Checking Dependencies"
 
         missing_deps() {
@@ -27,7 +27,18 @@ dependencies() {
                 fi
                 ;;
             "Fedora")
-                for i in {meson,gcc,g++,libX11-devel,glslang,python-mako,mesa-libGL-devel,glibc-devel.i686,libstdc++-devel.i686}; do
+                for i in {meson,gcc,g++,libX11-devel,glslang,python-mako,mesa-libGL-devel}; do
+                    dnf list installed | grep $i &> /dev/null
+                    if [[ $? == 1 ]]; then
+                        INSTALL=$INSTALL" "$i
+                    fi
+                done
+                if [[ ! -z "$INSTALL" ]]; then
+                    missing_deps
+                    sudo dnf install $INSTALL
+                fi
+                unset INSTALL
+                for i in {glibc-devel.i686,libstdc++-devel.i686,libX11-devel.i686}; do
                     dnf list installed | grep $i &> /dev/null
                     if [[ $? == 1 ]]; then
                         INSTALL=$INSTALL" "$i
@@ -72,7 +83,7 @@ configure() {
 
         export CC="gcc -m32"
         export CXX="g++ -m32"
-        export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:${PKG_CONFIG_PATH_32}"
+        export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH_32}"
         export LLVM_CONFIG="/usr/bin/llvm-config32"
         meson build/meson32 --libdir lib32 --prefix $PWD/build/release/usr
     fi
