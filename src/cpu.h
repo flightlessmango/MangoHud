@@ -48,9 +48,14 @@ public:
 	const std::vector<CPUData>& GetCPUData() const {
 		return m_cpuData;
 	}
+	const CPUData& GetCPUDataTotal() const {
+		return m_cpuDataTotal;
+	}
 private:
 	unsigned long long int m_boottime = 0;
 	std::vector<CPUData> m_cpuData;
+	CPUData m_cpuDataTotal {};
+	std::vector<int> m_coreMhz;
 	double m_cpuPeriod = 0;
 	bool m_updatedCPUs = false; // TODO use caching or just update?
 	bool m_inited = false;
