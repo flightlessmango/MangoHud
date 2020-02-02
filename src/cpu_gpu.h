@@ -53,21 +53,6 @@ string exec(string command) {
 
 
 void *cpuInfo(void *){
-	FILE *cpuInfo = fopen("/proc/cpuinfo", "r");
-    char line[256];
-	int i = 0;
-    while (fgets(line, sizeof(line), cpuInfo)) {
-		std::string row;
-		row = line;
-		if (row.find("MHz") != std::string::npos){
-			row = std::regex_replace(row, std::regex(R"([^0-9.])"), "");
-			// cpuArray[i + 1].freq = stoi(row);
-			i++;
-		}
-    }
-
-    fclose(cpuInfo);
-
 	char buff[6];
 	rewind(cpuTempFile);
     fflush(cpuTempFile);

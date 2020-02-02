@@ -915,6 +915,7 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
                cpuLoadLog += cpuData.percent;
             
             cpuLoadLog = cpuLoadLog / cpuStats.GetCPUData().size();
+            pthread_create(&cpuInfoThread, NULL, &cpuInfo, NULL);
             
             // get gpu usage
             if (deviceName.find("GeForce") != std::string::npos)
