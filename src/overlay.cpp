@@ -909,12 +909,6 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
       if (capture_begin ||
           elapsed >= instance_data->params.fps_sampling_period) {
             cpuStats.UpdateCPUData();
-            //int i = 0;
-            cpuLoadLog = 0;
-            //for (const CPUData &cpuData : cpuStats.GetCPUData())
-            //   cpuLoadLog += cpuData.percent;
-            
-            //cpuLoadLog = cpuLoadLog / cpuStats.GetCPUData().size();
             cpuLoadLog = cpuStats.GetCPUDataTotal().percent;
             pthread_create(&cpuInfoThread, NULL, &cpuInfo, NULL);
             
