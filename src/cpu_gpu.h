@@ -13,10 +13,8 @@
 #include <string>
 #include <sstream>
 #include <regex>
-extern "C"
-{
-	#include "nvidia_info.h"
-}
+#include "nvidia_info.h"
+
 using namespace std;
 
 int gpuLoad, gpuTemp, cpuTemp;
@@ -64,7 +62,6 @@ void *cpuInfo(void *){
 }
 
 void *getNvidiaGpuInfo(void *){
-	#ifdef HAVE_NVML
 		if (!nvmlSuccess)
 			checkNvidia();
 
@@ -74,7 +71,6 @@ void *getNvidiaGpuInfo(void *){
 			gpuLoadDisplay = gpuLoad;
 			gpuTemp = nvidiaTemp;
 		}
-	#endif
 	
 	pthread_detach(nvidiaSmiThread);
 	return NULL;

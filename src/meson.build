@@ -36,13 +36,9 @@ vklayer_files = files(
   'overlay_params.c',
   'font_unispace.c',
   'cpu.cpp',
+  'loaders/loader_nvml.cpp',
+  'nvml.cpp',
 )
-
-dep_nvml = cc.find_library('nvidia-ml', required: false)
-if dep_nvml.found()
-  vklayer_files += 'nvml.c'
-  pre_args += '-DHAVE_NVML'
-endif
 
 vklayer_mesa_overlay = shared_library(
   'MangoHud',
@@ -66,8 +62,7 @@ vklayer_mesa_overlay = shared_library(
     vulkan_wsi_deps, 
     libimgui_core_dep, 
     dep_dl,
-    dep_pthread,
-    dep_nvml],
+    dep_pthread],
   include_directories : inc_common,
   link_args : cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro']),
   install : true
