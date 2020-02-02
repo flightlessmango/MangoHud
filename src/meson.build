@@ -35,6 +35,7 @@ vklayer_files = files(
   'overlay.cpp',
   'overlay_params.c',
   'font_unispace.c',
+  'cpu.cpp',
 )
 
 dep_nvml = cc.find_library('nvidia-ml', required: false)

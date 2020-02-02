@@ -47,6 +47,7 @@
 #include "cpu_gpu.h"
 #include "logging.h"
 #include "keybinds.h"
+#include "cpu.h"
 
 bool open = false, displayHud = true;
 string gpuString;
@@ -846,7 +847,7 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
       if(log_duration_env)
 		   duration = std::stoi(log_duration_env);
       
-      coreCounting();
+      // coreCounting();
       if (deviceName.find("Radeon") != std::string::npos || deviceName.find("AMD") != std::string::npos) {
          amdGpuFile = fopen("/sys/class/drm/card0/device/gpu_busy_percent", "r");
          string tempFolder = exec("ls /sys/class/drm/card0/device/hwmon/");
@@ -907,9 +908,8 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
    if (data->last_fps_update) {
       if (capture_begin ||
           elapsed >= instance_data->params.fps_sampling_period) {
-            updateCpuStrings();
-            pthread_create(&cpuThread, NULL, &getCpuUsage, NULL);
-            data->cpuString = cpuArray[0].output.c_str();
+            cpuStats.UpdateCPUData();
+            cpuLoadLog = cpuStats.GetCPUDataTotal().percent;
             pthread_create(&cpuInfoThread, NULL, &cpuInfo, NULL);
             
             // get gpu usage
@@ -920,7 +920,7 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
               pthread_create(&gpuThread, NULL, &getAmdGpuUsage, NULL);
 
             // update variables for logging
-            cpuLoadLog = cpuArray[0].value;
+            // cpuLoadLog = cpuArray[0].value;
             gpuLoadLog = gpuLoad;
 
             data->frametimeDisplay = data->frametime;
@@ -1090,7 +1090,8 @@ static void compute_swapchain_display(struct swapchain_data *data)
       }
       
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_core_load]){
-         for (int i = 0; i < numCpuCores; i++)
+         int i = 0;
+         for (const CPUData &cpuData : cpuStats.GetCPUData())
          {
             ImGui::TextColored(ImVec4(0.0, 0.502, 0.753, 1.00f), "CPU");
             ImGui::SameLine(0, 1.0f);
@@ -1098,13 +1099,14 @@ static void compute_swapchain_display(struct swapchain_data *data)
             ImGui::TextColored(ImVec4(0.0, 0.502, 0.753, 1.00f),"%i", i);
             ImGui::PopFont();
             ImGui::SameLine(hudFirstRow);
-            ImGui::Text("%i%%", cpuArray[i + 1].value);
+            ImGui::Text("%i%%", int(cpuData.percent));
             ImGui::SameLine(hudSecondRow);
-            ImGui::Text("%i", cpuArray[i + 1].freq);
+            ImGui::Text("%i", cpuData.mhz);
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(font1);
             ImGui::Text("MHz");
             ImGui::PopFont();
+            i++;
          }
       }
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_fps]){
