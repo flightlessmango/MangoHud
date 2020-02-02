@@ -7,58 +7,49 @@ DISTRO=$(sed 1q /etc/os-release | sed 's/NAME=//g' | sed 's/"//g')
 
 dependencies() {
     if [[ ! -f build/release/usr/lib64/libMangoHud.so ]]; then
-        echo "# Checking Dependencies"
-
         missing_deps() {
             echo "# Missing dependencies!"
             echo "# Attempting to install '$INSTALL'"
         }
+        install() {
+            for i in $(eval echo $DEPS); do
+                $MANAGER_QUERY $i &> /dev/null
+                if [[ $? == 1 ]]; then
+                    INSTALL=$INSTALL" "$i
+                fi
+            done
+            if [[ ! -z "$INSTALL" ]]; then
+                missing_deps
+                sudo $MANAGER_INSTALL $INSTALL
+            fi
+        }
+        echo "# Checking Dependencies"
+        
         case $DISTRO in
             "Arch Linux"|"Manjaro")
-                for i in {gcc,meson,pkgconf,python-mako,glslang,libglvnd,lib32-libglvnd}; do
-                    pacman -Q $i &> /dev/null
-                    if [[ $? == 1 ]]; then
-                        INSTALL=$INSTALL" "$i
-                    fi
-                done
-                if [[ ! -z "$INSTALL" ]]; then
-                    missing_deps
-                    sudo pacman -S $INSTALL
-                fi
+                MANAGER_QUERY="pacman -Q"
+                MANAGER_INSTALL="pacman -S"
+                DEPS="{gcc,meson,pkgconf,python-mako,glslang,libglvnd,lib32-libglvnd}"
+                install
                 ;;
             "Fedora")
-                for i in {meson,gcc,g++,libX11-devel,glslang,python-mako,mesa-libGL-devel}; do
-                    dnf list installed | grep $i &> /dev/null
-                    if [[ $? == 1 ]]; then
-                        INSTALL=$INSTALL" "$i
-                    fi
-                done
-                if [[ ! -z "$INSTALL" ]]; then
-                    missing_deps
-                    sudo dnf install $INSTALL
-                fi
+                MANAGER_QUERY="dnf list installed"
+                MANAGER_INSTALL="dnf install"
+                DEPS="{meson,gcc,g++,libX11-devel,glslang,python-mako,mesa-libGL-devel}"
+                install
+
+                unset DEPS
                 unset INSTALL
-                for i in {glibc-devel.i686,libstdc++-devel.i686,libX11-devel.i686}; do
-                    dnf list installed | grep $i &> /dev/null
-                    if [[ $? == 1 ]]; then
-                        INSTALL=$INSTALL" "$i
-                    fi
-                done
-                if [[ ! -z "$INSTALL" ]]; then
-                    missing_deps
-                    sudo dnf install $INSTALL
-                fi
+                DEPS="{glibc-devel.i686,libstdc++-devel.i686,libX11-devel.i686}"
+                install
                 ;;
             "Ubuntu"|"Linux Mint"|"Debian")
-                for i in {gcc,g++,gcc-multilib,g++-multilib,ninja-build,python3-pip,python3-setuptools,python3-wheel,pkg-config,mesa-common-dev,libx11-dev:i386}; do
-                    dpkg-query -l $i &> /dev/null
-                    if [[ $? == 1 ]]; then
-                        INSTALL=$INSTALL" "$i
-                    fi
-                done
-                if [[ ! -z "$INSTALL" ]]; then
-                    missing_deps
-                    sudo apt install $INSTALL
+                MANAGER_QUERY="dpkg-query -l"
+                MANAGER_INSTALL="apt install"
+                DEPS="{gcc,g++,gcc-multilib,g++-multilib,ninja-build,python3-pip,python3-setuptools,python3-wheel,pkg-config,mesa-common-dev,libx11-dev:i386}"
+                install
+                
+                if [[ $(sudo pip3 show meson; echo $?) == 1 || $(sudo pip3 show meson; echo $?) == 1 ]]; then
                     sudo pip3 install meson mako
                 fi
                 if [[ ! -f /usr/local/bin/glslangValidator ]]; then
