@@ -2,8 +2,10 @@
 
 DATA_DIR=$HOME/.local/share/MangoHud
 LAYER=build/release/usr/share/vulkan/implicit_layer.d/mangohud.json
+INSTALL_DIR=build/package/MangoHud/.local/share
 IMPLICIT_LAYER_DIR=$HOME/.local/share/vulkan/implicit_layer.d 
 DISTRO=$(sed 1q /etc/os-release | sed 's/NAME=//g' | sed 's/"//g')
+VERSION=$(printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)")
 
 dependencies() {
     if [[ ! -f build/release/usr/lib64/libMangoHud.so ]]; then
@@ -85,24 +87,25 @@ build() {
     ninja -C build/meson64 install
 }
 
-install() {
-    mkdir -p $IMPLICIT_LAYER_DIR
-    mkdir -p $DATA_DIR
+package() {
+    mkdir -p $INSTALL_DIR/{MangoHud,vulkan/implicit_layer.d}
 
-    cp build/release/usr/lib32/libMangoHud.so $DATA_DIR/libMangoHud32.so
-    cp build/release/usr/lib64/libMangoHud.so $DATA_DIR/libMangoHud.so
-    cp $LAYER $IMPLICIT_LAYER_DIR/mangohud64.json
-    cp $LAYER $IMPLICIT_LAYER_DIR/mangohud32.json
+    cp build/release/usr/lib32/libMangoHud.so $INSTALL_DIR/MangoHud/libMangoHud32.so
+    cp build/release/usr/lib64/libMangoHud.so $INSTALL_DIR/MangoHud/libMangoHud.so
+    cp $LAYER $INSTALL_DIR/vulkan/implicit_layer.d/mangohud64.json
+    cp $LAYER $INSTALL_DIR/vulkan/implicit_layer.d/mangohud32.json
+    cp --preserve=mode bin/install.sh build/package/MangoHud/install.sh
+    sed -i "s|64bit|32bit|g" $INSTALL_DIR/vulkan/implicit_layer.d/mangohud32.json
 
-    sed -i "s|libMangoHud.so|$HOME/.local/share/MangoHud/libMangoHud32.so|g" $IMPLICIT_LAYER_DIR/mangohud32.json
-    sed -i "s|libMangoHud.so|$HOME/.local/share/MangoHud/libMangoHud.so|g" $IMPLICIT_LAYER_DIR/mangohud64.json
-    sed -i "s|64bit|32bit|g" $IMPLICIT_LAYER_DIR/mangohud32.json
+    cd build/package
+    tar cpzf ../MangoHud-$VERSION.tar.gz .
+    cd ../../
 }
 
-package() {
-    VERSION=$(printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)")
-    cd build/release
-    tar czf ../../MangoHud-$VERSION.tar.gz *
+install() {
+    tar xzf build/MangoHud-$VERSION.tar.gz --exclude='install.sh' --strip-components=2 -C $HOME/
+    sed -i "s|libMangoHud.so|$HOME/.local/share/MangoHud/libMangoHud32.so|g" $HOME/.local/share/vulkan/implicit_layer.d/mangohud32.json
+    sed -i "s|libMangoHud.so|$HOME/.local/share/MangoHud/libMangoHud.so|g" $HOME/.local/share/vulkan/implicit_layer.d/mangohud64.json
 }
 
 clean() {
@@ -117,7 +120,7 @@ uninstall() {
 case $1 in
     "") configure; build;;
     "build") configure; build;;
-    "install") configure; build; install;;
+    "install") package; install;;
     "update") git pull &> /dev/null; configure; build; install;;
     "package") package;;
     "clean") clean;;
