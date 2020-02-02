@@ -13,7 +13,9 @@
 class libnvml_loader {
  public:
   libnvml_loader();
-  libnvml_loader(const std::string& library_name) { Load(library_name); }
+  libnvml_loader(const std::string& library_name) : libnvml_loader() {
+    Load(library_name);
+  }
   ~libnvml_loader();
 
   bool Load(const std::string& library_name);
@@ -33,7 +35,7 @@ class libnvml_loader {
   void CleanUp(bool unload);
 
 #if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
-  void* library_;
+  void* library_ = nullptr;
 #endif
 
   bool loaded_;
