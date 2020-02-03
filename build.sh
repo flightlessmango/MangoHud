@@ -108,6 +108,9 @@ package() {
 }
 
 install() {
+    if [[ ! -f build/MangoHud-$VERSION.tar.gz ]]; then
+        package
+    fi
     tar xzf build/MangoHud-$VERSION.tar.gz --exclude='install.sh' --strip-components=2 -C $HOME/
     sed -i "s|libMangoHud.so|$HOME/.local/share/MangoHud/libMangoHud32.so|g" $HOME/.local/share/vulkan/implicit_layer.d/mangohud32.json
     sed -i "s|libMangoHud.so|$HOME/.local/share/MangoHud/libMangoHud.so|g" $HOME/.local/share/vulkan/implicit_layer.d/mangohud64.json
@@ -124,12 +127,12 @@ uninstall() {
 
 for a in $@; do
     case $a in
-        "") configure; build;;
+        "") build;;
         "pull") git pull;;
         "configure") configure;;
-        "build") configure; build;;
+        "build") build;;
         "package") package;;
-        "install") package; install;;
+        "install") install;;
         "clean") clean;;
         "uninstall") uninstall;;
         *)
