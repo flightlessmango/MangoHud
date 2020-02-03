@@ -33,18 +33,17 @@ dependencies() {
                 MANAGER_INSTALL="pacman -S"
                 DEPS="{gcc,meson,pkgconf,python-mako,glslang,libglvnd,lib32-libglvnd}"
                 install
-                ;;
+            ;;
             "Fedora")
                 MANAGER_QUERY="dnf list installed"
                 MANAGER_INSTALL="dnf install"
                 DEPS="{meson,gcc,g++,libX11-devel,glslang,python-mako,mesa-libGL-devel}"
                 install
 
-                unset DEPS
                 unset INSTALL
                 DEPS="{glibc-devel.i686,libstdc++-devel.i686,libX11-devel.i686}"
                 install
-                ;;
+            ;;
             "Ubuntu"|"Linux Mint"|"Debian")
                 MANAGER_QUERY="dpkg-query -l"
                 MANAGER_INSTALL="apt install"
@@ -60,7 +59,7 @@ dependencies() {
                     sudo install -m755 bin/glslangValidator /usr/local/bin/
                     rm bin/glslangValidator glslang-master-linux-Release.zip
                 fi
-                ;;
+            ;;
             *)
                 echo "# Unable to find distro information!"
                 echo "# Attempting to build regardless"
@@ -83,11 +82,17 @@ configure() {
 }
 
 build() {
+    if [[ ! -d build/meson64 ]]; then
+        configure
+    fi
     ninja -C build/meson32 install
     ninja -C build/meson64 install
 }
 
 package() {
+    if [[ ! -f build/release/usr/lib64/libMangoHud.so ]]; then
+        build
+    fi
     mkdir -p $INSTALL_DIR/{MangoHud,vulkan/implicit_layer.d}
 
     cp build/release/usr/lib32/libMangoHud.so $INSTALL_DIR/MangoHud/libMangoHud32.so
@@ -117,15 +122,18 @@ uninstall() {
     rm $IMPLICIT_LAYER_DIR/{mangohud64,mangohud32}.json
 }
 
-case $1 in
-    "") configure; build;;
-    "build") configure; build;;
-    "install") package; install;;
-    "update") git pull &> /dev/null; configure; build; install;;
-    "package") package;;
-    "clean") clean;;
-    "uninstall") uninstall;;
-    *)
-        echo "Unrecognized command argument: $1"
-        echo 'Accepted arguments: "", "build", "install", "update", "package", "clean", "uninstall".'
-esac
+for a in $@; do
+    case $a in
+        "") configure; build;;
+        "pull") git pull;;
+        "configure") configure;;
+        "build") configure; build;;
+        "package") package;;
+        "install") package; install;;
+        "clean") clean;;
+        "uninstall") uninstall;;
+        *)
+            echo "Unrecognized command argument: $a"
+            echo 'Accepted arguments: "pull", "configure", "build", "package", "install", "clean", "uninstall".'
+    esac
+done
