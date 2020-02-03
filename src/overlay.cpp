@@ -2521,6 +2521,7 @@ static const struct {
    const char *name;
    void *ptr;
 } name_to_funcptr_map[] = {
+   { "vkGetDeviceProcAddr", (void *) vkGetDeviceProcAddr },
 #define ADD_HOOK(fn) { "vk" # fn, (void *) overlay_ ## fn }
 #define ADD_ALIAS_HOOK(alias, fn) { "vk" # alias, (void *) overlay_ ## fn }
    ADD_HOOK(AllocateCommandBuffers),
@@ -2554,9 +2555,7 @@ static void *find_ptr(const char *name)
    return NULL;
 }
 
-extern "C" {
-
-VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_vkGetDeviceProcAddr(VkDevice dev,
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice dev,
                                                                              const char *funcName)
 {
    void *ptr = find_ptr(funcName);
@@ -2569,7 +2568,7 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_vkGetDeviceProc
    return device_data->vtable.GetDeviceProcAddr(dev, funcName);
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_vkGetInstanceProcAddr(VkInstance instance,
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance,
                                                                                const char *funcName)
 {
    void *ptr = find_ptr(funcName);
@@ -2580,6 +2579,4 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_vkGetInstancePr
    struct instance_data *instance_data = FIND(struct instance_data, instance);
    if (instance_data->vtable.GetInstanceProcAddr == NULL) return NULL;
    return instance_data->vtable.GetInstanceProcAddr(instance, funcName);
-}
-
 }

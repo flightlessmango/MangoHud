@@ -7,10 +7,6 @@
       "library_path": "libMangoHud.so",
       "implementation_version": "1",
       "description": "Vulkan Hud Overlay",
-      "functions": {
-        "vkGetInstanceProcAddr": "overlay_vkGetInstanceProcAddr",
-        "vkGetDeviceProcAddr": "overlay_vkGetDeviceProcAddr"
-      },
       "enable_environment": {
         "MANGOHUD": "1"
       },
