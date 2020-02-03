@@ -1,7 +1,9 @@
 #include <cstdlib>
 #include <functional>
 #include <thread>
+#include <iostream>
 #include "imgui_hud_shared.h"
+#include "dbus_info.h"
 
 namespace MangoHud { namespace GL {
 
@@ -26,6 +28,14 @@ void imgui_init()
     init_system_info();
     cfg_inited = true;
     init_cpu_stats(params);
+    if (params.enabled[OVERLAY_PARAM_ENABLED_media_player]) {
+        try {
+            dbusmgr::dbus_mgr.init();
+            get_spotify_metadata(dbusmgr::dbus_mgr, spotify);
+        } catch (std::runtime_error& e) {
+            std::cerr << "Failed to get initial Spotify metadata: " << e.what() << std::endl;
+        }
+    }
 }
 
 }} // namespaces

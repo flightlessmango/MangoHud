@@ -115,6 +115,7 @@ inc_common = [
 
 dep_vulkan = dependency('vulkan', required: get_option('use_system_vulkan'))
 dep_pthread = dependency('threads')
+dep_dbus = dependency('dbus-1')
 
 # Check for generic C arguments
 c_args = []
