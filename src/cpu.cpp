@@ -206,8 +206,9 @@ bool CPUStats::UpdateCoreMhz() {
     while (std::getline(cpuInfo, row) && i < m_cpuData.size()) {
         if (row.find("MHz") != std::string::npos){
             row = std::regex_replace(row, std::regex(R"([^0-9.])"), "");
-            if (!try_stoi(m_cpuData[i++].mhz, row))
-                m_cpuData[i++].mhz = 0;
+            if (!try_stoi(m_cpuData[i].mhz, row))
+                m_cpuData[i].mhz = 0;
+            i++;
         }
     }
     return true;
