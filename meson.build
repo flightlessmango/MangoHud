@@ -50,6 +50,10 @@ if ['linux', 'cygwin', 'gnu'].contains(host_machine.system())
   pre_args += '-DHAVE_PTHREAD'
 endif
 
+if get_option('glibcxx_asserts')
+  pre_args += '-D_GLIBCXX_ASSERTIONS'
+endif
+
 # Check for GCC style atomics
 if cc.compiles('''#include <stdint.h>
                   int main() {

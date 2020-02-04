@@ -1,0 +1,1 @@
+option('glibcxx_asserts', type : 'boolean', value : false)
