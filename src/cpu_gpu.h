@@ -18,13 +18,10 @@
 using namespace std;
 
 int gpuLoad, gpuTemp, cpuTemp;
-string gpuLoadDisplay, cpuTempLocation;
-FILE *amdGpuFile, *amdTempFile, *cpuTempFile;
+FILE *amdGpuFile = nullptr, *amdTempFile = nullptr, *cpuTempFile = nullptr;
 
 
 int numCpuCores = std::thread::hardware_concurrency();
-size_t arraySize = numCpuCores + 1;
-// std::vector<Cpus> cpuArray;
 pthread_t cpuThread, gpuThread, cpuInfoThread, nvidiaSmiThread;
 
 string exec(string command) {
@@ -51,44 +48,42 @@ string exec(string command) {
 
 
 void *cpuInfo(void *){
-	char buff[6];
-	rewind(cpuTempFile);
+    rewind(cpuTempFile);
     fflush(cpuTempFile);
-   	fscanf(cpuTempFile, "%s", buff);
-	cpuTemp = stoi(buff) / 1000;
-	pthread_detach(cpuInfoThread);
-	
-	return NULL;
+    if (fscanf(cpuTempFile, "%d", &cpuTemp) != 1)
+        cpuTemp = 0;
+    cpuTemp /= 1000;
+    pthread_detach(cpuInfoThread);
+
+    return NULL;
 }
 
 void *getNvidiaGpuInfo(void *){
-		if (!nvmlSuccess)
-			checkNvidia();
+    if (!nvmlSuccess)
+        checkNvidia();
 
-		if (nvmlSuccess){
-			getNvidiaInfo();	
-			gpuLoad = nvidiaUtilization.gpu;
-			gpuLoadDisplay = gpuLoad;
-			gpuTemp = nvidiaTemp;
-		}
-	
-	pthread_detach(nvidiaSmiThread);
-	return NULL;
+    if (nvmlSuccess){
+        getNvidiaInfo();
+        gpuLoad = nvidiaUtilization.gpu;
+        gpuTemp = nvidiaTemp;
+    }
+
+    pthread_detach(nvidiaSmiThread);
+    return NULL;
 }
 
 void *getAmdGpuUsage(void *){
-	char buff[5];
-	rewind(amdGpuFile);
+    rewind(amdGpuFile);
     fflush(amdGpuFile);
-   	fscanf(amdGpuFile, "%s", buff);
-	gpuLoadDisplay = buff;
-	gpuLoad = stoi(buff);	
-	
-	rewind(amdTempFile);
-    fflush(amdTempFile);
-	fscanf(amdTempFile, "%s", buff);
-	gpuTemp = (stoi(buff) / 1000);
+    if (fscanf(amdGpuFile, "%d", &gpuLoad) != 1)
+        gpuLoad = 0;
 
-	pthread_detach(gpuThread);
-	return NULL;
+    rewind(amdTempFile);
+    fflush(amdTempFile);
+    if (fscanf(amdTempFile, "%d", &gpuTemp) != 1)
+        gpuTemp = 0;
+    gpuTemp /= 1000;
+
+    pthread_detach(gpuThread);
+    return NULL;
 }

@@ -7,6 +7,7 @@
 #include <string.h>
 #include <algorithm>
 #include <regex>
+#include "string_utils.h"
 
 #ifndef PROCDIR
 #define PROCDIR "/proc"
@@ -23,10 +24,6 @@
 #ifndef PROCCPUINFOFILE
 #define PROCCPUINFOFILE PROCDIR "/cpuinfo"
 #endif
-
-static bool starts_with(const std::string& s,  const char *t){
-	return s.rfind(t, 0) == 0;
-}
 
 void calculateCPUData(CPUData& cpuData,
 	unsigned long long int usertime,
@@ -204,15 +201,14 @@ bool CPUStats::UpdateCPUData()
 bool CPUStats::UpdateCoreMhz() {
     m_coreMhz.clear();
     std::ifstream cpuInfo(PROCCPUINFOFILE);
-	std::string row;
-	int i = 0;
-    while (std::getline(cpuInfo, row)) {
-        CPUData& cpuData = m_cpuData[i];
-		if (row.find("MHz") != std::string::npos){
-			row = std::regex_replace(row, std::regex(R"([^0-9.])"), "");
-            cpuData.mhz = stoi(row);
-			i++;
-		}
+    std::string row;
+    size_t i = 0;
+    while (std::getline(cpuInfo, row) && i < m_cpuData.size()) {
+        if (row.find("MHz") != std::string::npos){
+            row = std::regex_replace(row, std::regex(R"([^0-9.])"), "");
+            if (!try_stoi(m_cpuData[i++].mhz, row))
+                m_cpuData[i++].mhz = 0;
+        }
     }
     return true;
 }
