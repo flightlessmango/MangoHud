@@ -5,7 +5,7 @@ LAYER=build/release/usr/share/vulkan/implicit_layer.d/mangohud.json
 INSTALL_DIR=build/package/MangoHud/.local/share
 IMPLICIT_LAYER_DIR=$HOME/.local/share/vulkan/implicit_layer.d 
 DISTRO=$(sed 1q /etc/os-release | sed 's/NAME=//g' | sed 's/"//g')
-VERSION=$(printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)")
+VERSION=$(git describe --long --tags --always | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/^v//')
 
 dependencies() {
     if [[ ! -f build/release/usr/lib64/libMangoHud.so ]]; then
