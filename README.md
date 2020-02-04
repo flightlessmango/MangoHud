@@ -2,8 +2,8 @@
 
 A modification of the Mesa Vulkan overlay. Including GUI improvements, temperature reporting, and logging capabilities.
 
-#### Comparison (outdated)
-![](assets/overlay_comparison.gif)
+#### Example:
+![](assets/overlay_example.gif)
 
 # Installation
 
