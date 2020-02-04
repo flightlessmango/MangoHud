@@ -2503,7 +2503,9 @@ static VkResult overlay_CreateInstance(
    VkLayerInstanceCreateInfo *chain_info =
       get_instance_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
-   engineName = pCreateInfo->pApplicationInfo->pEngineName;
+   const char* pEngineName = pCreateInfo->pApplicationInfo->pEngineName;
+   if (pEngineName)
+      engineName = pEngineName;
    if (engineName == "DXVK" || engineName == "vkd3d") {
       int engineVer = pCreateInfo->pApplicationInfo->engineVersion;
       engineVersion = to_string(VK_VERSION_MAJOR(engineVer)) + "." + to_string(VK_VERSION_MINOR(engineVer)) + "." + to_string(VK_VERSION_PATCH(engineVer));
