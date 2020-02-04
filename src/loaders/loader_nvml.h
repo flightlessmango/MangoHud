@@ -29,7 +29,7 @@ class libnvml_loader {
   decltype(&::nvmlDeviceGetCount_v2) nvmlDeviceGetCount_v2;
   decltype(&::nvmlDeviceGetHandleByIndex_v2) nvmlDeviceGetHandleByIndex_v2;
   decltype(&::nvmlDeviceGetHandleByPciBusId_v2) nvmlDeviceGetHandleByPciBusId_v2;
-
+  decltype(&::nvmlDeviceGetMemoryInfo) nvmlDeviceGetMemoryInfo;
 
  private:
   void CleanUp(bool unload);
