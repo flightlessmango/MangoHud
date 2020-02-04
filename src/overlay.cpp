@@ -1076,7 +1076,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
    
    if (displayHud){
       if (device_data->properties.vendorID == 0x10de || device_data->properties.vendorID == 0x1002){
-         ImGui::TextColored(ImVec4(0.0, 0.502, 0.25, 1.00f), "GPU");
+         ImGui::TextColored(ImVec4(0.180, 0.592, 0.384, 1.00f), "GPU");
          ImGui::SameLine(hudFirstRow);
          ImGui::Text("%i%%", gpuLoad);
          // ImGui::SameLine(150);
@@ -1086,7 +1086,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
             ImGui::Text("%i%s", gpuTemp, "°C");
          }
       }    
-      ImGui::TextColored(ImVec4(0.0, 0.502, 0.753, 1.00f), "CPU");
+      ImGui::TextColored(ImVec4(0.180, 0.592, 0.796, 1.00f), "CPU");
       ImGui::SameLine(hudFirstRow);
       ImGui::Text("%d%%", cpuLoadLog);
       // ImGui::SameLine(150);
@@ -1100,10 +1100,10 @@ static void compute_swapchain_display(struct swapchain_data *data)
          int i = 0;
          for (const CPUData &cpuData : cpuStats.GetCPUData())
          {
-            ImGui::TextColored(ImVec4(0.0, 0.502, 0.753, 1.00f), "CPU");
+            ImGui::TextColored(ImVec4(0.180, 0.592, 0.796, 1.00f), "CPU");
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(font1);
-            ImGui::TextColored(ImVec4(0.0, 0.502, 0.753, 1.00f),"%i", i);
+            ImGui::TextColored(ImVec4(0.180, 0.592, 0.796, 1.00f),"%i", i);
             ImGui::PopFont();
             ImGui::SameLine(hudFirstRow);
             ImGui::Text("%i%%", int(cpuData.percent));
@@ -1117,7 +1117,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
          }
       }
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_fps]){
-         ImGui::TextColored(ImVec4(0.753, 0.502, 0.502, 1.00f), "%s", engineName.c_str());
+         ImGui::TextColored(ImVec4(0.925, 0.411, 0.411, 1.00f), "%s", engineName.c_str());
          ImGui::SameLine(hudFirstRow);
          ImGui::Text("%.0f", data->fps);
          ImGui::SameLine(0, 1.0f);
@@ -1132,7 +1132,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
          ImGui::PopFont();
          if (engineName == "DXVK" || engineName == "VKD3D"){
             ImGui::PushFont(font1);
-            ImGui::TextColored(ImVec4(0.753, 0.502, 0.502, 1.00f), "%s", engineVersion.c_str());
+            ImGui::TextColored(ImVec4(0.925, 0.411, 0.411, 1.00f), "%s", engineVersion.c_str());
             ImGui::PopFont();
          }
       }
