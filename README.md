@@ -36,7 +36,7 @@ Or alternatively, add `MANGOHUD=1` to your shell profile.
 
 ## MANGOHUD_CONFIG parameters
 
-You can customize the hud by using the MANGOHUD_CONFIG environment variable while separating different options with a comma.
+You can customize the hud by using the MANGOHUD_CONFIG environment variable while separating different options with a comma. Add `some_parameter=0` to hide said parameter.
 
 - `cpu_temp`  :  Displays current CPU temperature
 - `gpu_temp`  :  Displays current GPU temperature
@@ -45,6 +45,7 @@ You can customize the hud by using the MANGOHUD_CONFIG environment variable whil
 - `width`     :  Set custom hud width
 - `height`    :  Set custom hud height
 - `position=x`:  Available values for `x` include `top-left`, `top-right`, `bottom-left`, and `bottom-right`
+- `frame_timing` :  Displays frame time line plot
 
 Note: Width and Height are set automatically based on the font_size, but can be overridden.
 
