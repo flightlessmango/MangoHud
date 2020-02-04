@@ -38,6 +38,7 @@ vklayer_files = files(
   'cpu.cpp',
   'loaders/loader_nvml.cpp',
   'nvml.cpp',
+  'file_utils.cpp',
 )
 
 vklayer_mesa_overlay = shared_library(
