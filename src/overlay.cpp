@@ -44,6 +44,8 @@
 #include "vk_enum_to_str.h"
 #include <vulkan/vk_util.h>
 
+#include "string_utils.h"
+#include "file_utils.h"
 #include "cpu_gpu.h"
 #include "logging.h"
 #include "keybinds.h"
@@ -103,6 +105,7 @@ struct device_data {
 
    /* For a single frame */
    struct frame_stat frame_stats;
+   bool gpu_stats = false;
 };
 
 /* Mapped from VkCommandBuffer */
@@ -825,59 +828,107 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
    }
 
    if (!sysInfoFetched) {
-      deviceName = device_data->properties.deviceName;
       ram =  exec("cat /proc/meminfo | grep 'MemTotal' | awk '{print $2}'");
+      trim(ram);
       cpu =  exec("cat /proc/cpuinfo | grep 'model name' | tail -n1 | sed 's/^.*: //' | sed 's/([^)]*)/()/g' | tr -d '(/)'");
+      trim(cpu);
       kernel = exec("uname -r");
+      trim(kernel);
       os = exec("cat /etc/*-release | grep 'PRETTY_NAME' | cut -d '=' -f 2-");
-      os.erase(remove( os.begin(), os.end(), '\"' ),os.end());
-      gpu = exec("lspci | grep VGA | head -n1 | awk -vRS=']' -vFS='[' '{print $2}' | sed '/^$/d' | tail -n1");
+      os.erase(remove(os.begin(), os.end(), '\"' ), os.end());
+      trim(os);
+      gpu = device_data->properties.deviceName;
       driver = exec("glxinfo | grep 'OpenGL version' | sed 's/^.*: //' | cut -d' ' --output-delimiter=$'\n' -f1- | grep -v '(' | grep -v ')' | tr '\n' ' ' | cut -c 1-");
-      ram.pop_back();
-      cpu.pop_back();
-      kernel.pop_back();
-      os.pop_back();
-      gpu.pop_back();
-      driver.pop_back();
+      trim(driver);
+      //driver = itox(device_data->properties.driverVersion);
 
-      log_period = (log_period_env) ? std::stoi(log_period_env) : 100;
+#ifndef NDEBUG
+      std::cout << "Ram:" << ram << "\n"
+                << "Cpu:" << cpu << "\n"
+                << "Kernel:" << kernel << "\n"
+                << "Os:" << os << "\n"
+                << "Gpu:" << gpu << "\n"
+                << "Driver:" << driver << std::endl;
+#endif
+
+      if (!log_period_env || !try_stoi(log_period, log_period_env))
+        log_period = 100;
 
       if (log_period == 0)
          out.open("/tmp/mango", ios::out | ios::app);
 
-      if(log_duration_env)
-		   duration = std::stoi(log_duration_env);
-      
-      // coreCounting();
-      if (deviceName.find("Radeon") != std::string::npos || deviceName.find("AMD") != std::string::npos) {
-         amdGpuFile = fopen("/sys/class/drm/card0/device/gpu_busy_percent", "r");
-         string tempFolder = exec("ls /sys/class/drm/card0/device/hwmon/");
-         tempFolder.pop_back();
-         string tempLocation = "/sys/class/drm/card0/device/hwmon/" + tempFolder + "/temp1_input";
-         amdTempFile = fopen(tempLocation.c_str(), "r");
+      if (log_duration_env && !try_stoi(duration, log_duration_env))
+        duration = 0;
+
+
+      if (device_data->properties.vendorID == 0x8086){
+         libnvml_loader nvml("libnvidia-ml.so.1");
+         if (nvml.IsLoaded()) {
+            device_data->properties.vendorID = 0x10de;
+            device_data->gpu_stats = true;
+        }
       }
-      if (cpu.find("Intel") != std::string::npos){
-         string cpuTempFolder = exec("ls /sys/devices/platform/coretemp.0/hwmon/");
-         cpuTempFolder.pop_back();
-         cpuTempLocation = "/sys/devices/platform/coretemp.0/hwmon/" + cpuTempFolder + "/temp1_input";
-         cpuTempFile = fopen(cpuTempLocation.c_str(), "r");
-      } else {
-         string name;
+
+      if (device_data->properties.vendorID == 0x10de)
+        device_data->gpu_stats = checkNvidia();
+
+      // coreCounting();
+      if (device_data->properties.vendorID == 0x8086 || gpu.find("Radeon") != std::string::npos || gpu.find("AMD") != std::string::npos) {
+        string path;
+        string drm = "/sys/class/drm/";
+        auto dirs = ls(drm.c_str(), "card");
+        for (auto& dir : dirs) {
+          path = drm + dir;
+#ifndef NDEBUG
+          std::cerr << "amdgpu path check: " << path << "/device/vendor" << std::endl;
+#endif
+          string line = read_line(path + "/device/vendor");
+          trim(line);
+          if (line != "0x1002")
+            continue;
+#ifndef NDEBUG
+          std::cerr << "using amdgpu path: " << path << std::endl;
+#endif
+          if (file_exists(path + "/device/gpu_busy_percent")) {
+            amdGpuFile = fopen((path + "/device/gpu_busy_percent").c_str(), "r");
+            path = path + "/device/hwmon/";
+            string tempFolder;
+            if (find_folder(path, "hwmon", tempFolder)) {
+              path = path + tempFolder + "/temp1_input";
+              amdTempFile = fopen(path.c_str(), "r");
+              device_data->gpu_stats = true;
+              device_data->properties.vendorID = 0x1002;
+              break;
+            }
+          }
+        }
+      }
+
+      if (cpu.find("Intel") != std::string::npos) {
          string path;
-         for (size_t i = 0; i < 10; i++)
+         if (find_folder("/sys/devices/platform/coretemp.0/hwmon/", "hwmon", path)) {
+           path = "/sys/devices/platform/coretemp.0/hwmon/" + path + "/temp1_input";
+           if (file_exists(path))
+              cpuTempFile = fopen(path.c_str(), "r");
+         }
+      } else {
+         string name, path;
+         string hwmon = "/sys/class/hwmon/";
+         auto dirs = ls(hwmon.c_str());
+         for (auto& dir : dirs)
          {
-            path = "/sys/class/hwmon/hwmon" + to_string(i) + "/name";
-            name = exec("cat " + path);
-            name.pop_back();
+            path = hwmon + dir;
+            name = read_line(path + "/name");
+            std::cerr << "hwmon: sensor name: " << name << std::endl;
             if (name == "k10temp" || name == "zenpower"){
-               cpuTempLocation = "/sys/class/hwmon/hwmon" + to_string(i) + "/temp1_input";
+               path += "/temp1_input";
                break;
             }
          }
-         if (cpuTempLocation.empty()) {
+         if (!file_exists(path)) {
             cout << "MANGOHUD: Could not find temp location" << endl;
          } else {
-            cpuTempFile = fopen(cpuTempLocation.c_str(), "r");
+            cpuTempFile = fopen(path.c_str(), "r");
          }
       }
       // Adjust height for DXVK/VKD3D version number
@@ -887,12 +938,6 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
          } else {
             instance_data->params.height += 24 / 2;
          }
-      }
-      
-      if (device_data->properties.vendorID == 0x8086){
-         libnvml_loader nvml("libnvidia-ml.so.1");
-         if (nvml.IsLoaded())
-            device_data->properties.vendorID = 0x10de;
       }
 
       sysInfoFetched = true;
@@ -917,14 +962,17 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
           elapsed >= instance_data->params.fps_sampling_period) {
             cpuStats.UpdateCPUData();
             cpuLoadLog = cpuStats.GetCPUDataTotal().percent;
-            pthread_create(&cpuInfoThread, NULL, &cpuInfo, NULL);
+            if (cpuTempFile)
+              pthread_create(&cpuInfoThread, NULL, &cpuInfo, NULL);
             
-            // get gpu usage
-            if (device_data->properties.vendorID == 0x10de)
-               pthread_create(&nvidiaSmiThread, NULL, &getNvidiaGpuInfo, NULL);
+            if (device_data->gpu_stats) {
+              // get gpu usage
+              if (device_data->properties.vendorID == 0x10de)
+                 pthread_create(&nvidiaSmiThread, NULL, &getNvidiaGpuInfo, NULL);
 
-            if (device_data->properties.vendorID == 0x1002)
-              pthread_create(&gpuThread, NULL, &getAmdGpuUsage, NULL);
+              if (device_data->properties.vendorID == 0x1002)
+                pthread_create(&gpuThread, NULL, &getAmdGpuUsage, NULL);
+            }
 
             // update variables for logging
             // cpuLoadLog = cpuArray[0].value;
@@ -1075,7 +1123,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
    }
    
    if (displayHud){
-      if (device_data->properties.vendorID == 0x10de || device_data->properties.vendorID == 0x1002){
+      if (device_data->gpu_stats){
          ImGui::TextColored(ImVec4(0.180, 0.592, 0.384, 1.00f), "GPU");
          ImGui::SameLine(hudFirstRow);
          ImGui::Text("%i%%", gpuLoad);

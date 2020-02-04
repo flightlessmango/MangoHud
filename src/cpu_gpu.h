@@ -17,7 +17,7 @@
 
 using namespace std;
 
-int gpuLoad, gpuTemp, cpuTemp;
+int gpuLoad = 0, gpuTemp = 0, cpuTemp = 0;
 FILE *amdGpuFile = nullptr, *amdTempFile = nullptr, *cpuTempFile = nullptr;
 
 

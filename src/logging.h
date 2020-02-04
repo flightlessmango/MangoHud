@@ -8,9 +8,9 @@
 
 using namespace std;
 
-string os, cpu, gpu, ram, kernel, driver, deviceName;
-bool sysInfoFetched; 
-int gpuLoadLog,cpuLoadLog,log_period;
+string os, cpu, gpu, ram, kernel, driver;
+bool sysInfoFetched = false;
+int gpuLoadLog = 0, cpuLoadLog = 0, log_period = 0;
 
 struct logData{
   double fps;
