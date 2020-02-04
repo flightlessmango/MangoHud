@@ -9,5 +9,5 @@ extern nvmlDevice_t nvidiaDevice;
 extern struct nvmlUtilization_st nvidiaUtilization;
 extern bool nvmlSuccess;
 
-void checkNvidia(void);
+bool checkNvidia(void);
 void getNvidiaInfo(void);

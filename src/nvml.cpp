@@ -9,17 +9,19 @@ bool nvmlSuccess = false;
 unsigned int nvidiaTemp;
 struct nvmlUtilization_st nvidiaUtilization;
 
-void checkNvidia(){
+bool checkNvidia(){
     if (nvml.IsLoaded()){
         result = nvml.nvmlInit();
         if (NVML_SUCCESS != result) {
             printf("MANGOHUD: Nvidia module not loaded\n");
         } else {
             nvmlSuccess = true;
+            return true;
         }
     } else {
         printf("Failed to load NVML!\n");
     }
+    return false;
 } 
 
 void getNvidiaInfo(){
