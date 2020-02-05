@@ -17,12 +17,20 @@
 
 using namespace std;
 
-int gpuLoad = 0, gpuTemp = 0, cpuTemp = 0;
-FILE *amdGpuFile = nullptr, *amdTempFile = nullptr, *cpuTempFile = nullptr;
-
+int gpuLoad = 0, gpuTemp = 0, cpuTemp = 0, gpuMemUsed = 0, gpuMemTotal = 0;
+FILE *amdGpuFile = nullptr, *amdTempFile = nullptr, *cpuTempFile = nullptr, *amdGpuVramTotalFile = nullptr, *amdGpuVramUsedFile = nullptr;
 
 int numCpuCores = std::thread::hardware_concurrency();
 pthread_t cpuThread, gpuThread, cpuInfoThread, nvidiaSmiThread;
+
+struct amdGpu {
+    int load;
+    int temp;
+    int64_t memoryUsed;
+    int64_t memoryTotal;
+};
+
+extern struct amdGpu amdgpu;
 
 string exec(string command) {
    char buffer[128];
@@ -75,14 +83,30 @@ void *getNvidiaGpuInfo(void *){
 void *getAmdGpuUsage(void *){
     rewind(amdGpuFile);
     fflush(amdGpuFile);
-    if (fscanf(amdGpuFile, "%d", &gpuLoad) != 1)
-        gpuLoad = 0;
+    if (fscanf(amdGpuFile, "%d", &amdgpu.load) != 1)
+        amdgpu.load = 0;
+    gpuLoad = amdgpu.load;
 
     rewind(amdTempFile);
     fflush(amdTempFile);
-    if (fscanf(amdTempFile, "%d", &gpuTemp) != 1)
-        gpuTemp = 0;
-    gpuTemp /= 1000;
+    if (fscanf(amdTempFile, "%d", &amdgpu.temp) != 1)
+        amdgpu.temp = 0;
+    amdgpu.temp /= 1000;
+    gpuTemp = amdgpu.temp;
+
+    rewind(amdGpuVramTotalFile);
+    fflush(amdGpuVramTotalFile);
+    if (fscanf(amdGpuVramTotalFile, "%lld", &amdgpu.memoryTotal) != 1)
+        amdgpu.memoryTotal = 0;
+    amdgpu.memoryTotal /= (1024 * 1024);
+    gpuMemTotal = amdgpu.memoryTotal;
+
+    rewind(amdGpuVramUsedFile);
+    fflush(amdGpuVramUsedFile);
+    if (fscanf(amdGpuVramUsedFile, "%lld", &amdgpu.memoryUsed) != 1)
+        amdgpu.memoryUsed = 0;
+    amdgpu.memoryUsed /= (1024 * 1024);
+    gpuMemUsed = amdgpu.memoryUsed;
 
     pthread_detach(gpuThread);
     return NULL;
