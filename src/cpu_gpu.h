@@ -14,6 +14,8 @@
 #include <sstream>
 #include <regex>
 #include "nvidia_info.h"
+#include "memory.h"
+#include "nvctrl.h"
 
 using namespace std;
 
@@ -74,6 +76,7 @@ void *getNvidiaGpuInfo(void *){
         getNvidiaInfo();
         gpuLoad = nvidiaUtilization.gpu;
         gpuTemp = nvidiaTemp;
+        gpuMemUsed = nvidiaMemUsed();
     }
 
     pthread_detach(nvidiaSmiThread);
