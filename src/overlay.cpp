@@ -1643,12 +1643,14 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
 
    device_data->vtable.EndCommandBuffer(draw->command_buffer);
 
+   // wait in the fragment stage until the swapchain image is ready
+   std::vector<VkPipelineStageFlags> stages_wait(n_wait_semaphores, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+
    VkSubmitInfo submit_info = {};
-   VkPipelineStageFlags stage_wait = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
    submit_info.commandBufferCount = 1;
    submit_info.pCommandBuffers = &draw->command_buffer;
-   submit_info.pWaitDstStageMask = &stage_wait;
+   submit_info.pWaitDstStageMask = stages_wait.data();
    submit_info.waitSemaphoreCount = n_wait_semaphores;
    submit_info.pWaitSemaphores = wait_semaphores;
    submit_info.signalSemaphoreCount = 1;
