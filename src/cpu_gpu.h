@@ -99,14 +99,14 @@ void *getAmdGpuUsage(void *){
 
     rewind(amdGpuVramTotalFile);
     fflush(amdGpuVramTotalFile);
-    if (fscanf(amdGpuVramTotalFile, "%lld", &amdgpu.memoryTotal) != 1)
+    if (fscanf(amdGpuVramTotalFile, "%" PRId64, &amdgpu.memoryTotal) != 1)
         amdgpu.memoryTotal = 0;
     amdgpu.memoryTotal /= (1024 * 1024);
     gpuMemTotal = amdgpu.memoryTotal;
 
     rewind(amdGpuVramUsedFile);
     fflush(amdGpuVramUsedFile);
-    if (fscanf(amdGpuVramUsedFile, "%lld", &amdgpu.memoryUsed) != 1)
+    if (fscanf(amdGpuVramUsedFile, "%" PRId64, &amdgpu.memoryUsed) != 1)
         amdgpu.memoryUsed = 0;
     amdgpu.memoryUsed /= (1024 * 1024);
     gpuMemUsed = amdgpu.memoryUsed;
