@@ -61,6 +61,7 @@ const char* offset_y_env = std::getenv("Y_OFFSET");
 string engineName, engineVersion;
 ImFont* font = nullptr;
 ImFont* font1 = nullptr;
+struct amdGpu amdgpu;
 
 /* Mapped from VkInstace/VkPhysicalDevice */
 struct instance_data {
@@ -874,7 +875,6 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
       if (device_data->properties.vendorID == 0x10de)
         device_data->gpu_stats = checkNvidia();
 
-      // coreCounting();
       if (device_data->properties.vendorID == 0x8086 || gpu.find("Radeon") != std::string::npos || gpu.find("AMD") != std::string::npos) {
         string path;
         string drm = "/sys/class/drm/";
@@ -893,6 +893,8 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
 #endif
           if (file_exists(path + "/device/gpu_busy_percent")) {
             amdGpuFile = fopen((path + "/device/gpu_busy_percent").c_str(), "r");
+            amdGpuVramTotalFile = fopen((path + "/device/mem_info_vram_total").c_str(), "r");
+            amdGpuVramUsedFile = fopen((path + "/device/mem_info_vram_used").c_str(), "r");
             path = path + "/device/hwmon/";
             string tempFolder;
             if (find_folder(path, "hwmon", tempFolder)) {
@@ -1172,9 +1174,12 @@ static void compute_swapchain_display(struct swapchain_data *data)
             i++;
          }
       }
-      ImGui::TextColored(ImVec4(0.502, 0.502, 0.753, 1.00f), "MEM");
+      ImGui::TextColored(ImVec4(0.678, 0.392, 0.756, 1.00f), "VRAM");
       ImGui::SameLine(hudFirstRow);
-      ImGui::Text("%.1fG/%.1fG", memused, memmax);
+      ImGui::Text("%iMB", gpuMemUsed);
+      ImGui::TextColored(ImVec4(0.760, 0.4, 0.576, 1.00f), "RAM");
+      ImGui::SameLine(hudFirstRow);
+      ImGui::Text("%.1fG", memused);
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_fps]){
          ImGui::TextColored(ImVec4(0.925, 0.411, 0.411, 1.00f), "%s", engineName.c_str());
          ImGui::SameLine(hudFirstRow);
