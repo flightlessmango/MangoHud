@@ -837,10 +837,12 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
       os = exec("cat /etc/*-release | grep 'PRETTY_NAME' | cut -d '=' -f 2-");
       os.erase(remove(os.begin(), os.end(), '\"' ), os.end());
       trim(os);
-      gpu = device_data->properties.deviceName;
+      gpu = exec("lspci | grep VGA | head -n1 | awk -vRS=']' -vFS='[' '{print $2}' | sed '/^$/d' | tail -n1");
+      trim(gpu);
       driver = exec("glxinfo | grep 'OpenGL version' | sed 's/^.*: //' | cut -d' ' --output-delimiter=$'\n' -f1- | grep -v '(' | grep -v ')' | tr '\n' ' ' | cut -c 1-");
       trim(driver);
       //driver = itox(device_data->properties.driverVersion);
+      cout << gpu << endl;
 
 #ifndef NDEBUG
       std::cout << "Ram:" << ram << "\n"
