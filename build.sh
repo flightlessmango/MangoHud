@@ -50,7 +50,7 @@ dependencies() {
                 DEPS="{gcc,g++,gcc-multilib,g++-multilib,ninja-build,python3-pip,python3-setuptools,python3-wheel,pkg-config,mesa-common-dev,libx11-dev:i386}"
                 install
                 
-                if [[ $(sudo pip3 show meson; echo $?) == 1 || $(sudo pip3 show meson; echo $?) == 1 ]]; then
+                if [[ $(sudo pip3 show meson; echo $?) == 1 || $(sudo pip3 show mako; echo $?) == 1 ]]; then
                     sudo pip3 install meson mako
                 fi
                 if [[ ! -f /usr/local/bin/glslangValidator ]]; then
