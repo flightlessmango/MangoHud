@@ -781,6 +781,67 @@ static void process_control_socket(struct instance_data *instance_data)
    }
 }
 
+void init_gpu_stats(struct device_data *device_data)
+{
+   struct instance_data *instance_data = device_data->instance;
+
+   // NVIDIA or Intel but maybe has Optimus
+   if (device_data->properties.vendorID == 0x8086
+      || device_data->properties.vendorID == 0x10de) {
+      if ((device_data->gpu_stats = checkNvidia())) {
+         device_data->properties.vendorID = 0x10de;
+      }
+   }
+
+   if (device_data->properties.vendorID == 0x8086
+       || device_data->properties.vendorID == 0x1002
+       || gpu.find("Radeon") != std::string::npos
+       || gpu.find("AMD") != std::string::npos) {
+      string path;
+      string drm = "/sys/class/drm/";
+
+      auto dirs = ls(drm.c_str(), "card");
+      for (auto& dir : dirs) {
+         path = drm + dir;
+
+#ifndef NDEBUG
+         std::cerr << "amdgpu path check: " << path << "/device/vendor" << std::endl;
+#endif
+
+         string line = read_line(path + "/device/vendor");
+         trim(line);
+         if (line != "0x1002")
+            continue;
+
+#ifndef NDEBUG
+           std::cerr << "using amdgpu path: " << path << std::endl;
+#endif
+
+         if (file_exists(path + "/device/gpu_busy_percent")) {
+            if (!amdGpuFile)
+               amdGpuFile = fopen((path + "/device/gpu_busy_percent").c_str(), "r");
+            if (!amdGpuVramTotalFile)
+               amdGpuVramTotalFile = fopen((path + "/device/mem_info_vram_total").c_str(), "r");
+            if (!amdGpuVramUsedFile)
+               amdGpuVramUsedFile = fopen((path + "/device/mem_info_vram_used").c_str(), "r");
+
+            path = path + "/device/hwmon/";
+            string tempFolder;
+            if (find_folder(path, "hwmon", tempFolder)) {
+               path = path + tempFolder + "/temp1_input";
+
+               if (!amdTempFile)
+                  amdTempFile = fopen(path.c_str(), "r");
+
+               device_data->gpu_stats = true;
+               device_data->properties.vendorID = 0x1002;
+               break;
+            }
+         }
+      }
+   }
+}
+
 static void snapshot_swapchain_frame(struct swapchain_data *data)
 {
    struct device_data *device_data = data->device;
@@ -863,51 +924,6 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
       if (log_duration_env && !try_stoi(duration, log_duration_env))
         duration = 0;
 
-
-      if (device_data->properties.vendorID == 0x8086){
-         libnvml_loader nvml("libnvidia-ml.so.1");
-         if (nvml.IsLoaded()) {
-            device_data->properties.vendorID = 0x10de;
-            device_data->gpu_stats = true;
-        }
-      }
-
-      if (device_data->properties.vendorID == 0x10de)
-        device_data->gpu_stats = checkNvidia();
-
-      if (device_data->properties.vendorID == 0x8086 || gpu.find("Radeon") != std::string::npos || gpu.find("AMD") != std::string::npos) {
-        string path;
-        string drm = "/sys/class/drm/";
-        auto dirs = ls(drm.c_str(), "card");
-        for (auto& dir : dirs) {
-          path = drm + dir;
-#ifndef NDEBUG
-          std::cerr << "amdgpu path check: " << path << "/device/vendor" << std::endl;
-#endif
-          string line = read_line(path + "/device/vendor");
-          trim(line);
-          if (line != "0x1002")
-            continue;
-#ifndef NDEBUG
-          std::cerr << "using amdgpu path: " << path << std::endl;
-#endif
-          if (file_exists(path + "/device/gpu_busy_percent")) {
-            amdGpuFile = fopen((path + "/device/gpu_busy_percent").c_str(), "r");
-            amdGpuVramTotalFile = fopen((path + "/device/mem_info_vram_total").c_str(), "r");
-            amdGpuVramUsedFile = fopen((path + "/device/mem_info_vram_used").c_str(), "r");
-            path = path + "/device/hwmon/";
-            string tempFolder;
-            if (find_folder(path, "hwmon", tempFolder)) {
-              path = path + tempFolder + "/temp1_input";
-              amdTempFile = fopen(path.c_str(), "r");
-              device_data->gpu_stats = true;
-              device_data->properties.vendorID = 0x1002;
-              break;
-            }
-          }
-        }
-      }
-
       if (cpu.find("Intel") != std::string::npos) {
          string path;
          if (find_folder("/sys/devices/platform/coretemp.0/hwmon/", "hwmon", path)) {
@@ -933,14 +949,6 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
             cout << "MANGOHUD: Could not find temp location" << endl;
          } else {
             cpuTempFile = fopen(path.c_str(), "r");
-         }
-      }
-      // Adjust height for DXVK/VKD3D version number
-      if (engineName == "DXVK" || engineName == "VKD3D"){
-         if (instance_data->params.font_size){
-            instance_data->params.height += instance_data->params.font_size / 2;
-         } else {
-            instance_data->params.height += 24 / 2;
          }
       }
 
@@ -2509,6 +2517,8 @@ static VkResult overlay_CreateDevice(
 
    device_map_queues(device_data, pCreateInfo);
 
+   init_gpu_stats(device_data);
+
    return result;
 }
 
@@ -2573,6 +2583,15 @@ static VkResult overlay_CreateInstance(
    hudSpacing = font_size / 2;
    hudFirstRow = font_size * 5;
    hudSecondRow = font_size * 8;
+
+   // Adjust height for DXVK/VKD3D version number
+   if (engineName == "DXVK" || engineName == "VKD3D"){
+      if (instance_data->params.font_size){
+         instance_data->params.height += instance_data->params.font_size / 2;
+      } else {
+         instance_data->params.height += 24 / 2;
+      }
+   }
 
    /* If there's no control file, and an output_file was specified, start
     * capturing fps data right away.
