@@ -41,6 +41,8 @@ You can customize the hud by using the MANGOHUD_CONFIG environment variable whil
 - `cpu_temp`  :  Displays current CPU temperature
 - `gpu_temp`  :  Displays current GPU temperature
 - `core_load` :  Displays current CPU load per core
+- `ram`       :  Displays system memory usage
+- `vram`      :  Displays GPU memory usage
 - `font_size` :  Changes the default font size (default is 24)
 - `width`     :  Set custom hud width
 - `height`    :  Set custom hud height
