@@ -83,32 +83,40 @@ void *getNvidiaGpuInfo(void *){
 }
 
 void *getAmdGpuUsage(void *){
-    rewind(amdGpuFile);
-    fflush(amdGpuFile);
-    if (fscanf(amdGpuFile, "%d", &amdgpu.load) != 1)
-        amdgpu.load = 0;
-    gpuLoad = amdgpu.load;
+    if (amdGpuFile) {
+        rewind(amdGpuFile);
+        fflush(amdGpuFile);
+        if (fscanf(amdGpuFile, "%d", &amdgpu.load) != 1)
+            amdgpu.load = 0;
+        gpuLoad = amdgpu.load;
+    }
 
-    rewind(amdTempFile);
-    fflush(amdTempFile);
-    if (fscanf(amdTempFile, "%d", &amdgpu.temp) != 1)
-        amdgpu.temp = 0;
-    amdgpu.temp /= 1000;
-    gpuTemp = amdgpu.temp;
+    if (amdTempFile) {
+        rewind(amdTempFile);
+        fflush(amdTempFile);
+        if (fscanf(amdTempFile, "%d", &amdgpu.temp) != 1)
+            amdgpu.temp = 0;
+        amdgpu.temp /= 1000;
+        gpuTemp = amdgpu.temp;
+    }
 
-    rewind(amdGpuVramTotalFile);
-    fflush(amdGpuVramTotalFile);
-    if (fscanf(amdGpuVramTotalFile, "%" PRId64, &amdgpu.memoryTotal) != 1)
-        amdgpu.memoryTotal = 0;
-    amdgpu.memoryTotal /= (1024 * 1024);
-    gpuMemTotal = amdgpu.memoryTotal;
+    if (amdGpuVramTotalFile) {
+        rewind(amdGpuVramTotalFile);
+        fflush(amdGpuVramTotalFile);
+        if (fscanf(amdGpuVramTotalFile, "%" PRId64, &amdgpu.memoryTotal) != 1)
+            amdgpu.memoryTotal = 0;
+        amdgpu.memoryTotal /= (1024 * 1024);
+        gpuMemTotal = amdgpu.memoryTotal;
+    }
 
-    rewind(amdGpuVramUsedFile);
-    fflush(amdGpuVramUsedFile);
-    if (fscanf(amdGpuVramUsedFile, "%" PRId64, &amdgpu.memoryUsed) != 1)
-        amdgpu.memoryUsed = 0;
-    amdgpu.memoryUsed /= (1024 * 1024);
-    gpuMemUsed = amdgpu.memoryUsed;
+    if (amdGpuVramUsedFile) {
+        rewind(amdGpuVramUsedFile);
+        fflush(amdGpuVramUsedFile);
+        if (fscanf(amdGpuVramUsedFile, "%" PRId64, &amdgpu.memoryUsed) != 1)
+            amdgpu.memoryUsed = 0;
+        amdgpu.memoryUsed /= (1024 * 1024);
+        gpuMemUsed = amdgpu.memoryUsed;
+    }
 
     pthread_detach(gpuThread);
     return NULL;

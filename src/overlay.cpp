@@ -839,6 +839,11 @@ void init_gpu_stats(struct device_data *device_data)
             }
          }
       }
+
+      // don't bother then
+      if (!amdGpuFile && !amdTempFile && !amdGpuVramTotalFile && !amdGpuVramUsedFile) {
+         device_data->gpu_stats = false;
+      }
    }
 }
 
