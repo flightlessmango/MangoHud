@@ -15,7 +15,6 @@
 #include <regex>
 #include "nvidia_info.h"
 #include "memory.h"
-#include "nvctrl.h"
 
 using namespace std;
 
