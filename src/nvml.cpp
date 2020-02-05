@@ -8,7 +8,7 @@ nvmlDevice_t nvidiaDevice;
 bool nvmlSuccess = false;
 unsigned int nvidiaTemp;
 struct nvmlUtilization_st nvidiaUtilization;
-struct nvmlMemory_st nvidiaMemory;
+struct nvmlMemory_st nvidiaMemory {};
 
 bool checkNvidia(){
     if (nvml.IsLoaded()){
@@ -29,5 +29,5 @@ void getNvidiaInfo(){
     nvml.nvmlDeviceGetHandleByIndex(0, &nvidiaDevice);
     nvml.nvmlDeviceGetUtilizationRates(nvidiaDevice, &nvidiaUtilization);
     nvml.nvmlDeviceGetTemperature(nvidiaDevice, NVML_TEMPERATURE_GPU, &nvidiaTemp);
-    // nvml.nvmlDeviceGetMemoryInfo(nvidiaDevice, &nvidiaMemory);
+    nvml.nvmlDeviceGetMemoryInfo(nvidiaDevice, &nvidiaMemory);
 }

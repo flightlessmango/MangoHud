@@ -76,7 +76,7 @@ void *getNvidiaGpuInfo(void *){
         getNvidiaInfo();
         gpuLoad = nvidiaUtilization.gpu;
         gpuTemp = nvidiaTemp;
-        gpuMemUsed = nvidiaMemUsed();
+        gpuMemUsed = nvidiaMemory.used / (1024 * 1024);
     }
 
     pthread_detach(nvidiaSmiThread);

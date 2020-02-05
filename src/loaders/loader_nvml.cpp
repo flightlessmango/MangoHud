@@ -135,6 +135,18 @@ bool libnvml_loader::Load(const std::string& library_name) {
     return false;
   }
 
+  #if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
+  nvmlDeviceGetMemoryInfo =
+      reinterpret_cast<decltype(this->nvmlDeviceGetMemoryInfo)>(
+          dlsym(library_, "nvmlDeviceGetMemoryInfo"));
+#endif
+#if defined(LIBRARY_LOADER_NVML_H_DT_NEEDED)
+  nvmlDeviceGetMemoryInfo = &::nvmlDeviceGetMemoryInfo;
+#endif
+  if (!nvmlDeviceGetMemoryInfo) {
+    CleanUp(true);
+    return false;
+  }
 
   loaded_ = true;
   return true;
