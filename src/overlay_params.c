@@ -177,6 +177,8 @@ parse_overlay_env(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = true;
+   params->enabled[OVERLAY_PARAM_ENABLED_ram] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_vram] = false;
    params->fps_sampling_period = 500000; /* 500ms */
    params->width = 280;
    params->height = 140;
@@ -229,5 +231,11 @@ parse_overlay_env(struct overlay_params *params,
       params->height += (params->font_size - 3);
 
    if (params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats])
+      params->height += (params->font_size - 3);
+
+   if (params->enabled[OVERLAY_PARAM_ENABLED_ram])
+      params->height += (params->font_size - 3);
+
+   if (params->enabled[OVERLAY_PARAM_ENABLED_vram])
       params->height += (params->font_size - 3);
 }     

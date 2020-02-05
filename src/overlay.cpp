@@ -1174,12 +1174,24 @@ static void compute_swapchain_display(struct swapchain_data *data)
             i++;
          }
       }
-      ImGui::TextColored(ImVec4(0.678, 0.392, 0.756, 1.00f), "VRAM");
-      ImGui::SameLine(hudFirstRow);
-      ImGui::Text("%iMB", gpuMemUsed);
-      ImGui::TextColored(ImVec4(0.760, 0.4, 0.576, 1.00f), "RAM");
-      ImGui::SameLine(hudFirstRow);
-      ImGui::Text("%.1fG", memused);
+      if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_vram]){
+         ImGui::TextColored(ImVec4(0.678, 0.392, 0.756, 1.00f), "VRAM");
+         ImGui::SameLine(hudFirstRow);
+         ImGui::Text("%i", gpuMemUsed);
+         ImGui::SameLine(0,1.0f);
+         ImGui::PushFont(font1);
+         ImGui::Text("MB");
+         ImGui::PopFont();
+      }
+      if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_ram]){
+         ImGui::TextColored(ImVec4(0.760, 0.4, 0.576, 1.00f), "RAM");
+         ImGui::SameLine(hudFirstRow);
+         ImGui::Text("%.1f", memused);
+         ImGui::SameLine(0,1.0f);
+         ImGui::PushFont(font1);
+         ImGui::Text("GB");
+         ImGui::PopFont();
+      }
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_fps]){
          ImGui::TextColored(ImVec4(0.925, 0.411, 0.411, 1.00f), "%s", engineName.c_str());
          ImGui::SameLine(hudFirstRow);

@@ -41,8 +41,10 @@ extern "C" {
    OVERLAY_PARAM_BOOL(core_load)                     \
    OVERLAY_PARAM_BOOL(cpu_temp)                      \
    OVERLAY_PARAM_BOOL(gpu_temp)                      \
-   OVERLAY_PARAM_BOOL(cpu_stats)                      \
-   OVERLAY_PARAM_BOOL(gpu_stats)                      \
+   OVERLAY_PARAM_BOOL(cpu_stats)                     \
+   OVERLAY_PARAM_BOOL(gpu_stats)                     \
+   OVERLAY_PARAM_BOOL(ram)                           \
+   OVERLAY_PARAM_BOOL(vram)                          \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
    OVERLAY_PARAM_CUSTOM(position)                    \
