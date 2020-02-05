@@ -1123,7 +1123,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
    }
    
    if (displayHud){
-      if (device_data->gpu_stats){
+      if (device_data->gpu_stats && instance_data->params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
          ImGui::TextColored(ImVec4(0.180, 0.592, 0.384, 1.00f), "GPU");
          ImGui::SameLine(hudFirstRow);
          ImGui::Text("%i%%", gpuLoad);
@@ -1133,15 +1133,18 @@ static void compute_swapchain_display(struct swapchain_data *data)
             ImGui::SameLine(hudSecondRow);
             ImGui::Text("%i%s", gpuTemp, "°C");
          }
-      }    
-      ImGui::TextColored(ImVec4(0.180, 0.592, 0.796, 1.00f), "CPU");
-      ImGui::SameLine(hudFirstRow);
-      ImGui::Text("%d%%", cpuLoadLog);
-      // ImGui::SameLine(150);
-      // ImGui::Text("%s", "%");
-      if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp]){
-         ImGui::SameLine(hudSecondRow);
-         ImGui::Text("%i%s", cpuTemp, "°C");
+      }
+      if(instance_data->params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats]){
+         ImGui::TextColored(ImVec4(0.180, 0.592, 0.796, 1.00f), "CPU");
+         ImGui::SameLine(hudFirstRow);
+         ImGui::Text("%d%%", cpuLoadLog);
+         // ImGui::SameLine(150);
+         // ImGui::Text("%s", "%");
+      
+         if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp]){
+            ImGui::SameLine(hudSecondRow);
+            ImGui::Text("%i%s", cpuTemp, "°C");
+         }
       }
       
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_core_load]){

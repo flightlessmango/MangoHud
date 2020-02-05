@@ -175,6 +175,8 @@ parse_overlay_env(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_core_load] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats] = true;
+   params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = true;
    params->fps_sampling_period = 500000; /* 500ms */
    params->width = 280;
    params->height = 140;
@@ -217,9 +219,15 @@ parse_overlay_env(struct overlay_params *params,
       params->font_size = 24.0f;
 
    if (params->font_size && !heightChanged)
-      params->height = (params->font_size + 3 * 2) * 3 + FrameTimeGraphHeight;
+      params->height = (params->font_size - 3 * 2) * 3 + FrameTimeGraphHeight;
 
    // Apply more hud height if cores are enabled
    if (params->enabled[OVERLAY_PARAM_ENABLED_core_load] && !heightChanged)
      params->height += ((params->font_size - 3) * get_nprocs());
-}
+
+   if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
+      params->height += (params->font_size - 3);
+
+   if (params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats])
+      params->height += (params->font_size - 3);
+}     
