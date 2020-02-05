@@ -70,9 +70,10 @@ dependencies() {
 configure() {
     dependencies
     git submodule update --init --depth 50
-    if [[ ! -d build/meson64 ]]; then
+    if [[ ! -f build/meson64/build.ninja ]]; then
         meson build/meson64 --libdir lib64 --prefix $PWD/build/release/usr
-
+    fi
+    if [[ ! -f build/meson32/build.ninja ]]; then
         export CC="gcc -m32"
         export CXX="g++ -m32"
         export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH_32}"
@@ -82,7 +83,7 @@ configure() {
 }
 
 build() {
-    if [[ ! -d build/meson64 ]]; then
+    if [[ ! -f build/meson64/build.ninja ]]; then
         configure
     fi
     ninja -C build/meson32 install
@@ -90,25 +91,26 @@ build() {
 }
 
 package() {
-    if [[ ! -f build/release/usr/lib64/libMangoHud.so ]]; then
+    LIB=build/release/usr/lib64/libMangoHud.so
+    LIB32=build/release/usr/lib32/libMangoHud.so
+    if [[ ! -f "$LIB" || "$LIB" -ot build/meson64/src/libMangoHud.so ]]; then
         build
     fi
     mkdir -p $INSTALL_DIR/{MangoHud,vulkan/implicit_layer.d}
 
-    cp build/release/usr/lib32/libMangoHud.so $INSTALL_DIR/MangoHud/libMangoHud32.so
-    cp build/release/usr/lib64/libMangoHud.so $INSTALL_DIR/MangoHud/libMangoHud.so
+    cp $LIB32 $INSTALL_DIR/MangoHud/libMangoHud32.so
+    cp $LIB $INSTALL_DIR/MangoHud/libMangoHud.so
     cp $LAYER $INSTALL_DIR/vulkan/implicit_layer.d/mangohud64.json
     cp $LAYER $INSTALL_DIR/vulkan/implicit_layer.d/mangohud32.json
     cp --preserve=mode bin/install.sh build/package/MangoHud/install.sh
     sed -i "s|64bit|32bit|g" $INSTALL_DIR/vulkan/implicit_layer.d/mangohud32.json
 
-    cd build/package
-    tar cpzf ../MangoHud-$VERSION.tar.gz .
-    cd ../../
+    tar -C build/package -cpzf build/MangoHud-$VERSION.tar.gz .
 }
 
 install() {
-    if [[ ! -f build/MangoHud-$VERSION.tar.gz ]]; then
+    PKG=build/MangoHud-$VERSION.tar.gz
+    if [[ ! -f "$PKG" || "$PKG" -ot build/meson64/src/libMangoHud.so ]]; then
         package
     fi
     tar xzf build/MangoHud-$VERSION.tar.gz --exclude='install.sh' --strip-components=2 -C $HOME/
