@@ -22,7 +22,7 @@ int gpuLoad = 0, gpuTemp = 0, cpuTemp = 0, gpuMemUsed = 0, gpuMemTotal = 0;
 FILE *amdGpuFile = nullptr, *amdTempFile = nullptr, *cpuTempFile = nullptr, *amdGpuVramTotalFile = nullptr, *amdGpuVramUsedFile = nullptr;
 
 int numCpuCores = std::thread::hardware_concurrency();
-pthread_t cpuThread, gpuThread, cpuInfoThread, nvidiaSmiThread;
+pthread_t cpuThread, gpuThread, cpuInfoThread;
 
 struct amdGpu {
     int load;
@@ -78,7 +78,7 @@ void *getNvidiaGpuInfo(void *){
         gpuMemUsed = nvidiaMemory.used / (1024 * 1024);
     }
 
-    pthread_detach(nvidiaSmiThread);
+    pthread_detach(gpuThread);
     return NULL;
 }
 

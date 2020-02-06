@@ -985,7 +985,7 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
             if (device_data->gpu_stats) {
               // get gpu usage
               if (device_data->properties.vendorID == 0x10de)
-                 pthread_create(&nvidiaSmiThread, NULL, &getNvidiaGpuInfo, NULL);
+                 pthread_create(&gpuThread, NULL, &getNvidiaGpuInfo, NULL);
 
               if (device_data->properties.vendorID == 0x1002)
                 pthread_create(&gpuThread, NULL, &getAmdGpuUsage, NULL);
