@@ -2195,15 +2195,18 @@ static VkResult overlay_QueuePresentKHR(
          struct swapchain_data *swapchain_data =
             FIND(struct swapchain_data, swapchain);
 
+         uint32_t image_index = pPresentInfo->pImageIndices[i];
+
          before_present(swapchain_data,
                         queue_data,
                         pPresentInfo->pWaitSemaphores,
                         pPresentInfo->waitSemaphoreCount,
-                        pPresentInfo->pImageIndices[i]);
+                        image_index);
 
          VkPresentInfoKHR present_info = *pPresentInfo;
          present_info.swapchainCount = 1;
          present_info.pSwapchains = &swapchain;
+         present_info.pImageIndices = &image_index;
 
          uint64_t ts0 = os_time_get();
          result = queue_data->device->vtable.QueuePresentKHR(queue, &present_info);
@@ -2215,11 +2218,13 @@ static VkResult overlay_QueuePresentKHR(
          VkSwapchainKHR swapchain = pPresentInfo->pSwapchains[i];
          struct swapchain_data *swapchain_data =
             FIND(struct swapchain_data, swapchain);
+
+         uint32_t image_index = pPresentInfo->pImageIndices[i];
+
          VkPresentInfoKHR present_info = *pPresentInfo;
          present_info.swapchainCount = 1;
          present_info.pSwapchains = &swapchain;
-
-         uint32_t image_index = pPresentInfo->pImageIndices[i];
+         present_info.pImageIndices = &image_index;
 
          struct overlay_draw *draw = before_present(swapchain_data,
                                                     queue_data,
