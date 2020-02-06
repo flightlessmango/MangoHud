@@ -213,29 +213,33 @@ parse_overlay_env(struct overlay_params *params,
    if (params->height != 140)
       heightChanged = true;
 
-   int FrameTimeGraphHeight = 0;
-   if (params->enabled[OVERLAY_PARAM_ENABLED_frame_timing])
-    FrameTimeGraphHeight = 50;
-
    if (!params->font_size)
       params->font_size = 24.0f;
 
-   if (params->font_size && !heightChanged)
-      params->height = (params->font_size - 3 * 2) * 3 + FrameTimeGraphHeight;
+   int FrameTimeGraphHeight = 0;
+   
+   if (!heightChanged){
+      if (params->enabled[OVERLAY_PARAM_ENABLED_frame_timing])
+         FrameTimeGraphHeight = 50 + params->font_size / 2;
 
-   // Apply more hud height if cores are enabled
-   if (params->enabled[OVERLAY_PARAM_ENABLED_core_load] && !heightChanged)
-     params->height += ((params->font_size - 3) * get_nprocs());
+      if (params->font_size)
+         params->height = (params->font_size - 3 * 2) * 3 + FrameTimeGraphHeight;
 
-   if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
-      params->height += (params->font_size - 3);
+      // Apply more hud height if cores are enabled
+      if (params->enabled[OVERLAY_PARAM_ENABLED_core_load])
+         params->height += ((params->font_size - 3) * get_nprocs());
 
-   if (params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats])
-      params->height += (params->font_size - 3);
+      if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
+         params->height += ((params->font_size) / 2);
 
-   if (params->enabled[OVERLAY_PARAM_ENABLED_ram])
-      params->height += (params->font_size - 3);
+      if (params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats])
+         params->height += ((params->font_size) / 2);
 
-   if (params->enabled[OVERLAY_PARAM_ENABLED_vram])
-      params->height += (params->font_size - 3);
+      if (params->enabled[OVERLAY_PARAM_ENABLED_ram])
+         params->height += (params->font_size - 3);
+
+      if (params->enabled[OVERLAY_PARAM_ENABLED_vram])
+         params->height += (params->font_size - 3);
+   }
+
 }     
