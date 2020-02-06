@@ -909,7 +909,6 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
       driver = exec("glxinfo | grep 'OpenGL version' | sed 's/^.*: //' | cut -d' ' --output-delimiter=$'\n' -f1- | grep -v '(' | grep -v ')' | tr '\n' ' ' | cut -c 1-");
       trim(driver);
       //driver = itox(device_data->properties.driverVersion);
-      cout << gpu << endl;
 
 #ifndef NDEBUG
       std::cout << "Ram:" << ram << "\n"
@@ -1262,8 +1261,14 @@ static void compute_swapchain_display(struct swapchain_data *data)
             ImGui::PlotLines(hash, get_time_stat, data,
                                  ARRAY_SIZE(data->frames_stats), 0,
                                  NULL, min_time, max_time,
-                                 ImVec2(ImGui::GetContentRegionAvailWidth(), 50));
+                                 ImVec2(ImGui::GetContentRegionAvailWidth() - instance_data->params.font_size * 2.2, 50));
          }
+      }
+      if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
+         ImGui::SameLine(0,1.0f);
+         ImGui::PushFont(font1);
+         ImGui::Text("%.1f ms", 1000 / data->fps);
+         ImGui::PopFont();
          ImGui::PopStyleColor();
       }
       data->window_size = ImVec2(data->window_size.x, ImGui::GetCursorPosY() + 10.0f);
@@ -1271,8 +1276,8 @@ static void compute_swapchain_display(struct swapchain_data *data)
    ImGui::End();
    if(loggingOn){
       ImGui::SetNextWindowBgAlpha(0.01);
-      ImGui::SetNextWindowSize(ImVec2(200, 100), ImGuiCond_Always);
-      ImGui::SetNextWindowPos(ImVec2(data->width - 200,
+      ImGui::SetNextWindowSize(ImVec2(instance_data->params.font_size * 13, instance_data->params.font_size * 13), ImGuiCond_Always);
+      ImGui::SetNextWindowPos(ImVec2(data->width - instance_data->params.font_size * 13,
                                     0),
                                     ImGuiCond_Always);
       ImGui::Begin("Logging", &open, ImGuiWindowFlags_NoDecoration);
@@ -2574,6 +2579,7 @@ static VkResult overlay_CreateInstance(
    
    int font_size;
    instance_data->params.font_size > 0 ? font_size = instance_data->params.font_size : font_size = 24;
+   instance_data->params.font_size > 0 ? font_size = instance_data->params.font_size : instance_data->params.font_size = 24;
    
    hudSpacing = font_size / 2;
    hudFirstRow = font_size * 5;
