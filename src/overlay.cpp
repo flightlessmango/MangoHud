@@ -1225,8 +1225,6 @@ static void compute_swapchain_display(struct swapchain_data *data)
             ImGui::PopFont();
          }
       }
-      // ImGui::ProgressBar(float(0.5), ImVec2(ImGui::GetContentRegionAvailWidth(), 21), NULL);
-      ImGui::Dummy(ImVec2(0.0f, 20.0f));
 
       if (loggingOn && log_period == 0){
          uint64_t now = os_time_get();
@@ -1237,21 +1235,11 @@ static void compute_swapchain_display(struct swapchain_data *data)
          out << fps << "," <<  cpuLoadLog << "," << gpuLoadLog << "," << (now - log_start) << endl;
       }
 
-      /* Recompute min/max */
-      for (uint32_t s = 0; s < OVERLAY_PARAM_ENABLED_MAX; s++) {
-         data->stats_min.stats[s] = UINT64_MAX;
-         data->stats_max.stats[s] = 0;
-      }
-      for (uint32_t f = 0; f < MIN2(data->n_frames, ARRAY_SIZE(data->frames_stats)); f++) {
-         for (uint32_t s = 0; s < OVERLAY_PARAM_ENABLED_MAX; s++) {
-            data->stats_min.stats[s] = MIN2(data->frames_stats[f].stats[s],
-                                          data->stats_min.stats[s]);
-            data->stats_max.stats[s] = MAX2(data->frames_stats[f].stats[s],
-                                          data->stats_max.stats[s]);
-         }
-      }
-      for (uint32_t s = 0; s < OVERLAY_PARAM_ENABLED_MAX; s++) {
-         assert(data->stats_min.stats[s] != UINT64_MAX);
+      if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
+         ImGui::Dummy(ImVec2(0.0f, instance_data->params.font_size / 2));
+         ImGui::PushFont(font1);
+         ImGui::TextColored(ImVec4(0.925, 0.411, 0.411, 1.00f), "%s", "Frametime");
+         ImGui::PopFont();
       }
 
       for (uint32_t s = 0; s < OVERLAY_PARAM_ENABLED_MAX; s++) {
