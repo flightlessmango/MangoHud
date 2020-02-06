@@ -1706,28 +1706,33 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
 
    device_data->vtable.CmdEndRenderPass(draw->command_buffer);
 
-   /* Bounce the image to display back to present layout. */
-   imb.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-   imb.pNext = nullptr;
-   imb.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-   imb.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-   imb.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-   imb.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-   imb.image = data->images[image_index];
-   imb.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-   imb.subresourceRange.baseMipLevel = 0;
-   imb.subresourceRange.levelCount = 1;
-   imb.subresourceRange.baseArrayLayer = 0;
-   imb.subresourceRange.layerCount = 1;
-   imb.srcQueueFamilyIndex = device_data->graphic_queue->family_index;
-   imb.dstQueueFamilyIndex = present_queue->family_index;
-   device_data->vtable.CmdPipelineBarrier(draw->command_buffer,
-                                          VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-                                          VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-                                          0,          /* dependency flags */
-                                          0, nullptr, /* memory barriers */
-                                          0, nullptr, /* buffer memory barriers */
-                                          1, &imb);   /* image memory barriers */
+   if (device_data->graphic_queue->family_index != present_queue->family_index)
+   {
+      /* Transfer the image back to the present queue family
+       * image layout was already changed to present by the render pass
+       */
+      imb.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+      imb.pNext = nullptr;
+      imb.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+      imb.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+      imb.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+      imb.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+      imb.image = data->images[image_index];
+      imb.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+      imb.subresourceRange.baseMipLevel = 0;
+      imb.subresourceRange.levelCount = 1;
+      imb.subresourceRange.baseArrayLayer = 0;
+      imb.subresourceRange.layerCount = 1;
+      imb.srcQueueFamilyIndex = device_data->graphic_queue->family_index;
+      imb.dstQueueFamilyIndex = present_queue->family_index;
+      device_data->vtable.CmdPipelineBarrier(draw->command_buffer,
+                                             VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+                                             VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+                                             0,          /* dependency flags */
+                                             0, nullptr, /* memory barriers */
+                                             0, nullptr, /* buffer memory barriers */
+                                             1, &imb);   /* image memory barriers */
+   }
 
    device_data->vtable.EndCommandBuffer(draw->command_buffer);
 
