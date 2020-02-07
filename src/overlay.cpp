@@ -24,6 +24,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <thread>
+#include <chrono>
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_layer.h>
@@ -55,13 +57,14 @@
 bool open = false, displayHud = true;
 string gpuString;
 float offset_x, offset_y, hudSpacing;
-int hudFirstRow, hudSecondRow;
+int hudFirstRow, hudSecondRow, frameOverhead = 0;
 const char* offset_x_env = std::getenv("X_OFFSET");
 const char* offset_y_env = std::getenv("Y_OFFSET");
 string engineName, engineVersion;
 ImFont* font = nullptr;
 ImFont* font1 = nullptr;
 struct amdGpu amdgpu;
+double frameStart, frameEnd, targetFrameTime;
 
 /* Mapped from VkInstace/VkPhysicalDevice */
 struct instance_data {
@@ -2141,10 +2144,29 @@ static void overlay_DestroySwapchainKHR(
    destroy_swapchain_data(swapchain_data);
 }
 
+void getFpsLimit(){
+   const char *fpsLimit = std::getenv("FPS");
+   if (fpsLimit != nullptr && !string(fpsLimit).empty()) {
+      double fps = stod(fpsLimit);
+      targetFrameTime = double(1000000000.0f / fps);
+   }
+}
+
+void FpsLimiter(){
+   uint64_t now = os_time_get();
+   int sleepTime = targetFrameTime - (now - frameEnd);
+   this_thread::sleep_for(chrono::nanoseconds(sleepTime + frameOverhead));
+   frameOverhead = (now - frameStart);
+}
+
 static VkResult overlay_QueuePresentKHR(
     VkQueue                                     queue,
     const VkPresentInfoKHR*                     pPresentInfo)
 {
+   uint64_t now = os_time_get();
+   frameStart = now;
+   FpsLimiter();
+   frameEnd = now;
    struct queue_data *queue_data = FIND(struct queue_data, queue);
    struct device_data *device_data = queue_data->device;
    struct instance_data *instance_data = device_data->instance;
@@ -2553,6 +2575,8 @@ static VkResult overlay_CreateInstance(
 
    if (engineName == "vkd3d")
       engineName = "VKD3D";
+
+   getFpsLimit();
    
    assert(chain_info->u.pLayerInfo);
    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr =
