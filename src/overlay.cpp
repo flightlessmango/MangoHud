@@ -26,6 +26,7 @@
 #include <assert.h>
 #include <thread>
 #include <chrono>
+#include <unordered_map>
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_layer.h>
@@ -2123,11 +2124,19 @@ static VkResult overlay_CreateSwapchainKHR(
     VkSwapchainKHR*                             pSwapchain)
 {
    struct device_data *device_data = FIND(struct device_data, device);
+   std::array<VkPresentModeKHR, 4> modes = {VK_PRESENT_MODE_FIFO_RELAXED_KHR,
+           VK_PRESENT_MODE_IMMEDIATE_KHR,
+           VK_PRESENT_MODE_MAILBOX_KHR,
+           VK_PRESENT_MODE_FIFO_KHR};
+
+   if (device_data->instance->params.vsync < 4)
+      const_cast<VkSwapchainCreateInfoKHR*> (pCreateInfo)->presentMode = modes[device_data->instance->params.vsync];
+
    VkResult result = device_data->vtable.CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
    if (result != VK_SUCCESS) return result;
-
    struct swapchain_data *swapchain_data = new_swapchain_data(*pSwapchain, device_data);
    setup_swapchain_data(swapchain_data, pCreateInfo);
+   
    return result;
 }
 
@@ -2552,6 +2561,7 @@ static VkResult overlay_CreateInstance(
 {
    VkLayerInstanceCreateInfo *chain_info =
       get_instance_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+      
 
    const char* pEngineName = pCreateInfo->pApplicationInfo->pEngineName;
    if (pEngineName)

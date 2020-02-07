@@ -85,6 +85,12 @@ parse_fps_limit(const char *str)
    return strtol(str, NULL, 0);
 }
 
+static uint32_t
+parse_vsync(const char *str)
+{
+   return strtol(str, NULL, 0);
+}
+
 static bool
 parse_no_display(const char *str)
 {
@@ -99,6 +105,7 @@ parse_unsigned(const char *str)
 
 #define parse_width(s) parse_unsigned(s)
 #define parse_height(s) parse_unsigned(s)
+#define parse_vsync(s) parse_unsigned(s)
 
 static bool
 parse_help(const char *str)
@@ -190,6 +197,7 @@ parse_overlay_env(struct overlay_params *params,
    params->height = 140;
    params->control = -1;
    params->fps_limit = 0;
+   params->vsync = -1;
 
    if (!env)
       return;

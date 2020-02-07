@@ -53,6 +53,7 @@ extern "C" {
    OVERLAY_PARAM_CUSTOM(no_display)                  \
    OVERLAY_PARAM_CUSTOM(control)                     \
    OVERLAY_PARAM_CUSTOM(fps_limit)                   \
+   OVERLAY_PARAM_CUSTOM(vsync)                       \
    OVERLAY_PARAM_CUSTOM(font_size)                   \
    OVERLAY_PARAM_CUSTOM(help)
 
@@ -83,6 +84,7 @@ struct overlay_params {
    bool no_display;
    unsigned width;
    unsigned height;
+   unsigned vsync;
    float font_size;
 };
 
