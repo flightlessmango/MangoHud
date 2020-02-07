@@ -57,7 +57,7 @@
 bool open = false, displayHud = true;
 string gpuString;
 float offset_x, offset_y, hudSpacing;
-int hudFirstRow, hudSecondRow, frameOverhead = 0;
+int hudFirstRow, hudSecondRow, frameOverhead = 0, sleepTime = 0;
 const char* offset_x_env = std::getenv("X_OFFSET");
 const char* offset_y_env = std::getenv("Y_OFFSET");
 string engineName, engineVersion;
@@ -2153,20 +2153,20 @@ void getFpsLimit(){
 }
 
 void FpsLimiter(){
-   uint64_t now = os_time_get();
-   int sleepTime = targetFrameTime - (now - frameEnd);
-   this_thread::sleep_for(chrono::nanoseconds(sleepTime + frameOverhead));
+   int64_t now = os_time_get_nano();
+   sleepTime = targetFrameTime - (now - frameEnd);
+   this_thread::sleep_for(chrono::nanoseconds(sleepTime - frameOverhead));
    frameOverhead = (now - frameStart);
+   cout << frameOverhead << endl;
 }
 
 static VkResult overlay_QueuePresentKHR(
     VkQueue                                     queue,
     const VkPresentInfoKHR*                     pPresentInfo)
 {
-   uint64_t now = os_time_get();
-   frameStart = now;
+   frameStart = os_time_get_nano();
    FpsLimiter();
-   frameEnd = now;
+   frameEnd = os_time_get_nano();
    struct queue_data *queue_data = FIND(struct queue_data, queue);
    struct device_data *device_data = queue_data->device;
    struct instance_data *instance_data = device_data->instance;
