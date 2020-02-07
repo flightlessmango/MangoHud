@@ -79,6 +79,12 @@ parse_fps_sampling_period(const char *str)
    return strtol(str, NULL, 0) * 1000;
 }
 
+static uint32_t
+parse_fps_limit(const char *str)
+{
+   return strtol(str, NULL, 0);
+}
+
 static bool
 parse_no_display(const char *str)
 {
@@ -183,6 +189,7 @@ parse_overlay_env(struct overlay_params *params,
    params->width = 280;
    params->height = 140;
    params->control = -1;
+   params->fps_limit = 0;
 
    if (!env)
       return;

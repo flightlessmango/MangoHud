@@ -52,6 +52,7 @@ extern "C" {
    OVERLAY_PARAM_CUSTOM(height)                      \
    OVERLAY_PARAM_CUSTOM(no_display)                  \
    OVERLAY_PARAM_CUSTOM(control)                     \
+   OVERLAY_PARAM_CUSTOM(fps_limit)                   \
    OVERLAY_PARAM_CUSTOM(font_size)                   \
    OVERLAY_PARAM_CUSTOM(help)
 
@@ -77,6 +78,7 @@ struct overlay_params {
    FILE *output_file;
    int control;
    uint32_t fps_sampling_period; /* us */
+   uint32_t fps_limit;
    bool help;
    bool no_display;
    unsigned width;

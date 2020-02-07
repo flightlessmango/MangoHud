@@ -2144,20 +2144,11 @@ static void overlay_DestroySwapchainKHR(
    destroy_swapchain_data(swapchain_data);
 }
 
-void getFpsLimit(){
-   const char *fpsLimit = std::getenv("FPS");
-   if (fpsLimit != nullptr && !string(fpsLimit).empty()) {
-      double fps = stod(fpsLimit);
-      targetFrameTime = double(1000000000.0f / fps);
-   }
-}
-
 void FpsLimiter(){
    int64_t now = os_time_get_nano();
    sleepTime = targetFrameTime - (now - frameEnd);
    this_thread::sleep_for(chrono::nanoseconds(sleepTime - frameOverhead));
    frameOverhead = (now - frameStart);
-   cout << frameOverhead << endl;
 }
 
 static VkResult overlay_QueuePresentKHR(
@@ -2576,8 +2567,6 @@ static VkResult overlay_CreateInstance(
    if (engineName == "vkd3d")
       engineName = "VKD3D";
 
-   getFpsLimit();
-   
    assert(chain_info->u.pLayerInfo);
    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr =
       chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
@@ -2600,7 +2589,9 @@ static VkResult overlay_CreateInstance(
    instance_data_map_physical_devices(instance_data, true);
 
    parse_overlay_env(&instance_data->params, getenv("MANGOHUD_CONFIG"));
-   
+   if (instance_data->params.fps_limit > 0)
+      targetFrameTime = double(1000000000.0f / instance_data->params.fps_limit);
+
    int font_size;
    instance_data->params.font_size > 0 ? font_size = instance_data->params.font_size : font_size = 24;
    instance_data->params.font_size > 0 ? font_size = instance_data->params.font_size : instance_data->params.font_size = 24;
