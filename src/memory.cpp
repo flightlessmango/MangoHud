@@ -37,7 +37,9 @@ memory_information update_meminfo() {
                      cureasyfree = 0, memavail = 0;
   memory_information mem_info {};
 
-  if (!(meminfo_fp = open_file("/proc/meminfo", &reported))) { }
+  if (!(meminfo_fp = open_file("/proc/meminfo", &reported))) {
+      return mem_info;
+  }
 
   while (!feof(meminfo_fp)) {
     if (fgets(buf, 255, meminfo_fp) == nullptr) { break; }
