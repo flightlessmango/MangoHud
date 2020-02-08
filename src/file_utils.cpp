@@ -57,6 +57,11 @@ std::vector<std::string> ls(const char* root, const char* prefix, LS_FLAGS flags
     }
 
     while ((dp = readdir(dirp))) {
+        if ((prefix && !starts_with(dp->d_name, prefix))
+            || !strcmp(dp->d_name, ".")
+            || !strcmp(dp->d_name, ".."))
+            continue;
+
         if (dp->d_type == DT_LNK) {
             struct stat s;
             std::string path(root);
@@ -74,10 +79,6 @@ std::vector<std::string> ls(const char* root, const char* prefix, LS_FLAGS flags
         } else if (((flags & LS_DIRS) && dp->d_type == DT_DIR)
             || ((flags & LS_FILES) && dp->d_type == DT_REG)
         ) {
-            if ((prefix && !starts_with(dp->d_name, prefix))
-                || !strcmp(dp->d_name, ".")
-                || !strcmp(dp->d_name, ".."))
-                continue;
             list.push_back(dp->d_name);
         }
     }
