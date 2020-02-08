@@ -1068,19 +1068,6 @@ static float get_time_stat(void *_data, int _idx)
    return data->frames_stats[idx].stats[data->stat_selector] / data->time_dividor;
 }
 
-static float get_stat(void *_data, int _idx)
-{
-   struct swapchain_data *data = (struct swapchain_data *) _data;
-   if ((ARRAY_SIZE(data->frames_stats) - _idx) > data->n_frames)
-      return 0.0f;
-   int idx = ARRAY_SIZE(data->frames_stats) +
-      data->n_frames < ARRAY_SIZE(data->frames_stats) ?
-      _idx - data->n_frames :
-      _idx + data->n_frames;
-   idx %= ARRAY_SIZE(data->frames_stats);
-   return data->frames_stats[idx].stats[data->stat_selector];
-}
-
 static void position_layer(struct swapchain_data *data)
 
 {
