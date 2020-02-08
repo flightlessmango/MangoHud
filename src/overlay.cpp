@@ -1110,7 +1110,11 @@ static void position_layer(struct swapchain_data *data)
       margin = 0.0f;
 
    ImGui::SetNextWindowBgAlpha(0.5);
-   ImGui::SetNextWindowSize(ImVec2(instance_data->params.width, instance_data->params.height), ImGuiCond_Always);
+   ImGui::SetNextWindowSize(ImVec2(instance_data->params.width, instance_data->params.height
+#ifndef NDEBUG
+      + instance_data->params.font_size
+#endif
+   ), ImGuiCond_Always);
    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,-3));
 
@@ -1257,6 +1261,14 @@ static void compute_swapchain_display(struct swapchain_data *data)
 
          out << fps << "," <<  cpuLoadLog << "," << gpuLoadLog << "," << (now - log_start) << endl;
       }
+
+#ifndef NDEBUG
+         // preserve some sanity trying to figure out if we are _really_ running the latest build
+         ImGui::Dummy(ImVec2(0.0f, instance_data->params.font_size / 2));
+         ImGui::PushFont(font1);
+         ImGui::TextColored(ImVec4(1, 1, 1, 1), "%s", __DATE__ " " __TIME__);
+         ImGui::PopFont();
+#endif
 
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
          ImGui::Dummy(ImVec2(0.0f, instance_data->params.font_size / 2));
