@@ -1263,13 +1263,13 @@ static void compute_swapchain_display(struct swapchain_data *data)
                                  NULL, min_time, max_time,
                                  ImVec2(ImGui::GetContentRegionAvailWidth() - instance_data->params.font_size * 2.2, 50));
          }
+         ImGui::PopStyleColor();
       }
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
          ImGui::SameLine(0,1.0f);
          ImGui::PushFont(font1);
          ImGui::Text("%.1f ms", 1000 / data->fps);
          ImGui::PopFont();
-         ImGui::PopStyleColor();
       }
       data->window_size = ImVec2(data->window_size.x, ImGui::GetCursorPosY() + 10.0f);
    }
