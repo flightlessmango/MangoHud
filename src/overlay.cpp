@@ -65,7 +65,7 @@ string engineName, engineVersion;
 ImFont* font = nullptr;
 ImFont* font1 = nullptr;
 struct amdGpu amdgpu;
-double frameStart, frameEnd, targetFrameTime;
+double frameStart, frameEnd, targetFrameTime = 0;
 
 /* Mapped from VkInstace/VkPhysicalDevice */
 struct instance_data {
@@ -2124,7 +2124,7 @@ static VkResult overlay_CreateSwapchainKHR(
     VkSwapchainKHR*                             pSwapchain)
 {
    struct device_data *device_data = FIND(struct device_data, device);
-   std::array<VkPresentModeKHR, 4> modes = {VK_PRESENT_MODE_FIFO_RELAXED_KHR,
+   array<VkPresentModeKHR, 4> modes = {VK_PRESENT_MODE_FIFO_RELAXED_KHR,
            VK_PRESENT_MODE_IMMEDIATE_KHR,
            VK_PRESENT_MODE_MAILBOX_KHR,
            VK_PRESENT_MODE_FIFO_KHR};
@@ -2164,9 +2164,11 @@ static VkResult overlay_QueuePresentKHR(
     VkQueue                                     queue,
     const VkPresentInfoKHR*                     pPresentInfo)
 {
-   frameStart = os_time_get_nano();
-   FpsLimiter();
-   frameEnd = os_time_get_nano();
+   if (targetFrameTime > 0){
+      frameStart = os_time_get_nano();
+      FpsLimiter();
+      frameEnd = os_time_get_nano();
+   }
    struct queue_data *queue_data = FIND(struct queue_data, queue);
    struct device_data *device_data = queue_data->device;
    struct instance_data *instance_data = device_data->instance;
