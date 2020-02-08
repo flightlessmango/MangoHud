@@ -45,7 +45,7 @@ dependencies() {
                 install
             ;;
             *"buntu"|"Linux Mint"|"Debian")
-                MANAGER_QUERY="dpkg-query -l"
+                MANAGER_QUERY="dpkg-query -s"
                 MANAGER_INSTALL="apt install"
                 DEPS="{gcc,g++,gcc-multilib,g++-multilib,ninja-build,python3-pip,python3-setuptools,python3-wheel,pkg-config,mesa-common-dev,libx11-dev:i386}"
                 install
