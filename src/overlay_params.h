@@ -45,6 +45,7 @@ extern "C" {
    OVERLAY_PARAM_BOOL(gpu_stats)                     \
    OVERLAY_PARAM_BOOL(ram)                           \
    OVERLAY_PARAM_BOOL(vram)                          \
+   OVERLAY_PARAM_BOOL(crosshair)                     \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
    OVERLAY_PARAM_CUSTOM(position)                    \
@@ -53,6 +54,7 @@ extern "C" {
    OVERLAY_PARAM_CUSTOM(no_display)                  \
    OVERLAY_PARAM_CUSTOM(control)                     \
    OVERLAY_PARAM_CUSTOM(font_size)                   \
+   OVERLAY_PARAM_CUSTOM(crosshair_size)              \
    OVERLAY_PARAM_CUSTOM(help)
 
 enum overlay_param_position {
@@ -77,6 +79,7 @@ struct overlay_params {
    FILE *output_file;
    int control;
    uint32_t fps_sampling_period; /* us */
+   uint32_t crosshair_size;
    bool help;
    bool no_display;
    unsigned width;

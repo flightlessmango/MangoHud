@@ -1135,7 +1135,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
 
    if(displayHud)
 	   ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
-
+      
    if(!displayHud){
       ImGui::SetNextWindowBgAlpha(0.01);
       ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
@@ -1284,11 +1284,21 @@ static void compute_swapchain_display(struct swapchain_data *data)
       ImGui::Text("Logging...");
       ImGui::Text("Elapsed: %isec", int((elapsedLog) / 1000000));
       ImGui::End();
-   }  
-   ImGui::PopStyleVar(2);
-   ImGui::EndFrame();
-   ImGui::Render();
-
+   }
+   if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_crosshair]){
+      ImGui::SetNextWindowBgAlpha(0.0);
+      ImGui::SetNextWindowSize(ImVec2(data->width, data->height), ImGuiCond_Always);
+      ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
+      ImGui::Begin("Logging", &open, ImGuiWindowFlags_NoDecoration);
+      ImVec2 horiz = ImVec2(data->width / 2 - (instance_data->params.crosshair_size / 2), data->height / 2);
+      ImVec2 vert = ImVec2(data->width / 2, data->height / 2 - (instance_data->params.crosshair_size / 2));
+      ImGui::GetWindowDrawList()->AddLine(horiz, ImVec2(horiz.x + instance_data->params.crosshair_size, horiz.y + 0), IM_COL32(0, 0, 0, 255), 2.0f);
+      ImGui::GetWindowDrawList()->AddLine(vert, ImVec2(vert.x + 0, vert.y + instance_data->params.crosshair_size), IM_COL32(0, 0, 0, 255), 2.0f);
+      ImGui::End();
+   }
+      ImGui::PopStyleVar(2);
+      ImGui::EndFrame();
+      ImGui::Render();
 }
 
 static uint32_t vk_memory_type(struct device_data *data,
