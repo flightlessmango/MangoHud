@@ -1,20 +1,15 @@
-#include <cmath>
-#include <iomanip>
 #include <array>
 #include <vector>
-#include <algorithm>
-#include <iterator>
-#include <thread>
 #include <sstream>
-#include <fstream>
-#include <stdlib.h>
-#include <stdio.h>
 #include <iostream>
 #include <string>
-#include <sstream>
-#include <regex>
+#include <mutex>
+#include <tuple>
+
 #include "nvidia_info.h"
 #include "memory.h"
+#include "cpu.h"
+#include "async.h"
 
 using namespace std;
 
@@ -24,15 +19,6 @@ float gpuMemUsed = 0, gpuMemTotal = 0;
 
 int numCpuCores = std::thread::hardware_concurrency();
 pthread_t cpuThread, gpuThread, cpuInfoThread;
-
-struct amdGpu {
-    int load;
-    int temp;
-    int64_t memoryUsed;
-    int64_t memoryTotal;
-};
-
-extern struct amdGpu amdgpu;
 
 string exec(string command) {
    char buffer[128];
@@ -56,69 +42,136 @@ string exec(string command) {
    return result;
 }
 
+struct gpu_stats {
+    virtual ~gpu_stats(){}
+    typedef std::tuple<bool, int, int, float, float> my_type;
+    virtual my_type get() = 0;
+    auto run ()
+    {
+        return runAsyncAndCatch<my_type>(&gpu_stats::get, this);
+    }
+protected:
+    std::mutex m;
+};
 
-void *cpuInfo(void *){
-    rewind(cpuTempFile);
-    fflush(cpuTempFile);
-    if (fscanf(cpuTempFile, "%d", &cpuTemp) != 1)
-        cpuTemp = 0;
-    cpuTemp /= 1000;
-    pthread_detach(cpuInfoThread);
+struct async_get_int {
+    virtual ~async_get_int(){}
+    typedef std::tuple<bool, int> my_type;
+    virtual my_type get() = 0;
+    auto run ()
+    {
+        return runAsyncAndCatch<my_type>(&async_get_int::get, this);
+    }
+protected:
+    std::mutex m;
+};
 
-    return NULL;
-}
-
-void *getNvidiaGpuInfo(void *){
-    if (!nvmlSuccess)
-        checkNvidia();
-
-    if (nvmlSuccess){
-        getNvidiaInfo();
-        gpuLoad = nvidiaUtilization.gpu;
-        gpuTemp = nvidiaTemp;
-        gpuMemUsed = float(nvidiaMemory.used / (1024 * 1024)) / 1000;
+struct cpu_stats_updater {
+    const CPUData& GetCPUDataTotal() const {
+        return stats.GetCPUDataTotal();
     }
 
-    pthread_detach(gpuThread);
-    return NULL;
-}
-
-void *getAmdGpuUsage(void *){
-    if (amdGpuFile) {
-        rewind(amdGpuFile);
-        fflush(amdGpuFile);
-        if (fscanf(amdGpuFile, "%d", &amdgpu.load) != 1)
-            amdgpu.load = 0;
-        gpuLoad = amdgpu.load;
+    const std::vector<CPUData>& GetCPUData() const {
+        return stats.GetCPUData();
     }
 
-    if (amdTempFile) {
-        rewind(amdTempFile);
-        fflush(amdTempFile);
-        if (fscanf(amdTempFile, "%d", &amdgpu.temp) != 1)
-            amdgpu.temp = 0;
-        amdgpu.temp /= 1000;
-        gpuTemp = amdgpu.temp;
+    bool get() {
+        std::lock_guard<std::mutex> lk(m);
+        return stats.UpdateCPUData();
     }
 
-    if (amdGpuVramTotalFile) {
-        rewind(amdGpuVramTotalFile);
-        fflush(amdGpuVramTotalFile);
-        if (fscanf(amdGpuVramTotalFile, "%" PRId64, &amdgpu.memoryTotal) != 1)
-            amdgpu.memoryTotal = 0;
-        amdgpu.memoryTotal /= (1024 * 1024);
-        gpuMemTotal = amdgpu.memoryTotal;
+    auto run () {
+        return runAsyncAndCatch<bool>(&cpu_stats_updater::get, this);
+    }
+protected:
+    CPUStats stats;
+    std::mutex m;
+};
+
+struct cpu_temp : public async_get_int {
+    cpu_temp(FILE* h) : handle(h) {};
+    my_type get()
+    {
+        std::lock_guard<std::mutex> lk(m);
+        int cpuTemp = 0;
+        rewind(handle);
+        fflush(handle);
+        if (fscanf(handle, "%d", &cpuTemp) != 1)
+            cpuTemp = 0;
+        cpuTemp /= 1000;
+        return my_type(true, cpuTemp);
+    }
+private:
+    FILE* handle = nullptr;
+};
+
+struct nvidia_gpu_stats : public gpu_stats
+{
+    my_type get()
+    {
+        std::lock_guard<std::mutex> lk(m);
+        int load = 0, temp = 0;
+        float used = 0, total = 0;
+        (void)total;
+
+        bool ret = false;
+        if (checkNvidia()){
+            ret = getNvidiaInfo(load, temp, used);
+        }
+        return my_type(ret, load, temp, used, 0);
+    }
+};
+
+struct amdgpu_gpu_stats : public gpu_stats {
+
+    amdgpu_gpu_stats (FILE *busy, FILE *temp, FILE *used, FILE *total)
+    : hbusy(busy)
+    , htemp(temp)
+    , hused(used)
+    //, htotal(total)
+    {
+        if (total) {
+            rewind(total);
+            fflush(total);
+            if (fscanf(total, "%" PRId64, &memTotal) != 1)
+                memTotal = 0;
+            memTotal /= (1024 * 1024);
+            fclose(total);
+        }
     }
 
-    if (amdGpuVramUsedFile) {
-        rewind(amdGpuVramUsedFile);
-        fflush(amdGpuVramUsedFile);
-        if (fscanf(amdGpuVramUsedFile, "%" PRId64, &amdgpu.memoryUsed) != 1)
-            amdgpu.memoryUsed = 0;
-        amdgpu.memoryUsed /= (1024 * 1024);
-        gpuMemUsed = float(amdgpu.memoryUsed) / 1000;
-    }
+    my_type get()
+    {
+        std::lock_guard<std::mutex> lk(m);
+        int load, temp;
+        int64_t used, total = memTotal;
 
-    pthread_detach(gpuThread);
-    return NULL;
-}
+        if (hbusy) {
+            rewind(hbusy);
+            fflush(hbusy);
+            if (fscanf(hbusy, "%d", &load) != 1)
+                load = 0;
+        }
+
+        if (htemp) {
+            rewind(htemp);
+            fflush(htemp);
+            if (fscanf(htemp, "%d", &temp) != 1)
+                temp = 0;
+            temp /= 1000;
+        }
+
+        if (hused) {
+            rewind(hused);
+            fflush(hused);
+            if (fscanf(hused, "%" PRId64, &used) != 1)
+                used = 0;
+            used /= (1024.f * 1024.f);
+        }
+        return my_type(true, load, temp, used, total);
+    }
+private:
+    int64_t memTotal = 0;
+    FILE *hbusy = nullptr, *htemp = nullptr;
+    FILE *hused = nullptr, *htotal = nullptr;
+};

@@ -124,14 +124,7 @@ bool CPUStats::Init()
 			m_cpuData.push_back(cpu);
 
 		} else if (starts_with(line, "btime ")) {
-
-			// C++ way, kind of noisy
-			//std::istringstream token( line );
-			//std::string s;
-			//token >> s;
-			//token >> m_boottime;
-
-			// assume that if btime got read, that everything else is OK too
+			// assume that if btime got read then everything else is OK too
 			sscanf(line.c_str(), "btime %lld\n", &m_boottime);
 			break;
 		}
@@ -144,7 +137,7 @@ bool CPUStats::Init()
 //TODO take sampling interval into account?
 bool CPUStats::UpdateCPUData()
 {
-    CPUStats::UpdateCoreMhz();
+	CPUStats::UpdateCoreMhz();
 	unsigned long long int usertime, nicetime, systemtime, idletime;
 	unsigned long long int ioWait, irq, softIrq, steal, guest, guestnice;
 	int cpuid = -1;
@@ -213,5 +206,3 @@ bool CPUStats::UpdateCoreMhz() {
     }
     return true;
 }
-
-CPUStats cpuStats;

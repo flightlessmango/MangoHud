@@ -1,8 +1,5 @@
-#include <stdio.h>
-#include <thread>
-
-extern pthread_t memoryThread;
-extern float memused, memmax;
+#include <mutex>
+#include "async.h"
 
 struct memory_information {
   /* memory information in kilobytes */
@@ -10,7 +7,23 @@ struct memory_information {
       memdirty;
   unsigned long long swap, swapfree, swapmax;
   unsigned long long bufmem, buffers, cached;
+
+  float memused_gib, memmax_gib;
 };
 
-void *update_meminfo(void*);
-FILE *open_file(const char *file, int *reported);
+memory_information update_meminfo();
+
+struct memory_updater
+{
+    memory_information get()
+    {
+        std::lock_guard<std::mutex> lk(m);
+        return update_meminfo();
+    }
+
+    auto run () {
+        return runAsyncAndCatch<memory_information>(&memory_updater::get, this);
+    }
+protected:
+    std::mutex m;
+};

@@ -1,12 +1,7 @@
 #include "memory.h"
-#include <iomanip>
 #include <cstring>
 #include <stdio.h>
-#include <iostream>
-#include <thread>
 
-struct memory_information mem_info;
-pthread_t memoryThread;
 float memused, memmax;
 
 FILE *open_file(const char *file, int *reported) {
@@ -25,7 +20,7 @@ FILE *open_file(const char *file, int *reported) {
   return fp;
 }
 
-void *update_meminfo(void *) {
+memory_information update_meminfo() {
   FILE *meminfo_fp;
   static int reported = 0;
 
@@ -40,10 +35,7 @@ void *update_meminfo(void *) {
    * the function by assigning the results to the information struct */
   unsigned long long shmem = 0, sreclaimable = 0, curmem = 0, curbufmem = 0,
                      cureasyfree = 0, memavail = 0;
-
-  mem_info.memmax = mem_info.memdirty = mem_info.swap = mem_info.swapfree = mem_info.swapmax =
-      mem_info.memwithbuffers = mem_info.buffers = mem_info.cached = mem_info.memfree =
-          mem_info.memeasyfree = 0;
+  memory_information mem_info {};
 
   if (!(meminfo_fp = open_file("/proc/meminfo", &reported))) { }
 
@@ -92,11 +84,11 @@ void *update_meminfo(void *) {
   mem_info.mem = curmem;
   mem_info.bufmem = curbufmem;
   mem_info.memeasyfree = cureasyfree;
-	
-  memused = (float(mem_info.memmax) - float(mem_info.memeasyfree)) / (1024 * 1024);
-  memmax = float(mem_info.memmax) / (1024 * 1024);
+
+  mem_info.memused_gib = (float(mem_info.memmax) - float(mem_info.memeasyfree)) / (1024 * 1024);
+  mem_info.memmax_gib = float(mem_info.memmax) / (1024 * 1024);
 
   fclose(meminfo_fp);
-  pthread_detach(memoryThread);
-  return NULL;
+
+  return mem_info;
 }

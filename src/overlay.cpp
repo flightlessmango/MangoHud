@@ -52,7 +52,6 @@
 #include "cpu_gpu.h"
 #include "logging.h"
 #include "keybinds.h"
-#include "cpu.h"
 #include "loaders/loader_nvml.h"
 
 bool open = false;
@@ -62,7 +61,6 @@ int hudFirstRow, hudSecondRow, frameOverhead = 0, sleepTime = 0;
 string engineName, engineVersion;
 ImFont* font = nullptr;
 ImFont* font1 = nullptr;
-struct amdGpu amdgpu;
 double frameStart, frameEnd, targetFrameTime = 0;
 
 #define RGBGetBValue(rgb)   (rgb & 0x000000FF)
@@ -88,6 +86,16 @@ struct instance_data {
 
    /* Dumping of frame stats to a file has been enabled and started. */
    bool capture_started;
+
+   struct cpu_temp *cpu_temp = nullptr;
+   std::future<async_get_int::my_type> cpu_temp_async;
+
+   struct cpu_stats_updater* cpu_stats = nullptr;
+   std::future<bool> cpu_stats_async;
+
+   memory_information memory;
+   struct memory_updater* mem_stats = nullptr;
+   std::future<memory_information> mem_stats_async;
 };
 
 struct frame_stat {
@@ -114,7 +122,10 @@ struct device_data {
 
    /* For a single frame */
    struct frame_stat frame_stats;
-   bool gpu_stats = false;
+
+   bool gpu_stats_enabled = false;
+   struct gpu_stats *gpu_stats = nullptr;
+   std::future<gpu_stats::my_type> gpu_async;
 };
 
 /* Mapped from VkCommandBuffer */
@@ -364,6 +375,12 @@ static void destroy_instance_data(struct instance_data *data)
       fclose(data->params.output_file);
    if (data->params.control >= 0)
       os_socket_close(data->params.control);
+   delete data->cpu_temp;
+   data->cpu_temp = nullptr;
+   delete data->cpu_stats;
+   data->cpu_stats = nullptr;
+   delete data->mem_stats;
+   data->mem_stats = nullptr;
    unmap_object(HKEY(data->instance));
    ralloc_free(data);
 }
@@ -484,6 +501,8 @@ static void device_unmap_queues(struct device_data *data)
 static void destroy_device_data(struct device_data *data)
 {
    unmap_object(HKEY(data->device));
+   delete data->gpu_stats;
+   data->gpu_stats = nullptr; // just in case
    ralloc_free(data);
 }
 
@@ -791,13 +810,13 @@ static void process_control_socket(struct instance_data *instance_data)
 
 void init_gpu_stats(struct device_data *device_data)
 {
-   struct instance_data *instance_data = device_data->instance;
-
    // NVIDIA or Intel but maybe has Optimus
    if (device_data->properties.vendorID == 0x8086
       || device_data->properties.vendorID == 0x10de) {
-      if ((device_data->gpu_stats = checkNvidia())) {
+      if ((device_data->gpu_stats_enabled = checkNvidia())) {
          device_data->properties.vendorID = 0x10de;
+         device_data->gpu_stats = new nvidia_gpu_stats();
+         device_data->gpu_stats->run();
       }
    }
 
@@ -841,17 +860,21 @@ void init_gpu_stats(struct device_data *device_data)
                if (!amdTempFile)
                   amdTempFile = fopen(path.c_str(), "r");
 
-               device_data->gpu_stats = true;
-               device_data->properties.vendorID = 0x1002;
+               if (amdGpuFile || amdTempFile || amdGpuVramTotalFile || amdGpuVramUsedFile) {
+                  device_data->gpu_stats_enabled = true;
+                  device_data->gpu_stats = new amdgpu_gpu_stats(amdGpuFile,
+                     amdTempFile, amdGpuVramUsedFile, amdGpuVramTotalFile);
+                  device_data->gpu_stats->run();
+                  device_data->properties.vendorID = 0x1002;
+               }
                break;
             }
          }
       }
+   }
 
-      // don't bother then
-      if (!amdGpuFile && !amdTempFile && !amdGpuVramTotalFile && !amdGpuVramUsedFile) {
-         device_data->gpu_stats = false;
-      }
+   if (device_data->gpu_stats) {
+      device_data->gpu_async = device_data->gpu_stats->run();
    }
 }
 
@@ -936,12 +959,11 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
       if (log_duration_env && !try_stoi(duration, log_duration_env))
         duration = 0;
 
+      std::string cpu_temp_path;
       if (cpu.find("Intel") != std::string::npos) {
          string path;
          if (find_folder("/sys/devices/platform/coretemp.0/hwmon/", "hwmon", path)) {
-           path = "/sys/devices/platform/coretemp.0/hwmon/" + path + "/temp1_input";
-           if (file_exists(path))
-              cpuTempFile = fopen(path.c_str(), "r");
+           cpu_temp_path = "/sys/devices/platform/coretemp.0/hwmon/" + path + "/temp1_input";
          }
       } else {
          string name, path;
@@ -953,15 +975,18 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
             name = read_line(path + "/name");
             std::cerr << "hwmon: sensor name: " << name << std::endl;
             if (name == "k10temp" || name == "zenpower"){
-               path += "/temp1_input";
+               cpu_temp_path = path + "/temp1_input";
                break;
             }
          }
-         if (!file_exists(path)) {
-            cout << "MANGOHUD: Could not find temp location" << endl;
-         } else {
-            cpuTempFile = fopen(path.c_str(), "r");
-         }
+      }
+
+      if (cpu_temp_path.empty() || !file_exists(cpu_temp_path)) {
+         cout << "MANGOHUD: Could not find temp location" << endl;
+      } else {
+         cpuTempFile = fopen(cpu_temp_path.c_str(), "r");
+         instance_data->cpu_temp = new cpu_temp(cpuTempFile);
+         instance_data->cpu_temp_async = instance_data->cpu_temp->run();
       }
 
       sysInfoFetched = true;
@@ -984,22 +1009,21 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
    if (data->last_fps_update) {
       if (capture_begin ||
           elapsed >= instance_data->params.fps_sampling_period) {
-            cpuStats.UpdateCPUData();
-            cpuLoadLog = cpuStats.GetCPUDataTotal().percent;
-            if (cpuTempFile)
-              pthread_create(&cpuInfoThread, NULL, &cpuInfo, NULL);
-            
-            if (device_data->gpu_stats) {
-              // get gpu usage
-              if (device_data->properties.vendorID == 0x10de)
-                 pthread_create(&gpuThread, NULL, &getNvidiaGpuInfo, NULL);
-
-              if (device_data->properties.vendorID == 0x1002)
-                pthread_create(&gpuThread, NULL, &getAmdGpuUsage, NULL);
+            if (instance_data->cpu_stats_async.valid()) {
+               instance_data->cpu_stats_async.get();
             }
 
-            // get ram usage/max
-            pthread_create(&memoryThread, NULL, &update_meminfo, NULL);
+            if (instance_data->cpu_temp)
+               instance_data->cpu_temp_async = instance_data->cpu_temp->run();
+            if (device_data->gpu_stats_enabled && device_data->gpu_stats)
+               device_data->gpu_async = device_data->gpu_stats->run();
+            if (instance_data->cpu_stats) {
+               cpuLoadLog = instance_data->cpu_stats->GetCPUDataTotal().percent;
+               instance_data->cpu_stats_async = instance_data->cpu_stats->run();
+            }
+            if (instance_data->mem_stats) {
+               instance_data->mem_stats_async = instance_data->mem_stats->run();
+            }
 
             // update variables for logging
             // cpuLoadLog = cpuArray[0].value;
@@ -1121,16 +1145,20 @@ static void compute_swapchain_display(struct swapchain_data *data)
    if (instance_data->params.font_size > 0 && instance_data->params.width == 280)
       instance_data->params.width = hudFirstRow + hudSecondRow;
 
-   if(!instance_data->params.no_display)
-	   ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
-      
    if(instance_data->params.no_display){
       ImGui::SetNextWindowBgAlpha(0.01);
-      ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
    }
-   
+
+   ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
+
    if (!instance_data->params.no_display){
-      if (device_data->gpu_stats && instance_data->params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
+      if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]
+                                             && device_data->gpu_stats){
+
+         bool valid = false;
+         if (device_data->gpu_async.valid()) // was run since last get()
+            std::tie(valid, gpuLoad, gpuTemp, gpuMemUsed, gpuMemTotal) = device_data->gpu_async.get();
+
          ImGui::TextColored(ImVec4(0.180, 0.592, 0.384, 1.00f), "GPU");
          ImGui::SameLine(hudFirstRow);
          ImGui::Text("%i%%", gpuLoad);
@@ -1148,15 +1176,21 @@ static void compute_swapchain_display(struct swapchain_data *data)
          // ImGui::SameLine(150);
          // ImGui::Text("%s", "%");
       
-         if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp]){
+         if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp]
+                                             && instance_data->cpu_temp){
+            bool valid = false;
+            if (instance_data->cpu_temp_async.valid()) // was run since last get()
+               std::tie(valid, cpuTemp) = instance_data->cpu_temp_async.get();
+
             ImGui::SameLine(hudSecondRow);
             ImGui::Text("%i%s", cpuTemp, "°C");
          }
       }
       
-      if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_core_load]){
+      if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_core_load]
+                                          && instance_data->cpu_stats){
          int i = 0;
-         for (const CPUData &cpuData : cpuStats.GetCPUData())
+         for (const CPUData &cpuData : instance_data->cpu_stats->GetCPUData())
          {
             ImGui::TextColored(ImVec4(0.180, 0.592, 0.796, 1.00f), "CPU");
             ImGui::SameLine(0, 1.0f);
@@ -1184,9 +1218,11 @@ static void compute_swapchain_display(struct swapchain_data *data)
          ImGui::PopFont();
       }
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_ram]){
+         if (instance_data->mem_stats_async.valid())
+            instance_data->memory = instance_data->mem_stats_async.get();
          ImGui::TextColored(ImVec4(0.760, 0.4, 0.576, 1.00f), "RAM");
          ImGui::SameLine(hudFirstRow);
-         ImGui::Text("%.2f", memused);
+         ImGui::Text("%.2f", instance_data->memory.memused_gib);
          ImGui::SameLine(0,1.0f);
          ImGui::PushFont(font1);
          ImGui::Text("GB");
@@ -1261,7 +1297,9 @@ static void compute_swapchain_display(struct swapchain_data *data)
       }
       data->window_size = ImVec2(data->window_size.x, ImGui::GetCursorPosY() + 10.0f);
    }
+
    ImGui::End();
+
    if(loggingOn){
       ImGui::SetNextWindowBgAlpha(0.01);
       ImGui::SetNextWindowSize(ImVec2(instance_data->params.font_size * 13, instance_data->params.font_size * 13), ImGuiCond_Always);
@@ -1288,9 +1326,9 @@ static void compute_swapchain_display(struct swapchain_data *data)
          RGBGetBValue(instance_data->params.crosshair_color), 255), 2.0f);
       ImGui::End();
    }
-      ImGui::PopStyleVar(2);
-      ImGui::EndFrame();
-      ImGui::Render();
+   ImGui::PopStyleVar(2);
+   ImGui::EndFrame();
+   ImGui::Render();
 }
 
 static uint32_t vk_memory_type(struct device_data *data,
@@ -2606,6 +2644,12 @@ static VkResult overlay_CreateInstance(
    instance_data->capture_enabled =
       instance_data->params.output_file && instance_data->params.control < 0;
    instance_data->capture_started = instance_data->capture_enabled;
+
+   instance_data->cpu_stats = new cpu_stats_updater();
+   instance_data->cpu_stats_async = instance_data->cpu_stats->run();
+
+   instance_data->mem_stats = new memory_updater();
+   instance_data->mem_stats_async = instance_data->mem_stats->run();
 
    return result;
 }

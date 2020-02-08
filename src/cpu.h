@@ -1,3 +1,4 @@
+#include <mutex>
 #include <vector>
 #include <cstdint>
 
@@ -60,5 +61,3 @@ private:
 	bool m_updatedCPUs = false; // TODO use caching or just update?
 	bool m_inited = false;
 };
-
-extern CPUStats cpuStats;
