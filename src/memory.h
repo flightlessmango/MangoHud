@@ -22,7 +22,7 @@ struct memory_updater
     }
 
     auto run () {
-        return runAsyncAndCatch<memory_information>(&memory_updater::get, this);
+        return runAsyncAndCatch(&memory_updater::get, this);
     }
 protected:
     std::mutex m;

@@ -48,7 +48,7 @@ struct gpu_stats {
     virtual my_type get() = 0;
     auto run ()
     {
-        return runAsyncAndCatch<my_type>(&gpu_stats::get, this);
+        return runAsyncAndCatch(&gpu_stats::get, this);
     }
 protected:
     std::mutex m;
@@ -60,7 +60,7 @@ struct async_get_int {
     virtual my_type get() = 0;
     auto run ()
     {
-        return runAsyncAndCatch<my_type>(&async_get_int::get, this);
+        return runAsyncAndCatch(&async_get_int::get, this);
     }
 protected:
     std::mutex m;
@@ -81,7 +81,7 @@ struct cpu_stats_updater {
     }
 
     auto run () {
-        return runAsyncAndCatch<bool>(&cpu_stats_updater::get, this);
+        return runAsyncAndCatch(&cpu_stats_updater::get, this);
     }
 protected:
     CPUStats stats;

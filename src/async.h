@@ -3,9 +3,10 @@
 #include <functional>
 #include <type_traits>
 
-template<class ret_type, class Fn, class... Args>
+template<class Fn, class... Args>
 inline auto runAsyncAndCatch(Fn&& fn, Args&&... args) {
     auto make_call = std::bind(std::forward<Fn>(fn), std::forward<Args>(args)...);
+    using ret_type = typename std::result_of<Fn(Args...)>::type;
 
     return std::async(std::launch::async, [=]() -> decltype(make_call()) {
         try {
