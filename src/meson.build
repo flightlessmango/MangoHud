@@ -33,7 +33,7 @@ endforeach
 
 vklayer_files = files(
   'overlay.cpp',
-  'overlay_params.c',
+  'overlay_params.cpp',
   'font_unispace.c',
   'cpu.cpp',
   'loaders/loader_nvml.cpp',
