@@ -31,6 +31,8 @@ extern "C" {
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <X11/Xlib.h>
+#include "X11/keysym.h"
 
 #define OVERLAY_PARAMS                               \
    OVERLAY_PARAM_BOOL(fps)                           \
@@ -84,8 +86,8 @@ struct overlay_params {
    unsigned width;
    unsigned height;
    float font_size;
-   int toggle_hud;
-   int toggle_logging;
+   KeySym toggle_hud;
+   KeySym toggle_logging;
 };
 
 const extern char *overlay_param_names[];
