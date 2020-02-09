@@ -53,6 +53,8 @@ extern "C" {
    OVERLAY_PARAM_CUSTOM(no_display)                  \
    OVERLAY_PARAM_CUSTOM(control)                     \
    OVERLAY_PARAM_CUSTOM(font_size)                   \
+   OVERLAY_PARAM_CUSTOM(toggle_hud)                  \
+   OVERLAY_PARAM_CUSTOM(toggle_logging)              \
    OVERLAY_PARAM_CUSTOM(help)
 
 enum overlay_param_position {
@@ -82,6 +84,8 @@ struct overlay_params {
    unsigned width;
    unsigned height;
    float font_size;
+   int toggle_hud;
+   int toggle_logging;
 };
 
 const extern char *overlay_param_names[];

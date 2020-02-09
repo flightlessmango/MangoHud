@@ -27,6 +27,8 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/sysinfo.h>
+#include <X11/Xlib.h>
+#include "X11/keysym.h"
 
 #include "overlay_params.h"
 
@@ -71,6 +73,18 @@ static float
 parse_font_size(const char *str)
 {
    return strtof(str, NULL);
+}
+
+static KeySym
+parse_toggle_hud(const char *str)
+{
+   return XStringToKeysym(str);
+}
+
+static KeySym
+parse_toggle_logging(const char *str)
+{
+   return XStringToKeysym(str);
 }
 
 static uint32_t
@@ -183,6 +197,8 @@ parse_overlay_env(struct overlay_params *params,
    params->width = 280;
    params->height = 140;
    params->control = -1;
+   params->toggle_hud = 65481;
+   params->toggle_logging = 65471;
 
    if (!env)
       return;
@@ -208,8 +224,11 @@ parse_overlay_env(struct overlay_params *params,
    }
    // if font_size is used and height has not been changed from default
    // increase height as needed based on font_size
-   bool heightChanged = false;
    
+   // params->toggle_hud = "F12";
+
+   bool heightChanged = false;
+
    if (params->height != 140)
       heightChanged = true;
 
