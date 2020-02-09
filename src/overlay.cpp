@@ -876,7 +876,7 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
    }
 
    if (elapsedF2 >= 500000 && mangohud_output_env){
-     if (key_is_pressed(XK_F2)){
+     if (key_is_pressed(instance_data->params.toggle_logging)){
        last_f2_press = now;
        log_start = now;
        loggingOn = !loggingOn;
@@ -888,7 +888,7 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
    }
    
    if (elapsedF12 >= 500000){
-     if (key_is_pressed(XK_F12)){
+     if (key_is_pressed(instance_data->params.toggle_hud)){
        displayHud = !displayHud;
        last_f12_press = now;
      }
