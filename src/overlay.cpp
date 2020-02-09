@@ -2580,10 +2580,10 @@ static VkResult overlay_CreateInstance(
    int font_size;
    instance_data->params.font_size > 0 ? font_size = instance_data->params.font_size : font_size = 24;
    instance_data->params.font_size > 0 ? font_size = instance_data->params.font_size : instance_data->params.font_size = 24;
-   
+
    hudSpacing = font_size / 2;
-   hudFirstRow = font_size * 5;
-   hudSecondRow = font_size * 8;
+   hudFirstRow = font_size * 4.5;
+   hudSecondRow = font_size * 7.5;
 
    // Adjust height for DXVK/VKD3D version number
    if (engineName == "DXVK" || engineName == "VKD3D"){
