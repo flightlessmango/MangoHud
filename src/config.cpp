@@ -5,11 +5,7 @@
 #include "config.h"
 #include "overlay_params.h"
 #include <vector>
-std::vector<const char*> config_params;
-
-void configParams(){
-    config_params.push_back("height");
-}
+std::unordered_map<std::string,std::string> options;
 
 void parseConfigLine(std::string line, struct overlay_params *params){
     if(line.find("#")!=std::string::npos)
@@ -33,12 +29,10 @@ void parseConfigLine(std::string line, struct overlay_params *params){
         {
             return;
         }
-    
-        std::cout  << "set option " << line.substr(0,equal) << " equal to " << line.substr(equal+1) << std::endl;
+        options.insert({line.substr(0,equal), line.substr(equal+1)});
 }
 
 void parseConfigFile(struct overlay_params *params) {
-    configParams();
     std::string home = std::getenv("HOME");
     std::string filePath = home + "/.local/share/MangoHud/MangoHud.conf";
     std::ifstream stream(filePath);

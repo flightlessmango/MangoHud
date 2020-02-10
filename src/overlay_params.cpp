@@ -201,8 +201,26 @@ parse_overlay_env(struct overlay_params *params,
    params->toggle_hud = 65481;
    params->toggle_logging = 65471;
 
+// Get config options
    parseConfigFile(params);
-
+   for (auto& it : options) {
+#define OVERLAY_PARAM_BOOL(name)                                        \
+      if (it.first == #name) {                                          \
+         params->enabled[OVERLAY_PARAM_ENABLED_##name] =                \
+            strtol(it.second.c_str(), NULL, 0);                         \
+         continue;                                                      \
+      }
+#define OVERLAY_PARAM_CUSTOM(name)                       \
+      if (it.first == #name) {                           \
+         params->name = parse_##name(it.second.c_str()); \
+         continue;                                       \
+      }
+      OVERLAY_PARAMS
+#undef OVERLAY_PARAM_BOOL
+#undef OVERLAY_PARAM_CUSTOM
+      fprintf(stderr, "Unknown option '%s'\n", it.first.c_str());
+   }
+   
    if (!env)
       return;
 
