@@ -93,12 +93,18 @@ vulkan_wsi_args = []
 vulkan_wsi_deps = []
 
 with_platform_x11 = true
+with_platform_xcb = true
 with_platform_wayland = false
 
 if with_platform_x11
   dep_x11 = dependency('x11')
   vulkan_wsi_args += ['-DVK_USE_PLATFORM_XLIB_KHR']
   vulkan_wsi_deps += dep_x11
+endif
+if with_platform_xcb
+  dep_xcb = dependency('xcb')
+  vulkan_wsi_args += ['-DVK_USE_PLATFORM_XCB_KHR']
+  vulkan_wsi_deps += dep_xcb
 endif
 if with_platform_wayland
   dep_wayland_client = dependency('wayland-client', version : '>=1.11')

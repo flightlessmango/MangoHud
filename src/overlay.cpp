@@ -54,6 +54,18 @@
 #include "keybinds.h"
 #include "loaders/loader_nvml.h"
 
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+#include <X11/Xproto.h>
+#endif
+
+#ifdef VK_USE_PLATFORM_XCB_KHR
+#include <xcb/xproto.h>
+#endif
+
+#define DEFAULT_FENCE_TIMEOUT 100000000000
+
+static bool hang_now = false;
+
 bool open = false;
 string gpuString;
 float offset_x, offset_y, hudSpacing;
@@ -96,6 +108,26 @@ struct instance_data {
    memory_information memory;
    struct memory_updater* mem_stats = nullptr;
    std::future<memory_information> mem_stats_async;
+};
+
+struct surface_data {
+   VkSurfaceKHR surface;
+   bool changed_flags;
+
+#ifdef VK_USE_PLATFORM_XCB_KHR
+   struct xcb {
+      xcb_connection_t *conn = nullptr;
+      xcb_window_t window = 0;
+   } xcb;
+#endif
+
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+   struct xlib {
+      Display *dpy = nullptr;
+      Window window = 0;
+      int evmask = 0;
+   } xlib;
+#endif
 };
 
 struct frame_stat {
@@ -177,6 +209,7 @@ struct overlay_draw {
 /* Mapped from VkSwapchainKHR */
 struct swapchain_data {
    struct device_data *device;
+   struct surface_data *surface_data;
 
    VkSwapchainKHR swapchain;
    unsigned width, height;
@@ -186,6 +219,14 @@ struct swapchain_data {
    VkImage *images;
    VkImageView *image_views;
    VkFramebuffer *framebuffers;
+
+   struct {
+      VkImage image;
+      unsigned width, height;
+      VkFormat format;
+      VkDeviceMemory mem;
+      bool updated;
+   } saved;
 
    VkRenderPass render_pass;
 
@@ -418,6 +459,14 @@ static struct device_data *new_device_data(VkDevice device, struct instance_data
    return data;
 }
 
+static struct surface_data *new_surface_data(VkSurfaceKHR surface)
+{
+   struct surface_data *data = rzalloc(NULL, struct surface_data);
+   data->surface = surface;
+   map_object(HKEY(data->surface), data);
+   return data;
+}
+
 static struct queue_data *new_queue_data(VkQueue queue,
                                          const VkQueueFamilyProperties *family_props,
                                          uint32_t family_index,
@@ -548,6 +597,12 @@ static struct swapchain_data *new_swapchain_data(VkSwapchainKHR swapchain,
 static void destroy_swapchain_data(struct swapchain_data *data)
 {
    unmap_object(HKEY(data->swapchain));
+   ralloc_free(data);
+}
+
+static void destroy_surface_data(struct surface_data *data)
+{
+   unmap_object(HKEY(data->surface));
    ralloc_free(data);
 }
 
@@ -808,6 +863,159 @@ static void process_control_socket(struct instance_data *instance_data)
    }
 }
 
+
+/***********************************************************************
+*                   Input hijacking                                    *
+***********************************************************************/
+
+#ifdef VK_USE_PLATFORM_XCB_KHR
+
+void process_events_xcb(xcb_connection_t * connection, xcb_window_t window)
+{
+   ImGuiIO& io = ImGui::GetIO();
+
+   xcb_generic_event_t *event = nullptr;
+   xcb_motion_notify_event_t *m;
+   xcb_button_press_event_t  *mb;
+
+   while ((event = xcb_poll_for_event (connection)) != nullptr) {
+      switch (event->response_type & ~0x80) {
+      case XCB_MOTION_NOTIFY:
+            m = (xcb_motion_notify_event_t*)event;
+            io.MousePos = ImVec2((float)m->event_x, (float)m->event_y);
+         break;
+      case XCB_BUTTON_PRESS:
+            mb = (xcb_button_press_event_t  *)event;
+            io.MousePos = ImVec2((float)mb->event_x, (float)mb->event_y);
+            if (mb->detail == 1)
+               io.MouseDown[0] = true;
+            if (mb->detail == 2)
+               io.MouseDown[1] = true;
+            if (mb->detail == 3)
+               io.MouseDown[2] = true;
+      break;
+      case XCB_BUTTON_RELEASE:
+            mb = (xcb_button_press_event_t  *)event;
+            io.MousePos = ImVec2((float)mb->event_x, (float)mb->event_y);
+            if (mb->detail == 1)
+               io.MouseDown[0] = false;
+            if (mb->detail == 2)
+               io.MouseDown[1] = false;
+            if (mb->detail == 3)
+               io.MouseDown[2] = false;
+      break;
+      default:
+         /* Unknown event type, ignore it */
+         break;
+      }
+
+      free (event);
+   }
+}
+
+static VkResult overlay_CreateXcbSurfaceKHR(VkInstance instance, const VkXcbSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface)
+{
+   struct instance_data *instance_data = FIND(struct instance_data, instance);
+   VkResult result = instance_data->vtable.CreateXcbSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
+
+   if (result == VK_SUCCESS) {
+      struct surface_data *data = new_surface_data(*pSurface);
+      data->xcb.conn   = pCreateInfo->connection;
+      data->xcb.window = pCreateInfo->window;
+
+      uint32_t mask = XCB_CW_EVENT_MASK;
+      uint32_t values[] = { XCB_EVENT_MASK_KEY_PRESS
+         | XCB_EVENT_MASK_KEY_RELEASE
+         | XCB_EVENT_MASK_POINTER_MOTION
+         | XCB_EVENT_MASK_BUTTON_PRESS
+         | XCB_EVENT_MASK_BUTTON_RELEASE };
+      //xcb_generic_error_t e {};
+
+      xcb_get_window_attributes_reply_t *reply = xcb_get_window_attributes_reply(data->xcb.conn,
+         xcb_get_window_attributes(data->xcb.conn, data->xcb.window), nullptr);
+
+      if (reply) {
+         std::cerr << std::hex << reply->all_event_masks << ", " << reply->your_event_mask << std::endl;
+         //mask |= reply->all_event_masks;
+         values[0] |= reply->your_event_mask;
+      }
+      xcb_change_window_attributes(data->xcb.conn, data->xcb.window, mask, values);
+
+      free(reply);
+   }
+
+   return result;
+}
+#endif
+
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+
+void process_events_xlib(Display *disp, Window window)
+{
+   ImGuiIO& io = ImGui::GetIO();
+
+   std::cerr << __func__ << std::endl;
+   XEvent event;
+   while (XPending(disp)) {
+      XNextEvent(disp, &event);
+
+      if (event.type == ButtonPress)
+      {
+         if (event.xbutton.button == 1)
+            io.MouseDown[0] = true;
+         if (event.xbutton.button == 2)
+            io.MouseDown[1] = true;
+         if (event.xbutton.button == 3)
+            io.MouseDown[2] = true;
+
+         std::cerr << "\t ButtonPress " << event.xbutton.button << std::endl;
+      }
+      else if (event.type == ButtonRelease)
+      {
+         if (event.xbutton.button == 1)
+            io.MouseDown[0] = false;
+         if (event.xbutton.button == 2)
+            io.MouseDown[1] = false;
+         if (event.xbutton.button == 3)
+            io.MouseDown[2] = false;
+
+         std::cerr << "\t ButtonPress " << event.xbutton.button << std::endl;
+      }
+      else if (event.type == MotionNotify)
+      {
+         std::cerr << "\t MotionNotify " << event.xmotion.x << ", " << event.xmotion.y << std::endl;
+         io.MousePos = ImVec2((float)event.xmotion.x, (float)event.xmotion.y);
+      }
+   }
+}
+
+static VkResult overlay_CreateXlibSurfaceKHR(VkInstance instance, const VkXlibSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface)
+{
+   std::cerr << __func__ << std::endl;
+   struct instance_data *instance_data = FIND(struct instance_data, instance);
+   VkResult result = instance_data->vtable.CreateXlibSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
+
+   if (result == VK_SUCCESS) {
+      struct surface_data *data = new_surface_data(*pSurface);
+      XWindowAttributes attr;
+      if (XGetWindowAttributes (pCreateInfo->dpy, pCreateInfo->window, &attr))
+         data->xlib.evmask = attr.your_event_mask;
+
+      data->xlib.dpy    = pCreateInfo->dpy;
+      data->xlib.window = pCreateInfo->window;
+   }
+   return result;
+}
+#endif
+
+static void overlay_DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface, const VkAllocationCallbacks* pAllocator)
+{
+   struct instance_data *instance_data = FIND(struct instance_data, instance);
+   struct surface_data *surface_data = FIND(struct surface_data, surface);
+   instance_data->vtable.DestroySurfaceKHR(instance, surface, pAllocator);
+   destroy_surface_data(surface_data);
+}
+
 void init_gpu_stats(struct device_data *device_data)
 {
    // NVIDIA or Intel but maybe has Optimus
@@ -959,25 +1167,18 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
       if (log_duration_env && !try_stoi(duration, log_duration_env))
         duration = 0;
 
-      std::string cpu_temp_path;
-      if (cpu.find("Intel") != std::string::npos) {
-         string path;
-         if (find_folder("/sys/devices/platform/coretemp.0/hwmon/", "hwmon", path)) {
-           cpu_temp_path = "/sys/devices/platform/coretemp.0/hwmon/" + path + "/temp1_input";
-         }
-      } else {
-         string name, path;
-         string hwmon = "/sys/class/hwmon/";
-         auto dirs = ls(hwmon.c_str());
-         for (auto& dir : dirs)
-         {
-            path = hwmon + dir;
-            name = read_line(path + "/name");
-            std::cerr << "hwmon: sensor name: " << name << std::endl;
-            if (name == "k10temp" || name == "zenpower"){
-               cpu_temp_path = path + "/temp1_input";
-               break;
-            }
+      string cpu_temp_path;
+      string name, path;
+      string hwmon = "/sys/class/hwmon/";
+      auto dirs = ls(hwmon.c_str());
+      for (auto& dir : dirs)
+      {
+         path = hwmon + dir;
+         name = read_line(path + "/name");
+         std::cerr << "hwmon: sensor name: " << name << std::endl;
+         if (name == "coretemp" || name == "k10temp" || name == "zenpower"){
+            cpu_temp_path = path + "/temp1_input";
+            break;
          }
       }
 
@@ -1114,31 +1315,31 @@ static void position_layer(struct swapchain_data *data)
 #ifndef NDEBUG
       + instance_data->params.font_size
 #endif
-   ), ImGuiCond_Always);
+   ), ImGuiCond_FirstUseEver);
    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,-3));
 
    switch (instance_data->params.position) {
    case LAYER_POSITION_TOP_LEFT:
-      ImGui::SetNextWindowPos(ImVec2(margin + instance_data->params.offset_x, margin + instance_data->params.offset_y), ImGuiCond_Always);
+      ImGui::SetNextWindowPos(ImVec2(margin + instance_data->params.offset_x, margin + instance_data->params.offset_y), ImGuiCond_FirstUseEver);
       break;
    case LAYER_POSITION_TOP_RIGHT:
       ImGui::SetNextWindowPos(ImVec2(data->width - data->window_size.x - margin + instance_data->params.offset_x, margin + instance_data->params.offset_y),
-                              ImGuiCond_Always);
+                              ImGuiCond_FirstUseEver);
       break;
    case LAYER_POSITION_BOTTOM_LEFT:
       ImGui::SetNextWindowPos(ImVec2(margin + instance_data->params.offset_x, data->height - data->window_size.y - margin + instance_data->params.offset_y),
-                              ImGuiCond_Always);
+                              ImGuiCond_FirstUseEver);
       break;
    case LAYER_POSITION_BOTTOM_RIGHT:
       ImGui::SetNextWindowPos(ImVec2(data->width - data->window_size.x - margin + instance_data->params.offset_x,
                                      data->height - data->window_size.y - margin + instance_data->params.offset_y),
-                              ImGuiCond_Always);
+                              ImGuiCond_FirstUseEver);
       break;
    }
 }
 
-static void compute_swapchain_display(struct swapchain_data *data)
+static void compute_swapchain_display(struct swapchain_data *data, bool has_input = false)
 {
    struct device_data *device_data = data->device;
    struct instance_data *instance_data = device_data->instance;
@@ -1153,7 +1354,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
       ImGui::SetNextWindowBgAlpha(0.01);
    }
 
-   ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
+   ImGui::Begin("Main", &open, has_input ? 0 : ImGuiWindowFlags_NoDecoration);
 
    if (!instance_data->params.no_display){
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]
@@ -1495,11 +1696,217 @@ static void CreateOrResizeBuffer(struct device_data *data,
     *buffer_size = new_size;
 }
 
+void save_swapchain_image(struct device_data *device_data, struct swapchain_data *swapchain_data, uint32_t image, VkCommandBuffer copyCmd)
+{
+   // Source for the copy is the last rendered swapchain image
+   VkImage srcImage = swapchain_data->images[image];
+
+   VkAccessFlags srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+   VkImageLayout oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+   if (!swapchain_data->saved.image
+      || swapchain_data->format != swapchain_data->saved.format
+      || swapchain_data->width != swapchain_data->saved.width
+      || swapchain_data->height != swapchain_data->saved.height)
+   {
+      if (swapchain_data->saved.image) {
+         device_data->vtable.DestroyImage(device_data->device, swapchain_data->saved.image, NULL);
+         device_data->vtable.FreeMemory(device_data->device, swapchain_data->saved.mem, NULL);
+         swapchain_data->saved.image = VK_NULL_HANDLE;
+      }
+
+      swapchain_data->saved.format = swapchain_data->format;
+      swapchain_data->saved.width  = swapchain_data->width;
+      swapchain_data->saved.height = swapchain_data->height;
+
+      VkImageCreateInfo image_info = {};
+      image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+      image_info.imageType = VK_IMAGE_TYPE_2D;
+      image_info.format = swapchain_data->format;
+      image_info.extent.width = swapchain_data->width;
+      image_info.extent.height = swapchain_data->height;
+      image_info.extent.depth = 1;
+      image_info.arrayLayers = 1;
+      image_info.mipLevels = 1;
+      image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+      image_info.samples = VK_SAMPLE_COUNT_1_BIT;
+      image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+      image_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+
+      // Create the image
+      VK_CHECK(device_data->vtable.CreateImage(device_data->device, &image_info, nullptr, &swapchain_data->saved.image));
+
+      // Create memory to back up the image
+      VkMemoryAllocateInfo memAllocInfo = {};
+      memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+      VkMemoryRequirements memRequirements;
+      device_data->vtable.GetImageMemoryRequirements(device_data->device,
+                                                     swapchain_data->saved.image, &memRequirements);
+      memAllocInfo.allocationSize = memRequirements.size;
+      memAllocInfo.memoryTypeIndex = vk_memory_type(device_data, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memRequirements.memoryTypeBits);
+
+      VK_CHECK(device_data->vtable.AllocateMemory(device_data->device, &memAllocInfo, nullptr, &swapchain_data->saved.mem));
+      VK_CHECK(device_data->vtable.BindImageMemory(device_data->device, swapchain_data->saved.image, swapchain_data->saved.mem, 0));
+
+      srcAccessMask = 0;
+      oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+   }
+
+   // Transition swapchain image from present to transfer source layout
+   VkImageMemoryBarrier imb {};
+   imb.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+   imb.pNext = nullptr;
+   imb.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+   imb.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+   imb.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+   imb.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+   imb.image = srcImage;
+   imb.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+   imb.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+   imb.subresourceRange = VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+   device_data->vtable.CmdPipelineBarrier(copyCmd,
+                                          VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                          VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                          0,          /* dependency flags */
+                                          0, nullptr, /* memory barriers */
+                                          0, nullptr, /* buffer memory barriers */
+                                          1, &imb);   /* image memory barriers */
+
+   imb.srcAccessMask = srcAccessMask;
+   imb.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+   imb.oldLayout = oldLayout;
+   imb.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+   imb.image = swapchain_data->saved.image;
+   imb.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+   imb.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+   imb.subresourceRange = VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+   device_data->vtable.CmdPipelineBarrier(copyCmd,
+                                          VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                          VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                          0,          /* dependency flags */
+                                          0, nullptr, /* memory barriers */
+                                          0, nullptr, /* buffer memory barriers */
+                                          1, &imb);   /* image memory barriers */
+
+   VkImageCopy image_region {};
+   image_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+   image_region.srcSubresource.layerCount = 1;
+   image_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+   image_region.dstSubresource.layerCount = 1;
+   image_region.extent.width = swapchain_data->width;
+   image_region.extent.height = swapchain_data->height;
+   image_region.extent.depth = 1;
+
+   device_data->vtable.CmdCopyImage(
+      copyCmd,
+      srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+      swapchain_data->saved.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+      1,
+      &image_region);
+
+   // Transition back the swap chain image after the copy is done
+   imb.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+   imb.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+   imb.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+   imb.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+   imb.image = srcImage;
+   imb.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+   imb.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+   imb.subresourceRange = VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+   device_data->vtable.CmdPipelineBarrier(copyCmd,
+                                          VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                          VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                          0,          /* dependency flags */
+                                          0, nullptr, /* memory barriers */
+                                          0, nullptr, /* buffer memory barriers */
+                                          1, &imb);   /* image memory barriers */
+
+   imb.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+   imb.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+   imb.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+   imb.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+   imb.image = swapchain_data->saved.image;
+   imb.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+   imb.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+   imb.subresourceRange = VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+   device_data->vtable.CmdPipelineBarrier(copyCmd,
+                                          VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                          VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                          0,          /* dependency flags */
+                                          0, nullptr, /* memory barriers */
+                                          0, nullptr, /* buffer memory barriers */
+                                          1, &imb);   /* image memory barriers */
+   swapchain_data->saved.updated = true;
+}
+
+void blit_swapchain_image(struct device_data *device_data, struct swapchain_data *swapchain_data, uint32_t image, VkCommandBuffer copyCmd)
+{
+   if (!swapchain_data->saved.image)
+      return;
+
+   VkImage srcImage = swapchain_data->saved.image;
+   VkImage dstImage = swapchain_data->images[image];
+
+   // Transition destination image to transfer destination layout
+   VkImageMemoryBarrier imb {};
+   imb.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+   imb.pNext = nullptr;
+   imb.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+   imb.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+   imb.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+   imb.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+   imb.image = dstImage;
+   imb.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+   imb.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+   imb.subresourceRange = VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+   device_data->vtable.CmdPipelineBarrier(copyCmd,
+                                          VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                          VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                          0,          /* dependency flags */
+                                          0, nullptr, /* memory barriers */
+                                          0, nullptr, /* buffer memory barriers */
+                                          1, &imb);   /* image memory barriers */
+
+   VkImageCopy image_region {};
+   image_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+   image_region.srcSubresource.layerCount = 1;
+   image_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+   image_region.dstSubresource.layerCount = 1;
+   image_region.extent.width = swapchain_data->width;
+   image_region.extent.height = swapchain_data->height;
+   image_region.extent.depth = 1;
+
+   device_data->vtable.CmdCopyImage(
+      copyCmd,
+      srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+      dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+      1,
+      &image_region);
+
+   // Transition back the swap chain image after the copy is done
+   imb.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+   imb.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+   imb.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+   imb.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+   imb.image = dstImage;
+   imb.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+   imb.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+   imb.subresourceRange = VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+   device_data->vtable.CmdPipelineBarrier(copyCmd,
+                                          VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                          VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                          0,          /* dependency flags */
+                                          0, nullptr, /* memory barriers */
+                                          0, nullptr, /* buffer memory barriers */
+                                          1, &imb);   /* image memory barriers */
+}
+
 static struct overlay_draw *render_swapchain_display(struct swapchain_data *data,
                                                      struct queue_data *present_queue,
                                                      const VkSemaphore *wait_semaphores,
                                                      unsigned n_wait_semaphores,
-                                                     unsigned image_index)
+                                                     unsigned image_index,
+                                                     bool has_input)
 {
    ImDrawData* draw_data = ImGui::GetDrawData();
    if (draw_data->TotalVtxCount == 0)
@@ -1523,6 +1930,12 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
    device_data->vtable.BeginCommandBuffer(draw->command_buffer, &buffer_begin_info);
 
    ensure_swapchain_fonts(data, draw->command_buffer);
+
+   if (has_input && !data->saved.updated) {
+      save_swapchain_image(device_data, data, image_index, draw->command_buffer);
+   } else if (has_input) {
+      blit_swapchain_image(device_data, data, image_index, draw->command_buffer);
+   }
 
    /* Bounce the image to display back to color attachment layout for
     * rendering on top of it.
@@ -2007,6 +2420,8 @@ static void setup_swapchain_data(struct swapchain_data *data,
    style.Colors[ImGuiCol_PlotLines] = ImVec4(0.0f, 1.0f, 0.0f, 1.00f);
 
    struct device_data *device_data = data->device;
+   struct surface_data *surface_data = FIND(struct surface_data, pCreateInfo->surface);
+   data->surface_data = surface_data;
 
    /* Render pass */
    VkAttachmentDescription attachment_desc = {};
@@ -2141,6 +2556,13 @@ static void shutdown_swapchain_data(struct swapchain_data *data)
    device_data->vtable.DestroyBuffer(device_data->device, data->upload_font_buffer, NULL);
    device_data->vtable.FreeMemory(device_data->device, data->upload_font_buffer_mem, NULL);
 
+   if (data->saved.image) {
+      device_data->vtable.DestroyImage(device_data->device, data->saved.image, NULL);
+      device_data->vtable.FreeMemory(device_data->device, data->saved.mem, NULL);
+      data->saved.image = VK_NULL_HANDLE;
+      data->saved.mem = VK_NULL_HANDLE;
+   }
+
    ImGui::DestroyContext(data->imgui_context);
 }
 
@@ -2148,7 +2570,8 @@ static struct overlay_draw *before_present(struct swapchain_data *swapchain_data
                                            struct queue_data *present_queue,
                                            const VkSemaphore *wait_semaphores,
                                            unsigned n_wait_semaphores,
-                                           unsigned imageIndex)
+                                           unsigned imageIndex,
+                                           bool has_input)
 {
    struct instance_data *instance_data = swapchain_data->device->instance;
    struct overlay_draw *draw = NULL;
@@ -2156,10 +2579,10 @@ static struct overlay_draw *before_present(struct swapchain_data *swapchain_data
    snapshot_swapchain_frame(swapchain_data);
 
    if (swapchain_data->n_frames > 0) {
-      compute_swapchain_display(swapchain_data);
+      compute_swapchain_display(swapchain_data, has_input);
       draw = render_swapchain_display(swapchain_data, present_queue,
                                       wait_semaphores, n_wait_semaphores,
-                                      imageIndex);
+                                      imageIndex, has_input);
    }
 
    return draw;
@@ -2218,6 +2641,7 @@ static VkResult overlay_QueuePresentKHR(
       frameEnd = os_time_get_nano();
    }
    
+   VkResult result = VK_SUCCESS;
    struct queue_data *queue_data = FIND(struct queue_data, queue);
    struct device_data *device_data = queue_data->device;
    struct instance_data *instance_data = device_data->instance;
@@ -2257,47 +2681,97 @@ static VkResult overlay_QueuePresentKHR(
       }
    }
 
-   /* Otherwise we need to add our overlay drawing semaphore to the list of
-    * semaphores to wait on. If we don't do that the presented picture might
-    * be have incomplete overlay drawings.
-    */
-   VkResult result = VK_SUCCESS;
-   for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {
-      VkSwapchainKHR swapchain = pPresentInfo->pSwapchains[i];
-      struct swapchain_data *swapchain_data =
-         FIND(struct swapchain_data, swapchain);
+   do {
+      uint64_t now = os_time_get(); /* us */
 
-      uint32_t image_index = pPresentInfo->pImageIndices[i];
+      if (elapsedF12 >= 500000){
+        if (key_is_pressed(XK_Shift_L) && key_is_pressed(XStringToKeysym("F10"))){
+          hang_now = !hang_now;
+          last_f12_press = now;
+          if (hang_now)
+            std::cerr << "Hanging the game now..." << std::endl;
+        }
+      }
 
-      VkPresentInfoKHR present_info = *pPresentInfo;
-      present_info.swapchainCount = 1;
-      present_info.pSwapchains = &swapchain;
-      present_info.pImageIndices = &image_index;
+      for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {
+         VkSwapchainKHR swapchain = pPresentInfo->pSwapchains[i];
+         struct swapchain_data *swapchain_data =
+            FIND(struct swapchain_data, swapchain);
+         uint32_t image_index = pPresentInfo->pImageIndices[i];
+         struct surface_data *surface_data = swapchain_data->surface_data;
 
-      struct overlay_draw *draw = before_present(swapchain_data,
-                                                   queue_data,
-                                                   pPresentInfo->pWaitSemaphores,
-                                                   pPresentInfo->waitSemaphoreCount,
-                                                   image_index);
+         if (hang_now) {
+            ImGuiIO& io = ImGui::GetIO();
 
-      /* Because the submission of the overlay draw waits on the semaphores
-         * handed for present, we don't need to have this present operation
-         * wait on them as well, we can just wait on the overlay submission
-         * semaphore.
-         */
-      present_info.pWaitSemaphores = &draw->semaphore;
-      present_info.waitSemaphoreCount = 1;
+#ifdef VK_USE_PLATFORM_XCB_KHR
+            if (surface_data && surface_data->xcb.conn) {
+               surface_data->changed_flags = true;
+               process_events_xcb(surface_data->xcb.conn, surface_data->xcb.window);
+            }
+#endif
 
-      uint64_t ts0 = os_time_get();
-      VkResult chain_result = queue_data->device->vtable.QueuePresentKHR(queue, &present_info);
-      uint64_t ts1 = os_time_get();
-      swapchain_data->frame_stats.stats[OVERLAY_PARAM_ENABLED_present_timing] += ts1 - ts0;
-      if (pPresentInfo->pResults)
-         pPresentInfo->pResults[i] = chain_result;
-      if (chain_result != VK_SUCCESS && result == VK_SUCCESS)
-         result = chain_result;
-   }
-   
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+            if (surface_data && surface_data->xlib.dpy) {
+
+               if (!surface_data->changed_flags) {
+                  XSelectInput(surface_data->xlib.dpy, surface_data->xlib.window,
+                     surface_data->xlib.evmask | PointerMotionMask | ButtonReleaseMask | ButtonPressMask | KeyPressMask);
+                  surface_data->changed_flags = true;
+               }
+
+               process_events_xlib(surface_data->xlib.dpy, surface_data->xlib.window);
+            }
+#endif
+
+            // limit to atleast 200 fps for no reason
+            io.DeltaTime = (1.0f / 200.0f);
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
+         } else {
+            if (surface_data->changed_flags) {
+               std::cerr << "Returning to our regularly scheduled programming..." << std::endl;
+
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+               if (surface_data && surface_data->xlib.dpy) {
+                  XSelectInput(surface_data->xlib.dpy, surface_data->xlib.window, surface_data->xlib.evmask);
+               }
+#endif
+            }
+            surface_data->changed_flags = false;
+            swapchain_data->saved.updated = false;
+         }
+
+         VkPresentInfoKHR present_info = *pPresentInfo;
+         present_info.swapchainCount = 1;
+         present_info.pSwapchains = &swapchain;
+         present_info.pImageIndices = &image_index;
+
+         struct overlay_draw *draw = before_present(swapchain_data,
+                                                    queue_data,
+                                                    pPresentInfo->pWaitSemaphores,
+                                                    pPresentInfo->waitSemaphoreCount,
+                                                    image_index,
+                                                    hang_now);
+
+         /* Because the submission of the overlay draw waits on the semaphores
+          * handed for present, we don't need to have this present operation
+          * wait on them as well, we can just wait on the overlay submission
+          * semaphore.
+          */
+         present_info.pWaitSemaphores = &draw->semaphore;
+         present_info.waitSemaphoreCount = 1;
+
+         uint64_t ts0 = os_time_get();
+         VkResult chain_result = queue_data->device->vtable.QueuePresentKHR(queue, &present_info);
+         uint64_t ts1 = os_time_get();
+         swapchain_data->frame_stats.stats[OVERLAY_PARAM_ENABLED_present_timing] += ts1 - ts0;
+         if (pPresentInfo->pResults)
+            pPresentInfo->pResults[i] = chain_result;
+         if (chain_result != VK_SUCCESS && result == VK_SUCCESS)
+            result = chain_result;
+      }
+
+   } while(hang_now);
    return result;
 }
 
@@ -2701,6 +3175,10 @@ static const struct {
 
    ADD_HOOK(CreateInstance),
    ADD_HOOK(DestroyInstance),
+
+   ADD_HOOK(CreateXlibSurfaceKHR),
+   ADD_HOOK(CreateXcbSurfaceKHR),
+   ADD_HOOK(DestroySurfaceKHR),
 #undef ADD_HOOK
 };
 
