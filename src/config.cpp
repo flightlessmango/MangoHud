@@ -39,7 +39,7 @@ void parseConfigFile() {
     std::ifstream stream(filePath);
 
     std::string line;
-
+    if (stream)
     while (std::getline(stream, line))
     {
         parseConfigLine(line);

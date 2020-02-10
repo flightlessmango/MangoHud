@@ -221,8 +221,7 @@ parse_overlay_env(struct overlay_params *params,
       fprintf(stderr, "Unknown option '%s'\n", it.first.c_str());
    }
 
-   if (!env)
-      return;
+   if (env){
 
    while ((num = parse_string(env, key, value)) != 0) {
       env += num;
@@ -243,11 +242,11 @@ parse_overlay_env(struct overlay_params *params,
 #undef OVERLAY_PARAM_CUSTOM
       fprintf(stderr, "Unknown option '%s'\n", key);
    }
+}
    // if font_size is used and height has not been changed from default
    // increase height as needed based on font_size
    
    // params->toggle_hud = "F12";
-
    bool heightChanged = false;
 
    if (params->height != 140)
