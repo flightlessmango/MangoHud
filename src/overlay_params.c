@@ -105,6 +105,12 @@ parse_vsync(const char *str)
    return strtol(str, NULL, 0);
 }
 
+static uint32_t
+parse_crosshair_size(const char *str)
+{
+   return strtol(str, NULL, 0);
+}
+
 static bool
 parse_no_display(const char *str)
 {
@@ -214,6 +220,7 @@ parse_overlay_env(struct overlay_params *params,
    params->toggle_logging = 65471;
    params->fps_limit = 0;
    params->vsync = -1;
+   params->crosshair_size = 30;
 
    if (!env)
       return;
