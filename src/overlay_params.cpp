@@ -101,12 +101,6 @@ parse_fps_limit(const char *str)
 }
 
 static uint32_t
-parse_vsync(const char *str)
-{
-   return strtol(str, NULL, 0);
-}
-
-static uint32_t
 parse_crosshair_size(const char *str)
 {
    return strtol(str, NULL, 0);
@@ -127,6 +121,8 @@ parse_unsigned(const char *str)
 #define parse_width(s) parse_unsigned(s)
 #define parse_height(s) parse_unsigned(s)
 #define parse_vsync(s) parse_unsigned(s)
+#define parse_offset_x(s) parse_unsigned(s)
+#define parse_offset_y(s) parse_unsigned(s)
 
 static bool
 parse_help(const char *str)
@@ -222,6 +218,8 @@ parse_overlay_env(struct overlay_params *params,
    params->fps_limit = 0;
    params->vsync = -1;
    params->crosshair_size = 30;
+   params->offset_x = 0;
+   params->offset_y = 0;
 
 // Get config options
    parseConfigFile();

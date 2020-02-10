@@ -60,6 +60,8 @@ extern "C" {
    OVERLAY_PARAM_CUSTOM(toggle_hud)                  \
    OVERLAY_PARAM_CUSTOM(toggle_logging)              \
    OVERLAY_PARAM_CUSTOM(crosshair_size)              \
+   OVERLAY_PARAM_CUSTOM(offset_x)                    \
+   OVERLAY_PARAM_CUSTOM(offset_y)                    \
    OVERLAY_PARAM_CUSTOM(help)
 
 enum overlay_param_position {
@@ -90,6 +92,8 @@ struct overlay_params {
    bool no_display;
    unsigned width;
    unsigned height;
+   unsigned offset_x;
+   unsigned offset_y;
    unsigned vsync;
    float font_size;
    KeySym toggle_hud;

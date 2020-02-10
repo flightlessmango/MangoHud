@@ -59,8 +59,6 @@ bool open = false, displayHud = true;
 string gpuString;
 float offset_x, offset_y, hudSpacing;
 int hudFirstRow, hudSecondRow, frameOverhead = 0, sleepTime = 0;
-const char* offset_x_env = std::getenv("X_OFFSET");
-const char* offset_y_env = std::getenv("Y_OFFSET");
 string engineName, engineVersion;
 ImFont* font = nullptr;
 ImFont* font1 = nullptr;
@@ -1078,36 +1076,29 @@ static void position_layer(struct swapchain_data *data)
    struct device_data *device_data = data->device;
    struct instance_data *instance_data = device_data->instance;
    float margin = 10.0f;
-   if (offset_x_env)
+   if (instance_data->params.offset_x > 0 || instance_data->params.offset_y > 0)
       margin = 0.0f;
-
 
    ImGui::SetNextWindowBgAlpha(0.5);
    ImGui::SetNextWindowSize(ImVec2(instance_data->params.width, instance_data->params.height), ImGuiCond_Always);
    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,-3));
 
-   if (offset_x_env)
-     offset_x = std::stof(offset_x_env);
-
-   if (offset_y_env)
-     offset_y = std::stof(offset_y_env);
-
    switch (instance_data->params.position) {
    case LAYER_POSITION_TOP_LEFT:
-      ImGui::SetNextWindowPos(ImVec2(margin + offset_x, margin + offset_y), ImGuiCond_Always);
+      ImGui::SetNextWindowPos(ImVec2(margin + instance_data->params.offset_x, margin + instance_data->params.offset_y), ImGuiCond_Always);
       break;
    case LAYER_POSITION_TOP_RIGHT:
-      ImGui::SetNextWindowPos(ImVec2(data->width - data->window_size.x - margin, margin),
+      ImGui::SetNextWindowPos(ImVec2(data->width - data->window_size.x - margin + instance_data->params.offset_x, margin + instance_data->params.offset_y),
                               ImGuiCond_Always);
       break;
    case LAYER_POSITION_BOTTOM_LEFT:
-      ImGui::SetNextWindowPos(ImVec2(margin, data->height - data->window_size.y - margin),
+      ImGui::SetNextWindowPos(ImVec2(margin + instance_data->params.offset_x, data->height - data->window_size.y - margin + instance_data->params.offset_y),
                               ImGuiCond_Always);
       break;
    case LAYER_POSITION_BOTTOM_RIGHT:
-      ImGui::SetNextWindowPos(ImVec2(data->width - data->window_size.x - margin,
-                                     data->height - data->window_size.y - margin),
+      ImGui::SetNextWindowPos(ImVec2(data->width - data->window_size.x - margin + instance_data->params.offset_x,
+                                     data->height - data->window_size.y - margin + instance_data->params.offset_y),
                               ImGuiCond_Always);
       break;
    }
