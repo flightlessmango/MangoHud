@@ -33,14 +33,14 @@ endforeach
 
 vklayer_files = files(
   'overlay.cpp',
-  'overlay_params.c',
+  'overlay_params.cpp',
   'font_unispace.c',
   'cpu.cpp',
   'loaders/loader_nvml.cpp',
   'nvml.cpp',
   'file_utils.cpp',
   'memory.cpp',
-  # 'nvctrl.cpp',
+  'config.cpp',
 )
 
 # lib_xnvctrl = cc.find_library('XNVCtrl')

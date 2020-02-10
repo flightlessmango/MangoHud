@@ -32,7 +32,6 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 #include <X11/Xlib.h>
-#include "X11/keysym.h"
 
 #define OVERLAY_PARAMS                               \
    OVERLAY_PARAM_BOOL(fps)                           \

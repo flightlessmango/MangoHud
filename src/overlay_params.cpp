@@ -24,13 +24,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <string.h>
+#include <fstream>
 #include <errno.h>
 #include <sys/sysinfo.h>
 #include <X11/Xlib.h>
 #include "X11/keysym.h"
 
 #include "overlay_params.h"
+#include "config.h"
 
 #include "mesa/util/os_socket.h"
 
@@ -222,8 +223,27 @@ parse_overlay_env(struct overlay_params *params,
    params->vsync = -1;
    params->crosshair_size = 30;
 
-   if (!env)
-      return;
+// Get config options
+   parseConfigFile();
+   for (auto& it : options) {
+#define OVERLAY_PARAM_BOOL(name)                                        \
+      if (it.first == #name) {                                          \
+         params->enabled[OVERLAY_PARAM_ENABLED_##name] =                \
+            strtol(it.second.c_str(), NULL, 0);                         \
+         continue;                                                      \
+      }
+#define OVERLAY_PARAM_CUSTOM(name)                       \
+      if (it.first == #name) {                           \
+         params->name = parse_##name(it.second.c_str()); \
+         continue;                                       \
+      }
+      OVERLAY_PARAMS
+#undef OVERLAY_PARAM_BOOL
+#undef OVERLAY_PARAM_CUSTOM
+      fprintf(stderr, "Unknown option '%s'\n", it.first.c_str());
+   }
+
+   if (env){
 
    while ((num = parse_string(env, key, value)) != 0) {
       env += num;
@@ -244,11 +264,11 @@ parse_overlay_env(struct overlay_params *params,
 #undef OVERLAY_PARAM_CUSTOM
       fprintf(stderr, "Unknown option '%s'\n", key);
    }
+}
    // if font_size is used and height has not been changed from default
    // increase height as needed based on font_size
    
    // params->toggle_hud = "F12";
-
    bool heightChanged = false;
 
    if (params->height != 140)
@@ -283,4 +303,4 @@ parse_overlay_env(struct overlay_params *params,
          params->height += (params->font_size - 3);
    }
 
-}     
+}
