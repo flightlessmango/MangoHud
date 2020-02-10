@@ -24,6 +24,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <thread>
+#include <chrono>
+#include <unordered_map>
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_layer.h>
@@ -55,13 +58,14 @@
 bool open = false, displayHud = true;
 string gpuString;
 float offset_x, offset_y, hudSpacing;
-int hudFirstRow, hudSecondRow;
+int hudFirstRow, hudSecondRow, frameOverhead = 0, sleepTime = 0;
 const char* offset_x_env = std::getenv("X_OFFSET");
 const char* offset_y_env = std::getenv("Y_OFFSET");
 string engineName, engineVersion;
 ImFont* font = nullptr;
 ImFont* font1 = nullptr;
 struct amdGpu amdgpu;
+double frameStart, frameEnd, targetFrameTime = 0;
 
 /* Mapped from VkInstace/VkPhysicalDevice */
 struct instance_data {
@@ -2107,11 +2111,19 @@ static VkResult overlay_CreateSwapchainKHR(
     VkSwapchainKHR*                             pSwapchain)
 {
    struct device_data *device_data = FIND(struct device_data, device);
+   array<VkPresentModeKHR, 4> modes = {VK_PRESENT_MODE_FIFO_RELAXED_KHR,
+           VK_PRESENT_MODE_IMMEDIATE_KHR,
+           VK_PRESENT_MODE_MAILBOX_KHR,
+           VK_PRESENT_MODE_FIFO_KHR};
+
+   if (device_data->instance->params.vsync < 4)
+      const_cast<VkSwapchainCreateInfoKHR*> (pCreateInfo)->presentMode = modes[device_data->instance->params.vsync];
+
    VkResult result = device_data->vtable.CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
    if (result != VK_SUCCESS) return result;
-
    struct swapchain_data *swapchain_data = new_swapchain_data(*pSwapchain, device_data);
    setup_swapchain_data(swapchain_data, pCreateInfo);
+   
    return result;
 }
 
@@ -2128,10 +2140,22 @@ static void overlay_DestroySwapchainKHR(
    destroy_swapchain_data(swapchain_data);
 }
 
+void FpsLimiter(){
+   int64_t now = os_time_get_nano();
+   sleepTime = targetFrameTime - (now - frameEnd);
+   this_thread::sleep_for(chrono::nanoseconds(sleepTime - frameOverhead));
+   frameOverhead = (now - frameStart);
+}
+
 static VkResult overlay_QueuePresentKHR(
     VkQueue                                     queue,
     const VkPresentInfoKHR*                     pPresentInfo)
 {
+   if (targetFrameTime > 0){
+      frameStart = os_time_get_nano();
+      FpsLimiter();
+      frameEnd = os_time_get_nano();
+   }
    struct queue_data *queue_data = FIND(struct queue_data, queue);
    struct device_data *device_data = queue_data->device;
    struct instance_data *instance_data = device_data->instance;
@@ -2531,6 +2555,7 @@ static VkResult overlay_CreateInstance(
 {
    VkLayerInstanceCreateInfo *chain_info =
       get_instance_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
+      
 
    const char* pEngineName = pCreateInfo->pApplicationInfo->pEngineName;
    if (pEngineName)
@@ -2545,7 +2570,7 @@ static VkResult overlay_CreateInstance(
 
    if (engineName == "vkd3d")
       engineName = "VKD3D";
-   
+
    assert(chain_info->u.pLayerInfo);
    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr =
       chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
@@ -2568,7 +2593,9 @@ static VkResult overlay_CreateInstance(
    instance_data_map_physical_devices(instance_data, true);
 
    parse_overlay_env(&instance_data->params, getenv("MANGOHUD_CONFIG"));
-   
+   if (instance_data->params.fps_limit > 0)
+      targetFrameTime = double(1000000000.0f / instance_data->params.fps_limit);
+
    int font_size;
    instance_data->params.font_size > 0 ? font_size = instance_data->params.font_size : font_size = 24;
    instance_data->params.font_size > 0 ? font_size = instance_data->params.font_size : instance_data->params.font_size = 24;

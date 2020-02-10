@@ -54,6 +54,8 @@ extern "C" {
    OVERLAY_PARAM_CUSTOM(height)                      \
    OVERLAY_PARAM_CUSTOM(no_display)                  \
    OVERLAY_PARAM_CUSTOM(control)                     \
+   OVERLAY_PARAM_CUSTOM(fps_limit)                   \
+   OVERLAY_PARAM_CUSTOM(vsync)                       \
    OVERLAY_PARAM_CUSTOM(font_size)                   \
    OVERLAY_PARAM_CUSTOM(toggle_hud)                  \
    OVERLAY_PARAM_CUSTOM(toggle_logging)              \
@@ -81,10 +83,12 @@ struct overlay_params {
    FILE *output_file;
    int control;
    uint32_t fps_sampling_period; /* us */
+   uint32_t fps_limit;
    bool help;
    bool no_display;
    unsigned width;
    unsigned height;
+   unsigned vsync;
    float font_size;
    KeySym toggle_hud;
    KeySym toggle_logging;
