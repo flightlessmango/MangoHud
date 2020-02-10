@@ -7,7 +7,7 @@
 #include <vector>
 std::unordered_map<std::string,std::string> options;
 
-void parseConfigLine(std::string line, struct overlay_params *params){
+void parseConfigLine(std::string line){
     if(line.find("#")!=std::string::npos)
         {
             line = line.erase(line.find("#"),std::string::npos);
@@ -29,10 +29,11 @@ void parseConfigLine(std::string line, struct overlay_params *params){
         {
             return;
         }
-        options.insert({line.substr(0,equal), line.substr(equal+1)});
+    
+    options.insert({line.substr(0,equal), line.substr(equal+1)});
 }
 
-void parseConfigFile(struct overlay_params *params) {
+void parseConfigFile() {
     std::string home = std::getenv("HOME");
     std::string filePath = home + "/.local/share/MangoHud/MangoHud.conf";
     std::ifstream stream(filePath);
@@ -41,6 +42,6 @@ void parseConfigFile(struct overlay_params *params) {
 
     while (std::getline(stream, line))
     {
-        parseConfigLine(line, params);
+        parseConfigLine(line);
     }
 }
