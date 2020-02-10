@@ -24,13 +24,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <string.h>
+#include <fstream>
 #include <errno.h>
 #include <sys/sysinfo.h>
 #include <X11/Xlib.h>
 #include "X11/keysym.h"
 
 #include "overlay_params.h"
+#include "config.h"
 
 #include "mesa/util/os_socket.h"
 
@@ -200,6 +201,8 @@ parse_overlay_env(struct overlay_params *params,
    params->toggle_hud = 65481;
    params->toggle_logging = 65471;
 
+   parseConfigFile(params);
+
    if (!env)
       return;
 
@@ -261,4 +264,4 @@ parse_overlay_env(struct overlay_params *params,
          params->height += (params->font_size - 3);
    }
 
-}     
+}

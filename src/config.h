@@ -1,0 +1,1 @@
+ void parseConfigFile(struct overlay_params *params);

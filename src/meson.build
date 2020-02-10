@@ -40,7 +40,7 @@ vklayer_files = files(
   'nvml.cpp',
   'file_utils.cpp',
   'memory.cpp',
-  # 'nvctrl.cpp',
+  'config.cpp',
 )
 
 # lib_xnvctrl = cc.find_library('XNVCtrl')
