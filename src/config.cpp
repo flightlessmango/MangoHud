@@ -4,7 +4,7 @@
 #include <string.h>
 #include "config.h"
 #include "overlay_params.h"
-#include <vector>
+
 std::unordered_map<std::string,std::string> options;
 
 void parseConfigLine(std::string line){
