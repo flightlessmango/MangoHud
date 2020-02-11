@@ -55,7 +55,7 @@
 #include "cpu.h"
 #include "loaders/loader_nvml.h"
 
-bool open = false, displayHud = true;
+bool open = false;
 string gpuString;
 float offset_x, offset_y, hudSpacing;
 int hudFirstRow, hudSecondRow, frameOverhead = 0, sleepTime = 0;
@@ -890,10 +890,10 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
    }
    
    if (elapsedF12 >= 500000){
-     if (key_is_pressed(instance_data->params.toggle_hud)){
-       displayHud = !displayHud;
-       last_f12_press = now;
-     }
+      if (key_is_pressed(instance_data->params.toggle_hud)){
+         instance_data->params.no_display = !instance_data->params.no_display;
+         last_f12_press = now;
+      }
    }
 
    if (!sysInfoFetched) {
@@ -1115,15 +1115,15 @@ static void compute_swapchain_display(struct swapchain_data *data)
    if (instance_data->params.font_size > 0 && instance_data->params.width == 280)
       instance_data->params.width = hudFirstRow + hudSecondRow;
 
-   if(displayHud)
+   if(!instance_data->params.no_display)
 	   ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
       
-   if(!displayHud){
+   if(instance_data->params.no_display){
       ImGui::SetNextWindowBgAlpha(0.01);
       ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
    }
    
-   if (displayHud){
+   if (!instance_data->params.no_display){
       if (device_data->gpu_stats && instance_data->params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
          ImGui::TextColored(ImVec4(0.180, 0.592, 0.384, 1.00f), "GPU");
          ImGui::SameLine(hudFirstRow);
@@ -2095,7 +2095,7 @@ static struct overlay_draw *before_present(struct swapchain_data *swapchain_data
 
    snapshot_swapchain_frame(swapchain_data);
 
-   if (!instance_data->params.no_display && swapchain_data->n_frames > 0) {
+   if (swapchain_data->n_frames > 0) {
       compute_swapchain_display(swapchain_data);
       draw = render_swapchain_display(swapchain_data, present_queue,
                                       wait_semaphores, n_wait_semaphores,
@@ -2157,6 +2157,7 @@ static VkResult overlay_QueuePresentKHR(
       FpsLimiter();
       frameEnd = os_time_get_nano();
    }
+   
    struct queue_data *queue_data = FIND(struct queue_data, queue);
    struct device_data *device_data = queue_data->device;
    struct instance_data *instance_data = device_data->instance;
@@ -2201,67 +2202,42 @@ static VkResult overlay_QueuePresentKHR(
     * be have incomplete overlay drawings.
     */
    VkResult result = VK_SUCCESS;
-   if (instance_data->params.no_display) {
-      for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {
-         VkSwapchainKHR swapchain = pPresentInfo->pSwapchains[i];
-         struct swapchain_data *swapchain_data =
-            FIND(struct swapchain_data, swapchain);
+   for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {
+      VkSwapchainKHR swapchain = pPresentInfo->pSwapchains[i];
+      struct swapchain_data *swapchain_data =
+         FIND(struct swapchain_data, swapchain);
 
-         uint32_t image_index = pPresentInfo->pImageIndices[i];
+      uint32_t image_index = pPresentInfo->pImageIndices[i];
 
-         before_present(swapchain_data,
-                        queue_data,
-                        pPresentInfo->pWaitSemaphores,
-                        pPresentInfo->waitSemaphoreCount,
-                        image_index);
+      VkPresentInfoKHR present_info = *pPresentInfo;
+      present_info.swapchainCount = 1;
+      present_info.pSwapchains = &swapchain;
+      present_info.pImageIndices = &image_index;
 
-         VkPresentInfoKHR present_info = *pPresentInfo;
-         present_info.swapchainCount = 1;
-         present_info.pSwapchains = &swapchain;
-         present_info.pImageIndices = &image_index;
+      struct overlay_draw *draw = before_present(swapchain_data,
+                                                   queue_data,
+                                                   pPresentInfo->pWaitSemaphores,
+                                                   pPresentInfo->waitSemaphoreCount,
+                                                   image_index);
 
-         uint64_t ts0 = os_time_get();
-         result = queue_data->device->vtable.QueuePresentKHR(queue, &present_info);
-         uint64_t ts1 = os_time_get();
-         swapchain_data->frame_stats.stats[OVERLAY_PARAM_ENABLED_present_timing] += ts1 - ts0;
-      }
-   } else {
-      for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {
-         VkSwapchainKHR swapchain = pPresentInfo->pSwapchains[i];
-         struct swapchain_data *swapchain_data =
-            FIND(struct swapchain_data, swapchain);
+      /* Because the submission of the overlay draw waits on the semaphores
+         * handed for present, we don't need to have this present operation
+         * wait on them as well, we can just wait on the overlay submission
+         * semaphore.
+         */
+      present_info.pWaitSemaphores = &draw->semaphore;
+      present_info.waitSemaphoreCount = 1;
 
-         uint32_t image_index = pPresentInfo->pImageIndices[i];
-
-         VkPresentInfoKHR present_info = *pPresentInfo;
-         present_info.swapchainCount = 1;
-         present_info.pSwapchains = &swapchain;
-         present_info.pImageIndices = &image_index;
-
-         struct overlay_draw *draw = before_present(swapchain_data,
-                                                    queue_data,
-                                                    pPresentInfo->pWaitSemaphores,
-                                                    pPresentInfo->waitSemaphoreCount,
-                                                    image_index);
-
-         /* Because the submission of the overlay draw waits on the semaphores
-          * handed for present, we don't need to have this present operation
-          * wait on them as well, we can just wait on the overlay submission
-          * semaphore.
-          */
-         present_info.pWaitSemaphores = &draw->semaphore;
-         present_info.waitSemaphoreCount = 1;
-
-         uint64_t ts0 = os_time_get();
-         VkResult chain_result = queue_data->device->vtable.QueuePresentKHR(queue, &present_info);
-         uint64_t ts1 = os_time_get();
-         swapchain_data->frame_stats.stats[OVERLAY_PARAM_ENABLED_present_timing] += ts1 - ts0;
-         if (pPresentInfo->pResults)
-            pPresentInfo->pResults[i] = chain_result;
-         if (chain_result != VK_SUCCESS && result == VK_SUCCESS)
-            result = chain_result;
-      }
+      uint64_t ts0 = os_time_get();
+      VkResult chain_result = queue_data->device->vtable.QueuePresentKHR(queue, &present_info);
+      uint64_t ts1 = os_time_get();
+      swapchain_data->frame_stats.stats[OVERLAY_PARAM_ENABLED_present_timing] += ts1 - ts0;
+      if (pPresentInfo->pResults)
+         pPresentInfo->pResults[i] = chain_result;
+      if (chain_result != VK_SUCCESS && result == VK_SUCCESS)
+         result = chain_result;
    }
+   
    return result;
 }
 
