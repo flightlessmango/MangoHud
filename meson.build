@@ -92,18 +92,21 @@ endforeach
 vulkan_wsi_args = []
 vulkan_wsi_deps = []
 
-with_platform_x11 = true
-with_platform_wayland = false
+dep_x11 = dependency('x11', required: get_option('with_x11'))
+dep_wayland_client = dependency('wayland-client',
+    required: get_option('with_wayland'), version : '>=1.11')
 
-if with_platform_x11
-  dep_x11 = dependency('x11')
+if dep_x11.found()
   vulkan_wsi_args += ['-DVK_USE_PLATFORM_XLIB_KHR']
   vulkan_wsi_deps += dep_x11
 endif
-if with_platform_wayland
-  dep_wayland_client = dependency('wayland-client', version : '>=1.11')
+if dep_wayland_client.found()
   vulkan_wsi_args += ['-DVK_USE_PLATFORM_WAYLAND_KHR']
   vulkan_wsi_deps += dep_wayland_client
+endif
+
+if not dep_x11.found() and not dep_wayland_client.found()
+  error('At least one of "with_x11" and "with_wayland" should be enabled')
 endif
 
 inc_common = [

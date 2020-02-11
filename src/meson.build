@@ -63,7 +63,7 @@ opengl_files = files(
   'gl/gl3w/GL/gl3w.c',
 )
 
-if get_option('use_xnvctrl').enabled()
+if get_option('with_xnvctrl').enabled()
   pre_args += '-DHAVE_XNVCTRL'
   vklayer_files += files(
     'loaders/loader_nvctrl.cpp',
