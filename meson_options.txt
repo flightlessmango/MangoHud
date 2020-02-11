@@ -1,1 +1,3 @@
 option('glibcxx_asserts', type : 'boolean', value : false)
+option('with_x11', type : 'feature', value : 'enabled')
+option('with_wayland', type : 'feature', value : 'disabled')
