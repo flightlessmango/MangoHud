@@ -18,8 +18,9 @@
 
 using namespace std;
 
-int gpuLoad = 0, gpuTemp = 0, cpuTemp = 0, gpuMemUsed = 0, gpuMemTotal = 0;
+int gpuLoad = 0, gpuTemp = 0, cpuTemp = 0;
 FILE *amdGpuFile = nullptr, *amdTempFile = nullptr, *cpuTempFile = nullptr, *amdGpuVramTotalFile = nullptr, *amdGpuVramUsedFile = nullptr;
+float gpuMemUsed = 0, gpuMemTotal = 0;
 
 int numCpuCores = std::thread::hardware_concurrency();
 pthread_t cpuThread, gpuThread, cpuInfoThread;
@@ -75,7 +76,7 @@ void *getNvidiaGpuInfo(void *){
         getNvidiaInfo();
         gpuLoad = nvidiaUtilization.gpu;
         gpuTemp = nvidiaTemp;
-        gpuMemUsed = nvidiaMemory.used / (1024 * 1024);
+        gpuMemUsed = float(nvidiaMemory.used / (1024 * 1024)) / 1000;
     }
 
     pthread_detach(gpuThread);
@@ -115,7 +116,7 @@ void *getAmdGpuUsage(void *){
         if (fscanf(amdGpuVramUsedFile, "%" PRId64, &amdgpu.memoryUsed) != 1)
             amdgpu.memoryUsed = 0;
         amdgpu.memoryUsed /= (1024 * 1024);
-        gpuMemUsed = amdgpu.memoryUsed;
+        gpuMemUsed = float(amdgpu.memoryUsed) / 1000;
     }
 
     pthread_detach(gpuThread);
