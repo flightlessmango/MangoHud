@@ -62,6 +62,7 @@ extern "C" {
    OVERLAY_PARAM_CUSTOM(crosshair_size)              \
    OVERLAY_PARAM_CUSTOM(offset_x)                    \
    OVERLAY_PARAM_CUSTOM(offset_y)                    \
+   OVERLAY_PARAM_CUSTOM(crosshair_color)             \
    OVERLAY_PARAM_CUSTOM(help)
 
 enum overlay_param_position {
@@ -95,6 +96,7 @@ struct overlay_params {
    unsigned offset_x;
    unsigned offset_y;
    unsigned vsync;
+   unsigned crosshair_color;
    float font_size;
    KeySym toggle_hud;
    KeySym toggle_logging;

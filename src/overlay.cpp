@@ -65,6 +65,12 @@ ImFont* font1 = nullptr;
 struct amdGpu amdgpu;
 double frameStart, frameEnd, targetFrameTime = 0;
 
+#define RGBGetBValue(rgb)   (rgb & 0x000000FF)
+#define RGBGetGValue(rgb)   ((rgb >> 8) & 0x000000FF)
+#define RGBGetRValue(rgb)   ((rgb >> 16) & 0x000000FF)
+
+#define ToRGBColor(r, g, b, a) ((r << 16) | (g << 8) | (b));
+
 /* Mapped from VkInstace/VkPhysicalDevice */
 struct instance_data {
    struct vk_instance_dispatch_table vtable;
@@ -1274,8 +1280,12 @@ static void compute_swapchain_display(struct swapchain_data *data)
       ImGui::Begin("Logging", &open, ImGuiWindowFlags_NoDecoration);
       ImVec2 horiz = ImVec2(data->width / 2 - (instance_data->params.crosshair_size / 2), data->height / 2);
       ImVec2 vert = ImVec2(data->width / 2, data->height / 2 - (instance_data->params.crosshair_size / 2));
-      ImGui::GetWindowDrawList()->AddLine(horiz, ImVec2(horiz.x + instance_data->params.crosshair_size, horiz.y + 0), IM_COL32(0, 0, 0, 255), 2.0f);
-      ImGui::GetWindowDrawList()->AddLine(vert, ImVec2(vert.x + 0, vert.y + instance_data->params.crosshair_size), IM_COL32(0, 0, 0, 255), 2.0f);
+      ImGui::GetWindowDrawList()->AddLine(horiz, ImVec2(horiz.x + instance_data->params.crosshair_size, horiz.y + 0),
+         IM_COL32(RGBGetRValue(instance_data->params.crosshair_color), RGBGetGValue(instance_data->params.crosshair_color),
+         RGBGetBValue(instance_data->params.crosshair_color), 255), 2.0f);
+      ImGui::GetWindowDrawList()->AddLine(vert, ImVec2(vert.x + 0, vert.y + instance_data->params.crosshair_size),
+         IM_COL32(RGBGetRValue(instance_data->params.crosshair_color), RGBGetGValue(instance_data->params.crosshair_color),
+         RGBGetBValue(instance_data->params.crosshair_color), 255), 2.0f);
       ImGui::End();
    }
       ImGui::PopStyleVar(2);

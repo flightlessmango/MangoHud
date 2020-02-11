@@ -113,6 +113,14 @@ parse_no_display(const char *str)
 }
 
 static unsigned
+parse_color(const char (*str))
+{
+   std::string string = str;
+   string = "0x" + string;
+   return strtol(string.c_str(), NULL, 0);
+}
+
+static unsigned
 parse_unsigned(const char *str)
 {
    return strtol(str, NULL, 0);
@@ -123,6 +131,8 @@ parse_unsigned(const char *str)
 #define parse_vsync(s) parse_unsigned(s)
 #define parse_offset_x(s) parse_unsigned(s)
 #define parse_offset_y(s) parse_unsigned(s)
+
+#define parse_crosshair_color(s) parse_color(s)
 
 static bool
 parse_help(const char *str)
