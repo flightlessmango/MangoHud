@@ -223,8 +223,8 @@ parse_overlay_env(struct overlay_params *params,
    params->width = 280;
    params->height = 140;
    params->control = -1;
-   params->toggle_hud = 65481;
-   params->toggle_logging = 65471;
+   params->toggle_hud = XK_F12;
+   params->toggle_logging = XK_F2;
    params->fps_limit = 0;
    params->vsync = -1;
    params->crosshair_size = 30;
