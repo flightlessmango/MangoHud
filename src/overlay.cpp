@@ -1955,6 +1955,7 @@ static void setup_swapchain_data(struct swapchain_data *data,
    ImGuiStyle& style = ImGui::GetStyle();
    //style.Colors[ImGuiCol_FrameBg]   = ImVec4(0.0f, 0.0f, 0.0f, 0.00f); // Setting temporarily with PushStyleColor()
    style.Colors[ImGuiCol_PlotLines] = ImVec4(0.0f, 1.0f, 0.0f, 1.00f);
+   style.Colors[ImGuiCol_WindowBg]  = ImVec4(0.06f, 0.06f, 0.06f, 1.0f);
 
    struct device_data *device_data = data->device;
 
