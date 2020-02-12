@@ -2242,8 +2242,10 @@ static VkResult overlay_QueuePresentKHR(
          * wait on them as well, we can just wait on the overlay submission
          * semaphore.
          */
-      present_info.pWaitSemaphores = &draw->semaphore;
-      present_info.waitSemaphoreCount = 1;
+      if (draw) {
+         present_info.pWaitSemaphores = &draw->semaphore;
+         present_info.waitSemaphoreCount = 1;
+      }
 
       uint64_t ts0 = os_time_get();
       VkResult chain_result = queue_data->device->vtable.QueuePresentKHR(queue, &present_info);
