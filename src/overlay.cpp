@@ -935,7 +935,9 @@ static VkResult overlay_CreateXcbSurfaceKHR(VkInstance instance, const VkXcbSurf
          xcb_get_window_attributes(data->xcb.conn, data->xcb.window), nullptr);
 
       if (reply) {
+         std::ios_base::fmtflags f( std::cerr.flags() );
          std::cerr << std::hex << reply->all_event_masks << ", " << reply->your_event_mask << std::endl;
+         std::cerr.flags( f );
          //mask |= reply->all_event_masks;
          values[0] |= reply->your_event_mask;
       }
@@ -956,8 +958,10 @@ void process_events_xlib(Display *disp, Window window)
 
    std::cerr << __func__ << std::endl;
    XEvent event;
-   while (XPending(disp)) {
-      XNextEvent(disp, &event);
+//   while (XPending(disp)) {
+//      XNextEvent(disp, &event);
+
+   while (XCheckMaskEvent(disp, PointerMotionMask | ButtonPressMask | ButtonReleaseMask | KeyPressMask | KeyReleaseMask, &event)) {
 
       if (event.type == ButtonPress)
       {
@@ -1930,13 +1934,13 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
    device_data->vtable.BeginCommandBuffer(draw->command_buffer, &buffer_begin_info);
 
    ensure_swapchain_fonts(data, draw->command_buffer);
-
+/*
    if (has_input && !data->saved.updated) {
       save_swapchain_image(device_data, data, image_index, draw->command_buffer);
    } else if (has_input) {
       blit_swapchain_image(device_data, data, image_index, draw->command_buffer);
    }
-
+*/
    /* Bounce the image to display back to color attachment layout for
     * rendering on top of it.
     */
@@ -2771,7 +2775,7 @@ static VkResult overlay_QueuePresentKHR(
             result = chain_result;
       }
 
-   } while(hang_now);
+   } while(false && hang_now);
    return result;
 }
 
