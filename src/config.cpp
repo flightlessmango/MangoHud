@@ -39,13 +39,15 @@ void parseConfigLine(std::string line){
 void parseConfigFile() {
     std::vector<std::string> paths;
     std::string home;
-    static const char *config_dir = "/.local/share/MangoHud";
+    static const char *config_dir = "/.config/MangoHud";
 
     const char *env_home = std::getenv("HOME");
     if (env_home)
         home = env_home;
-    if (!home.empty())
+    if (!home.empty()) {
+        paths.push_back(home + "/.local/share/MangoHud/MangoHud.conf");
         paths.push_back(home + config_dir + "/MangoHud.conf");
+    }
 
     std::string exe_path = get_exe_path();
     auto n = exe_path.find_last_of('/');
