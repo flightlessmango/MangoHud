@@ -1130,6 +1130,14 @@ static void compute_swapchain_display(struct swapchain_data *data)
    }
    
    if (!instance_data->params.no_display){
+      if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_time]){
+         std::time_t t = std::time(nullptr);
+         std::stringstream time;
+         time << std::put_time(std::localtime(&t), "%T");
+         ImGui::PushFont(font1);
+         ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.00f), "%s", time.str().c_str());
+         ImGui::PopFont();
+      }
       if (device_data->gpu_stats && instance_data->params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
          ImGui::TextColored(ImVec4(0.180, 0.592, 0.384, 1.00f), "GPU");
          ImGui::SameLine(hudFirstRow);

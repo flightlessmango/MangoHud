@@ -335,6 +335,9 @@ parse_overlay_env(struct overlay_params *params,
 
       if (params->enabled[OVERLAY_PARAM_ENABLED_vram])
          params->height += (params->font_size - 3);
+      
+      if (params->enabled[OVERLAY_PARAM_ENABLED_time])
+         params->height += ((params->font_size / 2) - (3 / 2));
    }
 
 }
