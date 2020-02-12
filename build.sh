@@ -134,8 +134,8 @@ clean() {
 }
 
 uninstall() {
-    rm -r "$HOME/.local/share/MangoHud"
-    rm "$IMPLICIT_LAYER_DIR"/{mangohud64,mangohud32}.json
+    rm -rfv "$HOME"/.local/share/MangoHud/libMangoHud*.so
+    rm -fv "$IMPLICIT_LAYER_DIR"/{mangohud64,mangohud32}.json
 }
 
 for a in $@; do
