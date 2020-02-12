@@ -4,6 +4,7 @@
 #include <string.h>
 #include "config.h"
 #include "overlay_params.h"
+#include "file_utils.h"
 
 std::unordered_map<std::string,std::string> options;
 
@@ -36,14 +37,34 @@ void parseConfigLine(std::string line){
 }
 
 void parseConfigFile() {
-    std::string home = std::getenv("HOME");
-    std::string filePath = home + "/.local/share/MangoHud/MangoHud.conf";
-    std::ifstream stream(filePath);
+    std::vector<std::string> paths;
+    std::string home;
+    static const char *config_dir = "/.local/share/MangoHud";
+
+    const char *env_home = std::getenv("HOME");
+    if (env_home)
+        home = env_home;
+    if (!home.empty())
+        paths.push_back(home + config_dir + "/MangoHud.conf");
+
+    std::string exe_path = get_exe_path();
+    auto n = exe_path.find_last_of('/');
+    if (!exe_path.empty() && n != std::string::npos) {
+        // as executable's name
+        if (!home.empty())
+            paths.push_back(home + config_dir + exe_path.substr(n) + ".conf");
+
+        // in executable's folder though not much sense in /usr/bin/
+        paths.push_back(exe_path.substr(0, n) + "/MangoHud.conf");
+    }
 
     std::string line;
-    if (stream)
-    while (std::getline(stream, line))
-    {
-        parseConfigLine(line);
+    for (auto& p : paths) {
+        std::cerr << "parsing config: " << p << std::endl;
+        std::ifstream stream(p);
+        while (std::getline(stream, line))
+        {
+            parseConfigLine(line);
+        }
     }
 }
