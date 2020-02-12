@@ -27,6 +27,8 @@ void parseConfigLine(std::string line){
     size_t equal = line.find("=");
     if(equal==std::string::npos)
         {
+            if (!line.empty())
+                options.insert({line, "1"});
             return;
         }
     
