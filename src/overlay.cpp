@@ -2154,8 +2154,11 @@ static void overlay_DestroySwapchainKHR(
 void FpsLimiter(){
    int64_t now = os_time_get_nano();
    sleepTime = targetFrameTime - (now - frameEnd);
-   this_thread::sleep_for(chrono::nanoseconds(sleepTime - frameOverhead));
-   frameOverhead = (now - frameStart);
+   if ( sleepTime > frameOverhead ) {
+      int64_t adjustedSleep = sleepTime - frameOverhead;
+      this_thread::sleep_for(chrono::nanoseconds(adjustedSleep));
+      frameOverhead = ((os_time_get_nano() - frameStart) - adjustedSleep + (frameOverhead * 99)) / 100;
+   }
 }
 
 static VkResult overlay_QueuePresentKHR(
