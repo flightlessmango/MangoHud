@@ -58,12 +58,12 @@
 bool open = false;
 string gpuString;
 float offset_x, offset_y, hudSpacing;
-int hudFirstRow, hudSecondRow, frameOverhead = 0, sleepTime = 0;
+int hudFirstRow, hudSecondRow;
 string engineName, engineVersion;
 ImFont* font = nullptr;
 ImFont* font1 = nullptr;
 struct amdGpu amdgpu;
-double frameStart, frameEnd, targetFrameTime = 0;
+int64_t frameStart, frameEnd, targetFrameTime = 0, frameOverhead = 0, sleepTime = 0;
 
 #define RGBGetBValue(rgb)   (rgb & 0x000000FF)
 #define RGBGetGValue(rgb)   ((rgb >> 8) & 0x000000FF)
@@ -2153,12 +2153,13 @@ static void overlay_DestroySwapchainKHR(
 }
 
 void FpsLimiter(){
-   int64_t now = os_time_get_nano();
-   sleepTime = targetFrameTime - (now - frameEnd);
+   sleepTime = targetFrameTime - (frameStart - frameEnd);
    if ( sleepTime > frameOverhead ) {
       int64_t adjustedSleep = sleepTime - frameOverhead;
       this_thread::sleep_for(chrono::nanoseconds(adjustedSleep));
-      frameOverhead = ((os_time_get_nano() - frameStart) - adjustedSleep + (frameOverhead * 99)) / 100;
+      frameOverhead = ((os_time_get_nano() - frameStart) - adjustedSleep);
+      if (frameOverhead > targetFrameTime)
+         frameOverhead = 0;
    }
 }
 
@@ -2166,12 +2167,6 @@ static VkResult overlay_QueuePresentKHR(
     VkQueue                                     queue,
     const VkPresentInfoKHR*                     pPresentInfo)
 {
-   if (targetFrameTime > 0){
-      frameStart = os_time_get_nano();
-      FpsLimiter();
-      frameEnd = os_time_get_nano();
-   }
-   
    struct queue_data *queue_data = FIND(struct queue_data, queue);
    struct device_data *device_data = queue_data->device;
    struct instance_data *instance_data = device_data->instance;
@@ -2250,6 +2245,12 @@ static VkResult overlay_QueuePresentKHR(
          pPresentInfo->pResults[i] = chain_result;
       if (chain_result != VK_SUCCESS && result == VK_SUCCESS)
          result = chain_result;
+   }
+
+   if (targetFrameTime > 0){
+      frameStart = os_time_get_nano();
+      FpsLimiter();
+      frameEnd = os_time_get_nano();
    }
    
    return result;
@@ -2585,7 +2586,7 @@ static VkResult overlay_CreateInstance(
 
    parse_overlay_env(&instance_data->params, getenv("MANGOHUD_CONFIG"));
    if (instance_data->params.fps_limit > 0)
-      targetFrameTime = double(1000000000.0f / instance_data->params.fps_limit);
+      targetFrameTime = int64_t(1000000000.0 / instance_data->params.fps_limit);
 
    int font_size;
    instance_data->params.font_size > 0 ? font_size = instance_data->params.font_size : font_size = 24;
