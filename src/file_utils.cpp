@@ -98,3 +98,10 @@ bool dir_exists(const std::string& path)
     struct stat s;
     return !stat(path.c_str(), &s) && S_ISDIR(s.st_mode);
 }
+
+std::string get_exe_path()
+{
+    char result[PATH_MAX] {};
+    ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+    return std::string(result, (count > 0) ? count : 0);
+}
