@@ -1,28 +1,34 @@
 #!/bin/bash    
 
-DATA_DIR=$HOME/.local/share/MangoHud
-LAYER=build/release/usr/share/vulkan/implicit_layer.d/mangohud.json
-INSTALL_DIR=build/package/MangoHud/.local/share
-IMPLICIT_LAYER_DIR=$HOME/.local/share/vulkan/implicit_layer.d 
+DATA_DIR="$HOME/.local/share/MangoHud"
+LAYER="build/release/usr/share/vulkan/implicit_layer.d/mangohud.json"
+INSTALL_DIR="build/package/MangoHud/.local/share"
+IMPLICIT_LAYER_DIR="$HOME/.local/share/vulkan/implicit_layer.d"
 DISTRO=$(sed 1q /etc/os-release | sed 's/NAME=//g' | sed 's/"//g')
 VERSION=$(git describe --long --tags --always | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/^v//')
 
 dependencies() {
     if [[ ! -f build/release/usr/lib64/libMangoHud.so ]]; then
         missing_deps() {
-            echo "# Missing dependencies!"
-            echo "# Attempting to install '$INSTALL'"
+            echo "# Missing dependencies:$INSTALL"
+            read -rp "Do you wish the script to install these packages? [y/N]" PERMISSION
+            case "$PERMISSION" in
+                "y"|"Y") echo "Attempting to install missing packages"; sleep 0.5;;
+                *) echo "Continuing with missing dependencies"; sleep 1;;
+            esac
         }
         install() {
             for i in $(eval echo $DEPS); do
-                $MANAGER_QUERY $i &> /dev/null
+                $MANAGER_QUERY "$i" &> /dev/null
                 if [[ $? == 1 ]]; then
-                    INSTALL=$INSTALL" "$i
+                    INSTALL="$INSTALL""$i "
                 fi
             done
             if [[ ! -z "$INSTALL" ]]; then
                 missing_deps
-                sudo $MANAGER_INSTALL $INSTALL
+                if [[ "$PERMISSION" == "Y" || "$PERMISSION" == "y" ]]; then
+                    sudo $MANAGER_INSTALL $INSTALL
+                fi
             fi
         }
         echo "# Checking Dependencies"
@@ -70,20 +76,20 @@ dependencies() {
 configure() {
     dependencies
     git submodule update --init --depth 50
-    if [[ ! -f build/meson64/build.ninja ]]; then
-        meson build/meson64 --libdir lib64 --prefix $PWD/build/release/usr
+    if [[ ! -f "build/meson64/build.ninja" ]]; then
+        meson build/meson64 --libdir lib64 --prefix "$PWD/build/release/usr"
     fi
-    if [[ ! -f build/meson32/build.ninja ]]; then
+    if [[ ! -f "build/meson32/build.ninja" ]]; then
         export CC="gcc -m32"
         export CXX="g++ -m32"
         export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH_32}"
         export LLVM_CONFIG="/usr/bin/llvm-config32"
-        meson build/meson32 --libdir lib32 --prefix $PWD/build/release/usr
+        meson build/meson32 --libdir lib32 --prefix "$PWD/build/release/usr"
     fi
 }
 
 build() {
-    if [[ ! -f build/meson64/build.ninja ]]; then
+    if [[ ! -f "build/meson64/build.ninja" ]]; then
         configure
     fi
     ninja -C build/meson32 install
@@ -91,40 +97,45 @@ build() {
 }
 
 package() {
-    LIB=build/release/usr/lib64/libMangoHud.so
-    LIB32=build/release/usr/lib32/libMangoHud.so
-    if [[ ! -f "$LIB" || "$LIB" -ot build/meson64/src/libMangoHud.so ]]; then
+    LIB="build/release/usr/lib64/libMangoHud.so"
+    LIB32="build/release/usr/lib32/libMangoHud.so"
+    if [[ ! -f "$LIB" || "$LIB" -ot "build/meson64/src/libMangoHud.so" ]]; then
         build
     fi
-    mkdir -p $INSTALL_DIR/{MangoHud,vulkan/implicit_layer.d}
+    mkdir -p "$INSTALL_DIR"/{MangoHud,vulkan/implicit_layer.d}
 
-    cp $LIB32 $INSTALL_DIR/MangoHud/libMangoHud32.so
-    cp $LIB $INSTALL_DIR/MangoHud/libMangoHud.so
-    cp $LAYER $INSTALL_DIR/vulkan/implicit_layer.d/mangohud64.json
-    cp $LAYER $INSTALL_DIR/vulkan/implicit_layer.d/mangohud32.json
-    cp --preserve=mode bin/install.sh build/package/MangoHud/install.sh
-    sed -i "s|64bit|32bit|g" $INSTALL_DIR/vulkan/implicit_layer.d/mangohud32.json
+    cp "$LIB32" "$INSTALL_DIR/MangoHud/libMangoHud32.so"
+    cp "$LIB" "$INSTALL_DIR/MangoHud/libMangoHud.so"
+    cp "$LAYER" "$INSTALL_DIR/vulkan/implicit_layer.d/mangohud64.json"
+    cp "$LAYER" "$INSTALL_DIR/vulkan/implicit_layer.d/mangohud32.json"
+    cp --preserve=mode "bin/install.sh" "build/package/MangoHud/install.sh"
+    cp "bin/MangoHud.conf" "$INSTALL_DIR/MangoHud/MangoHud.conf"
+    sed -i "s|64bit|32bit|g" "$INSTALL_DIR/vulkan/implicit_layer.d/mangohud32.json"
 
-    tar -C build/package -cpzf build/MangoHud-$VERSION.tar.gz .
+    tar -C build/package -cpzf "build/MangoHud-$VERSION.tar.gz" .
 }
 
 install() {
-    PKG=build/MangoHud-$VERSION.tar.gz
-    if [[ ! -f "$PKG" || "$PKG" -ot build/meson64/src/libMangoHud.so ]]; then
+    PKG="build/MangoHud-$VERSION.tar.gz"
+    if [[ ! -f "$PKG" || "$PKG" -ot "build/meson64/src/libMangoHud.so" ]]; then
         package
     fi
-    tar xzf build/MangoHud-$VERSION.tar.gz --exclude='install.sh' --strip-components=2 -C $HOME/
-    sed -i "s|libMangoHud.so|$HOME/.local/share/MangoHud/libMangoHud32.so|g" $HOME/.local/share/vulkan/implicit_layer.d/mangohud32.json
-    sed -i "s|libMangoHud.so|$HOME/.local/share/MangoHud/libMangoHud.so|g" $HOME/.local/share/vulkan/implicit_layer.d/mangohud64.json
+    if [[ -f "$HOME/.local/share/MangoHud/MangoHud.conf" ]]; then
+        tar xzf build/MangoHud-$VERSION.tar.gz --exclude='install.sh' --exclude="MangoHud/.local/share/MangoHud/MangoHud.conf" --strip-components=2 -C $HOME/
+    else
+        tar xzf build/MangoHud-$VERSION.tar.gz --exclude='install.sh' --strip-components=2 -C $HOME/
+    fi
+    sed -i "s|libMangoHud.so|$HOME/.local/share/MangoHud/libMangoHud32.so|g" "$HOME/.local/share/vulkan/implicit_layer.d/mangohud32.json"
+    sed -i "s|libMangoHud.so|$HOME/.local/share/MangoHud/libMangoHud.so|g" "$HOME/.local/share/vulkan/implicit_layer.d/mangohud64.json"
 }
 
 clean() {
-    rm -rf build
+    rm -rf "build"
 }
 
 uninstall() {
-    rm -r $HOME/.local/share/MangoHud
-    rm $IMPLICIT_LAYER_DIR/{mangohud64,mangohud32}.json
+    rm -r "$HOME/.local/share/MangoHud"
+    rm "$IMPLICIT_LAYER_DIR"/{mangohud64,mangohud32}.json
 }
 
 for a in $@; do
