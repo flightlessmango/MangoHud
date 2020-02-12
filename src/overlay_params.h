@@ -47,6 +47,7 @@ extern "C" {
    OVERLAY_PARAM_BOOL(ram)                           \
    OVERLAY_PARAM_BOOL(vram)                          \
    OVERLAY_PARAM_BOOL(crosshair)                     \
+   OVERLAY_PARAM_BOOL(full)                          \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
    OVERLAY_PARAM_CUSTOM(position)                    \
@@ -92,6 +93,7 @@ struct overlay_params {
    uint32_t crosshair_size;
    bool help;
    bool no_display;
+   bool full;
    unsigned width;
    unsigned height;
    unsigned offset_x;

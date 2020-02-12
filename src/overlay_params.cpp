@@ -240,6 +240,16 @@ parse_overlay_env(struct overlay_params *params,
 
 // Get config options
    parseConfigFile();
+   if (options.find("full") != options.end() && options.find("full")->second != "0") {
+   #define OVERLAY_PARAM_BOOL(name) \
+         params->enabled[OVERLAY_PARAM_ENABLED_##name] = 1;
+   #define OVERLAY_PARAM_CUSTOM(name)  //define _CUSTOM to nothing so they are left alone
+      OVERLAY_PARAMS
+   #undef OVERLAY_PARAM_BOOL
+   #undef OVERLAY_PARAM_CUSTOM
+   params->enabled[OVERLAY_PARAM_ENABLED_crosshair] = 0;
+   options.erase("full");
+   }
    for (auto& it : options) {
 #define OVERLAY_PARAM_BOOL(name)                                        \
       if (it.first == #name) {                                          \
@@ -262,7 +272,15 @@ parse_overlay_env(struct overlay_params *params,
 
    while ((num = parse_string(env, key, value)) != 0) {
       env += num;
-
+      if (!strcmp("full", key)) {
+      #define OVERLAY_PARAM_BOOL(name) \
+            params->enabled[OVERLAY_PARAM_ENABLED_##name] = 1;
+      #define OVERLAY_PARAM_CUSTOM(name)  //define _CUSTOM to nothing so they are left alone
+         OVERLAY_PARAMS
+      #undef OVERLAY_PARAM_BOOL
+      #undef OVERLAY_PARAM_CUSTOM
+      params->enabled[OVERLAY_PARAM_ENABLED_crosshair] = 0;
+      }
 #define OVERLAY_PARAM_BOOL(name)                                        \
       if (!strcmp(#name, key)) {                                        \
          params->enabled[OVERLAY_PARAM_ENABLED_##name] =                \
@@ -280,6 +298,7 @@ parse_overlay_env(struct overlay_params *params,
       fprintf(stderr, "Unknown option '%s'\n", key);
    }
 }
+   
    // if font_size is used and height has not been changed from default
    // increase height as needed based on font_size
    
