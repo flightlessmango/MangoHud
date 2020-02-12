@@ -76,6 +76,12 @@ parse_font_size(const char *str)
    return strtof(str, NULL);
 }
 
+static float
+parse_background_alpha(const char *str)
+{
+   return strtof(str, NULL);
+}
+
 static KeySym
 parse_toggle_hud(const char *str)
 {
@@ -230,6 +236,7 @@ parse_overlay_env(struct overlay_params *params,
    params->crosshair_size = 30;
    params->offset_x = 0;
    params->offset_y = 0;
+   params->background_alpha = 0.5;
 
 // Get config options
    parseConfigFile();

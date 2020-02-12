@@ -1085,7 +1085,7 @@ static void position_layer(struct swapchain_data *data)
    if (instance_data->params.offset_x > 0 || instance_data->params.offset_y > 0)
       margin = 0.0f;
 
-   ImGui::SetNextWindowBgAlpha(0.5);
+   ImGui::SetNextWindowBgAlpha(instance_data->params.background_alpha);
    ImGui::SetNextWindowSize(ImVec2(instance_data->params.width, instance_data->params.height), ImGuiCond_Always);
    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,-3));
@@ -1125,7 +1125,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
 	   ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
       
    if(instance_data->params.no_display){
-      ImGui::SetNextWindowBgAlpha(0.01);
+      ImGui::SetNextWindowBgAlpha(0.0);
       ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
    }
    
@@ -1263,7 +1263,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
    }
    ImGui::End();
    if(loggingOn){
-      ImGui::SetNextWindowBgAlpha(0.01);
+      ImGui::SetNextWindowBgAlpha(0.0);
       ImGui::SetNextWindowSize(ImVec2(instance_data->params.font_size * 13, instance_data->params.font_size * 13), ImGuiCond_Always);
       ImGui::SetNextWindowPos(ImVec2(data->width - instance_data->params.font_size * 13,
                                     0),
