@@ -2,7 +2,7 @@
 
 DATA_DIR="$HOME/.local/share/MangoHud"
 LAYER="build/release/usr/share/vulkan/implicit_layer.d/mangohud.json"
-INSTALL_DIR="build/package/MangoHud/.local/share"
+INSTALL_DIR="build/package/MangoHud"
 IMPLICIT_LAYER_DIR="$HOME/.local/share/vulkan/implicit_layer.d"
 DISTRO=$(sed 1q /etc/os-release | sed 's/NAME=//g' | sed 's/"//g')
 VERSION=$(git describe --long --tags --always | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/^v//')
@@ -102,15 +102,16 @@ package() {
     if [[ ! -f "$LIB" || "$LIB" -ot "build/meson64/src/libMangoHud.so" ]]; then
         build
     fi
-    mkdir -p "$INSTALL_DIR"/{MangoHud,vulkan/implicit_layer.d}
+    mkdir -p "$INSTALL_DIR/.local/share/"{MangoHud,vulkan/implicit_layer.d}
+    mkdir -p "$INSTALL_DIR/.config/MangoHud"
 
-    cp "$LIB32" "$INSTALL_DIR/MangoHud/libMangoHud32.so"
-    cp "$LIB" "$INSTALL_DIR/MangoHud/libMangoHud.so"
-    cp "$LAYER" "$INSTALL_DIR/vulkan/implicit_layer.d/mangohud64.json"
-    cp "$LAYER" "$INSTALL_DIR/vulkan/implicit_layer.d/mangohud32.json"
+    cp "$LIB32" "$INSTALL_DIR/.local/share/MangoHud/libMangoHud32.so"
+    cp "$LIB" "$INSTALL_DIR/.local/share/MangoHud/libMangoHud.so"
+    cp "$LAYER" "$INSTALL_DIR/.local/share/vulkan/implicit_layer.d/mangohud64.json"
+    cp "$LAYER" "$INSTALL_DIR/.local/share/vulkan/implicit_layer.d/mangohud32.json"
     cp --preserve=mode "bin/install.sh" "build/package/MangoHud/install.sh"
-    cp "bin/MangoHud.conf" "$INSTALL_DIR/MangoHud/MangoHud.conf"
-    sed -i "s|64bit|32bit|g" "$INSTALL_DIR/vulkan/implicit_layer.d/mangohud32.json"
+    cp "bin/MangoHud.conf" "$INSTALL_DIR/"{.config/MangoHud/MangoHud.conf,.local/share/MangoHud/MangoHud.conf}
+    sed -i "s|64bit|32bit|g" "$INSTALL_DIR/.local/share/vulkan/implicit_layer.d/mangohud32.json"
 
     tar -C build/package -cpzf "build/MangoHud-$VERSION.tar.gz" .
 }
@@ -120,8 +121,8 @@ install() {
     if [[ ! -f "$PKG" || "$PKG" -ot "build/meson64/src/libMangoHud.so" ]]; then
         package
     fi
-    if [[ -f "$HOME/.local/share/MangoHud/MangoHud.conf" ]]; then
-        tar xzf build/MangoHud-$VERSION.tar.gz --exclude='install.sh' --exclude="MangoHud/.local/share/MangoHud/MangoHud.conf" --strip-components=2 -C $HOME/
+    if [[ -f "$HOME/.config/MangoHud/MangoHud.conf" ]]; then
+        tar xzf build/MangoHud-$VERSION.tar.gz --exclude='install.sh' --exclude="MangoHud/.config/MangoHud/MangoHud.conf" --strip-components=2 -C $HOME/
     else
         tar xzf build/MangoHud-$VERSION.tar.gz --exclude='install.sh' --strip-components=2 -C $HOME/
     fi
@@ -134,7 +135,7 @@ clean() {
 }
 
 uninstall() {
-    rm -rfv "$HOME"/.local/share/MangoHud/libMangoHud*.so
+    rm -rfv "$HOME/.local/share/MangoHud"
     rm -fv "$IMPLICIT_LAYER_DIR"/{mangohud64,mangohud32}.json
 }
 
