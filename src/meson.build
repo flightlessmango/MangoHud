@@ -50,7 +50,7 @@ vklayer_mesa_overlay = shared_library(
   vk_enum_to_str,
   vklayer_files,
   overlay_spv,
-  vk_layer_table_helpers,
+  vulkan_headers,
   c_args : [
     pre_args,
     c_vis_args, 

@@ -1,6 +1,3 @@
 [submodule "modules/ImGui/src"]
 	path = modules/ImGui/src
 	url = https://github.com/flightlessmango/ImGui.git
-[submodule "modules/Vulkan-Headers"]
-	path = modules/Vulkan-Headers
-	url = https://github.com/KhronosGroup/Vulkan-Headers.git
