@@ -1,1 +1,2 @@
 option('glibcxx_asserts', type : 'boolean', value : false)
+option('use_system_vulkan', type : 'feature', value : 'disabled', description: 'Use system vulkan headers instead of the provided ones')
