@@ -83,11 +83,13 @@ void parseConfigFile() {
 
     std::string line;
     for (auto& p : paths) {
-        std::cerr << "parsing config: " << p << std::endl;
+        std::cerr << "parsing config: " << p;
         std::ifstream stream(p);
         while (std::getline(stream, line))
         {
             parseConfigLine(line);
         }
+        std::cerr << " [ ok ]" << std::endl;
+
     }
 }
