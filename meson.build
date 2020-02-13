@@ -184,17 +184,8 @@ endif
 
 dep_pthread = cc.find_library('pthread')
 
-vk_api_xml = files('modules/Vulkan-Docs/xml/vk.xml')
+vk_api_xml = files('modules/Vulkan-Headers/registry/vk.xml')
 vk_layer_table_helpers = []
-loader_genvk_py = files('modules/Vulkan-Loader/scripts/loader_genvk.py')
-foreach s : ['vk_dispatch_table_helper.h', 'vk_layer_dispatch_table.h']#, 'vk_loader_extensions.h', 'vk_loader_extensions.c']
-  vk_layer_table_helpers += custom_target(
-    s, output : s,
-    command : [prog_python, loader_genvk_py,
-      '-scripts', '../../Vulkan-Docs/scripts', # relative to loader_genvk.py
-      '-registry', vk_api_xml,
-      '-o','@OUTDIR@', s])
-endforeach
 
 vk_enum_to_str = custom_target(
   'vk_enum_to_str',

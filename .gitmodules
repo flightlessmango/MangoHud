@@ -1,9 +1,3 @@
-[submodule "modules/Vulkan-Docs"]
-	path = modules/Vulkan-Docs
-	url = https://github.com/KhronosGroup/Vulkan-Docs.git
-[submodule "modules/Vulkan-Loader"]
-	path = modules/Vulkan-Loader
-	url = https://github.com/KhronosGroup/Vulkan-Loader.git
 [submodule "modules/ImGui/src"]
 	path = modules/ImGui/src
 	url = https://github.com/flightlessmango/ImGui.git
