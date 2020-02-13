@@ -46,7 +46,7 @@ void parseConfigFile() {
         home = env_home;
     if (!home.empty()) {
         paths.push_back(home + "/.local/share/MangoHud/MangoHud.conf");
-        paths.push_back(home + config_dir + "/MangoHud.conf");
+        paths.push_back(home + config_dir + "MangoHud.conf");
     }
 
     std::string exe_path = get_exe_path();
@@ -83,8 +83,14 @@ void parseConfigFile() {
 
     std::string line;
     for (auto& p : paths) {
-        std::cerr << "parsing config: " << p;
         std::ifstream stream(p);
+        if (!stream.good()) {
+            // printing just so user has an idea of possible configs
+            std::cerr << "skipping config: " << p << std::endl;
+            continue;
+        }
+
+        std::cerr << "parsing config: " << p;
         while (std::getline(stream, line))
         {
             parseConfigLine(line);
