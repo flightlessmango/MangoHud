@@ -108,8 +108,14 @@ endif
 
 inc_common = [
     include_directories('include'),
-    include_directories('modules/Vulkan-Headers/include'),
 ]
+
+dep_vulkan = dependency('vulkan', required: get_option('use_system_vulkan'))
+if not dep_vulkan.found()
+  inc_common += [
+      include_directories('modules/Vulkan-Headers/include')
+  ]
+endif
 
 # Check for generic C arguments
 c_args = []
@@ -184,7 +190,16 @@ endif
 
 dep_pthread = cc.find_library('pthread')
 
-vk_api_xml = files('modules/Vulkan-Headers/registry/vk.xml')
+if dep_vulkan.found()
+  datadir = get_option('datadir')
+  if not datadir.startswith('/')
+    datadir = get_option('prefix') / datadir
+  endif
+  vk_api_xml = files(datadir / 'vulkan/registry/vk.xml')
+else
+  vk_api_xml = files('modules/Vulkan-Headers/registry/vk.xml')
+endif
+
 vk_layer_table_helpers = []
 
 vk_enum_to_str = custom_target(
