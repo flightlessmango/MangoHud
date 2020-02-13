@@ -2109,7 +2109,6 @@ static struct overlay_draw *before_present(struct swapchain_data *swapchain_data
                                            unsigned n_wait_semaphores,
                                            unsigned imageIndex)
 {
-   struct instance_data *instance_data = swapchain_data->device->instance;
    struct overlay_draw *draw = NULL;
 
    snapshot_swapchain_frame(swapchain_data);
@@ -2177,7 +2176,6 @@ static VkResult overlay_QueuePresentKHR(
 {
    struct queue_data *queue_data = FIND(struct queue_data, queue);
    struct device_data *device_data = queue_data->device;
-   struct instance_data *instance_data = device_data->instance;
 
    device_data->frame_stats.stats[OVERLAY_PARAM_ENABLED_frame]++;
 
