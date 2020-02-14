@@ -1,5 +1,6 @@
 #!/bin/bash
 
+cd $(dirname "$0")
 cp -rv ".local" "$HOME/"
 if [[ ! -f "$HOME/.config/MangoHud/MangoHud.conf" ]]; then
     cp -rv ".config" "$HOME/"
