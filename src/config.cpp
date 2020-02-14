@@ -29,11 +29,11 @@ void parseConfigLine(std::string line){
     if(equal==std::string::npos)
         {
             if (!line.empty())
-                options.insert({line, "1"});
+                options[line] = "1";
             return;
         }
     
-    options.insert({line.substr(0,equal), line.substr(equal+1)});
+    options[line.substr(0, equal)] = line.substr(equal+1);
 }
 
 void parseConfigFile() {
