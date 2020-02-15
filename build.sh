@@ -1,9 +1,11 @@
 #!/bin/bash    
 
-DATA_DIR="$HOME/.local/share/MangoHud"
+XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+DATA_DIR="$XDG_DATA_HOME/MangoHud"
 LAYER="build/release/usr/share/vulkan/implicit_layer.d/mangohud.json"
 INSTALL_DIR="build/package/MangoHud"
-IMPLICIT_LAYER_DIR="$HOME/.local/share/vulkan/implicit_layer.d"
+IMPLICIT_LAYER_DIR="$XDG_DATA_HOME/vulkan/implicit_layer.d"
 DISTRO=$(sed 1q /etc/os-release | sed 's/NAME=//g' | sed 's/"//g')
 VERSION=$(git describe --long --tags --always | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/^v//')
 
@@ -122,13 +124,14 @@ install() {
     if [[ ! -f "$PKG" || "$PKG" -ot "build/meson64/src/libMangoHud.so" ]]; then
         package
     fi
-    if [[ -f "$HOME/.config/MangoHud/MangoHud.conf" ]]; then
-        tar xzf build/MangoHud-$VERSION.tar.gz --exclude='install.sh' --exclude="MangoHud/.config/MangoHud/MangoHud.conf" --strip-components=2 -C $HOME/
+    if [[ -f "$XDG_CONFIG_HOME/MangoHud/MangoHud.conf" ]]; then
+        tar xzf "build/MangoHud-$VERSION.tar.gz" -C "$XDG_DATA_HOME/" "./MangoHud/.local/share/"{MangoHud,vulkan} --strip-components=4
     else
-        tar xzf build/MangoHud-$VERSION.tar.gz --exclude='install.sh' --strip-components=2 -C $HOME/
+        tar xzf "build/MangoHud-$VERSION.tar.gz" -C "$XDG_DATA_HOME/" "./MangoHud/.local/share/"{MangoHud,vulkan} --strip-components=4
+        tar xzf "build/MangoHud-$VERSION.tar.gz" -C "$XDG_CONFIG_HOME/" "./MangoHud/.config/MangoHud" --strip-components=3
     fi
-    sed -i "s|libMangoHud.so|$HOME/.local/share/MangoHud/libMangoHud32.so|g" "$HOME/.local/share/vulkan/implicit_layer.d/mangohud32.json"
-    sed -i "s|libMangoHud.so|$HOME/.local/share/MangoHud/libMangoHud.so|g" "$HOME/.local/share/vulkan/implicit_layer.d/mangohud64.json"
+    sed -i "s|libMangoHud.so|$XDG_DATA_HOME/MangoHud/libMangoHud32.so|g" "$XDG_DATA_HOME/vulkan/implicit_layer.d/mangohud32.json"
+    sed -i "s|libMangoHud.so|$XDG_DATA_HOME/MangoHud/libMangoHud.so|g" "$XDG_DATA_HOME/vulkan/implicit_layer.d/mangohud64.json"
 }
 
 clean() {
@@ -136,7 +139,7 @@ clean() {
 }
 
 uninstall() {
-    rm -rfv "$HOME/.local/share/MangoHud"
+    rm -rfv "$XDG_DATA_HOME/MangoHud"
     rm -fv "$IMPLICIT_LAYER_DIR"/{mangohud64,mangohud32}.json
 }
 
