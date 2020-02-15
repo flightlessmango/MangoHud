@@ -16,3 +16,6 @@ std::vector<std::string> ls(const char* root, const char* prefix = nullptr, LS_F
 bool file_exists(const std::string& path);
 bool dir_exists(const std::string& path);
 std::string get_exe_path();
+std::string get_home_dir();
+std::string get_data_dir();
+std::string get_config_dir();
