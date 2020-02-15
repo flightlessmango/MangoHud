@@ -49,6 +49,7 @@ extern "C" {
    OVERLAY_PARAM_BOOL(crosshair)                     \
    OVERLAY_PARAM_BOOL(time)                          \
    OVERLAY_PARAM_BOOL(full)                          \
+   OVERLAY_PARAM_BOOL(read_configs)                  \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
    OVERLAY_PARAM_CUSTOM(position)                    \
@@ -110,6 +111,8 @@ struct overlay_params {
 const extern char *overlay_param_names[];
 
 void parse_overlay_env(struct overlay_params *params,
+                       const char *env);
+void parse_overlay_config(struct overlay_params *params,
                        const char *env);
 
 #ifdef __cplusplus
