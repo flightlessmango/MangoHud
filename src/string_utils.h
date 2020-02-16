@@ -73,4 +73,15 @@ static bool try_stoi(int& val, const std::string& str, std::size_t* pos = 0, int
     return false;
 }
 
+static bool try_stoull(unsigned long long& val, const std::string& str, std::size_t* pos = 0, int base = 10)
+{
+    try {
+        val = std::stoull(str, pos, base);
+        return true;
+    } catch (std::invalid_argument& e) {
+        std::cerr << __func__ << ": invalid argument: '" << str << "'" << std::endl;
+    }
+    return false;
+}
+
 #pragma GCC diagnostic pop

@@ -41,6 +41,7 @@ vklayer_files = files(
   'file_utils.cpp',
   'memory.cpp',
   'config.cpp',
+  'iostats.cpp',
 )
 
 # lib_xnvctrl = cc.find_library('XNVCtrl')

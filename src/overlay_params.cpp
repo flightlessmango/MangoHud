@@ -147,6 +147,8 @@ parse_str(const char *str)
 #define parse_offset_x(s) parse_unsigned(s)
 #define parse_offset_y(s) parse_unsigned(s)
 #define parse_time_format(s) parse_str(s)
+#define parse_io_read(s) parse_unsigned(s)
+#define parse_io_write(s) parse_unsigned(s)
 
 #define parse_crosshair_color(s) parse_color(s)
 
