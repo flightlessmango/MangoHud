@@ -67,8 +67,7 @@ void parseConfigFile() {
             while (std::getline(stream, line, '\0'))
             {
                 if (!line.empty()
-                    && ((n = line.find_last_of('\\')) != std::string::npos
-                    || (n = line.find_last_of('/')) != std::string::npos)
+                    && (n = line.find_last_of("/\\")) != std::string::npos
                     && n < line.size() - 1) // have at least one character
                 {
                     auto dot = line.find_last_of('.');
