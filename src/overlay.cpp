@@ -2457,8 +2457,45 @@ static const struct {
 #undef ADD_HOOK
 };
 
+static bool checkBlacklisted()
+{
+   std::vector<std::string> blacklist {
+      "Battle.net.exe",
+      "EpicGamesLauncher.exe",
+      "IGOProxy.exe",
+      "IGOProxy64.exe",
+      "Origin.exe",
+      "OriginThinSetupInternal.exe",
+      "Steam.exe",
+   };
+
+#ifdef _GNU_SOURCE_OFF
+   std::string p(program_invocation_name);
+   std::string procName = p.substr(p.find_last_of("/\\") + 1);
+#else
+   std::string p = get_exe_path();
+   std::string procName;
+   if (ends_with(p, "wine-preloader") || ends_with(p, "wine64-preloader")) {
+      get_wine_exe_name(procName, true);
+   } else {
+      procName = p.substr(p.find_last_of("/\\") + 1);
+   }
+#endif
+
+   return std::find(blacklist.begin(), blacklist.end(), procName) != blacklist.end();
+}
+
+static bool isBlacklisted = checkBlacklisted();
+
 static void *find_ptr(const char *name)
 {
+    std::string f(name);
+
+    if (isBlacklisted && (f != "vkCreateInstance" && f != "vkDestroyInstance" && f != "vkCreateDevice" && f != "vkDestroyDevice"))
+    {
+        return NULL;
+    }
+
    for (uint32_t i = 0; i < ARRAY_SIZE(name_to_funcptr_map); i++) {
       if (strcmp(name, name_to_funcptr_map[i].name) == 0)
          return name_to_funcptr_map[i].ptr;
