@@ -1,13 +1,20 @@
 #!/bin/bash    
-
+OS_RELEASE_FILES=("/etc/os-release" "/usr/lib/os-release")
 XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 DATA_DIR="$XDG_DATA_HOME/MangoHud"
 LAYER="build/release/usr/share/vulkan/implicit_layer.d/mangohud.json"
 INSTALL_DIR="build/package/MangoHud"
 IMPLICIT_LAYER_DIR="$XDG_DATA_HOME/vulkan/implicit_layer.d"
-DISTRO=$(sed 1q /etc/os-release | sed 's/NAME=//g' | sed 's/"//g')
 VERSION=$(git describe --long --tags --always | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/^v//')
+
+# Correctly identify the os-release file.
+for os_release in ${OS_RELEASE_FILES[@]} ; do
+    if [[ ! -e "${os_release}" ]]; then
+        continue
+    fi
+    DISTRO=$(sed 1q ${os_release} | sed 's/NAME=//g' | sed 's/"//g')
+done
 
 dependencies() {
     if [[ ! -f build/release/usr/lib64/libMangoHud.so ]]; then
