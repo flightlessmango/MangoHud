@@ -75,6 +75,29 @@ dependencies() {
                     rm bin/glslangValidator glslang-master-linux-Release.zip
                 fi
             ;;
+            "Solus")
+                unset MANAGER_QUERY
+                unset DEPS
+                MANAGER_INSTALL="eopkg it"
+
+                local packages=("mesalib-32bit-devel" "glslang" "libstdc++-32bit" "glibc-32bit-devel" "mako")
+
+                # eopkg doesn't emit exit codes properly, so use the python API to find if a package is installed.
+                for package in ${packages[@]}; do
+                    python -c "import pisi.db; import sys; idb = pisi.db.installdb.InstallDB(); sys.exit(0 if idb.has_package(\"${package}\") else 1)"
+                    if [[ $? -ne 0 ]]; then
+                        INSTALL="${INSTALL}""${package} "
+                    fi
+                done
+
+                # likewise, ensure the whole system.devel component is satisfied
+                python -c "import pisi.db; import sys; idb = pisi.db.installdb.InstallDB(); cdb = pisi.db.componentdb.ComponentDB(); mpkgs = [x for x in cdb.get_packages('system.devel') if not idb.has_package(x)]; sys.exit(0 if len(mpkgs) == 0 else 1)"
+
+                if [[ $? -ne 0 ]]; then
+                    INSTALL="${INSTALL}""-c system.devel "
+                fi
+                install
+                ;;
             *)
                 echo "# Unable to find distro information!"
                 echo "# Attempting to build regardless"
