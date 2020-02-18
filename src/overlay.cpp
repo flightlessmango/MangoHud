@@ -1129,15 +1129,8 @@ static void compute_swapchain_display(struct swapchain_data *data)
    if (instance_data->params.font_size > 0 && instance_data->params.width == 280)
       instance_data->params.width = hudFirstRow + hudSecondRow;
 
-   if(!instance_data->params.no_display)
-	   ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
-      
-   if(instance_data->params.no_display){
-      ImGui::SetNextWindowBgAlpha(0.0);
-      ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
-   }
-   
    if (!instance_data->params.no_display){
+      ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_time]){
          std::time_t t = std::time(nullptr);
          std::stringstream time;
@@ -1276,8 +1269,8 @@ static void compute_swapchain_display(struct swapchain_data *data)
          ImGui::PopFont();
       }
       data->window_size = ImVec2(data->window_size.x, ImGui::GetCursorPosY() + 10.0f);
+      ImGui::End();
    }
-   ImGui::End();
    if(loggingOn){
       ImGui::SetNextWindowBgAlpha(0.0);
       ImGui::SetNextWindowSize(ImVec2(instance_data->params.font_size * 13, instance_data->params.font_size * 13), ImGuiCond_Always);
