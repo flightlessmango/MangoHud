@@ -94,6 +94,12 @@ parse_toggle_logging(const char *str)
    return XStringToKeysym(str);
 }
 
+static KeySym
+parse_refresh_config(const char *str)
+{
+   return XStringToKeysym(str);
+}
+
 static uint32_t
 parse_fps_sampling_period(const char *str)
 {
@@ -263,6 +269,7 @@ parse_overlay_config(struct overlay_params *params,
    params->control = -1;
    params->toggle_hud = XK_F12;
    params->toggle_logging = XK_F2;
+   params->refresh_config = XK_F4;
    params->fps_limit = 0;
    params->vsync = -1;
    params->crosshair_size = 30;

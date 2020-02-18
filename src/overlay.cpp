@@ -870,6 +870,7 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
    double elapsed = (double)(now - data->last_fps_update); /* us */
    elapsedF2 = (double)(now - last_f2_press);
    elapsedF12 = (double)(now - last_f12_press);
+   elapsedRefreshConfig = (double)(now - refresh_config_press);
    fps = 1000000.0f * data->n_frames_since_update / elapsed;
 
    if (data->last_present_time) {
@@ -894,11 +895,18 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
 
      }
    }
-   
+
    if (elapsedF12 >= 500000){
       if (key_is_pressed(instance_data->params.toggle_hud)){
          instance_data->params.no_display = !instance_data->params.no_display;
          last_f12_press = now;
+      }
+   }
+
+   if (elapsedRefreshConfig >= 500000){
+      if (key_is_pressed(instance_data->params.refresh_config)){
+         parse_overlay_config(&instance_data->params, getenv("MANGOHUD_CONFIG"));
+         refresh_config_press = now;
       }
    }
 
