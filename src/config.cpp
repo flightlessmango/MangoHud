@@ -82,20 +82,20 @@ void parseConfigFile() {
     }
 
     std::string line;
-    for (auto& p : paths) {
-        std::ifstream stream(p);
+    for (auto p = paths.rbegin(); p != paths.rend(); p++) {
+        std::ifstream stream(*p);
         if (!stream.good()) {
             // printing just so user has an idea of possible configs
-            std::cerr << "skipping config: " << p << std::endl;
+            std::cerr << "skipping config: " << *p << std::endl;
             continue;
         }
 
-        std::cerr << "parsing config: " << p;
+        std::cerr << "parsing config: " << *p;
         while (std::getline(stream, line))
         {
             parseConfigLine(line);
         }
         std::cerr << " [ ok ]" << std::endl;
-
+        return;
     }
 }
