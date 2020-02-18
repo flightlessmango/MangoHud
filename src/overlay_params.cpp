@@ -119,11 +119,9 @@ parse_no_display(const char *str)
 }
 
 static unsigned
-parse_color(const char (*str))
+parse_color(const char *str)
 {
-   std::string string = str;
-   string = "0x" + string;
-   return strtol(string.c_str(), NULL, 0);
+   return strtol(str, NULL, 16);
 }
 
 static unsigned
