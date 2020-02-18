@@ -1094,7 +1094,7 @@ static void position_layer(struct swapchain_data *data)
       margin = 0.0f;
 
    ImGui::SetNextWindowBgAlpha(instance_data->params.background_alpha);
-   ImGui::SetNextWindowSize(ImVec2(instance_data->params.width, instance_data->params.height), ImGuiCond_Always);
+   ImGui::SetNextWindowSize(data->window_size, ImGuiCond_Always);
    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,-3));
 
