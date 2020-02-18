@@ -77,7 +77,6 @@ void parseConfigFile() {
                     break;
                 }
             }
-
         }
     }
 

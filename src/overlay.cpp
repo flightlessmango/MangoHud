@@ -351,7 +351,7 @@ free_chain(struct VkBaseOutStructure *chain)
 
 static struct instance_data *new_instance_data(VkInstance instance)
 {
-   struct instance_data *data = rzalloc(NULL, struct instance_data);
+   struct instance_data *data = new instance_data();
    data->instance = instance;
    data->control_client = -1;
    map_object(HKEY(data->instance), data);
@@ -365,7 +365,7 @@ static void destroy_instance_data(struct instance_data *data)
    if (data->params.control >= 0)
       os_socket_close(data->params.control);
    unmap_object(HKEY(data->instance));
-   ralloc_free(data);
+   delete data;
 }
 
 static void instance_data_map_physical_devices(struct instance_data *instance_data,
