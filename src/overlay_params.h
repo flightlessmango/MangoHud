@@ -49,7 +49,7 @@ extern "C" {
    OVERLAY_PARAM_BOOL(crosshair)                     \
    OVERLAY_PARAM_BOOL(time)                          \
    OVERLAY_PARAM_BOOL(full)                          \
-   OVERLAY_PARAM_BOOL(read_configs)                  \
+   OVERLAY_PARAM_BOOL(read_cfg)                      \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
    OVERLAY_PARAM_CUSTOM(position)                    \

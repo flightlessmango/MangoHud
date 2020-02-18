@@ -258,7 +258,7 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_ram] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_vram] = false;
-   params->enabled[OVERLAY_PARAM_ENABLED_read_configs] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = false;
    params->fps_sampling_period = 500000; /* 500ms */
    params->width = 280;
    params->height = 140;
@@ -276,8 +276,8 @@ parse_overlay_config(struct overlay_params *params,
    if (env)
       parse_overlay_env(params, env);
 
-   bool rc = params->enabled[OVERLAY_PARAM_ENABLED_read_configs];
-   if (!env || rc) {
+   bool read_cfg = params->enabled[OVERLAY_PARAM_ENABLED_read_cfg];
+   if (!env || read_cfg) {
 
       // Get config options
       parseConfigFile();
@@ -313,7 +313,7 @@ parse_overlay_config(struct overlay_params *params,
    }
 
    // second pass, override config file settings with MANGOHUD_CONFIG
-   if (env && rc)
+   if (env && read_cfg)
       parse_overlay_env(params, env);
 
    // if font_size is used and height has not been changed from default
