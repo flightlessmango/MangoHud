@@ -60,8 +60,6 @@ string gpuString;
 float offset_x, offset_y, hudSpacing;
 int hudFirstRow, hudSecondRow;
 string engineName, engineVersion;
-ImFont* font = nullptr;
-ImFont* font1 = nullptr;
 struct amdGpu amdgpu;
 int64_t frameStart, frameEnd, targetFrameTime = 0, frameOverhead = 0, sleepTime = 0;
 
@@ -191,6 +189,8 @@ struct swapchain_data {
 
    struct list_head draws; /* List of struct overlay_draw */
 
+   ImFont* font = nullptr;
+   ImFont* font1 = nullptr;
    bool font_uploaded;
    VkImage font_image;
    VkImageView font_image_view;
@@ -1142,7 +1142,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
          std::time_t t = std::time(nullptr);
          std::stringstream time;
          time << std::put_time(std::localtime(&t), "%T");
-         ImGui::PushFont(font1);
+         ImGui::PushFont(data->font1);
          ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.00f), "%s", time.str().c_str());
          ImGui::PopFont();
       }
@@ -1176,7 +1176,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
          {
             ImGui::TextColored(ImVec4(0.180, 0.592, 0.796, 1.00f), "CPU");
             ImGui::SameLine(0, 1.0f);
-            ImGui::PushFont(font1);
+            ImGui::PushFont(data->font1);
             ImGui::TextColored(ImVec4(0.180, 0.592, 0.796, 1.00f),"%i", i);
             ImGui::PopFont();
             ImGui::SameLine(hudFirstRow);
@@ -1184,7 +1184,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
             ImGui::SameLine(hudSecondRow);
             ImGui::Text("%i", cpuData.mhz);
             ImGui::SameLine(0, 1.0f);
-            ImGui::PushFont(font1);
+            ImGui::PushFont(data->font1);
             ImGui::Text("MHz");
             ImGui::PopFont();
             i++;
@@ -1195,7 +1195,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
          ImGui::SameLine(hudFirstRow);
          ImGui::Text("%.2f", gpuMemUsed);
          ImGui::SameLine(0,1.0f);
-         ImGui::PushFont(font1);
+         ImGui::PushFont(data->font1);
          ImGui::Text("GB");
          ImGui::PopFont();
       }
@@ -1204,7 +1204,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
          ImGui::SameLine(hudFirstRow);
          ImGui::Text("%.2f", memused);
          ImGui::SameLine(0,1.0f);
-         ImGui::PushFont(font1);
+         ImGui::PushFont(data->font1);
          ImGui::Text("GB");
          ImGui::PopFont();
       }
@@ -1213,17 +1213,17 @@ static void compute_swapchain_display(struct swapchain_data *data)
          ImGui::SameLine(hudFirstRow);
          ImGui::Text("%.0f", data->fps);
          ImGui::SameLine(0, 1.0f);
-         ImGui::PushFont(font1);
+         ImGui::PushFont(data->font1);
          ImGui::Text("FPS");
          ImGui::PopFont();
          ImGui::SameLine(hudSecondRow);
          ImGui::Text("%.1f", 1000 / data->fps);
          ImGui::SameLine(0, 1.0f);
-         ImGui::PushFont(font1);
+         ImGui::PushFont(data->font1);
          ImGui::Text("ms");
          ImGui::PopFont();
          if (engineName == "DXVK" || engineName == "VKD3D"){
-            ImGui::PushFont(font1);
+            ImGui::PushFont(data->font1);
             ImGui::TextColored(ImVec4(0.925, 0.411, 0.411, 1.00f), "%s", engineVersion.c_str());
             ImGui::PopFont();
          }
@@ -1240,7 +1240,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
 
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
          ImGui::Dummy(ImVec2(0.0f, instance_data->params.font_size / 2));
-         ImGui::PushFont(font1);
+         ImGui::PushFont(data->font1);
          ImGui::TextColored(ImVec4(0.925, 0.411, 0.411, 1.00f), "%s", "Frametime");
          ImGui::PopFont();
       }
@@ -1271,7 +1271,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
       }
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
          ImGui::SameLine(0,1.0f);
-         ImGui::PushFont(font1);
+         ImGui::PushFont(data->font1);
          ImGui::Text("%.1f ms", 1000 / data->fps);
          ImGui::PopFont();
       }
@@ -1882,16 +1882,17 @@ static void setup_swapchain_data_pipeline(struct swapchain_data *data)
       font_size = 24;
 
    const char* mangohud_font = getenv("MANGOHUD_FONT");
-   if(mangohud_font) {
-      font = io.Fonts->AddFontFromFileTTF(mangohud_font, font_size);
-      font1 = io.Fonts->AddFontFromFileTTF(mangohud_font, font_size * 0.55f);
+   // ImGui takes ownership of the data, no need to free it
+   if (mangohud_font && file_exists(mangohud_font)) {
+      data->font = io.Fonts->AddFontFromFileTTF(mangohud_font, font_size);
+      data->font1 = io.Fonts->AddFontFromFileTTF(mangohud_font, font_size * 0.55f);
    } else {
       ImFontConfig font_cfg = ImFontConfig();
       const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
       const ImWchar* glyph_ranges = io.Fonts->GetGlyphRangesDefault();
 
-      font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size, &font_cfg, glyph_ranges);
-      font1 = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size * 0.55, &font_cfg, glyph_ranges);
+      data->font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size, &font_cfg, glyph_ranges);
+      data->font1 = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size * 0.55, &font_cfg, glyph_ranges);
    }
    unsigned char* pixels;
    int width, height;
