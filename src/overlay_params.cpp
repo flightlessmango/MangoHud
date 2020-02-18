@@ -219,6 +219,7 @@ parse_overlay_env(struct overlay_params *params,
    while ((num = parse_string(env, key, value)) != 0) {
       env += num;
       if (!strcmp("full", key)) {
+         bool read_cfg = params->enabled[OVERLAY_PARAM_ENABLED_read_cfg];
 #define OVERLAY_PARAM_BOOL(name) \
          params->enabled[OVERLAY_PARAM_ENABLED_##name] = 1;
 #define OVERLAY_PARAM_CUSTOM(name)
@@ -226,6 +227,7 @@ parse_overlay_env(struct overlay_params *params,
 #undef OVERLAY_PARAM_BOOL
 #undef OVERLAY_PARAM_CUSTOM
          params->enabled[OVERLAY_PARAM_ENABLED_crosshair] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = read_cfg;
       }
 #define OVERLAY_PARAM_BOOL(name)                                       \
       if (!strcmp(#name, key)) {                                       \
