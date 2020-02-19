@@ -27,6 +27,9 @@
 #include <thread>
 #include <chrono>
 #include <unordered_map>
+#include <mutex>
+#include <vector>
+#include <list>
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_layer.h>
@@ -37,12 +40,10 @@
 #include "font_default.h"
 
 // #include "util/debug.h"
-#include "mesa/util/hash_table.h"
-#include "mesa/util/list.h"
-#include "mesa/util/ralloc.h"
+#include <inttypes.h>
+#include "mesa/util/macros.h"
 #include "mesa/util/os_time.h"
 #include "mesa/util/os_socket.h"
-#include "mesa/util/simple_mtx.h"
 
 #include "vk_enum_to_str.h"
 #include <vulkan/vk_util.h>
@@ -107,8 +108,7 @@ struct device_data {
 
    struct queue_data *graphic_queue;
 
-   struct queue_data **queues;
-   uint32_t n_queues;
+   std::vector<struct queue_data *> queues;
 
    /* For a single frame */
    struct frame_stat frame_stats;
@@ -116,6 +116,7 @@ struct device_data {
 };
 
 /* Mapped from VkCommandBuffer */
+struct queue_data;
 struct command_buffer_data {
    struct device_data *device;
 
@@ -127,7 +128,7 @@ struct command_buffer_data {
 
    struct frame_stat stats;
 
-   struct list_head link; /* link into queue_data::running_command_buffer */
+   struct queue_data *queue_data;
 };
 
 /* Mapped from VkQueue */
@@ -141,12 +142,10 @@ struct queue_data {
 
    VkFence queries_fence;
 
-   struct list_head running_command_buffer;
+   std::list<command_buffer_data *> running_command_buffer;
 };
 
 struct overlay_draw {
-   struct list_head link;
-
    VkCommandBuffer command_buffer;
 
    VkSemaphore semaphore;
@@ -169,10 +168,9 @@ struct swapchain_data {
    unsigned width, height;
    VkFormat format;
 
-   uint32_t n_images;
-   VkImage *images;
-   VkImageView *image_views;
-   VkFramebuffer *framebuffers;
+   std::vector<VkImage> images;
+   std::vector<VkImageView> image_views;
+   std::vector<VkFramebuffer> framebuffers;
 
    VkRenderPass render_pass;
 
@@ -187,7 +185,7 @@ struct swapchain_data {
 
    VkCommandPool command_pool;
 
-   struct list_head draws; /* List of struct overlay_draw */
+   std::list<overlay_draw *> draws; /* List of struct overlay_draw */
 
    ImFont* font = nullptr;
    ImFont* font1 = nullptr;
@@ -240,42 +238,32 @@ static const VkQueryPipelineStatisticFlags overlay_query_flags =
    VK_QUERY_PIPELINE_STATISTIC_COMPUTE_SHADER_INVOCATIONS_BIT;
 #define OVERLAY_QUERY_COUNT (11)
 
-static struct hash_table_u64 *vk_object_to_data = NULL;
-static simple_mtx_t vk_object_to_data_mutex = _SIMPLE_MTX_INITIALIZER_NP;
+// single global lock, for simplicity
+std::mutex global_lock;
+typedef std::lock_guard<std::mutex> scoped_lock;
+std::unordered_map<uint64_t, void *> vk_object_to_data;
 
 thread_local ImGuiContext* __MesaImGui;
 
-static inline void ensure_vk_object_map(void)
-{
-   if (!vk_object_to_data)
-      vk_object_to_data = _mesa_hash_table_u64_create(NULL);
-}
-
 #define HKEY(obj) ((uint64_t)(obj))
-#define FIND(type, obj) ((type *)find_object_data(HKEY(obj)))
+#define FIND(type, obj) (reinterpret_cast<type *>(find_object_data(HKEY(obj))))
 
 static void *find_object_data(uint64_t obj)
 {
-   simple_mtx_lock(&vk_object_to_data_mutex);
-   ensure_vk_object_map();
-   void *data = _mesa_hash_table_u64_search(vk_object_to_data, obj);
-   simple_mtx_unlock(&vk_object_to_data_mutex);
-   return data;
+   scoped_lock lk(global_lock);
+   return vk_object_to_data[obj];
 }
 
 static void map_object(uint64_t obj, void *data)
 {
-   simple_mtx_lock(&vk_object_to_data_mutex);
-   ensure_vk_object_map();
-   _mesa_hash_table_u64_insert(vk_object_to_data, obj, data);
-   simple_mtx_unlock(&vk_object_to_data_mutex);
+   scoped_lock lk(global_lock);
+   vk_object_to_data[obj] = data;
 }
 
 static void unmap_object(uint64_t obj)
 {
-   simple_mtx_lock(&vk_object_to_data_mutex);
-   _mesa_hash_table_u64_remove(vk_object_to_data, obj);
-   simple_mtx_unlock(&vk_object_to_data_mutex);
+   scoped_lock lk(global_lock);
+   vk_object_to_data.erase(obj);
 }
 
 /**/
@@ -376,10 +364,10 @@ static void instance_data_map_physical_devices(struct instance_data *instance_da
                                                   &physicalDeviceCount,
                                                   NULL);
 
-   VkPhysicalDevice *physicalDevices = (VkPhysicalDevice *) malloc(sizeof(VkPhysicalDevice) * physicalDeviceCount);
+   std::vector<VkPhysicalDevice> physicalDevices(physicalDeviceCount);
    instance_data->vtable.EnumeratePhysicalDevices(instance_data->instance,
                                                   &physicalDeviceCount,
-                                                  physicalDevices);
+                                                  physicalDevices.data());
 
    for (uint32_t i = 0; i < physicalDeviceCount; i++) {
       if (map)
@@ -387,14 +375,12 @@ static void instance_data_map_physical_devices(struct instance_data *instance_da
       else
          unmap_object(HKEY(physicalDevices[i]));
    }
-
-   free(physicalDevices);
 }
 
 /**/
 static struct device_data *new_device_data(VkDevice device, struct instance_data *instance)
 {
-   struct device_data *data = rzalloc(NULL, struct device_data);
+   struct device_data *data = new device_data();
    data->instance = instance;
    data->device = device;
    map_object(HKEY(data->device), data);
@@ -406,13 +392,12 @@ static struct queue_data *new_queue_data(VkQueue queue,
                                          uint32_t family_index,
                                          struct device_data *device_data)
 {
-   struct queue_data *data = rzalloc(device_data, struct queue_data);
+   struct queue_data *data = new queue_data();
    data->device = device_data;
    data->queue = queue;
    data->flags = family_props->queueFlags;
    data->timestamp_mask = (1ull << family_props->timestampValidBits) - 1;
    data->family_index = family_index;
-   list_inithead(&data->running_command_buffer);
    map_object(HKEY(data->queue), data);
 
    /* Fence synchronizing access to queries on that queue. */
@@ -435,26 +420,26 @@ static void destroy_queue(struct queue_data *data)
    struct device_data *device_data = data->device;
    device_data->vtable.DestroyFence(device_data->device, data->queries_fence, NULL);
    unmap_object(HKEY(data->queue));
-   ralloc_free(data);
+   delete data;
 }
 
 static void device_map_queues(struct device_data *data,
                               const VkDeviceCreateInfo *pCreateInfo)
 {
+   uint32_t n_queues = 0;
    for (uint32_t i = 0; i < pCreateInfo->queueCreateInfoCount; i++)
-      data->n_queues += pCreateInfo->pQueueCreateInfos[i].queueCount;
-   data->queues = ralloc_array(data, struct queue_data *, data->n_queues);
+      n_queues += pCreateInfo->pQueueCreateInfos[i].queueCount;
+   data->queues.resize(n_queues);
 
    struct instance_data *instance_data = data->instance;
    uint32_t n_family_props;
    instance_data->vtable.GetPhysicalDeviceQueueFamilyProperties(data->physical_device,
                                                                 &n_family_props,
                                                                 NULL);
-   VkQueueFamilyProperties *family_props =
-      (VkQueueFamilyProperties *)malloc(sizeof(VkQueueFamilyProperties) * n_family_props);
+   std::vector<VkQueueFamilyProperties> family_props(n_family_props);
    instance_data->vtable.GetPhysicalDeviceQueueFamilyProperties(data->physical_device,
                                                                 &n_family_props,
-                                                                family_props);
+                                                                family_props.data());
 
    uint32_t queue_index = 0;
    for (uint32_t i = 0; i < pCreateInfo->queueCreateInfoCount; i++) {
@@ -471,20 +456,18 @@ static void device_map_queues(struct device_data *data,
                            pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex, data);
       }
    }
-
-   free(family_props);
 }
 
 static void device_unmap_queues(struct device_data *data)
 {
-   for (uint32_t i = 0; i < data->n_queues; i++)
-      destroy_queue(data->queues[i]);
+   for (auto q : data->queues)
+      destroy_queue(q);
 }
 
 static void destroy_device_data(struct device_data *data)
 {
    unmap_object(HKEY(data->device));
-   ralloc_free(data);
+   delete data;
 }
 
 /**/
@@ -494,13 +477,12 @@ static struct command_buffer_data *new_command_buffer_data(VkCommandBuffer cmd_b
                                                            uint32_t query_index,
                                                            struct device_data *device_data)
 {
-   struct command_buffer_data *data = rzalloc(NULL, struct command_buffer_data);
+   struct command_buffer_data *data = new command_buffer_data();
    data->device = device_data;
    data->cmd_buffer = cmd_buffer;
    data->level = level;
    data->timestamp_query_pool = timestamp_query_pool;
    data->query_index = query_index;
-   list_inithead(&data->link);
    map_object(HKEY(data->cmd_buffer), data);
    return data;
 }
@@ -508,8 +490,9 @@ static struct command_buffer_data *new_command_buffer_data(VkCommandBuffer cmd_b
 static void destroy_command_buffer_data(struct command_buffer_data *data)
 {
    unmap_object(HKEY(data->cmd_buffer));
-   list_delinit(&data->link);
-   ralloc_free(data);
+   if (data->queue_data)
+      data->queue_data->running_command_buffer.remove(data);
+   delete data;
 }
 
 /**/
@@ -517,11 +500,10 @@ static struct swapchain_data *new_swapchain_data(VkSwapchainKHR swapchain,
                                                  struct device_data *device_data)
 {
    struct instance_data *instance_data = device_data->instance;
-   struct swapchain_data *data = rzalloc(NULL, struct swapchain_data);
+   struct swapchain_data *data = new swapchain_data();
    data->device = device_data;
    data->swapchain = swapchain;
    data->window_size = ImVec2(instance_data->params.width, instance_data->params.height);
-   list_inithead(&data->draws);
    map_object(HKEY(data->swapchain), data);
    return data;
 }
@@ -529,27 +511,27 @@ static struct swapchain_data *new_swapchain_data(VkSwapchainKHR swapchain,
 static void destroy_swapchain_data(struct swapchain_data *data)
 {
    unmap_object(HKEY(data->swapchain));
-   ralloc_free(data);
+   delete data;
 }
 
 struct overlay_draw *get_overlay_draw(struct swapchain_data *data)
 {
    struct device_data *device_data = data->device;
-   struct overlay_draw *draw = list_is_empty(&data->draws) ?
-      NULL : list_first_entry(&data->draws, struct overlay_draw, link);
+   struct overlay_draw *draw = data->draws.empty() ?
+      nullptr : data->draws.front();
 
    VkSemaphoreCreateInfo sem_info = {};
    sem_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
    if (draw && device_data->vtable.GetFenceStatus(device_data->device, draw->fence) == VK_SUCCESS) {
-      list_del(&draw->link);
       VK_CHECK(device_data->vtable.ResetFences(device_data->device,
                                                1, &draw->fence));
-      list_addtail(&draw->link, &data->draws);
+      data->draws.pop_front();
+      data->draws.push_back(draw);
       return draw;
    }
 
-   draw = rzalloc(data, struct overlay_draw);
+   draw = new overlay_draw();
 
    VkCommandBufferAllocateInfo cmd_buffer_info = {};
    cmd_buffer_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -573,7 +555,7 @@ struct overlay_draw *get_overlay_draw(struct swapchain_data *data)
    VK_CHECK(device_data->vtable.CreateSemaphore(device_data->device, &sem_info,
                                                 NULL, &draw->semaphore));
 
-   list_addtail(&draw->link, &data->draws);
+   data->draws.push_back(draw);
 
    return draw;
 }
@@ -2007,19 +1989,27 @@ static void setup_swapchain_data(struct swapchain_data *data,
 
    setup_swapchain_data_pipeline(data);
 
+   uint32_t n_images = 0;
    VK_CHECK(device_data->vtable.GetSwapchainImagesKHR(device_data->device,
                                                       data->swapchain,
-                                                      &data->n_images,
+                                                      &n_images,
                                                       NULL));
 
-   data->images = ralloc_array(data, VkImage, data->n_images);
-   data->image_views = ralloc_array(data, VkImageView, data->n_images);
-   data->framebuffers = ralloc_array(data, VkFramebuffer, data->n_images);
+   data->images.resize(n_images);
+   data->image_views.resize(n_images);
+   data->framebuffers.resize(n_images);
 
    VK_CHECK(device_data->vtable.GetSwapchainImagesKHR(device_data->device,
                                                       data->swapchain,
-                                                      &data->n_images,
-                                                      data->images));
+                                                      &n_images,
+                                                      data->images.data()));
+
+
+   if (n_images != data->images.size()) {
+      data->images.resize(n_images);
+      data->image_views.resize(n_images);
+      data->framebuffers.resize(n_images);
+   }
 
    /* Image views */
    VkImageViewCreateInfo view_info = {};
@@ -2031,7 +2021,7 @@ static void setup_swapchain_data(struct swapchain_data *data,
    view_info.components.b = VK_COMPONENT_SWIZZLE_B;
    view_info.components.a = VK_COMPONENT_SWIZZLE_A;
    view_info.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
-   for (uint32_t i = 0; i < data->n_images; i++) {
+   for (size_t i = 0; i < data->images.size(); i++) {
       view_info.image = data->images[i];
       VK_CHECK(device_data->vtable.CreateImageView(device_data->device,
                                                    &view_info, NULL,
@@ -2048,7 +2038,7 @@ static void setup_swapchain_data(struct swapchain_data *data,
    fb_info.width = data->width;
    fb_info.height = data->height;
    fb_info.layers = 1;
-   for (uint32_t i = 0; i < data->n_images; i++) {
+   for (size_t i = 0; i < data->image_views.size(); i++) {
       attachment[0] = data->image_views[i];
       VK_CHECK(device_data->vtable.CreateFramebuffer(device_data->device, &fb_info,
                                                      NULL, &data->framebuffers[i]));
@@ -2068,16 +2058,17 @@ static void shutdown_swapchain_data(struct swapchain_data *data)
 {
    struct device_data *device_data = data->device;
 
-   list_for_each_entry_safe(struct overlay_draw, draw, &data->draws, link) {
+   for (auto draw : data->draws) {
       device_data->vtable.DestroySemaphore(device_data->device, draw->semaphore, NULL);
       device_data->vtable.DestroyFence(device_data->device, draw->fence, NULL);
       device_data->vtable.DestroyBuffer(device_data->device, draw->vertex_buffer, NULL);
       device_data->vtable.DestroyBuffer(device_data->device, draw->index_buffer, NULL);
       device_data->vtable.FreeMemory(device_data->device, draw->vertex_buffer_mem, NULL);
       device_data->vtable.FreeMemory(device_data->device, draw->index_buffer_mem, NULL);
+      delete draw;
    }
 
-   for (uint32_t i = 0; i < data->n_images; i++) {
+   for (size_t i = 0; i < data->images.size(); i++) {
       device_data->vtable.DestroyImageView(device_data->device, data->image_views[i], NULL);
       device_data->vtable.DestroyFramebuffer(device_data->device, data->framebuffers[i], NULL);
    }
@@ -2181,7 +2172,7 @@ static VkResult overlay_QueuePresentKHR(
 
    device_data->frame_stats.stats[OVERLAY_PARAM_ENABLED_frame]++;
 
-   if (list_length(&queue_data->running_command_buffer) > 0) {
+   if (!queue_data->running_command_buffer.empty()) {
       /* Before getting the query results, make sure the operations have
        * completed.
        */
@@ -2193,9 +2184,9 @@ static VkResult overlay_QueuePresentKHR(
                                                  VK_FALSE, UINT64_MAX));
 
       /* Now get the results. */
-      list_for_each_entry_safe(struct command_buffer_data, cmd_buffer_data,
-                               &queue_data->running_command_buffer, link) {
-         list_delinit(&cmd_buffer_data->link);
+      while (!queue_data->running_command_buffer.empty()) {
+         auto cmd_buffer_data = queue_data->running_command_buffer.front();
+         queue_data->running_command_buffer.pop_front();
 
          if (cmd_buffer_data->timestamp_query_pool) {
             uint64_t gpu_timestamps[2] = { 0 };
@@ -2472,9 +2463,10 @@ static VkResult overlay_QueueSubmit(
          if (!cmd_buffer_data->timestamp_query_pool)
             continue;
 
-         if (list_is_empty(&cmd_buffer_data->link)) {
-            list_addtail(&cmd_buffer_data->link,
-                         &queue_data->running_command_buffer);
+         auto& q = queue_data->running_command_buffer;
+         if (std::find(q.begin(), q.end(), cmd_buffer_data) == q.end()) {
+            cmd_buffer_data->queue_data = queue_data;
+            q.push_back(cmd_buffer_data);
          } else {
             fprintf(stderr, "Command buffer submitted multiple times before present.\n"
                     "This could lead to invalid data.\n");

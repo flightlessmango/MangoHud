@@ -208,11 +208,8 @@ vk_enum_to_str = custom_target(
 )
 
 util_files = files(
-  'src/mesa/util/hash_table.c',
   'src/mesa/util/os_socket.c',
   'src/mesa/util/os_time.c',
-  'src/mesa/util/ralloc.c',
-  'src/mesa/main/hash.c',
 )
 
 subdir('modules/ImGui')
