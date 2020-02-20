@@ -323,6 +323,9 @@ parse_overlay_config(struct overlay_params *params,
    if (env && read_cfg)
       parse_overlay_env(params, env);
 
+   // Command buffer gets reused and timestamps cause hangs for some reason, force off for now
+   params->enabled[OVERLAY_PARAM_ENABLED_gpu_timing] = false;
+
    // if font_size is used and height has not been changed from default
    // increase height as needed based on font_size
    
