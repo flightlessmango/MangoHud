@@ -128,6 +128,8 @@ struct queue_data {
 struct overlay_draw {
    VkCommandBuffer command_buffer;
 
+   VkSemaphore cross_engine_semaphore;
+
    VkSemaphore semaphore;
    VkFence fence;
 
@@ -462,6 +464,8 @@ struct overlay_draw *get_overlay_draw(struct swapchain_data *data)
 
    VK_CHECK(device_data->vtable.CreateSemaphore(device_data->device, &sem_info,
                                                 NULL, &draw->semaphore));
+   VK_CHECK(device_data->vtable.CreateSemaphore(device_data->device, &sem_info,
+                                                NULL, &draw->cross_engine_semaphore));
 
    data->draws.push_back(draw);
 
@@ -1593,20 +1597,49 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
 
    device_data->vtable.EndCommandBuffer(draw->command_buffer);
 
-   // wait in the fragment stage until the swapchain image is ready
-   std::vector<VkPipelineStageFlags> stages_wait(n_wait_semaphores, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+   /* When presenting on a different queue than where we're drawing the
+    * overlay *AND* when the application does not provide a semaphore to
+    * vkQueuePresent, insert our own cross engine synchronization
+    * semaphore.
+    */
+   if (n_wait_semaphores == 0 && device_data->graphic_queue->queue != present_queue->queue) {
+      VkPipelineStageFlags stages_wait = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+      VkSubmitInfo submit_info = {};
+      submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+      submit_info.commandBufferCount = 0;
+      submit_info.pWaitDstStageMask = &stages_wait;
+      submit_info.waitSemaphoreCount = 0;
+      submit_info.signalSemaphoreCount = 1;
+      submit_info.pSignalSemaphores = &draw->cross_engine_semaphore;
 
-   VkSubmitInfo submit_info = {};
-   submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-   submit_info.commandBufferCount = 1;
-   submit_info.pCommandBuffers = &draw->command_buffer;
-   submit_info.pWaitDstStageMask = stages_wait.data();
-   submit_info.waitSemaphoreCount = n_wait_semaphores;
-   submit_info.pWaitSemaphores = wait_semaphores;
-   submit_info.signalSemaphoreCount = 1;
-   submit_info.pSignalSemaphores = &draw->semaphore;
+      device_data->vtable.QueueSubmit(present_queue->queue, 1, &submit_info, VK_NULL_HANDLE);
 
-   device_data->vtable.QueueSubmit(device_data->graphic_queue->queue, 1, &submit_info, draw->fence);
+      submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+      submit_info.commandBufferCount = 1;
+      submit_info.pWaitDstStageMask = &stages_wait;
+      submit_info.pCommandBuffers = &draw->command_buffer;
+      submit_info.waitSemaphoreCount = 1;
+      submit_info.pWaitSemaphores = &draw->cross_engine_semaphore;
+      submit_info.signalSemaphoreCount = 1;
+      submit_info.pSignalSemaphores = &draw->semaphore;
+
+      device_data->vtable.QueueSubmit(device_data->graphic_queue->queue, 1, &submit_info, draw->fence);
+   } else {
+      // wait in the fragment stage until the swapchain image is ready
+      std::vector<VkPipelineStageFlags> stages_wait(n_wait_semaphores, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+
+      VkSubmitInfo submit_info = {};
+      submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+      submit_info.commandBufferCount = 1;
+      submit_info.pCommandBuffers = &draw->command_buffer;
+      submit_info.pWaitDstStageMask = stages_wait.data();
+      submit_info.waitSemaphoreCount = n_wait_semaphores;
+      submit_info.pWaitSemaphores = wait_semaphores;
+      submit_info.signalSemaphoreCount = 1;
+      submit_info.pSignalSemaphores = &draw->semaphore;
+
+      device_data->vtable.QueueSubmit(device_data->graphic_queue->queue, 1, &submit_info, draw->fence);
+   }
 
    return draw;
 }
@@ -2021,6 +2054,7 @@ static void shutdown_swapchain_data(struct swapchain_data *data)
    struct device_data *device_data = data->device;
 
    for (auto draw : data->draws) {
+      device_data->vtable.DestroySemaphore(device_data->device, draw->cross_engine_semaphore, NULL);
       device_data->vtable.DestroySemaphore(device_data->device, draw->semaphore, NULL);
       device_data->vtable.DestroyFence(device_data->device, draw->fence, NULL);
       device_data->vtable.DestroyBuffer(device_data->device, draw->vertex_buffer, NULL);
