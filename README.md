@@ -30,6 +30,8 @@ If you are running an Ubuntu-like distrobution, Fedora, or Arch, the build scrip
 
 [Fedora](https://src.fedoraproject.org/rpms/mangohud): `sudo dnf install mangohud`
 
+[Arch](https://aur.archlinux.org/packages/mangohud): Install mangohud and lib32-mangohud with your favourite AUR helper.
+
 # Normal usage
 
 To enable the MangoHud Vulkan overlay layer, run :
