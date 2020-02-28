@@ -325,46 +325,4 @@ parse_overlay_config(struct overlay_params *params,
 
    // Command buffer gets reused and timestamps cause hangs for some reason, force off for now
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_timing] = false;
-
-   // if font_size is used and height has not been changed from default
-   // increase height as needed based on font_size
-   
-   // params->toggle_hud = "F12";
-   bool heightChanged = false;
-
-   if (params->height != 140)
-      heightChanged = true;
-
-   if (!params->font_size)
-      params->font_size = 24.0f;
-
-   int FrameTimeGraphHeight = 0;
-   
-   if (!heightChanged){
-      if (params->enabled[OVERLAY_PARAM_ENABLED_frame_timing])
-         FrameTimeGraphHeight = 50 + params->font_size / 2;
-
-      if (params->font_size)
-         params->height = (params->font_size - 3 * 2) * 3 + FrameTimeGraphHeight;
-
-      // Apply more hud height if cores are enabled
-      if (params->enabled[OVERLAY_PARAM_ENABLED_core_load])
-         params->height += ((params->font_size - 3) * get_nprocs());
-
-      if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
-         params->height += ((params->font_size) / 2);
-
-      if (params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats])
-         params->height += ((params->font_size) / 2);
-
-      if (params->enabled[OVERLAY_PARAM_ENABLED_ram])
-         params->height += (params->font_size - 3);
-
-      if (params->enabled[OVERLAY_PARAM_ENABLED_vram])
-         params->height += (params->font_size - 3);
-      
-      if (params->enabled[OVERLAY_PARAM_ENABLED_time])
-         params->height += ((params->font_size / 2) - (3 / 2));
-   }
-
 }
