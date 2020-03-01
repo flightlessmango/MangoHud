@@ -6,7 +6,7 @@ libnvml_loader nvml("libnvidia-ml.so.1");
 nvmlReturn_t result;
 nvmlDevice_t nvidiaDevice;
 bool nvmlSuccess = false;
-unsigned int nvidiaTemp;
+unsigned int nvidiaTemp, nvidiaCoreClock, nvidiaMemClock;
 struct nvmlUtilization_st nvidiaUtilization;
 struct nvmlMemory_st nvidiaMemory {};
 
@@ -30,4 +30,6 @@ void getNvidiaInfo(){
     nvml.nvmlDeviceGetUtilizationRates(nvidiaDevice, &nvidiaUtilization);
     nvml.nvmlDeviceGetTemperature(nvidiaDevice, NVML_TEMPERATURE_GPU, &nvidiaTemp);
     nvml.nvmlDeviceGetMemoryInfo(nvidiaDevice, &nvidiaMemory);
+    nvml.nvmlDeviceGetClockInfo(nvidiaDevice, NVML_CLOCK_GRAPHICS, &nvidiaCoreClock);
+    nvml.nvmlDeviceGetClockInfo(nvidiaDevice, NVML_CLOCK_MEM, &nvidiaMemClock);
 }

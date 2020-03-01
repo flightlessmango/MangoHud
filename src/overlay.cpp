@@ -820,6 +820,10 @@ void init_gpu_stats(struct device_data *device_data)
                amdGpuVramTotalFile = fopen((path + "/device/mem_info_vram_total").c_str(), "r");
             if (!amdGpuVramUsedFile)
                amdGpuVramUsedFile = fopen((path + "/device/mem_info_vram_used").c_str(), "r");
+            if (!amdGpuMemoryClockFile)
+               amdGpuMemoryClockFile = fopen((path + "/device/pp_dpm_mclk").c_str(), "r");
+            if (!amdGpuCoreClockFile)
+               amdGpuCoreClockFile = fopen((path + "/device/pp_dpm_sclk").c_str(), "r");
 
             path = path + "/device/hwmon/";
             string tempFolder;
@@ -1117,7 +1121,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
 
    if (!instance_data->params.no_display){
       ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
-      ImGui::BeginTable("hud", 3);
+      ImGui::BeginTable("hud", instance_data->params.tableCols);
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_time]){
          ImGui::TableNextRow();
          ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.00f), "%s", data->time.c_str());
@@ -1132,6 +1136,14 @@ static void compute_swapchain_display(struct swapchain_data *data)
          if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_gpu_temp]){
             ImGui::TableNextCell();
             ImGui::Text("%i%s", gpuTemp, "°C");
+         }
+         if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]){
+            ImGui::TableNextCell();
+            ImGui::Text("%i", gpuCoreClock);
+            ImGui::SameLine(0, 1.0f);
+            ImGui::PushFont(data->font1);
+            ImGui::Text("MHz");
+            ImGui::PopFont();
          }
       }
       if(instance_data->params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats]){
@@ -1205,6 +1217,14 @@ static void compute_swapchain_display(struct swapchain_data *data)
          ImGui::PushFont(data->font1);
          ImGui::Text("GB");
          ImGui::PopFont();
+         if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_gpu_mem_clock]){
+            ImGui::TableNextCell();
+            ImGui::Text("%i", gpuMemClock);
+            ImGui::SameLine(0, 1.0f);
+            ImGui::PushFont(data->font1);
+            ImGui::Text("MHz");
+            ImGui::PopFont();
+         }
       }
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_ram]){
          ImGui::TableNextRow();

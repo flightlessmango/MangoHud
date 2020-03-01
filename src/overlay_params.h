@@ -54,6 +54,8 @@ extern "C" {
    OVERLAY_PARAM_BOOL(read_cfg)                      \
    OVERLAY_PARAM_BOOL(io_read)                       \
    OVERLAY_PARAM_BOOL(io_write)                      \
+   OVERLAY_PARAM_BOOL(gpu_mem_clock)                 \
+   OVERLAY_PARAM_BOOL(gpu_core_clock)                \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
    OVERLAY_PARAM_CUSTOM(position)                    \
@@ -111,6 +113,7 @@ struct overlay_params {
    unsigned offset_y;
    unsigned vsync;
    unsigned crosshair_color;
+   unsigned tableCols;
    float font_size;
    float background_alpha;
    KeySym toggle_hud;

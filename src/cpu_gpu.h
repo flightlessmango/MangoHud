@@ -7,8 +7,8 @@
 
 using namespace std;
 
-int gpuLoad = 0, gpuTemp = 0, cpuTemp = 0;
-FILE *amdGpuFile = nullptr, *amdTempFile = nullptr, *cpuTempFile = nullptr, *amdGpuVramTotalFile = nullptr, *amdGpuVramUsedFile = nullptr;
+int gpuLoad = 0, gpuTemp = 0, cpuTemp = 0, gpuMemClock, gpuCoreClock;
+FILE *amdGpuFile = nullptr, *amdTempFile = nullptr, *cpuTempFile = nullptr, *amdGpuVramTotalFile = nullptr, *amdGpuVramUsedFile = nullptr, *amdGpuCoreClockFile = nullptr, *amdGpuMemoryClockFile = nullptr;
 float gpuMemUsed = 0, gpuMemTotal = 0;
 
 int numCpuCores = std::thread::hardware_concurrency();
@@ -19,6 +19,8 @@ struct amdGpu {
     int temp;
     int64_t memoryUsed;
     int64_t memoryTotal;
+    int MemClock;
+    int CoreClock;
 };
 
 extern struct amdGpu amdgpu;
@@ -66,6 +68,8 @@ void *getNvidiaGpuInfo(void *){
         gpuLoad = nvidiaUtilization.gpu;
         gpuTemp = nvidiaTemp;
         gpuMemUsed = float(nvidiaMemory.used / (1024 * 1024)) / 1000;
+        gpuCoreClock = nvidiaCoreClock;
+        gpuMemClock = nvidiaMemClock * 2;
     }
 
     pthread_detach(gpuThread);
@@ -106,6 +110,36 @@ void *getAmdGpuUsage(void *){
             amdgpu.memoryUsed = 0;
         amdgpu.memoryUsed /= (1024 * 1024);
         gpuMemUsed = float(amdgpu.memoryUsed) / 1000;
+    }
+    
+    if (amdGpuCoreClockFile) {
+        rewind(amdGpuCoreClockFile);
+        fflush(amdGpuCoreClockFile);
+        char line[255];
+        while (fgets(line, sizeof(line), amdGpuCoreClockFile)){
+            std::string row = line;
+            row.erase(row.begin());
+            if (row.find("*") != std::string::npos){
+                row = std::regex_replace(row, std::regex(R"([^0-9])"), "");
+                amdgpu.CoreClock = stoi(row);
+                gpuCoreClock = amdgpu.CoreClock;
+            }
+        }
+    }
+
+    if (amdGpuMemoryClockFile) {
+        rewind(amdGpuMemoryClockFile);
+        fflush(amdGpuMemoryClockFile);
+        char line[255];
+        while (fgets(line, sizeof(line), amdGpuMemoryClockFile)){
+            std::string row = line;
+            row.erase(row.begin());
+            if (row.find("*") != std::string::npos){
+                row = std::regex_replace(row, std::regex(R"([^0-9])"), "");
+                amdgpu.MemClock = stoi(row) * 2;
+                gpuMemClock = amdgpu.MemClock;
+            }
+        }
     }
 
     pthread_detach(gpuThread);
