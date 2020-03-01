@@ -52,6 +52,8 @@ extern "C" {
    OVERLAY_PARAM_BOOL(time)                          \
    OVERLAY_PARAM_BOOL(full)                          \
    OVERLAY_PARAM_BOOL(read_cfg)                      \
+   OVERLAY_PARAM_BOOL(io_read)                       \
+   OVERLAY_PARAM_BOOL(io_write)                      \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
    OVERLAY_PARAM_CUSTOM(position)                    \
@@ -64,7 +66,7 @@ extern "C" {
    OVERLAY_PARAM_CUSTOM(font_size)                   \
    OVERLAY_PARAM_CUSTOM(toggle_hud)                  \
    OVERLAY_PARAM_CUSTOM(toggle_logging)              \
-   OVERLAY_PARAM_CUSTOM(refresh_config)               \
+   OVERLAY_PARAM_CUSTOM(refresh_config)              \
    OVERLAY_PARAM_CUSTOM(crosshair_size)              \
    OVERLAY_PARAM_CUSTOM(offset_x)                    \
    OVERLAY_PARAM_CUSTOM(offset_y)                    \

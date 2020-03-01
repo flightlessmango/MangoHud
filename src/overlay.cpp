@@ -1165,6 +1165,33 @@ static void compute_swapchain_display(struct swapchain_data *data)
             i++;
          }
       }
+   if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_read] || instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_write]){
+         auto sampling = instance_data->params.fps_sampling_period;
+         ImGui::TableNextRow();
+         if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_read] && !instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_write])
+            ImGui::TextColored(ImVec4(0.643, 0.569, 0.827, 1.00f), "IO RD");
+         if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_write] && !instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_read])
+            ImGui::TextColored(ImVec4(0.643, 0.569, 0.827, 1.00f), "IO RW");
+         if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_read] && instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_write])
+            ImGui::TextColored(ImVec4(0.643, 0.569, 0.827, 1.00f), "IO RD/RW");
+         
+         if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_read]){
+            ImGui::TableNextCell();
+            ImGui::Text("%.2f", data->io.diff.read * (1000000 / sampling));
+            ImGui::SameLine(0,1.0f);
+            ImGui::PushFont(data->font1);
+            ImGui::Text("MiB/s");
+            ImGui::PopFont();
+         }
+         if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_write]){
+            ImGui::TableNextCell();
+            ImGui::Text("%.2f", data->io.diff.write * (1000000 / sampling));
+            ImGui::SameLine(0,1.0f);
+            ImGui::PushFont(data->font1);
+            ImGui::Text("MiB/s");
+            ImGui::PopFont();
+         }
+      }
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_vram]){
          ImGui::TableNextRow();
          ImGui::TextColored(ImVec4(0.678, 0.392, 0.756, 1.00f), "VRAM");

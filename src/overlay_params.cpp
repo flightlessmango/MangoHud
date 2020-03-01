@@ -278,6 +278,8 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_ram] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_vram] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_io_read] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_io_write] = false;
    params->fps_sampling_period = 500000; /* 500ms */
    params->width = 280;
    params->height = 140;
@@ -339,4 +341,10 @@ parse_overlay_config(struct overlay_params *params,
 
    // Command buffer gets reused and timestamps cause hangs for some reason, force off for now
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_timing] = false;
+
+   if (!params->font_size)
+      params->font_size = 24;
+   //increase hud width if io read and write
+   if (params->enabled[OVERLAY_PARAM_ENABLED_io_read] && params->enabled[OVERLAY_PARAM_ENABLED_io_write])
+      params->width = 15 * params->font_size;
 }
