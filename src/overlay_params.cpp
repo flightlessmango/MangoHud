@@ -182,8 +182,15 @@ parse_string(const char *s, char *out_param, char *out_value)
    if (*s == '=') {
       s++;
       i++;
-      for (; !is_delimiter(*s); s++, out_value++, i++)
+      for (; !is_delimiter(*s); s++, out_value++, i++) {
          *out_value = *s;
+         // Consume escaped delimiter, but don't escape null. Might be end of string.
+         if (*s == '\\' && *(s + 1) != 0 && is_delimiter(*(s + 1))) {
+            s++;
+            i++;
+            *out_value = *s;
+         }
+      }
    } else
       *(out_value++) = '1';
    *out_value = 0;
