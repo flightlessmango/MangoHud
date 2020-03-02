@@ -136,11 +136,18 @@ parse_unsigned(const char *str)
    return strtol(str, NULL, 0);
 }
 
+static const char *
+parse_str(const char *str)
+{
+   return str;
+}
+
 #define parse_width(s) parse_unsigned(s)
 #define parse_height(s) parse_unsigned(s)
 #define parse_vsync(s) parse_unsigned(s)
 #define parse_offset_x(s) parse_unsigned(s)
 #define parse_offset_y(s) parse_unsigned(s)
+#define parse_time_format(s) parse_str(s)
 
 #define parse_crosshair_color(s) parse_color(s)
 
@@ -259,7 +266,7 @@ parse_overlay_config(struct overlay_params *params,
                   const char *env)
 {
 
-   memset(params, 0, sizeof(*params));
+   *params = {};
 
    /* Visible by default */
    params->enabled[OVERLAY_PARAM_ENABLED_fps] = true;
@@ -285,6 +292,7 @@ parse_overlay_config(struct overlay_params *params,
    params->offset_x = 0;
    params->offset_y = 0;
    params->background_alpha = 0.5;
+   params->time_format = "%T";
 
    // first pass with env var
    if (env)

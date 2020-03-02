@@ -211,6 +211,7 @@ struct swapchain_data {
    double frametimeDisplay;
    const char* cpuString;
    const char* gpuString;
+   std::string time;
 
    enum overlay_param_enabled stat_selector;
    double time_dividor;
@@ -999,6 +1000,12 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
 
             data->frametimeDisplay = data->frametime;
             data->fps = fps;
+
+            std::time_t t = std::time(nullptr);
+            std::stringstream time;
+            time << std::put_time(std::localtime(&t), instance_data->params.time_format.c_str());
+            data->time = time.str();
+
          if (instance_data->capture_started) {
             if (!instance_data->first_line_printed) {
                bool first_column = true;
@@ -1114,12 +1121,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
    if (!instance_data->params.no_display){
       ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_time]){
-         std::time_t t = std::time(nullptr);
-         std::stringstream time;
-         time << std::put_time(std::localtime(&t), "%T");
-         ImGui::PushFont(data->font1);
-         ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.00f), "%s", time.str().c_str());
-         ImGui::PopFont();
+         ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.00f), "%s", data->time.c_str());
       }
       if (device_data->gpu_stats && instance_data->params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
          ImGui::TextColored(ImVec4(0.180, 0.592, 0.384, 1.00f), "GPU");

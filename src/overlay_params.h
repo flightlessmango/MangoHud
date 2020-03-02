@@ -24,6 +24,8 @@
 #ifndef OVERLAY_PARAMS_H
 #define OVERLAY_PARAMS_H
 
+#include <string>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -68,6 +70,7 @@ extern "C" {
    OVERLAY_PARAM_CUSTOM(offset_y)                    \
    OVERLAY_PARAM_CUSTOM(crosshair_color)             \
    OVERLAY_PARAM_CUSTOM(background_alpha)            \
+   OVERLAY_PARAM_CUSTOM(time_format)                 \
    OVERLAY_PARAM_CUSTOM(help)
 
 enum overlay_param_position {
@@ -108,6 +111,7 @@ struct overlay_params {
    KeySym toggle_hud;
    KeySym toggle_logging;
    KeySym refresh_config;
+   std::string time_format;
 };
 
 const extern char *overlay_param_names[];
