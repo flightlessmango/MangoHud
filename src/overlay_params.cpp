@@ -352,7 +352,7 @@ parse_overlay_config(struct overlay_params *params,
    if (params->enabled[OVERLAY_PARAM_ENABLED_io_read] && params->enabled[OVERLAY_PARAM_ENABLED_io_write] && params->width == 280)
       params->width = 15 * params->font_size;
 
-   if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock] && params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp]){
+   if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock] && params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp] && params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
       params->tableCols = 4;
       params->width = 20 * params->font_size;
    }
