@@ -115,31 +115,21 @@ void *getAmdGpuUsage(void *){
     if (amdGpuCoreClockFile) {
         rewind(amdGpuCoreClockFile);
         fflush(amdGpuCoreClockFile);
-        char line[255];
-        while (fgets(line, sizeof(line), amdGpuCoreClockFile)){
-            std::string row = line;
-            row.erase(row.begin());
-            if (row.find("*") != std::string::npos){
-                row = std::regex_replace(row, std::regex(R"([^0-9])"), "");
-                amdgpu.CoreClock = stoi(row);
-                gpuCoreClock = amdgpu.CoreClock;
-            }
-        }
+        if (fscanf(amdGpuCoreClockFile, "%" PRId64, &amdgpu.CoreClock) != 1)
+            amdgpu.CoreClock = 0;
+
+        amdgpu.CoreClock /= 1000000;
+        gpuCoreClock = amdgpu.CoreClock;
     }
 
     if (amdGpuMemoryClockFile) {
         rewind(amdGpuMemoryClockFile);
         fflush(amdGpuMemoryClockFile);
-        char line[255];
-        while (fgets(line, sizeof(line), amdGpuMemoryClockFile)){
-            std::string row = line;
-            row.erase(row.begin());
-            if (row.find("*") != std::string::npos){
-                row = std::regex_replace(row, std::regex(R"([^0-9])"), "");
-                amdgpu.MemClock = stoi(row) * 2;
-                gpuMemClock = amdgpu.MemClock;
-            }
-        }
+        if (fscanf(amdGpuMemoryClockFile, "%" PRId64, &amdgpu.MemClock) != 1)
+            amdgpu.MemClock = 0;
+
+        amdgpu.MemClock /= 1000000;
+        gpuMemClock = amdgpu.MemClock;
     }
 
     pthread_detach(gpuThread);

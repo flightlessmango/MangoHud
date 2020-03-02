@@ -820,14 +820,14 @@ void init_gpu_stats(struct device_data *device_data)
                amdGpuVramTotalFile = fopen((path + "/device/mem_info_vram_total").c_str(), "r");
             if (!amdGpuVramUsedFile)
                amdGpuVramUsedFile = fopen((path + "/device/mem_info_vram_used").c_str(), "r");
-            if (!amdGpuMemoryClockFile)
-               amdGpuMemoryClockFile = fopen((path + "/device/pp_dpm_mclk").c_str(), "r");
-            if (!amdGpuCoreClockFile)
-               amdGpuCoreClockFile = fopen((path + "/device/pp_dpm_sclk").c_str(), "r");
 
             path = path + "/device/hwmon/";
             string tempFolder;
             if (find_folder(path, "hwmon", tempFolder)) {
+               if (!amdGpuCoreClockFile)
+                  amdGpuCoreClockFile = fopen((path + tempFolder + "/freq1_input").c_str(), "r");
+               if (!amdGpuMemoryClockFile)
+                  amdGpuMemoryClockFile = fopen((path + tempFolder + "/freq2_input").c_str(), "r");
                path = path + tempFolder + "/temp1_input";
 
                if (!amdTempFile)
