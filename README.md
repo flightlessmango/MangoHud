@@ -71,6 +71,7 @@ A partial list of parameters are below. See the config file for a complete list.
 | `position=`                        | Location of the hud: `top-left` (default), `top-right`, `bottom-left`, `bottom-right` |
 | `no_display`                       | Hide the hud by default                                                               |
 | `toggle_hud=`<br>`toggle_logging=` | Modifiable toggle hotkeys. Default are F12 and F2, respectively.                      |
+| `time`<br>`time_format=%T`         | Displays local time. See [std::put_time](https://en.cppreference.com/w/cpp/io/manip/put_time) for formatting help. |
 
 Note: Width and Height are set automatically based on the font_size, but can be overridden.
 
