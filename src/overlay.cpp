@@ -1104,6 +1104,21 @@ static void position_layer(struct swapchain_data *data)
    }
 }
 
+static void right_aligned_text(float off_x, const char *fmt, ...)
+{
+   ImVec2 pos = ImGui::GetCursorPos();
+   char buffer[32] {};
+
+   va_list args;
+   va_start(args, fmt);
+   vsnprintf(buffer, sizeof(buffer), fmt, args);
+   va_end(args);
+
+   ImVec2 sz = ImGui::CalcTextSize(buffer);
+   ImGui::SetCursorPosX(pos.x + off_x - sz.x);
+   ImGui::Text("%s", buffer);
+}
+
 static void compute_swapchain_display(struct swapchain_data *data)
 {
    struct device_data *device_data = data->device;
@@ -1112,6 +1127,8 @@ static void compute_swapchain_display(struct swapchain_data *data)
    ImGui::SetCurrentContext(data->imgui_context);
    ImGui::NewFrame();
    position_layer(data);
+
+   static float char_width = ImGui::CalcTextSize("A").x;
 
    if (!instance_data->params.no_display){
       ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
@@ -1124,16 +1141,20 @@ static void compute_swapchain_display(struct swapchain_data *data)
          ImGui::TableNextRow();
          ImGui::TextColored(ImVec4(0.180, 0.592, 0.384, 1.00f), "GPU");
          ImGui::TableNextCell();
-         ImGui::Text("%i%%", gpuLoad);
+         right_aligned_text(char_width * 4, "%i", gpuLoad);
+         ImGui::SameLine(0, 1.0f);
+         ImGui::Text("%%");
          // ImGui::SameLine(150);
          // ImGui::Text("%s", "%");
          if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_gpu_temp]){
             ImGui::TableNextCell();
-            ImGui::Text("%i%s", gpuTemp, "°C");
+            right_aligned_text(char_width * 4, "%i", gpuTemp);
+            ImGui::SameLine(0, 1.0f);
+            ImGui::Text("°C");
          }
          if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]){
             ImGui::TableNextCell();
-            ImGui::Text("%i", gpuCoreClock);
+            right_aligned_text(char_width * 4, "%i", gpuCoreClock);
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(data->font1);
             ImGui::Text("MHz");
@@ -1144,13 +1165,17 @@ static void compute_swapchain_display(struct swapchain_data *data)
          ImGui::TableNextRow();
          ImGui::TextColored(ImVec4(0.180, 0.592, 0.796, 1.00f), "CPU");
          ImGui::TableNextCell();
-         ImGui::Text("%d%%", cpuLoadLog);
+         right_aligned_text(char_width * 4, "%d", cpuLoadLog);
+         ImGui::SameLine(0, 1.0f);
+         ImGui::Text("%%");
          // ImGui::SameLine(150);
          // ImGui::Text("%s", "%");
       
          if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp]){
             ImGui::TableNextCell();
-            ImGui::Text("%i%s", cpuTemp, "°C");
+            right_aligned_text(char_width * 4, "%i", cpuTemp);
+            ImGui::SameLine(0, 1.0f);
+            ImGui::Text("°C");
          }
       }
       
@@ -1165,9 +1190,11 @@ static void compute_swapchain_display(struct swapchain_data *data)
             ImGui::TextColored(ImVec4(0.180, 0.592, 0.796, 1.00f),"%i", i);
             ImGui::PopFont();
             ImGui::TableNextCell();
-            ImGui::Text("%i%%", int(cpuData.percent));
+            right_aligned_text(char_width * 4, "%i", int(cpuData.percent));
+            ImGui::SameLine(0, 1.0f);
+            ImGui::Text("%%");
             ImGui::TableNextCell();
-            ImGui::Text("%i", cpuData.mhz);
+            right_aligned_text(char_width * 4, "%i", cpuData.mhz);
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(data->font1);
             ImGui::Text("MHz");
@@ -1187,7 +1214,8 @@ static void compute_swapchain_display(struct swapchain_data *data)
          
          if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_read]){
             ImGui::TableNextCell();
-            ImGui::Text("%.2f", data->io.diff.read * (1000000 / sampling));
+            float val = data->io.diff.read * (1000000 / sampling);
+            right_aligned_text(char_width * 4, val < 100 ? "%.2f" : "%.f", val);
             ImGui::SameLine(0,1.0f);
             ImGui::PushFont(data->font1);
             ImGui::Text("MiB/s");
@@ -1195,7 +1223,8 @@ static void compute_swapchain_display(struct swapchain_data *data)
          }
          if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_write]){
             ImGui::TableNextCell();
-            ImGui::Text("%.2f", data->io.diff.write * (1000000 / sampling));
+            float val = data->io.diff.write * (1000000 / sampling);
+            right_aligned_text(char_width * 4, val < 100 ? "%.2f" : "%.f", val);
             ImGui::SameLine(0,1.0f);
             ImGui::PushFont(data->font1);
             ImGui::Text("MiB/s");
@@ -1206,14 +1235,14 @@ static void compute_swapchain_display(struct swapchain_data *data)
          ImGui::TableNextRow();
          ImGui::TextColored(ImVec4(0.678, 0.392, 0.756, 1.00f), "VRAM");
          ImGui::TableNextCell();
-         ImGui::Text("%.2f", gpuMemUsed);
+         right_aligned_text(char_width * 4, "%.2f", gpuMemUsed);
          ImGui::SameLine(0,1.0f);
          ImGui::PushFont(data->font1);
          ImGui::Text("GB");
          ImGui::PopFont();
          if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_gpu_mem_clock]){
             ImGui::TableNextCell();
-            ImGui::Text("%i", gpuMemClock);
+            right_aligned_text(char_width * 4, "%i", gpuMemClock);
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(data->font1);
             ImGui::Text("MHz");
@@ -1224,43 +1253,23 @@ static void compute_swapchain_display(struct swapchain_data *data)
          ImGui::TableNextRow();
          ImGui::TextColored(ImVec4(0.760, 0.4, 0.576, 1.00f), "RAM");
          ImGui::TableNextCell();
-         ImGui::Text("%.2f", memused);
+         right_aligned_text(char_width * 4, "%.2f", memused);
          ImGui::SameLine(0,1.0f);
          ImGui::PushFont(data->font1);
          ImGui::Text("GB");
-         ImGui::PopFont();
-      }
-      if (instance_data->params.io_read){
-         auto sampling = instance_data->params.fps_sampling_period;
-         ImGui::TextColored(ImVec4(0.760, 0.576, 0.4, 1.00f), "IO rd");
-         ImGui::SameLine(hudFirstRow);
-         ImGui::Text("%.2f", data->io.diff.read * (1000000 / sampling));
-         ImGui::SameLine(0,1.0f);
-         ImGui::PushFont(data->font1);
-         ImGui::Text("MiB/s");
-         ImGui::PopFont();
-      }
-      if (instance_data->params.io_write){
-         auto sampling = instance_data->params.fps_sampling_period;
-         ImGui::TextColored(ImVec4(0.760, 0.576, 0.4, 1.00f), "IO wr");
-         ImGui::SameLine(hudFirstRow);
-         ImGui::Text("%.2f", data->io.diff.write * (1000000 / sampling));
-         ImGui::SameLine(0,1.0f);
-         ImGui::PushFont(data->font1);
-         ImGui::Text("MiB/s");
          ImGui::PopFont();
       }
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_fps]){
          ImGui::TableNextRow();
          ImGui::TextColored(ImVec4(0.925, 0.411, 0.411, 1.00f), "%s", engineName.c_str());
          ImGui::TableNextCell();
-         ImGui::Text("%.0f", data->fps);
+         right_aligned_text(char_width * 4, "%.0f", data->fps);
          ImGui::SameLine(0, 1.0f);
          ImGui::PushFont(data->font1);
          ImGui::Text("FPS");
          ImGui::PopFont();
          ImGui::TableNextCell();
-         ImGui::Text("%.1f", 1000 / data->fps);
+         right_aligned_text(char_width * 4, "%.1f", 1000 / data->fps);
          ImGui::SameLine(0, 1.0f);
          ImGui::PushFont(data->font1);
          ImGui::Text("ms");
