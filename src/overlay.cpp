@@ -929,32 +929,25 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
       if (log_duration_env && !try_stoi(duration, log_duration_env))
         duration = 0;
 
-      if (cpu.find("Intel") != std::string::npos) {
-         string path;
-         if (find_folder("/sys/devices/platform/coretemp.0/hwmon/", "hwmon", path)) {
-           path = "/sys/devices/platform/coretemp.0/hwmon/" + path + "/temp1_input";
-           if (file_exists(path))
-              cpuTempFile = fopen(path.c_str(), "r");
+      string name, path;
+      string hwmon = "/sys/class/hwmon/";
+      auto dirs = ls(hwmon.c_str());
+      for (auto& dir : dirs)
+      {
+         path = hwmon + dir;
+         name = read_line(path + "/name");
+#ifndef NDEBUG
+         std::cerr << "hwmon: sensor name: " << name << std::endl;
+#endif
+         if (name == "coretemp" || name == "k10temp" || name == "zenpower"){
+            path += "/temp1_input";
+            break;
          }
+      }
+      if (!file_exists(path)) {
+         cerr << "MANGOHUD: Could not find cpu temp sensor location" << endl;
       } else {
-         string name, path;
-         string hwmon = "/sys/class/hwmon/";
-         auto dirs = ls(hwmon.c_str());
-         for (auto& dir : dirs)
-         {
-            path = hwmon + dir;
-            name = read_line(path + "/name");
-            std::cerr << "hwmon: sensor name: " << name << std::endl;
-            if (name == "k10temp" || name == "zenpower"){
-               path += "/temp1_input";
-               break;
-            }
-         }
-         if (!file_exists(path)) {
-            cout << "MANGOHUD: Could not find temp location" << endl;
-         } else {
-            cpuTempFile = fopen(path.c_str(), "r");
-         }
+         cpuTempFile = fopen(path.c_str(), "r");
       }
 
       sysInfoFetched = true;
