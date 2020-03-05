@@ -67,7 +67,7 @@ void *getNvidiaGpuInfo(void *){
         getNvidiaInfo();
         gpuLoad = nvidiaUtilization.gpu;
         gpuTemp = nvidiaTemp;
-        gpuMemUsed = float(nvidiaMemory.used / (1024 * 1024)) / 1000;
+        gpuMemUsed = nvidiaMemory.used / (1024.f * 1024.f * 1024.f);
         gpuCoreClock = nvidiaCoreClock;
         gpuMemClock = nvidiaMemClock * 2;
     }
@@ -77,6 +77,8 @@ void *getNvidiaGpuInfo(void *){
 }
 
 void *getAmdGpuUsage(void *){
+    int64_t value = 0;
+
     if (amdGpuFile) {
         rewind(amdGpuFile);
         fflush(amdGpuFile);
@@ -97,38 +99,38 @@ void *getAmdGpuUsage(void *){
     if (amdGpuVramTotalFile) {
         rewind(amdGpuVramTotalFile);
         fflush(amdGpuVramTotalFile);
-        if (fscanf(amdGpuVramTotalFile, "%" PRId64, &amdgpu.memoryTotal) != 1)
-            amdgpu.memoryTotal = 0;
-        amdgpu.memoryTotal /= (1024 * 1024);
+        if (fscanf(amdGpuVramTotalFile, "%" PRId64, &value) != 1)
+            value = 0;
+        amdgpu.memoryTotal = value / (1024 * 1024);
         gpuMemTotal = amdgpu.memoryTotal;
     }
 
     if (amdGpuVramUsedFile) {
         rewind(amdGpuVramUsedFile);
         fflush(amdGpuVramUsedFile);
-        if (fscanf(amdGpuVramUsedFile, "%" PRId64, &amdgpu.memoryUsed) != 1)
-            amdgpu.memoryUsed = 0;
-        amdgpu.memoryUsed /= (1024 * 1024);
-        gpuMemUsed = float(amdgpu.memoryUsed) / 1000;
+        if (fscanf(amdGpuVramUsedFile, "%" PRId64, &value) != 1)
+            value = 0;
+        amdgpu.memoryUsed = value / (1024 * 1024);
+        gpuMemUsed = amdgpu.memoryUsed / 1024.f;
     }
-    
+
     if (amdGpuCoreClockFile) {
         rewind(amdGpuCoreClockFile);
         fflush(amdGpuCoreClockFile);
-        if (fscanf(amdGpuCoreClockFile, "%" PRId64, &amdgpu.CoreClock) != 1)
-            amdgpu.CoreClock = 0;
+        if (fscanf(amdGpuCoreClockFile, "%" PRId64, &value) != 1)
+            value = 0;
 
-        amdgpu.CoreClock /= 1000000;
+        amdgpu.CoreClock = value / 1000000;
         gpuCoreClock = amdgpu.CoreClock;
     }
 
     if (amdGpuMemoryClockFile) {
         rewind(amdGpuMemoryClockFile);
         fflush(amdGpuMemoryClockFile);
-        if (fscanf(amdGpuMemoryClockFile, "%" PRId64, &amdgpu.MemClock) != 1)
-            amdgpu.MemClock = 0;
+        if (fscanf(amdGpuMemoryClockFile, "%" PRId64, &value) != 1)
+            value = 0;
 
-        amdgpu.MemClock /= 1000000;
+        amdgpu.MemClock = value / 1000000;
         gpuMemClock = amdgpu.MemClock;
     }
 
