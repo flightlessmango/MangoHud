@@ -28,6 +28,7 @@
 #include <sys/sysinfo.h>
 #include <X11/Xlib.h>
 #include "X11/keysym.h"
+#include "imgui.h"
 
 #include "overlay_params.h"
 #include "config.h"
@@ -343,7 +344,13 @@ parse_overlay_config(struct overlay_params *params,
 
    // Command buffer gets reused and timestamps cause hangs for some reason, force off for now
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_timing] = false;
-   
+   // Convert from 0xRRGGBB to ImGui's format
+   params->crosshair_color =
+      IM_COL32(RGBGetRValue(params->crosshair_color),
+               RGBGetGValue(params->crosshair_color),
+               RGBGetBValue(params->crosshair_color),
+               255);
+
    params->tableCols = 3;
 
    if (!params->font_size)

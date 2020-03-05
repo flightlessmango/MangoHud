@@ -35,6 +35,12 @@ extern "C" {
 #include <stdbool.h>
 #include <X11/Xlib.h>
 
+#define RGBGetBValue(rgb)   (rgb & 0x000000FF)
+#define RGBGetGValue(rgb)   ((rgb >> 8) & 0x000000FF)
+#define RGBGetRValue(rgb)   ((rgb >> 16) & 0x000000FF)
+
+#define ToRGBColor(r, g, b, a) ((r << 16) | (g << 8) | (b));
+
 #define OVERLAY_PARAMS                               \
    OVERLAY_PARAM_BOOL(fps)                           \
    OVERLAY_PARAM_BOOL(frame)                         \
