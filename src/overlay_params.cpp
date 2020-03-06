@@ -24,7 +24,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <fstream>
 #include <errno.h>
 #include <sys/sysinfo.h>
 #include <X11/Xlib.h>

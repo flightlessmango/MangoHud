@@ -1,18 +1,7 @@
-#include <cmath>
-#include <iomanip>
-#include <array>
-#include <vector>
-#include <algorithm>
-#include <iterator>
 #include <thread>
-#include <sstream>
-#include <fstream>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <iostream>
-#include <string>
-#include <sstream>
-#include <regex>
 #include "nvidia_info.h"
 #include "memory.h"
 
