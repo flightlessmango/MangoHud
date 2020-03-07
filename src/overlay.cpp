@@ -2546,7 +2546,9 @@ static VkResult overlay_CreateInstance(
       get_instance_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
       
 
-   const char* pEngineName = pCreateInfo->pApplicationInfo->pEngineName;
+   const char* pEngineName = nullptr;
+   if (pCreateInfo->pApplicationInfo)
+      pEngineName = pCreateInfo->pApplicationInfo->pEngineName;
    if (pEngineName)
       engineName = pEngineName;
    if (engineName == "DXVK" || engineName == "vkd3d") {
