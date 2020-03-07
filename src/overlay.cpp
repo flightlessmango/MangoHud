@@ -1132,11 +1132,10 @@ static void compute_swapchain_display(struct swapchain_data *data)
 
    if (!instance_data->params.no_display){
       ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
-      ImGui::BeginTable("hud", instance_data->params.tableCols);
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_time]){
-         ImGui::TableNextRow();
          ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.00f), "%s", data->time.c_str());
       }
+      ImGui::BeginTable("hud", instance_data->params.tableCols);
       if (device_data->gpu_stats && instance_data->params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
          ImGui::TableNextRow();
          ImGui::TextColored(ImVec4(0.180, 0.592, 0.384, 1.00f), "GPU");
