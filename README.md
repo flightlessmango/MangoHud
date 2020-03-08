@@ -24,7 +24,7 @@ This will build and copy `libMangoHud.so` & `libMangoHud32.so` to `$HOME/.local/
 
 ---
 
-If you are running an Ubuntu-like distrobution, Fedora, or Arch, the build script will automatically detect and prompt you to install missing build dependencies. If you run in to any issues with this please report them!
+If you are running an Ubuntu-like distribution, Fedora, or Arch, the build script will automatically detect and prompt you to install missing build dependencies. If you run into any issues with this please report them!
 
 ## Packaging status
 
@@ -53,7 +53,7 @@ The default config file is installed to `$HOME/.config/MangoHud/MangoHud.conf` a
 
 ---
 
-### `MANGOHUD_CONFIG` environment varianble
+### `MANGOHUD_CONFIG` environment variable
 
 You can also customize the hud by using the `MANGOHUD_CONFIG` environment variable while separating different options with a comma. This takes priority over any config file.
 
