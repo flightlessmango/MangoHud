@@ -98,3 +98,44 @@ bool dir_exists(const std::string& path)
     struct stat s;
     return !stat(path.c_str(), &s) && S_ISDIR(s.st_mode);
 }
+
+std::string get_exe_path()
+{
+    char result[PATH_MAX] {};
+    ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+    return std::string(result, (count > 0) ? count : 0);
+}
+
+std::string get_home_dir()
+{
+    std::string path;
+    const char* p = getenv("HOME");
+
+    if (p)
+        path = p;
+    return path;
+}
+
+std::string get_data_dir()
+{
+    const char* p = getenv("XDG_DATA_HOME");
+    if (p)
+        return p;
+
+    std::string path = get_home_dir();
+    if (!path.empty())
+        path += "/.local/share";
+    return path;
+}
+
+std::string get_config_dir()
+{
+    const char* p = getenv("XDG_CONFIG_HOME");
+    if (p)
+        return p;
+
+    std::string path = get_home_dir();
+    if (!path.empty())
+        path += "/.config";
+    return path;
+}

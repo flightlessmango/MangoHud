@@ -24,7 +24,13 @@ This will build and copy `libMangoHud.so` & `libMangoHud32.so` to `$HOME/.local/
 
 ---
 
-If you are running an Ubuntu-like distrobution, Fedora, or Arch, the build script will automatically detect and prompt you to install missing build dependencies. If you run in to any issues with this please report them!
+If you are running an Ubuntu-like distribution, Fedora, or Arch, the build script will automatically detect and prompt you to install missing build dependencies. If you run into any issues with this please report them!
+
+## Packaging status
+
+[Fedora](https://src.fedoraproject.org/rpms/mangohud): `sudo dnf install mangohud`
+
+[Arch](https://aur.archlinux.org/packages/mangohud): Install `mangohud` and `lib32-mangohud` with your favourite AUR helper. `mangohud-git` is also available on the AUR.
 
 # Normal usage
 
@@ -34,20 +40,37 @@ To enable the MangoHud Vulkan overlay layer, run :
 
 Or alternatively, add `MANGOHUD=1` to your shell profile.
 
-## MANGOHUD_CONFIG parameters
+## Hud configuration
 
-You can customize the hud by using the MANGOHUD_CONFIG environment variable while separating different options with a comma. Add `some_parameter=0` to hide said parameter.
+MangoHud comes with a config file which can be used to set configuration options globally or per application. The priorities of different config files are:
 
-- `cpu_temp`  :  Displays current CPU temperature
-- `gpu_temp`  :  Displays current GPU temperature
-- `core_load` :  Displays current CPU load per core
-- `ram`       :  Displays system memory usage
-- `vram`      :  Displays GPU memory usage
-- `font_size` :  Changes the default font size (default is 24)
-- `width`     :  Set custom hud width
-- `height`    :  Set custom hud height
-- `position=x`:  Available values for `x` include `top-left`, `top-right`, `bottom-left`, and `bottom-right`
-- `frame_timing` :  Displays frame time line plot
+1. `/path/to/application/dir/MangoHud.conf`
+2. `$HOME/.config/MangoHud/{application_name}.conf`
+3. `$HOME/.config/MangoHud/MangoHud.conf`
+4. `$HOME/.local/share/MangoHud/MangoHud.conf`
+
+The default config file is installed to `$HOME/.config/MangoHud/MangoHud.conf` and will not be overwritten by the script.
+
+---
+
+### `MANGOHUD_CONFIG` environment variable
+
+You can also customize the hud by using the `MANGOHUD_CONFIG` environment variable while separating different options with a comma. This takes priority over any config file.
+
+A partial list of parameters are below. See the config file for a complete list.
+
+| Variable                           | Description                                                                           |
+|------------------------------------|---------------------------------------------------------------------------------------|
+| `cpu_temp`<br>`gpu_temp`           | Displays current CPU/GPU temperature                                                  |
+| `core_load`                        | Displays load & frequency per core                                                    |
+| `ram`<br>`vram`                    | Displays system RAM/VRAM usage                                                        |
+| `full`                             | Enables all of the above config options                                               |
+| `crosshair`                        | Adds a crosshair overlay at the centre of the screen                                  |
+| `font_size=`                       | Customizeable font size (default=24)                                                  |
+| `width=`<br>`height=`              | Customizeable hud dimensions (in pixels)                                              |
+| `position=`                        | Location of the hud: `top-left` (default), `top-right`, `bottom-left`, `bottom-right` |
+| `no_display`                       | Hide the hud by default                                                               |
+| `toggle_hud=`<br>`toggle_logging=` | Modifiable toggle hotkeys. Default are F12 and F2, respectively.                      |
 
 Note: Width and Height are set automatically based on the font_size, but can be overridden.
 

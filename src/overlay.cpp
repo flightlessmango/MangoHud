@@ -27,6 +27,9 @@
 #include <thread>
 #include <chrono>
 #include <unordered_map>
+#include <mutex>
+#include <vector>
+#include <list>
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_layer.h>
@@ -37,12 +40,10 @@
 #include "font_default.h"
 
 // #include "util/debug.h"
-#include "mesa/util/hash_table.h"
-#include "mesa/util/list.h"
-#include "mesa/util/ralloc.h"
+#include <inttypes.h>
+#include "mesa/util/macros.h"
 #include "mesa/util/os_time.h"
 #include "mesa/util/os_socket.h"
-#include "mesa/util/simple_mtx.h"
 
 #include "vk_enum_to_str.h"
 #include <vulkan/vk_util.h>
@@ -58,12 +59,10 @@
 bool open = false;
 string gpuString;
 float offset_x, offset_y, hudSpacing;
-int hudFirstRow, hudSecondRow, frameOverhead = 0, sleepTime = 0;
+int hudFirstRow, hudSecondRow;
 string engineName, engineVersion;
-ImFont* font = nullptr;
-ImFont* font1 = nullptr;
 struct amdGpu amdgpu;
-double frameStart, frameEnd, targetFrameTime = 0;
+int64_t frameStart, frameEnd, targetFrameTime = 0, frameOverhead = 0, sleepTime = 0;
 
 #define RGBGetBValue(rgb)   (rgb & 0x000000FF)
 #define RGBGetGValue(rgb)   ((rgb >> 8) & 0x000000FF)
@@ -109,8 +108,7 @@ struct device_data {
 
    struct queue_data *graphic_queue;
 
-   struct queue_data **queues;
-   uint32_t n_queues;
+   std::vector<struct queue_data *> queues;
 
    /* For a single frame */
    struct frame_stat frame_stats;
@@ -118,6 +116,7 @@ struct device_data {
 };
 
 /* Mapped from VkCommandBuffer */
+struct queue_data;
 struct command_buffer_data {
    struct device_data *device;
 
@@ -129,7 +128,7 @@ struct command_buffer_data {
 
    struct frame_stat stats;
 
-   struct list_head link; /* link into queue_data::running_command_buffer */
+   struct queue_data *queue_data;
 };
 
 /* Mapped from VkQueue */
@@ -143,12 +142,10 @@ struct queue_data {
 
    VkFence queries_fence;
 
-   struct list_head running_command_buffer;
+   std::list<command_buffer_data *> running_command_buffer;
 };
 
 struct overlay_draw {
-   struct list_head link;
-
    VkCommandBuffer command_buffer;
 
    VkSemaphore semaphore;
@@ -171,10 +168,9 @@ struct swapchain_data {
    unsigned width, height;
    VkFormat format;
 
-   uint32_t n_images;
-   VkImage *images;
-   VkImageView *image_views;
-   VkFramebuffer *framebuffers;
+   std::vector<VkImage> images;
+   std::vector<VkImageView> image_views;
+   std::vector<VkFramebuffer> framebuffers;
 
    VkRenderPass render_pass;
 
@@ -189,8 +185,10 @@ struct swapchain_data {
 
    VkCommandPool command_pool;
 
-   struct list_head draws; /* List of struct overlay_draw */
+   std::list<overlay_draw *> draws; /* List of struct overlay_draw */
 
+   ImFont* font = nullptr;
+   ImFont* font1 = nullptr;
    bool font_uploaded;
    VkImage font_image;
    VkImageView font_image_view;
@@ -240,42 +238,32 @@ static const VkQueryPipelineStatisticFlags overlay_query_flags =
    VK_QUERY_PIPELINE_STATISTIC_COMPUTE_SHADER_INVOCATIONS_BIT;
 #define OVERLAY_QUERY_COUNT (11)
 
-static struct hash_table_u64 *vk_object_to_data = NULL;
-static simple_mtx_t vk_object_to_data_mutex = _SIMPLE_MTX_INITIALIZER_NP;
+// single global lock, for simplicity
+std::mutex global_lock;
+typedef std::lock_guard<std::mutex> scoped_lock;
+std::unordered_map<uint64_t, void *> vk_object_to_data;
 
 thread_local ImGuiContext* __MesaImGui;
 
-static inline void ensure_vk_object_map(void)
-{
-   if (!vk_object_to_data)
-      vk_object_to_data = _mesa_hash_table_u64_create(NULL);
-}
-
 #define HKEY(obj) ((uint64_t)(obj))
-#define FIND(type, obj) ((type *)find_object_data(HKEY(obj)))
+#define FIND(type, obj) (reinterpret_cast<type *>(find_object_data(HKEY(obj))))
 
 static void *find_object_data(uint64_t obj)
 {
-   simple_mtx_lock(&vk_object_to_data_mutex);
-   ensure_vk_object_map();
-   void *data = _mesa_hash_table_u64_search(vk_object_to_data, obj);
-   simple_mtx_unlock(&vk_object_to_data_mutex);
-   return data;
+   scoped_lock lk(global_lock);
+   return vk_object_to_data[obj];
 }
 
 static void map_object(uint64_t obj, void *data)
 {
-   simple_mtx_lock(&vk_object_to_data_mutex);
-   ensure_vk_object_map();
-   _mesa_hash_table_u64_insert(vk_object_to_data, obj, data);
-   simple_mtx_unlock(&vk_object_to_data_mutex);
+   scoped_lock lk(global_lock);
+   vk_object_to_data[obj] = data;
 }
 
 static void unmap_object(uint64_t obj)
 {
-   simple_mtx_lock(&vk_object_to_data_mutex);
-   _mesa_hash_table_u64_remove(vk_object_to_data, obj);
-   simple_mtx_unlock(&vk_object_to_data_mutex);
+   scoped_lock lk(global_lock);
+   vk_object_to_data.erase(obj);
 }
 
 /**/
@@ -351,7 +339,7 @@ free_chain(struct VkBaseOutStructure *chain)
 
 static struct instance_data *new_instance_data(VkInstance instance)
 {
-   struct instance_data *data = rzalloc(NULL, struct instance_data);
+   struct instance_data *data = new instance_data();
    data->instance = instance;
    data->control_client = -1;
    map_object(HKEY(data->instance), data);
@@ -365,7 +353,7 @@ static void destroy_instance_data(struct instance_data *data)
    if (data->params.control >= 0)
       os_socket_close(data->params.control);
    unmap_object(HKEY(data->instance));
-   ralloc_free(data);
+   delete data;
 }
 
 static void instance_data_map_physical_devices(struct instance_data *instance_data,
@@ -376,10 +364,10 @@ static void instance_data_map_physical_devices(struct instance_data *instance_da
                                                   &physicalDeviceCount,
                                                   NULL);
 
-   VkPhysicalDevice *physicalDevices = (VkPhysicalDevice *) malloc(sizeof(VkPhysicalDevice) * physicalDeviceCount);
+   std::vector<VkPhysicalDevice> physicalDevices(physicalDeviceCount);
    instance_data->vtable.EnumeratePhysicalDevices(instance_data->instance,
                                                   &physicalDeviceCount,
-                                                  physicalDevices);
+                                                  physicalDevices.data());
 
    for (uint32_t i = 0; i < physicalDeviceCount; i++) {
       if (map)
@@ -387,14 +375,12 @@ static void instance_data_map_physical_devices(struct instance_data *instance_da
       else
          unmap_object(HKEY(physicalDevices[i]));
    }
-
-   free(physicalDevices);
 }
 
 /**/
 static struct device_data *new_device_data(VkDevice device, struct instance_data *instance)
 {
-   struct device_data *data = rzalloc(NULL, struct device_data);
+   struct device_data *data = new device_data();
    data->instance = instance;
    data->device = device;
    map_object(HKEY(data->device), data);
@@ -406,13 +392,12 @@ static struct queue_data *new_queue_data(VkQueue queue,
                                          uint32_t family_index,
                                          struct device_data *device_data)
 {
-   struct queue_data *data = rzalloc(device_data, struct queue_data);
+   struct queue_data *data = new queue_data();
    data->device = device_data;
    data->queue = queue;
    data->flags = family_props->queueFlags;
    data->timestamp_mask = (1ull << family_props->timestampValidBits) - 1;
    data->family_index = family_index;
-   list_inithead(&data->running_command_buffer);
    map_object(HKEY(data->queue), data);
 
    /* Fence synchronizing access to queries on that queue. */
@@ -435,26 +420,26 @@ static void destroy_queue(struct queue_data *data)
    struct device_data *device_data = data->device;
    device_data->vtable.DestroyFence(device_data->device, data->queries_fence, NULL);
    unmap_object(HKEY(data->queue));
-   ralloc_free(data);
+   delete data;
 }
 
 static void device_map_queues(struct device_data *data,
                               const VkDeviceCreateInfo *pCreateInfo)
 {
+   uint32_t n_queues = 0;
    for (uint32_t i = 0; i < pCreateInfo->queueCreateInfoCount; i++)
-      data->n_queues += pCreateInfo->pQueueCreateInfos[i].queueCount;
-   data->queues = ralloc_array(data, struct queue_data *, data->n_queues);
+      n_queues += pCreateInfo->pQueueCreateInfos[i].queueCount;
+   data->queues.resize(n_queues);
 
    struct instance_data *instance_data = data->instance;
    uint32_t n_family_props;
    instance_data->vtable.GetPhysicalDeviceQueueFamilyProperties(data->physical_device,
                                                                 &n_family_props,
                                                                 NULL);
-   VkQueueFamilyProperties *family_props =
-      (VkQueueFamilyProperties *)malloc(sizeof(VkQueueFamilyProperties) * n_family_props);
+   std::vector<VkQueueFamilyProperties> family_props(n_family_props);
    instance_data->vtable.GetPhysicalDeviceQueueFamilyProperties(data->physical_device,
                                                                 &n_family_props,
-                                                                family_props);
+                                                                family_props.data());
 
    uint32_t queue_index = 0;
    for (uint32_t i = 0; i < pCreateInfo->queueCreateInfoCount; i++) {
@@ -471,20 +456,18 @@ static void device_map_queues(struct device_data *data,
                            pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex, data);
       }
    }
-
-   free(family_props);
 }
 
 static void device_unmap_queues(struct device_data *data)
 {
-   for (uint32_t i = 0; i < data->n_queues; i++)
-      destroy_queue(data->queues[i]);
+   for (auto q : data->queues)
+      destroy_queue(q);
 }
 
 static void destroy_device_data(struct device_data *data)
 {
    unmap_object(HKEY(data->device));
-   ralloc_free(data);
+   delete data;
 }
 
 /**/
@@ -494,13 +477,12 @@ static struct command_buffer_data *new_command_buffer_data(VkCommandBuffer cmd_b
                                                            uint32_t query_index,
                                                            struct device_data *device_data)
 {
-   struct command_buffer_data *data = rzalloc(NULL, struct command_buffer_data);
+   struct command_buffer_data *data = new command_buffer_data();
    data->device = device_data;
    data->cmd_buffer = cmd_buffer;
    data->level = level;
    data->timestamp_query_pool = timestamp_query_pool;
    data->query_index = query_index;
-   list_inithead(&data->link);
    map_object(HKEY(data->cmd_buffer), data);
    return data;
 }
@@ -508,8 +490,9 @@ static struct command_buffer_data *new_command_buffer_data(VkCommandBuffer cmd_b
 static void destroy_command_buffer_data(struct command_buffer_data *data)
 {
    unmap_object(HKEY(data->cmd_buffer));
-   list_delinit(&data->link);
-   ralloc_free(data);
+   if (data->queue_data)
+      data->queue_data->running_command_buffer.remove(data);
+   delete data;
 }
 
 /**/
@@ -517,11 +500,12 @@ static struct swapchain_data *new_swapchain_data(VkSwapchainKHR swapchain,
                                                  struct device_data *device_data)
 {
    struct instance_data *instance_data = device_data->instance;
-   struct swapchain_data *data = rzalloc(NULL, struct swapchain_data);
+   struct swapchain_data *data = new swapchain_data();
    data->device = device_data;
    data->swapchain = swapchain;
+   if (instance_data->params.font_size > 0 && instance_data->params.width == 280)
+      instance_data->params.width = hudFirstRow + hudSecondRow;
    data->window_size = ImVec2(instance_data->params.width, instance_data->params.height);
-   list_inithead(&data->draws);
    map_object(HKEY(data->swapchain), data);
    return data;
 }
@@ -529,27 +513,27 @@ static struct swapchain_data *new_swapchain_data(VkSwapchainKHR swapchain,
 static void destroy_swapchain_data(struct swapchain_data *data)
 {
    unmap_object(HKEY(data->swapchain));
-   ralloc_free(data);
+   delete data;
 }
 
 struct overlay_draw *get_overlay_draw(struct swapchain_data *data)
 {
    struct device_data *device_data = data->device;
-   struct overlay_draw *draw = list_is_empty(&data->draws) ?
-      NULL : list_first_entry(&data->draws, struct overlay_draw, link);
+   struct overlay_draw *draw = data->draws.empty() ?
+      nullptr : data->draws.front();
 
    VkSemaphoreCreateInfo sem_info = {};
    sem_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
    if (draw && device_data->vtable.GetFenceStatus(device_data->device, draw->fence) == VK_SUCCESS) {
-      list_del(&draw->link);
       VK_CHECK(device_data->vtable.ResetFences(device_data->device,
                                                1, &draw->fence));
-      list_addtail(&draw->link, &data->draws);
+      data->draws.pop_front();
+      data->draws.push_back(draw);
       return draw;
    }
 
-   draw = rzalloc(data, struct overlay_draw);
+   draw = new overlay_draw();
 
    VkCommandBufferAllocateInfo cmd_buffer_info = {};
    cmd_buffer_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -573,7 +557,7 @@ struct overlay_draw *get_overlay_draw(struct swapchain_data *data)
    VK_CHECK(device_data->vtable.CreateSemaphore(device_data->device, &sem_info,
                                                 NULL, &draw->semaphore));
 
-   list_addtail(&draw->link, &data->draws);
+   data->draws.push_back(draw);
 
    return draw;
 }
@@ -870,6 +854,7 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
    double elapsed = (double)(now - data->last_fps_update); /* us */
    elapsedF2 = (double)(now - last_f2_press);
    elapsedF12 = (double)(now - last_f12_press);
+   elapsedRefreshConfig = (double)(now - refresh_config_press);
    fps = 1000000.0f * data->n_frames_since_update / elapsed;
 
    if (data->last_present_time) {
@@ -894,11 +879,18 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
 
      }
    }
-   
+
    if (elapsedF12 >= 500000){
       if (key_is_pressed(instance_data->params.toggle_hud)){
          instance_data->params.no_display = !instance_data->params.no_display;
          last_f12_press = now;
+      }
+   }
+
+   if (elapsedRefreshConfig >= 500000){
+      if (key_is_pressed(instance_data->params.refresh_config)){
+         parse_overlay_config(&instance_data->params, getenv("MANGOHUD_CONFIG"));
+         refresh_config_press = now;
       }
    }
 
@@ -1085,8 +1077,8 @@ static void position_layer(struct swapchain_data *data)
    if (instance_data->params.offset_x > 0 || instance_data->params.offset_y > 0)
       margin = 0.0f;
 
-   ImGui::SetNextWindowBgAlpha(0.5);
-   ImGui::SetNextWindowSize(ImVec2(instance_data->params.width, instance_data->params.height), ImGuiCond_Always);
+   ImGui::SetNextWindowBgAlpha(instance_data->params.background_alpha);
+   ImGui::SetNextWindowSize(data->window_size, ImGuiCond_Always);
    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,-3));
 
@@ -1118,18 +1110,17 @@ static void compute_swapchain_display(struct swapchain_data *data)
    ImGui::SetCurrentContext(data->imgui_context);
    ImGui::NewFrame();
    position_layer(data);
-   if (instance_data->params.font_size > 0 && instance_data->params.width == 280)
-      instance_data->params.width = hudFirstRow + hudSecondRow;
 
-   if(!instance_data->params.no_display)
-	   ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
-      
-   if(instance_data->params.no_display){
-      ImGui::SetNextWindowBgAlpha(0.01);
-      ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
-   }
-   
    if (!instance_data->params.no_display){
+      ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
+      if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_time]){
+         std::time_t t = std::time(nullptr);
+         std::stringstream time;
+         time << std::put_time(std::localtime(&t), "%T");
+         ImGui::PushFont(data->font1);
+         ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.00f), "%s", time.str().c_str());
+         ImGui::PopFont();
+      }
       if (device_data->gpu_stats && instance_data->params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
          ImGui::TextColored(ImVec4(0.180, 0.592, 0.384, 1.00f), "GPU");
          ImGui::SameLine(hudFirstRow);
@@ -1160,7 +1151,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
          {
             ImGui::TextColored(ImVec4(0.180, 0.592, 0.796, 1.00f), "CPU");
             ImGui::SameLine(0, 1.0f);
-            ImGui::PushFont(font1);
+            ImGui::PushFont(data->font1);
             ImGui::TextColored(ImVec4(0.180, 0.592, 0.796, 1.00f),"%i", i);
             ImGui::PopFont();
             ImGui::SameLine(hudFirstRow);
@@ -1168,7 +1159,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
             ImGui::SameLine(hudSecondRow);
             ImGui::Text("%i", cpuData.mhz);
             ImGui::SameLine(0, 1.0f);
-            ImGui::PushFont(font1);
+            ImGui::PushFont(data->font1);
             ImGui::Text("MHz");
             ImGui::PopFont();
             i++;
@@ -1179,7 +1170,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
          ImGui::SameLine(hudFirstRow);
          ImGui::Text("%.2f", gpuMemUsed);
          ImGui::SameLine(0,1.0f);
-         ImGui::PushFont(font1);
+         ImGui::PushFont(data->font1);
          ImGui::Text("GB");
          ImGui::PopFont();
       }
@@ -1188,7 +1179,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
          ImGui::SameLine(hudFirstRow);
          ImGui::Text("%.2f", memused);
          ImGui::SameLine(0,1.0f);
-         ImGui::PushFont(font1);
+         ImGui::PushFont(data->font1);
          ImGui::Text("GB");
          ImGui::PopFont();
       }
@@ -1197,17 +1188,17 @@ static void compute_swapchain_display(struct swapchain_data *data)
          ImGui::SameLine(hudFirstRow);
          ImGui::Text("%.0f", data->fps);
          ImGui::SameLine(0, 1.0f);
-         ImGui::PushFont(font1);
+         ImGui::PushFont(data->font1);
          ImGui::Text("FPS");
          ImGui::PopFont();
          ImGui::SameLine(hudSecondRow);
          ImGui::Text("%.1f", 1000 / data->fps);
          ImGui::SameLine(0, 1.0f);
-         ImGui::PushFont(font1);
+         ImGui::PushFont(data->font1);
          ImGui::Text("ms");
          ImGui::PopFont();
          if (engineName == "DXVK" || engineName == "VKD3D"){
-            ImGui::PushFont(font1);
+            ImGui::PushFont(data->font1);
             ImGui::TextColored(ImVec4(0.925, 0.411, 0.411, 1.00f), "%s", engineVersion.c_str());
             ImGui::PopFont();
          }
@@ -1224,7 +1215,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
 
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
          ImGui::Dummy(ImVec2(0.0f, instance_data->params.font_size / 2));
-         ImGui::PushFont(font1);
+         ImGui::PushFont(data->font1);
          ImGui::TextColored(ImVec4(0.925, 0.411, 0.411, 1.00f), "%s", "Frametime");
          ImGui::PopFont();
       }
@@ -1255,15 +1246,15 @@ static void compute_swapchain_display(struct swapchain_data *data)
       }
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
          ImGui::SameLine(0,1.0f);
-         ImGui::PushFont(font1);
+         ImGui::PushFont(data->font1);
          ImGui::Text("%.1f ms", 1000 / data->fps);
          ImGui::PopFont();
       }
       data->window_size = ImVec2(data->window_size.x, ImGui::GetCursorPosY() + 10.0f);
+      ImGui::End();
    }
-   ImGui::End();
    if(loggingOn){
-      ImGui::SetNextWindowBgAlpha(0.01);
+      ImGui::SetNextWindowBgAlpha(0.0);
       ImGui::SetNextWindowSize(ImVec2(instance_data->params.font_size * 13, instance_data->params.font_size * 13), ImGuiCond_Always);
       ImGui::SetNextWindowPos(ImVec2(data->width - instance_data->params.font_size * 13,
                                     0),
@@ -1866,16 +1857,17 @@ static void setup_swapchain_data_pipeline(struct swapchain_data *data)
       font_size = 24;
 
    const char* mangohud_font = getenv("MANGOHUD_FONT");
-   if(mangohud_font) {
-      font = io.Fonts->AddFontFromFileTTF(mangohud_font, font_size);
-      font1 = io.Fonts->AddFontFromFileTTF(mangohud_font, font_size * 0.55f);
+   // ImGui takes ownership of the data, no need to free it
+   if (mangohud_font && file_exists(mangohud_font)) {
+      data->font = io.Fonts->AddFontFromFileTTF(mangohud_font, font_size);
+      data->font1 = io.Fonts->AddFontFromFileTTF(mangohud_font, font_size * 0.55f);
    } else {
       ImFontConfig font_cfg = ImFontConfig();
       const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
       const ImWchar* glyph_ranges = io.Fonts->GetGlyphRangesDefault();
 
-      font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size, &font_cfg, glyph_ranges);
-      font1 = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size * 0.55, &font_cfg, glyph_ranges);
+      data->font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size, &font_cfg, glyph_ranges);
+      data->font1 = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size * 0.55, &font_cfg, glyph_ranges);
    }
    unsigned char* pixels;
    int width, height;
@@ -1955,6 +1947,7 @@ static void setup_swapchain_data(struct swapchain_data *data,
    ImGuiStyle& style = ImGui::GetStyle();
    //style.Colors[ImGuiCol_FrameBg]   = ImVec4(0.0f, 0.0f, 0.0f, 0.00f); // Setting temporarily with PushStyleColor()
    style.Colors[ImGuiCol_PlotLines] = ImVec4(0.0f, 1.0f, 0.0f, 1.00f);
+   style.Colors[ImGuiCol_WindowBg]  = ImVec4(0.06f, 0.06f, 0.06f, 1.0f);
 
    struct device_data *device_data = data->device;
 
@@ -1996,19 +1989,27 @@ static void setup_swapchain_data(struct swapchain_data *data,
 
    setup_swapchain_data_pipeline(data);
 
+   uint32_t n_images = 0;
    VK_CHECK(device_data->vtable.GetSwapchainImagesKHR(device_data->device,
                                                       data->swapchain,
-                                                      &data->n_images,
+                                                      &n_images,
                                                       NULL));
 
-   data->images = ralloc_array(data, VkImage, data->n_images);
-   data->image_views = ralloc_array(data, VkImageView, data->n_images);
-   data->framebuffers = ralloc_array(data, VkFramebuffer, data->n_images);
+   data->images.resize(n_images);
+   data->image_views.resize(n_images);
+   data->framebuffers.resize(n_images);
 
    VK_CHECK(device_data->vtable.GetSwapchainImagesKHR(device_data->device,
                                                       data->swapchain,
-                                                      &data->n_images,
-                                                      data->images));
+                                                      &n_images,
+                                                      data->images.data()));
+
+
+   if (n_images != data->images.size()) {
+      data->images.resize(n_images);
+      data->image_views.resize(n_images);
+      data->framebuffers.resize(n_images);
+   }
 
    /* Image views */
    VkImageViewCreateInfo view_info = {};
@@ -2020,7 +2021,7 @@ static void setup_swapchain_data(struct swapchain_data *data,
    view_info.components.b = VK_COMPONENT_SWIZZLE_B;
    view_info.components.a = VK_COMPONENT_SWIZZLE_A;
    view_info.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
-   for (uint32_t i = 0; i < data->n_images; i++) {
+   for (size_t i = 0; i < data->images.size(); i++) {
       view_info.image = data->images[i];
       VK_CHECK(device_data->vtable.CreateImageView(device_data->device,
                                                    &view_info, NULL,
@@ -2037,7 +2038,7 @@ static void setup_swapchain_data(struct swapchain_data *data,
    fb_info.width = data->width;
    fb_info.height = data->height;
    fb_info.layers = 1;
-   for (uint32_t i = 0; i < data->n_images; i++) {
+   for (size_t i = 0; i < data->image_views.size(); i++) {
       attachment[0] = data->image_views[i];
       VK_CHECK(device_data->vtable.CreateFramebuffer(device_data->device, &fb_info,
                                                      NULL, &data->framebuffers[i]));
@@ -2057,16 +2058,17 @@ static void shutdown_swapchain_data(struct swapchain_data *data)
 {
    struct device_data *device_data = data->device;
 
-   list_for_each_entry_safe(struct overlay_draw, draw, &data->draws, link) {
+   for (auto draw : data->draws) {
       device_data->vtable.DestroySemaphore(device_data->device, draw->semaphore, NULL);
       device_data->vtable.DestroyFence(device_data->device, draw->fence, NULL);
       device_data->vtable.DestroyBuffer(device_data->device, draw->vertex_buffer, NULL);
       device_data->vtable.DestroyBuffer(device_data->device, draw->index_buffer, NULL);
       device_data->vtable.FreeMemory(device_data->device, draw->vertex_buffer_mem, NULL);
       device_data->vtable.FreeMemory(device_data->device, draw->index_buffer_mem, NULL);
+      delete draw;
    }
 
-   for (uint32_t i = 0; i < data->n_images; i++) {
+   for (size_t i = 0; i < data->images.size(); i++) {
       device_data->vtable.DestroyImageView(device_data->device, data->image_views[i], NULL);
       device_data->vtable.DestroyFramebuffer(device_data->device, data->framebuffers[i], NULL);
    }
@@ -2100,7 +2102,6 @@ static struct overlay_draw *before_present(struct swapchain_data *swapchain_data
                                            unsigned n_wait_semaphores,
                                            unsigned imageIndex)
 {
-   struct instance_data *instance_data = swapchain_data->device->instance;
    struct overlay_draw *draw = NULL;
 
    snapshot_swapchain_frame(swapchain_data);
@@ -2152,29 +2153,26 @@ static void overlay_DestroySwapchainKHR(
 }
 
 void FpsLimiter(){
-   int64_t now = os_time_get_nano();
-   sleepTime = targetFrameTime - (now - frameEnd);
-   this_thread::sleep_for(chrono::nanoseconds(sleepTime - frameOverhead));
-   frameOverhead = (now - frameStart);
+   sleepTime = targetFrameTime - (frameStart - frameEnd);
+   if ( sleepTime > frameOverhead ) {
+      int64_t adjustedSleep = sleepTime - frameOverhead;
+      this_thread::sleep_for(chrono::nanoseconds(adjustedSleep));
+      frameOverhead = ((os_time_get_nano() - frameStart) - adjustedSleep);
+      if (frameOverhead > targetFrameTime)
+         frameOverhead = 0;
+   }
 }
 
 static VkResult overlay_QueuePresentKHR(
     VkQueue                                     queue,
     const VkPresentInfoKHR*                     pPresentInfo)
 {
-   if (targetFrameTime > 0){
-      frameStart = os_time_get_nano();
-      FpsLimiter();
-      frameEnd = os_time_get_nano();
-   }
-   
    struct queue_data *queue_data = FIND(struct queue_data, queue);
    struct device_data *device_data = queue_data->device;
-   struct instance_data *instance_data = device_data->instance;
 
    device_data->frame_stats.stats[OVERLAY_PARAM_ENABLED_frame]++;
 
-   if (list_length(&queue_data->running_command_buffer) > 0) {
+   if (!queue_data->running_command_buffer.empty()) {
       /* Before getting the query results, make sure the operations have
        * completed.
        */
@@ -2186,9 +2184,9 @@ static VkResult overlay_QueuePresentKHR(
                                                  VK_FALSE, UINT64_MAX));
 
       /* Now get the results. */
-      list_for_each_entry_safe(struct command_buffer_data, cmd_buffer_data,
-                               &queue_data->running_command_buffer, link) {
-         list_delinit(&cmd_buffer_data->link);
+      while (!queue_data->running_command_buffer.empty()) {
+         auto cmd_buffer_data = queue_data->running_command_buffer.front();
+         queue_data->running_command_buffer.pop_front();
 
          if (cmd_buffer_data->timestamp_query_pool) {
             uint64_t gpu_timestamps[2] = { 0 };
@@ -2235,8 +2233,10 @@ static VkResult overlay_QueuePresentKHR(
          * wait on them as well, we can just wait on the overlay submission
          * semaphore.
          */
-      present_info.pWaitSemaphores = &draw->semaphore;
-      present_info.waitSemaphoreCount = 1;
+      if (draw) {
+         present_info.pWaitSemaphores = &draw->semaphore;
+         present_info.waitSemaphoreCount = 1;
+      }
 
       uint64_t ts0 = os_time_get();
       VkResult chain_result = queue_data->device->vtable.QueuePresentKHR(queue, &present_info);
@@ -2246,6 +2246,12 @@ static VkResult overlay_QueuePresentKHR(
          pPresentInfo->pResults[i] = chain_result;
       if (chain_result != VK_SUCCESS && result == VK_SUCCESS)
          result = chain_result;
+   }
+
+   if (targetFrameTime > 0){
+      frameStart = os_time_get_nano();
+      FpsLimiter();
+      frameEnd = os_time_get_nano();
    }
    
    return result;
@@ -2457,9 +2463,10 @@ static VkResult overlay_QueueSubmit(
          if (!cmd_buffer_data->timestamp_query_pool)
             continue;
 
-         if (list_is_empty(&cmd_buffer_data->link)) {
-            list_addtail(&cmd_buffer_data->link,
-                         &queue_data->running_command_buffer);
+         auto& q = queue_data->running_command_buffer;
+         if (std::find(q.begin(), q.end(), cmd_buffer_data) == q.end()) {
+            cmd_buffer_data->queue_data = queue_data;
+            q.push_back(cmd_buffer_data);
          } else {
             fprintf(stderr, "Command buffer submitted multiple times before present.\n"
                     "This could lead to invalid data.\n");
@@ -2579,16 +2586,16 @@ static VkResult overlay_CreateInstance(
                              &instance_data->vtable);
    instance_data_map_physical_devices(instance_data, true);
 
-   parse_overlay_env(&instance_data->params, getenv("MANGOHUD_CONFIG"));
+   parse_overlay_config(&instance_data->params, getenv("MANGOHUD_CONFIG"));
    if (instance_data->params.fps_limit > 0)
-      targetFrameTime = double(1000000000.0f / instance_data->params.fps_limit);
+      targetFrameTime = int64_t(1000000000.0 / instance_data->params.fps_limit);
 
    int font_size;
    instance_data->params.font_size > 0 ? font_size = instance_data->params.font_size : font_size = 24;
    instance_data->params.font_size > 0 ? font_size = instance_data->params.font_size : instance_data->params.font_size = 24;
 
    hudSpacing = font_size / 2;
-   hudFirstRow = font_size * 4.5;
+   hudFirstRow = font_size * 4.2;
    hudSecondRow = font_size * 7.5;
 
    // Adjust height for DXVK/VKD3D version number

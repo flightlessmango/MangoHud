@@ -59,7 +59,6 @@ C_TEMPLATE = Template(textwrap.dedent(u"""\
 
     #include <string.h>
     #include <vulkan/vulkan.h>
-    #include <vulkan/vk_android_native_buffer.h>
     #include "../src/mesa/util/macros.h"
     #include "vk_enum_to_str.h"
 
@@ -158,7 +157,6 @@ H_TEMPLATE = Template(textwrap.dedent(u"""\
     #define MESA_VK_ENUM_TO_STR_H
 
     #include <vulkan/vulkan.h>
-    #include <vulkan/vk_android_native_buffer.h>
 
     #ifdef __cplusplus
     extern "C" {
@@ -361,6 +359,8 @@ def parse_xml(cmd_factory, enum_factory, ext_factory, struct_factory, filename):
 
     for command in xml.findall('./commands/command'):
         name = command.find('./proto/name')
+        if name is not None and "ANDROID" in name.text:
+            continue
         first_arg = command.find('./param/type')
         # Some commands are alias KHR -> nonKHR, ignore those
         if name is not None:
@@ -369,6 +369,8 @@ def parse_xml(cmd_factory, enum_factory, ext_factory, struct_factory, filename):
 
     for struct_type in xml.findall('./types/type[@category="struct"]'):
         name = struct_type.attrib['name']
+        if name is not None and "ANDROID" in name:
+            continue
         stype = struct_get_stype(struct_type)
         if stype is not None:
             struct_factory(name, stype=stype)

@@ -50,7 +50,7 @@ vklayer_mesa_overlay = shared_library(
   vk_enum_to_str,
   vklayer_files,
   overlay_spv,
-  vk_layer_table_helpers,
+  vulkan_headers,
   c_args : [
     pre_args,
     c_vis_args, 
@@ -66,7 +66,8 @@ vklayer_mesa_overlay = shared_library(
     vulkan_wsi_deps, 
     libimgui_core_dep, 
     dep_dl,
-    dep_pthread],
+    dep_pthread,
+    dep_vulkan],
   include_directories : inc_common,
   link_args : cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro']),
   install : true

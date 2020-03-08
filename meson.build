@@ -111,8 +111,9 @@ endif
 
 inc_common = [
     include_directories('include'),
-    include_directories('modules/Vulkan-Headers/include'),
 ]
+
+dep_vulkan = dependency('vulkan', required: get_option('use_system_vulkan'))
 
 # Check for generic C arguments
 c_args = []
@@ -187,17 +188,17 @@ endif
 
 dep_pthread = cc.find_library('pthread')
 
-vk_api_xml = files('modules/Vulkan-Docs/xml/vk.xml')
-vk_layer_table_helpers = []
-loader_genvk_py = files('modules/Vulkan-Loader/scripts/loader_genvk.py')
-foreach s : ['vk_dispatch_table_helper.h', 'vk_layer_dispatch_table.h']#, 'vk_loader_extensions.h', 'vk_loader_extensions.c']
-  vk_layer_table_helpers += custom_target(
-    s, output : s,
-    command : [prog_python, loader_genvk_py,
-      '-scripts', '../../Vulkan-Docs/scripts', # relative to loader_genvk.py
-      '-registry', vk_api_xml,
-      '-o','@OUTDIR@', s])
-endforeach
+if dep_vulkan.found()
+  vulkan_headers = []
+  datadir = get_option('datadir')
+  if not datadir.startswith('/')
+    datadir = get_option('prefix') / datadir
+  endif
+  vk_api_xml = files(datadir / 'vulkan/registry/vk.xml')
+else
+  subdir('modules/Vulkan-Headers')
+  vulkan_headers = vk_api_xml
+endif
 
 vk_enum_to_str = custom_target(
   'vk_enum_to_str',
@@ -210,11 +211,8 @@ vk_enum_to_str = custom_target(
 )
 
 util_files = files(
-  'src/mesa/util/hash_table.c',
   'src/mesa/util/os_socket.c',
   'src/mesa/util/os_time.c',
-  'src/mesa/util/ralloc.c',
-  'src/mesa/main/hash.c',
 )
 
 subdir('modules/ImGui')

@@ -1,3 +1,4 @@
 option('glibcxx_asserts', type : 'boolean', value : false)
 option('with_x11', type : 'feature', value : 'enabled')
 option('with_wayland', type : 'feature', value : 'disabled')
+option('use_system_vulkan', type : 'feature', value : 'disabled', description: 'Use system vulkan headers instead of the provided ones')

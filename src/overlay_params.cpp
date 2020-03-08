@@ -76,6 +76,12 @@ parse_font_size(const char *str)
    return strtof(str, NULL);
 }
 
+static float
+parse_background_alpha(const char *str)
+{
+   return strtof(str, NULL);
+}
+
 static KeySym
 parse_toggle_hud(const char *str)
 {
@@ -84,6 +90,12 @@ parse_toggle_hud(const char *str)
 
 static KeySym
 parse_toggle_logging(const char *str)
+{
+   return XStringToKeysym(str);
+}
+
+static KeySym
+parse_refresh_config(const char *str)
 {
    return XStringToKeysym(str);
 }
@@ -113,11 +125,9 @@ parse_no_display(const char *str)
 }
 
 static unsigned
-parse_color(const char (*str))
+parse_color(const char *str)
 {
-   std::string string = str;
-   string = "0x" + string;
-   return strtol(string.c_str(), NULL, 0);
+   return strtol(str, NULL, 16);
 }
 
 static unsigned
@@ -206,6 +216,41 @@ parse_overlay_env(struct overlay_params *params,
 {
    uint32_t num;
    char key[256], value[256];
+   while ((num = parse_string(env, key, value)) != 0) {
+      env += num;
+      if (!strcmp("full", key)) {
+         bool read_cfg = params->enabled[OVERLAY_PARAM_ENABLED_read_cfg];
+#define OVERLAY_PARAM_BOOL(name) \
+         params->enabled[OVERLAY_PARAM_ENABLED_##name] = 1;
+#define OVERLAY_PARAM_CUSTOM(name)
+         OVERLAY_PARAMS
+#undef OVERLAY_PARAM_BOOL
+#undef OVERLAY_PARAM_CUSTOM
+         params->enabled[OVERLAY_PARAM_ENABLED_crosshair] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = read_cfg;
+      }
+#define OVERLAY_PARAM_BOOL(name)                                       \
+      if (!strcmp(#name, key)) {                                       \
+         params->enabled[OVERLAY_PARAM_ENABLED_##name] =               \
+            strtol(value, NULL, 0);                                    \
+         continue;                                                     \
+      }
+#define OVERLAY_PARAM_CUSTOM(name)                                     \
+      if (!strcmp(#name, key)) {                                       \
+         params->name = parse_##name(value);                           \
+         continue;                                                     \
+      }
+      OVERLAY_PARAMS
+#undef OVERLAY_PARAM_BOOL
+#undef OVERLAY_PARAM_CUSTOM
+      fprintf(stderr, "Unknown option '%s'\n", key);
+   }
+}
+
+void
+parse_overlay_config(struct overlay_params *params,
+                  const char *env)
+{
 
    memset(params, 0, sizeof(*params));
 
@@ -219,96 +264,65 @@ parse_overlay_env(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_ram] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_vram] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = false;
    params->fps_sampling_period = 500000; /* 500ms */
    params->width = 280;
    params->height = 140;
    params->control = -1;
    params->toggle_hud = XK_F12;
    params->toggle_logging = XK_F2;
+   params->refresh_config = XK_F4;
    params->fps_limit = 0;
    params->vsync = -1;
    params->crosshair_size = 30;
    params->offset_x = 0;
    params->offset_y = 0;
+   params->background_alpha = 0.5;
 
-// Get config options
-   parseConfigFile();
-   for (auto& it : options) {
-#define OVERLAY_PARAM_BOOL(name)                                        \
-      if (it.first == #name) {                                          \
-         params->enabled[OVERLAY_PARAM_ENABLED_##name] =                \
-            strtol(it.second.c_str(), NULL, 0);                         \
-         continue;                                                      \
-      }
-#define OVERLAY_PARAM_CUSTOM(name)                       \
-      if (it.first == #name) {                           \
-         params->name = parse_##name(it.second.c_str()); \
-         continue;                                       \
-      }
-      OVERLAY_PARAMS
+   // first pass with env var
+   if (env)
+      parse_overlay_env(params, env);
+
+   bool read_cfg = params->enabled[OVERLAY_PARAM_ENABLED_read_cfg];
+   if (!env || read_cfg) {
+
+      // Get config options
+      parseConfigFile();
+      if (options.find("full") != options.end() && options.find("full")->second != "0") {
+#define OVERLAY_PARAM_BOOL(name) \
+            params->enabled[OVERLAY_PARAM_ENABLED_##name] = 1;
+#define OVERLAY_PARAM_CUSTOM(name)
+            OVERLAY_PARAMS
 #undef OVERLAY_PARAM_BOOL
 #undef OVERLAY_PARAM_CUSTOM
-      fprintf(stderr, "Unknown option '%s'\n", it.first.c_str());
-   }
-
-   if (env){
-
-   while ((num = parse_string(env, key, value)) != 0) {
-      env += num;
-
-#define OVERLAY_PARAM_BOOL(name)                                        \
-      if (!strcmp(#name, key)) {                                        \
-         params->enabled[OVERLAY_PARAM_ENABLED_##name] =                \
-            strtol(value, NULL, 0);                                     \
-         continue;                                                      \
+         params->enabled[OVERLAY_PARAM_ENABLED_crosshair] = 0;
+         options.erase("full");
       }
-#define OVERLAY_PARAM_CUSTOM(name)               \
-      if (!strcmp(#name, key)) {                 \
-         params->name = parse_##name(value);     \
-         continue;                               \
-      }
-      OVERLAY_PARAMS
+
+      for (auto& it : options) {
+#define OVERLAY_PARAM_BOOL(name)                                       \
+         if (it.first == #name) {                                      \
+            params->enabled[OVERLAY_PARAM_ENABLED_##name] =            \
+               strtol(it.second.c_str(), NULL, 0);                     \
+            continue;                                                  \
+         }
+#define OVERLAY_PARAM_CUSTOM(name)                                     \
+         if (it.first == #name) {                                      \
+            params->name = parse_##name(it.second.c_str());            \
+            continue;                                                  \
+         }
+         OVERLAY_PARAMS
 #undef OVERLAY_PARAM_BOOL
 #undef OVERLAY_PARAM_CUSTOM
-      fprintf(stderr, "Unknown option '%s'\n", key);
-   }
-}
-   // if font_size is used and height has not been changed from default
-   // increase height as needed based on font_size
-   
-   // params->toggle_hud = "F12";
-   bool heightChanged = false;
+         fprintf(stderr, "Unknown option '%s'\n", it.first.c_str());
+      }
 
-   if (params->height != 140)
-      heightChanged = true;
-
-   if (!params->font_size)
-      params->font_size = 24.0f;
-
-   int FrameTimeGraphHeight = 0;
-   
-   if (!heightChanged){
-      if (params->enabled[OVERLAY_PARAM_ENABLED_frame_timing])
-         FrameTimeGraphHeight = 50 + params->font_size / 2;
-
-      if (params->font_size)
-         params->height = (params->font_size - 3 * 2) * 3 + FrameTimeGraphHeight;
-
-      // Apply more hud height if cores are enabled
-      if (params->enabled[OVERLAY_PARAM_ENABLED_core_load])
-         params->height += ((params->font_size - 3) * get_nprocs());
-
-      if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
-         params->height += ((params->font_size) / 2);
-
-      if (params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats])
-         params->height += ((params->font_size) / 2);
-
-      if (params->enabled[OVERLAY_PARAM_ENABLED_ram])
-         params->height += (params->font_size - 3);
-
-      if (params->enabled[OVERLAY_PARAM_ENABLED_vram])
-         params->height += (params->font_size - 3);
    }
 
+   // second pass, override config file settings with MANGOHUD_CONFIG
+   if (env && read_cfg)
+      parse_overlay_env(params, env);
+
+   // Command buffer gets reused and timestamps cause hangs for some reason, force off for now
+   params->enabled[OVERLAY_PARAM_ENABLED_gpu_timing] = false;
 }

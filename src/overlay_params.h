@@ -47,6 +47,9 @@ extern "C" {
    OVERLAY_PARAM_BOOL(ram)                           \
    OVERLAY_PARAM_BOOL(vram)                          \
    OVERLAY_PARAM_BOOL(crosshair)                     \
+   OVERLAY_PARAM_BOOL(time)                          \
+   OVERLAY_PARAM_BOOL(full)                          \
+   OVERLAY_PARAM_BOOL(read_cfg)                      \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
    OVERLAY_PARAM_CUSTOM(position)                    \
@@ -59,10 +62,12 @@ extern "C" {
    OVERLAY_PARAM_CUSTOM(font_size)                   \
    OVERLAY_PARAM_CUSTOM(toggle_hud)                  \
    OVERLAY_PARAM_CUSTOM(toggle_logging)              \
+   OVERLAY_PARAM_CUSTOM(refresh_config)               \
    OVERLAY_PARAM_CUSTOM(crosshair_size)              \
    OVERLAY_PARAM_CUSTOM(offset_x)                    \
    OVERLAY_PARAM_CUSTOM(offset_y)                    \
    OVERLAY_PARAM_CUSTOM(crosshair_color)             \
+   OVERLAY_PARAM_CUSTOM(background_alpha)            \
    OVERLAY_PARAM_CUSTOM(help)
 
 enum overlay_param_position {
@@ -91,6 +96,7 @@ struct overlay_params {
    uint32_t crosshair_size;
    bool help;
    bool no_display;
+   bool full;
    unsigned width;
    unsigned height;
    unsigned offset_x;
@@ -98,13 +104,17 @@ struct overlay_params {
    unsigned vsync;
    unsigned crosshair_color;
    float font_size;
+   float background_alpha;
    KeySym toggle_hud;
    KeySym toggle_logging;
+   KeySym refresh_config;
 };
 
 const extern char *overlay_param_names[];
 
 void parse_overlay_env(struct overlay_params *params,
+                       const char *env);
+void parse_overlay_config(struct overlay_params *params,
                        const char *env);
 
 #ifdef __cplusplus
