@@ -139,31 +139,34 @@ package() {
     mkdir -p "$INSTALL_DIR/usr/lib/MangoHud/"{lib32,lib64}
     mkdir -p "$INSTALL_DIR/usr/share/vulkan/implicit_layer.d"
     mkdir -p "$INSTALL_DIR/etc/ld.so.conf.d"
-    
+
     cp libmangohud.conf "$INSTALL_DIR/etc/ld.so.conf.d/libmangohud.conf"
     cp "$LIB"   "$INSTALL_DIR/usr/lib/MangoHud/lib64/libMangoHud.so"
     cp "$LIB32" "$INSTALL_DIR/usr/lib/MangoHud/lib32/libMangoHud.so"
     cp "$LAYER" "$INSTALL_DIR/usr/share/vulkan/implicit_layer.d/"
     cp --preserve=mode "build/release/usr/bin/mangohud" "$INSTALL_DIR/usr/bin/mangohud"
 
-    tar -C build/package -cf "build/MangoHud-package.tar" .
+    tar --numeric-owner --owner=0 --group=0 \
+        -C build/package -cvf "build/MangoHud-package.tar" .
 }
 
 release() {
     rm build/MangoHud-package.tar
     mkdir -p build/MangoHud
     package
-    cp bin/mangohud-setup.sh build/MangoHud/mangohud-setup.sh
+    cp --preserve=mode bin/mangohud-setup.sh build/MangoHud/mangohud-setup.sh
     cp build/MangoHud-package.tar build/MangoHud/MangoHud-package.tar
-    cd build/
-    tar -czvf MangoHud-$VERSION.tar.gz MangoHud
-    cd ..
+    tar --numeric-owner --owner=0 --group=0 \
+        -C build -czvf build/MangoHud-$VERSION.tar.gz MangoHud
 }
 
 install() {
-    package
-    [ "$UID" -eq 0 ] || exec sudo bash "$0" "$@"
-    tar -C / -xf build/MangoHud*.tar
+    if [[ ! -f build/MangoHud-package.tar ]]; then
+        echo No package found. Run \"$0 package\".
+        exit 1
+    fi
+    [ "$UID" -eq 0 ] || exec sudo bash "$0" install
+    tar -C / -xvf build/MangoHud-package.tar
     ldconfig
     echo "MangoHud Installed"
 }
@@ -173,7 +176,7 @@ clean() {
 }
 
 uninstall() {
-    [ "$UID" -eq 0 ] || exec sudo bash "$0" "$@"
+    [ "$UID" -eq 0 ] || exec sudo bash "$0" uninstall
     rm -rfv "/usr/lib/MangoHud"
     rm -fv "/usr/share/vulkan/implicit_layer.d/mangohud.json"
     rm -fv "/etc/ld.so.conf.d/libmangohud.conf"
