@@ -1225,7 +1225,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             s == OVERLAY_PARAM_ENABLED_fps ||
             s == OVERLAY_PARAM_ENABLED_frame)
             continue;
-            
+
          char hash[40];
          snprintf(hash, sizeof(hash), "##%s", overlay_param_names[s]);
          data.stat_selector = (enum overlay_param_enabled) s;
@@ -1943,15 +1943,16 @@ static void setup_swapchain_data_pipeline(struct swapchain_data *data)
    write_desc[0].pImageInfo = desc_image;
    device_data->vtable.UpdateDescriptorSets(device_data->device, 1, write_desc, 0, NULL);
 }
-void imgui_custom_style(){
+
+void imgui_custom_style(struct overlay_params& params){
    ImGuiStyle& style = ImGui::GetStyle();
-   style.Colors[ImGuiCol_PlotLines] = ImVec4(0.0f, 1.0f, 0.0f, 1.00f);
+   style.Colors[ImGuiCol_PlotLines] = ImGui::ColorConvertU32ToFloat4(params.frametime_color);
    style.Colors[ImGuiCol_WindowBg]  = ImVec4(0.06f, 0.06f, 0.06f, 1.0f);
    style.CellPadding.y = -2;
 }
 
 static void setup_swapchain_data(struct swapchain_data *data,
-                                 const VkSwapchainCreateInfoKHR *pCreateInfo)
+                                 const VkSwapchainCreateInfoKHR *pCreateInfo, struct overlay_params& params)
 {
    data->width = pCreateInfo->imageExtent.width;
    data->height = pCreateInfo->imageExtent.height;
@@ -1962,7 +1963,7 @@ static void setup_swapchain_data(struct swapchain_data *data,
 
    ImGui::GetIO().IniFilename = NULL;
    ImGui::GetIO().DisplaySize = ImVec2((float)data->width, (float)data->height);
-   imgui_custom_style();
+   imgui_custom_style(params);
 
    struct device_data *device_data = data->device;
 
@@ -2149,7 +2150,7 @@ static VkResult overlay_CreateSwapchainKHR(
    VkResult result = device_data->vtable.CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
    if (result != VK_SUCCESS) return result;
    struct swapchain_data *swapchain_data = new_swapchain_data(*pSwapchain, device_data);
-   setup_swapchain_data(swapchain_data, pCreateInfo);
+   setup_swapchain_data(swapchain_data, pCreateInfo, device_data->instance->params);
    
    return result;
 }
