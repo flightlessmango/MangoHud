@@ -4,7 +4,7 @@ XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 DATA_DIR="$XDG_DATA_HOME/MangoHud"
 LAYER="build/release/usr/share/vulkan/implicit_layer.d/mangohud.json"
-INSTALL_DIR="build/package/MangoHud"
+INSTALL_DIR="build/package/"
 IMPLICIT_LAYER_DIR="$XDG_DATA_HOME/vulkan/implicit_layer.d"
 VERSION=$(git describe --long --tags --always | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/^v//')
 
@@ -134,35 +134,38 @@ package() {
     if [[ ! -f "$LIB" || "$LIB" -ot "build/meson64/src/libMangoHud.so" ]]; then
         build
     fi
-    mkdir -p "$INSTALL_DIR/.local/share/"{MangoHud,vulkan/implicit_layer.d}
-    mkdir -p "$INSTALL_DIR/.config/MangoHud"
+    mkdir -p "$INSTALL_DIR/usr/bin"
+    mkdir -p "$INSTALL_DIR/usr/lib/MangoHud"
+    mkdir -p "$INSTALL_DIR/usr/lib/MangoHud/"{lib32,lib64}
+    mkdir -p "$INSTALL_DIR/usr/share/vulkan/implicit_layer.d"
+    mkdir -p "$INSTALL_DIR/etc/ld.so.conf.d"
+    
+    cp libmangohud.conf "$INSTALL_DIR/etc/ld.so.conf.d/libmangohud.conf"
+    cp "$LIB"   "$INSTALL_DIR/usr/lib/MangoHud/lib64/libMangoHud.so"
+    cp "$LIB32" "$INSTALL_DIR/usr/lib/MangoHud/lib32/libMangoHud.so"
+    cp "$LAYER" "$INSTALL_DIR/usr/share/vulkan/implicit_layer.d/"
+    cp --preserve=mode "build/release/usr/bin/mangohud" "$INSTALL_DIR/usr/bin/mangohud"
 
-    cp "$LIB32" "$INSTALL_DIR/.local/share/MangoHud/libMangoHud32.so"
-    cp "$LIB" "$INSTALL_DIR/.local/share/MangoHud/libMangoHud.so"
-    cp "$LAYER" "$INSTALL_DIR/.local/share/vulkan/implicit_layer.d/mangohud64.json"
-    cp "$LAYER" "$INSTALL_DIR/.local/share/vulkan/implicit_layer.d/mangohud32.json"
-    cp --preserve=mode "bin/install.sh" "build/package/MangoHud/install.sh"
-    cp --preserve=mode "bin/run-mangohud-gl.sh" "build/package/MangoHud/run-mangohud-gl.sh"
-    cp "bin/MangoHud.conf" "$INSTALL_DIR/.config/MangoHud/MangoHud.conf"
-    cp "bin/MangoHud.conf" "$INSTALL_DIR/.local/share/MangoHud/MangoHud.conf"
-    sed -i "s|64bit|32bit|g" "$INSTALL_DIR/.local/share/vulkan/implicit_layer.d/mangohud32.json"
+    tar -C build/package -cf "build/MangoHud-package.tar" .
+}
 
-    tar -C build/package -cpzf "build/MangoHud-$VERSION.tar.gz" .
+release() {
+    rm build/MangoHud-package.tar
+    mkdir -p build/MangoHud
+    package
+    cp bin/mangohud-setup.sh build/MangoHud/mangohud-setup.sh
+    cp build/MangoHud-package.tar build/MangoHud/MangoHud-package.tar
+    cd build/
+    tar -czvf MangoHud-$VERSION.tar.gz MangoHud
+    cd ..
 }
 
 install() {
-    PKG="build/MangoHud-$VERSION.tar.gz"
-    if [[ ! -f "$PKG" || "$PKG" -ot "build/meson64/src/libMangoHud.so" ]]; then
-        package
-    fi
-    if [[ -f "$XDG_CONFIG_HOME/MangoHud/MangoHud.conf" ]]; then
-        tar xzf "build/MangoHud-$VERSION.tar.gz" -C "$XDG_DATA_HOME/" "./MangoHud/.local/share/"{MangoHud,vulkan} --strip-components=4
-    else
-        tar xzf "build/MangoHud-$VERSION.tar.gz" -C "$XDG_DATA_HOME/" "./MangoHud/.local/share/"{MangoHud,vulkan} --strip-components=4
-        tar xzf "build/MangoHud-$VERSION.tar.gz" -C "$XDG_CONFIG_HOME/" "./MangoHud/.config/MangoHud" --strip-components=3
-    fi
-    sed -i "s|libMangoHud.so|$XDG_DATA_HOME/MangoHud/libMangoHud32.so|g" "$XDG_DATA_HOME/vulkan/implicit_layer.d/mangohud32.json"
-    sed -i "s|libMangoHud.so|$XDG_DATA_HOME/MangoHud/libMangoHud.so|g" "$XDG_DATA_HOME/vulkan/implicit_layer.d/mangohud64.json"
+    package
+    [ "$UID" -eq 0 ] || exec sudo bash "$0" "$@"
+    tar -C / -xf build/MangoHud*.tar
+    ldconfig
+    echo "MangoHud Installed"
 }
 
 clean() {
@@ -170,8 +173,11 @@ clean() {
 }
 
 uninstall() {
-    rm -rfv "$XDG_DATA_HOME/MangoHud"
-    rm -fv "$IMPLICIT_LAYER_DIR"/{mangohud64,mangohud32}.json
+    [ "$UID" -eq 0 ] || exec sudo bash "$0" "$@"
+    rm -rfv "/usr/lib/MangoHud"
+    rm -fv "/usr/share/vulkan/implicit_layer.d/mangohud.json"
+    rm -fv "/etc/ld.so.conf.d/libmangohud.conf"
+    rm -fv "/usr/bin/mangohud"
 }
 
 for a in $@; do
@@ -184,6 +190,7 @@ for a in $@; do
         "install") install;;
         "clean") clean;;
         "uninstall") uninstall;;
+        "release") release;;
         *)
             echo "Unrecognized command argument: $a"
             echo 'Accepted arguments: "pull", "configure", "build", "package", "install", "clean", "uninstall".'

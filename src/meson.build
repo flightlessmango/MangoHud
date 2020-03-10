@@ -95,5 +95,5 @@ install_data(
   files('../bin/run-mangohud-gl-pkg.sh'),
   install_dir : get_option('bindir'),
   install_mode: 'rwxr-xr-x',
-  rename : ['run-mangohud-gl.sh']
+  rename : ['mangohud']
 )
