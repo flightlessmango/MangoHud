@@ -124,8 +124,7 @@ struct overlay_params {
    bool io_read, io_write;
    unsigned width;
    unsigned height;
-   unsigned offset_x;
-   unsigned offset_y;
+   int offset_x, offset_y;
    unsigned vsync;
    unsigned crosshair_color, cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color;
    unsigned tableCols;
