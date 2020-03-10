@@ -1947,7 +1947,7 @@ static void setup_swapchain_data_pipeline(struct swapchain_data *data)
 void imgui_custom_style(struct overlay_params& params){
    ImGuiStyle& style = ImGui::GetStyle();
    style.Colors[ImGuiCol_PlotLines] = ImGui::ColorConvertU32ToFloat4(params.frametime_color);
-   style.Colors[ImGuiCol_WindowBg]  = ImVec4(0.06f, 0.06f, 0.06f, 1.0f);
+   style.Colors[ImGuiCol_WindowBg]  = ImGui::ColorConvertU32ToFloat4(params.background_color);
    style.CellPadding.y = -2;
 }
 
