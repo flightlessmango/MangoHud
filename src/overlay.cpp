@@ -1205,11 +1205,11 @@ static void compute_swapchain_display(struct swapchain_data *data)
          auto sampling = instance_data->params.fps_sampling_period;
          ImGui::TableNextRow();
          if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_read] && !instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_write])
-            ImGui::TextColored(ImVec4(0.643, 0.569, 0.827, 1.00f), "IO RD");
+            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.io_color), "IO RD");
          if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_write] && !instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_read])
-            ImGui::TextColored(ImVec4(0.643, 0.569, 0.827, 1.00f), "IO RW");
+            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.io_color), "IO RW");
          if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_read] && instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_write])
-            ImGui::TextColored(ImVec4(0.643, 0.569, 0.827, 1.00f), "IO RD/RW");
+            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.io_color), "IO RD/RW");
          
          if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_read]){
             ImGui::TableNextCell();
