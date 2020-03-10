@@ -25,6 +25,10 @@
 #define PROCCPUINFOFILE PROCDIR "/cpuinfo"
 #endif
 
+#include "file_utils.h"
+FILE *cpuTempFile = nullptr;
+pthread_t cpuTempThread;
+
 void calculateCPUData(CPUData& cpuData,
 	unsigned long long int usertime,
 	unsigned long long int nicetime,
@@ -98,6 +102,7 @@ CPUStats::CPUStats()
 
 bool CPUStats::Init()
 {
+	CPUStats::GetCpuFile();
 	std::string line;
 	std::ifstream file (PROCSTATFILE);
 	bool first = true;
@@ -145,6 +150,7 @@ bool CPUStats::Init()
 bool CPUStats::UpdateCPUData()
 {
     CPUStats::UpdateCoreMhz();
+	CPUStats::UpdateCpuTemp();
 	unsigned long long int usertime, nicetime, systemtime, idletime;
 	unsigned long long int ioWait, irq, softIrq, steal, guest, guestnice;
 	int cpuid = -1;
@@ -212,6 +218,40 @@ bool CPUStats::UpdateCoreMhz() {
         }
     }
     return true;
+}
+
+bool CPUStats::UpdateCpuTemp(){
+    rewind(cpuTempFile);
+    fflush(cpuTempFile);
+    if (fscanf(cpuTempFile, "%d", &m_cpuDataTotal.temp) != 1)
+        m_cpuDataTotal.temp = 0;
+    m_cpuDataTotal.temp /= 1000;
+
+    return NULL;
+}
+
+bool CPUStats::GetCpuFile(){
+	std::string name, path;
+	std::string hwmon = "/sys/class/hwmon/";
+	auto dirs = ls(hwmon.c_str());
+	for (auto& dir : dirs)
+	{
+	path = hwmon + dir;
+	name = read_line(path + "/name");
+#ifndef NDEBUG
+		std::cerr << "hwmon: sensor name: " << name << std::endl;
+#endif
+		if (name == "coretemp" || name == "k10temp" || name == "zenpower"){
+		path += "/temp1_input";
+		break;
+		}
+	}
+	if (!file_exists(path)) {
+		std::cerr << "MANGOHUD: Could not find cpu temp sensor location" << std::endl;
+	} else {
+		cpuTempFile = fopen(path.c_str(), "r");
+	}
+	return true;
 }
 
 CPUStats cpuStats;

@@ -29,6 +29,7 @@ typedef struct CPUData_ {
 	unsigned long long int guestPeriod;
     float percent;
     int mhz;
+	int temp;
 } CPUData;
 
 class CPUStats
@@ -43,6 +44,8 @@ public:
 
 	bool UpdateCPUData();
     bool UpdateCoreMhz();
+	bool UpdateCpuTemp();
+	bool GetCpuFile();
 	double GetCPUPeriod() { return m_cpuPeriod; }
 
 	const std::vector<CPUData>& GetCPUData() const {

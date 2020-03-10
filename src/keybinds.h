@@ -3,7 +3,7 @@
 #include "X11/keysym.h"
 #include "mesa/util/os_time.h"
 
-double elapsedF2, elapsedF12,  elapsedRefreshConfig;
+double elapsedF2, elapsedF12, elapsedRefreshConfig;
 uint64_t last_f2_press, last_f12_press, refresh_config_press;
 pthread_t f2;
 char *displayid = getenv("DISPLAY");

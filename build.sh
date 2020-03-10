@@ -142,6 +142,7 @@ package() {
     cp "$LAYER" "$INSTALL_DIR/.local/share/vulkan/implicit_layer.d/mangohud64.json"
     cp "$LAYER" "$INSTALL_DIR/.local/share/vulkan/implicit_layer.d/mangohud32.json"
     cp --preserve=mode "bin/install.sh" "build/package/MangoHud/install.sh"
+    cp --preserve=mode "bin/run-mangohud-gl.sh" "build/package/MangoHud/run-mangohud-gl.sh"
     cp "bin/MangoHud.conf" "$INSTALL_DIR/.config/MangoHud/MangoHud.conf"
     cp "bin/MangoHud.conf" "$INSTALL_DIR/.local/share/MangoHud/MangoHud.conf"
     sed -i "s|64bit|32bit|g" "$INSTALL_DIR/.local/share/vulkan/implicit_layer.d/mangohud32.json"

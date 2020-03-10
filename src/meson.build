@@ -42,7 +42,18 @@ vklayer_files = files(
   'memory.cpp',
   'config.cpp',
   'iostats.cpp',
+  'gpu.cpp',
 )
+
+opengl_files = files(
+  'gl/inject.cpp',
+  'gl/real_dlsym.cpp',
+  'gl/imgui_impl_opengl3.cpp',
+  'loaders/loader_gl.cpp',
+  'gl/gl3w/GL/gl3w.c',
+)
+pre_args += '-DHOOK_DLSYM'
+inc_opengl = include_directories('gl/gl3w')
 
 # lib_xnvctrl = cc.find_library('XNVCtrl')
 vklayer_mesa_overlay = shared_library(
@@ -50,6 +61,7 @@ vklayer_mesa_overlay = shared_library(
   util_files,
   vk_enum_to_str,
   vklayer_files,
+  opengl_files,
   overlay_spv,
   vulkan_headers,
   c_args : [
@@ -69,7 +81,7 @@ vklayer_mesa_overlay = shared_library(
     dep_dl,
     dep_pthread,
     dep_vulkan],
-  include_directories : inc_common,
+  include_directories : [inc_common, inc_opengl],
   link_args : cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro']),
   install : true
 )
@@ -77,4 +89,11 @@ vklayer_mesa_overlay = shared_library(
 install_data(
   files('mangohud.json'),
   install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
+)
+
+install_data(
+  files('../bin/run-mangohud-gl-pkg.sh'),
+  install_dir : get_option('bindir'),
+  install_mode: 'rwxr-xr-x',
+  rename : ['run-mangohud-gl.sh']
 )

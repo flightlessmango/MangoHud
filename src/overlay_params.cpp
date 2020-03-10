@@ -376,9 +376,12 @@ parse_overlay_config(struct overlay_params *params,
    }
 
    params->tableCols = 3;
-
-   if (!params->font_size)
+   
+   if (!params->font_size) {
       params->font_size = 24;
+   } else {
+      params->width = params->font_size * 11.7;
+   }
    //increase hud width if io read and write
    if (params->enabled[OVERLAY_PARAM_ENABLED_io_read] && params->enabled[OVERLAY_PARAM_ENABLED_io_write] && params->width == 280)
       params->width = 15 * params->font_size;

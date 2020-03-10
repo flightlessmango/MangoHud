@@ -36,7 +36,7 @@
 
 #include "imgui.h"
 
-#include "overlay_params.h"
+#include "overlay.h"
 #include "font_default.h"
 
 // #include "util/debug.h"
@@ -50,12 +50,12 @@
 
 #include "string_utils.h"
 #include "file_utils.h"
-#include "cpu_gpu.h"
+#include "gpu.h"
 #include "logging.h"
 #include "keybinds.h"
 #include "cpu.h"
-#include "iostats.h"
 #include "loaders/loader_nvml.h"
+#include "memory.h"
 
 bool open = false;
 string gpuString;
@@ -63,7 +63,7 @@ float offset_x, offset_y, hudSpacing;
 int hudFirstRow, hudSecondRow;
 string engineName, engineVersion;
 struct amdGpu amdgpu;
-int64_t frameStart, frameEnd, targetFrameTime = 0, frameOverhead = 0, sleepTime = 0;
+struct fps_limit fps_limit_stats;
 
 /* Mapped from VkInstace/VkPhysicalDevice */
 struct instance_data {
@@ -82,10 +82,6 @@ struct instance_data {
 
    /* Dumping of frame stats to a file has been enabled and started. */
    bool capture_started;
-};
-
-struct frame_stat {
-   uint64_t stats[OVERLAY_PARAM_ENABLED_MAX];
 };
 
 /* Mapped from VkDevice */
@@ -107,7 +103,6 @@ struct device_data {
 
    /* For a single frame */
    struct frame_stat frame_stats;
-   bool gpu_stats = false;
 };
 
 /* Mapped from VkCommandBuffer */
@@ -183,7 +178,6 @@ struct swapchain_data {
    std::list<overlay_draw *> draws; /* List of struct overlay_draw */
 
    ImFont* font = nullptr;
-   ImFont* font1 = nullptr;
    bool font_uploaded;
    VkImage font_image;
    VkImageView font_image_view;
@@ -196,30 +190,22 @@ struct swapchain_data {
    ImVec2 window_size;
 
    /**/
-   uint64_t n_frames;
    uint64_t last_present_time;
 
    unsigned n_frames_since_update;
    uint64_t last_fps_update;
-   double fps;
    double frametime;
    double frametimeDisplay;
    const char* cpuString;
    const char* gpuString;
-   std::string time;
 
-   enum overlay_param_enabled stat_selector;
-   double time_dividor;
-   struct frame_stat stats_min, stats_max;
-   struct frame_stat frames_stats[200];
+   struct swapchain_stats sw_stats;
 
    /* Over a single frame */
    struct frame_stat frame_stats;
 
    /* Over fps_sampling_period */
    struct frame_stat accumulated_stats;
-
-   struct iostats io;
 };
 
 static const VkQueryPipelineStatisticFlags overlay_query_flags =
@@ -501,8 +487,6 @@ static struct swapchain_data *new_swapchain_data(VkSwapchainKHR swapchain,
    struct swapchain_data *data = new swapchain_data();
    data->device = device_data;
    data->swapchain = swapchain;
-   if (instance_data->params.font_size > 0 && instance_data->params.width == 280)
-      instance_data->params.width = hudFirstRow + hudSecondRow;
    data->window_size = ImVec2(instance_data->params.width, instance_data->params.height);
    map_object(HKEY(data->swapchain), data);
    return data;
@@ -771,20 +755,42 @@ static void process_control_socket(struct instance_data *instance_data)
    }
 }
 
-void init_gpu_stats(struct device_data *device_data)
+string exec(string command) {
+   char buffer[128];
+   string result = "";
+
+   // Open pipe to file
+   FILE* pipe = popen(command.c_str(), "r");
+   if (!pipe) {
+      return "popen failed!";
+   }
+
+   // read till end of process:
+   while (!feof(pipe)) {
+
+      // use buffer to read and add to result
+      if (fgets(buffer, 128, pipe) != NULL)
+         result += buffer;
+   }
+
+   pclose(pipe);
+   return result;
+}
+
+void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
 {
-   struct instance_data *instance_data = device_data->instance;
+   if (!params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
+      return;
 
    // NVIDIA or Intel but maybe has Optimus
-   if (device_data->properties.vendorID == 0x8086
-      || device_data->properties.vendorID == 0x10de) {
-      if ((device_data->gpu_stats = checkNvidia())) {
-         device_data->properties.vendorID = 0x10de;
+   if (vendorID == 0x8086
+      || vendorID == 0x10de) {
+      if ((params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = checkNvidia())) {
+         vendorID = 0x10de;
       }
    }
 
-   if (device_data->properties.vendorID == 0x8086
-       || device_data->properties.vendorID == 0x1002
+   if (vendorID == 0x8086 || vendorID == 0x1002
        || gpu.find("Radeon") != std::string::npos
        || gpu.find("AMD") != std::string::npos) {
       string path;
@@ -827,8 +833,8 @@ void init_gpu_stats(struct device_data *device_data)
                if (!amdTempFile)
                   amdTempFile = fopen(path.c_str(), "r");
 
-               device_data->gpu_stats = true;
-               device_data->properties.vendorID = 0x1002;
+               params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = true;
+               vendorID = 0x1002;
                break;
             }
          }
@@ -836,67 +842,13 @@ void init_gpu_stats(struct device_data *device_data)
 
       // don't bother then
       if (!amdGpuFile && !amdTempFile && !amdGpuVramTotalFile && !amdGpuVramUsedFile) {
-         device_data->gpu_stats = false;
+         params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
       }
    }
 }
 
-static void snapshot_swapchain_frame(struct swapchain_data *data)
-{
-   struct device_data *device_data = data->device;
-   struct instance_data *instance_data = device_data->instance;
-   uint32_t f_idx = data->n_frames % ARRAY_SIZE(data->frames_stats);
-   uint64_t now = os_time_get(); /* us */
-
-   if (instance_data->params.control >= 0) {
-      control_client_check(device_data);
-      process_control_socket(instance_data);
-   }
-
-   double elapsed = (double)(now - data->last_fps_update); /* us */
-   elapsedF2 = (double)(now - last_f2_press);
-   elapsedF12 = (double)(now - last_f12_press);
-   elapsedRefreshConfig = (double)(now - refresh_config_press);
-   fps = 1000000.0f * data->n_frames_since_update / elapsed;
-
-   if (data->last_present_time) {
-      data->frame_stats.stats[OVERLAY_PARAM_ENABLED_frame_timing] =
-         now - data->last_present_time;
-   }
-
-   memset(&data->frames_stats[f_idx], 0, sizeof(data->frames_stats[f_idx]));
-   for (int s = 0; s < OVERLAY_PARAM_ENABLED_MAX; s++) {
-      data->frames_stats[f_idx].stats[s] += device_data->frame_stats.stats[s] + data->frame_stats.stats[s];
-      data->accumulated_stats.stats[s] += device_data->frame_stats.stats[s] + data->frame_stats.stats[s];
-   }
-
-   if (elapsedF2 >= 500000 && mangohud_output_env){
-     if (key_is_pressed(instance_data->params.toggle_logging)){
-       last_f2_press = now;
-       log_start = now;
-       loggingOn = !loggingOn;
-
-       if (loggingOn && log_period != 0)
-         pthread_create(&f2, NULL, &logging, NULL);
-
-     }
-   }
-
-   if (elapsedF12 >= 500000){
-      if (key_is_pressed(instance_data->params.toggle_hud)){
-         instance_data->params.no_display = !instance_data->params.no_display;
-         last_f12_press = now;
-      }
-   }
-
-   if (elapsedRefreshConfig >= 500000){
-      if (key_is_pressed(instance_data->params.refresh_config)){
-         parse_overlay_config(&instance_data->params, getenv("MANGOHUD_CONFIG"));
-         refresh_config_press = now;
-      }
-   }
-
-   if (!sysInfoFetched) {
+void init_system_info(){
+      unsetenv("LD_PRELOAD");
       ram =  exec("cat /proc/meminfo | grep 'MemTotal' | awk '{print $2}'");
       trim(ram);
       cpu =  exec("cat /proc/cpuinfo | grep 'model name' | tail -n1 | sed 's/^.*: //' | sed 's/([^)]*)/()/g' | tr -d '(/)'");
@@ -924,141 +876,122 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
       if (!log_period_env || !try_stoi(log_period, log_period_env))
         log_period = 100;
 
-      if (log_period == 0)
-         out.open("/tmp/mango", ios::out | ios::app);
-
       if (log_duration_env && !try_stoi(duration, log_duration_env))
         duration = 0;
+}
 
-      string name, path;
-      string hwmon = "/sys/class/hwmon/";
-      auto dirs = ls(hwmon.c_str());
-      for (auto& dir : dirs)
-      {
-         path = hwmon + dir;
-         name = read_line(path + "/name");
-#ifndef NDEBUG
-         std::cerr << "hwmon: sensor name: " << name << std::endl;
-#endif
-         if (name == "coretemp" || name == "k10temp" || name == "zenpower"){
-            path += "/temp1_input";
-            break;
-         }
-      }
-      if (!file_exists(path)) {
-         cerr << "MANGOHUD: Could not find cpu temp sensor location" << endl;
-      } else {
-         cpuTempFile = fopen(path.c_str(), "r");
-      }
+void check_keybinds(struct overlay_params& params){
+   uint64_t now = os_time_get(); /* us */
+   elapsedF2 = (double)(now - last_f2_press);
+   elapsedF12 = (double)(now - last_f12_press);
+   elapsedRefreshConfig = (double)(now - refresh_config_press);
+  
+  if (elapsedF2 >= 500000 && mangohud_output_env){
+     if (key_is_pressed(params.toggle_logging)){
+       last_f2_press = now;
+       log_start = now;
+       loggingOn = !loggingOn;
 
-      sysInfoFetched = true;
+       if (loggingOn && log_period != 0)
+         pthread_create(&f2, NULL, &logging, NULL);
+
+     }
    }
 
-   /* If capture has been enabled but it hasn't started yet, it means we are on
-    * the first snapshot after it has been enabled. At this point we want to
-    * use the stats captured so far to update the display, but we don't want
-    * this data to cause noise to the stats that we want to capture from now
-    * on.
-    *
-    * capture_begin == true will trigger an update of the fps on display, and a
-    * flush of the data, but no stats will be written to the output file. This
-    * way, we will have only stats from after the capture has been enabled
-    * written to the output_file.
-    */
-   const bool capture_begin =
-      instance_data->capture_enabled && !instance_data->capture_started;
+   if (elapsedF12 >= 500000){
+      if (key_is_pressed(params.toggle_hud)){
+         last_f12_press = now;
+         params.no_display = !params.no_display;
+      }
+   }
 
-   if (data->last_fps_update) {
-      if (capture_begin ||
-          elapsed >= instance_data->params.fps_sampling_period) {
+   if (elapsedRefreshConfig >= 500000){
+      if (key_is_pressed(params.refresh_config)){
+         parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
+         refresh_config_press = now;
+      }
+   }
+}
+
+void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
+   uint32_t f_idx = sw_stats.n_frames % ARRAY_SIZE(sw_stats.frames_stats);
+   uint64_t now = os_time_get(); /* us */
+
+   double elapsed = (double)(now - sw_stats.last_fps_update); /* us */
+   fps = 1000000.0f * sw_stats.n_frames_since_update / elapsed;
+
+   if (sw_stats.last_present_time) {
+        sw_stats.frames_stats[f_idx].stats[OVERLAY_PARAM_ENABLED_frame_timing] =
+            now - sw_stats.last_present_time;
+   }
+      if (sw_stats.last_fps_update) {
+         if (elapsed >= params.fps_sampling_period) {
             cpuStats.UpdateCPUData();
-            cpuLoadLog = cpuStats.GetCPUDataTotal().percent;
-            if (cpuTempFile)
-              pthread_create(&cpuInfoThread, NULL, &cpuInfo, NULL);
+            sw_stats.total_cpu = cpuStats.GetCPUDataTotal().percent;
             
-            if (device_data->gpu_stats) {
-              // get gpu usage
-              if (device_data->properties.vendorID == 0x10de)
-                 pthread_create(&gpuThread, NULL, &getNvidiaGpuInfo, NULL);
+            if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]) {
+               if (vendorID == 0x1002)
+                  pthread_create(&gpuThread, NULL, &getAmdGpuUsage, NULL);
 
-              if (device_data->properties.vendorID == 0x1002)
-                pthread_create(&gpuThread, NULL, &getAmdGpuUsage, NULL);
+               if (vendorID == 0x10de)
+                  pthread_create(&gpuThread, NULL, &getNvidiaGpuInfo, NULL);
             }
 
             // get ram usage/max
             pthread_create(&memoryThread, NULL, &update_meminfo, NULL);
-            pthread_create(&ioThread, NULL, &getIoStats, &data->io);
+            pthread_create(&ioThread, NULL, &getIoStats, &sw_stats.io);
 
-            // update variables for logging
-            // cpuLoadLog = cpuArray[0].value;
-            gpuLoadLog = gpuLoad;
-
-            data->frametimeDisplay = data->frametime;
-            data->fps = fps;
+            gpuLoadLog = gpu_info.load;
+            cpuLoadLog = sw_stats.total_cpu;
+            sw_stats.fps = fps;
 
             std::time_t t = std::time(nullptr);
             std::stringstream time;
-            time << std::put_time(std::localtime(&t), instance_data->params.time_format.c_str());
-            data->time = time.str();
+            time << std::put_time(std::localtime(&t), params.time_format.c_str());
+            sw_stats.time = time.str();
 
-         if (instance_data->capture_started) {
-            if (!instance_data->first_line_printed) {
-               bool first_column = true;
+            sw_stats.n_frames_since_update = 0;
+            sw_stats.last_fps_update = now;
 
-               instance_data->first_line_printed = true;
-
-#define OVERLAY_PARAM_BOOL(name) \
-               if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_##name]) { \
-                  fprintf(instance_data->params.output_file, \
-                          "%s%s%s", first_column ? "" : ", ", #name, \
-                          param_unit(OVERLAY_PARAM_ENABLED_##name)); \
-                  first_column = false; \
-               }
-#define OVERLAY_PARAM_CUSTOM(name)
-               OVERLAY_PARAMS
-#undef OVERLAY_PARAM_BOOL
-#undef OVERLAY_PARAM_CUSTOM
-               fprintf(instance_data->params.output_file, "\n");
-            }
-
-            for (int s = 0; s < OVERLAY_PARAM_ENABLED_MAX; s++) {
-               if (!instance_data->params.enabled[s])
-                  continue;
-               if (s == OVERLAY_PARAM_ENABLED_fps) {
-                  fprintf(instance_data->params.output_file,
-                          "%s%.2f", s == 0 ? "" : ", ", data->fps);
-               } else {
-                  fprintf(instance_data->params.output_file,
-                          "%s%" PRIu64, s == 0 ? "" : ", ",
-                          data->accumulated_stats.stats[s]);
-               }
-            }
-            fprintf(instance_data->params.output_file, "\n");
-            fflush(instance_data->params.output_file);
          }
-
-         memset(&data->accumulated_stats, 0, sizeof(data->accumulated_stats));
-         data->n_frames_since_update = 0;
-         data->last_fps_update = now;
-
-         if (capture_begin)
-            instance_data->capture_started = true;
-      }
    } else {
-      data->last_fps_update = now;
+      sw_stats.last_fps_update = now;
    }
 
-   memset(&device_data->frame_stats, 0, sizeof(device_data->frame_stats));
-   memset(&data->frame_stats, 0, sizeof(device_data->frame_stats));
+   // memset(&device_data->frame_stats, 0, sizeof(device_data->frame_stats));
+   // memset(&data->frame_stats, 0, sizeof(device_data->frame_stats));
+   
+   sw_stats.last_present_time = now;
+   sw_stats.n_frames++;
+   sw_stats.n_frames_since_update++;
+}
 
-   data->last_present_time = now;
-   data->n_frames++;
-   data->n_frames_since_update++;
+static void snapshot_swapchain_frame(struct swapchain_data *data)
+{
+   struct device_data *device_data = data->device;
+   struct instance_data *instance_data = device_data->instance;
+   update_hud_info(data->sw_stats, instance_data->params, device_data->properties.vendorID);
+   check_keybinds(instance_data->params);
+
+   // not currently used
+   // if (instance_data->params.control >= 0) {
+   //    control_client_check(device_data);
+   //    process_control_socket(instance_data);
+   // }
+
+   
+   // not currently used
+   // memset(&data->sw_stats.frames_stats[f_idx], 0, sizeof(data->sw_stats.frames_stats[f_idx]));
+   // for (int s = 0; s < OVERLAY_PARAM_ENABLED_MAX; s++) {
+      // data->sw_stats.frames_stats[f_idx].stats[s] += device_data->frame_stats.stats[s] + data->frame_stats.stats[s];
+      // data->accumulated_stats.stats[s] += device_data->frame_stats.stats[s] + data->frame_stats.stats[s];
+   // }
+
 }
 
 static float get_time_stat(void *_data, int _idx)
 {
-   struct swapchain_data *data = (struct swapchain_data *) _data;
+   struct swapchain_stats *data = (struct swapchain_stats *) _data;
    if ((ARRAY_SIZE(data->frames_stats) - _idx) > data->n_frames)
       return 0.0f;
    int idx = ARRAY_SIZE(data->frames_stats) +
@@ -1070,35 +1003,32 @@ static float get_time_stat(void *_data, int _idx)
    return data->frames_stats[idx].stats[data->stat_selector] / data->time_dividor;
 }
 
-static void position_layer(struct swapchain_data *data)
-
+void position_layer(struct overlay_params& params, ImVec2 window_size, unsigned width, unsigned height)
 {
-   struct device_data *device_data = data->device;
-   struct instance_data *instance_data = device_data->instance;
    float margin = 10.0f;
-   if (instance_data->params.offset_x > 0 || instance_data->params.offset_y > 0)
+   if (params.offset_x > 0 || params.offset_y > 0)
       margin = 0.0f;
 
-   ImGui::SetNextWindowBgAlpha(instance_data->params.background_alpha);
-   ImGui::SetNextWindowSize(data->window_size, ImGuiCond_Always);
+   ImGui::SetNextWindowBgAlpha(params.background_alpha);
+   ImGui::SetNextWindowSize(window_size, ImGuiCond_Always);
    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,-3));
 
-   switch (instance_data->params.position) {
+   switch (params.position) {
    case LAYER_POSITION_TOP_LEFT:
-      ImGui::SetNextWindowPos(ImVec2(margin + instance_data->params.offset_x, margin + instance_data->params.offset_y), ImGuiCond_Always);
+      ImGui::SetNextWindowPos(ImVec2(margin + params.offset_x, margin + params.offset_y), ImGuiCond_Always);
       break;
    case LAYER_POSITION_TOP_RIGHT:
-      ImGui::SetNextWindowPos(ImVec2(data->width - data->window_size.x - margin + instance_data->params.offset_x, margin + instance_data->params.offset_y),
+      ImGui::SetNextWindowPos(ImVec2(width - window_size.x - margin + params.offset_x, margin + params.offset_y),
                               ImGuiCond_Always);
       break;
    case LAYER_POSITION_BOTTOM_LEFT:
-      ImGui::SetNextWindowPos(ImVec2(margin + instance_data->params.offset_x, data->height - data->window_size.y - margin + instance_data->params.offset_y),
+      ImGui::SetNextWindowPos(ImVec2(margin + params.offset_x, height - window_size.y - margin + params.offset_y),
                               ImGuiCond_Always);
       break;
    case LAYER_POSITION_BOTTOM_RIGHT:
-      ImGui::SetNextWindowPos(ImVec2(data->width - data->window_size.x - margin + instance_data->params.offset_x,
-                                     data->height - data->window_size.y - margin + instance_data->params.offset_y),
+      ImGui::SetNextWindowPos(ImVec2(width - window_size.x - margin + params.offset_x,
+                                     height - window_size.y - margin + params.offset_y),
                               ImGuiCond_Always);
       break;
    }
@@ -1119,74 +1049,68 @@ static void right_aligned_text(float off_x, const char *fmt, ...)
    ImGui::Text("%s", buffer);
 }
 
-static void compute_swapchain_display(struct swapchain_data *data)
+void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, unsigned width, unsigned height)
 {
-   struct device_data *device_data = data->device;
-   struct instance_data *instance_data = device_data->instance;
-
-   ImGui::SetCurrentContext(data->imgui_context);
-   ImGui::NewFrame();
-   position_layer(data);
-
    static float char_width = ImGui::CalcTextSize("A").x;
 
-   if (!instance_data->params.no_display){
+   if (!params.no_display){
       ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
-      if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_time]){
-         ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.00f), "%s", data->time.c_str());
-      }
-      ImGui::BeginTable("hud", instance_data->params.tableCols);
-      if (device_data->gpu_stats && instance_data->params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
+      ImGui::BeginTable("hud", params.tableCols);
+      if (params.enabled[OVERLAY_PARAM_ENABLED_time]){
          ImGui::TableNextRow();
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.gpu_color), "GPU");
+         ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.00f), "%s", data.time.c_str());
+      }
+      if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
+         ImGui::TableNextRow();
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.gpu_color), "GPU");
          ImGui::TableNextCell();
-         right_aligned_text(char_width * 4, "%i", gpuLoad);
+         right_aligned_text(char_width * 4, "%i", gpu_info.load);
          ImGui::SameLine(0, 1.0f);
          ImGui::Text("%%");
          // ImGui::SameLine(150);
          // ImGui::Text("%s", "%");
-         if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_gpu_temp]){
+         if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_temp]){
             ImGui::TableNextCell();
-            right_aligned_text(char_width * 4, "%i", gpuTemp);
+            right_aligned_text(char_width * 4, "%i", gpu_info.temp);
             ImGui::SameLine(0, 1.0f);
             ImGui::Text("°C");
          }
-         if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]){
+         if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]){
             ImGui::TableNextCell();
-            right_aligned_text(char_width * 4, "%i", gpuCoreClock);
+            right_aligned_text(char_width * 4, "%i", gpu_info.CoreClock);
             ImGui::SameLine(0, 1.0f);
-            ImGui::PushFont(data->font1);
+            ImGui::PushFont(data.font1);
             ImGui::Text("MHz");
             ImGui::PopFont();
          }
       }
-      if(instance_data->params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats]){
+      if(params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats]){
          ImGui::TableNextRow();
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.cpu_color), "CPU");
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.cpu_color), "CPU");
          ImGui::TableNextCell();
-         right_aligned_text(char_width * 4, "%d", cpuLoadLog);
+         right_aligned_text(char_width * 4, "%d", data.total_cpu);
          ImGui::SameLine(0, 1.0f);
          ImGui::Text("%%");
          // ImGui::SameLine(150);
          // ImGui::Text("%s", "%");
       
-         if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp]){
+         if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp]){
             ImGui::TableNextCell();
-            right_aligned_text(char_width * 4, "%i", cpuTemp);
+            right_aligned_text(char_width * 4, "%i", cpuStats.GetCPUDataTotal().temp);
             ImGui::SameLine(0, 1.0f);
             ImGui::Text("°C");
          }
       }
       
-      if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_core_load]){
+      if (params.enabled[OVERLAY_PARAM_ENABLED_core_load]){
          int i = 0;
          for (const CPUData &cpuData : cpuStats.GetCPUData())
          {
             ImGui::TableNextRow();
-            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.cpu_color), "CPU");
+            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.cpu_color), "CPU");
             ImGui::SameLine(0, 1.0f);
-            ImGui::PushFont(data->font1);
-            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.cpu_color),"%i", i);
+            ImGui::PushFont(data.font1);
+            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.cpu_color),"%i", i);
             ImGui::PopFont();
             ImGui::TableNextCell();
             right_aligned_text(char_width * 4, "%i", int(cpuData.percent));
@@ -1195,88 +1119,88 @@ static void compute_swapchain_display(struct swapchain_data *data)
             ImGui::TableNextCell();
             right_aligned_text(char_width * 4, "%i", cpuData.mhz);
             ImGui::SameLine(0, 1.0f);
-            ImGui::PushFont(data->font1);
+            ImGui::PushFont(data.font1);
             ImGui::Text("MHz");
             ImGui::PopFont();
             i++;
          }
       }
-   if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_read] || instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_write]){
-         auto sampling = instance_data->params.fps_sampling_period;
+      if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write]){
+         auto sampling = params.fps_sampling_period;
          ImGui::TableNextRow();
-         if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_read] && !instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_write])
-            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.io_color), "IO RD");
-         if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_write] && !instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_read])
-            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.io_color), "IO RW");
-         if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_read] && instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_write])
-            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.io_color), "IO RD/RW");
+         if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] && !params.enabled[OVERLAY_PARAM_ENABLED_io_write])
+            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.io_color), "IO RD");
+         if (params.enabled[OVERLAY_PARAM_ENABLED_io_write] && !params.enabled[OVERLAY_PARAM_ENABLED_io_read])
+            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.io_color), "IO RW");
+         if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] && params.enabled[OVERLAY_PARAM_ENABLED_io_write])
+            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.io_color), "IO RD/RW");
          
-         if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_read]){
+         if (params.enabled[OVERLAY_PARAM_ENABLED_io_read]){
             ImGui::TableNextCell();
-            float val = data->io.diff.read * (1000000 / sampling);
+            float val = data.io.diff.read * (1000000 / sampling);
             right_aligned_text(char_width * 4, val < 100 ? "%.2f" : "%.f", val);
             ImGui::SameLine(0,1.0f);
-            ImGui::PushFont(data->font1);
+            ImGui::PushFont(data.font1);
             ImGui::Text("MiB/s");
             ImGui::PopFont();
          }
-         if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_io_write]){
+         if (params.enabled[OVERLAY_PARAM_ENABLED_io_write]){
             ImGui::TableNextCell();
-            float val = data->io.diff.write * (1000000 / sampling);
+            float val = data.io.diff.write * (1000000 / sampling);
             right_aligned_text(char_width * 4, val < 100 ? "%.2f" : "%.f", val);
             ImGui::SameLine(0,1.0f);
-            ImGui::PushFont(data->font1);
+            ImGui::PushFont(data.font1);
             ImGui::Text("MiB/s");
             ImGui::PopFont();
          }
       }
-      if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_vram]){
+      if (params.enabled[OVERLAY_PARAM_ENABLED_vram]){
          ImGui::TableNextRow();
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.vram_color), "VRAM");
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.vram_color), "VRAM");
          ImGui::TableNextCell();
-         right_aligned_text(char_width * 4, "%.2f", gpuMemUsed);
+         right_aligned_text(char_width * 4, "%.2f", gpu_info.memoryUsed);
          ImGui::SameLine(0,1.0f);
-         ImGui::PushFont(data->font1);
+         ImGui::PushFont(data.font1);
          ImGui::Text("GB");
          ImGui::PopFont();
-         if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_gpu_mem_clock]){
+         if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_mem_clock]){
             ImGui::TableNextCell();
-            right_aligned_text(char_width * 4, "%i", gpuMemClock);
+            right_aligned_text(char_width * 4, "%i", gpu_info.MemClock);
             ImGui::SameLine(0, 1.0f);
-            ImGui::PushFont(data->font1);
+            ImGui::PushFont(data.font1);
             ImGui::Text("MHz");
             ImGui::PopFont();
          }
       }
-      if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_ram]){
+      if (params.enabled[OVERLAY_PARAM_ENABLED_ram]){
          ImGui::TableNextRow();
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.ram_color), "RAM");
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.ram_color), "RAM");
          ImGui::TableNextCell();
          right_aligned_text(char_width * 4, "%.2f", memused);
          ImGui::SameLine(0,1.0f);
-         ImGui::PushFont(data->font1);
+         ImGui::PushFont(data.font1);
          ImGui::Text("GB");
          ImGui::PopFont();
       }
-      if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_fps]){
+      if (params.enabled[OVERLAY_PARAM_ENABLED_fps]){
          ImGui::TableNextRow();
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.engine_color), "%s", engineName.c_str());
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", engineName.c_str());
          ImGui::TableNextCell();
-         right_aligned_text(char_width * 4, "%.0f", data->fps);
+         right_aligned_text(char_width * 4, "%.0f", data.fps);
          ImGui::SameLine(0, 1.0f);
-         ImGui::PushFont(data->font1);
+         ImGui::PushFont(data.font1);
          ImGui::Text("FPS");
          ImGui::PopFont();
          ImGui::TableNextCell();
-         right_aligned_text(char_width * 4, "%.1f", 1000 / data->fps);
+         right_aligned_text(char_width * 4, "%.1f", 1000 / data.fps);
          ImGui::SameLine(0, 1.0f);
-         ImGui::PushFont(data->font1);
+         ImGui::PushFont(data.font1);
          ImGui::Text("ms");
          ImGui::PopFont();
          if (engineName == "DXVK" || engineName == "VKD3D"){
             ImGui::TableNextRow();
-            ImGui::PushFont(data->font1);
-            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.engine_color), "%s", engineVersion.c_str());
+            ImGui::PushFont(data.font1);
+            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", engineVersion.c_str());
             ImGui::PopFont();
          }
       }
@@ -1290,50 +1214,49 @@ static void compute_swapchain_display(struct swapchain_data *data)
          out << fps << "," <<  cpuLoadLog << "," << gpuLoadLog << "," << (now - log_start) << endl;
       }
 
-      if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
-         ImGui::Dummy(ImVec2(0.0f, instance_data->params.font_size / 2));
-         ImGui::PushFont(data->font1);
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.engine_color), "%s", "Frametime");
+      if (params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
+         ImGui::Dummy(ImVec2(0.0f, params.font_size / 2));
+         ImGui::PushFont(data.font1);
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", "Frametime");
          ImGui::PopFont();
       }
-
       for (uint32_t s = 0; s < OVERLAY_PARAM_ENABLED_MAX; s++) {
-         if (!instance_data->params.enabled[s] ||
+         if (!params.enabled[s] ||
             s == OVERLAY_PARAM_ENABLED_fps ||
             s == OVERLAY_PARAM_ENABLED_frame)
             continue;
-
+            
          char hash[40];
          snprintf(hash, sizeof(hash), "##%s", overlay_param_names[s]);
-         data->stat_selector = (enum overlay_param_enabled) s;
-         data->time_dividor = 1000.0f;
+         data.stat_selector = (enum overlay_param_enabled) s;
+         data.time_dividor = 1000.0f;
          if (s == OVERLAY_PARAM_ENABLED_gpu_timing)
-            data->time_dividor = 1000000.0f;
+            data.time_dividor = 1000000.0f;
 
          ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
          if (s == OVERLAY_PARAM_ENABLED_frame_timing) {
             double min_time = 0.0f;
             double max_time = 50.0f;
-            ImGui::PlotLines(hash, get_time_stat, data,
-                                 ARRAY_SIZE(data->frames_stats), 0,
+            ImGui::PlotLines(hash, get_time_stat, &data,
+                                 ARRAY_SIZE(data.frames_stats), 0,
                                  NULL, min_time, max_time,
-                                 ImVec2(ImGui::GetContentRegionAvailWidth() - instance_data->params.font_size * 2.2, 50));
+                                 ImVec2(ImGui::GetContentRegionAvailWidth() - params.font_size * 2.2, 50));
          }
          ImGui::PopStyleColor();
       }
-      if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
+      if (params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
          ImGui::SameLine(0,1.0f);
-         ImGui::PushFont(data->font1);
-         ImGui::Text("%.1f ms", 1000 / data->fps);
+         ImGui::PushFont(data.font1);
+         ImGui::Text("%.1f ms", 1000 / data.fps);
          ImGui::PopFont();
       }
-      data->window_size = ImVec2(data->window_size.x, ImGui::GetCursorPosY() + 10.0f);
+      window_size = ImVec2(window_size.x, ImGui::GetCursorPosY() + 10.0f);
       ImGui::End();
    }
    if(loggingOn){
       ImGui::SetNextWindowBgAlpha(0.0);
-      ImGui::SetNextWindowSize(ImVec2(instance_data->params.font_size * 13, instance_data->params.font_size * 13), ImGuiCond_Always);
-      ImGui::SetNextWindowPos(ImVec2(data->width - instance_data->params.font_size * 13,
+      ImGui::SetNextWindowSize(ImVec2(params.font_size * 13, params.font_size * 13), ImGuiCond_Always);
+      ImGui::SetNextWindowPos(ImVec2(width - params.font_size * 13,
                                     0),
                                     ImGuiCond_Always);
       ImGui::Begin("Logging", &open, ImGuiWindowFlags_NoDecoration);
@@ -1341,24 +1264,37 @@ static void compute_swapchain_display(struct swapchain_data *data)
       ImGui::Text("Elapsed: %isec", int((elapsedLog) / 1000000));
       ImGui::End();
    }
-   if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_crosshair]){
+   if (params.enabled[OVERLAY_PARAM_ENABLED_crosshair]){
       ImGui::SetNextWindowBgAlpha(0.0);
-      ImGui::SetNextWindowSize(ImVec2(data->width, data->height), ImGuiCond_Always);
+      ImGui::SetNextWindowSize(ImVec2(width, height), ImGuiCond_Always);
       ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
       ImGui::Begin("Logging", &open, ImGuiWindowFlags_NoDecoration);
-      ImVec2 horiz = ImVec2(data->width / 2 - (instance_data->params.crosshair_size / 2), data->height / 2);
-      ImVec2 vert = ImVec2(data->width / 2, data->height / 2 - (instance_data->params.crosshair_size / 2));
+      ImVec2 horiz = ImVec2(width / 2 - (params.crosshair_size / 2), height / 2);
+      ImVec2 vert = ImVec2(width / 2, height / 2 - (params.crosshair_size / 2));
       ImGui::GetWindowDrawList()->AddLine(horiz,
-         ImVec2(horiz.x + instance_data->params.crosshair_size, horiz.y + 0),
-         instance_data->params.crosshair_color, 2.0f);
+         ImVec2(horiz.x + params.crosshair_size, horiz.y + 0),
+         params.crosshair_color, 2.0f);
       ImGui::GetWindowDrawList()->AddLine(vert,
-         ImVec2(vert.x + 0, vert.y + instance_data->params.crosshair_size),
-         instance_data->params.crosshair_color, 2.0f);
+         ImVec2(vert.x + 0, vert.y + params.crosshair_size),
+         params.crosshair_color, 2.0f);
       ImGui::End();
    }
-      ImGui::PopStyleVar(2);
-      ImGui::EndFrame();
-      ImGui::Render();
+}
+
+static void compute_swapchain_display(struct swapchain_data *data)
+{
+   struct device_data *device_data = data->device;
+   struct instance_data *instance_data = device_data->instance;
+
+   ImGui::SetCurrentContext(data->imgui_context);
+   ImGui::NewFrame();
+
+   position_layer(instance_data->params, data->window_size, data->width, data->height);
+   render_imgui(data->sw_stats, instance_data->params, data->window_size, data->width, data->height);
+   ImGui::PopStyleVar(2);
+
+   ImGui::EndFrame();
+   ImGui::Render();
 }
 
 static uint32_t vk_memory_type(struct device_data *data,
@@ -1937,14 +1873,14 @@ static void setup_swapchain_data_pipeline(struct swapchain_data *data)
    // ImGui takes ownership of the data, no need to free it
    if (mangohud_font && file_exists(mangohud_font)) {
       data->font = io.Fonts->AddFontFromFileTTF(mangohud_font, font_size);
-      data->font1 = io.Fonts->AddFontFromFileTTF(mangohud_font, font_size * 0.55f);
+      data->sw_stats.font1 = io.Fonts->AddFontFromFileTTF(mangohud_font, font_size * 0.55f);
    } else {
       ImFontConfig font_cfg = ImFontConfig();
       const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
       const ImWchar* glyph_ranges = io.Fonts->GetGlyphRangesDefault();
 
       data->font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size, &font_cfg, glyph_ranges);
-      data->font1 = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size * 0.55, &font_cfg, glyph_ranges);
+      data->sw_stats.font1 = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size * 0.55, &font_cfg, glyph_ranges);
    }
    unsigned char* pixels;
    int width, height;
@@ -2007,6 +1943,12 @@ static void setup_swapchain_data_pipeline(struct swapchain_data *data)
    write_desc[0].pImageInfo = desc_image;
    device_data->vtable.UpdateDescriptorSets(device_data->device, 1, write_desc, 0, NULL);
 }
+void imgui_custom_style(){
+   ImGuiStyle& style = ImGui::GetStyle();
+   style.Colors[ImGuiCol_PlotLines] = ImVec4(0.0f, 1.0f, 0.0f, 1.00f);
+   style.Colors[ImGuiCol_WindowBg]  = ImVec4(0.06f, 0.06f, 0.06f, 1.0f);
+   style.CellPadding.y = -2;
+}
 
 static void setup_swapchain_data(struct swapchain_data *data,
                                  const VkSwapchainCreateInfoKHR *pCreateInfo)
@@ -2020,12 +1962,7 @@ static void setup_swapchain_data(struct swapchain_data *data,
 
    ImGui::GetIO().IniFilename = NULL;
    ImGui::GetIO().DisplaySize = ImVec2((float)data->width, (float)data->height);
-
-   ImGuiStyle& style = ImGui::GetStyle();
-   //style.Colors[ImGuiCol_FrameBg]   = ImVec4(0.0f, 0.0f, 0.0f, 0.00f); // Setting temporarily with PushStyleColor()
-   style.Colors[ImGuiCol_PlotLines] = ImVec4(0.0f, 1.0f, 0.0f, 1.00f);
-   style.Colors[ImGuiCol_WindowBg]  = ImVec4(0.06f, 0.06f, 0.06f, 1.0f);
-   style.CellPadding.y = -2;
+   imgui_custom_style();
 
    struct device_data *device_data = data->device;
 
@@ -2184,7 +2121,7 @@ static struct overlay_draw *before_present(struct swapchain_data *swapchain_data
 
    snapshot_swapchain_frame(swapchain_data);
 
-   if (swapchain_data->n_frames > 0) {
+   if (swapchain_data->sw_stats.n_frames > 0) {
       compute_swapchain_display(swapchain_data);
       draw = render_swapchain_display(swapchain_data, present_queue,
                                       wait_semaphores, n_wait_semaphores,
@@ -2230,14 +2167,14 @@ static void overlay_DestroySwapchainKHR(
    destroy_swapchain_data(swapchain_data);
 }
 
-void FpsLimiter(){
-   sleepTime = targetFrameTime - (frameStart - frameEnd);
-   if ( sleepTime > frameOverhead ) {
-      int64_t adjustedSleep = sleepTime - frameOverhead;
+void FpsLimiter(struct fps_limit& stats){
+   stats.sleepTime = stats.targetFrameTime - (stats.frameStart - stats.frameEnd);
+   if (stats.sleepTime > stats.frameOverhead) {
+      int64_t adjustedSleep = stats.sleepTime - stats.frameOverhead;
       this_thread::sleep_for(chrono::nanoseconds(adjustedSleep));
-      frameOverhead = ((os_time_get_nano() - frameStart) - adjustedSleep);
-      if (frameOverhead > targetFrameTime)
-         frameOverhead = 0;
+      stats.frameOverhead = ((os_time_get_nano() - stats.frameStart) - adjustedSleep);
+      if (stats.frameOverhead > stats.targetFrameTime)
+         stats.frameOverhead = 0;
    }
 }
 
@@ -2326,10 +2263,10 @@ static VkResult overlay_QueuePresentKHR(
          result = chain_result;
    }
 
-   if (targetFrameTime > 0){
-      frameStart = os_time_get_nano();
-      FpsLimiter();
-      frameEnd = os_time_get_nano();
+   if (fps_limit_stats.targetFrameTime > 0){
+      fps_limit_stats.frameStart = os_time_get_nano();
+      FpsLimiter(fps_limit_stats);
+      fps_limit_stats.frameEnd = os_time_get_nano();
    }
    
    return result;
@@ -2605,7 +2542,8 @@ static VkResult overlay_CreateDevice(
 
    device_map_queues(device_data, pCreateInfo);
 
-   init_gpu_stats(device_data);
+   init_gpu_stats(device_data->properties.vendorID, instance_data->params);
+   init_system_info();
 
    return result;
 }
@@ -2668,15 +2606,7 @@ static VkResult overlay_CreateInstance(
 
    parse_overlay_config(&instance_data->params, getenv("MANGOHUD_CONFIG"));
    if (instance_data->params.fps_limit > 0)
-      targetFrameTime = int64_t(1000000000.0 / instance_data->params.fps_limit);
-
-   int font_size;
-   instance_data->params.font_size > 0 ? font_size = instance_data->params.font_size : font_size = 24;
-   instance_data->params.font_size > 0 ? font_size = instance_data->params.font_size : instance_data->params.font_size = 24;
-
-   hudSpacing = font_size / 2;
-   hudFirstRow = font_size * 4.2;
-   hudSecondRow = font_size * 7.5;
+      fps_limit_stats.targetFrameTime = int64_t(1000000000.0 / instance_data->params.fps_limit);
 
    // Adjust height for DXVK/VKD3D version number
    if (engineName == "DXVK" || engineName == "VKD3D"){
