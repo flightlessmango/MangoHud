@@ -2638,11 +2638,13 @@ static void overlay_DestroyInstance(
    destroy_instance_data(instance_data);
 }
 
+extern "C" VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetDeviceProcAddr(VkDevice dev,
+                                                                             const char *funcName);
 static const struct {
    const char *name;
    void *ptr;
 } name_to_funcptr_map[] = {
-   { "vkGetDeviceProcAddr", (void *) vkGetDeviceProcAddr },
+   { "vkGetDeviceProcAddr", (void *) overlay_GetDeviceProcAddr },
 #define ADD_HOOK(fn) { "vk" # fn, (void *) overlay_ ## fn }
 #define ADD_ALIAS_HOOK(alias, fn) { "vk" # alias, (void *) overlay_ ## fn }
    ADD_HOOK(AllocateCommandBuffers),
@@ -2676,7 +2678,7 @@ static void *find_ptr(const char *name)
    return NULL;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice dev,
+extern "C" VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetDeviceProcAddr(VkDevice dev,
                                                                              const char *funcName)
 {
    void *ptr = find_ptr(funcName);
@@ -2689,7 +2691,7 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
    return device_data->vtable.GetDeviceProcAddr(dev, funcName);
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance,
+extern "C" VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetInstanceProcAddr(VkInstance instance,
                                                                                const char *funcName)
 {
    void *ptr = find_ptr(funcName);
