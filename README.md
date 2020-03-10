@@ -18,9 +18,7 @@ cd MangoHud
 
 Then simply run the following command:
 
-`./build.sh install`
-
-This will build and copy `libMangoHud.so` & `libMangoHud32.so` to `$HOME/.local/share/MangoHud`, as well as copying the required Vulkan layer configuration files.
+`sudo ./build.sh install`
 
 ---
 
