@@ -5,6 +5,7 @@ XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 
 cd $(dirname "$0")
 cp -rv ".local/share/MangoHud" "$XDG_DATA_HOME/"
+cp -rv ".local/share/vulkan" "$XDG_DATA_HOME/"
 if [[ ! -f "$XDG_CONFIG_HOME/MangoHud/MangoHud.conf" ]]; then
     cp -rv ".config/MangoHud" "$XDG_CONFIG_HOME/"
 fi
