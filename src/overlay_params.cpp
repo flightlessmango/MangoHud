@@ -152,6 +152,11 @@ parse_str(const char *str)
 #define parse_io_write(s) parse_unsigned(s)
 
 #define parse_crosshair_color(s) parse_color(s)
+#define parse_cpu_color(s) parse_color(s)
+#define parse_gpu_color(s) parse_color(s)
+#define parse_vram_color(s) parse_color(s)
+#define parse_ram_color(s) parse_color(s)
+#define parse_engine_color(s) parse_color(s)
 
 static bool
 parse_help(const char *str)
@@ -297,6 +302,11 @@ parse_overlay_config(struct overlay_params *params,
    params->offset_y = 0;
    params->background_alpha = 0.5;
    params->time_format = "%T";
+   params->gpu_color = strtol("2e9762", NULL, 16);
+   params->cpu_color = strtol("2e97cb", NULL, 16);
+   params->vram_color = strtol("ad64c1", NULL, 16);
+   params->ram_color = strtol("c26693", NULL, 16);
+   params->engine_color = strtol("eb5b5b", NULL, 16);
 
    // first pass with env var
    if (env)
@@ -345,11 +355,24 @@ parse_overlay_config(struct overlay_params *params,
    // Command buffer gets reused and timestamps cause hangs for some reason, force off for now
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_timing] = false;
    // Convert from 0xRRGGBB to ImGui's format
-   params->crosshair_color =
-      IM_COL32(RGBGetRValue(params->crosshair_color),
-               RGBGetGValue(params->crosshair_color),
-               RGBGetBValue(params->crosshair_color),
+   std::array<unsigned *, 6> colors = {
+      &params->crosshair_color,
+      &params->cpu_color,
+      &params->gpu_color,
+      &params->vram_color,
+      &params->ram_color,
+      &params->engine_color
+   };
+
+   for (auto color : colors){
+      *color =
+      IM_COL32(RGBGetRValue(*color),
+               RGBGetGValue(*color),
+               RGBGetBValue(*color),
                255);
+   }
+
+   printf("%i\n", params->crosshair_color);
 
    params->tableCols = 3;
 

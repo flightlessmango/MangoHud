@@ -83,6 +83,11 @@ extern "C" {
    OVERLAY_PARAM_CUSTOM(time_format)                 \
    OVERLAY_PARAM_CUSTOM(io_read)                     \
    OVERLAY_PARAM_CUSTOM(io_write)                    \
+   OVERLAY_PARAM_CUSTOM(cpu_color)                   \
+   OVERLAY_PARAM_CUSTOM(gpu_color)                   \
+   OVERLAY_PARAM_CUSTOM(vram_color)                  \
+   OVERLAY_PARAM_CUSTOM(ram_color)                   \
+   OVERLAY_PARAM_CUSTOM(engine_color)                \
    OVERLAY_PARAM_CUSTOM(help)
 
 enum overlay_param_position {
@@ -118,7 +123,7 @@ struct overlay_params {
    unsigned offset_x;
    unsigned offset_y;
    unsigned vsync;
-   unsigned crosshair_color;
+   unsigned crosshair_color, cpu_color, gpu_color, vram_color, ram_color, engine_color;
    unsigned tableCols;
    float font_size;
    float background_alpha;

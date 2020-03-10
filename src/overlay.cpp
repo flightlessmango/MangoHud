@@ -1138,7 +1138,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
       ImGui::BeginTable("hud", instance_data->params.tableCols);
       if (device_data->gpu_stats && instance_data->params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
          ImGui::TableNextRow();
-         ImGui::TextColored(ImVec4(0.180, 0.592, 0.384, 1.00f), "GPU");
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.gpu_color), "GPU");
          ImGui::TableNextCell();
          right_aligned_text(char_width * 4, "%i", gpuLoad);
          ImGui::SameLine(0, 1.0f);
@@ -1162,7 +1162,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
       }
       if(instance_data->params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats]){
          ImGui::TableNextRow();
-         ImGui::TextColored(ImVec4(0.180, 0.592, 0.796, 1.00f), "CPU");
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.cpu_color), "CPU");
          ImGui::TableNextCell();
          right_aligned_text(char_width * 4, "%d", cpuLoadLog);
          ImGui::SameLine(0, 1.0f);
@@ -1183,10 +1183,10 @@ static void compute_swapchain_display(struct swapchain_data *data)
          for (const CPUData &cpuData : cpuStats.GetCPUData())
          {
             ImGui::TableNextRow();
-            ImGui::TextColored(ImVec4(0.180, 0.592, 0.796, 1.00f), "CPU");
+            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.cpu_color), "CPU");
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(data->font1);
-            ImGui::TextColored(ImVec4(0.180, 0.592, 0.796, 1.00f),"%i", i);
+            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.cpu_color),"%i", i);
             ImGui::PopFont();
             ImGui::TableNextCell();
             right_aligned_text(char_width * 4, "%i", int(cpuData.percent));
@@ -1232,7 +1232,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
       }
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_vram]){
          ImGui::TableNextRow();
-         ImGui::TextColored(ImVec4(0.678, 0.392, 0.756, 1.00f), "VRAM");
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.vram_color), "VRAM");
          ImGui::TableNextCell();
          right_aligned_text(char_width * 4, "%.2f", gpuMemUsed);
          ImGui::SameLine(0,1.0f);
@@ -1250,7 +1250,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
       }
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_ram]){
          ImGui::TableNextRow();
-         ImGui::TextColored(ImVec4(0.760, 0.4, 0.576, 1.00f), "RAM");
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.ram_color), "RAM");
          ImGui::TableNextCell();
          right_aligned_text(char_width * 4, "%.2f", memused);
          ImGui::SameLine(0,1.0f);
@@ -1260,7 +1260,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
       }
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_fps]){
          ImGui::TableNextRow();
-         ImGui::TextColored(ImVec4(0.925, 0.411, 0.411, 1.00f), "%s", engineName.c_str());
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.engine_color), "%s", engineName.c_str());
          ImGui::TableNextCell();
          right_aligned_text(char_width * 4, "%.0f", data->fps);
          ImGui::SameLine(0, 1.0f);
@@ -1276,7 +1276,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
          if (engineName == "DXVK" || engineName == "VKD3D"){
             ImGui::TableNextRow();
             ImGui::PushFont(data->font1);
-            ImGui::TextColored(ImVec4(0.925, 0.411, 0.411, 1.00f), "%s", engineVersion.c_str());
+            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.engine_color), "%s", engineVersion.c_str());
             ImGui::PopFont();
          }
       }
@@ -1293,7 +1293,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
       if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
          ImGui::Dummy(ImVec2(0.0f, instance_data->params.font_size / 2));
          ImGui::PushFont(data->font1);
-         ImGui::TextColored(ImVec4(0.925, 0.411, 0.411, 1.00f), "%s", "Frametime");
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(instance_data->params.engine_color), "%s", "Frametime");
          ImGui::PopFont();
       }
 
