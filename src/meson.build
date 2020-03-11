@@ -83,6 +83,7 @@ vklayer_mesa_overlay = shared_library(
     dep_vulkan],
   include_directories : [inc_common, inc_opengl],
   link_args : cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro']),
+  install_dir : join_paths(get_option('libdir'), 'mangohud'),
   install : true
 )
 
