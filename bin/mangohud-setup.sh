@@ -1,4 +1,6 @@
 install() {
+    rm -rf "$HOME/.local/share/MangoHud/"{libMangoHud32.so,libMangoHud.so}
+    rm -rf "$HOME/.local/share/vulkan/implicit_layer.d/"{mangohud32.json,mangohud64.json}
     [ "$UID" -eq 0 ] || exec sudo bash "$0" install
     tar -C / -xvf MangoHud-package.tar
     ldconfig
