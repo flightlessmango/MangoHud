@@ -129,8 +129,8 @@ build() {
 }
 
 package() {
-    LIB="build/release/usr/lib64/libMangoHud.so"
-    LIB32="build/release/usr/lib32/libMangoHud.so"
+    LIB="build/release/usr/lib64/mangohud/libMangoHud.so"
+    LIB32="build/release/usr/lib32/mangohud/libMangoHud.so"
     if [[ ! -f "$LIB" || "$LIB" -ot "build/meson64/src/libMangoHud.so" ]]; then
         build
     fi
