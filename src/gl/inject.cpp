@@ -36,17 +36,13 @@ static ImVec2 window_size;
 static overlay_params params {};
 static swapchain_stats sw_stats {};
 static fps_limit fps_limit_stats {};
-static state *current_state; 
+static state state;
 static bool inited = false;
-std::unordered_map<void*, state> g_imgui_states;
 uint32_t vendorID;
 std::string deviceName;
 
 void imgui_init()
 {
-    if (inited)
-        return;
-    inited = true;
     parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
     window_size = ImVec2(params.width, params.height);
     init_system_info();
@@ -56,6 +52,9 @@ void imgui_init()
 
 void imgui_create(void *ctx)
 {
+    if (inited)
+        return;
+    inited = true;
     if (!ctx)
         return;
     imgui_init();
@@ -71,7 +70,6 @@ void imgui_create(void *ctx)
     init_gpu_stats(vendorID, params);
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
-    auto& state = g_imgui_states[ctx];
     state.imgui_ctx = ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
@@ -104,20 +102,7 @@ void imgui_create(void *ctx)
 
     state.font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size, &font_cfg, glyph_ranges);
     state.font1 = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size * 0.55, &font_cfg, glyph_ranges);
-    current_state = &state;
     engineName = "OpenGL";
-}
-
-void imgui_destroy(void *ctx)
-{
-    if (!ctx)
-        return;
-
-    auto it = g_imgui_states.find(ctx);
-    if (it != g_imgui_states.end()) {
-        ImGui::DestroyContext(it->second.imgui_ctx);
-        g_imgui_states.erase(it);
-    }
 }
 
 void imgui_shutdown()
@@ -125,29 +110,18 @@ void imgui_shutdown()
     std::cerr << __func__ << std::endl;
 
     ImGui_ImplOpenGL3_Shutdown();
-
-    for(auto &p : g_imgui_states)
-        ImGui::DestroyContext(p.second.imgui_ctx);
-    g_imgui_states.clear();
+    ImGui::DestroyContext(state.imgui_ctx);
+    inited = false;
 }
 
 void imgui_set_context(void *ctx)
 {
     if (!ctx) {
         imgui_shutdown();
-        current_state = nullptr;
         return;
     }
     std::cerr << __func__ << std::endl;
-
-    auto it = g_imgui_states.find(ctx);
-    if (it != g_imgui_states.end()) {
-        ImGui::SetCurrentContext(it->second.imgui_ctx);
-        current_state = &it->second;
-    } else {
-        imgui_create(ctx);
-    }
-    sw_stats.font1 = current_state->font1;
+    imgui_create(ctx);
 }
 
 void imgui_render()
