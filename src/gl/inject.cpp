@@ -102,6 +102,7 @@ void imgui_create(void *ctx)
 
     state.font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size, &font_cfg, glyph_ranges);
     state.font1 = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size * 0.55, &font_cfg, glyph_ranges);
+    sw_stats.font1 = state.font1;
     engineName = "OpenGL";
 }
 
