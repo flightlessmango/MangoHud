@@ -83,9 +83,15 @@ vklayer_mesa_overlay = shared_library(
     dep_vulkan],
   include_directories : [inc_common, inc_opengl],
   link_args : cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro']),
-  install_dir : join_paths(get_option('libdir'), 'mangohud'),
+  install_dir : libdir_mangohud,
   install : true
 )
+
+#configure_file(input : 'mangohud.json.in',
+#  output : 'mangohud.json',
+#  configuration : { 'libdir_mangohud' : libdir_mangohud },
+#  install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
+#)
 
 install_data(
   files('mangohud.json'),

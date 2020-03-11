@@ -1,2 +1,4 @@
 option('glibcxx_asserts', type : 'boolean', value : false)
 option('use_system_vulkan', type : 'feature', value : 'disabled', description: 'Use system vulkan headers instead of the provided ones')
+option('mangohud_prefix', type : 'string', value : '', description: 'Add prefix to cross-compiled library, like "lib32-".')
+option('using_build_sh', type : 'boolean', value : false, description: 'Add "mangohud" suffix to libdir or not.')

@@ -30,6 +30,12 @@ cpp = meson.get_compiler('cpp')
 prog_python = import('python').find_installation('python3')
 null_dep = dependency('', required : false)
 
+# Needs prefix for configure_file()
+libdir_mangohud = join_paths(get_option('prefix'), get_option('libdir'), 'mangohud')
+if get_option('using_build_sh')
+  libdir_mangohud = join_paths(get_option('prefix'), get_option('libdir'))
+endif
+
 pre_args = [
   '-D__STDC_CONSTANT_MACROS',
   '-D__STDC_FORMAT_MACROS',
@@ -205,6 +211,12 @@ vk_enum_to_str = custom_target(
     prog_python, '@INPUT0@', '--xml', '@INPUT1@',
     '--outdir', meson.current_build_dir()
   ],
+)
+
+configure_file(input : 'libmangohud.conf.in',
+  output : get_option('mangohud_prefix') + 'libmangohud.conf',
+  configuration : { 'libdir_mangohud' : libdir_mangohud },
+  install_dir : join_paths(get_option('sysconfdir'), 'ld.so.conf.d'),
 )
 
 util_files = files(
