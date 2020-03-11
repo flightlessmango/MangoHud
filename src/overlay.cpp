@@ -1074,7 +1074,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             ImGui::TableNextCell();
             right_aligned_text(char_width * 4, "%i", gpu_info.temp);
             ImGui::SameLine(0, 1.0f);
-            ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, 1.0), "°C");
+            ImGui::Text("°C");
          }
          if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]){
             ImGui::TableNextCell();
@@ -1949,6 +1949,7 @@ void imgui_custom_style(struct overlay_params& params){
    ImGuiStyle& style = ImGui::GetStyle();
    style.Colors[ImGuiCol_PlotLines] = ImGui::ColorConvertU32ToFloat4(params.frametime_color);
    style.Colors[ImGuiCol_WindowBg]  = ImGui::ColorConvertU32ToFloat4(params.background_color);
+   style.Colors[ImGuiCol_Text] = ImGui::ColorConvertU32ToFloat4(params.text_color);
    style.CellPadding.y = -2;
 }
 

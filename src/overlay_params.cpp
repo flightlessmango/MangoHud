@@ -166,6 +166,7 @@ parse_str(const char *str)
 #define parse_io_color(s) parse_color(s)
 #define parse_frametime_color(s) parse_color(s)
 #define parse_background_color(s) parse_color(s)
+#define parse_text_color(s) parse_color(s)
 
 static bool
 parse_help(const char *str)
@@ -320,6 +321,7 @@ parse_overlay_config(struct overlay_params *params,
    params->io_color = strtol("a491d3", NULL, 16);
    params->frametime_color = strtol("00ff00", NULL, 16);
    params->background_color = strtol("020202", NULL, 16);
+   params->text_color = strtol("ffffff", NULL, 16);
 
    // first pass with env var
    if (env)
@@ -368,7 +370,7 @@ parse_overlay_config(struct overlay_params *params,
    // Command buffer gets reused and timestamps cause hangs for some reason, force off for now
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_timing] = false;
    // Convert from 0xRRGGBB to ImGui's format
-   std::array<unsigned *, 9> colors = {
+   std::array<unsigned *, 10> colors = {
       &params->crosshair_color,
       &params->cpu_color,
       &params->gpu_color,
@@ -378,6 +380,7 @@ parse_overlay_config(struct overlay_params *params,
       &params->io_color,
       &params->background_color,
       &params->frametime_color,
+      &params->text_color,
    };
 
    for (auto color : colors){

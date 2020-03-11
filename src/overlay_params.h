@@ -91,6 +91,7 @@ extern "C" {
    OVERLAY_PARAM_CUSTOM(frametime_color)             \
    OVERLAY_PARAM_CUSTOM(background_color)            \
    OVERLAY_PARAM_CUSTOM(io_color)                    \
+   OVERLAY_PARAM_CUSTOM(text_color)                  \
    OVERLAY_PARAM_CUSTOM(alpha)                       \
    OVERLAY_PARAM_CUSTOM(help)
 
@@ -126,7 +127,7 @@ struct overlay_params {
    unsigned height;
    int offset_x, offset_y;
    unsigned vsync;
-   unsigned crosshair_color, cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color;
+   unsigned crosshair_color, cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color;
    unsigned tableCols;
    float font_size;
    float background_alpha, alpha;
