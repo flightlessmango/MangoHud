@@ -83,7 +83,7 @@ parse_background_alpha(const char *str)
 }
 
 static float
-parse_frametime_alpha(const char *str)
+parse_alpha(const char *str)
 {
    return strtof(str, NULL);
 }
@@ -310,7 +310,7 @@ parse_overlay_config(struct overlay_params *params,
    params->offset_x = 0;
    params->offset_y = 0;
    params->background_alpha = 0.5;
-   params->frametime_alpha = 1.0;
+   params->alpha = 1.0;
    params->time_format = "%T";
    params->gpu_color = strtol("2e9762", NULL, 16);
    params->cpu_color = strtol("2e97cb", NULL, 16);
@@ -368,7 +368,7 @@ parse_overlay_config(struct overlay_params *params,
    // Command buffer gets reused and timestamps cause hangs for some reason, force off for now
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_timing] = false;
    // Convert from 0xRRGGBB to ImGui's format
-   std::array<unsigned *, 8> colors = {
+   std::array<unsigned *, 9> colors = {
       &params->crosshair_color,
       &params->cpu_color,
       &params->gpu_color,
@@ -377,6 +377,7 @@ parse_overlay_config(struct overlay_params *params,
       &params->engine_color,
       &params->io_color,
       &params->background_color,
+      &params->frametime_color,
    };
 
    for (auto color : colors){
@@ -386,12 +387,6 @@ parse_overlay_config(struct overlay_params *params,
                RGBGetBValue(*color),
                255);
       }
-
-      params->frametime_color =
-      IM_COL32(RGBGetRValue(params->frametime_color),
-               RGBGetGValue(params->frametime_color),
-               RGBGetBValue(params->frametime_color),
-               params->frametime_alpha * 255);
 
    params->tableCols = 3;
    

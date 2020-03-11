@@ -1013,6 +1013,7 @@ void position_layer(struct overlay_params& params, ImVec2 window_size, unsigned 
    ImGui::SetNextWindowSize(window_size, ImGuiCond_Always);
    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,-3));
+   ImGui::PushStyleVar(ImGuiStyleVar_Alpha, params.alpha);
 
    switch (params.position) {
    case LAYER_POSITION_TOP_LEFT:
@@ -1073,7 +1074,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             ImGui::TableNextCell();
             right_aligned_text(char_width * 4, "%i", gpu_info.temp);
             ImGui::SameLine(0, 1.0f);
-            ImGui::Text("°C");
+            ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, 1.0), "°C");
          }
          if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]){
             ImGui::TableNextCell();
@@ -1291,7 +1292,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
 
    position_layer(instance_data->params, data->window_size, data->width, data->height);
    render_imgui(data->sw_stats, instance_data->params, data->window_size, data->width, data->height);
-   ImGui::PopStyleVar(2);
+   ImGui::PopStyleVar(3);
 
    ImGui::EndFrame();
    ImGui::Render();
