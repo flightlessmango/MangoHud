@@ -110,8 +110,11 @@ void imgui_shutdown()
 {
     std::cerr << __func__ << std::endl;
 
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui::DestroyContext(state.imgui_ctx);
+    if (state.imgui_ctx) {
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui::DestroyContext(state.imgui_ctx);
+        state.imgui_ctx = nullptr;
+    }
     inited = false;
 }
 
