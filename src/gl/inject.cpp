@@ -136,7 +136,7 @@ void imgui_render()
 
     position_layer(params, window_size, vp[2], vp[3]);
     render_imgui(sw_stats, params, window_size, vp[2], vp[3]);
-    ImGui::PopStyleVar(2);
+    ImGui::PopStyleVar(3);
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
