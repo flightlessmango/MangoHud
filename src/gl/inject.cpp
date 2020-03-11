@@ -108,7 +108,9 @@ void imgui_create(void *ctx)
 
 void imgui_shutdown()
 {
+#ifndef NDEBUG
     std::cerr << __func__ << std::endl;
+#endif
 
     if (state.imgui_ctx) {
         ImGui_ImplOpenGL3_Shutdown();
@@ -124,7 +126,9 @@ void imgui_set_context(void *ctx)
         imgui_shutdown();
         return;
     }
-    std::cerr << __func__ << std::endl;
+#ifndef NDEBUG
+    std::cerr << __func__ << ": " << ctx << std::endl;
+#endif
     imgui_create(ctx);
 }
 
@@ -181,10 +185,13 @@ EXPORT_C_(void *) glXCreateContext(void *dpy, void *vis, void *shareList, int di
 
 EXPORT_C_(bool) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
     gl.Load();
+#ifndef NDEBUG
+    std::cerr << __func__ << ": " << drawable << ", " << ctx << std::endl;
+#endif
+
     bool ret = gl.glXMakeCurrent(dpy, drawable, ctx);
     if (ret)
         imgui_set_context(ctx);
-    std::cerr << __func__ << std::endl;
     return ret;
 }
 

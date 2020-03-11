@@ -350,7 +350,6 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
 
 bool ImGui_ImplOpenGL3_CreateFontsTexture()
 {
-    printf("%s\n", __func__);
     // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
     unsigned char* pixels;
@@ -541,32 +540,29 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st).r;\n"
         "}\n";
 
-
+#ifndef NDEBUG
     printf("glsl_version: %d\n", glsl_version);
+#endif
     // Select shaders matching our GLSL versions
     const GLchar* vertex_shader = NULL;
     const GLchar* fragment_shader = NULL;
     if (glsl_version < 130)
     {
-        printf("glsl_version < 130\n");
         vertex_shader = vertex_shader_glsl_120;
         fragment_shader = fragment_shader_glsl_120;
     }
     else if (glsl_version >= 410)
     {
-        printf("glsl_version >= 410\n");
         vertex_shader = vertex_shader_glsl_410_core;
         fragment_shader = fragment_shader_glsl_410_core;
     }
     else if (glsl_version == 300)
     {
-        printf("glsl_version == 300\n");
         vertex_shader = vertex_shader_glsl_300_es;
         fragment_shader = fragment_shader_glsl_300_es;
     }
     else
     {
-        printf("vertex_shader_glsl_130\n");
         vertex_shader = vertex_shader_glsl_130;
         fragment_shader = fragment_shader_glsl_130;
     }
@@ -614,7 +610,9 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
 
 void    ImGui_ImplOpenGL3_DestroyDeviceObjects()
 {
+#ifndef NDEBUG
     printf("%s\n", __func__);
+#endif
     if (g_VboHandle)        { glDeleteBuffers(1, &g_VboHandle); g_VboHandle = 0; }
     if (g_ElementsHandle)   { glDeleteBuffers(1, &g_ElementsHandle); g_ElementsHandle = 0; }
     if (g_ShaderHandle && g_VertHandle) { glDetachShader(g_ShaderHandle, g_VertHandle); }
