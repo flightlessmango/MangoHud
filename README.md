@@ -16,9 +16,11 @@ git clone --recurse-submodules https://github.com/flightlessmango/MangoHud.git
 cd MangoHud
 ```
 
-Then simply run the following command:
+Then simply run the following commands:
 
-`sudo ./build.sh install`
+`./build.sh build`
+<br>`./build.sh package`
+<br>`sudo ./build.sh install`
 
 ---
 
