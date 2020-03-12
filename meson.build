@@ -212,12 +212,13 @@ vk_enum_to_str = custom_target(
     '--outdir', meson.current_build_dir()
   ],
 )
-
-configure_file(input : 'libmangohud.conf.in',
-  output : get_option('mangohud_prefix') + 'libmangohud.conf',
-  configuration : { 'libdir_mangohud' : libdir_mangohud },
-  install_dir : join_paths(get_option('sysconfdir'), 'ld.so.conf.d'),
-)
+if get_option('using_build_sh')
+  configure_file(input : 'libmangohud.conf.in',
+    output : get_option('mangohud_prefix') + 'libmangohud.conf',
+    configuration : { 'libdir_mangohud' : libdir_mangohud },
+    install_dir : join_paths(get_option('sysconfdir'), 'ld.so.conf.d'),
+  )
+endif
 
 util_files = files(
   'src/mesa/util/os_socket.c',
