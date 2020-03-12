@@ -87,16 +87,23 @@ vklayer_mesa_overlay = shared_library(
   install : true
 )
 
-#configure_file(input : 'mangohud.json.in',
-#  output : 'mangohud.json',
-#  configuration : { 'libdir_mangohud' : libdir_mangohud },
-#  install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
-#)
-
-install_data(
-  files('mangohud.json'),
+if get_option('using_build_sh')
+  configure_file(input : 'mangohud.json.in',
+  output : '@0@.json'.format(meson.project_name()),
+  configuration : {'PROJECT_NAME' : meson.project_name()},
+  install : true,
   install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
-)
+  )
+else
+  configure_file(input : 'mangohud.json.in',
+  output : '@0@.@1@.json'.format(meson.project_name(), target_machine.cpu_family()),
+  configuration : {'libdir_mangohud' : join_paths(get_option('prefix'), get_option('libdir'), 'mangohud'),
+                    'PROJECT_NAME' : meson.project_name() + ' ',
+                    'LAYER_SUFFIX' : target_machine.cpu_family()},
+  install : true,
+  install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
+  )
+endif
 
 install_data(
   files('../bin/run-mangohud-gl-pkg.sh'),

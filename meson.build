@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-project('mangohud',
+project('MangoHud',
   ['c', 'cpp'],
   version : 'v1.0.0',
   license : 'MIT',
