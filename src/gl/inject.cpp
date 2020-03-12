@@ -208,18 +208,73 @@ EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
     }
 }
 
+EXPORT_C_(void) glXSwapIntervalEXT(void *dpy, void *draw, int interval) {
+#ifndef NDEBUG
+    std::cerr << __func__ << ": " << interval << std::endl;
+#endif
+
+    gl.Load();
+    if (params.gl_vsync >= 0)
+        interval = params.gl_vsync;
+    gl.glXSwapIntervalEXT(dpy, draw, interval);
+}
+
+EXPORT_C_(int) glXSwapIntervalSGI(int interval) {
+#ifndef NDEBUG
+    std::cerr << __func__ << ": " << interval << std::endl;
+#endif
+    gl.Load();
+    if (params.gl_vsync >= 0)
+        interval = params.gl_vsync;
+    return gl.glXSwapIntervalSGI(interval);
+}
+
+EXPORT_C_(int) glXSwapIntervalMESA(unsigned int interval) {
+#ifndef NDEBUG
+    std::cerr << __func__ << ": " << interval << std::endl;
+#endif
+    gl.Load();
+    if (params.gl_vsync >= 0)
+        interval = (unsigned int)params.gl_vsync;
+    return gl.glXSwapIntervalMESA(interval);
+}
+
+EXPORT_C_(int) glXGetSwapIntervalMESA() {
+    gl.Load();
+    static bool first_call = true;
+    int interval = gl.glXGetSwapIntervalMESA();
+
+    if (first_call) {
+        first_call = false;
+        if (params.gl_vsync >= 0) {
+            interval = params.gl_vsync;
+            gl.glXSwapIntervalMESA(interval);
+        }
+    }
+
+#ifndef NDEBUG
+    std::cerr << __func__ << ": " << interval << std::endl;
+#endif
+    return interval;
+}
+
 struct func_ptr {
    const char *name;
    void *ptr;
 };
 
-static std::array<const func_ptr, 5> name_to_funcptr_map = {{
+static std::array<const func_ptr, 9> name_to_funcptr_map = {{
 #define ADD_HOOK(fn) { #fn, (void *) fn }
    ADD_HOOK(glXGetProcAddress),
    ADD_HOOK(glXGetProcAddressARB),
    ADD_HOOK(glXCreateContext),
    ADD_HOOK(glXMakeCurrent),
    ADD_HOOK(glXSwapBuffers),
+
+   ADD_HOOK(glXSwapIntervalEXT),
+   ADD_HOOK(glXSwapIntervalSGI),
+   ADD_HOOK(glXSwapIntervalMESA),
+   ADD_HOOK(glXGetSwapIntervalMESA),
 #undef ADD_HOOK
 }};
 

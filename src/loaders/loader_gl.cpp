@@ -71,6 +71,10 @@ bool gl_loader::Load(bool egl_only) {
       reinterpret_cast<decltype(this->glXSwapIntervalMESA)>(
           glXGetProcAddress((const unsigned char *)"glXSwapIntervalMESA"));
 
+  glXGetSwapIntervalMESA =
+      reinterpret_cast<decltype(this->glXGetSwapIntervalMESA)>(
+          glXGetProcAddress((const unsigned char *)"glXGetSwapIntervalMESA"));
+
   glXMakeCurrent =
       reinterpret_cast<decltype(this->glXMakeCurrent)>(
           glXGetProcAddress((const unsigned char *)"glXMakeCurrent"));

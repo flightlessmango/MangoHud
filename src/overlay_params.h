@@ -71,6 +71,7 @@ extern "C" {
    OVERLAY_PARAM_CUSTOM(control)                     \
    OVERLAY_PARAM_CUSTOM(fps_limit)                   \
    OVERLAY_PARAM_CUSTOM(vsync)                       \
+   OVERLAY_PARAM_CUSTOM(gl_vsync)                    \
    OVERLAY_PARAM_CUSTOM(font_size)                   \
    OVERLAY_PARAM_CUSTOM(toggle_hud)                  \
    OVERLAY_PARAM_CUSTOM(toggle_logging)              \
@@ -127,6 +128,7 @@ struct overlay_params {
    unsigned height;
    int offset_x, offset_y;
    unsigned vsync;
+   int gl_vsync;
    unsigned crosshair_color, cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color;
    unsigned tableCols;
    float font_size;

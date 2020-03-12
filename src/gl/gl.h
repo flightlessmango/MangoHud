@@ -10,6 +10,7 @@ void glXSwapBuffers(void*, void*);
 void glXSwapIntervalEXT(void*, void*, int);
 int glXSwapIntervalSGI(int);
 int glXSwapIntervalMESA(unsigned int);
+int glXGetSwapIntervalMESA(void);
 bool glXMakeCurrent(void*, void*, void*);
 
 void* glXGetProcAddress(const unsigned char*);

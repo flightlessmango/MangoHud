@@ -151,6 +151,7 @@ parse_str(const char *str)
 #define parse_width(s) parse_unsigned(s)
 #define parse_height(s) parse_unsigned(s)
 #define parse_vsync(s) parse_unsigned(s)
+#define parse_gl_vsync(s) parse_unsigned(s)
 #define parse_offset_x(s) parse_unsigned(s)
 #define parse_offset_y(s) parse_unsigned(s)
 #define parse_time_format(s) parse_str(s)
@@ -307,6 +308,7 @@ parse_overlay_config(struct overlay_params *params,
    params->refresh_config = XK_F4;
    params->fps_limit = 0;
    params->vsync = -1;
+   params->gl_vsync = -1;
    params->crosshair_size = 30;
    params->offset_x = 0;
    params->offset_y = 0;
