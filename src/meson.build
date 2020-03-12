@@ -90,7 +90,9 @@ vklayer_mesa_overlay = shared_library(
 if get_option('using_build_sh')
   configure_file(input : 'mangohud.json.in',
   output : '@0@.json'.format(meson.project_name()),
-  configuration : {'PROJECT_NAME' : meson.project_name()},
+  configuration : {'PROJECT_NAME'     : meson.project_name(),
+                   'libdir_mangohud'  : '',
+                   'LAYER_SUFFIX'     : ''},
   install : true,
   install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
   )
