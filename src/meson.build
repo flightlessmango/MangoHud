@@ -97,7 +97,7 @@ if get_option('using_build_sh')
 else
   configure_file(input : 'mangohud.json.in',
   output : '@0@.@1@.json'.format(meson.project_name(), target_machine.cpu_family()),
-  configuration : {'libdir_mangohud' : join_paths(get_option('prefix'), get_option('libdir'), 'mangohud'),
+  configuration : {'libdir_mangohud' : join_paths(get_option('prefix'), get_option('libdir'), 'mangohud') + '/',
                     'PROJECT_NAME' : meson.project_name() + ' ',
                     'LAYER_SUFFIX' : target_machine.cpu_family()},
   install : true,
