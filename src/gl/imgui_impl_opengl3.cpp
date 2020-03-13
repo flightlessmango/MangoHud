@@ -74,8 +74,8 @@
 #define GL_ZERO_TO_ONE                    0x935F
 #define GL_CLIP_DEPTH_MODE                0x935D
 
-#include "loaders/loader_gl.h"
-extern gl_loader gl;
+void* get_glx_proc_address(const char* name);
+void (*glClipControl)(int origin, int depth);
 
 // Desktop GL 3.2+ has glDrawElementsBaseVertex() which GL ES and WebGL don't have.
 #if defined(IMGUI_IMPL_OPENGL_ES2) || defined(IMGUI_IMPL_OPENGL_ES3) || !defined(GL_VERSION_3_2)
@@ -96,6 +96,8 @@ static unsigned int g_VboHandle = 0, g_ElementsHandle = 0;
 // Functions
 bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
 {
+    glClipControl = reinterpret_cast<decltype(glClipControl)> (get_glx_proc_address("glClipControl"));
+
     // Query for GL version
 #if !defined(IMGUI_IMPL_OPENGL_ES2)
 
@@ -245,8 +247,8 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     GLenum last_clip_depth_mode = 0; glGetIntegerv(GL_CLIP_DEPTH_MODE, (GLint*)&last_clip_depth_mode);
     if (last_clip_origin == GL_UPPER_LEFT) {
         clip_origin_lower_left = false;
-        if (gl.glClipControl)
-            gl.glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+        if (glClipControl)
+            glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
     }
 #endif
 
@@ -343,8 +345,8 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     glScissor(last_scissor_box[0], last_scissor_box[1], (GLsizei)last_scissor_box[2], (GLsizei)last_scissor_box[3]);
 
 #if defined(GL_CLIP_ORIGIN) && !defined(__APPLE__)
-    if (!clip_origin_lower_left && gl.glClipControl)
-        gl.glClipControl(last_clip_origin, last_clip_depth_mode);
+    if (!clip_origin_lower_left && glClipControl)
+        glClipControl(last_clip_origin, last_clip_depth_mode);
 #endif
 }
 

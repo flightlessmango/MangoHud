@@ -18,8 +18,6 @@ void* glXGetProcAddressARB(const unsigned char*);
 
 unsigned int eglSwapBuffers( void*, void* );
 
-void glClipControl(int origin, int depth);
-
 #ifdef __cplusplus
 }
 #endif

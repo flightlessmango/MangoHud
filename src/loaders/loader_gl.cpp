@@ -83,10 +83,6 @@ bool gl_loader::Load(bool egl_only) {
     return false;
   }
 
-  glClipControl =
-      reinterpret_cast<decltype(this->glClipControl)>(
-          glXGetProcAddress((const unsigned char *)"glClipControl"));
-
   loaded_ = true;
   return true;
 }
