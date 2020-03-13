@@ -542,19 +542,6 @@ struct overlay_draw *get_overlay_draw(struct swapchain_data *data)
    return draw;
 }
 
-static const char *param_unit(enum overlay_param_enabled param)
-{
-   switch (param) {
-   case OVERLAY_PARAM_ENABLED_frame_timing:
-   case OVERLAY_PARAM_ENABLED_present_timing:
-      return "(us)";
-   case OVERLAY_PARAM_ENABLED_gpu_timing:
-      return "(ns)";
-   default:
-      return "";
-   }
-}
-
 static void parse_command(struct instance_data *instance_data,
                           const char *cmd, unsigned cmdlen,
                           const char *param, unsigned paramlen)
