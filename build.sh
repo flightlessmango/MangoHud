@@ -149,7 +149,7 @@ release() {
 }
 
 install() {
-    rm -f "$HOME/.local/share/MangoHud/"{libMangoHud32.so,libMangoHud.so}
+    rm -rf "$HOME/.local/share/MangoHud/"
     rm -f "$HOME/.local/share/vulkan/implicit_layer.d/"{mangohud32.json,mangohud64.json}
     if [[ ! -f build/MangoHud-package.tar ]]; then
         echo No package found. Run \"$0 package\".
