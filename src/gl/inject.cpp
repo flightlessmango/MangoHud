@@ -90,7 +90,6 @@ void imgui_create(void *ctx)
     imgui_custom_style(params);
 
     GLint vp [4]; glGetIntegerv (GL_VIEWPORT, vp);
-    printf("viewport %d %d %d %d\n", vp[0], vp[1], vp[2], vp[3]);
     ImGui::GetIO().IniFilename = NULL;
     ImGui::GetIO().DisplaySize = ImVec2(vp[2], vp[3]);
 
@@ -163,7 +162,7 @@ void* get_proc_address(const char* name) {
     void (*func)() = (void (*)())real_dlsym( RTLD_NEXT, name );
 
     if (!func) {
-        std::cerr << "MangoHud: Failed to get function '" << name << "'" << std::endl;
+        std::cerr << "MANGOHUD: Failed to get function '" << name << "'" << std::endl;
         exit( 1 );
     }
 
@@ -175,7 +174,7 @@ void* get_glx_proc_address(const char* name) {
         // Force load libGL then. If it still doesn't find it, get_proc_address should quit the program
         void *handle = dlopen("libGL.so.1", RTLD_GLOBAL | RTLD_LAZY | RTLD_DEEPBIND);
         if (!handle)
-            std::cerr << "MangoHud: couldn't find libGL.so.1" << std::endl;
+            std::cerr << "MANGOHUD: couldn't find libGL.so.1" << std::endl;
         gl.Load();
     }
 
@@ -196,7 +195,9 @@ EXPORT_C_(void *) glXCreateContext(void *dpy, void *vis, void *shareList, int di
 {
     gl.Load();
     void *ctx = gl.glXCreateContext(dpy, vis, shareList, direct);
+#ifndef NDEBUG
     std::cerr << __func__ << ":" << ctx << std::endl;
+#endif
     return ctx;
 }
 
@@ -344,11 +345,11 @@ EXPORT_C_(void*) dlsym(void * handle, const char * name)
 {
     void* func = find_ptr(name);
     if (func) {
-        //std::cerr << __func__ << ":" << name << std::endl;
+        //fprintf(stderr,"%s: local: %s\n",  __func__ , name);
         return func;
     }
 
-    //std::cerr << __func__ << ": foreign: " << name << std::endl;
+    //fprintf(stderr,"%s: foreign: %s\n",  __func__ , name);
     return real_dlsym(handle, name);
 }
 #endif
