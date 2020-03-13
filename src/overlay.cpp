@@ -884,7 +884,7 @@ void check_keybinds(struct overlay_params& params){
    uint64_t now = os_time_get(); /* us */
    elapsedF2 = (double)(now - last_f2_press);
    elapsedF12 = (double)(now - last_f12_press);
-   elapsedRefreshConfig = (double)(now - refresh_config_press);
+   elapsedReloadCfg = (double)(now - reload_cfg_press);
   
   if (elapsedF2 >= 500000 && mangohud_output_env){
      if (key_is_pressed(params.toggle_logging)){
@@ -906,9 +906,9 @@ void check_keybinds(struct overlay_params& params){
    }
 
    if (elapsedRefreshConfig >= 500000){
-      if (key_is_pressed(params.refresh_config)){
+      if (key_is_pressed(params.reload_cfg)){
          parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
-         refresh_config_press = now;
+         reload_cfg_press = now;
       }
    }
 }

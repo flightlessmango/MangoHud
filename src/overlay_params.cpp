@@ -101,7 +101,7 @@ parse_toggle_logging(const char *str)
 }
 
 static KeySym
-parse_refresh_config(const char *str)
+parse_reload_cfg(const char *str)
 {
    return XStringToKeysym(str);
 }
@@ -305,7 +305,7 @@ parse_overlay_config(struct overlay_params *params,
    params->control = -1;
    params->toggle_hud = XK_F12;
    params->toggle_logging = XK_F2;
-   params->refresh_config = XK_F4;
+   params->reload_cfg = XK_F4;
    params->fps_limit = 0;
    params->vsync = -1;
    params->gl_vsync = -1;

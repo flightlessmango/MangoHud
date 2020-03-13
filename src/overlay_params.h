@@ -75,7 +75,7 @@ extern "C" {
    OVERLAY_PARAM_CUSTOM(font_size)                   \
    OVERLAY_PARAM_CUSTOM(toggle_hud)                  \
    OVERLAY_PARAM_CUSTOM(toggle_logging)              \
-   OVERLAY_PARAM_CUSTOM(refresh_config)              \
+   OVERLAY_PARAM_CUSTOM(reload_cfg)                  \
    OVERLAY_PARAM_CUSTOM(crosshair_size)              \
    OVERLAY_PARAM_CUSTOM(offset_x)                    \
    OVERLAY_PARAM_CUSTOM(offset_y)                    \
@@ -135,7 +135,7 @@ struct overlay_params {
    float background_alpha, alpha;
    KeySym toggle_hud;
    KeySym toggle_logging;
-   KeySym refresh_config;
+   KeySym reload_cfg;
    std::string time_format;
 };
 
