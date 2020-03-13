@@ -873,9 +873,6 @@ void init_system_info(){
 
       if (!log_period_env || !try_stoi(log_period, log_period_env))
         log_period = 100;
-
-      if (log_duration_env && !try_stoi(duration, log_duration_env))
-        duration = 0;
 }
 
 void check_keybinds(struct overlay_params& params){
@@ -1207,7 +1204,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       if (loggingOn && log_period == 0){
          uint64_t now = os_time_get();
          elapsedLog = (double)(now - log_start);
-         if ((elapsedLog) >= duration * 1000000)
+         if ((elapsedLog) >= params.log_duration * 1000000)
             loggingOn = false;
 
          out << fps << "," <<  cpuLoadLog << "," << gpuLoadLog << "," << (now - log_start) << endl;

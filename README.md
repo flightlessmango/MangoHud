@@ -77,15 +77,13 @@ A partial list of parameters are below. See the config file for a complete list.
 | `alpha`                            | Set the opacity of all text and frametime graph `0.0-1.0`                             |
 | `background_alpha`                 | Set the opacity of the background `0.0-1.0`                                           |
 | `read_cfg`                         | Add to MANGOHUD_CONFIG as first parameter to also load config file. Otherwise only MANGOHUD_CONFIG parameters are used. |
+| `output_file`                      | Define name and location of the output file (Required for logging)                    |
+| `font_file`                        | Change default font (set location to .TTF/.OTF file )                                 |
+| `log_duration`                     | Set amount of time the logging will run for (in seconds)                              |
 
 Note: Width and Height are set automatically based on the font_size, but can be overridden.
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
-
-## Environment Variables
-
-- `MANGOHUD_OUTPUT` : Define name and location of the output file (Required for logging)
-- `MANGOHUD_FONT`: Change default font (set location to .TTF/.OTF file )
 
 ## Keybindings
 
