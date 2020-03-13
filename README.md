@@ -90,6 +90,7 @@ Note: Width and Height are set automatically based on the font_size, but can be 
 - `-1` = Adaptive sync
 - `0`  = Off
 - `1`  = On
+- `n`  = Sync to refresh rate / n.
 
 ### Vulkan Vsync
 - `0` = Adaptive VSync
