@@ -80,7 +80,7 @@ A partial list of parameters are below. See the config file for a complete list.
 | `output_file`                      | Define name and location of the output file (Required for logging)                    |
 | `font_file`                        | Change default font (set location to .TTF/.OTF file )                                 |
 | `log_duration`                     | Set amount of time the logging will run for (in seconds)                              |
-| `vsync`<br> `gl_vsync              | Set vsync for OpenGL or Vulkan                                                        |
+| `vsync`<br> `gl_vsync`             | Set vsync for OpenGL or Vulkan                                                        |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 
