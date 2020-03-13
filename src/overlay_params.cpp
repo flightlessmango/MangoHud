@@ -142,6 +142,12 @@ parse_unsigned(const char *str)
    return strtol(str, NULL, 0);
 }
 
+static signed
+parse_signed(const char *str)
+{
+   return strtol(str, NULL, 0);
+}
+
 static const char *
 parse_str(const char *str)
 {
@@ -151,7 +157,7 @@ parse_str(const char *str)
 #define parse_width(s) parse_unsigned(s)
 #define parse_height(s) parse_unsigned(s)
 #define parse_vsync(s) parse_unsigned(s)
-#define parse_gl_vsync(s) parse_unsigned(s)
+#define parse_gl_vsync(s) parse_signed(s)
 #define parse_offset_x(s) parse_unsigned(s)
 #define parse_offset_y(s) parse_unsigned(s)
 #define parse_log_duration(s) parse_unsigned(s)
