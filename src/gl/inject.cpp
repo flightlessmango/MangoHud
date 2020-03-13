@@ -38,17 +38,21 @@ static overlay_params params {};
 static swapchain_stats sw_stats {};
 static fps_limit fps_limit_stats {};
 static state state;
+static bool cfg_inited = false;
 static bool inited = false;
-uint32_t vendorID;
-std::string deviceName;
+static uint32_t vendorID;
+static std::string deviceName;
 
 void imgui_init()
 {
+    if (cfg_inited)
+        return;
     parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
     window_size = ImVec2(params.width, params.height);
     init_system_info();
     if (params.fps_limit > 0)
       fps_limit_stats.targetFrameTime = int64_t(1000000000.0 / params.fps_limit);
+    cfg_inited = true;
 }
 
 void imgui_create(void *ctx)
