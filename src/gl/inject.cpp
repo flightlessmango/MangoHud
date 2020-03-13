@@ -13,6 +13,7 @@
 #include "imgui_impl_opengl3.h"
 #include "font_default.h"
 #include "overlay.h"
+#include "cpu.h"
 #include "mesa/util/macros.h"
 #include "mesa/util/os_time.h"
 
@@ -55,10 +56,14 @@ void imgui_create(void *ctx)
     if (inited)
         return;
     inited = true;
+
     if (!ctx)
         return;
+
+    cpuStats.Init();
     imgui_init();
     gl3wInit();
+
     std::cerr << "GL version: " << glGetString(GL_VERSION) << std::endl;
     deviceName = (char*)glGetString(GL_RENDERER);
     if (deviceName.find("Radeon") != std::string::npos

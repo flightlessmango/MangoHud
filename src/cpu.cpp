@@ -97,11 +97,12 @@ void calculateCPUData(CPUData& cpuData,
 
 CPUStats::CPUStats()
 {
-	m_inited = Init();
 }
 
 bool CPUStats::Init()
 {
+    if (m_inited)
+        return true;
 	CPUStats::GetCpuFile();
 	std::string line;
 	std::ifstream file (PROCSTATFILE);
@@ -142,8 +143,8 @@ bool CPUStats::Init()
 		}
 	} while(true);
 
-	UpdateCPUData();
-	return true;
+	m_inited = true;
+	return UpdateCPUData();
 }
 
 //TODO take sampling interval into account?
@@ -221,13 +222,14 @@ bool CPUStats::UpdateCoreMhz() {
 }
 
 bool CPUStats::UpdateCpuTemp(){
+    m_cpuDataTotal.temp = 0;
     rewind(cpuTempFile);
     fflush(cpuTempFile);
     if (fscanf(cpuTempFile, "%d", &m_cpuDataTotal.temp) != 1)
-        m_cpuDataTotal.temp = 0;
+        return false;
     m_cpuDataTotal.temp /= 1000;
 
-    return NULL;
+    return true;
 }
 
 bool CPUStats::GetCpuFile(){

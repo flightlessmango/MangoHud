@@ -2611,6 +2611,8 @@ static VkResult overlay_CreateInstance(
    if (instance_data->params.fps_limit > 0)
       fps_limit_stats.targetFrameTime = int64_t(1000000000.0 / instance_data->params.fps_limit);
 
+   cpuStats.Init();
+
    // Adjust height for DXVK/VKD3D version number
    if (engineName == "DXVK" || engineName == "VKD3D"){
       if (instance_data->params.font_size){
