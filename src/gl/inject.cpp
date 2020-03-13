@@ -217,7 +217,7 @@ EXPORT_C_(bool) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
     if (ret)
         imgui_set_context(ctx);
 
-    if (params.gl_vsync >= 0) {
+    if (params.gl_vsync >= -1) {
         if (gl.glXSwapIntervalEXT)
             gl.glXSwapIntervalEXT(dpy, drawable, params.gl_vsync);
         if (gl.glXSwapIntervalSGI)

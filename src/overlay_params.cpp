@@ -311,7 +311,7 @@ parse_overlay_config(struct overlay_params *params,
    params->reload_cfg = XK_F4;
    params->fps_limit = 0;
    params->vsync = -1;
-   params->gl_vsync = -1;
+   params->gl_vsync = -2;
    params->crosshair_size = 30;
    params->offset_x = 0;
    params->offset_y = 0;
