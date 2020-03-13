@@ -35,9 +35,6 @@ void parseConfigFile() {
     std::string env_data = get_data_dir();
     std::string env_config = get_config_dir();
 
-    if (!env_data.empty())
-        paths.push_back(env_data + mangohud_dir + "MangoHud.conf");
-
     if (!env_config.empty())
         paths.push_back(env_config + mangohud_dir + "MangoHud.conf");
 
