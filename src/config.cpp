@@ -77,7 +77,7 @@ void parseConfigFile() {
         std::ifstream stream(*p);
         if (!stream.good()) {
             // printing just so user has an idea of possible configs
-            std::cerr << "skipping config: " << *p << std::endl;
+            std::cerr << "skipping config: " << *p << " [ not found ]" << std::endl;
             continue;
         }
 
