@@ -16,15 +16,15 @@ git clone --recurse-submodules https://github.com/flightlessmango/MangoHud.git
 cd MangoHud
 ```
 
-Then simply run the following command:
+Then simply run the following commands:
 
-`./build.sh install`
-
-This will build and copy `libMangoHud.so` & `libMangoHud32.so` to `$HOME/.local/share/MangoHud`, as well as copying the required Vulkan layer configuration files.
+`./build.sh build`
+<br>`./build.sh package`
+<br>`sudo ./build.sh install`
 
 ---
 
-If you are running an Ubuntu-like distrobution, Fedora, or Arch, the build script will automatically detect and prompt you to install missing build dependencies. If you run in to any issues with this please report them!
+If you are running an Ubuntu-like distribution, Fedora, or Arch, the build script will automatically detect and prompt you to install missing build dependencies. If you run into any issues with this please report them!
 
 ## Packaging status
 
@@ -53,7 +53,7 @@ The default config file is installed to `$HOME/.config/MangoHud/MangoHud.conf` a
 
 ---
 
-### `MANGOHUD_CONFIG` environment varianble
+### `MANGOHUD_CONFIG` environment variable
 
 You can also customize the hud by using the `MANGOHUD_CONFIG` environment variable while separating different options with a comma. This takes priority over any config file.
 
@@ -71,19 +71,38 @@ A partial list of parameters are below. See the config file for a complete list.
 | `position=`                        | Location of the hud: `top-left` (default), `top-right`, `bottom-left`, `bottom-right` |
 | `no_display`                       | Hide the hud by default                                                               |
 | `toggle_hud=`<br>`toggle_logging=` | Modifiable toggle hotkeys. Default are F12 and F2, respectively.                      |
-
-Note: Width and Height are set automatically based on the font_size, but can be overridden.
+| `reload_cfg=`                      | Change keybind for reloading the config                                               |
+| `time`<br>`time_format=%T`         | Displays local time. See [std::put_time](https://en.cppreference.com/w/cpp/io/manip/put_time) for formatting help. |
+| `gpu_color`<br>`gpu_color`<br>`vram_color`<br>`ram_color`<br>`io_color`<br>`engine_color`<br>`frametime_color`<br>`background_color`<br>`text_color`         | Change default colors: `gpu_color=RRGGBB`|
+| `alpha`                            | Set the opacity of all text and frametime graph `0.0-1.0`                             |
+| `background_alpha`                 | Set the opacity of the background `0.0-1.0`                                           |
+| `read_cfg`                         | Add to MANGOHUD_CONFIG as first parameter to also load config file. Otherwise only MANGOHUD_CONFIG parameters are used. |
+| `output_file`                      | Define name and location of the output file (Required for logging)                    |
+| `font_file`                        | Change default font (set location to .TTF/.OTF file )                                 |
+| `log_duration`                     | Set amount of time the logging will run for (in seconds)                              |
+| `vsync`<br> `gl_vsync`             | Set vsync for OpenGL or Vulkan                                                        |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 
-## Environment Variables
+Note: Width and Height are set automatically based on the font_size, but can be overridden.
+## Vsync
+### OpenGL Vsync
+- `-1` = Adaptive sync
+- `0`  = Off
+- `1`  = On
+- `n`  = Sync to refresh rate / n.
 
-- `MANGOHUD_OUTPUT` : Define name and location of the output file (Required for logging)
-- `MANGOHUD_FONT`: Change default font (set location to .TTF/.OTF file )
+### Vulkan Vsync
+- `0` = Adaptive VSync
+- `1` = Off
+- `2` = Mailbox (VSync with uncapped FPS)
+- `3` = On
+
 
 ## Keybindings
 
 - `F2` : Toggle Logging
+- `F4` : Reload Config
 - `F12`: Toggle Hud
 
 ## MangoHud FPS logging

@@ -5,35 +5,27 @@
 #include "config.h"
 #include "overlay_params.h"
 #include "file_utils.h"
+#include "string_utils.h"
 
 std::unordered_map<std::string,std::string> options;
 
-void parseConfigLine(std::string line){
-    if(line.find("#")!=std::string::npos)
-        {
-            line = line.erase(line.find("#"),std::string::npos);
-        }
-    size_t space = line.find(" ");
-    while(space!=std::string::npos)
-        {
-            line = line.erase(space,1);
-            space = line.find(" ");
-        }
-    space = line.find("\t");
-    while(space!=std::string::npos)
-        {
-            line = line.erase(space,1);
-            space = line.find("\t");
-        }
+void parseConfigLine(std::string line) {
+    std::string param, value;
+
+    if (line.find("#") != std::string::npos)
+        line = line.erase(line.find("#"), std::string::npos);
+
     size_t equal = line.find("=");
-    if(equal==std::string::npos)
-        {
-            if (!line.empty())
-                options[line] = "1";
-            return;
-        }
-    
-    options[line.substr(0, equal)] = line.substr(equal+1);
+    if (equal == std::string::npos)
+        value = "1";
+    else
+        value = line.substr(equal+1);
+
+    param = line.substr(0, equal);
+    trim(param);
+    trim(value);
+    if (!param.empty())
+        options[param] = value;
 }
 
 void parseConfigFile() {
@@ -42,9 +34,6 @@ void parseConfigFile() {
 
     std::string env_data = get_data_dir();
     std::string env_config = get_config_dir();
-
-    if (!env_data.empty())
-        paths.push_back(env_data + mangohud_dir + "MangoHud.conf");
 
     if (!env_config.empty())
         paths.push_back(env_config + mangohud_dir + "MangoHud.conf");
@@ -85,7 +74,7 @@ void parseConfigFile() {
         std::ifstream stream(*p);
         if (!stream.good()) {
             // printing just so user has an idea of possible configs
-            std::cerr << "skipping config: " << *p << std::endl;
+            std::cerr << "skipping config: " << *p << " [ not found ]" << std::endl;
             continue;
         }
 

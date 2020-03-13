@@ -22,10 +22,8 @@ struct logData{
 double fps, elapsedLog;
 std::vector<logData> logArray;
 ofstream out;
-const char* log_duration_env = std::getenv("LOG_DURATION");
-const char* mangohud_output_env = std::getenv("MANGOHUD_OUTPUT");
 const char* log_period_env = std::getenv("LOG_PERIOD");
-int duration, num;
+int num;
 bool loggingOn;
 uint64_t log_start;
 
@@ -39,12 +37,13 @@ uint64_t log_start;
 // 	logArray.clear();
 // }
 
-void *logging(void *){
+void *logging(void *params_void){
+  overlay_params *params = reinterpret_cast<overlay_params *>(params_void);
   time_t now_log = time(0);
   tm *log_time = localtime(&now_log);
 	string date = to_string(log_time->tm_year + 1900) + "-" + to_string(1 + log_time->tm_mon) + "-" + to_string(log_time->tm_mday) + "_" + to_string(1 + log_time->tm_hour) + "-" + to_string(1 + log_time->tm_min) + "-" + to_string(1 + log_time->tm_sec);
   log_start = os_time_get();
-  out.open(mangohud_output_env + date, ios::out | ios::app);
+  out.open(params->output_file + date, ios::out | ios::app);
   out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver" << endl;
   out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << endl;
 	while (loggingOn){
@@ -53,7 +52,7 @@ void *logging(void *){
     out << fps << "," << cpuLoadLog << "," << gpuLoadLog << "," <<  now - log_start << endl;
 		// logArray.push_back({fps, cpuLoadLog, gpuLoadLog, 0.0f});
 
-    if ((elapsedLog) >= duration * 1000000 && log_duration_env)
+    if ((elapsedLog) >= params->log_duration * 1000000 && params->log_duration)
       loggingOn = false;
     
     this_thread::sleep_for(chrono::milliseconds(log_period));

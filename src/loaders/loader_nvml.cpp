@@ -135,7 +135,7 @@ bool libnvml_loader::Load(const std::string& library_name) {
     return false;
   }
 
-  #if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
+#if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
   nvmlDeviceGetMemoryInfo =
       reinterpret_cast<decltype(this->nvmlDeviceGetMemoryInfo)>(
           dlsym(library_, "nvmlDeviceGetMemoryInfo"));
@@ -144,6 +144,19 @@ bool libnvml_loader::Load(const std::string& library_name) {
   nvmlDeviceGetMemoryInfo = &::nvmlDeviceGetMemoryInfo;
 #endif
   if (!nvmlDeviceGetMemoryInfo) {
+    CleanUp(true);
+    return false;
+  }
+
+#if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
+  nvmlDeviceGetClockInfo =
+      reinterpret_cast<decltype(this->nvmlDeviceGetClockInfo)>(
+          dlsym(library_, "nvmlDeviceGetClockInfo"));
+#endif
+#if defined(LIBRARY_LOADER_NVML_H_DT_NEEDED)
+  nvmlDeviceGetClockInfo = &::nvmlDeviceGetClockInfo;
+#endif
+  if (!nvmlDeviceGetClockInfo) {
     CleanUp(true);
     return false;
   }

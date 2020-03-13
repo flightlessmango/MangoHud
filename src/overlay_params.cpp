@@ -24,11 +24,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <fstream>
 #include <errno.h>
 #include <sys/sysinfo.h>
 #include <X11/Xlib.h>
 #include "X11/keysym.h"
+#include "imgui.h"
 
 #include "overlay_params.h"
 #include "config.h"
@@ -47,12 +47,6 @@ parse_position(const char *str)
    if (!strcmp(str, "bottom-right"))
       return LAYER_POSITION_BOTTOM_RIGHT;
    return LAYER_POSITION_TOP_LEFT;
-}
-
-static FILE *
-parse_output_file(const char *str)
-{
-   return fopen(str, "w+");
 }
 
 static int
@@ -82,6 +76,12 @@ parse_background_alpha(const char *str)
    return strtof(str, NULL);
 }
 
+static float
+parse_alpha(const char *str)
+{
+   return strtof(str, NULL);
+}
+
 static KeySym
 parse_toggle_hud(const char *str)
 {
@@ -95,7 +95,7 @@ parse_toggle_logging(const char *str)
 }
 
 static KeySym
-parse_refresh_config(const char *str)
+parse_reload_cfg(const char *str)
 {
    return XStringToKeysym(str);
 }
@@ -136,13 +136,41 @@ parse_unsigned(const char *str)
    return strtol(str, NULL, 0);
 }
 
+static signed
+parse_signed(const char *str)
+{
+   return strtol(str, NULL, 0);
+}
+
+static const char *
+parse_str(const char *str)
+{
+   return str;
+}
+
 #define parse_width(s) parse_unsigned(s)
 #define parse_height(s) parse_unsigned(s)
 #define parse_vsync(s) parse_unsigned(s)
+#define parse_gl_vsync(s) parse_signed(s)
 #define parse_offset_x(s) parse_unsigned(s)
 #define parse_offset_y(s) parse_unsigned(s)
+#define parse_log_duration(s) parse_unsigned(s)
+#define parse_time_format(s) parse_str(s)
+#define parse_output_file(s) parse_str(s)
+#define parse_font_file(s) parse_str(s)
+#define parse_io_read(s) parse_unsigned(s)
+#define parse_io_write(s) parse_unsigned(s)
 
 #define parse_crosshair_color(s) parse_color(s)
+#define parse_cpu_color(s) parse_color(s)
+#define parse_gpu_color(s) parse_color(s)
+#define parse_vram_color(s) parse_color(s)
+#define parse_ram_color(s) parse_color(s)
+#define parse_engine_color(s) parse_color(s)
+#define parse_io_color(s) parse_color(s)
+#define parse_frametime_color(s) parse_color(s)
+#define parse_background_color(s) parse_color(s)
+#define parse_text_color(s) parse_color(s)
 
 static bool
 parse_help(const char *str)
@@ -182,8 +210,15 @@ parse_string(const char *s, char *out_param, char *out_value)
    if (*s == '=') {
       s++;
       i++;
-      for (; !is_delimiter(*s); s++, out_value++, i++)
+      for (; !is_delimiter(*s); s++, out_value++, i++) {
          *out_value = *s;
+         // Consume escaped delimiter, but don't escape null. Might be end of string.
+         if (*s == '\\' && *(s + 1) != 0 && is_delimiter(*(s + 1))) {
+            s++;
+            i++;
+            *out_value = *s;
+         }
+      }
    } else
       *(out_value++) = '1';
    *out_value = 0;
@@ -252,7 +287,7 @@ parse_overlay_config(struct overlay_params *params,
                   const char *env)
 {
 
-   memset(params, 0, sizeof(*params));
+   *params = {};
 
    /* Visible by default */
    params->enabled[OVERLAY_PARAM_ENABLED_fps] = true;
@@ -265,19 +300,33 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_ram] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_vram] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_io_read] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_io_write] = false;
    params->fps_sampling_period = 500000; /* 500ms */
    params->width = 280;
    params->height = 140;
    params->control = -1;
    params->toggle_hud = XK_F12;
    params->toggle_logging = XK_F2;
-   params->refresh_config = XK_F4;
+   params->reload_cfg = XK_F4;
    params->fps_limit = 0;
    params->vsync = -1;
+   params->gl_vsync = -2;
    params->crosshair_size = 30;
    params->offset_x = 0;
    params->offset_y = 0;
    params->background_alpha = 0.5;
+   params->alpha = 1.0;
+   params->time_format = "%T";
+   params->gpu_color = strtol("2e9762", NULL, 16);
+   params->cpu_color = strtol("2e97cb", NULL, 16);
+   params->vram_color = strtol("ad64c1", NULL, 16);
+   params->ram_color = strtol("c26693", NULL, 16);
+   params->engine_color = strtol("eb5b5b", NULL, 16);
+   params->io_color = strtol("a491d3", NULL, 16);
+   params->frametime_color = strtol("00ff00", NULL, 16);
+   params->background_color = strtol("020202", NULL, 16);
+   params->text_color = strtol("ffffff", NULL, 16);
 
    // first pass with env var
    if (env)
@@ -325,4 +374,42 @@ parse_overlay_config(struct overlay_params *params,
 
    // Command buffer gets reused and timestamps cause hangs for some reason, force off for now
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_timing] = false;
+   // Convert from 0xRRGGBB to ImGui's format
+   std::array<unsigned *, 10> colors = {
+      &params->crosshair_color,
+      &params->cpu_color,
+      &params->gpu_color,
+      &params->vram_color,
+      &params->ram_color,
+      &params->engine_color,
+      &params->io_color,
+      &params->background_color,
+      &params->frametime_color,
+      &params->text_color,
+   };
+
+   for (auto color : colors){
+         *color =
+         IM_COL32(RGBGetRValue(*color),
+               RGBGetGValue(*color),
+               RGBGetBValue(*color),
+               255);
+      }
+
+   params->tableCols = 3;
+   
+   if (!params->font_size) {
+      params->font_size = 24;
+   } else {
+      params->width = params->font_size * 11.7;
+   }
+
+   //increase hud width if io read and write
+   if (params->enabled[OVERLAY_PARAM_ENABLED_io_read] && params->enabled[OVERLAY_PARAM_ENABLED_io_write] && params->width == 280)
+      params->width = 15 * params->font_size;
+
+   if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock] && params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp] && params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
+      params->tableCols = 4;
+      params->width = 20 * params->font_size;
+   }
 }

@@ -4,7 +4,7 @@ XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 DATA_DIR="$XDG_DATA_HOME/MangoHud"
 LAYER="build/release/usr/share/vulkan/implicit_layer.d/mangohud.json"
-INSTALL_DIR="build/package/MangoHud"
+INSTALL_DIR="build/package/"
 IMPLICIT_LAYER_DIR="$XDG_DATA_HOME/vulkan/implicit_layer.d"
 VERSION=$(git describe --long --tags --always | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/^v//')
 
@@ -109,14 +109,14 @@ configure() {
     dependencies
     git submodule update --init --depth 50
     if [[ ! -f "build/meson64/build.ninja" ]]; then
-        meson build/meson64 --libdir lib64 --prefix "$PWD/build/release/usr"
+        meson build/meson64 --libdir lib/mangohud/lib64 --prefix /usr -Dusing_build_sh=true
     fi
     if [[ ! -f "build/meson32/build.ninja" ]]; then
         export CC="gcc -m32"
         export CXX="g++ -m32"
         export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH_32}"
         export LLVM_CONFIG="/usr/bin/llvm-config32"
-        meson build/meson32 --libdir lib32 --prefix "$PWD/build/release/usr"
+        meson build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dmangohud_prefix=lib32-  -Dusing_build_sh=true
     fi
 }
 
@@ -124,44 +124,41 @@ build() {
     if [[ ! -f "build/meson64/build.ninja" ]]; then
         configure
     fi
-    ninja -C build/meson32 install
-    ninja -C build/meson64 install
+    DESTDIR="$PWD/build/release" ninja -C build/meson32 install
+    DESTDIR="$PWD/build/release" ninja -C build/meson64 install
 }
 
 package() {
-    LIB="build/release/usr/lib64/libMangoHud.so"
-    LIB32="build/release/usr/lib32/libMangoHud.so"
+    LIB="build/release/usr/lib/mangohud/lib64/libMangoHud.so"
+    LIB32="build/release/usr/lib/mangohud/lib32/libMangoHud.so"
     if [[ ! -f "$LIB" || "$LIB" -ot "build/meson64/src/libMangoHud.so" ]]; then
         build
     fi
-    mkdir -p "$INSTALL_DIR/.local/share/"{MangoHud,vulkan/implicit_layer.d}
-    mkdir -p "$INSTALL_DIR/.config/MangoHud"
+    tar --numeric-owner --owner=0 --group=0 \
+        -C build/release -cvf "build/MangoHud-package.tar" .
+}
 
-    cp "$LIB32" "$INSTALL_DIR/.local/share/MangoHud/libMangoHud32.so"
-    cp "$LIB" "$INSTALL_DIR/.local/share/MangoHud/libMangoHud.so"
-    cp "$LAYER" "$INSTALL_DIR/.local/share/vulkan/implicit_layer.d/mangohud64.json"
-    cp "$LAYER" "$INSTALL_DIR/.local/share/vulkan/implicit_layer.d/mangohud32.json"
-    cp --preserve=mode "bin/install.sh" "build/package/MangoHud/install.sh"
-    cp "bin/MangoHud.conf" "$INSTALL_DIR/.config/MangoHud/MangoHud.conf"
-    cp "bin/MangoHud.conf" "$INSTALL_DIR/.local/share/MangoHud/MangoHud.conf"
-    sed -i "s|64bit|32bit|g" "$INSTALL_DIR/.local/share/vulkan/implicit_layer.d/mangohud32.json"
-
-    tar -C build/package -cpzf "build/MangoHud-$VERSION.tar.gz" .
+release() {
+    rm build/MangoHud-package.tar
+    mkdir -p build/MangoHud
+    package
+    cp --preserve=mode bin/mangohud-setup.sh build/MangoHud/mangohud-setup.sh
+    cp build/MangoHud-package.tar build/MangoHud/MangoHud-package.tar
+    tar --numeric-owner --owner=0 --group=0 \
+        -C build -czvf build/MangoHud-$VERSION.tar.gz MangoHud
 }
 
 install() {
-    PKG="build/MangoHud-$VERSION.tar.gz"
-    if [[ ! -f "$PKG" || "$PKG" -ot "build/meson64/src/libMangoHud.so" ]]; then
-        package
+    rm -rf "$HOME/.local/share/MangoHud/"
+    rm -f "$HOME/.local/share/vulkan/implicit_layer.d/"{mangohud32.json,mangohud64.json}
+    if [[ ! -f build/MangoHud-package.tar ]]; then
+        echo No package found. Run \"$0 package\".
+        exit 1
     fi
-    if [[ -f "$XDG_CONFIG_HOME/MangoHud/MangoHud.conf" ]]; then
-        tar xzf "build/MangoHud-$VERSION.tar.gz" -C "$XDG_DATA_HOME/" "./MangoHud/.local/share/"{MangoHud,vulkan} --strip-components=4
-    else
-        tar xzf "build/MangoHud-$VERSION.tar.gz" -C "$XDG_DATA_HOME/" "./MangoHud/.local/share/"{MangoHud,vulkan} --strip-components=4
-        tar xzf "build/MangoHud-$VERSION.tar.gz" -C "$XDG_CONFIG_HOME/" "./MangoHud/.config/MangoHud" --strip-components=3
-    fi
-    sed -i "s|libMangoHud.so|$XDG_DATA_HOME/MangoHud/libMangoHud32.so|g" "$XDG_DATA_HOME/vulkan/implicit_layer.d/mangohud32.json"
-    sed -i "s|libMangoHud.so|$XDG_DATA_HOME/MangoHud/libMangoHud.so|g" "$XDG_DATA_HOME/vulkan/implicit_layer.d/mangohud64.json"
+    [ "$UID" -eq 0 ] || exec sudo bash "$0" install
+    tar -C / -xvf build/MangoHud-package.tar
+    ldconfig
+    echo "MangoHud Installed"
 }
 
 clean() {
@@ -169,8 +166,12 @@ clean() {
 }
 
 uninstall() {
-    rm -rfv "$XDG_DATA_HOME/MangoHud"
-    rm -fv "$IMPLICIT_LAYER_DIR"/{mangohud64,mangohud32}.json
+    [ "$UID" -eq 0 ] || exec sudo bash "$0" uninstall
+    rm -rfv "/usr/lib/mangohud"
+    rm -fv "/usr/share/vulkan/implicit_layer.d/mangohud.json"
+    rm -fv "/etc/ld.so.conf.d/libmangohud.conf"
+    rm -fv "/etc/ld.so.conf.d/lib32-libmangohud.conf"
+    rm -fv "/usr/bin/mangohud"
 }
 
 for a in $@; do
@@ -183,6 +184,7 @@ for a in $@; do
         "install") install;;
         "clean") clean;;
         "uninstall") uninstall;;
+        "release") release;;
         *)
             echo "Unrecognized command argument: $a"
             echo 'Accepted arguments: "pull", "configure", "build", "package", "install", "clean", "uninstall".'

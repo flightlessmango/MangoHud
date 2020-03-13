@@ -1,3 +1,4 @@
 [submodule "modules/ImGui/src"]
 	path = modules/ImGui/src
-	url = https://github.com/flightlessmango/ImGui.git
+	url = https://github.com/ocornut/imgui.git
+	branch = tables

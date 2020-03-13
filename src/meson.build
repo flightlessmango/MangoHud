@@ -41,7 +41,19 @@ vklayer_files = files(
   'file_utils.cpp',
   'memory.cpp',
   'config.cpp',
+  'iostats.cpp',
+  'gpu.cpp',
 )
+
+opengl_files = files(
+  'gl/inject.cpp',
+  'gl/real_dlsym.cpp',
+  'gl/imgui_impl_opengl3.cpp',
+  'loaders/loader_gl.cpp',
+  'gl/gl3w/GL/gl3w.c',
+)
+pre_args += '-DHOOK_DLSYM'
+inc_opengl = include_directories('gl/gl3w')
 
 # lib_xnvctrl = cc.find_library('XNVCtrl')
 vklayer_mesa_overlay = shared_library(
@@ -49,6 +61,7 @@ vklayer_mesa_overlay = shared_library(
   util_files,
   vk_enum_to_str,
   vklayer_files,
+  opengl_files,
   overlay_spv,
   vulkan_headers,
   c_args : [
@@ -68,12 +81,41 @@ vklayer_mesa_overlay = shared_library(
     dep_dl,
     dep_pthread,
     dep_vulkan],
-  include_directories : inc_common,
+  include_directories : [inc_common, inc_opengl],
   link_args : cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro']),
+  install_dir : libdir_mangohud,
   install : true
 )
 
-install_data(
-  files('mangohud.json'),
+if get_option('using_build_sh')
+  configure_file(input : 'mangohud.json.in',
+  output : '@0@.json'.format(meson.project_name()),
+  configuration : {'PROJECT_NAME'     : meson.project_name(),
+                   'libdir_mangohud'  : '',
+                   'LAYER_SUFFIX'     : ''},
+  install : true,
   install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
+  )
+else
+  configure_file(input : 'mangohud.json.in',
+  output : '@0@.@1@.json'.format(meson.project_name(), target_machine.cpu_family()),
+  configuration : {'libdir_mangohud' : join_paths(get_option('prefix'), get_option('libdir'), 'mangohud') + '/',
+                    'PROJECT_NAME' : meson.project_name() + ' ',
+                    'LAYER_SUFFIX' : target_machine.cpu_family()},
+  install : true,
+  install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
+  )
+endif
+
+install_data(
+  files('../bin/run-mangohud-gl-pkg.sh'),
+  install_dir : get_option('bindir'),
+  install_mode: 'rwxr-xr-x',
+  rename : ['mangohud']
+)
+
+install_data(
+  files('../bin/MangoHud.conf'),
+  install_dir : join_paths(get_option('datadir'), 'doc', 'mangohud'),
+  rename : ['MangoHud.conf.example']
 )

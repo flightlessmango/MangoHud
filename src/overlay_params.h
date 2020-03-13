@@ -24,6 +24,8 @@
 #ifndef OVERLAY_PARAMS_H
 #define OVERLAY_PARAMS_H
 
+#include <string>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -32,6 +34,12 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 #include <X11/Xlib.h>
+
+#define RGBGetBValue(rgb)   (rgb & 0x000000FF)
+#define RGBGetGValue(rgb)   ((rgb >> 8) & 0x000000FF)
+#define RGBGetRValue(rgb)   ((rgb >> 16) & 0x000000FF)
+
+#define ToRGBColor(r, g, b, a) ((r << 16) | (g << 8) | (b));
 
 #define OVERLAY_PARAMS                               \
    OVERLAY_PARAM_BOOL(fps)                           \
@@ -50,8 +58,13 @@ extern "C" {
    OVERLAY_PARAM_BOOL(time)                          \
    OVERLAY_PARAM_BOOL(full)                          \
    OVERLAY_PARAM_BOOL(read_cfg)                      \
+   OVERLAY_PARAM_BOOL(io_read)                       \
+   OVERLAY_PARAM_BOOL(io_write)                      \
+   OVERLAY_PARAM_BOOL(gpu_mem_clock)                 \
+   OVERLAY_PARAM_BOOL(gpu_core_clock)                \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
+   OVERLAY_PARAM_CUSTOM(font_file)                   \
    OVERLAY_PARAM_CUSTOM(position)                    \
    OVERLAY_PARAM_CUSTOM(width)                       \
    OVERLAY_PARAM_CUSTOM(height)                      \
@@ -59,15 +72,30 @@ extern "C" {
    OVERLAY_PARAM_CUSTOM(control)                     \
    OVERLAY_PARAM_CUSTOM(fps_limit)                   \
    OVERLAY_PARAM_CUSTOM(vsync)                       \
+   OVERLAY_PARAM_CUSTOM(gl_vsync)                    \
    OVERLAY_PARAM_CUSTOM(font_size)                   \
    OVERLAY_PARAM_CUSTOM(toggle_hud)                  \
    OVERLAY_PARAM_CUSTOM(toggle_logging)              \
-   OVERLAY_PARAM_CUSTOM(refresh_config)               \
+   OVERLAY_PARAM_CUSTOM(reload_cfg)                  \
    OVERLAY_PARAM_CUSTOM(crosshair_size)              \
    OVERLAY_PARAM_CUSTOM(offset_x)                    \
    OVERLAY_PARAM_CUSTOM(offset_y)                    \
    OVERLAY_PARAM_CUSTOM(crosshair_color)             \
    OVERLAY_PARAM_CUSTOM(background_alpha)            \
+   OVERLAY_PARAM_CUSTOM(time_format)                 \
+   OVERLAY_PARAM_CUSTOM(io_read)                     \
+   OVERLAY_PARAM_CUSTOM(io_write)                    \
+   OVERLAY_PARAM_CUSTOM(cpu_color)                   \
+   OVERLAY_PARAM_CUSTOM(gpu_color)                   \
+   OVERLAY_PARAM_CUSTOM(vram_color)                  \
+   OVERLAY_PARAM_CUSTOM(ram_color)                   \
+   OVERLAY_PARAM_CUSTOM(engine_color)                \
+   OVERLAY_PARAM_CUSTOM(frametime_color)             \
+   OVERLAY_PARAM_CUSTOM(background_color)            \
+   OVERLAY_PARAM_CUSTOM(io_color)                    \
+   OVERLAY_PARAM_CUSTOM(text_color)                  \
+   OVERLAY_PARAM_CUSTOM(alpha)                       \
+   OVERLAY_PARAM_CUSTOM(log_duration)                \
    OVERLAY_PARAM_CUSTOM(help)
 
 enum overlay_param_position {
@@ -89,7 +117,6 @@ enum overlay_param_enabled {
 struct overlay_params {
    bool enabled[OVERLAY_PARAM_ENABLED_MAX];
    enum overlay_param_position position;
-   FILE *output_file;
    int control;
    uint32_t fps_sampling_period; /* us */
    uint32_t fps_limit;
@@ -97,17 +124,21 @@ struct overlay_params {
    bool help;
    bool no_display;
    bool full;
+   bool io_read, io_write;
    unsigned width;
    unsigned height;
-   unsigned offset_x;
-   unsigned offset_y;
+   int offset_x, offset_y;
    unsigned vsync;
-   unsigned crosshair_color;
+   int gl_vsync;
+   int log_duration;
+   unsigned crosshair_color, cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color;
+   unsigned tableCols;
    float font_size;
-   float background_alpha;
+   float background_alpha, alpha;
    KeySym toggle_hud;
    KeySym toggle_logging;
-   KeySym refresh_config;
+   KeySym reload_cfg;
+   std::string time_format, output_file, font_file;
 };
 
 const extern char *overlay_param_names[];

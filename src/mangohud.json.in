@@ -1,10 +1,10 @@
 {
     "file_format_version" : "1.0.0",
     "layer" : {
-      "name": "MangoHud",
+      "name": "@PROJECT_NAME@@LAYER_SUFFIX@",
       "type": "GLOBAL",
       "api_version": "1.1.125",
-      "library_path": "libMangoHud.so",
+      "library_path": "@libdir_mangohud@libMangoHud.so",
       "implementation_version": "1",
       "description": "Vulkan Hud Overlay",
       "functions": {
