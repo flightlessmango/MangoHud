@@ -80,10 +80,23 @@ A partial list of parameters are below. See the config file for a complete list.
 | `output_file`                      | Define name and location of the output file (Required for logging)                    |
 | `font_file`                        | Change default font (set location to .TTF/.OTF file )                                 |
 | `log_duration`                     | Set amount of time the logging will run for (in seconds)                              |
-
-Note: Width and Height are set automatically based on the font_size, but can be overridden.
+| `vsync`<br> `gl_vsync              | Set vsync for OpenGL or Vulkan                                                        |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
+
+Note: Width and Height are set automatically based on the font_size, but can be overridden.
+## Vsync
+### OpenGL Vsync
+- `-1` = Adaptive sync
+- `0`  = Off
+- `1`  = On
+
+### Vulkan Vsync
+- `0` = Adaptive VSync
+- `1` = Off
+- `2` = Mailbox (VSync with uncapped FPS)
+- `3` = On
+
 
 ## Keybindings
 
