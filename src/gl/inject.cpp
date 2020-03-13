@@ -162,11 +162,19 @@ void* get_proc_address(const char* name) {
 }
 
 void* get_glx_proc_address(const char* name) {
-    gl.Load();
+    if (!gl.Load()) {
+        // Force load libGL then. If it still doesn't find it, get_proc_address should quit the program
+        void *handle = dlopen("libGL.so.1", RTLD_GLOBAL | RTLD_LAZY | RTLD_DEEPBIND);
+        if (!handle)
+            std::cerr << "MangoHud: couldn't find libGL.so.1" << std::endl;
+        gl.Load();
+    }
 
-    void *func = gl.glXGetProcAddress( (const unsigned char*) name );
+    void *func = nullptr;
+    if (gl.glXGetProcAddress)
+        func = gl.glXGetProcAddress( (const unsigned char*) name );
 
-    if (!func)
+    if (!func && gl.glXGetProcAddressARB)
         func = gl.glXGetProcAddressARB( (const unsigned char*) name );
 
     if (!func)
@@ -297,7 +305,7 @@ EXPORT_C_(void *) glXGetProcAddress(const unsigned char* procName) {
     if (func)
         return func;
 
-    return gl.glXGetProcAddress(procName);
+    return get_glx_proc_address((const char*)procName);
 }
 
 EXPORT_C_(void *) glXGetProcAddressARB(const unsigned char* procName) {
@@ -309,7 +317,7 @@ EXPORT_C_(void *) glXGetProcAddressARB(const unsigned char* procName) {
     if (func)
         return func;
 
-    return gl.glXGetProcAddressARB(procName);
+    return get_glx_proc_address((const char*)procName);
 }
 
 #ifdef HOOK_DLSYM
