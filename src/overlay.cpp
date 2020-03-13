@@ -905,7 +905,7 @@ void check_keybinds(struct overlay_params& params){
       }
    }
 
-   if (elapsedRefreshConfig >= 500000){
+   if (elapsedReloadCfg >= 500000){
       if (key_is_pressed(params.reload_cfg)){
          parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
          reload_cfg_press = now;
