@@ -332,8 +332,6 @@ static struct instance_data *new_instance_data(VkInstance instance)
 
 static void destroy_instance_data(struct instance_data *data)
 {
-   if (data->params.output_file)
-      fclose(data->params.output_file);
    if (data->params.control >= 0)
       os_socket_close(data->params.control);
    unmap_object(HKEY(data->instance));
@@ -886,14 +884,14 @@ void check_keybinds(struct overlay_params& params){
    elapsedF12 = (double)(now - last_f12_press);
    elapsedReloadCfg = (double)(now - reload_cfg_press);
   
-  if (elapsedF2 >= 500000 && mangohud_output_env){
+  if (elapsedF2 >= 500000 && !params.output_file.empty()){
      if (key_is_pressed(params.toggle_logging)){
        last_f2_press = now;
        log_start = now;
        loggingOn = !loggingOn;
 
        if (loggingOn && log_period != 0)
-         pthread_create(&f2, NULL, &logging, NULL);
+         pthread_create(&f2, NULL, &logging, &params);
 
      }
    }
@@ -2621,13 +2619,6 @@ static VkResult overlay_CreateInstance(
          instance_data->params.height += 24 / 2;
       }
    }
-
-   /* If there's no control file, and an output_file was specified, start
-    * capturing fps data right away.
-    */
-   instance_data->capture_enabled =
-      instance_data->params.output_file && instance_data->params.control < 0;
-   instance_data->capture_started = instance_data->capture_enabled;
 
    return result;
 }

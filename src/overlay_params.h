@@ -115,7 +115,6 @@ enum overlay_param_enabled {
 struct overlay_params {
    bool enabled[OVERLAY_PARAM_ENABLED_MAX];
    enum overlay_param_position position;
-   FILE *output_file;
    int control;
    uint32_t fps_sampling_period; /* us */
    uint32_t fps_limit;
@@ -136,7 +135,7 @@ struct overlay_params {
    KeySym toggle_hud;
    KeySym toggle_logging;
    KeySym reload_cfg;
-   std::string time_format;
+   std::string time_format, output_file;
 };
 
 const extern char *overlay_param_names[];
