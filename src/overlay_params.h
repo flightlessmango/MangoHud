@@ -64,6 +64,7 @@ extern "C" {
    OVERLAY_PARAM_BOOL(gpu_core_clock)                \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
+   OVERLAY_PARAM_CUSTOM(font_file)                   \
    OVERLAY_PARAM_CUSTOM(position)                    \
    OVERLAY_PARAM_CUSTOM(width)                       \
    OVERLAY_PARAM_CUSTOM(height)                      \
@@ -135,7 +136,7 @@ struct overlay_params {
    KeySym toggle_hud;
    KeySym toggle_logging;
    KeySym reload_cfg;
-   std::string time_format, output_file;
+   std::string time_format, output_file, font_file;
 };
 
 const extern char *overlay_param_names[];

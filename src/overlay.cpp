@@ -1868,11 +1868,10 @@ static void setup_swapchain_data_pipeline(struct swapchain_data *data)
    if (!font_size)
       font_size = 24;
 
-   const char* mangohud_font = getenv("MANGOHUD_FONT");
    // ImGui takes ownership of the data, no need to free it
-   if (mangohud_font && file_exists(mangohud_font)) {
-      data->font = io.Fonts->AddFontFromFileTTF(mangohud_font, font_size);
-      data->sw_stats.font1 = io.Fonts->AddFontFromFileTTF(mangohud_font, font_size * 0.55f);
+   if (!device_data->instance->params.font_file.empty() && file_exists(device_data->instance->params.font_file)) {
+      data->font = io.Fonts->AddFontFromFileTTF(device_data->instance->params.font_file.c_str(), font_size);
+      data->sw_stats.font1 = io.Fonts->AddFontFromFileTTF(device_data->instance->params.font_file.c_str(), font_size * 0.55f);
    } else {
       ImFontConfig font_cfg = ImFontConfig();
       const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
