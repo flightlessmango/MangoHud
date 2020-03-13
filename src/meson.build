@@ -113,3 +113,9 @@ install_data(
   install_mode: 'rwxr-xr-x',
   rename : ['mangohud']
 )
+
+install_data(
+  files('../bin/MangoHud.conf'),
+  install_dir : join_paths(get_option('datadir'), 'doc', 'mangohud'),
+  rename : ['MangoHud.conf.example']
+)
