@@ -16,6 +16,7 @@
 #include "cpu.h"
 #include "mesa/util/macros.h"
 #include "mesa/util/os_time.h"
+#include "file_utils.h"
 
 #include <chrono>
 #include <iomanip>
@@ -104,12 +105,17 @@ void imgui_create(void *ctx)
     if (!font_size)
         font_size = 24;
 
-    ImFontConfig font_cfg = ImFontConfig();
-    const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
-    const ImWchar* glyph_ranges = io.Fonts->GetGlyphRangesDefault();
+    if (!params.font_file.empty() && file_exists(params.font_file)) {
+        state.font = io.Fonts->AddFontFromFileTTF(params.font_file.c_str(), font_size);
+        state.font1 = io.Fonts->AddFontFromFileTTF(params.font_file.c_str(), font_size * 0.55f);
+    } else {
+        ImFontConfig font_cfg = ImFontConfig();
+        const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
+        const ImWchar* glyph_ranges = io.Fonts->GetGlyphRangesDefault();
 
-    state.font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size, &font_cfg, glyph_ranges);
-    state.font1 = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size * 0.55, &font_cfg, glyph_ranges);
+        state.font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size, &font_cfg, glyph_ranges);
+        state.font1 = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size * 0.55, &font_cfg, glyph_ranges);
+    }
     sw_stats.font1 = state.font1;
     engineName = "OpenGL";
 }
