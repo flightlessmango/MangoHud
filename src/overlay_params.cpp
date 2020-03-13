@@ -49,12 +49,6 @@ parse_position(const char *str)
    return LAYER_POSITION_TOP_LEFT;
 }
 
-static FILE *
-parse_output_file(const char *str)
-{
-   return fopen(str, "w+");
-}
-
 static int
 parse_control(const char *str)
 {
