@@ -55,7 +55,7 @@ If you are using Fedora, to install the [MangoHud](https://src.fedoraproject.org
 sudo dnf install mangohud
 ```
 
-### Flatpak
+#### Flatpak
 
 If you are using Flatpaks, you will have to add the [FlatHub repository](https://flatpak.org/setup/) for your specific distribution, and then, to install it, execute:
 
