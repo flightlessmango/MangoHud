@@ -920,8 +920,10 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
             }
 
             // get ram usage/max
-            pthread_create(&memoryThread, NULL, &update_meminfo, NULL);
-            pthread_create(&ioThread, NULL, &getIoStats, &sw_stats.io);
+            if (params.enabled[OVERLAY_PARAM_ENABLED_ram])
+               pthread_create(&memoryThread, NULL, &update_meminfo, NULL);
+            if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])
+               pthread_create(&ioThread, NULL, &getIoStats, &sw_stats.io);
 
             gpuLoadLog = gpu_info.load;
             cpuLoadLog = sw_stats.total_cpu;
