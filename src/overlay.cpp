@@ -937,10 +937,12 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
             cpuLoadLog = sw_stats.total_cpu;
             sw_stats.fps = fps;
 
-            std::time_t t = std::time(nullptr);
-            std::stringstream time;
-            time << std::put_time(std::localtime(&t), params.time_format.c_str());
-            sw_stats.time = time.str();
+            if (params.enabled[OVERLAY_PARAM_ENABLED_time]) {
+               std::time_t t = std::time(nullptr);
+               std::stringstream time;
+               time << std::put_time(std::localtime(&t), params.time_format.c_str());
+               sw_stats.time = time.str();
+            }
 
             sw_stats.n_frames_since_update = 0;
             sw_stats.last_fps_update = now;
