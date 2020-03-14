@@ -908,9 +908,11 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
    }
       if (sw_stats.last_fps_update) {
          if (elapsed >= params.fps_sampling_period) {
-            cpuStats.UpdateCPUData();
-            sw_stats.total_cpu = cpuStats.GetCPUDataTotal().percent;
-            
+            if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats]) {
+               cpuStats.UpdateCPUData();
+               sw_stats.total_cpu = cpuStats.GetCPUDataTotal().percent;
+            }
+
             if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]) {
                if (vendorID == 0x1002)
                   pthread_create(&gpuThread, NULL, &getAmdGpuUsage, NULL);
