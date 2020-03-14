@@ -7,7 +7,7 @@ A modification of the Mesa Vulkan overlay. Including GUI improvements, temperatu
 
 # Installation
 
-If you do not wish to compile anything, simply download the file under Releases, extract it, and run `./install.sh` from within the extracted folder.
+If you do not wish to compile anything, simply download the file under Releases, extract it, and run `./mangohud-setup.sh` from within the extracted folder.
 
 If you wish to compile MangoHud to keep up to date with any changes - first clone this repository and cd into it:
 
@@ -47,7 +47,6 @@ MangoHud comes with a config file which can be used to set configuration options
 1. `/path/to/application/dir/MangoHud.conf`
 2. `$HOME/.config/MangoHud/{application_name}.conf`
 3. `$HOME/.config/MangoHud/MangoHud.conf`
-4. `$HOME/.local/share/MangoHud/MangoHud.conf`
 
 The default config file is installed to `$HOME/.config/MangoHud/MangoHud.conf` and will not be overwritten by the script.
 
