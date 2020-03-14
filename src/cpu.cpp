@@ -150,8 +150,6 @@ bool CPUStats::Init()
 //TODO take sampling interval into account?
 bool CPUStats::UpdateCPUData()
 {
-    CPUStats::UpdateCoreMhz();
-    CPUStats::UpdateCpuTemp();
     unsigned long long int usertime, nicetime, systemtime, idletime;
     unsigned long long int ioWait, irq, softIrq, steal, guest, guestnice;
     int cpuid = -1;
