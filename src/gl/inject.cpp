@@ -231,6 +231,7 @@ EXPORT_C_(bool) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
 
 EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
     gl.Load();
+    imgui_create(gl.glXGetCurrentContext());
     check_keybinds(params);
     update_hud_info(sw_stats, params, vendorID);
     imgui_render();

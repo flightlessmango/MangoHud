@@ -51,6 +51,14 @@ bool gl_loader::Load(bool egl_only) {
     return false;
   }
 
+  glXGetCurrentContext =
+      reinterpret_cast<decltype(this->glXGetCurrentContext)>(
+          glXGetProcAddress((const unsigned char *)"glXGetCurrentContext"));
+  if (!glXGetCurrentContext) {
+    CleanUp(true);
+    return false;
+  }
+
   glXSwapBuffers =
       reinterpret_cast<decltype(this->glXSwapBuffers)>(
           glXGetProcAddress((const unsigned char *)"glXSwapBuffers"));
