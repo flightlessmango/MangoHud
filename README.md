@@ -34,11 +34,19 @@ If you are running an Ubuntu-like distribution, Fedora, or Arch, the build scrip
 
 # Normal usage
 
-To enable the MangoHud Vulkan overlay layer, run :
+To enable the MangoHud overlay layer for 64bit Vulkan and OpenGL, run :
 
-`MANGOHUD=1 /path/to/my_vulkan_app`
+`mangohud /path/to/app`
 
-Or alternatively, add `MANGOHUD=1` to your shell profile.
+Or
+
+`mangohud.x86 /path/to/app` for 32bit OpenGL
+
+For Steam games, you can add this as a launch option:
+
+`mangohud %command%`
+
+Or alternatively, add `MANGOHUD=1` to your shell profile (Vulkan only).
 
 ## Hud configuration
 
