@@ -7,7 +7,7 @@ A modification of the Mesa Vulkan overlay. Including GUI improvements, temperatu
 
 # Installation
 
-If you do not wish to compile anything, simply download the file under Releases, extract it, and run `./mangohud-setup.sh install` from within the extracted folder.
+## Build
 
 If you wish to compile MangoHud to keep up to date with any changes - first clone this repository and cd into it:
 
@@ -16,21 +16,52 @@ git clone --recurse-submodules https://github.com/flightlessmango/MangoHud.git
 cd MangoHud
 ```
 
-Then simply run the following commands:
+To build it, execute:
 
-`./build.sh build`
-<br>`./build.sh package`
-<br>`sudo ./build.sh install`
+```
+./build.sh build
+./build.sh package
+```
 
----
+**NOTE: If you are running an Ubuntu-based, Fedora, or Arch-based, the build script will automatically detect and prompt you to install missing build dependencies. If you run into any issues with this please report them!**
 
-If you are running an Ubuntu-like distribution, Fedora, or Arch, the build script will automatically detect and prompt you to install missing build dependencies. If you run into any issues with this please report them!
+Once done, proceed to the [installation](#source).
 
-## Packaging status
+## Install
 
-[Fedora](https://src.fedoraproject.org/rpms/mangohud): `sudo dnf install mangohud`
+### Source
 
-[Arch](https://aur.archlinux.org/packages/mangohud): Install `mangohud` and `lib32-mangohud` with your favourite AUR helper. `mangohud-git` is also available on the AUR.
+If you have compiled MangoHud from source, to install it, execute:
+
+```
+./build.sh install
+```
+
+### Pre-packaged binaries
+
+#### GitHub releases
+
+If you do not wish to compile anything, simply download the file under [Releases](https://github.com/flightlessmango/MangoHud/releases), extract it, and run `./mangohud-setup.sh install` from within the extracted folder.
+
+#### Arch-based distributions
+
+If you are using an Arch-based distribution, install [`mangohud`](https://aur.archlinux.org/packages/mangohud/) and [`lib32-mangohud`](https://aur.archlinux.org/packages/lib32-mangohud/) with your favourite AUR helper. [`mangohud-git`](https://aur.archlinux.org/packages/mangohud-git/) and [`lib32-mangohud-git`](https://aur.archlinux.org/packages/lib32-mangohud-git/) are also available on the AUR if you want the up-to-date version of MangoHud.
+
+#### Fedora
+
+If you are using Fedora, to install the [MangoHud](https://src.fedoraproject.org/rpms/mangohud) package, execute:
+
+```
+sudo dnf install mangohud
+```
+
+#### Flatpak
+
+If you are using Flatpaks, you will have to add the [FlatHub repository](https://flatpak.org/setup/) for your specific distribution, and then, to install it, execute:
+
+```
+flatpak install com.valvesoftware.Steam.VulkanLayer.MangoHud
+```
 
 # Normal usage
 
