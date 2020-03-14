@@ -117,7 +117,6 @@ void imgui_create(void *ctx)
         state.font1 = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size * 0.55, &font_cfg, glyph_ranges);
     }
     sw_stats.font1 = state.font1;
-    engineName = "OpenGL";
 }
 
 void imgui_shutdown()
@@ -157,7 +156,7 @@ void imgui_render()
     ImGui::NewFrame();
 
     position_layer(params, window_size, vp[2], vp[3]);
-    render_imgui(sw_stats, params, window_size, vp[2], vp[3]);
+    render_imgui(sw_stats, params, window_size, vp[2], vp[3], false);
     ImGui::PopStyleVar(3);
 
     ImGui::Render();

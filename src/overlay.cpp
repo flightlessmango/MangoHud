@@ -1045,7 +1045,7 @@ static void right_aligned_text(float off_x, const char *fmt, ...)
    ImGui::Text("%s", buffer);
 }
 
-void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, unsigned width, unsigned height)
+void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, unsigned width, unsigned height, bool is_vulkan)
 {
    static float char_width = ImGui::CalcTextSize("A").x;
 
@@ -1180,7 +1180,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       }
       if (params.enabled[OVERLAY_PARAM_ENABLED_fps]){
          ImGui::TableNextRow();
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", engineName.c_str());
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", is_vulkan ? engineName.c_str() : "OpenGL");
          ImGui::TableNextCell();
          right_aligned_text(char_width * 4, "%.0f", data.fps);
          ImGui::SameLine(0, 1.0f);
@@ -1193,7 +1193,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::PushFont(data.font1);
          ImGui::Text("ms");
          ImGui::PopFont();
-         if (engineName == "DXVK" || engineName == "VKD3D"){
+         if ((engineName == "DXVK" || engineName == "VKD3D") && is_vulkan){
             ImGui::TableNextRow();
             ImGui::PushFont(data.font1);
             ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", engineVersion.c_str());
@@ -1286,7 +1286,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
    ImGui::NewFrame();
 
    position_layer(instance_data->params, data->window_size, data->width, data->height);
-   render_imgui(data->sw_stats, instance_data->params, data->window_size, data->width, data->height);
+   render_imgui(data->sw_stats, instance_data->params, data->window_size, data->width, data->height, true);
    ImGui::PopStyleVar(3);
 
    ImGui::EndFrame();
