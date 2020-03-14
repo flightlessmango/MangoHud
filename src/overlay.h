@@ -38,6 +38,7 @@ void position_layer(struct overlay_params& params, ImVec2 window_size, unsigned 
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, unsigned width, unsigned height, bool is_vulkan);
 void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID);
 void init_gpu_stats(uint32_t& vendorID, overlay_params& params);
+void init_cpu_stats(overlay_params& params);
 void check_keybinds(struct overlay_params& params);
 void init_system_info(void);
 void FpsLimiter(struct fps_limit& stats);

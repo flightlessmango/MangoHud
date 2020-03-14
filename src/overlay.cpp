@@ -762,6 +762,15 @@ string exec(string command) {
    return result;
 }
 
+void init_cpu_stats(overlay_params& params)
+{
+   auto& enabled = params.enabled;
+   enabled[OVERLAY_PARAM_ENABLED_cpu_stats] = cpuStats.Init()
+                           && enabled[OVERLAY_PARAM_ENABLED_cpu_stats];
+   enabled[OVERLAY_PARAM_ENABLED_cpu_temp] = cpuStats.GetCpuFile()
+                           && enabled[OVERLAY_PARAM_ENABLED_cpu_temp];
+}
+
 void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
 {
    if (!params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
@@ -2605,7 +2614,7 @@ static VkResult overlay_CreateInstance(
    if (instance_data->params.fps_limit > 0)
       fps_limit_stats.targetFrameTime = int64_t(1000000000.0 / instance_data->params.fps_limit);
 
-   cpuStats.Init();
+   init_cpu_stats(instance_data->params);
 
    // Adjust height for DXVK/VKD3D version number
    if (engineName == "DXVK" || engineName == "VKD3D"){
