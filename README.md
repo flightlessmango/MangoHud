@@ -34,7 +34,7 @@ Once done, proceed to the [installation](#source).
 If you have compiled MangoHud from source, to install it, execute:
 
 ```
-sudo ./build.sh install
+./build.sh install
 ```
 
 ### Pre-packaged binaries
