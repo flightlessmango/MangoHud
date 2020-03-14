@@ -56,7 +56,7 @@ MangoHud comes with a config file which can be used to set configuration options
 2. `$HOME/.config/MangoHud/{application_name}.conf`
 3. `$HOME/.config/MangoHud/MangoHud.conf`
 
-The default config file is installed to `$HOME/.config/MangoHud/MangoHud.conf` and will not be overwritten by the script.
+You can find an example config in /usr/share/doc/mangohud
 
 ---
 
