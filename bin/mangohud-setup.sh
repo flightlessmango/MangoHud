@@ -10,10 +10,10 @@ install() {
 uninstall() {
     [ "$UID" -eq 0 ] || exec sudo bash "$0" uninstall
     rm -rfv "/usr/lib/mangohud"
-    rm -fv "/usr/share/vulkan/implicit_layer.d/mangohud.json"
-    rm -fv "/etc/ld.so.conf.d/libmangohud.conf"
-    rm -fv "/etc/ld.so.conf.d/lib32-libmangohud.conf"
+    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json"
+    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json"
     rm -fv "/usr/bin/mangohud"
+    rm -fv "/usr/bin/mangohud.x86"
 }
 
 for a in $@; do
