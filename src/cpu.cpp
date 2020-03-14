@@ -26,7 +26,6 @@
 #endif
 
 #include "file_utils.h"
-FILE *cpuTempFile = nullptr;
 pthread_t cpuTempThread;
 
 void calculateCPUData(CPUData& cpuData,
@@ -99,11 +98,17 @@ CPUStats::CPUStats()
 {
 }
 
+CPUStats::~CPUStats()
+{
+    if (m_cpuTempFile)
+        fclose(m_cpuTempFile);
+}
+
 bool CPUStats::Init()
 {
     if (m_inited)
         return true;
-    CPUStats::GetCpuFile();
+
     std::string line;
     std::ifstream file (PROCSTATFILE);
     bool first = true;
@@ -220,10 +225,13 @@ bool CPUStats::UpdateCoreMhz() {
 }
 
 bool CPUStats::UpdateCpuTemp() {
+    if (!m_cpuTempFile)
+        return false;
+
     m_cpuDataTotal.temp = 0;
-    rewind(cpuTempFile);
-    fflush(cpuTempFile);
-    if (fscanf(cpuTempFile, "%d", &m_cpuDataTotal.temp) != 1)
+    rewind(m_cpuTempFile);
+    fflush(m_cpuTempFile);
+    if (fscanf(m_cpuTempFile, "%d", &m_cpuDataTotal.temp) != 1)
         return false;
     m_cpuDataTotal.temp /= 1000;
 
@@ -231,6 +239,9 @@ bool CPUStats::UpdateCpuTemp() {
 }
 
 bool CPUStats::GetCpuFile() {
+    if (m_cpuTempFile)
+        return true;
+
     std::string name, path;
     std::string hwmon = "/sys/class/hwmon/";
 
@@ -249,8 +260,9 @@ bool CPUStats::GetCpuFile() {
 
     if (!file_exists(path)) {
         std::cerr << "MANGOHUD: Could not find cpu temp sensor location" << std::endl;
+        return false;
     } else {
-        cpuTempFile = fopen(path.c_str(), "r");
+        m_cpuTempFile = fopen(path.c_str(), "r");
     }
     return true;
 }

@@ -1,5 +1,6 @@
 #include <vector>
 #include <cstdint>
+#include <cstdio>
 
 typedef struct CPUData_ {
    unsigned long long int totalTime;
@@ -36,6 +37,7 @@ class CPUStats
 {
 public:
    CPUStats();
+   ~CPUStats();
    bool Init();
    bool Updated()
    {
@@ -62,6 +64,7 @@ private:
    double m_cpuPeriod = 0;
    bool m_updatedCPUs = false; // TODO use caching or just update?
    bool m_inited = false;
+   FILE *m_cpuTempFile = nullptr;
 };
 
 extern CPUStats cpuStats;
