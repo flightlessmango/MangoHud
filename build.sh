@@ -109,14 +109,14 @@ configure() {
     dependencies
     git submodule update --init --depth 50
     if [[ ! -f "build/meson64/build.ninja" ]]; then
-        meson build/meson64 --libdir lib/mangohud/lib64 --prefix /usr -Dusing_build_sh=true
+        meson build/meson64 --libdir lib/mangohud/lib64 --prefix /usr -Dappend_libdir_mangohud=false
     fi
     if [[ ! -f "build/meson32/build.ninja" ]]; then
         export CC="gcc -m32"
         export CXX="g++ -m32"
         export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH_32}"
         export LLVM_CONFIG="/usr/bin/llvm-config32"
-        meson build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dmangohud_prefix=lib32-  -Dusing_build_sh=true
+        meson build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false
     fi
 }
 
@@ -171,9 +171,8 @@ uninstall() {
     rm -rfv "/usr/share/doc/mangohud"
     rm -fv "/usr/share/vulkan/implicit_layer.d/mangohud.json"
     rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.json"
-    rm -fv "/etc/ld.so.conf.d/libmangohud.conf"
-    rm -fv "/etc/ld.so.conf.d/lib32-libmangohud.conf"
     rm -fv "/usr/bin/mangohud"
+    rm -fv "/usr/bin/mangohud.x86"
 }
 
 for a in $@; do
