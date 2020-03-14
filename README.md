@@ -55,6 +55,14 @@ If you are using Fedora, to install the [MangoHud](https://src.fedoraproject.org
 sudo dnf install mangohud
 ```
 
+### Flatpak
+
+If you are using Flatpaks, you will have to add the [FlatHub repository](https://flatpak.org/setup/) for your specific distribution, and then, to install it, execute:
+
+```
+flatpak install com.valvesoftware.Steam.VulkanLayer.MangoHud
+```
+
 # Normal usage
 
 To enable the MangoHud overlay layer for 64bit Vulkan and OpenGL, run :
