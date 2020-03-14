@@ -171,6 +171,8 @@ uninstall() {
     rm -rfv "/usr/share/doc/mangohud"
     rm -fv "/usr/share/vulkan/implicit_layer.d/mangohud.json"
     rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.json"
+    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json"
+    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json"
     rm -fv "/usr/bin/mangohud"
     rm -fv "/usr/bin/mangohud.x86"
 }
