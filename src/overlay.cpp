@@ -906,48 +906,49 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
         sw_stats.frames_stats[f_idx].stats[OVERLAY_PARAM_ENABLED_frame_timing] =
             now - sw_stats.last_present_time;
    }
-      if (sw_stats.last_fps_update) {
-         if (elapsed >= params.fps_sampling_period) {
 
-            if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats]) {
-               cpuStats.UpdateCPUData();
-               sw_stats.total_cpu = cpuStats.GetCPUDataTotal().percent;
+   if (sw_stats.last_fps_update) {
+      if (elapsed >= params.fps_sampling_period) {
 
-               if (params.enabled[OVERLAY_PARAM_ENABLED_core_load])
-                  cpuStats.UpdateCoreMhz();
-               if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp])
-                  cpuStats.UpdateCpuTemp();
-            }
+         if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats]) {
+            cpuStats.UpdateCPUData();
+            sw_stats.total_cpu = cpuStats.GetCPUDataTotal().percent;
 
-            if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]) {
-               if (vendorID == 0x1002)
-                  pthread_create(&gpuThread, NULL, &getAmdGpuUsage, NULL);
-
-               if (vendorID == 0x10de)
-                  pthread_create(&gpuThread, NULL, &getNvidiaGpuInfo, NULL);
-            }
-
-            // get ram usage/max
-            if (params.enabled[OVERLAY_PARAM_ENABLED_ram])
-               pthread_create(&memoryThread, NULL, &update_meminfo, NULL);
-            if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])
-               pthread_create(&ioThread, NULL, &getIoStats, &sw_stats.io);
-
-            gpuLoadLog = gpu_info.load;
-            cpuLoadLog = sw_stats.total_cpu;
-            sw_stats.fps = fps;
-
-            if (params.enabled[OVERLAY_PARAM_ENABLED_time]) {
-               std::time_t t = std::time(nullptr);
-               std::stringstream time;
-               time << std::put_time(std::localtime(&t), params.time_format.c_str());
-               sw_stats.time = time.str();
-            }
-
-            sw_stats.n_frames_since_update = 0;
-            sw_stats.last_fps_update = now;
-
+            if (params.enabled[OVERLAY_PARAM_ENABLED_core_load])
+               cpuStats.UpdateCoreMhz();
+            if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp])
+               cpuStats.UpdateCpuTemp();
          }
+
+         if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]) {
+            if (vendorID == 0x1002)
+               pthread_create(&gpuThread, NULL, &getAmdGpuUsage, NULL);
+
+            if (vendorID == 0x10de)
+               pthread_create(&gpuThread, NULL, &getNvidiaGpuInfo, NULL);
+         }
+
+         // get ram usage/max
+         if (params.enabled[OVERLAY_PARAM_ENABLED_ram])
+            pthread_create(&memoryThread, NULL, &update_meminfo, NULL);
+         if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])
+            pthread_create(&ioThread, NULL, &getIoStats, &sw_stats.io);
+
+         gpuLoadLog = gpu_info.load;
+         cpuLoadLog = sw_stats.total_cpu;
+         sw_stats.fps = fps;
+
+         if (params.enabled[OVERLAY_PARAM_ENABLED_time]) {
+            std::time_t t = std::time(nullptr);
+            std::stringstream time;
+            time << std::put_time(std::localtime(&t), params.time_format.c_str());
+            sw_stats.time = time.str();
+         }
+
+         sw_stats.n_frames_since_update = 0;
+         sw_stats.last_fps_update = now;
+
+      }
    } else {
       sw_stats.last_fps_update = now;
    }
