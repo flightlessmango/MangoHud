@@ -1,6 +1,7 @@
 #include <X11/Xlib.h>
 #include <iostream>
 #include "X11/keysym.h"
+#include <functional>
 
 double elapsedF2, elapsedF12, elapsedReloadCfg;
 uint64_t last_f2_press, last_f12_press, reload_cfg_press;
