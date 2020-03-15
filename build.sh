@@ -177,6 +177,15 @@ uninstall() {
     rm -fv "/usr/bin/mangohud.x86"
 }
 
+usage() {
+    if test -z $1; then
+        echo "Unrecognized command argument: $a"
+    else
+        echo "$0 requires one argument"
+    fi
+    echo 'Accepted arguments: "pull", "configure", "build", "package", "install", "clean", "uninstall".'
+}
+
 for a in $@; do
     case $a in
         "") build;;
@@ -189,7 +198,11 @@ for a in $@; do
         "uninstall") uninstall;;
         "release") release;;
         *)
-            echo "Unrecognized command argument: $a"
-            echo 'Accepted arguments: "pull", "configure", "build", "package", "install", "clean", "uninstall".'
+            usage
     esac
 done
+
+if [[ -z $@ ]]; then
+    usage no-args
+fi
+
