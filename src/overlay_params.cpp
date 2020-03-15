@@ -149,6 +149,12 @@ parse_signed(const char *str)
 static std::string
 parse_str(const char *str)
 {
+   return str;
+}
+
+static std::string
+parse_path(const char *str)
+{
 #ifdef _XOPEN_SOURCE
    // Expand ~/ to home dir
    if (str[0] == '~') {
@@ -175,8 +181,8 @@ parse_str(const char *str)
 #define parse_offset_y(s) parse_unsigned(s)
 #define parse_log_duration(s) parse_unsigned(s)
 #define parse_time_format(s) parse_str(s)
-#define parse_output_file(s) parse_str(s)
-#define parse_font_file(s) parse_str(s)
+#define parse_output_file(s) parse_path(s)
+#define parse_font_file(s) parse_path(s)
 #define parse_io_read(s) parse_unsigned(s)
 #define parse_io_write(s) parse_unsigned(s)
 
