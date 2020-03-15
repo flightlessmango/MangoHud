@@ -115,8 +115,10 @@ configure_file(input : '../bin/mangohud.in',
   install_dir : get_option('bindir'),
 )
 
-install_data(
-  files('../bin/MangoHud.conf'),
-  install_dir : join_paths(get_option('datadir'), 'doc', 'mangohud'),
-  rename : ['MangoHud.conf.example']
-)
+if get_option('include_doc')
+  install_data(
+    files('../bin/MangoHud.conf'),
+    install_dir : join_paths(get_option('datadir'), 'doc', 'mangohud'),
+    rename : ['MangoHud.conf.example']
+  )
+endif
