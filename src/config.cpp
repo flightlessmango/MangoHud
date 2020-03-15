@@ -56,13 +56,19 @@ void parseConfigFile() {
             while (std::getline(stream, line, '\0'))
             {
                 if (!line.empty()
-                    && (n = line.find_last_of("/\\")) != std::string::npos
+                    && ((n = line.find_last_of("/\\")) != std::string::npos)
                     && n < line.size() - 1) // have at least one character
                 {
                     auto dot = line.find_last_of('.');
                     if (dot < n)
                         dot = line.size();
                     paths.push_back(env_config + mangohud_dir + "wine-" + line.substr(n + 1, dot - n - 1) + ".conf");
+                    break;
+                }
+                else if (ends_with(line, ".exe", true))
+                {
+                    auto dot = line.find_last_of('.');
+                    paths.push_back(env_config + mangohud_dir + "wine-" + line.substr(0, dot) + ".conf");
                     break;
                 }
             }
