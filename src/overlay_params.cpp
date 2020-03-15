@@ -27,7 +27,8 @@
 #include <errno.h>
 #include <sys/sysinfo.h>
 #include <X11/Xlib.h>
-#include "X11/keysym.h"
+#include <X11/keysym.h>
+#include <wordexp.h>
 #include "imgui.h"
 
 #include "overlay_params.h"
@@ -142,9 +143,24 @@ parse_signed(const char *str)
    return strtol(str, NULL, 0);
 }
 
-static const char *
+static std::string
 parse_str(const char *str)
 {
+#ifdef _XOPEN_SOURCE
+   // Expand ~/ to home dir
+   if (str[0] == '~') {
+      std::string s;
+      wordexp_t e;
+      int ret;
+
+      if (!(ret = wordexp(str, &e, 0)))
+         s = e.we_wordv[0];
+      wordfree(&e);
+
+      if (!ret)
+         return s;
+   }
+#endif
    return str;
 }
 
