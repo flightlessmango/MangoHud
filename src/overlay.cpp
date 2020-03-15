@@ -2611,8 +2611,6 @@ static VkResult overlay_CreateInstance(
    instance_data_map_physical_devices(instance_data, true);
 
    parse_overlay_config(&instance_data->params, getenv("MANGOHUD_CONFIG"));
-   if (instance_data->params.fps_limit > 0)
-      fps_limit_stats.targetFrameTime = int64_t(1000000000.0 / instance_data->params.fps_limit);
 
    init_cpu_stats(instance_data->params);
 

@@ -30,13 +30,16 @@
 #include <X11/keysym.h>
 #include <wordexp.h>
 #include "imgui.h"
+#include <iostream>
 
 #include "overlay_params.h"
+#include "overlay.h"
 #include "config.h"
 
 #include "mesa/util/os_socket.h"
 
 static enum overlay_param_position
+
 parse_position(const char *str)
 {
    if (!str || !strcmp(str, "top-left"))
@@ -428,4 +431,8 @@ parse_overlay_config(struct overlay_params *params,
       params->tableCols = 4;
       params->width = 20 * params->font_size;
    }
+   
+   // set frametime limit
+   if (params->fps_limit > 0)
+      fps_limit_stats.targetFrameTime = int64_t(1000000000.0 / params->fps_limit);
 }

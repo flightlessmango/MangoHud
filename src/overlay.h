@@ -34,6 +34,8 @@ struct fps_limit {
    int64_t sleepTime;
 };
 
+extern struct fps_limit fps_limit_stats;
+
 void position_layer(struct overlay_params& params, ImVec2 window_size, unsigned width, unsigned height);
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, unsigned width, unsigned height, bool is_vulkan);
 void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID);
