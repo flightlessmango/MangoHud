@@ -52,7 +52,7 @@ dependencies() {
             "Fedora")
                 MANAGER_QUERY="dnf list installed"
                 MANAGER_INSTALL="dnf install"
-                DEPS="{meson,gcc,gcc-g++,libX11-devel,glslang,python3-mako,mesa-libGL-devel}"
+                DEPS="{meson,gcc,gcc-c++,libX11-devel,glslang,python3-mako,mesa-libGL-devel}"
                 install
 
                 unset INSTALL
