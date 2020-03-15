@@ -3,6 +3,7 @@ OS_RELEASE_FILES=("/etc/os-release" "/usr/lib/os-release")
 XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 DATA_DIR="$XDG_DATA_HOME/MangoHud"
+CONFIG_DIR="$XDG_CONFIG_HOME/MangoHud"
 LAYER="build/release/usr/share/vulkan/implicit_layer.d/mangohud.json"
 INSTALL_DIR="build/package/"
 IMPLICIT_LAYER_DIR="$XDG_DATA_HOME/vulkan/implicit_layer.d"
@@ -155,6 +156,7 @@ install() {
         echo No package found. Run \"$0 package\".
         exit 1
     fi
+    [ "$UID" -eq 0 ] || mkdir -pv "${CONFIG_DIR}"
     [ "$UID" -eq 0 ] || exec sudo bash "$0" install
     tar -C / --no-overwrite-dir -xvhf build/MangoHud-package.tar
     echo "MangoHud Installed"
