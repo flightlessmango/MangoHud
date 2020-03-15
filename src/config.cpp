@@ -29,6 +29,7 @@ void parseConfigLine(std::string line) {
 }
 
 void parseConfigFile() {
+    options.clear();
     std::vector<std::string> paths;
     static const char *mangohud_dir = "/MangoHud/";
 
