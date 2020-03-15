@@ -156,7 +156,7 @@ install() {
         exit 1
     fi
     [ "$UID" -eq 0 ] || exec sudo bash "$0" install
-    tar -C / -xvf build/MangoHud-package.tar
+    tar -C / -xvhf build/MangoHud-package.tar
     ldconfig
     echo "MangoHud Installed"
 }
