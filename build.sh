@@ -181,7 +181,7 @@ usage() {
     if test -z $1; then
         echo "Unrecognized command argument: $a"
     else
-        echo "$0 requires at least one argument"
+        echo "$0 requires one argument"
     fi
     echo 'Accepted arguments: "pull", "configure", "build", "package", "install", "clean", "uninstall".'
 }
@@ -202,7 +202,7 @@ for a in $@; do
     esac
 done
 
-if test -z $@; then
+if [[ -z $@ ]]; then
     usage no-args
 fi
 
