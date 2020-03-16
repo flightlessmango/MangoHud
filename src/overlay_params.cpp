@@ -361,8 +361,8 @@ parse_overlay_config(struct overlay_params *params,
    if (!env || read_cfg) {
 
       // Get config options
-      parseConfigFile();
-      if (options.find("full") != options.end() && options.find("full")->second != "0") {
+      parseConfigFile(*params);
+      if (params->options.find("full") != params->options.end() && params->options.find("full")->second != "0") {
 #define OVERLAY_PARAM_BOOL(name) \
             params->enabled[OVERLAY_PARAM_ENABLED_##name] = 1;
 #define OVERLAY_PARAM_CUSTOM(name)
@@ -370,10 +370,10 @@ parse_overlay_config(struct overlay_params *params,
 #undef OVERLAY_PARAM_BOOL
 #undef OVERLAY_PARAM_CUSTOM
          params->enabled[OVERLAY_PARAM_ENABLED_crosshair] = 0;
-         options.erase("full");
+         params->options.erase("full");
       }
 
-      for (auto& it : options) {
+      for (auto& it : params->options) {
 #define OVERLAY_PARAM_BOOL(name)                                       \
          if (it.first == #name) {                                      \
             params->enabled[OVERLAY_PARAM_ENABLED_##name] =            \

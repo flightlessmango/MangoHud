@@ -4,14 +4,10 @@
 #include <string.h>
 #include <thread>
 #include "config.h"
-#include "overlay_params.h"
 #include "file_utils.h"
 #include "string_utils.h"
 
-std::string config_file_path;
-std::unordered_map<std::string,std::string> options;
-
-void parseConfigLine(std::string line) {
+void parseConfigLine(std::string line, std::unordered_map<std::string,std::string>& options) {
     std::string param, value;
 
     if (line.find("#") != std::string::npos)
@@ -30,8 +26,8 @@ void parseConfigLine(std::string line) {
         options[param] = value;
 }
 
-void parseConfigFile() {
-    options.clear();
+void parseConfigFile(overlay_params& params) {
+    params.options.clear();
     std::vector<std::string> paths;
     static const char *mangohud_dir = "/MangoHud/";
 
@@ -90,10 +86,10 @@ void parseConfigFile() {
         std::cerr << "parsing config: " << *p;
         while (std::getline(stream, line))
         {
-            parseConfigLine(line);
+            parseConfigLine(line, params.options);
         }
         std::cerr << " [ ok ]" << std::endl;
-        config_file_path = *p;
+        params.config_file_path = *p;
         return;
     }
 }

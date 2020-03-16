@@ -25,6 +25,7 @@
 #define OVERLAY_PARAMS_H
 
 #include <string>
+#include <unordered_map>
 
 #ifdef __cplusplus
 extern "C" {
@@ -139,6 +140,10 @@ struct overlay_params {
    KeySym toggle_logging;
    KeySym reload_cfg;
    std::string time_format, output_file, font_file;
+
+   std::string config_file_path;
+   std::unordered_map<std::string,std::string> options;
+
 };
 
 const extern char *overlay_param_names[];
