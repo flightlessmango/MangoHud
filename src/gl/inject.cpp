@@ -77,6 +77,9 @@ void imgui_create(void *ctx)
     gl3wInit();
 
     std::cerr << "GL version: " << glGetString(GL_VERSION) << std::endl;
+    glGetIntegerv(GL_MAJOR_VERSION, &sw_stats.version_gl.major);
+    glGetIntegerv(GL_MINOR_VERSION, &sw_stats.version_gl.minor);
+
     deviceName = (char*)glGetString(GL_RENDERER);
     if (deviceName.find("Radeon") != std::string::npos
     || deviceName.find("AMD") != std::string::npos){

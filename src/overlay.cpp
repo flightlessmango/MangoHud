@@ -1194,6 +1194,13 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       if (params.enabled[OVERLAY_PARAM_ENABLED_fps]){
          ImGui::TableNextRow();
          ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", is_vulkan ? engineName.c_str() : "OpenGL");
+         if (!is_vulkan) {
+            ImGui::SameLine(0, 1.0f);
+            ImGui::PushFont(data.font1);
+            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color),
+               "%d.%d", data.version_gl.major, data.version_gl.minor);
+            ImGui::PopFont();
+         }
          ImGui::TableNextCell();
          right_aligned_text(char_width * 4, "%.0f", data.fps);
          ImGui::SameLine(0, 1.0f);
@@ -1206,10 +1213,22 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::PushFont(data.font1);
          ImGui::Text("ms");
          ImGui::PopFont();
-         if ((engineName == "DXVK" || engineName == "VKD3D") && is_vulkan){
+         if (is_vulkan) {
             ImGui::TableNextRow();
             ImGui::PushFont(data.font1);
-            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", engineVersion.c_str());
+            if ((engineName == "DXVK" || engineName == "VKD3D")){
+               ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color),
+                  "%s/%d.%d.%d", engineVersion.c_str(),
+                  data.version_vk.major,
+                  data.version_vk.minor,
+                  data.version_vk.patch);
+            } else {
+               ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color),
+                  "%d.%d.%d",
+                  data.version_vk.major,
+                  data.version_vk.minor,
+                  data.version_vk.patch);
+            }
             ImGui::PopFont();
          }
       }
@@ -2162,7 +2181,11 @@ static VkResult overlay_CreateSwapchainKHR(
    if (result != VK_SUCCESS) return result;
    struct swapchain_data *swapchain_data = new_swapchain_data(*pSwapchain, device_data);
    setup_swapchain_data(swapchain_data, pCreateInfo, device_data->instance->params);
-   
+
+   swapchain_data->sw_stats.version_vk.major = VK_VERSION_MAJOR(device_data->properties.apiVersion);
+   swapchain_data->sw_stats.version_vk.minor = VK_VERSION_MINOR(device_data->properties.apiVersion);
+   swapchain_data->sw_stats.version_vk.patch = VK_VERSION_PATCH(device_data->properties.apiVersion);
+
    return result;
 }
 

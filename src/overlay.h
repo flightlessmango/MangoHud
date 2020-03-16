@@ -24,6 +24,15 @@ struct swapchain_stats {
    uint64_t last_present_time;
    unsigned n_frames_since_update;
    uint64_t last_fps_update;
+   struct {
+      int32_t major;
+      int32_t minor;
+   } version_gl;
+   struct {
+      int32_t major;
+      int32_t minor;
+      int32_t patch;
+   } version_vk;
 };
 
 struct fps_limit {
