@@ -17,6 +17,7 @@
 #include "mesa/util/macros.h"
 #include "mesa/util/os_time.h"
 #include "file_utils.h"
+#include "notify.h"
 
 #include <chrono>
 #include <iomanip>
@@ -48,6 +49,7 @@ void imgui_init()
     if (cfg_inited)
         return;
     parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
+    pthread_create(&fileChange, NULL, &fileChanged, &params);
     window_size = ImVec2(params.width, params.height);
     init_system_info();
     cfg_inited = true;

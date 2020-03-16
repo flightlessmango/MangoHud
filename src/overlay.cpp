@@ -56,6 +56,7 @@
 #include "cpu.h"
 #include "loaders/loader_nvml.h"
 #include "memory.h"
+#include "notify.h"
 
 bool open = false;
 string gpuString;
@@ -2611,6 +2612,7 @@ static VkResult overlay_CreateInstance(
    instance_data_map_physical_devices(instance_data, true);
 
    parse_overlay_config(&instance_data->params, getenv("MANGOHUD_CONFIG"));
+   pthread_create(&fileChange, NULL, &fileChanged, &instance_data->params);
 
    init_cpu_stats(instance_data->params);
 

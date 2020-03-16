@@ -2,11 +2,13 @@
 #include <sstream>
 #include <iostream>
 #include <string.h>
+#include <thread>
 #include "config.h"
 #include "overlay_params.h"
 #include "file_utils.h"
 #include "string_utils.h"
 
+std::string config_file_path;
 std::unordered_map<std::string,std::string> options;
 
 void parseConfigLine(std::string line) {
@@ -91,6 +93,7 @@ void parseConfigFile() {
             parseConfigLine(line);
         }
         std::cerr << " [ ok ]" << std::endl;
+        config_file_path = *p;
         return;
     }
 }
