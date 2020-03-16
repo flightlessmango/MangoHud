@@ -23,8 +23,10 @@ void *fileChanged(void *params_void){
             struct inotify_event *event =
                 (struct inotify_event *) &buffer[i];
             i += EVENT_SIZE + event->len;
-            if (event->mask & IN_MODIFY)
+            if (event->mask & IN_MODIFY) {
+                std::lock_guard<std::mutex> lk(nt->mutex);
                 parse_overlay_config(nt->params, getenv("MANGOHUD_CONFIG"));
+            }
         }
         i = 0;
         printf("File Changed\n");

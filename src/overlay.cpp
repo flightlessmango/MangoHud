@@ -1296,9 +1296,11 @@ static void compute_swapchain_display(struct swapchain_data *data)
 
    ImGui::SetCurrentContext(data->imgui_context);
    ImGui::NewFrame();
-
-   position_layer(instance_data->params, data->window_size, data->width, data->height);
-   render_imgui(data->sw_stats, instance_data->params, data->window_size, data->width, data->height, true);
+   {
+      scoped_lock lk(instance_data->notifier.mutex);
+      position_layer(instance_data->params, data->window_size, data->width, data->height);
+      render_imgui(data->sw_stats, instance_data->params, data->window_size, data->width, data->height, true);
+   }
    ImGui::PopStyleVar(3);
 
    ImGui::EndFrame();
