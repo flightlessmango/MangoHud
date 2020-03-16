@@ -23,7 +23,7 @@ To build it, execute:
 ./build.sh package
 ```
 
-**NOTE: If you are running an Ubuntu-based, Fedora, or Arch-based, the build script will automatically detect and prompt you to install missing build dependencies. If you run into any issues with this please report them!**
+**NOTE: If you are running an Ubuntu-based, Arch-based, Fedora-based, or openSUSE-based distro, the build script will automatically detect and prompt you to install missing build dependencies. If you run into any issues with this please report them!**
 
 Once done, proceed to the [installation](#source).
 
