@@ -53,14 +53,14 @@ dependencies() {
             "Fedora")
                 MANAGER_QUERY="dnf list installed"
                 MANAGER_INSTALL="dnf install"
-                DEPS="{meson,gcc,g++,libX11-devel,glslang,python-mako,mesa-libGL-devel}"
+                DEPS="{meson,gcc,gcc-c++,libX11-devel,glslang,python3-mako,mesa-libGL-devel}"
                 install
 
                 unset INSTALL
                 DEPS="{glibc-devel.i686,libstdc++-devel.i686,libX11-devel.i686}"
                 install
             ;;
-            *"buntu"|"Linux Mint"|"Debian"|"Zorin OS"|"Pop!_OS")
+            *"buntu"|"Linux Mint"|"Debian"|"Zorin OS"|"Pop!_OS"|"elementary OS")
                 MANAGER_QUERY="dpkg-query -s"
                 MANAGER_INSTALL="apt install"
                 DEPS="{gcc,g++,gcc-multilib,g++-multilib,ninja-build,python3-pip,python3-setuptools,python3-wheel,pkg-config,mesa-common-dev,libx11-dev:i386}"
@@ -76,6 +76,11 @@ dependencies() {
                     rm bin/glslangValidator glslang-master-linux-Release.zip
                 fi
             ;;
+            "opensSUSE Leap"|"openSUSE Tumbleweed")
+                MANAGER_QUERY="zypper search"
+                MANAGER_INSTALL="zypper install"
+                DEPS="{gcc-c++,gcc-c++-31bit,meson,libpkgconf-devel,python3-Mako,libX11-devel,libX11-devel-32bit,glslang-devel,libglvnd-devel,libglvnd-devel-32bit,glibc-devel,glibc-devel-32bit,libstdc++-devel,libstdc++-devel-32bit,Mesa-libGL-devel}"
+                install
             "Solus")
                 unset MANAGER_QUERY
                 unset DEPS
@@ -178,6 +183,15 @@ uninstall() {
     rm -fv "/usr/bin/mangohud.x86"
 }
 
+usage() {
+    if test -z $1; then
+        echo "Unrecognized command argument: $a"
+    else
+        echo "$0 requires one argument"
+    fi
+    echo 'Accepted arguments: "pull", "configure", "build", "package", "install", "clean", "uninstall".'
+}
+
 for a in $@; do
     case $a in
         "") build;;
@@ -190,7 +204,11 @@ for a in $@; do
         "uninstall") uninstall;;
         "release") release;;
         *)
-            echo "Unrecognized command argument: $a"
-            echo 'Accepted arguments: "pull", "configure", "build", "package", "install", "clean", "uninstall".'
+            usage
     esac
 done
+
+if [[ -z $@ ]]; then
+    usage no-args
+fi
+
