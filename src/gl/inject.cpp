@@ -1,6 +1,8 @@
 #include <iostream>
 #include <array>
 #include <unordered_map>
+#include <memory>
+#include <functional>
 #include <cstring>
 #include <cstdio>
 #include <dlfcn.h>
@@ -39,17 +41,23 @@ static ImVec2 window_size;
 static overlay_params params {};
 static swapchain_stats sw_stats {};
 static state state;
+static notify_thread notifier;
 static bool cfg_inited = false;
 static bool inited = false;
 static uint32_t vendorID;
 static std::string deviceName;
+
+// seems to quit by itself though
+static std::unique_ptr<notify_thread, std::function<void(notify_thread *)>>
+    stop_notifier(&notifier, [](notify_thread *n){ n->quit = true; });
 
 void imgui_init()
 {
     if (cfg_inited)
         return;
     parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
-    pthread_create(&fileChange, NULL, &fileChanged, &params);
+    notifier.params = &params;
+    pthread_create(&fileChange, NULL, &fileChanged, &notifier);
     window_size = ImVec2(params.width, params.height);
     init_system_info();
     cfg_inited = true;
@@ -153,9 +161,11 @@ void imgui_render()
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
-
-    position_layer(params, window_size, vp[2], vp[3]);
-    render_imgui(sw_stats, params, window_size, vp[2], vp[3], false);
+    {
+        std::lock_guard<std::mutex> lk(notifier.mutex);
+        position_layer(params, window_size, vp[2], vp[3]);
+        render_imgui(sw_stats, params, window_size, vp[2], vp[3], false);
+    }
     ImGui::PopStyleVar(3);
 
     ImGui::Render();
