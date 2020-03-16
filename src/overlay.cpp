@@ -1060,7 +1060,8 @@ static void right_aligned_text(float off_x, const char *fmt, ...)
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, unsigned width, unsigned height, bool is_vulkan)
 {
    static float char_width = ImGui::CalcTextSize("A").x;
-
+   window_size = ImVec2(params.width, params.height);
+   
    if (!params.no_display){
       ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
       if (params.enabled[OVERLAY_PARAM_ENABLED_time]){
