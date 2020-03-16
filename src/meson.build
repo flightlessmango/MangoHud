@@ -51,6 +51,7 @@ vklayer_files = files(
   'iostats.cpp',
   'gpu.cpp',
   'notify.cpp',
+  'elfhacks.cpp',
 )
 
 opengl_files = files(

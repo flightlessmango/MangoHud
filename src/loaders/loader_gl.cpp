@@ -8,14 +8,17 @@ gl_loader::~gl_loader() {
   CleanUp(loaded_);
 }
 
-bool gl_loader::Load(bool egl_only) {
+bool gl_loader::Load(void *handle, bool egl_only) {
   if (loaded_) {
     return true;
   }
 
+  if (!handle)
+    handle = RTLD_NEXT;
+
   eglSwapBuffers =
       reinterpret_cast<decltype(this->eglSwapBuffers)>(
-          real_dlsym(RTLD_NEXT, "eglSwapBuffers"));
+          real_dlsym(handle, "eglSwapBuffers"));
 
   if (egl_only) {
     loaded_ = true;
@@ -24,11 +27,11 @@ bool gl_loader::Load(bool egl_only) {
 
   glXGetProcAddress =
       reinterpret_cast<decltype(this->glXGetProcAddress)>(
-          real_dlsym(RTLD_NEXT, "glXGetProcAddress"));
+          real_dlsym(handle, "glXGetProcAddress"));
 
   glXGetProcAddressARB =
       reinterpret_cast<decltype(this->glXGetProcAddressARB)>(
-          real_dlsym(RTLD_NEXT, "glXGetProcAddressARB"));
+          real_dlsym(handle, "glXGetProcAddressARB"));
 
   if (!glXGetProcAddress) {
     CleanUp(true);

@@ -9,7 +9,7 @@ class gl_loader {
   gl_loader();
   ~gl_loader();
 
-  bool Load(bool egl_only = false);
+  bool Load(void *handle = nullptr, bool egl_only = false);
   bool IsLoaded() { return loaded_; }
 
   decltype(&::glXGetProcAddress) glXGetProcAddress;
