@@ -83,6 +83,8 @@ struct instance_data {
 
    /* Dumping of frame stats to a file has been enabled and started. */
    bool capture_started;
+
+   notify_thread notifier;
 };
 
 /* Mapped from VkDevice */
@@ -2612,7 +2614,8 @@ static VkResult overlay_CreateInstance(
    instance_data_map_physical_devices(instance_data, true);
 
    parse_overlay_config(&instance_data->params, getenv("MANGOHUD_CONFIG"));
-   pthread_create(&fileChange, NULL, &fileChanged, &instance_data->params);
+   instance_data->notifier.params = &instance_data->params;
+   pthread_create(&fileChange, NULL, &fileChanged, &instance_data->notifier);
 
    init_cpu_stats(instance_data->params);
 
@@ -2635,6 +2638,7 @@ static void overlay_DestroyInstance(
    struct instance_data *instance_data = FIND(struct instance_data, instance);
    instance_data_map_physical_devices(instance_data, false);
    instance_data->vtable.DestroyInstance(instance, pAllocator);
+   instance_data->notifier.quit = true;
    destroy_instance_data(instance_data);
 }
 
