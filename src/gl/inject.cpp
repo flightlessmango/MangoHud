@@ -37,6 +37,30 @@ struct state {
     ImFont* font1 = nullptr;
 };
 
+struct GLVec
+{
+    GLint v[4];
+
+    GLint operator[] (size_t i)
+    {
+        return v[i];
+    }
+
+    bool operator== (const GLVec& r)
+    {
+        return v[0] == r.v[0]
+            && v[1] == r.v[1]
+            && v[2] == r.v[2]
+            && v[3] == r.v[3];
+    }
+
+    bool operator!= (const GLVec& r)
+    {
+        return !(*this == r);
+    }
+};
+
+static GLVec last_vp {}, last_sb {};
 static ImVec2 window_size;
 static overlay_params params {};
 static swapchain_stats sw_stats {};
@@ -100,9 +124,11 @@ void imgui_create(void *ctx)
     //ImGui::StyleColorsClassic();
     imgui_custom_style(params);
 
-    GLint vp [4]; glGetIntegerv (GL_VIEWPORT, vp);
+    glGetIntegerv (GL_VIEWPORT, last_vp.v);
+    glGetIntegerv (GL_SCISSOR_BOX, last_sb.v);
+
     ImGui::GetIO().IniFilename = NULL;
-    ImGui::GetIO().DisplaySize = ImVec2(vp[2], vp[3]);
+    ImGui::GetIO().DisplaySize = ImVec2(last_vp[2], last_vp[3]);
 
     ImGui_ImplOpenGL3_Init();
     // Make a dummy GL call (we don't actually need the result)
@@ -159,8 +185,30 @@ void imgui_render()
 {
     if (!ImGui::GetCurrentContext())
         return;
-    GLint vp [4]; glGetIntegerv (GL_VIEWPORT, vp);
-    ImGui::GetIO().DisplaySize = ImVec2(vp[2], vp[3]);
+
+    // check which one is affected by window resize and use that
+    GLVec vp; glGetIntegerv (GL_VIEWPORT, vp.v);
+    GLVec sb; glGetIntegerv (GL_SCISSOR_BOX, sb.v);
+
+    if (vp != last_vp) {
+#ifndef NDEBUG
+        printf("viewport: %d %d %d %d\n", vp[0], vp[1], vp[2], vp[3]);
+#endif
+        ImGui::GetIO().DisplaySize = ImVec2(vp[2], vp[3]);
+    }
+
+    if (sb != last_sb
+        || last_vp == sb // openmw initial viewport size is the same (correct)
+                         // at start as scissor box, so apply it instead
+    ) {
+#ifndef NDEBUG
+        printf("scissor box: %d %d %d %d\n", sb[0], sb[1], sb[2], sb[3]);
+#endif
+        ImGui::GetIO().DisplaySize = ImVec2(sb[2], sb[3]);
+    }
+
+    last_vp = vp;
+    last_sb = sb;
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
