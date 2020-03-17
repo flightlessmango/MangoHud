@@ -1,0 +1,10 @@
+[wrap-file]
+directory = imgui-1.76
+
+source_url = https://github.com/ocornut/imgui/archive/v1.76.tar.gz
+source_filename = dearimgui-1.76.tar.gz
+source_hash = e482dda81330d38c87bd81597cacaa89f05e20ed2c4c4a93a64322e97565f6dc
+
+patch_url = https://github.com/stephanlachnit/dearimgui-wrap/releases/download/v1.76/v1.76.zip
+patch_filename = dearimgui-1.76-wrap.zip
+patch_hash = ab6f2acefd359ae87b0420bab46c35a66742dcd37990366a30b3a29eb3f12b03

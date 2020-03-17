@@ -2,7 +2,11 @@
 
 VERSION=$(git describe --tags)
 
-FILE_PATTERN="--exclude-vcs --exclude-vcs-ignores ."
+# include imgui specifically because it is in the gitignore
+FILE_PATTERN="--exclude-vcs ./subprojects/imgui-* --exclude-vcs-ignores ."
+
+# ensure that subprojects are downloaded
+meson subprojects download
 
 # default version
 tar -czf MangoHud-$VERSION-Source.tar.gz $FILE_PATTERN

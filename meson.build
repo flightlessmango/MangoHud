@@ -213,5 +213,6 @@ else
   cpp_nvml_args = []
 endif
 
-subdir('modules/ImGui')
+dearimgui_sp = subproject('dearimgui')
+dearimgui_dep = dearimgui_sp.get_variable('dearimgui_dep')
 subdir('src')
