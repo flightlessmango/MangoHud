@@ -78,7 +78,7 @@ dependencies() {
             "openSUSE Leap"|"openSUSE Tumbleweed")
                 MANAGER_QUERY="zypper search"
                 MANAGER_INSTALL="zypper install"
-                DEPS="{gcc-c++,gcc-c++-31bit,meson,libpkgconf-devel,python3-Mako,libX11-devel,libX11-devel-32bit,glslang-devel,libglvnd-devel,libglvnd-devel-32bit,glibc-devel,glibc-devel-32bit,libstdc++-devel,libstdc++-devel-32bit,Mesa-libGL-devel}"
+                DEPS="{gcc-c++,gcc-c++-32bit,meson,libpkgconf-devel,python3-Mako,libX11-devel,libX11-devel-32bit,glslang-devel,libglvnd-devel,libglvnd-devel-32bit,glibc-devel,glibc-devel-32bit,libstdc++-devel,libstdc++-devel-32bit,Mesa-libGL-devel}"
                 install
             ;;
             "Solus")
