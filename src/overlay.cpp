@@ -1194,13 +1194,6 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       if (params.enabled[OVERLAY_PARAM_ENABLED_fps]){
          ImGui::TableNextRow();
          ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", is_vulkan ? engineName.c_str() : "OpenGL");
-         if (!is_vulkan) {
-            ImGui::SameLine(0, 1.0f);
-            ImGui::PushFont(data.font1);
-            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color),
-               "%d.%d", data.version_gl.major, data.version_gl.minor);
-            ImGui::PopFont();
-         }
          ImGui::TableNextCell();
          right_aligned_text(char_width * 4, "%.0f", data.fps);
          ImGui::SameLine(0, 1.0f);
@@ -1213,26 +1206,31 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::PushFont(data.font1);
          ImGui::Text("ms");
          ImGui::PopFont();
+         ImGui::TableNextRow();
+         ImGui::PushFont(data.font1);
+         auto engine_color = ImGui::ColorConvertU32ToFloat4(params.engine_color);
          if (is_vulkan) {
-            ImGui::TableNextRow();
-            ImGui::PushFont(data.font1);
             if ((engineName == "DXVK" || engineName == "VKD3D")){
-               ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color),
+               ImGui::TextColored(engine_color,
                   "%s/%d.%d.%d", engineVersion.c_str(),
                   data.version_vk.major,
                   data.version_vk.minor,
                   data.version_vk.patch);
             } else {
-               ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color),
+               ImGui::TextColored(engine_color,
                   "%d.%d.%d",
                   data.version_vk.major,
                   data.version_vk.minor,
                   data.version_vk.patch);
             }
-            ImGui::PopFont();
+         } else {
+            ImGui::TextColored(engine_color,
+               "%d.%d", data.version_gl.major, data.version_gl.minor);
          }
+         ImGui::PopFont();
       }
       ImGui::EndTable();
+
       if (loggingOn && log_period == 0){
          uint64_t now = os_time_get();
          elapsedLog = (double)(now - log_start);
