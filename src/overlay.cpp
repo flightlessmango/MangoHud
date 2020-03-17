@@ -1010,8 +1010,10 @@ static float get_time_stat(void *_data, int _idx)
    return data->frames_stats[idx].stats[data->stat_selector] / data->time_dividor;
 }
 
-void position_layer(struct overlay_params& params, ImVec2 window_size, unsigned width, unsigned height)
+void position_layer(struct overlay_params& params, ImVec2 window_size)
 {
+   unsigned width = ImGui::GetIO().DisplaySize.x;
+   unsigned height = ImGui::GetIO().DisplaySize.y;
    float margin = 10.0f;
    if (params.offset_x > 0 || params.offset_y > 0)
       margin = 0.0f;
@@ -1057,10 +1059,12 @@ static void right_aligned_text(float off_x, const char *fmt, ...)
    ImGui::Text("%s", buffer);
 }
 
-void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, unsigned width, unsigned height, bool is_vulkan)
+void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan)
 {
    static float char_width = ImGui::CalcTextSize("A").x;
    window_size = ImVec2(params.width, params.height);
+   unsigned width = ImGui::GetIO().DisplaySize.x;
+   unsigned height = ImGui::GetIO().DisplaySize.y;
    
    if (!params.no_display){
       ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
@@ -1316,8 +1320,8 @@ static void compute_swapchain_display(struct swapchain_data *data)
    ImGui::NewFrame();
    {
       scoped_lock lk(instance_data->notifier.mutex);
-      position_layer(instance_data->params, data->window_size, data->width, data->height);
-      render_imgui(data->sw_stats, instance_data->params, data->window_size, data->width, data->height, true);
+      position_layer(instance_data->params, data->window_size);
+      render_imgui(data->sw_stats, instance_data->params, data->window_size, true);
    }
    ImGui::PopStyleVar(3);
 
