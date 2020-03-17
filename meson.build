@@ -188,15 +188,15 @@ else
 endif
 
 if dep_vulkan.found()
-  vulkan_headers = []
   datadir = get_option('datadir')
   if not datadir.startswith('/')
     datadir = get_option('prefix') / datadir
   endif
   vk_api_xml = files(datadir / 'vulkan/registry/vk.xml')
 else
-  subdir('modules/Vulkan-Headers')
-  vulkan_headers = vk_api_xml
+  vkh_sp = subproject('vulkanheaders')
+  vk_api_xml = vkh_sp.get_variable('vulkan_api_xml')
+  dep_vulkan = vkh_sp.get_variable('vulkanheaders_dep')
 endif
 
 vk_enum_to_str = custom_target(

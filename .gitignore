@@ -36,3 +36,7 @@ lib32-mangohud*.tar.*
 *.out
 *.app
 
+# subprojects
+subprojects/packagecache/
+subprojects/imgui-*/
+subprojects/Vulkan-Headers-*/
