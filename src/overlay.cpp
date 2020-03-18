@@ -1210,8 +1210,12 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::PushFont(data.font1);
          ImGui::Text("ms");
          ImGui::PopFont();
-         ImGui::TableNextRow();
+      }
+      ImGui::EndTable();
+
+      if (params.enabled[OVERLAY_PARAM_ENABLED_fps]){
          ImGui::PushFont(data.font1);
+         ImGui::Dummy(ImVec2(0, 8.0f));
          auto engine_color = ImGui::ColorConvertU32ToFloat4(params.engine_color);
          if (is_vulkan) {
             if ((engineName == "DXVK" || engineName == "VKD3D")){
@@ -1233,7 +1237,6 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          }
          ImGui::PopFont();
       }
-      ImGui::EndTable();
 
       if (loggingOn && log_period == 0){
          uint64_t now = os_time_get();
