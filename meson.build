@@ -20,7 +20,7 @@
 
 project('MangoHud',
   ['c', 'cpp'],
-  version : 'v1.0.0',
+  version : 'v0.3.1',
   license : 'MIT',
   default_options : ['buildtype=release', 'c_std=c99', 'cpp_std=c++14']
 )

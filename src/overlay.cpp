@@ -56,6 +56,7 @@
 #include "cpu.h"
 #include "loaders/loader_nvml.h"
 #include "memory.h"
+#include "notify.h"
 
 bool open = false;
 string gpuString;
@@ -82,6 +83,8 @@ struct instance_data {
 
    /* Dumping of frame stats to a file has been enabled and started. */
    bool capture_started;
+
+   notify_thread notifier;
 };
 
 /* Mapped from VkDevice */
@@ -762,6 +765,15 @@ string exec(string command) {
    return result;
 }
 
+void init_cpu_stats(overlay_params& params)
+{
+   auto& enabled = params.enabled;
+   enabled[OVERLAY_PARAM_ENABLED_cpu_stats] = cpuStats.Init()
+                           && enabled[OVERLAY_PARAM_ENABLED_cpu_stats];
+   enabled[OVERLAY_PARAM_ENABLED_cpu_temp] = cpuStats.GetCpuFile()
+                           && enabled[OVERLAY_PARAM_ENABLED_cpu_temp];
+}
+
 void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
 {
    if (!params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
@@ -906,36 +918,49 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
         sw_stats.frames_stats[f_idx].stats[OVERLAY_PARAM_ENABLED_frame_timing] =
             now - sw_stats.last_present_time;
    }
-      if (sw_stats.last_fps_update) {
-         if (elapsed >= params.fps_sampling_period) {
+
+   if (sw_stats.last_fps_update) {
+      if (elapsed >= params.fps_sampling_period) {
+
+         if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats]) {
             cpuStats.UpdateCPUData();
             sw_stats.total_cpu = cpuStats.GetCPUDataTotal().percent;
-            
-            if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]) {
-               if (vendorID == 0x1002)
-                  pthread_create(&gpuThread, NULL, &getAmdGpuUsage, NULL);
 
-               if (vendorID == 0x10de)
-                  pthread_create(&gpuThread, NULL, &getNvidiaGpuInfo, NULL);
-            }
+            if (params.enabled[OVERLAY_PARAM_ENABLED_core_load])
+               cpuStats.UpdateCoreMhz();
+            if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp])
+               cpuStats.UpdateCpuTemp();
+         }
 
-            // get ram usage/max
+         if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]) {
+            if (vendorID == 0x1002)
+               pthread_create(&gpuThread, NULL, &getAmdGpuUsage, NULL);
+
+            if (vendorID == 0x10de)
+               pthread_create(&gpuThread, NULL, &getNvidiaGpuInfo, NULL);
+         }
+
+         // get ram usage/max
+         if (params.enabled[OVERLAY_PARAM_ENABLED_ram])
             pthread_create(&memoryThread, NULL, &update_meminfo, NULL);
+         if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])
             pthread_create(&ioThread, NULL, &getIoStats, &sw_stats.io);
 
-            gpuLoadLog = gpu_info.load;
-            cpuLoadLog = sw_stats.total_cpu;
-            sw_stats.fps = fps;
+         gpuLoadLog = gpu_info.load;
+         cpuLoadLog = sw_stats.total_cpu;
+         sw_stats.fps = fps;
 
+         if (params.enabled[OVERLAY_PARAM_ENABLED_time]) {
             std::time_t t = std::time(nullptr);
             std::stringstream time;
             time << std::put_time(std::localtime(&t), params.time_format.c_str());
             sw_stats.time = time.str();
-
-            sw_stats.n_frames_since_update = 0;
-            sw_stats.last_fps_update = now;
-
          }
+
+         sw_stats.n_frames_since_update = 0;
+         sw_stats.last_fps_update = now;
+
+      }
    } else {
       sw_stats.last_fps_update = now;
    }
@@ -985,8 +1010,10 @@ static float get_time_stat(void *_data, int _idx)
    return data->frames_stats[idx].stats[data->stat_selector] / data->time_dividor;
 }
 
-void position_layer(struct overlay_params& params, ImVec2 window_size, unsigned width, unsigned height)
+void position_layer(struct overlay_params& params, ImVec2 window_size)
 {
+   unsigned width = ImGui::GetIO().DisplaySize.x;
+   unsigned height = ImGui::GetIO().DisplaySize.y;
    float margin = 10.0f;
    if (params.offset_x > 0 || params.offset_y > 0)
       margin = 0.0f;
@@ -1032,10 +1059,13 @@ static void right_aligned_text(float off_x, const char *fmt, ...)
    ImGui::Text("%s", buffer);
 }
 
-void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, unsigned width, unsigned height)
+void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan)
 {
    static float char_width = ImGui::CalcTextSize("A").x;
-
+   window_size = ImVec2(params.width, params.height);
+   unsigned width = ImGui::GetIO().DisplaySize.x;
+   unsigned height = ImGui::GetIO().DisplaySize.y;
+   
    if (!params.no_display){
       ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
       if (params.enabled[OVERLAY_PARAM_ENABLED_time]){
@@ -1167,7 +1197,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       }
       if (params.enabled[OVERLAY_PARAM_ENABLED_fps]){
          ImGui::TableNextRow();
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", engineName.c_str());
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", is_vulkan ? engineName.c_str() : "OpenGL");
          ImGui::TableNextCell();
          right_aligned_text(char_width * 4, "%.0f", data.fps);
          ImGui::SameLine(0, 1.0f);
@@ -1180,14 +1210,31 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::PushFont(data.font1);
          ImGui::Text("ms");
          ImGui::PopFont();
-         if (engineName == "DXVK" || engineName == "VKD3D"){
-            ImGui::TableNextRow();
-            ImGui::PushFont(data.font1);
-            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", engineVersion.c_str());
-            ImGui::PopFont();
+         ImGui::TableNextRow();
+         ImGui::PushFont(data.font1);
+         auto engine_color = ImGui::ColorConvertU32ToFloat4(params.engine_color);
+         if (is_vulkan) {
+            if ((engineName == "DXVK" || engineName == "VKD3D")){
+               ImGui::TextColored(engine_color,
+                  "%s/%d.%d.%d", engineVersion.c_str(),
+                  data.version_vk.major,
+                  data.version_vk.minor,
+                  data.version_vk.patch);
+            } else {
+               ImGui::TextColored(engine_color,
+                  "%d.%d.%d",
+                  data.version_vk.major,
+                  data.version_vk.minor,
+                  data.version_vk.patch);
+            }
+         } else {
+            ImGui::TextColored(engine_color,
+               "%d.%d", data.version_gl.major, data.version_gl.minor);
          }
+         ImGui::PopFont();
       }
       ImGui::EndTable();
+
       if (loggingOn && log_period == 0){
          uint64_t now = os_time_get();
          elapsedLog = (double)(now - log_start);
@@ -1271,9 +1318,11 @@ static void compute_swapchain_display(struct swapchain_data *data)
 
    ImGui::SetCurrentContext(data->imgui_context);
    ImGui::NewFrame();
-
-   position_layer(instance_data->params, data->window_size, data->width, data->height);
-   render_imgui(data->sw_stats, instance_data->params, data->window_size, data->width, data->height);
+   {
+      scoped_lock lk(instance_data->notifier.mutex);
+      position_layer(instance_data->params, data->window_size);
+      render_imgui(data->sw_stats, instance_data->params, data->window_size, true);
+   }
    ImGui::PopStyleVar(3);
 
    ImGui::EndFrame();
@@ -2134,7 +2183,11 @@ static VkResult overlay_CreateSwapchainKHR(
    if (result != VK_SUCCESS) return result;
    struct swapchain_data *swapchain_data = new_swapchain_data(*pSwapchain, device_data);
    setup_swapchain_data(swapchain_data, pCreateInfo, device_data->instance->params);
-   
+
+   swapchain_data->sw_stats.version_vk.major = VK_VERSION_MAJOR(device_data->properties.apiVersion);
+   swapchain_data->sw_stats.version_vk.minor = VK_VERSION_MINOR(device_data->properties.apiVersion);
+   swapchain_data->sw_stats.version_vk.patch = VK_VERSION_PATCH(device_data->properties.apiVersion);
+
    return result;
 }
 
@@ -2589,10 +2642,10 @@ static VkResult overlay_CreateInstance(
    instance_data_map_physical_devices(instance_data, true);
 
    parse_overlay_config(&instance_data->params, getenv("MANGOHUD_CONFIG"));
-   if (instance_data->params.fps_limit > 0)
-      fps_limit_stats.targetFrameTime = int64_t(1000000000.0 / instance_data->params.fps_limit);
+   instance_data->notifier.params = &instance_data->params;
+   pthread_create(&fileChange, NULL, &fileChanged, &instance_data->notifier);
 
-   cpuStats.Init();
+   init_cpu_stats(instance_data->params);
 
    // Adjust height for DXVK/VKD3D version number
    if (engineName == "DXVK" || engineName == "VKD3D"){
@@ -2613,6 +2666,7 @@ static void overlay_DestroyInstance(
    struct instance_data *instance_data = FIND(struct instance_data, instance);
    instance_data_map_physical_devices(instance_data, false);
    instance_data->vtable.DestroyInstance(instance, pAllocator);
+   instance_data->notifier.quit = true;
    destroy_instance_data(instance_data);
 }
 

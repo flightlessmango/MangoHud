@@ -2,14 +2,12 @@
 #include <sstream>
 #include <iostream>
 #include <string.h>
+#include <thread>
 #include "config.h"
-#include "overlay_params.h"
 #include "file_utils.h"
 #include "string_utils.h"
 
-std::unordered_map<std::string,std::string> options;
-
-void parseConfigLine(std::string line) {
+void parseConfigLine(std::string line, std::unordered_map<std::string,std::string>& options) {
     std::string param, value;
 
     if (line.find("#") != std::string::npos)
@@ -28,7 +26,8 @@ void parseConfigLine(std::string line) {
         options[param] = value;
 }
 
-void parseConfigFile() {
+void parseConfigFile(overlay_params& params) {
+    params.options.clear();
     std::vector<std::string> paths;
     static const char *mangohud_dir = "/MangoHud/";
 
@@ -56,13 +55,19 @@ void parseConfigFile() {
             while (std::getline(stream, line, '\0'))
             {
                 if (!line.empty()
-                    && (n = line.find_last_of("/\\")) != std::string::npos
+                    && ((n = line.find_last_of("/\\")) != std::string::npos)
                     && n < line.size() - 1) // have at least one character
                 {
                     auto dot = line.find_last_of('.');
                     if (dot < n)
                         dot = line.size();
                     paths.push_back(env_config + mangohud_dir + "wine-" + line.substr(n + 1, dot - n - 1) + ".conf");
+                    break;
+                }
+                else if (ends_with(line, ".exe", true))
+                {
+                    auto dot = line.find_last_of('.');
+                    paths.push_back(env_config + mangohud_dir + "wine-" + line.substr(0, dot) + ".conf");
                     break;
                 }
             }
@@ -81,9 +86,10 @@ void parseConfigFile() {
         std::cerr << "parsing config: " << *p;
         while (std::getline(stream, line))
         {
-            parseConfigLine(line);
+            parseConfigLine(line, params.options);
         }
         std::cerr << " [ ok ]" << std::endl;
+        params.config_file_path = *p;
         return;
     }
 }

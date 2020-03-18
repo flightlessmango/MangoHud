@@ -102,7 +102,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
 #if !defined(IMGUI_IMPL_OPENGL_ES2)
 
     glsl_version = "#version 130";
-    GLint major, minor;
+    GLint major = -1, minor = -1;
     glGetIntegerv(GL_MAJOR_VERSION, &major);
     glGetIntegerv(GL_MINOR_VERSION, &minor);
     g_GlVersion = major * 1000 + minor;

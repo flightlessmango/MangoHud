@@ -1,5 +1,2 @@
-#include <unordered_map>
-
-extern std::unordered_map<std::string,std::string> options;
-
-void parseConfigFile(void);
+#include "overlay_params.h"
+void parseConfigFile(overlay_params& p);

@@ -53,6 +53,22 @@ static bool starts_with(const std::string& s,  const char *t) {
     return s.rfind(t, 0) == 0;
 }
 
+static bool ends_with(const std::string& s,  const char *t, bool icase = false) {
+    std::string s0(s);
+    std::string s1(t);
+
+    if (s0.size() < s1.size())
+        return false;
+
+    if (icase) {
+        std::transform(s0.begin(), s0.end(), s0.begin(), ::tolower);
+        std::transform(s1.begin(), s1.end(), s1.begin(), ::tolower);
+    }
+
+    size_t pos = s0.size() - s1.size();
+    return (s0.rfind(s1, pos) == pos);
+}
+
 template<typename T>
 static std::string itox(T i) {
     std::stringstream ss;

@@ -1,9 +1,21 @@
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+MANGOHUD_CONFIG_DIR="$XDG_CONFIG_HOME/MangoHud"
+
+config() {
+    mkdir -p "${MANGOHUD_CONFIG_DIR}"
+    echo You can use the example configuration file from
+    echo /usr/share/doc/mangohud/MangoHud.conf.example
+    echo as a starting point by copying it to
+    echo ${MANGOHUD_CONFIG_DIR}/MangoHud.conf
+    echo
+}
+
 install() {
     rm -rf "$HOME/.local/share/MangoHud/"
     rm -f "$HOME/.local/share/vulkan/implicit_layer.d/"{mangohud32.json,mangohud64.json}
+    [ "$UID" -eq 0 ] || config
     [ "$UID" -eq 0 ] || exec sudo bash "$0" install
-    tar -C / -xvf MangoHud-package.tar
-    ldconfig
+    tar -C / --no-overwrite-dir -xvhf MangoHud-package.tar
     echo "MangoHud Installed"
 }
 

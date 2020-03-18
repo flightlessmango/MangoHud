@@ -1,6 +1,8 @@
 #include <iostream>
 #include <array>
 #include <unordered_map>
+#include <memory>
+#include <functional>
 #include <cstring>
 #include <cstdio>
 #include <dlfcn.h>
@@ -17,6 +19,7 @@
 #include "mesa/util/macros.h"
 #include "mesa/util/os_time.h"
 #include "file_utils.h"
+#include "notify.h"
 
 #include <chrono>
 #include <iomanip>
@@ -34,26 +37,55 @@ struct state {
     ImFont* font1 = nullptr;
 };
 
+struct GLVec
+{
+    GLint v[4];
+
+    GLint operator[] (size_t i)
+    {
+        return v[i];
+    }
+
+    bool operator== (const GLVec& r)
+    {
+        return v[0] == r.v[0]
+            && v[1] == r.v[1]
+            && v[2] == r.v[2]
+            && v[3] == r.v[3];
+    }
+
+    bool operator!= (const GLVec& r)
+    {
+        return !(*this == r);
+    }
+};
+
+static GLVec last_vp {}, last_sb {};
 static ImVec2 window_size;
 static overlay_params params {};
 static swapchain_stats sw_stats {};
-static fps_limit fps_limit_stats {};
 static state state;
+static notify_thread notifier;
 static bool cfg_inited = false;
 static bool inited = false;
 static uint32_t vendorID;
 static std::string deviceName;
+
+// seems to quit by itself though
+static std::unique_ptr<notify_thread, std::function<void(notify_thread *)>>
+    stop_notifier(&notifier, [](notify_thread *n){ n->quit = true; });
 
 void imgui_init()
 {
     if (cfg_inited)
         return;
     parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
+    notifier.params = &params;
+    pthread_create(&fileChange, NULL, &fileChanged, &notifier);
     window_size = ImVec2(params.width, params.height);
     init_system_info();
-    if (params.fps_limit > 0)
-      fps_limit_stats.targetFrameTime = int64_t(1000000000.0 / params.fps_limit);
     cfg_inited = true;
+    init_cpu_stats(params);
 }
 
 void imgui_create(void *ctx)
@@ -65,11 +97,13 @@ void imgui_create(void *ctx)
     if (!ctx)
         return;
 
-    cpuStats.Init();
     imgui_init();
     gl3wInit();
 
     std::cerr << "GL version: " << glGetString(GL_VERSION) << std::endl;
+    glGetIntegerv(GL_MAJOR_VERSION, &sw_stats.version_gl.major);
+    glGetIntegerv(GL_MINOR_VERSION, &sw_stats.version_gl.minor);
+
     deviceName = (char*)glGetString(GL_RENDERER);
     if (deviceName.find("Radeon") != std::string::npos
     || deviceName.find("AMD") != std::string::npos){
@@ -90,9 +124,11 @@ void imgui_create(void *ctx)
     //ImGui::StyleColorsClassic();
     imgui_custom_style(params);
 
-    GLint vp [4]; glGetIntegerv (GL_VIEWPORT, vp);
+    glGetIntegerv (GL_VIEWPORT, last_vp.v);
+    glGetIntegerv (GL_SCISSOR_BOX, last_sb.v);
+
     ImGui::GetIO().IniFilename = NULL;
-    ImGui::GetIO().DisplaySize = ImVec2(vp[2], vp[3]);
+    ImGui::GetIO().DisplaySize = ImVec2(last_vp[2], last_vp[3]);
 
     ImGui_ImplOpenGL3_Init();
     // Make a dummy GL call (we don't actually need the result)
@@ -117,7 +153,6 @@ void imgui_create(void *ctx)
         state.font1 = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size * 0.55, &font_cfg, glyph_ranges);
     }
     sw_stats.font1 = state.font1;
-    engineName = "OpenGL";
 }
 
 void imgui_shutdown()
@@ -150,14 +185,38 @@ void imgui_render()
 {
     if (!ImGui::GetCurrentContext())
         return;
-    GLint vp [4]; glGetIntegerv (GL_VIEWPORT, vp);
-    ImGui::GetIO().DisplaySize = ImVec2(vp[2], vp[3]);
+
+    // check which one is affected by window resize and use that
+    GLVec vp; glGetIntegerv (GL_VIEWPORT, vp.v);
+    GLVec sb; glGetIntegerv (GL_SCISSOR_BOX, sb.v);
+
+    if (vp != last_vp) {
+#ifndef NDEBUG
+        printf("viewport: %d %d %d %d\n", vp[0], vp[1], vp[2], vp[3]);
+#endif
+        ImGui::GetIO().DisplaySize = ImVec2(vp[2], vp[3]);
+    }
+
+    if (sb != last_sb
+        || last_vp == sb // openmw initial viewport size is the same (correct)
+                         // at start as scissor box, so apply it instead
+    ) {
+#ifndef NDEBUG
+        printf("scissor box: %d %d %d %d\n", sb[0], sb[1], sb[2], sb[3]);
+#endif
+        ImGui::GetIO().DisplaySize = ImVec2(sb[2], sb[3]);
+    }
+
+    last_vp = vp;
+    last_sb = sb;
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
-
-    position_layer(params, window_size, vp[2], vp[3]);
-    render_imgui(sw_stats, params, window_size, vp[2], vp[3]);
+    {
+        std::lock_guard<std::mutex> lk(notifier.mutex);
+        position_layer(params, window_size);
+        render_imgui(sw_stats, params, window_size, false);
+    }
     ImGui::PopStyleVar(3);
 
     ImGui::Render();
@@ -178,10 +237,10 @@ void* get_proc_address(const char* name) {
 void* get_glx_proc_address(const char* name) {
     if (!gl.Load()) {
         // Force load libGL then. If it still doesn't find it, get_proc_address should quit the program
-        void *handle = dlopen("libGL.so.1", RTLD_GLOBAL | RTLD_LAZY | RTLD_DEEPBIND);
+        void *handle = real_dlopen("libGL.so.1", RTLD_LAZY);
         if (!handle)
             std::cerr << "MANGOHUD: couldn't find libGL.so.1" << std::endl;
-        gl.Load();
+        gl.Load(handle);
     }
 
     void *func = nullptr;
@@ -231,6 +290,7 @@ EXPORT_C_(bool) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
 
 EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
     gl.Load();
+    imgui_create(gl.glXGetCurrentContext());
     check_keybinds(params);
     update_hud_info(sw_stats, params, vendorID);
     imgui_render();
@@ -323,8 +383,6 @@ static void *find_ptr(const char *name)
 }
 
 EXPORT_C_(void *) glXGetProcAddress(const unsigned char* procName) {
-    gl.Load();
-
     //std::cerr << __func__ << ":" << procName << std::endl;
 
     void* func = find_ptr( (const char*)procName );
@@ -335,8 +393,6 @@ EXPORT_C_(void *) glXGetProcAddress(const unsigned char* procName) {
 }
 
 EXPORT_C_(void *) glXGetProcAddressARB(const unsigned char* procName) {
-    gl.Load();
-
     //std::cerr << __func__ << ":" << procName << std::endl;
 
     void* func = find_ptr( (const char*)procName );

@@ -27,15 +27,19 @@
 #include <errno.h>
 #include <sys/sysinfo.h>
 #include <X11/Xlib.h>
-#include "X11/keysym.h"
+#include <X11/keysym.h>
+#include <wordexp.h>
 #include "imgui.h"
+#include <iostream>
 
 #include "overlay_params.h"
+#include "overlay.h"
 #include "config.h"
 
 #include "mesa/util/os_socket.h"
 
 static enum overlay_param_position
+
 parse_position(const char *str)
 {
    if (!str || !strcmp(str, "top-left"))
@@ -142,9 +146,30 @@ parse_signed(const char *str)
    return strtol(str, NULL, 0);
 }
 
-static const char *
+static std::string
 parse_str(const char *str)
 {
+   return str;
+}
+
+static std::string
+parse_path(const char *str)
+{
+#ifdef _XOPEN_SOURCE
+   // Expand ~/ to home dir
+   if (str[0] == '~') {
+      std::string s;
+      wordexp_t e;
+      int ret;
+
+      if (!(ret = wordexp(str, &e, 0)))
+         s = e.we_wordv[0];
+      wordfree(&e);
+
+      if (!ret)
+         return s;
+   }
+#endif
    return str;
 }
 
@@ -156,8 +181,8 @@ parse_str(const char *str)
 #define parse_offset_y(s) parse_unsigned(s)
 #define parse_log_duration(s) parse_unsigned(s)
 #define parse_time_format(s) parse_str(s)
-#define parse_output_file(s) parse_str(s)
-#define parse_font_file(s) parse_str(s)
+#define parse_output_file(s) parse_path(s)
+#define parse_font_file(s) parse_path(s)
 #define parse_io_read(s) parse_unsigned(s)
 #define parse_io_write(s) parse_unsigned(s)
 
@@ -336,8 +361,8 @@ parse_overlay_config(struct overlay_params *params,
    if (!env || read_cfg) {
 
       // Get config options
-      parseConfigFile();
-      if (options.find("full") != options.end() && options.find("full")->second != "0") {
+      parseConfigFile(*params);
+      if (params->options.find("full") != params->options.end() && params->options.find("full")->second != "0") {
 #define OVERLAY_PARAM_BOOL(name) \
             params->enabled[OVERLAY_PARAM_ENABLED_##name] = 1;
 #define OVERLAY_PARAM_CUSTOM(name)
@@ -345,10 +370,10 @@ parse_overlay_config(struct overlay_params *params,
 #undef OVERLAY_PARAM_BOOL
 #undef OVERLAY_PARAM_CUSTOM
          params->enabled[OVERLAY_PARAM_ENABLED_crosshair] = 0;
-         options.erase("full");
+         params->options.erase("full");
       }
 
-      for (auto& it : options) {
+      for (auto& it : params->options) {
 #define OVERLAY_PARAM_BOOL(name)                                       \
          if (it.first == #name) {                                      \
             params->enabled[OVERLAY_PARAM_ENABLED_##name] =            \
@@ -412,4 +437,8 @@ parse_overlay_config(struct overlay_params *params,
       params->tableCols = 4;
       params->width = 20 * params->font_size;
    }
+   
+   // set frametime limit
+   if (params->fps_limit > 0)
+      fps_limit_stats.targetFrameTime = int64_t(1000000000.0 / params->fps_limit);
 }
