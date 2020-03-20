@@ -12,6 +12,16 @@ Display *display = XOpenDisplay(NULL);
 libnvctrl_loader nvctrl("libXNVCtrl.so");
 
 struct nvctrlInfo nvctrl_info;
+bool nvctrlSuccess = false;
+
+bool checkXNVCtrl()
+{
+    if (nvctrl.IsLoaded()) {
+        nvctrlSuccess = nvctrl.XNVCTRLIsNvScreen(display, 0);
+        return nvctrlSuccess;
+    }
+    return false;
+}
 
 void parse_token(std::string token, string_map& options) {
     std::string param, value;

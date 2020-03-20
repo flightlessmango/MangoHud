@@ -21,6 +21,7 @@ class libnvctrl_loader {
   bool Load(const std::string& library_name);
   bool IsLoaded() { return loaded_; }
 
+  decltype(&::XNVCTRLIsNvScreen) XNVCTRLIsNvScreen;
   decltype(&::XNVCTRLQueryVersion) XNVCTRLQueryVersion;
   decltype(&::XNVCTRLQueryAttribute) XNVCTRLQueryAttribute;
   decltype(&::XNVCTRLQueryTargetStringAttribute) XNVCTRLQueryTargetStringAttribute;

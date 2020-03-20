@@ -29,6 +29,13 @@ bool libnvctrl_loader::Load(const std::string& library_name) {
   if (!library_)
     return false;
 
+  XNVCTRLIsNvScreen =
+      reinterpret_cast<decltype(this->XNVCTRLIsNvScreen)>(
+          dlsym(library_, "XNVCTRLIsNvScreen"));
+  if (!XNVCTRLIsNvScreen) {
+    CleanUp(true);
+    return false;
+  }
 
   XNVCTRLQueryVersion =
       reinterpret_cast<decltype(this->XNVCTRLQueryVersion)>(
