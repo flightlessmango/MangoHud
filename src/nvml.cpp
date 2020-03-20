@@ -26,10 +26,13 @@ bool checkNvidia(){
 } 
 
 void getNvidiaInfo(){
+    nvmlReturn_t response;
     nvml.nvmlDeviceGetHandleByIndex(0, &nvidiaDevice);
-    nvml.nvmlDeviceGetUtilizationRates(nvidiaDevice, &nvidiaUtilization);
+    response = nvml.nvmlDeviceGetUtilizationRates(nvidiaDevice, &nvidiaUtilization);
     nvml.nvmlDeviceGetTemperature(nvidiaDevice, NVML_TEMPERATURE_GPU, &nvidiaTemp);
     nvml.nvmlDeviceGetMemoryInfo(nvidiaDevice, &nvidiaMemory);
     nvml.nvmlDeviceGetClockInfo(nvidiaDevice, NVML_CLOCK_GRAPHICS, &nvidiaCoreClock);
     nvml.nvmlDeviceGetClockInfo(nvidiaDevice, NVML_CLOCK_MEM, &nvidiaMemClock);
+    if (response == 3)
+        nvmlSuccess = false;
 }
