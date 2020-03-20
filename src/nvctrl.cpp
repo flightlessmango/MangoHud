@@ -1,56 +1,75 @@
 #include <stdio.h>
-#include <regex>
+#include <cstring>
+#include <sstream>
+#include <unordered_map>
 #include "nvctrl.h"
 #include "loaders/loader_nvctrl.h"
-#include <iostream>
+#include "string_utils.h"
+
+typedef std::unordered_map<std::string, std::string> string_map;
 
 Display *display = XOpenDisplay(NULL);
 libnvctrl_loader nvctrl("libXNVCtrl.so");
 
 struct nvctrlInfo nvctrl_info;
 
+void parse_token(std::string token, string_map& options) {
+    std::string param, value;
+
+    size_t equal = token.find("=");
+    if (equal == std::string::npos)
+        return;
+
+    value = token.substr(equal+1);
+
+    param = token.substr(0, equal);
+    trim(param);
+    trim(value);
+    //std::cerr << __func__ << ": " << param << "=" << value << std::endl;
+    if (!param.empty())
+        options[param] = value;
+}
+
 char* get_attr_target_string(int attr, int target_type, int target_id) {
-        char* c;
+        char* c = nullptr;
         
         if (!nvctrl.XNVCTRLQueryTargetStringAttribute(display, target_type, target_id, 0, attr, &c)) {
-                fprintf(stderr, "Failed to query attribute.");
+                fprintf(stderr, "Failed to query attribute '%d'.\n", attr);
                 
         }
         return c;
 }
 
 void getNvctrlInfo(){
-    char* utilization = get_attr_target_string(NV_CTRL_STRING_GPU_UTILIZATION, NV_CTRL_TARGET_TYPE_GPU, 0);
-    char* s = utilization;
-    strtok(s, ",");
-    while (s != NULL)
-    {
-        std::string str = s;
-        if (str.find("graphics") != std::string::npos){
-            str = std::regex_replace(str, std::regex(R"([^0-9.])"), "");
-            nvctrl_info.load = std::stoi(str);
+    string_map params;
+    std::string token;
+
+    int enums[] = {
+        NV_CTRL_STRING_GPU_UTILIZATION,
+        NV_CTRL_STRING_GPU_CURRENT_CLOCK_FREQS,
+        0 // keep null
+    };
+
+    for (size_t i=0; enums[i]; i++) {
+        char* str = get_attr_target_string(enums[i], NV_CTRL_TARGET_TYPE_GPU, 0);
+        if (!str)
+            continue;
+
+        std::stringstream ss (str);
+        while (std::getline(ss, token, ',')) {
+            parse_token(token, params);
         }
-        s = strtok (NULL, ",");
+        free(str);
     }
 
-    char* freq = get_attr_target_string(NV_CTRL_STRING_GPU_CURRENT_CLOCK_FREQS, NV_CTRL_TARGET_TYPE_GPU, 0);
-    char* freq_str = freq;
-    strtok(freq_str, ",");
-    while (freq_str != NULL)
-    {
-        std::string str = freq_str;
-        if (str.find("nvclock=") != std::string::npos){
-            str = std::regex_replace(str, std::regex(R"([^0-9.])"), "");
-            nvctrl_info.CoreClock = std::stoi(str);
-        }
-        if (str.find("memclock=") != std::string::npos){
-            str = std::regex_replace(str, std::regex(R"([^0-9.])"), "");
-            nvctrl_info.MemClock = std::stoi(str);
-        }
-        freq_str = strtok (NULL, ",");
-    }
+    if (!try_stoi(nvctrl_info.load, params["graphics"]))
+        nvctrl_info.load = 0;
+    if (!try_stoi(nvctrl_info.CoreClock, params["nvclock"]))
+        nvctrl_info.CoreClock = 0;
+    if (!try_stoi(nvctrl_info.MemClock, params["memclock"]))
+        nvctrl_info.MemClock = 0;
 
-    int64_t temp;
+    int64_t temp = 0;
     nvctrl.XNVCTRLQueryTargetAttribute64(display,
                         NV_CTRL_TARGET_TYPE_GPU,
                         0,
@@ -59,8 +78,8 @@ void getNvctrlInfo(){
                         &temp);
     nvctrl_info.temp = temp;
 
-    int64_t memtotal;
-            nvctrl.XNVCTRLQueryTargetAttribute64(display,
+    int64_t memtotal = 0;
+    nvctrl.XNVCTRLQueryTargetAttribute64(display,
                         NV_CTRL_TARGET_TYPE_GPU,
                         0,
                         0,
@@ -68,15 +87,12 @@ void getNvctrlInfo(){
                         &memtotal);
     nvctrl_info.memoryTotal = memtotal;
 
-    int64_t memused;
-            nvctrl.XNVCTRLQueryTargetAttribute64(display,
+    int64_t memused = 0;
+    nvctrl.XNVCTRLQueryTargetAttribute64(display,
                         NV_CTRL_TARGET_TYPE_GPU,
                         0,
                         0,
                         NV_CTRL_USED_DEDICATED_GPU_MEMORY,
                         &memused);
-    nvctrl_info.memoryUsed = memused;    
-
-    free(utilization);
-    free(freq);
+    nvctrl_info.memoryUsed = memused;
 }
