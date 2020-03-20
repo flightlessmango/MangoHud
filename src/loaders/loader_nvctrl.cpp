@@ -54,10 +54,10 @@ bool libnvctrl_loader::Load(const std::string& library_name) {
     return false;
   }
   
-  XNVCTRLQueryTargetAttribute =
-      reinterpret_cast<decltype(this->XNVCTRLQueryTargetAttribute)>(
-          dlsym(library_, "XNVCTRLQueryTargetAttribute"));
-  if (!XNVCTRLQueryTargetAttribute) {
+  XNVCTRLQueryTargetAttribute64 =
+      reinterpret_cast<decltype(this->XNVCTRLQueryTargetAttribute64)>(
+          dlsym(library_, "XNVCTRLQueryTargetAttribute64"));
+  if (!XNVCTRLQueryTargetAttribute64) {
     CleanUp(true);
     return false;
   }

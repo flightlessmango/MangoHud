@@ -52,8 +52,8 @@ void getNvctrlInfo(){
     printf("coreclock: %i\n", nvctrl_info.CoreClock);
     printf("memclock: %i\n", nvctrl_info.MemClock);
 
-    int temp;
-    nvctrl.XNVCTRLQueryTargetAttribute(display,
+    int64_t temp;
+    nvctrl.XNVCTRLQueryTargetAttribute64(display,
                         NV_CTRL_TARGET_TYPE_GPU,
                         0,
                         0,
@@ -61,8 +61,8 @@ void getNvctrlInfo(){
                         &temp);
     nvctrl_info.temp = temp;
 
-    int memtotal;
-            nvctrl.XNVCTRLQueryTargetAttribute(display,
+    int64_t memtotal;
+            nvctrl.XNVCTRLQueryTargetAttribute64(display,
                         NV_CTRL_TARGET_TYPE_GPU,
                         0,
                         0,
@@ -70,12 +70,15 @@ void getNvctrlInfo(){
                         &memtotal);
     nvctrl_info.memoryTotal = memtotal;
 
-    int memused;
-            nvctrl.XNVCTRLQueryTargetAttribute(display,
+    int64_t memused;
+            nvctrl.XNVCTRLQueryTargetAttribute64(display,
                         NV_CTRL_TARGET_TYPE_GPU,
                         0,
                         0,
                         NV_CTRL_USED_DEDICATED_GPU_MEMORY,
                         &memused);
-    nvctrl_info.memoryUsed = memused;        
+    nvctrl_info.memoryUsed = memused;    
+        
+    free(utilization);
+    free(freq);
 }

@@ -24,7 +24,7 @@ class libnvctrl_loader {
   decltype(&::XNVCTRLQueryVersion) XNVCTRLQueryVersion;
   decltype(&::XNVCTRLQueryAttribute) XNVCTRLQueryAttribute;
   decltype(&::XNVCTRLQueryTargetStringAttribute) XNVCTRLQueryTargetStringAttribute;
-  decltype(&::XNVCTRLQueryTargetAttribute) XNVCTRLQueryTargetAttribute;
+  decltype(&::XNVCTRLQueryTargetAttribute64) XNVCTRLQueryTargetAttribute64;
 
  private:
   void CleanUp(bool unload);
