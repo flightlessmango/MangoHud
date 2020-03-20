@@ -49,8 +49,6 @@ void getNvctrlInfo(){
         }
         freq_str = strtok (NULL, ",");
     }
-    printf("coreclock: %i\n", nvctrl_info.CoreClock);
-    printf("memclock: %i\n", nvctrl_info.MemClock);
 
     int64_t temp;
     nvctrl.XNVCTRLQueryTargetAttribute64(display,
@@ -78,7 +76,7 @@ void getNvctrlInfo(){
                         NV_CTRL_USED_DEDICATED_GPU_MEMORY,
                         &memused);
     nvctrl_info.memoryUsed = memused;    
-        
+
     free(utilization);
     free(freq);
 }
