@@ -1,0 +1,12 @@
+struct nvctrlInfo{
+    int load;
+    int temp;
+    float memoryUsed;
+    float memoryTotal;
+    int MemClock;
+    int CoreClock;
+};
+
+extern struct nvctrlInfo nvctrl_info;
+void getNvctrlInfo(void);
+char *get_attr_target_string(int attr, int target_type, int target_id);
