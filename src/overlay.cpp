@@ -1174,7 +1174,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          right_aligned_text(char_width * 4, "%.2f", gpu_info.memoryUsed);
          ImGui::SameLine(0,1.0f);
          ImGui::PushFont(data.font1);
-         ImGui::Text("GB");
+         ImGui::Text("GiB");
          ImGui::PopFont();
          if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_mem_clock]){
             ImGui::TableNextCell();
@@ -1192,7 +1192,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          right_aligned_text(char_width * 4, "%.2f", memused);
          ImGui::SameLine(0,1.0f);
          ImGui::PushFont(data.font1);
-         ImGui::Text("GB");
+         ImGui::Text("GiB");
          ImGui::PopFont();
       }
       if (params.enabled[OVERLAY_PARAM_ENABLED_fps]){
