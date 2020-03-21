@@ -196,7 +196,16 @@ usage() {
     else
         echo "$0 requires one argument"
     fi
-    echo 'Accepted arguments: "pull", "configure", "build", "package", "install", "clean", "uninstall".'
+    echo -e "\nUsage: $0 <command>\n"
+    echo "Available commands:"
+    echo -e "\tpull\t\tPull latest commits (code) from Git"
+    echo -e "\tconfigure\tEnsures that dependencies are installed, updates git submodules, and generates files needed for building MangoHud. This is automatically run by the build command"
+    echo -e "\tbuild\t\tIf needed runs configure and then builds (compiles) MangoHud"
+    echo -e "\tpackage\t\tRuns build if needed and then builds a tar package from MangoHud"
+    echo -e "\tinstall\t\tInstall MangoHud onto your system"
+    echo -e "\tclean\t\tRemoves build directory"
+    echo -e "\tuninstall\tRemoves installed MangoHud files from your system"
+    echo -e "\trelease\t\tBuilds a MangoHud release tar package"
 }
 
 for a in $@; do
