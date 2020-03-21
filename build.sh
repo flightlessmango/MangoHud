@@ -158,13 +158,19 @@ release() {
 install() {
     rm -rf "$HOME/.local/share/MangoHud/"
     rm -f "$HOME/.local/share/vulkan/implicit_layer.d/"{mangohud32.json,mangohud64.json}
-    if [[ ! -f build/MangoHud-package.tar ]]; then
-        echo No package found. Run \"$0 package\".
-        exit 1
-    fi
+
     [ "$UID" -eq 0 ] || mkdir -pv "${CONFIG_DIR}"
     [ "$UID" -eq 0 ] || exec sudo bash "$0" install
-    tar -C / --no-overwrite-dir -xvhf build/MangoHud-package.tar
+
+    /usr/bin/install -vm644 -D ./build/release/usr/lib/mangohud/lib32/libMangoHud.so /usr/lib/mangohud/lib32/libMangoHud.so
+    /usr/bin/install -vm644 -D ./build/release/usr/lib/mangohud/lib64/libMangoHud.so /usr/lib/mangohud/lib64/libMangoHud.so
+    /usr/bin/install -vm644 -D ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86.json
+    /usr/bin/install -vm644 -D ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json
+    /usr/bin/install -vm644 -D ./build/release/usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
+
+    /usr/bin/install -vm755 ./build/release/usr/bin/mangohud.x86 /usr/bin/mangohud.x86
+    /usr/bin/install -vm755 ./build/release/usr/bin/mangohud /usr/bin/mangohud
+
     echo "MangoHud Installed"
 }
 

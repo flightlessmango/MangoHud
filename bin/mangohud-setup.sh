@@ -1,7 +1,11 @@
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 MANGOHUD_CONFIG_DIR="$XDG_CONFIG_HOME/MangoHud"
 
-config() {
+mangohud_usage() {
+    echo 'Accepted arguments: "install", "uninstall".'
+}
+
+mangohud_config() {
     mkdir -p "${MANGOHUD_CONFIG_DIR}"
     echo You can use the example configuration file from
     echo /usr/share/doc/mangohud/MangoHud.conf.example
@@ -10,16 +14,27 @@ config() {
     echo
 }
 
-install() {
+mangohud_install() {
     rm -rf "$HOME/.local/share/MangoHud/"
     rm -f "$HOME/.local/share/vulkan/implicit_layer.d/"{mangohud32.json,mangohud64.json}
-    [ "$UID" -eq 0 ] || config
+
+    [ "$UID" -eq 0 ] || mangohud_config
+    [ "$UID" -eq 0 ] || tar xf MangoHud-package.tar
     [ "$UID" -eq 0 ] || exec sudo bash "$0" install
-    tar -C / --no-overwrite-dir -xvhf MangoHud-package.tar
+
+    install -vm644 -D ./usr/lib/mangohud/lib32/libMangoHud.so /usr/lib/mangohud/lib32/libMangoHud.so
+    install -vm644 -D ./usr/lib/mangohud/lib64/libMangoHud.so /usr/lib/mangohud/lib64/libMangoHud.so
+    install -vm644 -D ./usr/share/vulkan/implicit_layer.d/MangoHud.x86.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86.json
+    install -vm644 -D ./usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json
+    install -vm644 -D ./usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
+
+    install -vm755 ./usr/bin/mangohud.x86 /usr/bin/mangohud.x86
+    install -vm755 ./usr/bin/mangohud /usr/bin/mangohud
+
     echo "MangoHud Installed"
 }
 
-uninstall() {
+mangohud_uninstall() {
     [ "$UID" -eq 0 ] || exec sudo bash "$0" uninstall
     rm -rfv "/usr/lib/mangohud"
     rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json"
@@ -31,10 +46,14 @@ uninstall() {
 
 for a in $@; do
     case $a in
-        "install") install;;
-        "uninstall") uninstall;;
+        "install") mangohud_install;;
+        "uninstall") mangohud_uninstall;;
         *)
             echo "Unrecognized command argument: $a"
-            echo 'Accepted arguments: "install", "uninstall".'
+            mangohud_usage
     esac
 done
+
+if [ -z $@ ]; then
+    mangohud_usage
+fi
