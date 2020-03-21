@@ -202,7 +202,7 @@ usage() {
     echo -e "\tconfigure\tEnsures that dependencies are installed, updates git submodules, and generates files needed for building MangoHud. This is automatically run by the build command"
     echo -e "\tbuild\t\tIf needed runs configure and then builds (compiles) MangoHud"
     echo -e "\tpackage\t\tRuns build if needed and then builds a tar package from MangoHud"
-    echo -e "\tinstall\t\tInstall MangoHud onto your system. Requires that the package has been built"
+    echo -e "\tinstall\t\tInstall MangoHud onto your system"
     echo -e "\tclean\t\tRemoves build directory"
     echo -e "\tuninstall\tRemoves installed MangoHud files from your system"
     echo -e "\trelease\t\tBuilds a MangoHud release tar package"
