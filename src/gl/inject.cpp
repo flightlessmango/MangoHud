@@ -190,15 +190,18 @@ void imgui_render()
     GLVec vp; glGetIntegerv (GL_VIEWPORT, vp.v);
     GLVec sb; glGetIntegerv (GL_SCISSOR_BOX, sb.v);
 
-    if (vp != last_vp) {
+    bool invalid_scissor = (sb[2] == 1 && sb[3] == 1);
+
+    if (vp != last_vp || invalid_scissor) {
 #ifndef NDEBUG
         printf("viewport: %d %d %d %d\n", vp[0], vp[1], vp[2], vp[3]);
 #endif
         ImGui::GetIO().DisplaySize = ImVec2(vp[2], vp[3]);
     }
 
-    if (sb != last_sb
-        || last_vp == sb // openmw initial viewport size is the same (correct)
+    if (!invalid_scissor &&
+        (sb != last_sb
+        || last_vp == sb) // openmw initial viewport size is the same (correct)
                          // at start as scissor box, so apply it instead
     ) {
 #ifndef NDEBUG
