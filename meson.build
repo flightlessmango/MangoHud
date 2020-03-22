@@ -111,6 +111,7 @@ inc_common = [
 ]
 
 dep_vulkan = dependency('vulkan', required: get_option('use_system_vulkan'))
+dep_pthread = dependency('threads')
 
 # Check for generic C arguments
 c_args = []
@@ -182,8 +183,6 @@ if cc.has_function('dlopen')
 else
   dep_dl = cc.find_library('dl')
 endif
-
-dep_pthread = cc.find_library('pthread')
 
 if dep_vulkan.found()
   vulkan_headers = []
