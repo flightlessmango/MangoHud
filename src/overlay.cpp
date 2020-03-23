@@ -2659,7 +2659,7 @@ static VkResult overlay_CreateInstance(
 
    parse_overlay_config(&instance_data->params, getenv("MANGOHUD_CONFIG"));
    instance_data->notifier.params = &instance_data->params;
-   pthread_create(&fileChange, NULL, &fileChanged, &instance_data->notifier);
+   start_notifier(instance_data->notifier);
 
    init_cpu_stats(instance_data->params);
 
@@ -2685,7 +2685,7 @@ static void overlay_DestroyInstance(
    struct instance_data *instance_data = FIND(struct instance_data, instance);
    instance_data_map_physical_devices(instance_data, false);
    instance_data->vtable.DestroyInstance(instance, pAllocator);
-   instance_data->notifier.quit = true;
+   stop_notifier(instance_data->notifier);
    destroy_instance_data(instance_data);
 }
 

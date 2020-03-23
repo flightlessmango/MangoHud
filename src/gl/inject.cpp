@@ -73,7 +73,7 @@ static std::string deviceName;
 
 // seems to quit by itself though
 static std::unique_ptr<notify_thread, std::function<void(notify_thread *)>>
-    stop_notifier(&notifier, [](notify_thread *n){ n->quit = true; });
+    stop_it(&notifier, [](notify_thread *n){ stop_notifier(*n); });
 
 void imgui_init()
 {
@@ -81,7 +81,7 @@ void imgui_init()
         return;
     parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
     notifier.params = &params;
-    pthread_create(&fileChange, NULL, &fileChanged, &notifier);
+    start_notifier(notifier);
     window_size = ImVec2(params.width, params.height);
     init_system_info();
     cfg_inited = true;
