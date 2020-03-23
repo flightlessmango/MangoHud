@@ -211,10 +211,10 @@ util_files = files(
   'src/mesa/util/os_time.c',
 )
 
-if target_machine.cpu_family() == 'x86_64'
+if cc.sizeof('void*') == 8
   pre_args += '-DMANGOHUD_ARCH="64bit"'
 endif
-if target_machine.cpu_family() == 'x86'
+if cc.sizeof('void*') == 4
   pre_args += '-DMANGOHUD_ARCH="32bit"'
 endif
 
