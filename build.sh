@@ -49,7 +49,7 @@ dependencies() {
             "Arch Linux"|"Manjaro")
                 MANAGER_QUERY="pacman -Q"
                 MANAGER_INSTALL="pacman -S"
-                DEPS="{gcc,meson,pkgconf,python-mako,glslang,libglvnd,lib32-libglvnd}"
+                DEPS="{gcc,meson,pkgconf,python-mako,glslang,libglvnd,lib32-libglvnd,libxnvctrl}"
                 install
             ;;
             "Fedora")
