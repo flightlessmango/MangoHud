@@ -1078,7 +1078,6 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       if (params.enabled[OVERLAY_PARAM_ENABLED_time]){
          ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.00f), "%s", data.time.c_str());
       }
-
       ImGui::BeginTable("hud", params.tableCols);
       if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
          ImGui::TableNextRow();
@@ -1241,6 +1240,10 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          } else {
             ImGui::TextColored(engine_color,
                "%d.%d", data.version_gl.major, data.version_gl.minor);
+         }
+         if (params.enabled[OVERLAY_PARAM_ENABLED_arch]){
+            ImGui::Dummy(ImVec2(0.0,5.0f));
+            ImGui::TextColored(engine_color, "%s", MANGOHUD_ARCH);
          }
          ImGui::PopFont();
       }
