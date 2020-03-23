@@ -63,6 +63,7 @@ extern "C" {
    OVERLAY_PARAM_BOOL(io_write)                      \
    OVERLAY_PARAM_BOOL(gpu_mem_clock)                 \
    OVERLAY_PARAM_BOOL(gpu_core_clock)                \
+   OVERLAY_PARAM_BOOL(arch)                          \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
    OVERLAY_PARAM_CUSTOM(font_file)                   \
