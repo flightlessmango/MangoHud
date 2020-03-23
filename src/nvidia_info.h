@@ -9,5 +9,5 @@ extern struct nvmlUtilization_st nvidiaUtilization;
 extern struct nvmlMemory_st nvidiaMemory;
 extern bool nvmlSuccess;
 
-bool checkNvidia(void);
-void getNvidiaInfo(void);
+bool checkNVML(void);
+void getNVMLInfo(void);

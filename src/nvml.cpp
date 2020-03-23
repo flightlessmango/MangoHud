@@ -10,7 +10,7 @@ unsigned int nvidiaTemp, nvidiaCoreClock, nvidiaMemClock;
 struct nvmlUtilization_st nvidiaUtilization;
 struct nvmlMemory_st nvidiaMemory {};
 
-bool checkNvidia(){
+bool checkNVML(){
     if (nvml.IsLoaded()){
         result = nvml.nvmlInit();
         if (NVML_SUCCESS != result) {
@@ -25,11 +25,14 @@ bool checkNvidia(){
     return false;
 } 
 
-void getNvidiaInfo(){
+void getNVMLInfo(){
+    nvmlReturn_t response;
     nvml.nvmlDeviceGetHandleByIndex(0, &nvidiaDevice);
-    nvml.nvmlDeviceGetUtilizationRates(nvidiaDevice, &nvidiaUtilization);
+    response = nvml.nvmlDeviceGetUtilizationRates(nvidiaDevice, &nvidiaUtilization);
     nvml.nvmlDeviceGetTemperature(nvidiaDevice, NVML_TEMPERATURE_GPU, &nvidiaTemp);
     nvml.nvmlDeviceGetMemoryInfo(nvidiaDevice, &nvidiaMemory);
     nvml.nvmlDeviceGetClockInfo(nvidiaDevice, NVML_CLOCK_GRAPHICS, &nvidiaCoreClock);
     nvml.nvmlDeviceGetClockInfo(nvidiaDevice, NVML_CLOCK_MEM, &nvidiaMemClock);
+    if (response == NVML_ERROR_NOT_SUPPORTED)
+        nvmlSuccess = false;
 }

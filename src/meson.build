@@ -44,6 +44,7 @@ vklayer_files = files(
   'font_unispace.c',
   'cpu.cpp',
   'loaders/loader_nvml.cpp',
+  'loaders/loader_nvctrl.cpp',
   'nvml.cpp',
   'file_utils.cpp',
   'memory.cpp',
@@ -52,6 +53,7 @@ vklayer_files = files(
   'gpu.cpp',
   'notify.cpp',
   'elfhacks.cpp',
+  'nvctrl.cpp',
 )
 
 opengl_files = files(

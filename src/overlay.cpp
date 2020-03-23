@@ -782,7 +782,14 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
    // NVIDIA or Intel but maybe has Optimus
    if (vendorID == 0x8086
       || vendorID == 0x10de) {
-      if ((params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = checkNvidia())) {
+
+      if (checkNVML())
+         getNVMLInfo();
+
+      if (!nvmlSuccess)
+         checkXNVCtrl();
+
+      if ((params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = (nvmlSuccess || nvctrlSuccess))) {
          vendorID = 0x10de;
       }
    }

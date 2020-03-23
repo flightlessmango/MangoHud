@@ -7,18 +7,22 @@ FILE *amdGpuFile = nullptr, *amdTempFile = nullptr, *amdGpuVramTotalFile = nullp
 pthread_t cpuThread, gpuThread, cpuInfoThread;
 
 void *getNvidiaGpuInfo(void *){
-    if (!nvmlSuccess)
-        checkNvidia();
-
     if (nvmlSuccess){
-        getNvidiaInfo();
+        getNVMLInfo();
         gpu_info.load = nvidiaUtilization.gpu;
         gpu_info.temp = nvidiaTemp;
         gpu_info.memoryUsed = nvidiaMemory.used / (1024.f * 1024.f * 1024.f);
         gpu_info.CoreClock = nvidiaCoreClock;
-        gpu_info.MemClock = nvidiaMemClock * 2;
+        gpu_info.MemClock = nvidiaMemClock;
+    } else if (nvctrlSuccess) {
+        getNvctrlInfo();
+        gpu_info.load = nvctrl_info.load;
+        gpu_info.temp = nvctrl_info.temp;
+        gpu_info.memoryUsed = nvctrl_info.memoryUsed / (1024.f);
+        gpu_info.CoreClock = nvctrl_info.CoreClock;
+        gpu_info.MemClock = nvctrl_info.MemClock;
     }
-
+    
     pthread_detach(gpuThread);
     return NULL;
 }

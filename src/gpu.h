@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "nvidia_info.h"
+#include "nvctrl.h"
 
 using namespace std;
 extern FILE *amdGpuFile, *amdTempFile, *amdGpuVramTotalFile, *amdGpuVramUsedFile, *amdGpuCoreClockFile, *amdGpuMemoryClockFile;

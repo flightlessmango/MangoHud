@@ -84,7 +84,9 @@ static bool try_stoi(int& val, const std::string& str, std::size_t* pos = 0, int
         val = std::stoi(str, pos, base);
         return true;
     } catch (std::invalid_argument& e) {
+#ifndef NDEBUG
         std::cerr << __func__ << ": invalid argument: '" << str << "'" << std::endl;
+#endif
     }
     return false;
 }
@@ -95,7 +97,9 @@ static bool try_stoull(unsigned long long& val, const std::string& str, std::siz
         val = std::stoull(str, pos, base);
         return true;
     } catch (std::invalid_argument& e) {
+#ifndef NDEBUG
         std::cerr << __func__ << ": invalid argument: '" << str << "'" << std::endl;
+#endif
     }
     return false;
 }
