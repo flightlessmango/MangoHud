@@ -1,4 +1,6 @@
-#!/bin/bash    
+#!/usr/bin/env bash
+set -e
+
 OS_RELEASE_FILES=("/etc/os-release" "/usr/lib/os-release")
 XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
