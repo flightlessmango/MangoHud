@@ -64,4 +64,6 @@ void stop_notifier(notify_thread& nt)
     inotify_rm_watch(nt.fd, nt.wd);
     close(nt.fd);
     nt.fd = -1;
+
+    pthread_join(fileChange, nullptr);
 }
