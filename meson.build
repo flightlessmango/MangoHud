@@ -210,7 +210,7 @@ util_files = files(
   'src/mesa/util/os_socket.c',
   'src/mesa/util/os_time.c',
 )
-pre_args += '-DMANGOHUD_ARCH='
+
 if target_machine.cpu_family() == 'x86_64'
   pre_args += '-DMANGOHUD_ARCH="64bit"'
 endif

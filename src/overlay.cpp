@@ -1243,7 +1243,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          }
          if (params.enabled[OVERLAY_PARAM_ENABLED_arch]){
             ImGui::Dummy(ImVec2(0.0,5.0f));
-            ImGui::TextColored(engine_color, "%s", MANGOHUD_ARCH);
+            ImGui::TextColored(engine_color, "%s", "" MANGOHUD_ARCH);
          }
          ImGui::PopFont();
       }
