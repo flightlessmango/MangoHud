@@ -1,4 +1,3 @@
-#include <thread>
 #include <chrono>
 #include <unistd.h>
 #include <fcntl.h>
@@ -6,8 +5,6 @@
 #include <sys/inotify.h>
 #include "config.h"
 #include "notify.h"
-
-pthread_t fileChange;
 
 #define EVENT_SIZE  ( sizeof (struct inotify_event) )
 #define EVENT_BUF_LEN     ( 1024 * ( EVENT_SIZE + 16 ) )
@@ -50,7 +47,7 @@ bool start_notifier(notify_thread& nt)
         return false;
     }
 
-    pthread_create(&fileChange, NULL, &fileChanged, &nt);
+    pthread_create(&nt.thread, NULL, &fileChanged, &nt);
 
     return true;
 }
@@ -65,5 +62,5 @@ void stop_notifier(notify_thread& nt)
     close(nt.fd);
     nt.fd = -1;
 
-    pthread_join(fileChange, nullptr);
+    pthread_join(nt.thread, nullptr);
 }
