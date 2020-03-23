@@ -62,7 +62,6 @@ bool open = false;
 string gpuString;
 float offset_x, offset_y, hudSpacing;
 int hudFirstRow, hudSecondRow;
-string engineName, engineVersion;
 struct amdGpu amdgpu;
 struct fps_limit fps_limit_stats;
 
@@ -84,6 +83,7 @@ struct instance_data {
    /* Dumping of frame stats to a file has been enabled and started. */
    bool capture_started;
 
+   string engineName, engineVersion;
    notify_thread notifier;
 };
 
@@ -1197,7 +1197,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       }
       if (params.enabled[OVERLAY_PARAM_ENABLED_fps]){
          ImGui::TableNextRow();
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", is_vulkan ? engineName.c_str() : "OpenGL");
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", is_vulkan ? data.engineName.c_str() : "OpenGL");
          ImGui::TableNextCell();
          right_aligned_text(char_width * 4, "%.0f", data.fps);
          ImGui::SameLine(0, 1.0f);
@@ -1218,9 +1218,9 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::Dummy(ImVec2(0, 8.0f));
          auto engine_color = ImGui::ColorConvertU32ToFloat4(params.engine_color);
          if (is_vulkan) {
-            if ((engineName == "DXVK" || engineName == "VKD3D")){
+            if ((data.engineName == "DXVK" || data.engineName == "VKD3D")){
                ImGui::TextColored(engine_color,
-                  "%s/%d.%d.%d", engineVersion.c_str(),
+                  "%s/%d.%d.%d", data.engineVersion.c_str(),
                   data.version_vk.major,
                   data.version_vk.minor,
                   data.version_vk.patch);
@@ -2190,6 +2190,8 @@ static VkResult overlay_CreateSwapchainKHR(
    swapchain_data->sw_stats.version_vk.major = VK_VERSION_MAJOR(device_data->properties.apiVersion);
    swapchain_data->sw_stats.version_vk.minor = VK_VERSION_MINOR(device_data->properties.apiVersion);
    swapchain_data->sw_stats.version_vk.patch = VK_VERSION_PATCH(device_data->properties.apiVersion);
+   swapchain_data->sw_stats.engineName    = device_data->instance->engineName;
+   swapchain_data->sw_stats.engineVersion = device_data->instance->engineVersion;
 
    return result;
 }
@@ -2607,6 +2609,7 @@ static VkResult overlay_CreateInstance(
       get_instance_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
       
 
+   std::string engineName, engineVersion;
    const char* pEngineName = nullptr;
    if (pCreateInfo->pApplicationInfo)
       pEngineName = pCreateInfo->pApplicationInfo->pEngineName;
@@ -2658,6 +2661,9 @@ static VkResult overlay_CreateInstance(
          instance_data->params.height += 24 / 2;
       }
    }
+
+   instance_data->engineName = engineName;
+   instance_data->engineVersion = engineVersion;
 
    return result;
 }

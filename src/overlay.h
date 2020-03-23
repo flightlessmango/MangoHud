@@ -4,7 +4,6 @@
 #include "overlay_params.h"
 #include "iostats.h"
 
-extern std::string engineName;
 struct frame_stat {
    uint64_t stats[OVERLAY_PARAM_ENABLED_MAX];
 };
@@ -33,6 +32,8 @@ struct swapchain_stats {
       int32_t minor;
       int32_t patch;
    } version_vk;
+   std::string engineName;
+   std::string engineVersion;
 };
 
 struct fps_limit {
