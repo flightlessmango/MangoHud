@@ -17,6 +17,12 @@ void *fileChanged(void *params_void){
     char buffer[EVENT_BUF_LEN];
     fd = inotify_init();
     wd = inotify_add_watch( fd, nt->params->config_file_path.c_str(), IN_MODIFY);
+
+    if (wd < 0) {
+        close(fd);
+        return nullptr;
+    }
+
     while (!nt->quit) {
         length = read( fd, buffer, EVENT_BUF_LEN );
         while (i < length) {
@@ -31,5 +37,7 @@ void *fileChanged(void *params_void){
         i = 0;
         printf("File Changed\n");
     }
-    return NULL;
+    inotify_rm_watch(fd, wd);
+    close(fd);
+    return nullptr;
 }
