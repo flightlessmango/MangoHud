@@ -5,12 +5,12 @@
 #include "iostats.h"
 
 struct frame_stat {
-   uint64_t stats[OVERLAY_PARAM_ENABLED_MAX];
+   uint64_t stats[OVERLAY_PLOTS_MAX];
 };
 
 struct swapchain_stats {
    uint64_t n_frames;
-   enum overlay_param_enabled stat_selector;
+   enum overlay_plots stat_selector;
    double time_dividor;
    struct frame_stat stats_min, stats_max;
    struct frame_stat frames_stats[200];

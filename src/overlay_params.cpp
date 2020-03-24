@@ -397,8 +397,6 @@ parse_overlay_config(struct overlay_params *params,
    if (env && read_cfg)
       parse_overlay_env(params, env);
 
-   // Command buffer gets reused and timestamps cause hangs for some reason, force off for now
-   params->enabled[OVERLAY_PARAM_ENABLED_gpu_timing] = false;
    // Convert from 0xRRGGBB to ImGui's format
    std::array<unsigned *, 10> colors = {
       &params->crosshair_color,

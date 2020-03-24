@@ -44,10 +44,7 @@ extern "C" {
 
 #define OVERLAY_PARAMS                               \
    OVERLAY_PARAM_BOOL(fps)                           \
-   OVERLAY_PARAM_BOOL(frame)                         \
    OVERLAY_PARAM_BOOL(frame_timing)                  \
-   OVERLAY_PARAM_BOOL(present_timing)                \
-   OVERLAY_PARAM_BOOL(gpu_timing)                    \
    OVERLAY_PARAM_BOOL(core_load)                     \
    OVERLAY_PARAM_BOOL(cpu_temp)                      \
    OVERLAY_PARAM_BOOL(gpu_temp)                      \
@@ -105,6 +102,11 @@ enum overlay_param_position {
    LAYER_POSITION_TOP_RIGHT,
    LAYER_POSITION_BOTTOM_LEFT,
    LAYER_POSITION_BOTTOM_RIGHT,
+};
+
+enum overlay_plots {
+    OVERLAY_PLOTS_frame_timing,
+    OVERLAY_PLOTS_MAX,
 };
 
 enum overlay_param_enabled {
