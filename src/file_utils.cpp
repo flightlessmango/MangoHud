@@ -106,6 +106,33 @@ std::string get_exe_path()
     return std::string(result, (count > 0) ? count : 0);
 }
 
+bool get_wine_exe_name(std::string& name, bool keep_ext)
+{
+    std::string line;
+    std::ifstream cmdline("/proc/self/cmdline");
+    auto n = std::string::npos;
+    while (std::getline(cmdline, line, '\0'))
+    {
+        if (!line.empty()
+            && ((n = line.find_last_of("/\\")) != std::string::npos)
+            && n < line.size() - 1) // have at least one character
+        {
+            auto dot = keep_ext ? std::string::npos : line.find_last_of('.');
+            if (dot < n)
+                dot = line.size();
+            name = line.substr(n + 1, dot - n - 1);
+            return true;
+        }
+        else if (ends_with(line, ".exe", true))
+        {
+            auto dot = keep_ext ? std::string::npos : line.find_last_of('.');
+            name =  line.substr(0, dot);
+            return true;
+        }
+    }
+    return false;
+}
+
 std::string get_home_dir()
 {
     std::string path;
