@@ -2467,6 +2467,7 @@ static bool checkBlacklisted()
       "Origin.exe",
       "OriginThinSetupInternal.exe",
       "Steam.exe",
+      "BethesdaNetLauncher.exe",
    };
 
 #ifdef _GNU_SOURCE_OFF
