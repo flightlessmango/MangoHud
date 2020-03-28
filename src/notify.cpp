@@ -13,6 +13,7 @@ static void *fileChanged(void *params_void) {
     notify_thread *nt = reinterpret_cast<notify_thread *>(params_void);
     int length, i = 0;
     char buffer[EVENT_BUF_LEN];
+    overlay_params local_params = *nt->params;
 
     while (!nt->quit) {
         length = read( nt->fd, buffer, EVENT_BUF_LEN );
@@ -21,14 +22,14 @@ static void *fileChanged(void *params_void) {
                 (struct inotify_event *) &buffer[i];
             i += EVENT_SIZE + event->len;
             if (event->mask & IN_MODIFY) {
+                parse_overlay_config(&local_params, getenv("MANGOHUD_CONFIG"));
                 std::lock_guard<std::mutex> lk(nt->mutex);
-                parse_overlay_config(nt->params, getenv("MANGOHUD_CONFIG"));
+                *nt->params = local_params;
             }
         }
         i = 0;
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
-    printf("%s quit\n", __func__);
     return nullptr;
 }
 
