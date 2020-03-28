@@ -24,6 +24,8 @@
 #include <chrono>
 #include <iomanip>
 
+using namespace MangoHud;
+
 #define EXPORT_C_(type) extern "C" __attribute__((__visibility__("default"))) type
 
 EXPORT_C_(void *) glXGetProcAddress(const unsigned char* procName);
@@ -153,6 +155,9 @@ void imgui_create(void *ctx)
         state.font1 = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size * 0.55, &font_cfg, glyph_ranges);
     }
     sw_stats.font1 = state.font1;
+
+    // Reset global context to null, might clash with apps that use Dear ImGui
+    ImGui::SetCurrentContext(nullptr);
 }
 
 void imgui_shutdown()
@@ -162,6 +167,7 @@ void imgui_shutdown()
 #endif
 
     if (state.imgui_ctx) {
+        ImGui::SetCurrentContext(state.imgui_ctx);
         ImGui_ImplOpenGL3_Shutdown();
         ImGui::DestroyContext(state.imgui_ctx);
         state.imgui_ctx = nullptr;
@@ -183,8 +189,11 @@ void imgui_set_context(void *ctx)
 
 void imgui_render()
 {
-    if (!ImGui::GetCurrentContext())
+    if (!state.imgui_ctx)
         return;
+
+    ImGuiContext *saved_ctx = ImGui::GetCurrentContext();
+    ImGui::SetCurrentContext(state.imgui_ctx);
 
     // check which one is affected by window resize and use that
     GLVec vp; glGetIntegerv (GL_VIEWPORT, vp.v);
@@ -224,6 +233,7 @@ void imgui_render()
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    ImGui::SetCurrentContext(saved_ctx);
 }
 
 void* get_proc_address(const char* name) {
