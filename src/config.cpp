@@ -26,9 +26,8 @@ void parseConfigLine(std::string line, std::unordered_map<std::string,std::strin
         options[param] = value;
 }
 
-void parseConfigFile(overlay_params& params) {
-    params.options.clear();
-    std::vector<std::string> paths;
+void enumerate_config_files(std::vector<std::string>& paths)
+{
     static const char *mangohud_dir = "/MangoHud/";
 
     std::string env_data = get_data_dir();
@@ -56,6 +55,17 @@ void parseConfigFile(overlay_params& params) {
             }
         }
     }
+}
+
+void parseConfigFile(overlay_params& params) {
+    params.options.clear();
+    std::vector<std::string> paths;
+    const char *cfg_file = getenv("MANGOHUD_CONFIGFILE");
+
+    if (cfg_file)
+        paths.push_back(cfg_file);
+    else
+        enumerate_config_files(paths);
 
     std::string line;
     for (auto p = paths.rbegin(); p != paths.rend(); p++) {

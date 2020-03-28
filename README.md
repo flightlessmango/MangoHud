@@ -96,9 +96,11 @@ You can find an example config in /usr/share/doc/mangohud
 
 ---
 
-### `MANGOHUD_CONFIG` environment variable
+### `MANGOHUD_CONFIG` and `MANGOHUD_CONFIGFILE` environment variables
 
 You can also customize the hud by using the `MANGOHUD_CONFIG` environment variable while separating different options with a comma. This takes priority over any config file.
+
+You can also specify configuration file with `MANGOHUD_CONFIGFILE=/path/to/config` for applications whose names are hard to guess (java, python etc).
 
 A partial list of parameters are below. See the config file for a complete list.
 
