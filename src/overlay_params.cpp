@@ -437,6 +437,6 @@ parse_overlay_config(struct overlay_params *params,
    }
    
    // set frametime limit
-   if (params->fps_limit > 0)
+   if (params->fps_limit >= 0)
       fps_limit_stats.targetFrameTime = int64_t(1000000000.0 / params->fps_limit);
 }
