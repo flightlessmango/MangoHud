@@ -23,7 +23,8 @@ bool checkXNVCtrl()
         printf("MANGOHUD: XNVCtrl failed to load");
     }
     if (!nvctrlSuccess)
-        printf("MANGOHUD: XNVCtrl didn't find the correct display")
+        printf("MANGOHUD: XNVCtrl didn't find the correct display");
+
     return false;
 }
 
