@@ -19,7 +19,11 @@ bool checkXNVCtrl()
     if (nvctrl.IsLoaded()) {
         nvctrlSuccess = nvctrl.XNVCTRLIsNvScreen(display, 0);
         return nvctrlSuccess;
+    } else {
+        printf("MANGOHUD: XNVCtrl failed to load");
     }
+    if (!nvctrlSuccess)
+        printf("MANGOHUD: XNVCtrl didn't find the correct display")
     return false;
 }
 
