@@ -116,6 +116,7 @@ void imgui_create(void *ctx)
     init_gpu_stats(vendorID, params);
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
+    ImGuiContext *saved_ctx = ImGui::GetCurrentContext();
     state.imgui_ctx = ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
@@ -156,8 +157,8 @@ void imgui_create(void *ctx)
     }
     sw_stats.font1 = state.font1;
 
-    // Reset global context to null, might clash with apps that use Dear ImGui
-    ImGui::SetCurrentContext(nullptr);
+    // Restore global context or ours might clash with apps that use Dear ImGui
+    ImGui::SetCurrentContext(saved_ctx);
 }
 
 void imgui_shutdown()
