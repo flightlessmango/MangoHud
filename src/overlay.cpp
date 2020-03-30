@@ -710,13 +710,14 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
    if (vendorID == 0x8086
       || vendorID == 0x10de) {
 
-      if (checkNVML())
-         getNVMLInfo();
+      bool nvSuccess = (checkNVML() && getNVMLInfo());
 
-      if (!nvmlSuccess)
-         checkXNVCtrl();
+#ifdef HAVE_XNVCTRL
+      if (!nvSuccess)
+         nvSuccess = checkXNVCtrl();
+#endif
 
-      if ((params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = (nvmlSuccess || nvctrlSuccess))) {
+      if ((params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = nvSuccess)) {
          vendorID = 0x10de;
       }
    }

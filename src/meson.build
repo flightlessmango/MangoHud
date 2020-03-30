@@ -44,7 +44,6 @@ vklayer_files = files(
   'font_unispace.c',
   'cpu.cpp',
   'loaders/loader_nvml.cpp',
-  'loaders/loader_nvctrl.cpp',
   'nvml.cpp',
   'file_utils.cpp',
   'memory.cpp',
@@ -53,7 +52,6 @@ vklayer_files = files(
   'gpu.cpp',
   'notify.cpp',
   'elfhacks.cpp',
-  'nvctrl.cpp',
 )
 
 opengl_files = files(
@@ -63,10 +61,18 @@ opengl_files = files(
   'loaders/loader_gl.cpp',
   'gl/gl3w/GL/gl3w.c',
 )
+
+if get_option('use_xnvctrl').enabled()
+  pre_args += '-DHAVE_XNVCTRL'
+  vklayer_files += files(
+    'loaders/loader_nvctrl.cpp',
+    'nvctrl.cpp',
+  )
+endif
+
 pre_args += '-DHOOK_DLSYM'
 inc_opengl = include_directories('gl/gl3w')
 
-# lib_xnvctrl = cc.find_library('XNVCtrl')
 vklayer_mesa_overlay = shared_library(
   'MangoHud',
   util_files,

@@ -25,7 +25,7 @@ bool checkNVML(){
     return false;
 } 
 
-void getNVMLInfo(){
+bool getNVMLInfo(){
     nvmlReturn_t response;
     nvml.nvmlDeviceGetHandleByIndex(0, &nvidiaDevice);
     response = nvml.nvmlDeviceGetUtilizationRates(nvidiaDevice, &nvidiaUtilization);
@@ -35,4 +35,5 @@ void getNVMLInfo(){
     nvml.nvmlDeviceGetClockInfo(nvidiaDevice, NVML_CLOCK_MEM, &nvidiaMemClock);
     if (response == NVML_ERROR_NOT_SUPPORTED)
         nvmlSuccess = false;
+    return nvmlSuccess;
 }

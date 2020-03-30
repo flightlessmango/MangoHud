@@ -10,4 +10,4 @@ extern struct nvmlMemory_st nvidiaMemory;
 extern bool nvmlSuccess;
 
 bool checkNVML(void);
-void getNVMLInfo(void);
+bool getNVMLInfo(void);

@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include <iostream>
 #include <cstring>
 #include <sstream>
 #include <unordered_map>
@@ -18,12 +18,12 @@ bool checkXNVCtrl()
 {
     if (nvctrl.IsLoaded()) {
         nvctrlSuccess = nvctrl.XNVCTRLIsNvScreen(display, 0);
+        if (!nvctrlSuccess)
+            std::cerr << "MANGOHUD: XNVCtrl didn't find the correct display" << std::endl;
         return nvctrlSuccess;
-    } else {
-        printf("MANGOHUD: XNVCtrl failed to load");
     }
-    if (!nvctrlSuccess)
-        printf("MANGOHUD: XNVCtrl didn't find the correct display");
+
+    std::cerr << "MANGOHUD: XNVCtrl failed to load\n";
 
     return false;
 }
@@ -46,13 +46,11 @@ void parse_token(std::string token, string_map& options) {
 }
 
 char* get_attr_target_string(int attr, int target_type, int target_id) {
-        char* c = nullptr;
-        
-        if (!nvctrl.XNVCTRLQueryTargetStringAttribute(display, target_type, target_id, 0, attr, &c)) {
-                fprintf(stderr, "Failed to query attribute '%d'.\n", attr);
-                
-        }
-        return c;
+    char* c = nullptr;
+    if (!nvctrl.XNVCTRLQueryTargetStringAttribute(display, target_type, target_id, 0, attr, &c)) {
+        std::cerr << "Failed to query attribute '" << attr << "'.\n";
+    }
+    return c;
 }
 
 void getNvctrlInfo(){

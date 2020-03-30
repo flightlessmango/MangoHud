@@ -14,7 +14,9 @@ void *getNvidiaGpuInfo(void *){
         gpu_info.memoryUsed = nvidiaMemory.used / (1024.f * 1024.f * 1024.f);
         gpu_info.CoreClock = nvidiaCoreClock;
         gpu_info.MemClock = nvidiaMemClock;
-    } else if (nvctrlSuccess) {
+    }
+#ifdef HAVE_XNVCTRL
+    else if (nvctrlSuccess) {
         getNvctrlInfo();
         gpu_info.load = nvctrl_info.load;
         gpu_info.temp = nvctrl_info.temp;
@@ -22,6 +24,7 @@ void *getNvidiaGpuInfo(void *){
         gpu_info.CoreClock = nvctrl_info.CoreClock;
         gpu_info.MemClock = nvctrl_info.MemClock;
     }
+#endif
     
     pthread_detach(gpuThread);
     return NULL;
