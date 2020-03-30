@@ -1,4 +1,5 @@
 build/
+builddir/
 __pycache__/
 .vscode/
 MangoHud*.tar.gz
