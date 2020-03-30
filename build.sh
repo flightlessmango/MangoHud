@@ -120,14 +120,14 @@ configure() {
     dependencies
     git submodule update --init --depth 50
     if [[ ! -f "build/meson64/build.ninja" ]]; then
-        meson build/meson64 --libdir lib/mangohud/lib64 --prefix /usr -Dappend_libdir_mangohud=false
+        meson build/meson64 --libdir lib/mangohud/lib64 --prefix /usr -Dappend_libdir_mangohud=false ${CONFIGURE_OPTS}
     fi
     if [[ ! -f "build/meson32/build.ninja" ]]; then
         export CC="gcc -m32"
         export CXX="g++ -m32"
         export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH_32}"
         export LLVM_CONFIG="/usr/bin/llvm-config32"
-        meson build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false
+        meson build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false ${CONFIGURE_OPTS}
     fi
 }
 
