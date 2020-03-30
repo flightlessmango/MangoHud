@@ -30,6 +30,7 @@ dependencies() {
             esac
         }
         install() {
+            set +e
             for i in $(eval echo $DEPS); do
                 $MANAGER_QUERY "$i" &> /dev/null
                 if [[ $? == 1 ]]; then
@@ -42,6 +43,7 @@ dependencies() {
                     sudo $MANAGER_INSTALL $INSTALL
                 fi
             fi
+            set -e
         }
         echo "# Checking Dependencies"
         
