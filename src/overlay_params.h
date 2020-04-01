@@ -34,7 +34,10 @@ extern "C" {
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <X11/Xlib.h>
+
+#ifndef KeySym
+typedef unsigned long KeySym;
+#endif
 
 #define RGBGetBValue(rgb)   (rgb & 0x000000FF)
 #define RGBGetGValue(rgb)   ((rgb >> 8) & 0x000000FF)
