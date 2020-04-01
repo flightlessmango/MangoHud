@@ -1,3 +1,4 @@
+#include <X11/Xlib.h>
 #include <iostream>
 #include <array>
 #include <unordered_map>
@@ -268,6 +269,30 @@ void* get_glx_proc_address(const char* name) {
         func = get_proc_address( name );
 
     return func;
+}
+
+Status XGetGeometry(
+    Display      *display,
+    Drawable     d,
+    Window       *root,
+    int          *x,
+    int          *y,
+    unsigned int *width,
+    unsigned int *height,
+    unsigned int *border_width,
+    unsigned int *depth
+)
+{
+    static decltype(&::XGetGeometry) pfnXGetGeometry = nullptr;
+    if (!pfnXGetGeometry) {
+        void *handle = real_dlopen("libX11.so.6", RTLD_LAZY);
+        if (!handle)
+            std::cerr << "MANGOHUD: couldn't find libX11.so.6" << std::endl;
+        pfnXGetGeometry = reinterpret_cast<decltype(pfnXGetGeometry)>(
+          real_dlsym(handle, "XGetGeometry"));
+    }
+
+    return pfnXGetGeometry(display, d, root, x, y, width, height, border_width, depth);
 }
 
 EXPORT_C_(void *) glXCreateContext(void *dpy, void *vis, void *shareList, int direct)
