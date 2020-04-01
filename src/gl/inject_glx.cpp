@@ -17,7 +17,7 @@
 EXPORT_C_(void *) glXGetProcAddress(const unsigned char* procName);
 EXPORT_C_(void *) glXGetProcAddressARB(const unsigned char* procName);
 
-static gl_loader gl;
+static glx_loader glx;
 extern overlay_params params;
 
 void* get_proc_address(const char* name) {
@@ -32,20 +32,14 @@ void* get_proc_address(const char* name) {
 }
 
 void* get_glx_proc_address(const char* name) {
-    if (!gl.Load()) {
-        // Force load libGL then. If it still doesn't find it, get_proc_address should quit the program
-        void *handle = real_dlopen("libGL.so.1", RTLD_LAZY);
-        if (!handle)
-            std::cerr << "MANGOHUD: couldn't find libGL.so.1" << std::endl;
-        gl.Load(handle);
-    }
+    glx.Load();
 
     void *func = nullptr;
-    if (gl.glXGetProcAddress)
-        func = gl.glXGetProcAddress( (const unsigned char*) name );
+    if (glx.GetProcAddress)
+        func = glx.GetProcAddress( (const unsigned char*) name );
 
-    if (!func && gl.glXGetProcAddressARB)
-        func = gl.glXGetProcAddressARB( (const unsigned char*) name );
+    if (!func && glx.GetProcAddressARB)
+        func = glx.GetProcAddressARB( (const unsigned char*) name );
 
     if (!func)
         func = get_proc_address( name );
@@ -79,8 +73,8 @@ Status XGetGeometry(
 
 EXPORT_C_(void *) glXCreateContext(void *dpy, void *vis, void *shareList, int direct)
 {
-    gl.Load();
-    void *ctx = gl.glXCreateContext(dpy, vis, shareList, direct);
+    glx.Load();
+    void *ctx = glx.CreateContext(dpy, vis, shareList, direct);
 #ifndef NDEBUG
     std::cerr << __func__ << ":" << ctx << std::endl;
 #endif
@@ -88,34 +82,34 @@ EXPORT_C_(void *) glXCreateContext(void *dpy, void *vis, void *shareList, int di
 }
 
 EXPORT_C_(bool) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
-    gl.Load();
+    glx.Load();
 #ifndef NDEBUG
     std::cerr << __func__ << ": " << drawable << ", " << ctx << std::endl;
 #endif
 
-    bool ret = gl.glXMakeCurrent(dpy, drawable, ctx);
+    bool ret = glx.MakeCurrent(dpy, drawable, ctx);
     if (ret)
         imgui_set_context(ctx);
 
     if (params.gl_vsync >= -1) {
-        if (gl.glXSwapIntervalEXT)
-            gl.glXSwapIntervalEXT(dpy, drawable, params.gl_vsync);
-        if (gl.glXSwapIntervalSGI)
-            gl.glXSwapIntervalSGI(params.gl_vsync);
-        if (gl.glXSwapIntervalMESA)
-            gl.glXSwapIntervalMESA(params.gl_vsync);
+        if (glx.SwapIntervalEXT)
+            glx.SwapIntervalEXT(dpy, drawable, params.gl_vsync);
+        if (glx.SwapIntervalSGI)
+            glx.SwapIntervalSGI(params.gl_vsync);
+        if (glx.SwapIntervalMESA)
+            glx.SwapIntervalMESA(params.gl_vsync);
     }
 
     return ret;
 }
 
 EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
-    gl.Load();
-    imgui_create(gl.glXGetCurrentContext());
+    glx.Load();
+    imgui_create(glx.GetCurrentContext());
 
     unsigned int width, height;
-    //gl.glXQueryDrawable(dpy, drawable, 0x801D /*GLX_WIDTH*/, &width);
-    //gl.glXQueryDrawable(dpy, drawable, 0x801E /*GLX_HEIGTH*/, &height);
+    //glx.QueryDrawable(dpy, drawable, 0x801D /*GLX_WIDTH*/, &width);
+    //glx.QueryDrawable(dpy, drawable, 0x801E /*GLX_HEIGTH*/, &height);
 
     // glXQueryDrawable is buggy, use XGetGeometry instead
     Window unused_window;
@@ -130,7 +124,7 @@ EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
     height = vp[3];*/
 
     imgui_render(width, height);
-    gl.glXSwapBuffers(dpy, drawable);
+    glx.SwapBuffers(dpy, drawable);
     if (fps_limit_stats.targetFrameTime > 0){
         fps_limit_stats.frameStart = os_time_get_nano();
         FpsLimiter(fps_limit_stats);
@@ -143,42 +137,42 @@ EXPORT_C_(void) glXSwapIntervalEXT(void *dpy, void *draw, int interval) {
     std::cerr << __func__ << ": " << interval << std::endl;
 #endif
 
-    gl.Load();
+    glx.Load();
     if (params.gl_vsync >= 0)
         interval = params.gl_vsync;
-    gl.glXSwapIntervalEXT(dpy, draw, interval);
+    glx.SwapIntervalEXT(dpy, draw, interval);
 }
 
 EXPORT_C_(int) glXSwapIntervalSGI(int interval) {
 #ifndef NDEBUG
     std::cerr << __func__ << ": " << interval << std::endl;
 #endif
-    gl.Load();
+    glx.Load();
     if (params.gl_vsync >= 0)
         interval = params.gl_vsync;
-    return gl.glXSwapIntervalSGI(interval);
+    return glx.SwapIntervalSGI(interval);
 }
 
 EXPORT_C_(int) glXSwapIntervalMESA(unsigned int interval) {
 #ifndef NDEBUG
     std::cerr << __func__ << ": " << interval << std::endl;
 #endif
-    gl.Load();
+    glx.Load();
     if (params.gl_vsync >= 0)
         interval = (unsigned int)params.gl_vsync;
-    return gl.glXSwapIntervalMESA(interval);
+    return glx.SwapIntervalMESA(interval);
 }
 
 EXPORT_C_(int) glXGetSwapIntervalMESA() {
-    gl.Load();
+    glx.Load();
     static bool first_call = true;
-    int interval = gl.glXGetSwapIntervalMESA();
+    int interval = glx.GetSwapIntervalMESA();
 
     if (first_call) {
         first_call = false;
         if (params.gl_vsync >= 0) {
             interval = params.gl_vsync;
-            gl.glXSwapIntervalMESA(interval);
+            glx.SwapIntervalMESA(interval);
         }
     }
 

@@ -1,99 +1,95 @@
+#include <iostream>
 #include "real_dlsym.h"
 #include "loaders/loader_glx.h"
 
-gl_loader::gl_loader() : loaded_(false) {
+glx_loader::glx_loader() : loaded_(false) {
 }
 
-gl_loader::~gl_loader() {
+glx_loader::~glx_loader() {
   CleanUp(loaded_);
 }
 
-bool gl_loader::Load(void *handle, bool egl_only) {
+bool glx_loader::Load() {
   if (loaded_) {
     return true;
   }
 
-  if (!handle)
-    handle = RTLD_NEXT;
-
-  eglSwapBuffers =
-      reinterpret_cast<decltype(this->eglSwapBuffers)>(
-          real_dlsym(handle, "eglSwapBuffers"));
-
-  if (egl_only) {
-    loaded_ = true;
-    return true;
+  // Force load libGL
+  void *handle = real_dlopen("libGL.so.1", RTLD_LAZY);
+  if (!handle) {
+    std::cerr << "MANGOHUD: couldn't find libGL.so.1" << std::endl;
+    return false;
   }
 
-  glXGetProcAddress =
-      reinterpret_cast<decltype(this->glXGetProcAddress)>(
+  GetProcAddress =
+      reinterpret_cast<decltype(this->GetProcAddress)>(
           real_dlsym(handle, "glXGetProcAddress"));
 
-  glXGetProcAddressARB =
-      reinterpret_cast<decltype(this->glXGetProcAddressARB)>(
+  GetProcAddressARB =
+      reinterpret_cast<decltype(this->GetProcAddressARB)>(
           real_dlsym(handle, "glXGetProcAddressARB"));
 
-  if (!glXGetProcAddress) {
+  if (!GetProcAddress) {
     CleanUp(true);
     return false;
   }
 
-  glXCreateContext =
-      reinterpret_cast<decltype(this->glXCreateContext)>(
-          glXGetProcAddress((const unsigned char *)"glXCreateContext"));
-  if (!glXCreateContext) {
+  CreateContext =
+      reinterpret_cast<decltype(this->CreateContext)>(
+          GetProcAddress((const unsigned char *)"glXCreateContext"));
+  if (!CreateContext) {
     CleanUp(true);
     return false;
   }
 
-  glXDestroyContext =
-      reinterpret_cast<decltype(this->glXDestroyContext)>(
-          glXGetProcAddress((const unsigned char *)"glXDestroyContext"));
-  if (!glXDestroyContext) {
+  DestroyContext =
+      reinterpret_cast<decltype(this->DestroyContext)>(
+          GetProcAddress((const unsigned char *)"glXDestroyContext"));
+  if (!DestroyContext) {
     CleanUp(true);
     return false;
   }
 
-  glXGetCurrentContext =
-      reinterpret_cast<decltype(this->glXGetCurrentContext)>(
-          glXGetProcAddress((const unsigned char *)"glXGetCurrentContext"));
-  if (!glXGetCurrentContext) {
+  GetCurrentContext =
+      reinterpret_cast<decltype(this->GetCurrentContext)>(
+          GetProcAddress((const unsigned char *)"glXGetCurrentContext"));
+  if (!GetCurrentContext) {
     CleanUp(true);
     return false;
   }
 
-  glXSwapBuffers =
-      reinterpret_cast<decltype(this->glXSwapBuffers)>(
-          glXGetProcAddress((const unsigned char *)"glXSwapBuffers"));
-  if (!glXSwapBuffers) {
+  SwapBuffers =
+      reinterpret_cast<decltype(this->SwapBuffers)>(
+          GetProcAddress((const unsigned char *)"glXSwapBuffers"));
+  if (!SwapBuffers) {
     CleanUp(true);
     return false;
   }
 
-  glXSwapIntervalEXT =
-      reinterpret_cast<decltype(this->glXSwapIntervalEXT)>(
-          glXGetProcAddress((const unsigned char *)"glXSwapIntervalEXT"));
+  SwapIntervalEXT =
+      reinterpret_cast<decltype(this->SwapIntervalEXT)>(
+          GetProcAddress((const unsigned char *)"glXSwapIntervalEXT"));
 
-  glXSwapIntervalSGI =
-      reinterpret_cast<decltype(this->glXSwapIntervalSGI)>(
-          glXGetProcAddress((const unsigned char *)"glXSwapIntervalSGI"));
+  SwapIntervalSGI =
+      reinterpret_cast<decltype(this->SwapIntervalSGI)>(
+          GetProcAddress((const unsigned char *)"glXSwapIntervalSGI"));
 
-  glXSwapIntervalMESA =
-      reinterpret_cast<decltype(this->glXSwapIntervalMESA)>(
-          glXGetProcAddress((const unsigned char *)"glXSwapIntervalMESA"));
+  SwapIntervalMESA =
+      reinterpret_cast<decltype(this->SwapIntervalMESA)>(
+          GetProcAddress((const unsigned char *)"glXSwapIntervalMESA"));
 
-  glXGetSwapIntervalMESA =
-      reinterpret_cast<decltype(this->glXGetSwapIntervalMESA)>(
-          glXGetProcAddress((const unsigned char *)"glXGetSwapIntervalMESA"));
+  GetSwapIntervalMESA =
+      reinterpret_cast<decltype(this->GetSwapIntervalMESA)>(
+          GetProcAddress((const unsigned char *)"glXGetSwapIntervalMESA"));
 
-  glXQueryDrawable =
-      reinterpret_cast<decltype(this->glXQueryDrawable)>(
-          glXGetProcAddress((const unsigned char *)"glXQueryDrawable"));
+  QueryDrawable =
+      reinterpret_cast<decltype(this->QueryDrawable)>(
+          GetProcAddress((const unsigned char *)"glXQueryDrawable"));
 
-  glXMakeCurrent =
-      reinterpret_cast<decltype(this->glXMakeCurrent)>(
-          glXGetProcAddress((const unsigned char *)"glXMakeCurrent"));
-  if (!glXMakeCurrent) {
+  MakeCurrent =
+      reinterpret_cast<decltype(this->MakeCurrent)>(
+          GetProcAddress((const unsigned char *)"glXMakeCurrent"));
+  if (!MakeCurrent) {
     CleanUp(true);
     return false;
   }
@@ -102,17 +98,19 @@ bool gl_loader::Load(void *handle, bool egl_only) {
   return true;
 }
 
-void gl_loader::CleanUp(bool unload) {
+void glx_loader::CleanUp(bool unload) {
   loaded_ = false;
-  glXGetProcAddress = nullptr;
-  glXGetProcAddressARB = nullptr;
-  glXCreateContext = nullptr;
-  glXDestroyContext = nullptr;
-  glXSwapBuffers = nullptr;
-  glXSwapIntervalEXT = nullptr;
-  glXSwapIntervalSGI = nullptr;
-  glXSwapIntervalMESA = nullptr;
-  glXQueryDrawable = nullptr;
-  glXMakeCurrent = nullptr;
+  GetProcAddress = nullptr;
+  GetProcAddressARB = nullptr;
+  CreateContext = nullptr;
+  DestroyContext = nullptr;
+  SwapBuffers = nullptr;
+  SwapIntervalEXT = nullptr;
+  SwapIntervalSGI = nullptr;
+  SwapIntervalMESA = nullptr;
+  QueryDrawable = nullptr;
+  MakeCurrent = nullptr;
 
 }
+
+glx_loader glx;

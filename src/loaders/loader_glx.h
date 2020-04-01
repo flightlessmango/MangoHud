@@ -1,31 +1,27 @@
-#ifndef LIBRARY_LOADER_GL_H
-#define LIBRARY_LOADER_GL_H
-
+#pragma once
 #include "gl/gl.h"
 #include <dlfcn.h>
 
-class gl_loader {
+class glx_loader {
  public:
-  gl_loader();
-  ~gl_loader();
+  glx_loader();
+  ~glx_loader();
 
-  bool Load(void *handle = nullptr, bool egl_only = false);
+  bool Load();
   bool IsLoaded() { return loaded_; }
 
-  decltype(&::glXGetProcAddress) glXGetProcAddress;
-  decltype(&::glXGetProcAddressARB) glXGetProcAddressARB;
-  decltype(&::glXCreateContext) glXCreateContext;
-  decltype(&::glXDestroyContext) glXDestroyContext;
-  decltype(&::glXSwapBuffers) glXSwapBuffers;
-  decltype(&::glXSwapIntervalEXT) glXSwapIntervalEXT;
-  decltype(&::glXSwapIntervalSGI) glXSwapIntervalSGI;
-  decltype(&::glXSwapIntervalMESA) glXSwapIntervalMESA;
-  decltype(&::glXGetSwapIntervalMESA) glXGetSwapIntervalMESA;
-  decltype(&::glXMakeCurrent) glXMakeCurrent;
-  decltype(&::glXGetCurrentContext) glXGetCurrentContext;
-  decltype(&::glXQueryDrawable) glXQueryDrawable;
-
-  decltype(&::eglSwapBuffers) eglSwapBuffers;
+  decltype(&::glXGetProcAddress) GetProcAddress;
+  decltype(&::glXGetProcAddressARB) GetProcAddressARB;
+  decltype(&::glXCreateContext) CreateContext;
+  decltype(&::glXDestroyContext) DestroyContext;
+  decltype(&::glXSwapBuffers) SwapBuffers;
+  decltype(&::glXSwapIntervalEXT) SwapIntervalEXT;
+  decltype(&::glXSwapIntervalSGI) SwapIntervalSGI;
+  decltype(&::glXSwapIntervalMESA) SwapIntervalMESA;
+  decltype(&::glXGetSwapIntervalMESA) GetSwapIntervalMESA;
+  decltype(&::glXMakeCurrent) MakeCurrent;
+  decltype(&::glXGetCurrentContext) GetCurrentContext;
+  decltype(&::glXQueryDrawable) QueryDrawable;
 
  private:
   void CleanUp(bool unload);
@@ -33,8 +29,6 @@ class gl_loader {
   bool loaded_;
 
   // Disallow copy constructor and assignment operator.
-  gl_loader(const gl_loader&);
-  void operator=(const gl_loader&);
+  glx_loader(const glx_loader&);
+  void operator=(const glx_loader&);
 };
-
-#endif  // LIBRARY_LOADER_GL_H
