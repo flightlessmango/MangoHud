@@ -113,6 +113,10 @@ parse_reload_cfg(const char *str)
       return g_x11->XStringToKeysym(str);
    return 0;
 }
+#else
+#define parse_toggle_hud(x)      0
+#define parse_toggle_logging(x)  0
+#define parse_reload_cfg(x)      0
 #endif
 
 static uint32_t
@@ -342,9 +346,6 @@ parse_overlay_config(struct overlay_params *params,
    params->width = 280;
    params->height = 140;
    params->control = -1;
-   params->toggle_hud = XK_F12;
-   params->toggle_logging = XK_F2;
-   params->reload_cfg = XK_F4;
    params->fps_limit = 0;
    params->vsync = -1;
    params->gl_vsync = -2;
@@ -363,6 +364,12 @@ parse_overlay_config(struct overlay_params *params,
    params->frametime_color = strtol("00ff00", NULL, 16);
    params->background_color = strtol("020202", NULL, 16);
    params->text_color = strtol("ffffff", NULL, 16);
+
+#ifdef HAVE_X11
+   params->toggle_hud = XK_F12;
+   params->toggle_logging = XK_F2;
+   params->reload_cfg = XK_F4;
+#endif
 
    // first pass with env var
    if (env)

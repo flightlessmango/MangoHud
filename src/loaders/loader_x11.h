@@ -25,8 +25,8 @@ class libx11_loader {
  private:
   void CleanUp(bool unload);
 
-  void* library_;
-  bool loaded_;
+  void* library_ = nullptr;
+  bool loaded_ = false;
 
   // Disallow copy constructor and assignment operator.
   libx11_loader(const libx11_loader&);

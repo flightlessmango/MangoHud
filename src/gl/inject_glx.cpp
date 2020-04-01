@@ -4,13 +4,17 @@
 #include <cstring>
 #include "real_dlsym.h"
 #include "loaders/loader_glx.h"
-#include "imgui_hud.h"
+#include "loaders/loader_x11.h"
 #include "mesa/util/macros.h"
 #include "mesa/util/os_time.h"
-#include "overlay.h"
 
 #include <chrono>
 #include <iomanip>
+
+#include "imgui_hud_shared.h"
+#include "imgui_hud.h"
+
+using namespace MangoHud::GL;
 
 #define EXPORT_C_(type) extern "C" __attribute__((__visibility__("default"))) type
 
@@ -18,7 +22,6 @@ EXPORT_C_(void *) glXGetProcAddress(const unsigned char* procName);
 EXPORT_C_(void *) glXGetProcAddressARB(const unsigned char* procName);
 
 static glx_loader glx;
-extern overlay_params params;
 
 void* get_proc_address(const char* name) {
     void (*func)() = (void (*)())real_dlsym( RTLD_NEXT, name );
@@ -47,30 +50,6 @@ void* get_glx_proc_address(const char* name) {
     return func;
 }
 
-Status XGetGeometry(
-    Display      *display,
-    Drawable     d,
-    Window       *root,
-    int          *x,
-    int          *y,
-    unsigned int *width,
-    unsigned int *height,
-    unsigned int *border_width,
-    unsigned int *depth
-)
-{
-    static decltype(&::XGetGeometry) pfnXGetGeometry = nullptr;
-    if (!pfnXGetGeometry) {
-        void *handle = real_dlopen("libX11.so.6", RTLD_LAZY);
-        if (!handle)
-            std::cerr << "MANGOHUD: couldn't find libX11.so.6" << std::endl;
-        pfnXGetGeometry = reinterpret_cast<decltype(pfnXGetGeometry)>(
-          real_dlsym(handle, "XGetGeometry"));
-    }
-
-    return pfnXGetGeometry(display, d, root, x, y, width, height, border_width, depth);
-}
-
 EXPORT_C_(void *) glXCreateContext(void *dpy, void *vis, void *shareList, int direct)
 {
     glx.Load();
@@ -89,7 +68,7 @@ EXPORT_C_(bool) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
 
     bool ret = glx.MakeCurrent(dpy, drawable, ctx);
     if (ret)
-        imgui_set_context(ctx);
+        VARIANT(imgui_set_context)(ctx);
 
     if (params.gl_vsync >= -1) {
         if (glx.SwapIntervalEXT)
@@ -105,7 +84,7 @@ EXPORT_C_(bool) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
 
 EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
     glx.Load();
-    imgui_create(glx.GetCurrentContext());
+    VARIANT(imgui_create)(glx.GetCurrentContext());
 
     unsigned int width, height;
     //glx.QueryDrawable(dpy, drawable, 0x801D /*GLX_WIDTH*/, &width);
@@ -114,7 +93,7 @@ EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
     // glXQueryDrawable is buggy, use XGetGeometry instead
     Window unused_window;
     int unused;
-    XGetGeometry((Display*)dpy, (Window)drawable, &unused_window,
+    g_x11->XGetGeometry((Display*)dpy, (Window)drawable, &unused_window,
         &unused, &unused,
         &width, &height,
         (unsigned int*) &unused, (unsigned int*) &unused);
@@ -123,7 +102,7 @@ EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
     width = vp[2];
     height = vp[3];*/
 
-    imgui_render(width, height);
+    VARIANT(imgui_render)(width, height);
     glx.SwapBuffers(dpy, drawable);
     if (fps_limit_stats.targetFrameTime > 0){
         fps_limit_stats.frameStart = os_time_get_nano();

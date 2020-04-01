@@ -1,4 +1,5 @@
 #include "loader_x11.h"
+#include "real_dlsym.h"
 
 libx11_loader::libx11_loader() : loaded_(false) {
 }
@@ -12,7 +13,7 @@ bool libx11_loader::Load(const std::string& library_name) {
     return false;
   }
 
-  library_ = dlopen(library_name.c_str(), RTLD_LAZY);
+  library_ = real_dlopen(library_name.c_str(), RTLD_LAZY);
   if (!library_)
     return false;
 
@@ -80,6 +81,7 @@ void libx11_loader::CleanUp(bool unload) {
   XCloseDisplay = NULL;
   XQueryKeymap = NULL;
   XKeysymToKeycode = NULL;
+  XStringToKeysym = NULL;
   XGetGeometry = NULL;
 
 }

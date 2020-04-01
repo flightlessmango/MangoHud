@@ -1,17 +1,17 @@
 #include <string>
 #include <iostream>
 #include <memory>
-#include <functional>
-#include "GL/gl3w.h"
-#include <imgui.h>
-#include "imgui_impl_opengl3.h"
 #include "font_default.h"
-#include "overlay.h"
 #include "cpu.h"
 #include "file_utils.h"
-#include "notify.h"
+#include "imgui_hud_shared.h"
+#include "imgui_hud.h"
 
-using namespace MangoHud;
+#ifdef IMGUI_GLX
+#include "GL/gl3w.h"
+#endif
+
+namespace MangoHud { namespace GL {
 
 struct GLVec
 {
@@ -43,34 +43,12 @@ struct state {
 };
 
 static GLVec last_vp {}, last_sb {};
-static ImVec2 window_size;
 static swapchain_stats sw_stats {};
 static state state;
-static notify_thread notifier;
-static bool cfg_inited = false;
-static bool inited = false;
 static uint32_t vendorID;
 static std::string deviceName;
-overlay_params params {};
 
-// seems to quit by itself though
-static std::unique_ptr<notify_thread, std::function<void(notify_thread *)>>
-    stop_it(&notifier, [](notify_thread *n){ stop_notifier(*n); });
-
-void imgui_init()
-{
-    if (cfg_inited)
-        return;
-    parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
-    notifier.params = &params;
-    start_notifier(notifier);
-    window_size = ImVec2(params.width, params.height);
-    init_system_info();
-    cfg_inited = true;
-    init_cpu_stats(params);
-}
-
-void imgui_create(void *ctx)
+static void imgui_create(void *ctx)
 {
     if (inited)
         return;
@@ -80,7 +58,6 @@ void imgui_create(void *ctx)
         return;
 
     imgui_init();
-    gl3wInit();
 
     std::cerr << "GL version: " << glGetString(GL_VERSION) << std::endl;
     glGetIntegerv(GL_MAJOR_VERSION, &sw_stats.version_gl.major);
@@ -113,7 +90,7 @@ void imgui_create(void *ctx)
     ImGui::GetIO().IniFilename = NULL;
     ImGui::GetIO().DisplaySize = ImVec2(last_vp[2], last_vp[3]);
 
-    ImGui_ImplOpenGL3_Init();
+    VARIANT(ImGui_ImplOpenGL3_Init)();
     // Make a dummy GL call (we don't actually need the result)
     // IF YOU GET A CRASH HERE: it probably means that you haven't initialized the OpenGL function loader used by this code.
     // Desktop OpenGL 3/4 need a function loader. See the IMGUI_IMPL_OPENGL_LOADER_xxx explanation above.
@@ -141,7 +118,34 @@ void imgui_create(void *ctx)
     ImGui::SetCurrentContext(saved_ctx);
 }
 
-void imgui_shutdown()
+#ifdef IMGUI_GLX
+void VARIANT(imgui_create)(void *ctx)
+{
+    if (inited)
+        return;
+
+    if (!ctx)
+        return;
+
+    gl3wInit();
+    imgui_create(ctx);
+}
+#endif
+
+#ifdef IMGUI_EGL
+void VARIANT(imgui_create)(void *ctx)
+{
+    if (inited)
+        return;
+
+    if (!ctx)
+        return;
+
+    imgui_create(ctx);
+}
+#endif
+
+void VARIANT(imgui_shutdown)()
 {
 #ifndef NDEBUG
     std::cerr << __func__ << std::endl;
@@ -149,26 +153,26 @@ void imgui_shutdown()
 
     if (state.imgui_ctx) {
         ImGui::SetCurrentContext(state.imgui_ctx);
-        ImGui_ImplOpenGL3_Shutdown();
+        VARIANT(ImGui_ImplOpenGL3_Shutdown)();
         ImGui::DestroyContext(state.imgui_ctx);
         state.imgui_ctx = nullptr;
     }
     inited = false;
 }
 
-void imgui_set_context(void *ctx)
+void VARIANT(imgui_set_context)(void *ctx)
 {
     if (!ctx) {
-        imgui_shutdown();
+        VARIANT(imgui_shutdown)();
         return;
     }
 #ifndef NDEBUG
     std::cerr << __func__ << ": " << ctx << std::endl;
 #endif
-    imgui_create(ctx);
+    VARIANT(imgui_create)(ctx);
 }
 
-void imgui_render(unsigned int width, unsigned int height)
+void VARIANT(imgui_render)(unsigned int width, unsigned int height)
 {
     if (!state.imgui_ctx)
         return;
@@ -180,7 +184,7 @@ void imgui_render(unsigned int width, unsigned int height)
     ImGui::SetCurrentContext(state.imgui_ctx);
     ImGui::GetIO().DisplaySize = ImVec2(width, height);
 
-    ImGui_ImplOpenGL3_NewFrame();
+    VARIANT(ImGui_ImplOpenGL3_NewFrame)();
     ImGui::NewFrame();
     {
         std::lock_guard<std::mutex> lk(notifier.mutex);
@@ -190,6 +194,8 @@ void imgui_render(unsigned int width, unsigned int height)
     ImGui::PopStyleVar(3);
 
     ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    VARIANT(ImGui_ImplOpenGL3_RenderDrawData)(ImGui::GetDrawData());
     ImGui::SetCurrentContext(saved_ctx);
 }
+
+}} // namespaces

@@ -56,10 +56,14 @@ vklayer_files = files(
 )
 
 opengl_files = files(
-  'gl/imgui_hud.cpp',
-  'gl/imgui_impl_opengl3.cpp',
-  'gl/gl3w/GL/gl3w.c',
+  'gl/imgui_hud_shared.cpp',
 )
+
+pre_args += '-DHOOK_DLSYM'
+inc_opengl = include_directories('gl/gl3w')
+
+glimgui_glx_dep = null_dep
+glimgui_egl_dep = null_dep
 
 if get_option('with_x11').enabled() and \
     get_option('with_xnvctrl').enabled()
@@ -72,16 +76,80 @@ endif
 
 if get_option('with_x11').enabled()
   pre_args += '-DHAVE_X11'
-  opengl_files += files(
-    'gl/inject_glx.cpp',
-    'loaders/loader_glx.cpp',
+
+  vklayer_files += files(
     'loaders/loader_x11.cpp',
     'shared_x11.cpp',
   )
+
+  opengl_files += files(
+    'loaders/loader_glx.cpp',
+  )
+
+  # build with GLX functions
+  glimgui_glx = static_library(
+    'glimgui_glx',
+    files(
+      'gl/inject_glx.cpp',
+      'gl/imgui_impl_opengl3.cpp',
+      'gl/imgui_hud.cpp',
+      'gl/gl3w/GL/gl3w.c',
+    ),
+    pic : true,
+    c_args : [
+      pre_args,
+      c_vis_args,
+      no_override_init_args,
+      '-DIMGUI_GLX',
+    ],
+    cpp_args : [
+      pre_args,
+      cpp_vis_args,
+      '-DIMGUI_GLX',
+    ],
+    dependencies : [
+      libimgui_core_dep,
+    ],
+    include_directories : [inc_common, inc_opengl],
+  )
+
+  glimgui_glx_dep = declare_dependency(
+    link_with : glimgui_glx,
+  )
 endif
 
-pre_args += '-DHOOK_DLSYM'
-inc_opengl = include_directories('gl/gl3w')
+if false
+#if get_option('with_wayland').enabled()
+  # build with EGL functions
+  glimgui_egl = static_library(
+    'glimgui_egl',
+    files(
+      'gl/imgui_impl_opengl3.cpp',
+      'gl/imgui_hud.cpp',
+    ),
+    pic : true,
+    c_args : [
+      pre_args,
+      c_vis_args,
+      no_override_init_args,
+      '-DIMGUI_EGL',
+    ],
+    cpp_args : [
+      pre_args,
+      cpp_vis_args,
+      '-DIMGUI_EGL',
+    ],
+    dependencies : [
+      libimgui_core_dep,
+    ],
+    include_directories : [inc_common, inc_opengl],
+  )
+
+  glimgui_egl_dep = declare_dependency(
+    link_with : glimgui_egl,
+  )
+
+endif
 
 vklayer_mesa_overlay = shared_library(
   'MangoHud',
@@ -104,7 +172,9 @@ vklayer_mesa_overlay = shared_library(
     ],
   dependencies : [
     vulkan_wsi_deps, 
-    libimgui_core_dep, 
+    libimgui_core_dep,
+    glimgui_glx_dep,
+    glimgui_egl_dep,
     dep_dl,
     dep_pthread,
     dep_vulkan],
