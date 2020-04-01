@@ -16,6 +16,7 @@ void* glXGetCurrentContext();
 
 void* glXGetProcAddress(const unsigned char*);
 void* glXGetProcAddressARB(const unsigned char*);
+int glXQueryDrawable(void *dpy, void* glxdraw, int attr, unsigned int * value);
 
 unsigned int eglSwapBuffers( void*, void* );
 
