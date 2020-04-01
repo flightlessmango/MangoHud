@@ -58,7 +58,6 @@ vklayer_files = files(
 opengl_files = files(
   'gl/imgui_hud.cpp',
   'gl/imgui_impl_opengl3.cpp',
-  'loaders/loader_gl.cpp',
   'gl/gl3w/GL/gl3w.c',
 )
 
@@ -74,7 +73,7 @@ if get_option('with_x11').enabled()
   pre_args += '-DHAVE_X11'
   opengl_files += files(
     'gl/inject_glx.cpp',
-#    'loaders/loader_glx.cpp',
+    'loaders/loader_glx.cpp',
   )
 endif
 

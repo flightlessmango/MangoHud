@@ -3,7 +3,7 @@
 #include <array>
 #include <cstring>
 #include "real_dlsym.h"
-#include "loaders/loader_gl.h"
+#include "loaders/loader_glx.h"
 #include "imgui_hud.h"
 #include "mesa/util/macros.h"
 #include "mesa/util/os_time.h"

@@ -1,5 +1,5 @@
 #include "real_dlsym.h"
-#include "loaders/loader_gl.h"
+#include "loaders/loader_glx.h"
 
 gl_loader::gl_loader() : loaded_(false) {
 }
