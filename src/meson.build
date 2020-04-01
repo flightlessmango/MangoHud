@@ -61,7 +61,8 @@ opengl_files = files(
   'gl/gl3w/GL/gl3w.c',
 )
 
-if get_option('with_xnvctrl').enabled()
+if get_option('with_x11').enabled() and \
+    get_option('with_xnvctrl').enabled()
   pre_args += '-DHAVE_XNVCTRL'
   vklayer_files += files(
     'loaders/loader_nvctrl.cpp',
@@ -74,6 +75,8 @@ if get_option('with_x11').enabled()
   opengl_files += files(
     'gl/inject_glx.cpp',
     'loaders/loader_glx.cpp',
+    'loaders/loader_x11.cpp',
+    'shared_x11.cpp',
   )
 endif
 

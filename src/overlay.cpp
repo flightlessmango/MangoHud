@@ -810,13 +810,19 @@ void init_system_info(){
 }
 
 void check_keybinds(struct overlay_params& params){
+   bool pressed = false; // FIXME just a placeholder until wayland support
    uint64_t now = os_time_get(); /* us */
    elapsedF2 = (double)(now - last_f2_press);
    elapsedF12 = (double)(now - last_f12_press);
    elapsedReloadCfg = (double)(now - reload_cfg_press);
   
   if (elapsedF2 >= 500000 && !params.output_file.empty()){
-     if (key_is_pressed(params.toggle_logging)){
+#ifdef HAVE_X11
+     pressed = key_is_pressed(params.toggle_logging);
+#else
+     pressed = false;
+#endif
+     if (pressed){
        last_f2_press = now;
        log_start = now;
        loggingOn = !loggingOn;
@@ -828,14 +834,24 @@ void check_keybinds(struct overlay_params& params){
    }
 
    if (elapsedF12 >= 500000){
-      if (key_is_pressed(params.toggle_hud)){
+#ifdef HAVE_X11
+      pressed = key_is_pressed(params.toggle_hud);
+#else
+      pressed = false;
+#endif
+      if (pressed){
          last_f12_press = now;
          params.no_display = !params.no_display;
       }
    }
 
    if (elapsedReloadCfg >= 500000){
-      if (key_is_pressed(params.reload_cfg)){
+#ifdef HAVE_X11
+      pressed = key_is_pressed(params.reload_cfg);
+#else
+      pressed = false;
+#endif
+      if (pressed){
          parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
          reload_cfg_press = now;
       }

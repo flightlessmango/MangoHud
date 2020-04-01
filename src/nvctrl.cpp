@@ -5,10 +5,10 @@
 #include "nvctrl.h"
 #include "loaders/loader_nvctrl.h"
 #include "string_utils.h"
+#include "shared_x11.h"
 
 typedef std::unordered_map<std::string, std::string> string_map;
 
-Display *display = XOpenDisplay(NULL);
 libnvctrl_loader nvctrl("libXNVCtrl.so");
 
 struct nvctrlInfo nvctrl_info;
@@ -16,8 +16,8 @@ bool nvctrlSuccess = false;
 
 bool checkXNVCtrl()
 {
-    if (nvctrl.IsLoaded()) {
-        nvctrlSuccess = nvctrl.XNVCTRLIsNvScreen(display, 0);
+    if (init_x11() && nvctrl.IsLoaded()) {
+        nvctrlSuccess = nvctrl.XNVCTRLIsNvScreen(get_xdisplay(), 0);
         if (!nvctrlSuccess)
             std::cerr << "MANGOHUD: XNVCtrl didn't find the correct display" << std::endl;
         return nvctrlSuccess;
@@ -47,7 +47,7 @@ void parse_token(std::string token, string_map& options) {
 
 char* get_attr_target_string(int attr, int target_type, int target_id) {
     char* c = nullptr;
-    if (!nvctrl.XNVCTRLQueryTargetStringAttribute(display, target_type, target_id, 0, attr, &c)) {
+    if (!nvctrl.XNVCTRLQueryTargetStringAttribute(get_xdisplay(), target_type, target_id, 0, attr, &c)) {
         std::cerr << "Failed to query attribute '" << attr << "'.\n";
     }
     return c;
@@ -56,6 +56,9 @@ char* get_attr_target_string(int attr, int target_type, int target_id) {
 void getNvctrlInfo(){
     string_map params;
     std::string token;
+
+    if (!init_x11())
+        return;
 
     int enums[] = {
         NV_CTRL_STRING_GPU_UTILIZATION,
@@ -83,7 +86,7 @@ void getNvctrlInfo(){
         nvctrl_info.MemClock = 0;
 
     int64_t temp = 0;
-    nvctrl.XNVCTRLQueryTargetAttribute64(display,
+    nvctrl.XNVCTRLQueryTargetAttribute64(get_xdisplay(),
                         NV_CTRL_TARGET_TYPE_GPU,
                         0,
                         0,
@@ -92,7 +95,7 @@ void getNvctrlInfo(){
     nvctrl_info.temp = temp;
 
     int64_t memtotal = 0;
-    nvctrl.XNVCTRLQueryTargetAttribute64(display,
+    nvctrl.XNVCTRLQueryTargetAttribute64(get_xdisplay(),
                         NV_CTRL_TARGET_TYPE_GPU,
                         0,
                         0,
@@ -101,7 +104,7 @@ void getNvctrlInfo(){
     nvctrl_info.memoryTotal = memtotal;
 
     int64_t memused = 0;
-    nvctrl.XNVCTRLQueryTargetAttribute64(display,
+    nvctrl.XNVCTRLQueryTargetAttribute64(get_xdisplay(),
                         NV_CTRL_TARGET_TYPE_GPU,
                         0,
                         0,

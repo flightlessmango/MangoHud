@@ -98,7 +98,7 @@ dep_wayland_client = dependency('wayland-client',
 
 if dep_x11.found()
   vulkan_wsi_args += ['-DVK_USE_PLATFORM_XLIB_KHR']
-  vulkan_wsi_deps += dep_x11
+  vulkan_wsi_deps += dep_x11.partial_dependency(compile_args : true, includes : true)
 endif
 if dep_wayland_client.found()
   vulkan_wsi_args += ['-DVK_USE_PLATFORM_WAYLAND_KHR']

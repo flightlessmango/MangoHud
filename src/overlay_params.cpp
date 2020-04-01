@@ -26,8 +26,6 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <sys/sysinfo.h>
-#include <X11/Xlib.h>
-#include <X11/keysym.h>
 #include <wordexp.h>
 #include "imgui.h"
 #include <iostream>
@@ -37,6 +35,11 @@
 #include "config.h"
 
 #include "mesa/util/os_socket.h"
+
+#ifdef HAVE_X11
+#include <X11/keysym.h>
+#include "loaders/loader_x11.h"
+#endif
 
 static enum overlay_param_position
 
@@ -86,23 +89,31 @@ parse_alpha(const char *str)
    return strtof(str, NULL);
 }
 
+#ifdef HAVE_X11
 static KeySym
 parse_toggle_hud(const char *str)
 {
-   return XStringToKeysym(str);
+   if (g_x11->IsLoaded())
+      return g_x11->XStringToKeysym(str);
+   return 0;
 }
 
 static KeySym
 parse_toggle_logging(const char *str)
 {
-   return XStringToKeysym(str);
+   if (g_x11->IsLoaded())
+      return g_x11->XStringToKeysym(str);
+   return 0;
 }
 
 static KeySym
 parse_reload_cfg(const char *str)
 {
-   return XStringToKeysym(str);
+   if (g_x11->IsLoaded())
+      return g_x11->XStringToKeysym(str);
+   return 0;
 }
+#endif
 
 static uint32_t
 parse_fps_sampling_period(const char *str)
