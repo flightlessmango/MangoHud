@@ -81,3 +81,22 @@ void *real_dlsym(void *handle, const char *symbol)
 
     return result;
 }
+
+#ifdef HOOK_DLSYM
+extern void *find_glx_ptr(const char *name);
+
+EXPORT_C_(void*) dlsym(void * handle, const char * name)
+{
+
+#ifdef HAVE_X11
+    void* func = find_glx_ptr(name);
+    if (func) {
+        //fprintf(stderr,"%s: local: %s\n",  __func__ , name);
+        return func;
+    }
+#endif
+
+    //fprintf(stderr,"%s: foreign: %s\n",  __func__ , name);
+    return real_dlsym(handle, name);
+}
+#endif

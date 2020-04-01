@@ -202,7 +202,7 @@ static std::array<const func_ptr, 9> name_to_funcptr_map = {{
 #undef ADD_HOOK
 }};
 
-static void *find_ptr(const char *name)
+void *find_glx_ptr(const char *name)
 {
    for (auto& func : name_to_funcptr_map) {
       if (strcmp(name, func.name) == 0)
@@ -215,7 +215,7 @@ static void *find_ptr(const char *name)
 EXPORT_C_(void *) glXGetProcAddress(const unsigned char* procName) {
     //std::cerr << __func__ << ":" << procName << std::endl;
 
-    void* func = find_ptr( (const char*)procName );
+    void* func = find_glx_ptr( (const char*)procName );
     if (func)
         return func;
 
@@ -225,23 +225,9 @@ EXPORT_C_(void *) glXGetProcAddress(const unsigned char* procName) {
 EXPORT_C_(void *) glXGetProcAddressARB(const unsigned char* procName) {
     //std::cerr << __func__ << ":" << procName << std::endl;
 
-    void* func = find_ptr( (const char*)procName );
+    void* func = find_glx_ptr( (const char*)procName );
     if (func)
         return func;
 
     return get_glx_proc_address((const char*)procName);
 }
-
-#ifdef HOOK_DLSYM
-EXPORT_C_(void*) dlsym(void * handle, const char * name)
-{
-    void* func = find_ptr(name);
-    if (func) {
-        //fprintf(stderr,"%s: local: %s\n",  __func__ , name);
-        return func;
-    }
-
-    //fprintf(stderr,"%s: foreign: %s\n",  __func__ , name);
-    return real_dlsym(handle, name);
-}
-#endif
