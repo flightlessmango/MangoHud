@@ -52,11 +52,11 @@ vklayer_files = files(
   'gpu.cpp',
   'notify.cpp',
   'elfhacks.cpp',
+  'real_dlsym.cpp',
 )
 
 opengl_files = files(
   'gl/imgui_hud.cpp',
-  'gl/real_dlsym.cpp',
   'gl/imgui_impl_opengl3.cpp',
   'loaders/loader_gl.cpp',
   'gl/gl3w/GL/gl3w.c',

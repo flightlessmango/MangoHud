@@ -1,4 +1,4 @@
-#include "gl/real_dlsym.h"
+#include "real_dlsym.h"
 #include "loaders/loader_gl.h"
 
 gl_loader::gl_loader() : loaded_(false) {
