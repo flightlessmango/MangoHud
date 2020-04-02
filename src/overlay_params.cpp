@@ -1,9 +1,12 @@
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <sys/sysinfo.h>
-#include <wordexp.h>
+#include <array>
 #include "imgui.h"
 #include <iostream>
 #include <string>
@@ -21,8 +24,12 @@
 #include "loaders/loader_x11.h"
 #endif
 
+#ifdef __gnu_linux__
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
+#endif
+//#include <sys/sysinfo.h>
+#include <wordexp.h>
 #endif
 
 static enum overlay_param_position

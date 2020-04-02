@@ -1,6 +1,8 @@
 #pragma once
+#ifdef HAVE_X11
 #include "shared_x11.h"
 #include "loaders/loader_x11.h"
+#endif
 
 #ifndef KeySym
 typedef unsigned long KeySym;
@@ -26,6 +28,24 @@ bool keys_are_pressed(const std::vector<KeySym>& keys) {
         bool isPressed = !!(keys_return[kc2 >> 3] & (1 << (kc2 & 7)));
 
         if (isPressed)
+            pressed++;
+    }
+
+    if (pressed > 0 && pressed == keys.size()) {
+        return true;
+    }
+
+    return false;
+}
+#endif
+
+#ifdef _WIN32
+#include <windows.h>
+bool keys_are_pressed(const std::vector<KeySym>& keys) {
+    size_t pressed = 0;
+
+    for (KeySym ks : keys) {
+        if (GetAsyncKeyState(ks) & 0x8000)
             pressed++;
     }
 

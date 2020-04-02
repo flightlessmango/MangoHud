@@ -21,6 +21,10 @@
  * IN THE SOFTWARE.
  */
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -30,6 +34,7 @@
 #include <mutex>
 #include <vector>
 #include <list>
+#include <array>
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_layer.h>
@@ -54,8 +59,6 @@
 #include "logging.h"
 #include "keybinds.h"
 #include "cpu.h"
-#include "loaders/loader_nvml.h"
-#include "memory.h"
 #include "notify.h"
 #include "blacklist.h"
 #include "version.h"
@@ -64,6 +67,10 @@
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
 float g_overflow = 50.f /* 3333ms * 0.5 / 16.6667 / 2 (to edge and back) */;
+#endif
+
+#ifdef __gnu_linux__
+#include "memory.h"
 #endif
 
 bool open = false;
@@ -723,6 +730,7 @@ string exec(string command) {
    char buffer[128];
    string result = "";
 
+#ifdef __gnu_linux__
    // Open pipe to file
    FILE* pipe = popen(command.c_str(), "r");
    if (!pipe) {
@@ -738,16 +746,20 @@ string exec(string command) {
    }
 
    pclose(pipe);
+#endif
+
    return result;
 }
 
 void init_cpu_stats(overlay_params& params)
 {
    auto& enabled = params.enabled;
+#ifdef __gnu_linux__
    enabled[OVERLAY_PARAM_ENABLED_cpu_stats] = cpuStats.Init()
                            && enabled[OVERLAY_PARAM_ENABLED_cpu_stats];
    enabled[OVERLAY_PARAM_ENABLED_cpu_temp] = cpuStats.GetCpuFile()
                            && enabled[OVERLAY_PARAM_ENABLED_cpu_temp];
+#endif
 }
 
 struct PCI_BUS {
@@ -793,6 +805,7 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
       }
    }
 
+#ifdef __gnu_linux__
    // NVIDIA or Intel but maybe has Optimus
    if (vendorID == 0x8086
       || vendorID == 0x10de) {
@@ -876,9 +889,11 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
       }
    }
    parse_pciids();
+#endif
 }
 
 void init_system_info(){
+#ifdef __gnu_linux__
       const char* ld_preload = getenv("LD_PRELOAD");
       if (ld_preload)
          unsetenv("LD_PRELOAD");
@@ -908,6 +923,7 @@ void init_system_info(){
                 << "Gpu:" << gpu << "\n"
                 << "Driver:" << driver << std::endl;
 #endif
+#endif
 }
 
 void check_keybinds(struct overlay_params& params){
@@ -916,9 +932,8 @@ void check_keybinds(struct overlay_params& params){
    elapsedF2 = (double)(now - last_f2_press);
    elapsedF12 = (double)(now - last_f12_press);
    elapsedReloadCfg = (double)(now - reload_cfg_press);
-
-  if (elapsedF2 >= 500000){
-#ifdef HAVE_X11
+  if (elapsedF2 >= 500000 && !params.output_file.empty()){
+#if defined(HAVE_X11) || defined(_WIN32)
      pressed = keys_are_pressed(params.toggle_logging);
 #else
      pressed = false;
@@ -943,7 +958,7 @@ void check_keybinds(struct overlay_params& params){
    }
 
    if (elapsedF12 >= 500000){
-#ifdef HAVE_X11
+#if defined(HAVE_X11) || defined(_WIN32)
       pressed = keys_are_pressed(params.toggle_hud);
 #else
       pressed = false;
@@ -955,7 +970,7 @@ void check_keybinds(struct overlay_params& params){
    }
 
    if (elapsedReloadCfg >= 500000){
-#ifdef HAVE_X11
+#if defined(HAVE_X11) || defined(_WIN32)
       pressed = keys_are_pressed(params.reload_cfg);
 #else
       pressed = false;
@@ -1005,6 +1020,7 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
    if (sw_stats.last_fps_update) {
       if (elapsed >= params.fps_sampling_period) {
 
+#ifdef __gnu_linux__
          if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats]) {
             cpuStats.UpdateCPUData();
             sw_stats.total_cpu = cpuStats.GetCPUDataTotal().percent;
@@ -1031,6 +1047,8 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
 
          gpuLoadLog = gpu_info.load;
          cpuLoadLog = sw_stats.total_cpu;
+#endif
+
          sw_stats.fps = fps;
 
          if (params.enabled[OVERLAY_PARAM_ENABLED_time]) {
@@ -1272,7 +1290,9 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
 {
    uint32_t f_idx = (data.n_frames - 1) % ARRAY_SIZE(data.frames_stats);
    uint64_t frame_timing = data.frames_stats[f_idx].stats[OVERLAY_PLOTS_frame_timing];
+#ifdef __gnu_linux__
    static float char_width = ImGui::CalcTextSize("A").x;
+#endif
    window_size = ImVec2(params.width, params.height);
    unsigned width = ImGui::GetIO().DisplaySize.x;
    unsigned height = ImGui::GetIO().DisplaySize.y;
@@ -1287,6 +1307,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       if (params.enabled[OVERLAY_PARAM_ENABLED_time]){
          ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.00f), "%s", data.time.c_str());
       }
+#ifdef __gnu_linux__
       ImGui::BeginTable("hud", params.tableCols);
       if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
          ImGui::TableNextRow();
@@ -1448,7 +1469,8 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::PopFont();
       }
       ImGui::EndTable();
-      
+#endif
+
       auto engine_color = ImGui::ColorConvertU32ToFloat4(params.engine_color);
       if (params.enabled[OVERLAY_PARAM_ENABLED_fps] && params.enabled[OVERLAY_PARAM_ENABLED_engine_version]){
          ImGui::PushFont(data.font1);
@@ -2488,7 +2510,6 @@ static VkResult overlay_CreateSwapchainKHR(
    } else if (prop.vendorID == 0x8086) {
       ss << " " << (prop.driverVersion >> 14);
       ss << "."  << (prop.driverVersion & 0x3fff);
-   }
 #endif
    } else {
       ss << " " << VK_VERSION_MAJOR(prop.driverVersion);
@@ -2857,10 +2878,12 @@ static VkResult overlay_CreateInstance(
    instance_data_map_physical_devices(instance_data, true);
 
    if (!is_blacklisted()) {
+      init_cpu_stats(instance_data->params);
       parse_overlay_config(&instance_data->params, getenv("MANGOHUD_CONFIG"));
       instance_data->notifier.params = &instance_data->params;
+#ifdef __gnu_linux__
       start_notifier(instance_data->notifier);
-
+#endif
       init_cpu_stats(instance_data->params);
 
       // Adjust height for DXVK/VKD3D version number
@@ -2888,10 +2911,18 @@ static void overlay_DestroyInstance(
    struct instance_data *instance_data = FIND(struct instance_data, instance);
    instance_data_map_physical_devices(instance_data, false);
    instance_data->vtable.DestroyInstance(instance, pAllocator);
+#ifdef __gnu_linux__
    if (!is_blacklisted())
       stop_notifier(instance_data->notifier);
+#endif
    destroy_instance_data(instance_data);
 }
+
+// Doesn't seem to define for windows
+#ifdef _WIN32
+  #undef VK_LAYER_EXPORT
+  #define VK_LAYER_EXPORT __declspec(dllexport) // Note: actually gcc seems to also supports this syntax.
+#endif
 
 extern "C" VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetDeviceProcAddr(VkDevice dev,
                                                                              const char *funcName);

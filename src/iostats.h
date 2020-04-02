@@ -1,5 +1,4 @@
 #pragma once
-#include <pthread.h>
 #include <inttypes.h>
 
 struct iostats {
