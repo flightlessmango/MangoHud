@@ -1,3 +1,4 @@
+#include <functional>
 #include <chrono>
 #include <unistd.h>
 #include <fcntl.h>
@@ -9,28 +10,26 @@
 #define EVENT_SIZE  ( sizeof (struct inotify_event) )
 #define EVENT_BUF_LEN     ( 1024 * ( EVENT_SIZE + 16 ) )
 
-static void *fileChanged(void *params_void) {
-    notify_thread *nt = reinterpret_cast<notify_thread *>(params_void);
+static void fileChanged(notify_thread& nt) {
     int length, i = 0;
     char buffer[EVENT_BUF_LEN];
-    overlay_params local_params = *nt->params;
+    overlay_params local_params = *nt.params;
 
-    while (!nt->quit) {
-        length = read( nt->fd, buffer, EVENT_BUF_LEN );
+    while (!nt.quit) {
+        length = read( nt.fd, buffer, EVENT_BUF_LEN );
         while (i < length) {
             struct inotify_event *event =
                 (struct inotify_event *) &buffer[i];
             i += EVENT_SIZE + event->len;
             if (event->mask & IN_MODIFY) {
                 parse_overlay_config(&local_params, getenv("MANGOHUD_CONFIG"));
-                std::lock_guard<std::mutex> lk(nt->mutex);
-                *nt->params = local_params;
+                std::lock_guard<std::mutex> lk(nt.mutex);
+                *nt.params = local_params;
             }
         }
         i = 0;
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
-    return nullptr;
 }
 
 bool start_notifier(notify_thread& nt)
@@ -48,7 +47,7 @@ bool start_notifier(notify_thread& nt)
         return false;
     }
 
-    pthread_create(&nt.thread, NULL, &fileChanged, &nt);
+    nt.thread = std::thread(fileChanged, std::ref(nt));
 
     return true;
 }
@@ -63,5 +62,6 @@ void stop_notifier(notify_thread& nt)
     close(nt.fd);
     nt.fd = -1;
 
-    pthread_join(nt.thread, nullptr);
+    if (nt.thread.joinable())
+        nt.thread.join();
 }

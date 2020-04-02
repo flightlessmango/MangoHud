@@ -7,7 +7,10 @@
 
 using namespace std;
 extern FILE *amdGpuFile, *amdTempFile, *amdGpuVramTotalFile, *amdGpuVramUsedFile, *amdGpuCoreClockFile, *amdGpuMemoryClockFile;
+
+#ifdef __gnu_linux__
 extern pthread_t cpuThread, gpuThread, cpuInfoThread;
+#endif
 
 struct amdGpu {
     int load;

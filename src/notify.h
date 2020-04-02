@@ -8,7 +8,7 @@ struct notify_thread
     overlay_params *params = nullptr;
     bool quit = false;
     std::mutex mutex;
-    pthread_t thread;
+    std::thread thread;
 };
 
 bool start_notifier(notify_thread& nt);

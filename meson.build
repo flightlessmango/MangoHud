@@ -45,9 +45,11 @@ else
 endif
 
 # TODO: this is very incomplete
+is_unixy = false
 if ['linux', 'cygwin', 'gnu'].contains(host_machine.system())
   pre_args += '-D_GNU_SOURCE'
   pre_args += '-DHAVE_PTHREAD'
+  is_unixy = true
 endif
 
 if get_option('glibcxx_asserts')
@@ -92,9 +94,16 @@ endforeach
 vulkan_wsi_args = []
 vulkan_wsi_deps = []
 
-dep_x11 = dependency('x11', required: get_option('with_x11'))
-dep_wayland_client = dependency('wayland-client',
-    required: get_option('with_wayland'), version : '>=1.11')
+if is_unixy
+  dep_x11 = dependency('x11', required: get_option('with_x11'))
+  dep_wayland_client = dependency('wayland-client',
+      required: get_option('with_wayland'), version : '>=1.11')
+  dbus_dep = dependency('dbus-1', required: get_option('with_dbus')).partial_dependency(compile_args : true, includes : true)
+else
+  dep_x11 = null_dep
+  dep_wayland_client = null_dep
+  dbus_dep = null_dep
+endif
 
 if dep_x11.found()
   vulkan_wsi_args += ['-DVK_USE_PLATFORM_XLIB_KHR']
@@ -105,7 +114,7 @@ if dep_wayland_client.found()
   vulkan_wsi_deps += dep_wayland_client
 endif
 
-if not dep_x11.found() and not dep_wayland_client.found()
+if is_unixy and not dep_x11.found() and not dep_wayland_client.found()
   error('At least one of "with_x11" and "with_wayland" should be enabled')
 endif
 
@@ -115,7 +124,6 @@ inc_common = [
 
 dep_vulkan = dependency('vulkan', required: get_option('use_system_vulkan'))
 dep_pthread = dependency('threads')
-dbus_dep = dependency('dbus-1', required: get_option('with_dbus')).partial_dependency(compile_args : true, includes : true)
 
 # Check for generic C arguments
 c_args = []
@@ -182,10 +190,14 @@ foreach a : cpp_args
 endforeach
 
 # check for dl support
-if cc.has_function('dlopen')
-  dep_dl = null_dep
+if is_unixy
+  if cc.has_function('dlopen')
+    dep_dl = null_dep
+  else
+    dep_dl = cc.find_library('dl')
+  endif
 else
-  dep_dl = cc.find_library('dl')
+  dep_dl = null_dep
 endif
 
 if dep_vulkan.found()

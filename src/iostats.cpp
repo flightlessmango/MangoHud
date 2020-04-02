@@ -2,6 +2,7 @@
 #include "string_utils.h"
 #include <fstream>
 
+#ifdef __gnu_linux__
 pthread_t ioThread;
 void *getIoStats(void *args) {
     iostats *io = reinterpret_cast<iostats *>(args);
@@ -25,3 +26,4 @@ void *getIoStats(void *args) {
     pthread_detach(ioThread);
     return NULL;
 }
+#endif

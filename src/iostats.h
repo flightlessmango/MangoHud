@@ -1,8 +1,10 @@
 #pragma once
-#include <pthread.h>
 #include <inttypes.h>
 
+#ifdef __gnu_linux__
+#include <pthread.h>
 extern pthread_t ioThread;
+#endif
 
 struct iostats {
     struct {

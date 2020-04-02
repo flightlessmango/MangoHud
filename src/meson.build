@@ -43,68 +43,83 @@ vklayer_files = files(
   'overlay_params.cpp',
   'font_unispace.c',
   'blacklist.cpp',
-  'cpu.cpp',
-  'loaders/loader_nvml.cpp',
-  'nvml.cpp',
-  'file_utils.cpp',
-  'memory.cpp',
   'config.cpp',
-  'iostats.cpp',
-  'gpu.cpp',
-  'notify.cpp',
-  'elfhacks.cpp',
-  'real_dlsym.cpp',
 )
 
-opengl_files = files(
-  'gl/glad.c',
-  'gl/imgui_impl_opengl3.cpp',
-  'gl/imgui_hud.cpp',
-  'gl/inject_egl.cpp',
-)
+opengl_files = []
 
-if get_option('with_dlsym').enabled()
-    pre_args += '-DHOOK_DLSYM'
-endif
-
-if get_option('with_xnvctrl').enabled()
-
-  if not get_option('with_x11').enabled()
-    error('XNVCtrl also needs \'with_x11\'')
-  endif
-
-  xnvctrl_h_found = cc.has_header('NVCtrl/NVCtrl.h')
-  if not xnvctrl_h_found
-    error('NVCtrl.h was not found. Disable with \'with_xnvctrl\' if this feature is not needed.')
-  endif
-
-  pre_args += '-DHAVE_XNVCTRL'
+if ['windows', 'mingw'].contains(host_machine.system())
   vklayer_files += files(
-    'loaders/loader_nvctrl.cpp',
-    'nvctrl.cpp',
+    'file_utils_win32.cpp',
+#    'MangoHud.def',
   )
 endif
 
-if get_option('with_x11').enabled()
-  pre_args += '-DHAVE_X11'
-
+if is_unixy
   vklayer_files += files(
-    'loaders/loader_x11.cpp',
-    'shared_x11.cpp',
+    'file_utils.cpp',
+    'cpu.cpp',
+    'memory.cpp',
+    'iostats.cpp',
+    'gpu.cpp',
+    'notify.cpp',
+    'elfhacks.cpp',
+    'real_dlsym.cpp',
+    'loaders/loader_nvml.cpp',
+    'nvml.cpp',
   )
 
+  pre_args += '-DHAVE_NVML'
   opengl_files += files(
-    'loaders/loader_glx.cpp',
-    'gl/inject_glx.cpp',
+    'gl/glad.c',
+    'gl/imgui_impl_opengl3.cpp',
+    'gl/imgui_hud.cpp',
+    'gl/inject_egl.cpp',
   )
-endif
 
-if dbus_dep.found() and get_option('with_dbus').enabled()
-  pre_args += '-DHAVE_DBUS'
-  vklayer_files += files(
-    'dbus.cpp',
-    'loaders/loader_dbus.cpp',
-  )
+  if get_option('with_dlsym').enabled()
+      pre_args += '-DHOOK_DLSYM'
+  endif
+
+  if get_option('with_xnvctrl').enabled()
+
+    if not get_option('with_x11').enabled()
+      error('XNVCtrl also needs \'with_x11\'')
+    endif
+
+    xnvctrl_h_found = cc.has_header('NVCtrl/NVCtrl.h')
+    if not xnvctrl_h_found
+      error('NVCtrl.h was not found. Disable with \'with_xnvctrl\' if this feature is not needed.')
+    endif
+
+    pre_args += '-DHAVE_XNVCTRL'
+    vklayer_files += files(
+      'loaders/loader_nvctrl.cpp',
+      'nvctrl.cpp',
+    )
+  endif
+
+  if get_option('with_x11').enabled()
+    pre_args += '-DHAVE_X11'
+
+    vklayer_files += files(
+      'loaders/loader_x11.cpp',
+      'shared_x11.cpp',
+    )
+
+    opengl_files += files(
+      'loaders/loader_glx.cpp',
+      'gl/inject_glx.cpp',
+    )
+  endif
+
+  if dbus_dep.found() and get_option('with_dbus').enabled()
+    pre_args += '-DHAVE_DBUS'
+    vklayer_files += files(
+      'dbus.cpp',
+      'loaders/loader_dbus.cpp',
+    )
+  endif
 endif
 
 vklayer_mesa_overlay = shared_library(
@@ -140,28 +155,30 @@ vklayer_mesa_overlay = shared_library(
   install : true
 )
 
-mangohud_dlsym = shared_library(
-  'MangoHud_dlsym',
-  files(
-    'elfhacks.cpp',
-    'real_dlsym.cpp',
-    'hook_dlsym.cpp',
-  ),
-  c_args : [
-    pre_args,
-    c_vis_args,
-    no_override_init_args,
-    ],
-  cpp_args : [
-    pre_args,
-    cpp_vis_args,
-    ],
-  dependencies : [dep_dl],
-  include_directories : [inc_common],
-  link_args : cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL']),
-  install_dir : libdir_mangohud,
-  install : true
-)
+if is_unixy
+  mangohud_dlsym = shared_library(
+    'MangoHud_dlsym',
+    files(
+      'elfhacks.cpp',
+      'real_dlsym.cpp',
+      'hook_dlsym.cpp',
+    ),
+    c_args : [
+      pre_args,
+      c_vis_args,
+      no_override_init_args,
+      ],
+    cpp_args : [
+      pre_args,
+      cpp_vis_args,
+      ],
+    dependencies : [dep_dl],
+    include_directories : [inc_common],
+    link_args : cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL']),
+    install_dir : libdir_mangohud,
+    install : true
+  )
+endif
 
 configure_file(input : 'mangohud.json.in',
   output : '@0@.@1@.json'.format(meson.project_name(), target_machine.cpu_family()),
