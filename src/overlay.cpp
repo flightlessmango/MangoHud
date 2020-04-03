@@ -1290,9 +1290,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
 {
    uint32_t f_idx = (data.n_frames - 1) % ARRAY_SIZE(data.frames_stats);
    uint64_t frame_timing = data.frames_stats[f_idx].stats[OVERLAY_PLOTS_frame_timing];
-#ifdef __gnu_linux__
    static float char_width = ImGui::CalcTextSize("A").x;
-#endif
    window_size = ImVec2(params.width, params.height);
    unsigned width = ImGui::GetIO().DisplaySize.x;
    unsigned height = ImGui::GetIO().DisplaySize.y;
@@ -1307,8 +1305,8 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       if (params.enabled[OVERLAY_PARAM_ENABLED_time]){
          ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.00f), "%s", data.time.c_str());
       }
-#ifdef __gnu_linux__
       ImGui::BeginTable("hud", params.tableCols);
+#ifdef __gnu_linux__
       if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
          ImGui::TableNextRow();
          const char* gpu_text;
@@ -1452,6 +1450,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::Text("GiB");
          ImGui::PopFont();
       }
+#endif
       if (params.enabled[OVERLAY_PARAM_ENABLED_fps]){
          ImGui::TableNextRow();
          ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", is_vulkan ? data.engineName.c_str() : "OpenGL");
@@ -1469,7 +1468,6 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::PopFont();
       }
       ImGui::EndTable();
-#endif
 
       auto engine_color = ImGui::ColorConvertU32ToFloat4(params.engine_color);
       if (params.enabled[OVERLAY_PARAM_ENABLED_fps] && params.enabled[OVERLAY_PARAM_ENABLED_engine_version]){
