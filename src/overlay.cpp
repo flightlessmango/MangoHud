@@ -57,12 +57,15 @@
 #include "loaders/loader_nvml.h"
 #include "memory.h"
 #include "notify.h"
+
+#ifdef HAVE_DBUS
 #include "dbus_info.h"
+float g_overflow = 50.f /* 3333ms * 0.5 / 16.6667 / 2 (to edge and back) */;
+#endif
 
 bool open = false;
 string gpuString;
 float offset_x, offset_y, hudSpacing;
-float hudTicker = 50.f, overflow = 50.f /* 3333ms * 0.5 / 16.6667 / 2 (to edge and back) */;
 int hudFirstRow, hudSecondRow;
 struct amdGpu amdgpu;
 struct fps_limit fps_limit_stats;
@@ -1000,6 +1003,26 @@ static void right_aligned_text(float off_x, const char *fmt, ...)
    ImGui::Text("%s", buffer);
 }
 
+float get_ticker_limited_pos(float pos, float tw, float& left_limit, float& right_limit)
+{
+   float cw = ImGui::GetContentRegionAvailWidth();
+   float new_pos_x = ImGui::GetCursorPosX();
+   left_limit = cw - tw + new_pos_x;
+   right_limit = new_pos_x;
+
+   if (cw < tw) {
+      new_pos_x += pos;
+      // acts as a delay before it starts scrolling again
+      if (new_pos_x < left_limit)
+         return left_limit;
+      else if (new_pos_x > right_limit)
+         return right_limit;
+      else
+         return new_pos_x;
+   }
+   return new_pos_x;
+}
+
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan)
 {
    uint32_t f_idx = (data.n_frames - 1) % ARRAY_SIZE(data.frames_stats);
@@ -1220,6 +1243,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::PopFont();
       }
 
+#ifdef HAVE_DBUS
       {
          scoped_lock lk(spotify.mutex);
          if (spotify.valid) {
@@ -1227,60 +1251,48 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             ImGui::Dummy(ImVec2(0.0f, 20.0f));
             ImGui::PushFont(data.font1);
 
-            float tw = ImGui::CalcTextSize(spotify.title.c_str()).x;
-            float cw = ImGui::GetContentRegionAvailWidth();
-            //if (hudTicker < -tw)
-            //   hudTicker = cw;
-
-            static int dir = 1;
-            float limited_pos, new_pos_x = ImGui::GetCursorPosX();
-            float left_limit = cw - tw + new_pos_x;
-            float right_limit = ImGui::GetCursorPosX();
-
-            if (cw < tw) {
-               if (hudTicker < left_limit - overflow * .25f - new_pos_x) {
-                  dir = -1;
-                  hudTicker = (left_limit - overflow * .25f) + 1.f - new_pos_x;
-               } else if (hudTicker > right_limit + overflow - new_pos_x) {
-                  dir = 1;
-                  hudTicker = (right_limit + overflow) - 1.f - new_pos_x;
-               }
-
-               hudTicker -= .5f * (frame_timing / 16666.7f) * dir;
-               new_pos_x += hudTicker;
-
-               // acts as a delay before it starts scrolling again
-               if (new_pos_x < left_limit)
-                  limited_pos = left_limit;
-               else if (new_pos_x > right_limit)
-                  limited_pos = right_limit;
-               else
-                  limited_pos = new_pos_x;
-
-            } else {
-               limited_pos = new_pos_x;
-               hudTicker = overflow;
+            if (spotify.ticker.needs_recalc) {
+               spotify.ticker.tw0 = ImGui::CalcTextSize(spotify.title.c_str()).x;
+               spotify.ticker.tw1 = ImGui::CalcTextSize(spotify.artists.c_str()).x;
+               spotify.ticker.tw2 = ImGui::CalcTextSize(spotify.album.c_str()).x;
+               spotify.ticker.longest = std::max(std::max(
+                     spotify.ticker.tw0,
+                     spotify.ticker.tw1),
+                  spotify.ticker.tw2);
+               spotify.ticker.needs_recalc = false;
             }
 
-            ImGui::SetCursorPosX(limited_pos);
+            float new_pos, left_limit = 0, right_limit = 0;
+            get_ticker_limited_pos(spotify.ticker.pos, spotify.ticker.longest, left_limit, right_limit);
+
+            if (spotify.ticker.pos < left_limit - g_overflow * .5f) {
+               spotify.ticker.dir = -1;
+               spotify.ticker.pos = (left_limit - g_overflow * .5f) + 1.f /* random */;
+            } else if (spotify.ticker.pos > right_limit + g_overflow) {
+               spotify.ticker.dir = 1;
+               spotify.ticker.pos = (right_limit + g_overflow) - 1.f /* random */;
+            }
+
+            spotify.ticker.pos -= .5f * (frame_timing / 16666.7f) * spotify.ticker.dir;
+
+            new_pos = get_ticker_limited_pos(spotify.ticker.pos, spotify.ticker.tw0, left_limit, right_limit);
+            ImGui::SetCursorPosX(new_pos);
             ImGui::Text("%s", spotify.title.c_str());
-            //std::cerr << "ticker: " << hudTicker << ", " << left_limit << "<>" << right_limit << ", " << dir << std::endl;
 
-            for (size_t i = 0; i < spotify.artists.size(); i++) {
-               ImGui::Text("%s", spotify.artists[i].c_str());
-               if (i < spotify.artists.size() - 1) {
-                  ImGui::SameLine(0, 1.0f);
-                  ImGui::Text(",");
-                  ImGui::SameLine(0, 1.0f);
-               }
-            }
+            new_pos = get_ticker_limited_pos(spotify.ticker.pos, spotify.ticker.tw1, left_limit, right_limit);
+            ImGui::SetCursorPosX(new_pos);
+            ImGui::Text("%s", spotify.artists.c_str());
             //ImGui::NewLine();
-            if (!spotify.album.empty())
+            if (!spotify.album.empty()) {
+               new_pos = get_ticker_limited_pos(spotify.ticker.pos, spotify.ticker.tw2, left_limit, right_limit);
+               ImGui::SetCursorPosX(new_pos);
                ImGui::Text("%s", spotify.album.c_str());
+            }
             ImGui::PopFont();
             ImGui::PopStyleVar();
          }
       }
+#endif
 
       window_size = ImVec2(window_size.x, ImGui::GetCursorPosY() + 10.0f);
       ImGui::End();
@@ -2519,6 +2531,7 @@ static VkResult overlay_CreateInstance(
 
    init_cpu_stats(instance_data->params);
 
+#ifdef HAVE_DBUS
    if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_media_player]) {
       try {
          dbusmgr::dbus_mgr.init();
@@ -2527,6 +2540,7 @@ static VkResult overlay_CreateInstance(
          std::cerr << "Failed to get initial Spotify metadata: " << e.what() << std::endl;
       }
    }
+#endif
 
    // Adjust height for DXVK/VKD3D version number
    if (engineName == "DXVK" || engineName == "VKD3D"){

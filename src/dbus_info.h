@@ -1,5 +1,4 @@
 #pragma once
-#include <dbus/dbus.h>
 #include <stdexcept>
 #include <thread>
 #include <functional>
@@ -7,14 +6,26 @@
 #include <string>
 #include <map>
 #include <mutex>
+#include "loaders/loader_dbus.h"
 
 struct metadata {
-    std::vector<std::string> artists;
+    //std::vector<std::string> artists;
+    std::string artists; // pre-concatenate
     std::string title;
     std::string album;
     std::string something;
     std::string artUrl;
     bool playing = false;
+    struct {
+        float pos;
+        float longest;
+        int dir = -1;
+        bool needs_recalc;
+
+        float tw0;
+        float tw1;
+        float tw2;
+    } ticker;
 
     bool valid = false;
     std::mutex mutex;
@@ -47,14 +58,16 @@ namespace dbusmgr {
     class dbus_error : public std::runtime_error
     {
     public:
-        dbus_error(DBusError *src) : std::runtime_error(src->message)
+        dbus_error(libdbus_loader& dbus_, DBusError *src) : std::runtime_error(src->message)
         {
-            dbus_error_init(&error);
-            dbus_move_error (src, &error);
+            dbus = &dbus_;
+            dbus->error_init(&error);
+            dbus->move_error (src, &error);
         }
-        virtual ~dbus_error() { dbus_error_free (&error); }
+        virtual ~dbus_error() { dbus->error_free (&error); }
     private:
         DBusError error;
+        libdbus_loader *dbus;
     };
 
     class dbus_manager
@@ -62,7 +75,6 @@ namespace dbusmgr {
     public:
         dbus_manager()
         {
-            ::dbus_error_init(&m_error);
         }
 
         ~dbus_manager();
@@ -74,6 +86,11 @@ namespace dbusmgr {
         DBusConnection* get_conn() const {
             return m_dbus_conn;
         }
+
+        libdbus_loader& dbus() {
+            return m_dbus_ldr;
+        }
+
 
     protected:
         void stop_thread();
@@ -88,6 +105,7 @@ namespace dbusmgr {
         bool m_inited = false;
         std::thread m_thread;
         std::map<CBENUM, callback_func> m_callbacks;
+        libdbus_loader m_dbus_ldr;
 
         const std::array<DBusSignal, 2> m_signals {{
             { "org.freedesktop.DBus", "NameOwnerChanged", ST_NAMEOWNERCHANGED },

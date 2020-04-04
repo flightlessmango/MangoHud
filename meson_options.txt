@@ -6,3 +6,4 @@ option('include_doc', type : 'boolean', value : true, description: 'Include the 
 option('with_xnvctrl', type : 'feature', value : 'enabled', description: 'Enable XNVCtrl support')
 option('with_x11', type : 'feature', value : 'enabled')
 option('with_wayland', type : 'feature', value : 'disabled')
+option('with_dbus', type : 'feature', value : 'enabled')

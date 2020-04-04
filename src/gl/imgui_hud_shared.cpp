@@ -3,7 +3,10 @@
 #include <thread>
 #include <iostream>
 #include "imgui_hud_shared.h"
+
+#ifdef HAVE_DBUS
 #include "dbus_info.h"
+#endif
 
 namespace MangoHud { namespace GL {
 
@@ -28,6 +31,8 @@ void imgui_init()
     init_system_info();
     cfg_inited = true;
     init_cpu_stats(params);
+
+#ifdef HAVE_DBUS
     if (params.enabled[OVERLAY_PARAM_ENABLED_media_player]) {
         try {
             dbusmgr::dbus_mgr.init();
@@ -36,6 +41,7 @@ void imgui_init()
             std::cerr << "Failed to get initial Spotify metadata: " << e.what() << std::endl;
         }
     }
+#endif
 }
 
 }} // namespaces

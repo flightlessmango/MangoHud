@@ -53,7 +53,6 @@ vklayer_files = files(
   'notify.cpp',
   'elfhacks.cpp',
   'real_dlsym.cpp',
-  'dbus.cpp',
 )
 
 opengl_files = files(
@@ -152,6 +151,14 @@ if false
 
 endif
 
+if dbus_dep.found() and get_option('with_dbus').enabled()
+  pre_args += '-DHAVE_DBUS'
+  vklayer_files += files(
+    'dbus.cpp',
+    'loaders/loader_dbus.cpp',
+  )
+endif
+
 vklayer_mesa_overlay = shared_library(
   'MangoHud',
   util_files,
@@ -176,9 +183,9 @@ vklayer_mesa_overlay = shared_library(
     libimgui_core_dep,
     glimgui_glx_dep,
     glimgui_egl_dep,
+    dbus_dep,
     dep_dl,
     dep_pthread,
-    dep_dbus,
     dep_vulkan],
   include_directories : [inc_common, inc_opengl],
   link_args : cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro']),
