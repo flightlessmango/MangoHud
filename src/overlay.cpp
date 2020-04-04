@@ -943,18 +943,19 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
              if (vendorID == 0x10de)
                pthread_create(&gpuThread, NULL, &getNvidiaGpuInfo, NULL);
           }
-#ifdef __gnu_linux__
          if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats]) {
             cpuStats.UpdateCPUData();
             sw_stats.total_cpu = cpuStats.GetCPUDataTotal().percent;
 
+#ifdef __gnu_linux__
             if (params.enabled[OVERLAY_PARAM_ENABLED_core_load])
                cpuStats.UpdateCoreMhz();
             if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp])
                cpuStats.UpdateCpuTemp();
+#endif
          }
 
-
+#ifdef __gnu_linux__
          // get ram usage/max
          if (params.enabled[OVERLAY_PARAM_ENABLED_ram])
             pthread_create(&memoryThread, NULL, &update_meminfo, NULL);
@@ -1175,7 +1176,6 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             ImGui::PopFont();
          }
       }
-#ifdef __gnu_linux__
       if(params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats]){
          ImGui::TableNextRow();
          ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.cpu_color), "CPU");
@@ -1185,15 +1185,17 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::Text("%%");
          // ImGui::SameLine(150);
          // ImGui::Text("%s", "%");
-      
+#ifdef __gnu_linux__
          if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp]){
             ImGui::TableNextCell();
             right_aligned_text(char_width * 4, "%i", cpuStats.GetCPUDataTotal().temp);
             ImGui::SameLine(0, 1.0f);
             ImGui::Text("°C");
          }
+#endif
       }
       
+#ifdef __gnu_linux__
       if (params.enabled[OVERLAY_PARAM_ENABLED_core_load]){
          int i = 0;
          for (const CPUData &cpuData : cpuStats.GetCPUData())

@@ -53,7 +53,8 @@ opengl_files = []
 if ['windows', 'mingw'].contains(host_machine.system())
   vklayer_files += files(
     'file_utils_win32.cpp',
-    'loaders/loader_nvml_win32.cpp'
+    'loaders/loader_nvml_win32.cpp',
+    'cpu_win32.cpp',
 #    'MangoHud.def',
   )
 endif
