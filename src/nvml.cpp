@@ -1,8 +1,16 @@
+#ifdef __gnu_linux__
+#include <dlfcn.h>
+#endif
 #include "loaders/loader_nvml.h"
 #include "nvidia_info.h"
 #include <iostream>
 
+#ifdef __gnu_linux__
 libnvml_loader nvml("libnvidia-ml.so.1");
+#endif
+#ifdef _WIN32
+libnvml_loader nvml(NVMLQUERY_DEFAULT_NVML_DLL_PATH);
+#endif
 
 nvmlReturn_t result;
 nvmlDevice_t nvidiaDevice;
