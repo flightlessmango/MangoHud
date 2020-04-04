@@ -15,7 +15,9 @@
 class libnvctrl_loader {
  public:
   libnvctrl_loader();
-  libnvctrl_loader(const std::string& library_name) { Load(library_name); }
+  libnvctrl_loader(const std::string& library_name) : libnvctrl_loader() {
+    Load(library_name);
+  }
   ~libnvctrl_loader();
 
   bool Load(const std::string& library_name);
