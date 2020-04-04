@@ -1027,10 +1027,12 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
             cpuStats.UpdateCPUData();
             sw_stats.total_cpu = cpuStats.GetCPUDataTotal().percent;
 
+#ifdef __gnu_linux__
             if (params.enabled[OVERLAY_PARAM_ENABLED_core_load])
                cpuStats.UpdateCoreMhz();
             if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp])
                cpuStats.UpdateCpuTemp();
+#endif
          }
 
          if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]) {
@@ -1046,10 +1048,9 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
             std::thread(update_meminfo).detach();
          if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])
             std::thread(getIoStats, &sw_stats.io).detach();
-
+#endif
          gpuLoadLog = gpu_info.load;
          cpuLoadLog = sw_stats.total_cpu;
-#endif
 
          sw_stats.fps = fps;
 
@@ -1348,7 +1349,6 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             }
          }
       }
-#ifdef __gnu_linux__
       if(params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats]){
          ImGui::TableNextRow();
          const char* cpu_text;
@@ -1363,6 +1363,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::Text("%%");
          // ImGui::SameLine(150);
          // ImGui::Text("%s", "%");
+#ifdef __gnu_linux__
 
          if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp]){
             ImGui::TableNextCell();
@@ -1370,8 +1371,10 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             ImGui::SameLine(0, 1.0f);
             ImGui::Text("°C");
          }
+#endif
       }
 
+#ifdef __gnu_linux__
       if (params.enabled[OVERLAY_PARAM_ENABLED_core_load]){
          int i = 0;
          for (const CPUData &cpuData : cpuStats.GetCPUData())
