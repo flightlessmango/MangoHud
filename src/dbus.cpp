@@ -353,6 +353,10 @@ bool get_dict_string_array(libdbus_loader& dbus, DBusMessage *msg, string_pair_v
 
 static void assign_metadata(metadata& meta, string_pair_vec& entries)
 {
+    meta.title.clear();
+    meta.artists.clear();
+    meta.album.clear();
+
     std::lock_guard<std::mutex> lk(meta.mutex);
     std::vector<std::string> artists;
     meta.valid = false;
@@ -374,7 +378,6 @@ static void assign_metadata(metadata& meta, string_pair_vec& entries)
     }
 
     // XXX Spotify only sends one artist anyway
-    meta.artists.clear();
     for (auto p = artists.begin(); p != artists.end(); p++) {
         meta.artists += *p;
         if (p != artists.end() - 1)
