@@ -1,6 +1,3 @@
-#ifdef __gnu_linux__
-#include <dlfcn.h>
-#endif
 #include "loaders/loader_nvml.h"
 #include "nvidia_info.h"
 #include <iostream>
