@@ -81,10 +81,27 @@ dependencies() {
                 fi
             ;;
             "openSUSE Leap"|"openSUSE Tumbleweed")
+
+                PACKMAN_PKGS="libXNVCtrl-devel"
+                case $DISTRO in
+                    "openSUSE Leap")
+                        echo "You may have to enable packman repository for some extra packages: ${PACKMAN_PKGS}"
+                        echo "zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Leap_15.1/ packman"
+                    ;;
+                    "openSUSE Tumbleweed")
+                        echo "You may have to enable packman repository for some extra packages: ${PACKMAN_PKGS}"
+                        echo "zypper ar -cfp 90 http://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/ packman"
+                    ;;
+                esac
+
                 MANAGER_QUERY="rpm -q"
                 MANAGER_INSTALL="zypper install"
-                DEPS="{gcc-c++,gcc-c++-32bit,meson,libpkgconf-devel,python3-Mako,libX11-devel,libX11-devel-32bit,glslang-devel,libglvnd-devel,libglvnd-devel-32bit,glibc-devel,glibc-devel-32bit,libstdc++-devel,libstdc++-devel-32bit,Mesa-libGL-devel,libXNVCtrl-devel}"
+                DEPS="{gcc-c++,gcc-c++-32bit,libpkgconf-devel,python3-Mako,libX11-devel,glslang-devel,glibc-devel,glibc-devel-32bit,libstdc++-devel,libstdc++-devel-32bit,Mesa-libGL-devel,dbus-1-devel,${PACKMAN_PKGS}}"
                 install
+
+                if [[ $(sudo pip3 show meson; echo $?) == 1 ]]; then
+                    sudo pip3 install 'meson>=0.54'
+                fi
             ;;
             "Solus")
                 unset MANAGER_QUERY
