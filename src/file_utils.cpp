@@ -27,6 +27,7 @@ bool find_folder(const char* root, const char* prefix, std::string& dest)
         return false;
     }
 
+    // XXX xfs/jfs need stat() for inode type
     while ((dp = readdir(dirp))) {
         if ((dp->d_type == DT_LNK || dp->d_type == DT_DIR) && starts_with(dp->d_name, prefix)) {
             dest = dp->d_name;
