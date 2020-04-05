@@ -67,6 +67,7 @@ glimgui_egl_dep = null_dep
 
 if get_option('with_x11').enabled() and \
     get_option('with_xnvctrl').enabled()
+  xnvctrl_h_dep = cc.has_header('NVCtrl/NVCtrl.h')
   pre_args += '-DHAVE_XNVCTRL'
   vklayer_files += files(
     'loaders/loader_nvctrl.cpp',
@@ -75,6 +76,7 @@ if get_option('with_x11').enabled() and \
 endif
 
 if get_option('with_x11').enabled()
+  glx_h_dep = cc.has_header('GL/glx.h')
   pre_args += '-DHAVE_X11'
 
   vklayer_files += files(
