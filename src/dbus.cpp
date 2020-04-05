@@ -446,6 +446,9 @@ void get_spotify_metadata(dbusmgr::dbus_manager& dbus, metadata& meta)
 namespace dbusmgr {
 void dbus_manager::init()
 {
+    if (m_inited)
+        return;
+
     if (!m_dbus_ldr.Load("libdbus-1.so.3"))
         throw std::runtime_error("Could not load libdbus-1.so.3");
 
