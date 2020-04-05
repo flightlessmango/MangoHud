@@ -48,7 +48,7 @@ dependencies() {
         echo "# Checking Dependencies"
         
         case $DISTRO in
-            "Arch Linux"|"Manjaro")
+            "Arch Linux"|"Manjaro Linux")
                 MANAGER_QUERY="pacman -Q"
                 MANAGER_INSTALL="pacman -S"
                 DEPS="{gcc,meson,pkgconf,python-mako,glslang,libglvnd,lib32-libglvnd,libxnvctrl}"
