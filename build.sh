@@ -67,11 +67,11 @@ dependencies() {
             *"buntu"|"Linux Mint"|"Debian"|"Zorin OS"|"Pop!_OS"|"elementary OS")
                 MANAGER_QUERY="dpkg-query -s"
                 MANAGER_INSTALL="apt install"
-                DEPS="{gcc,g++,gcc-multilib,g++-multilib,ninja-build,python3-pip,python3-setuptools,python3-wheel,pkg-config,mesa-common-dev,libx11-dev,libxnvctrl-dev}"
+                DEPS="{gcc,g++,gcc-multilib,g++-multilib,ninja-build,python3-pip,python3-setuptools,python3-wheel,pkg-config,mesa-common-dev,libx11-dev,libxnvctrl-dev,libdbus-1-dev}"
                 install
                 
                 if [[ $(sudo pip3 show meson; echo $?) == 1 || $(sudo pip3 show mako; echo $?) == 1 ]]; then
-                    sudo pip3 install meson mako
+                    sudo pip3 install 'meson>=0.54' mako
                 fi
                 if [[ ! -f /usr/local/bin/glslangValidator ]]; then
                     wget https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip
