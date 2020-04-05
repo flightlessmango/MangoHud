@@ -467,13 +467,15 @@ void dbus_manager::init()
 
 dbus_manager::~dbus_manager()
 {
-    // unreference system bus connection instead of closing it
-    if (m_dbus_conn) {
-        disconnect_from_signals();
-        m_dbus_ldr.connection_unref(m_dbus_conn);
-        m_dbus_conn = nullptr;
+    if (m_inited) {
+        // unreference system bus connection instead of closing it
+        if (m_dbus_conn) {
+            disconnect_from_signals();
+            m_dbus_ldr.connection_unref(m_dbus_conn);
+            m_dbus_conn = nullptr;
+        }
+        m_dbus_ldr.error_free(&m_error);
     }
-    m_dbus_ldr.error_free(&m_error);
 }
 
 void dbus_manager::connect_to_signals()
