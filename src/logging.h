@@ -10,16 +10,16 @@ using namespace std;
 
 string os, cpu, gpu, ram, kernel, driver;
 bool sysInfoFetched = false;
-int gpuLoadLog = 0, cpuLoadLog = 0, log_period = 0;
+int gpuLoadLog = 0, cpuLoadLog = 0, log_period = 0, elapsedLog;
 
 struct logData{
   double fps;
-  double cpu;
-  double gpu;
-  double previous;
+  int cpu;
+  int gpu;
+  int previous;
 };
 
-double fps, elapsedLog;
+double fps;
 std::vector<logData> logArray;
 ofstream out;
 const char* log_period_env = std::getenv("LOG_PERIOD");
@@ -27,15 +27,15 @@ int num;
 bool loggingOn;
 uint64_t log_start;
 
-// void writeFile(string date){
-// 	out.open(mangohud_output_env + date, ios::out | ios::app);
+void writeFile(string filename){
+  out.open(filename, ios::out | ios::app);
 
-// 	for (size_t i = 0; i < logArray.size(); i++) {
-//      out << logArray[i].fps << "," << logArray[i].cpu  << "," << logArray[i].gpu << endl;
-//   }
-// 	out.close();
-// 	logArray.clear();
-// }
+  for (size_t i = 0; i < logArray.size(); i++)
+    out << logArray[i].fps << "," << logArray[i].cpu  << "," << logArray[i].gpu << "," << logArray[i].previous << endl;
+
+  out.close();
+  logArray.clear();
+}
 
 void *logging(void *params_void){
   overlay_params *params = reinterpret_cast<overlay_params *>(params_void);
@@ -51,18 +51,19 @@ void *logging(void *params_void){
   out.open(params->output_file + date, ios::out | ios::app);
   out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver" << endl;
   out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << endl;
+  out.close();
+
   while (loggingOn){
     uint64_t now = os_time_get();
-    elapsedLog = (double)(now - log_start);
-    out << fps << "," << cpuLoadLog << "," << gpuLoadLog << "," <<  now - log_start << endl;
-    // logArray.push_back({fps, cpuLoadLog, gpuLoadLog, 0.0f});
+    elapsedLog = now - log_start;
+    logArray.push_back({fps, cpuLoadLog, gpuLoadLog, elapsedLog});
 
     if ((elapsedLog) >= params->log_duration * 1000000 && params->log_duration)
       loggingOn = false;
-    
+
     this_thread::sleep_for(chrono::milliseconds(log_period));
   }
-  // writeFile(date);
-  out.close();
+
+  writeFile(params->output_file + date);
   return NULL; 
 }
