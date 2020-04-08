@@ -60,8 +60,8 @@ void *logging(void *params_void){
 
     if ((elapsedLog) >= params->log_duration * 1000000 && params->log_duration)
       loggingOn = false;
-
-    this_thread::sleep_for(chrono::milliseconds(log_period));
+    else
+      this_thread::sleep_for(chrono::milliseconds(log_period));
   }
 
   writeFile(params->output_file + date);
