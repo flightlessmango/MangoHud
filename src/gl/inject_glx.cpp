@@ -28,7 +28,6 @@ void* get_proc_address(const char* name) {
 
     if (!func) {
         std::cerr << "MANGOHUD: Failed to get function '" << name << "'" << std::endl;
-        exit( 1 );
     }
 
     return (void*)func;
