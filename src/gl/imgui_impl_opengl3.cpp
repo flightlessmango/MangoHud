@@ -68,20 +68,7 @@
 #include <stdio.h>
 #include <stdint.h>     // intptr_t
 
-#ifdef IMGUI_GLX
-#include <GL/gl3w.h>
-#endif
-
-#ifdef IMGUI_GLX
-
-#define GL_CLIP_ORIGIN                    0x935C
-#define GL_NEGATIVE_ONE_TO_ONE            0x935E
-#define GL_ZERO_TO_ONE                    0x935F
-#define GL_CLIP_DEPTH_MODE                0x935D
-
-void* get_glx_proc_address(const char* name);
-void (*glClipControl)(int origin, int depth) = nullptr;
-#endif
+#include <glad/glad.h>
 
 namespace MangoHud {
 
@@ -100,6 +87,7 @@ static GLuint       g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
 static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;                                // Uniforms location
 static int          g_AttribLocationVtxPos = 0, g_AttribLocationVtxUV = 0, g_AttribLocationVtxColor = 0; // Vertex attributes location
 static unsigned int g_VboHandle = 0, g_ElementsHandle = 0;
+static bool         g_IsGLES = false;
 
 // Functions
 static bool ImGui_ImplOpenGL3_CreateFontsTexture()
@@ -380,27 +368,40 @@ static void    ImGui_ImplOpenGL3_DestroyDeviceObjects()
 
 bool    VARIANT(ImGui_ImplOpenGL3_Init)(const char* glsl_version)
 {
-#ifdef IMGUI_GLX
-    glClipControl = reinterpret_cast<decltype(glClipControl)> (get_glx_proc_address("glClipControl"));
-#endif
-
     // Query for GL version
-#if !defined(IMGUI_IMPL_OPENGL_ES2)
+    const char *glVersionStr = (const char *)glGetString(GL_VERSION);
 
-    glsl_version = "#version 130";
     GLint major = -1, minor = -1;
     glGetIntegerv(GL_MAJOR_VERSION, &major);
     glGetIntegerv(GL_MINOR_VERSION, &minor);
-    g_GlVersion = major * 1000 + minor;
-    printf("Version: %d.%d\n", major, minor);
-    if (major >= 4 && minor >= 1)
-        glsl_version = "#version 410";
-    else if (major > 3 || (major == 3 && minor >= 2))
-        glsl_version = "#version 150";
 
-#else
-    g_GlVersion = 2000; // GLES 2
-#endif
+    if (strncmp(glVersionStr, "OpenGL ES", 9)) {
+        // Not GL ES
+        glsl_version = "#version 130";
+        g_GlVersion = major * 1000 + minor;
+        printf("Version: %d.%d\n", major, minor);
+        if (major >= 4 && minor >= 1)
+            glsl_version = "#version 410";
+        else if (major > 3 || (major == 3 && minor >= 2))
+            glsl_version = "#version 150";
+        else if (major < 2)
+            glsl_version = "#version 100";
+    } else {
+        g_IsGLES = true;
+        if (major >= 3)
+            g_GlVersion = major * 1000 + minor; // GLES >= 3
+        else
+            g_GlVersion = 2000; // GLES 2
+
+        // Store GLSL version string so we can refer to it later in case we recreate shaders.
+        // Note: GLSL version is NOT the same as GL version. Leave this to NULL if unsure.
+        if (g_GlVersion == 2000)
+            glsl_version = "#version 100";
+        else if (g_GlVersion >= 3000)
+            glsl_version = "#version 300 es";
+        else
+            glsl_version = "#version 130";
+    }
 
     // Setup back-end capabilities flags
     ImGuiIO& io = ImGui::GetIO();
@@ -448,9 +449,10 @@ static void VARIANT(ImGui_ImplOpenGL3_SetupRenderState)(ImDrawData* draw_data, i
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_SCISSOR_TEST);
-#ifdef GL_POLYGON_MODE
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-#endif
+
+    //#ifdef GL_POLYGON_MODE
+    if (!g_IsGLES && g_GlVersion >= 2000)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     // Setup viewport, orthographic projection matrix
     // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
@@ -469,14 +471,14 @@ static void VARIANT(ImGui_ImplOpenGL3_SetupRenderState)(ImDrawData* draw_data, i
     glUseProgram(g_ShaderHandle);
     glUniform1i(g_AttribLocationTex, 0);
     glUniformMatrix4fv(g_AttribLocationProjMtx, 1, GL_FALSE, &ortho_projection[0][0]);
-#ifdef GL_SAMPLER_BINDING
-    glBindSampler(0, 0); // We use combined texture/sampler state. Applications using GL 3.3 may set that otherwise.
-#endif
+
+    if (g_GlVersion >= 3003)
+        glBindSampler(0, 0); // We use combined texture/sampler state. Applications using GL 3.3 may set that otherwise.
 
     (void)vertex_array_object;
-#ifndef IMGUI_IMPL_OPENGL_ES2
-    glBindVertexArray(vertex_array_object);
-#endif
+    //#ifndef IMGUI_IMPL_OPENGL_ES2
+    if (!g_IsGLES || (g_IsGLES && g_GlVersion >= 3000))
+        glBindVertexArray(vertex_array_object);
 
     // Bind vertex/index buffers and setup attributes for ImDrawVert
     glBindBuffer(GL_ARRAY_BUFFER, g_VboHandle);
@@ -505,16 +507,23 @@ void    VARIANT(ImGui_ImplOpenGL3_RenderDrawData)(ImDrawData* draw_data)
     glActiveTexture(GL_TEXTURE0);
     GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
     GLint last_texture; glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
-#ifdef GL_SAMPLER_BINDING
-    GLint last_sampler; glGetIntegerv(GL_SAMPLER_BINDING, &last_sampler);
-#endif
+
+    // GL_SAMPLER_BINDING
+    GLint last_sampler;
+    if (!g_IsGLES && g_GlVersion >= 3003)
+        glGetIntegerv(GL_SAMPLER_BINDING, &last_sampler);
+
     GLint last_array_buffer; glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
-#ifndef IMGUI_IMPL_OPENGL_ES2
-    GLint last_vertex_array_object; glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array_object);
-#endif
-#ifdef GL_POLYGON_MODE
-    GLint last_polygon_mode[2]; glGetIntegerv(GL_POLYGON_MODE, last_polygon_mode);
-#endif
+
+//#ifndef IMGUI_IMPL_OPENGL_ES2
+    GLint last_vertex_array_object;
+    if (!g_IsGLES || (g_IsGLES && g_GlVersion >= 3000))
+        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array_object);
+
+    GLint last_polygon_mode[2]; 
+    if (!g_IsGLES && g_GlVersion >= 2000)
+        glGetIntegerv(GL_POLYGON_MODE, last_polygon_mode);
+
     GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
     GLint last_scissor_box[4]; glGetIntegerv(GL_SCISSOR_BOX, last_scissor_box);
     GLenum last_blend_src_rgb; glGetIntegerv(GL_BLEND_SRC_RGB, (GLint*)&last_blend_src_rgb);
@@ -528,23 +537,25 @@ void    VARIANT(ImGui_ImplOpenGL3_RenderDrawData)(ImDrawData* draw_data)
     GLboolean last_enable_depth_test = glIsEnabled(GL_DEPTH_TEST);
     GLboolean last_enable_scissor_test = glIsEnabled(GL_SCISSOR_TEST);
     bool clip_origin_lower_left = true;
-#if defined(GL_CLIP_ORIGIN) && !defined(__APPLE__)
-    GLenum last_clip_origin = 0; glGetIntegerv(GL_CLIP_ORIGIN, (GLint*)&last_clip_origin); // Support for GL 4.5's glClipControl(GL_UPPER_LEFT)
-    GLenum last_clip_depth_mode = 0; glGetIntegerv(GL_CLIP_DEPTH_MODE, (GLint*)&last_clip_depth_mode);
-    if (last_clip_origin == GL_UPPER_LEFT) {
-        clip_origin_lower_left = false;
-        if (glClipControl)
-            glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
-    }
-#endif
 
+    GLenum last_clip_origin = 0;
+    GLenum last_clip_depth_mode = 0;
+    if (!g_IsGLES && /*g_GlVersion >= 4005*/ (glad_glClipControl || glad_glClipControlEXT)) {
+        glGetIntegerv(GL_CLIP_ORIGIN, (GLint*)&last_clip_origin); // Support for GL 4.5's glClipControl(GL_UPPER_LEFT)
+        glGetIntegerv(GL_CLIP_DEPTH_MODE, (GLint*)&last_clip_depth_mode);
+        if (last_clip_origin == GL_UPPER_LEFT) {
+            clip_origin_lower_left = false;
+            if (glClipControl)
+                glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+        }
+    }
     // Setup desired GL state
     // Recreate the VAO every time (this is to easily allow multiple GL contexts to be rendered to. VAO are not shared among GL contexts)
     // The renderer would actually work without any VAO bound, but then our VertexAttrib calls would overwrite the default one currently bound.
     GLuint vertex_array_object = 0;
-#ifndef IMGUI_IMPL_OPENGL_ES2
-    glGenVertexArrays(1, &vertex_array_object);
-#endif
+    if (!g_IsGLES || (g_IsGLES && g_GlVersion >= 3000))
+        glGenVertexArrays(1, &vertex_array_object);
+
     VARIANT(ImGui_ImplOpenGL3_SetupRenderState)(draw_data, fb_width, fb_height, vertex_array_object);
 
     // Will project scissor/clipping rectangles into framebuffer space
@@ -603,20 +614,21 @@ void    VARIANT(ImGui_ImplOpenGL3_RenderDrawData)(ImDrawData* draw_data)
     }
 
     // Destroy the temporary VAO
-#ifndef IMGUI_IMPL_OPENGL_ES2
-    glDeleteVertexArrays(1, &vertex_array_object);
-#endif
+    if (!g_IsGLES || (g_IsGLES && g_GlVersion >= 3000))
+        glDeleteVertexArrays(1, &vertex_array_object);
 
     // Restore modified GL state
     glUseProgram(last_program);
     glBindTexture(GL_TEXTURE_2D, last_texture);
-#ifdef GL_SAMPLER_BINDING
-    glBindSampler(0, last_sampler);
-#endif
+
+    if (!g_IsGLES && g_GlVersion >= 3003)
+        glBindSampler(0, last_sampler);
+
     glActiveTexture(last_active_texture);
-#ifndef IMGUI_IMPL_OPENGL_ES2
-    glBindVertexArray(last_vertex_array_object);
-#endif
+
+    if (!g_IsGLES || (g_IsGLES && g_GlVersion >= 3000))
+        glBindVertexArray(last_vertex_array_object);
+
     glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
     glBlendEquationSeparate(last_blend_equation_rgb, last_blend_equation_alpha);
     glBlendFuncSeparate(last_blend_src_rgb, last_blend_dst_rgb, last_blend_src_alpha, last_blend_dst_alpha);
@@ -624,16 +636,16 @@ void    VARIANT(ImGui_ImplOpenGL3_RenderDrawData)(ImDrawData* draw_data)
     if (last_enable_cull_face) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
     if (last_enable_depth_test) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
     if (last_enable_scissor_test) glEnable(GL_SCISSOR_TEST); else glDisable(GL_SCISSOR_TEST);
-#ifdef GL_POLYGON_MODE
-    glPolygonMode(GL_FRONT_AND_BACK, (GLenum)last_polygon_mode[0]);
-#endif
+
+    if (!g_IsGLES && g_GlVersion >= 2000)
+        glPolygonMode(GL_FRONT_AND_BACK, (GLenum)last_polygon_mode[0]);
+
     glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
     glScissor(last_scissor_box[0], last_scissor_box[1], (GLsizei)last_scissor_box[2], (GLsizei)last_scissor_box[3]);
 
-#if defined(GL_CLIP_ORIGIN) && !defined(__APPLE__)
-    if (!clip_origin_lower_left && glClipControl)
-        glClipControl(last_clip_origin, last_clip_depth_mode);
-#endif
+    if (!g_IsGLES && /*g_GlVersion >= 4005*/ glad_glClipControl)
+        if (!clip_origin_lower_left && glClipControl)
+            glClipControl(last_clip_origin, last_clip_depth_mode);
 }
 
 }

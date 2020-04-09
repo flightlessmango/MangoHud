@@ -57,10 +57,13 @@ vklayer_files = files(
 
 opengl_files = files(
   'gl/imgui_hud_shared.cpp',
+  'gl/glad.c',
+  'gl/imgui_impl_opengl3.cpp',
+  'gl/imgui_hud.cpp',
+  'gl/inject_egl.cpp',
 )
 
 pre_args += '-DHOOK_DLSYM'
-inc_opengl = include_directories('gl/gl3w')
 
 glimgui_glx_dep = null_dep
 glimgui_egl_dep = null_dep
@@ -76,7 +79,6 @@ if get_option('with_x11').enabled() and \
 endif
 
 if get_option('with_x11').enabled()
-  glx_h_dep = cc.has_header('GL/glx.h')
   pre_args += '-DHAVE_X11'
 
   vklayer_files += files(
@@ -86,71 +88,8 @@ if get_option('with_x11').enabled()
 
   opengl_files += files(
     'loaders/loader_glx.cpp',
+    'gl/inject_glx.cpp',
   )
-
-  # build with GLX functions
-  glimgui_glx = static_library(
-    'glimgui_glx',
-    files(
-      'gl/inject_glx.cpp',
-      'gl/imgui_impl_opengl3.cpp',
-      'gl/imgui_hud.cpp',
-      'gl/gl3w/GL/gl3w.c',
-    ),
-    pic : true,
-    c_args : [
-      pre_args,
-      c_vis_args,
-      no_override_init_args,
-      '-DIMGUI_GLX',
-    ],
-    cpp_args : [
-      pre_args,
-      cpp_vis_args,
-      '-DIMGUI_GLX',
-    ],
-    dependencies : [
-      libimgui_core_dep,
-    ],
-    include_directories : [inc_common, inc_opengl],
-  )
-
-  glimgui_glx_dep = declare_dependency(
-    link_with : glimgui_glx,
-  )
-endif
-
-if false
-#if get_option('with_wayland').enabled()
-  # build with EGL functions
-  glimgui_egl = static_library(
-    'glimgui_egl',
-    files(
-      'gl/imgui_impl_opengl3.cpp',
-      'gl/imgui_hud.cpp',
-    ),
-    pic : true,
-    c_args : [
-      pre_args,
-      c_vis_args,
-      no_override_init_args,
-      '-DIMGUI_EGL',
-    ],
-    cpp_args : [
-      pre_args,
-      cpp_vis_args,
-      '-DIMGUI_EGL',
-    ],
-    dependencies : [
-      libimgui_core_dep,
-    ],
-    include_directories : [inc_common, inc_opengl],
-  )
-
-  glimgui_egl_dep = declare_dependency(
-    link_with : glimgui_egl,
-  )
-
 endif
 
 if dbus_dep.found() and get_option('with_dbus').enabled()
@@ -189,7 +128,7 @@ vklayer_mesa_overlay = shared_library(
     dep_dl,
     dep_pthread,
     dep_vulkan],
-  include_directories : [inc_common, inc_opengl],
+  include_directories : [inc_common],
   link_args : cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro']),
   install_dir : libdir_mangohud,
   install : true

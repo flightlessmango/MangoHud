@@ -25,6 +25,7 @@
 
 namespace MangoHud {
 
+/*
 #if defined(IMGUI_GLX) && defined(IMGUI_EGL)
 #error Both IMGUI_GLX and IMGUI_EGL can not be defined at the same time!
 #elif !defined(IMGUI_GLX) && !defined(IMGUI_EGL)
@@ -39,6 +40,10 @@ namespace MangoHud {
 #ifdef IMGUI_EGL
 #define VARIANT(x) x##_EGL
 #endif
+*/
+
+// FIXME might not be needed, GLX/EGL _can_ maybe live together
+#define VARIANT(x) x
 
 // Backend API
 IMGUI_IMPL_API bool     VARIANT(ImGui_ImplOpenGL3_Init)(const char* glsl_version = nullptr);

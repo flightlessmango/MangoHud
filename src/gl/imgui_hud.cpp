@@ -7,9 +7,7 @@
 #include "imgui_hud_shared.h"
 #include "imgui_hud.h"
 
-#ifdef IMGUI_GLX
-#include "GL/gl3w.h"
-#endif
+#include <glad/glad.h>
 
 namespace MangoHud { namespace GL {
 
@@ -48,7 +46,8 @@ static state state;
 static uint32_t vendorID;
 static std::string deviceName;
 
-static void imgui_create(void *ctx)
+//static
+void imgui_create(void *ctx)
 {
     if (inited)
         return;
@@ -58,6 +57,8 @@ static void imgui_create(void *ctx)
         return;
 
     imgui_init();
+
+    gladLoadGL();
 
     std::cerr << "GL version: " << glGetString(GL_VERSION) << std::endl;
     glGetIntegerv(GL_MAJOR_VERSION, &sw_stats.version_gl.major);
@@ -117,7 +118,7 @@ static void imgui_create(void *ctx)
     // Restore global context or ours might clash with apps that use Dear ImGui
     ImGui::SetCurrentContext(saved_ctx);
 }
-
+/*
 #ifdef IMGUI_GLX
 void VARIANT(imgui_create)(void *ctx)
 {
@@ -127,7 +128,6 @@ void VARIANT(imgui_create)(void *ctx)
     if (!ctx)
         return;
 
-    gl3wInit();
     imgui_create(ctx);
 }
 #endif
@@ -143,7 +143,7 @@ void VARIANT(imgui_create)(void *ctx)
 
     imgui_create(ctx);
 }
-#endif
+#endif*/
 
 void VARIANT(imgui_shutdown)()
 {

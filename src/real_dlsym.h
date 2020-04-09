@@ -4,3 +4,4 @@
 
 void *real_dlopen(const char *filename, int flag);
 void* real_dlsym( void*, const char* );
+void* get_proc_address(const char* name);

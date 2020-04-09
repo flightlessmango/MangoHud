@@ -82,19 +82,31 @@ void *real_dlsym(void *handle, const char *symbol)
     return result;
 }
 
+void* get_proc_address(const char* name) {
+    void (*func)() = (void (*)())real_dlsym(RTLD_NEXT, name);
+    return (void*)func;
+}
+
 #ifdef HOOK_DLSYM
 extern void *find_glx_ptr(const char *name);
+extern void *find_egl_ptr(const char *name);
 
 EXPORT_C_(void*) dlsym(void * handle, const char * name)
 {
-
+    void* func = nullptr;
 #ifdef HAVE_X11
-    void* func = find_glx_ptr(name);
+    func = find_glx_ptr(name);
     if (func) {
         //fprintf(stderr,"%s: local: %s\n",  __func__ , name);
         return func;
     }
 #endif
+
+    func = find_egl_ptr(name);
+    if (func) {
+        //fprintf(stderr,"%s: local: %s\n",  __func__ , name);
+        return func;
+    }
 
     //fprintf(stderr,"%s: foreign: %s\n",  __func__ , name);
     return real_dlsym(handle, name);

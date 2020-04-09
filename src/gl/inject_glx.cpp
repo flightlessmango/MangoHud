@@ -23,16 +23,6 @@ EXPORT_C_(void *) glXGetProcAddressARB(const unsigned char* procName);
 
 static glx_loader glx;
 
-void* get_proc_address(const char* name) {
-    void (*func)() = (void (*)())real_dlsym( RTLD_NEXT, name );
-
-    if (!func) {
-        std::cerr << "MANGOHUD: Failed to get function '" << name << "'" << std::endl;
-    }
-
-    return (void*)func;
-}
-
 void* get_glx_proc_address(const char* name) {
     glx.Load();
 
