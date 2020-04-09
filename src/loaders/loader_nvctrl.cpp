@@ -1,7 +1,5 @@
-// This is generated file. Do not modify directly.
-// Path to the code generator: /home/crz/git/MangoHud/generate_library_loader.py .
-
 #include "loader_nvctrl.h"
+#include <iostream>
 
 // Put these sanity checks here so that they fire at most once
 // (to avoid cluttering the build output).
@@ -26,8 +24,10 @@ bool libnvctrl_loader::Load(const std::string& library_name) {
 
 #if defined(LIBRARY_LOADER_NVCTRL_H_DLOPEN)
   library_ = dlopen(library_name.c_str(), RTLD_LAZY);
-  if (!library_)
+  if (!library_) {
+    std::cerr << "MANGOHUD: " << library_name << " dlopen failed: " << dlerror() << std::endl;
     return false;
+  }
 
   XNVCTRLIsNvScreen =
       reinterpret_cast<decltype(this->XNVCTRLIsNvScreen)>(

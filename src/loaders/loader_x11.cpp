@@ -1,5 +1,5 @@
 #include "loader_x11.h"
-#include "real_dlsym.h"
+#include <iostream>
 
 libx11_loader::libx11_loader() : loaded_(false) {
 }
@@ -13,9 +13,11 @@ bool libx11_loader::Load(const std::string& library_name) {
     return false;
   }
 
-  library_ = real_dlopen(library_name.c_str(), RTLD_LAZY);
-  if (!library_)
+  library_ = dlopen(library_name.c_str(), RTLD_LAZY);
+  if (!library_) {
+    std::cerr << "MANGOHUD: " << library_name << " dlopen failed: " << dlerror() << std::endl;
     return false;
+  }
 
 
   XOpenDisplay =

@@ -1,5 +1,6 @@
 
 #include "loaders/loader_dbus.h"
+#include <iostream>
 
 // Put these sanity checks here so that they fire at most once
 // (to avoid cluttering the build output).
@@ -24,8 +25,10 @@ bool libdbus_loader::Load(const std::string& library_name) {
 
 #if defined(LIBRARY_LOADER_DBUS_H_DLOPEN)
   library_ = dlopen(library_name.c_str(), RTLD_LAZY);
-  if (!library_)
+  if (!library_) {
+    std::cerr << "MANGOHUD: " << library_name << " dlopen failed: " << dlerror() << std::endl;
     return false;
+  }
 
 
   bus_add_match =

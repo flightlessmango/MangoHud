@@ -36,6 +36,10 @@ void* get_glx_proc_address(const char* name) {
     if (!func)
         func = get_proc_address( name );
 
+    if (!func) {
+        std::cerr << "MANGOHUD: Failed to get function '" << name << "'" << std::endl;
+    }
+
     return func;
 }
 
