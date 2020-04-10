@@ -21,6 +21,11 @@ using namespace MangoHud::GL;
 EXPORT_C_(void *) glXGetProcAddress(const unsigned char* procName);
 EXPORT_C_(void *) glXGetProcAddressARB(const unsigned char* procName);
 
+#ifndef GLX_WIDTH
+#define GLX_WIDTH   0x801D
+#define GLX_HEIGTH  0x801E
+#endif
+
 static glx_loader glx;
 
 void* get_glx_proc_address(const char* name) {
@@ -79,17 +84,22 @@ EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
     glx.Load();
     VARIANT(imgui_create)(glx.GetCurrentContext());
 
-    unsigned int width, height;
-    //glx.QueryDrawable(dpy, drawable, 0x801D /*GLX_WIDTH*/, &width);
-    //glx.QueryDrawable(dpy, drawable, 0x801E /*GLX_HEIGTH*/, &height);
+    unsigned int width = -1, height = -1;
 
     // glXQueryDrawable is buggy, use XGetGeometry instead
     Window unused_window;
     int unused;
-    g_x11->XGetGeometry((Display*)dpy, (Window)drawable, &unused_window,
+    static bool xgetgeom_failed = false;
+    if (xgetgeom_failed || !g_x11->XGetGeometry((Display*)dpy,
+        (Window)drawable, &unused_window,
         &unused, &unused,
         &width, &height,
-        (unsigned int*) &unused, (unsigned int*) &unused);
+        (unsigned int*) &unused, (unsigned int*) &unused)) {
+
+        xgetgeom_failed = true;
+        glx.QueryDrawable(dpy, drawable, GLX_WIDTH, &width);
+        glx.QueryDrawable(dpy, drawable, GLX_HEIGTH, &height);
+    }
 
     /*GLint vp[4]; glGetIntegerv (GL_VIEWPORT, vp);
     width = vp[2];
