@@ -706,16 +706,39 @@ void init_cpu_stats(overlay_params& params)
                            && enabled[OVERLAY_PARAM_ENABLED_cpu_temp];
 }
 
+struct PCI_BUS {
+   int domain;
+   int bus;
+   int slot;
+   int func;
+};
+
 void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
 {
    if (!params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
       return;
 
+   PCI_BUS pci;
+   bool pci_bus_parsed = false;
+   const char* env_pci_dev = getenv("MANGOHUD_PCI_DEV");
+
+   // for now just checks if pci bus parses correctly, if at all necessary
+   if (env_pci_dev) {
+      if (sscanf(env_pci_dev, "%04x:%02x:%02x.%x",
+               &pci.domain, &pci.bus,
+               &pci.slot, &pci.func) == 4) {
+         pci_bus_parsed = true;
+      } else {
+         std::cerr << "MANGOHUD: Failed to parse PCI device ID: " << env_pci_dev << "\n";
+         std::cerr << "MANGOHUD: It has to be formatted as 'xxxx:xx:xx.x' (domain:bus:slot.func)\n";
+      }
+   }
+
    // NVIDIA or Intel but maybe has Optimus
    if (vendorID == 0x8086
       || vendorID == 0x10de) {
 
-      bool nvSuccess = (checkNVML() && getNVMLInfo());
+      bool nvSuccess = (checkNVML(env_pci_dev) && getNVMLInfo());
 
 #ifdef HAVE_XNVCTRL
       if (!nvSuccess)
@@ -743,37 +766,45 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
 
          string line = read_line(path + "/device/vendor");
          trim(line);
-         if (line != "0x1002")
+         if (line != "0x1002" || !file_exists(path + "/device/gpu_busy_percent"))
             continue;
+
+         path += "/device";
+         if (pci_bus_parsed && env_pci_dev) {
+            string pci_device = readlink(path.c_str());
+#ifndef NDEBUG
+            std::cerr << "PCI device symlink: " << pci_device << "\n";
+#endif
+            if (!ends_with(pci_device, env_pci_dev)) {
+               std::cerr << "MANGOHUD: skipping GPU, no PCI ID match\n";
+               continue;
+            }
+         }
 
 #ifndef NDEBUG
            std::cerr << "using amdgpu path: " << path << std::endl;
 #endif
 
-         if (file_exists(path + "/device/gpu_busy_percent")) {
-            if (!amdGpuFile)
-               amdGpuFile = fopen((path + "/device/gpu_busy_percent").c_str(), "r");
-            if (!amdGpuVramTotalFile)
-               amdGpuVramTotalFile = fopen((path + "/device/mem_info_vram_total").c_str(), "r");
-            if (!amdGpuVramUsedFile)
-               amdGpuVramUsedFile = fopen((path + "/device/mem_info_vram_used").c_str(), "r");
+         if (!amdGpuFile)
+            amdGpuFile = fopen((path + "/gpu_busy_percent").c_str(), "r");
+         if (!amdGpuVramTotalFile)
+            amdGpuVramTotalFile = fopen((path + "/mem_info_vram_total").c_str(), "r");
+         if (!amdGpuVramUsedFile)
+            amdGpuVramUsedFile = fopen((path + "/mem_info_vram_used").c_str(), "r");
 
-            path = path + "/device/hwmon/";
-            string tempFolder;
-            if (find_folder(path, "hwmon", tempFolder)) {
-               if (!amdGpuCoreClockFile)
-                  amdGpuCoreClockFile = fopen((path + tempFolder + "/freq1_input").c_str(), "r");
-               if (!amdGpuMemoryClockFile)
-                  amdGpuMemoryClockFile = fopen((path + tempFolder + "/freq2_input").c_str(), "r");
-               path = path + tempFolder + "/temp1_input";
+         path += "/hwmon/";
+         string tempFolder;
+         if (find_folder(path, "hwmon", tempFolder)) {
+            if (!amdGpuCoreClockFile)
+               amdGpuCoreClockFile = fopen((path + tempFolder + "/freq1_input").c_str(), "r");
+            if (!amdGpuMemoryClockFile)
+               amdGpuMemoryClockFile = fopen((path + tempFolder + "/freq2_input").c_str(), "r");
+            if (!amdTempFile)
+               amdTempFile = fopen((path + tempFolder + "/temp1_input").c_str(), "r");
 
-               if (!amdTempFile)
-                  amdTempFile = fopen(path.c_str(), "r");
-
-               params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = true;
-               vendorID = 0x1002;
-               break;
-            }
+            params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = true;
+            vendorID = 0x1002;
+            break;
          }
       }
 

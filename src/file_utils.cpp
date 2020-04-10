@@ -100,11 +100,16 @@ bool dir_exists(const std::string& path)
     return !stat(path.c_str(), &s) && S_ISDIR(s.st_mode);
 }
 
-std::string get_exe_path()
+std::string readlink(const char * link)
 {
     char result[PATH_MAX] {};
-    ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+    ssize_t count = readlink(link, result, PATH_MAX);
     return std::string(result, (count > 0) ? count : 0);
+}
+
+std::string get_exe_path()
+{
+    return readlink("/proc/self/exe");
 }
 
 bool get_wine_exe_name(std::string& name, bool keep_ext)
