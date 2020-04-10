@@ -105,9 +105,10 @@ static bool ImGui_ImplOpenGL3_CreateFontsTexture()
     glBindTexture(GL_TEXTURE_2D, g_FontTexture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-#ifdef GL_UNPACK_ROW_LENGTH
-    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-#endif
+    //#ifdef GL_UNPACK_ROW_LENGTH
+    if (g_IsGLES || g_GlVersion >= 2000)
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, pixels);
 
     // Store our identifier
@@ -172,10 +173,10 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     GLint last_texture, last_array_buffer;
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
     glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
-#ifndef IMGUI_IMPL_OPENGL_ES2
+    //#ifndef IMGUI_IMPL_OPENGL_ES2
     GLint last_vertex_array;
-    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
-#endif
+    if (!g_IsGLES || (g_IsGLES && g_GlVersion >= 3000))
+        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
 
     // Parse GLSL version string
     int glsl_version = 130;
@@ -343,9 +344,9 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     // Restore modified GL state
     glBindTexture(GL_TEXTURE_2D, last_texture);
     glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
-#ifndef IMGUI_IMPL_OPENGL_ES2
-    glBindVertexArray(last_vertex_array);
-#endif
+    //#ifndef IMGUI_IMPL_OPENGL_ES2
+    if (!g_IsGLES || (g_IsGLES && g_GlVersion >= 3000))
+        glBindVertexArray(last_vertex_array);
 
     return true;
 }
@@ -406,10 +407,9 @@ bool    VARIANT(ImGui_ImplOpenGL3_Init)(const char* glsl_version)
     // Setup back-end capabilities flags
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_opengl3";
-#if IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
-    if (g_GlVersion >= 3200)
+    //#if IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
+    if ((!g_IsGLES && g_GlVersion >= 3200) || (g_IsGLES && g_GlVersion >= 3000))
         io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
-#endif
 
     // Store GLSL version string so we can refer to it later in case we recreate shaders.
     // Note: GLSL version is NOT the same as GL version. Leave this to NULL if unsure.
@@ -545,8 +545,7 @@ void    VARIANT(ImGui_ImplOpenGL3_RenderDrawData)(ImDrawData* draw_data)
         glGetIntegerv(GL_CLIP_DEPTH_MODE, (GLint*)&last_clip_depth_mode);
         if (last_clip_origin == GL_UPPER_LEFT) {
             clip_origin_lower_left = false;
-            if (glClipControl)
-                glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+            glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
         }
     }
     // Setup desired GL state
@@ -602,12 +601,11 @@ void    VARIANT(ImGui_ImplOpenGL3_RenderDrawData)(ImDrawData* draw_data)
 
                     // Bind texture, Draw
                     glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
-#if IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
-                    if (g_GlVersion >= 3200)
+                    //#if IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
+                    if ((!g_IsGLES && g_GlVersion >= 3200) || (g_IsGLES && g_GlVersion >= 3000))
                         glDrawElementsBaseVertex(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)), (GLint)pcmd->VtxOffset);
                     else
-#endif
-                    glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)));
+                        glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)));
                 }
             }
         }
@@ -644,7 +642,7 @@ void    VARIANT(ImGui_ImplOpenGL3_RenderDrawData)(ImDrawData* draw_data)
     glScissor(last_scissor_box[0], last_scissor_box[1], (GLsizei)last_scissor_box[2], (GLsizei)last_scissor_box[3]);
 
     if (!g_IsGLES && /*g_GlVersion >= 4005*/ glad_glClipControl)
-        if (!clip_origin_lower_left && glClipControl)
+        if (!clip_origin_lower_left)
             glClipControl(last_clip_origin, last_clip_depth_mode);
 }
 

@@ -53,13 +53,13 @@ EXPORT_C_(void *) glXCreateContext(void *dpy, void *vis, void *shareList, int di
     return ctx;
 }
 
-EXPORT_C_(bool) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
+EXPORT_C_(int) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
     glx.Load();
 #ifndef NDEBUG
     std::cerr << __func__ << ": " << drawable << ", " << ctx << std::endl;
 #endif
 
-    bool ret = glx.MakeCurrent(dpy, drawable, ctx);
+    int ret = glx.MakeCurrent(dpy, drawable, ctx);
     if (ret)
         VARIANT(imgui_set_context)(ctx);
 
