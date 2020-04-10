@@ -212,5 +212,11 @@ util_files = files(
   'src/mesa/util/os_time.c',
 )
 
+if get_option('use_system_nvml')
+  cpp_nvml_args = '-DUSE_SYSTEM_NVML'
+else
+  cpp_nvml_args = []
+endif
+
 subdir('modules/ImGui')
 subdir('src')
