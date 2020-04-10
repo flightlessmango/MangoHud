@@ -33,6 +33,7 @@
 #include "overlay_params.h"
 #include "overlay.h"
 #include "config.h"
+#include "dbus_info.h"
 
 #include "mesa/util/os_socket.h"
 
@@ -457,4 +458,19 @@ parse_overlay_config(struct overlay_params *params,
    // set frametime limit
    if (params->fps_limit >= 0)
       fps_limit_stats.targetFrameTime = int64_t(1000000000.0 / params->fps_limit);
+
+#ifdef HAVE_DBUS
+   if (params->enabled[OVERLAY_PARAM_ENABLED_media_player]) {
+      try {
+         dbusmgr::dbus_mgr.init();
+         get_spotify_metadata(dbusmgr::dbus_mgr, spotify);
+      } catch (std::runtime_error& e) {
+         std::cerr << "Failed to get initial Spotify metadata: " << e.what() << std::endl;
+      }
+   } else {
+      dbusmgr::dbus_mgr.deinit();
+      spotify.valid = false;
+   }
+#endif
+
 }

@@ -80,6 +80,7 @@ namespace dbusmgr {
         ~dbus_manager();
 
         void init();
+        void deinit();
         void add_callback(CBENUM type, callback_func func);
         void connect_to_signals();
         void disconnect_from_signals();

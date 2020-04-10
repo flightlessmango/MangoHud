@@ -2531,17 +2531,6 @@ static VkResult overlay_CreateInstance(
 
    init_cpu_stats(instance_data->params);
 
-#ifdef HAVE_DBUS
-   if (instance_data->params.enabled[OVERLAY_PARAM_ENABLED_media_player]) {
-      try {
-         dbusmgr::dbus_mgr.init();
-         get_spotify_metadata(dbusmgr::dbus_mgr, spotify);
-      } catch (std::runtime_error& e) {
-         std::cerr << "Failed to get initial Spotify metadata: " << e.what() << std::endl;
-      }
-   }
-#endif
-
    // Adjust height for DXVK/VKD3D version number
    if (engineName == "DXVK" || engineName == "VKD3D"){
       if (instance_data->params.font_size){

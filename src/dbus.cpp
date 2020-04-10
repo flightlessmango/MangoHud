@@ -449,7 +449,7 @@ void dbus_manager::init()
     if (m_inited)
         return;
 
-    if (!m_dbus_ldr.Load("libdbus-1.so.3"))
+    if (!m_dbus_ldr.IsLoaded() && !m_dbus_ldr.Load("libdbus-1.so.3"))
         throw std::runtime_error("Could not load libdbus-1.so.3");
 
     m_dbus_ldr.error_init(&m_error);
@@ -465,17 +465,24 @@ void dbus_manager::init()
     m_inited = true;
 }
 
+void dbus_manager::deinit()
+{
+    if (!m_inited)
+        return;
+
+    // unreference system bus connection instead of closing it
+    if (m_dbus_conn) {
+        disconnect_from_signals();
+        m_dbus_ldr.connection_unref(m_dbus_conn);
+        m_dbus_conn = nullptr;
+    }
+    m_dbus_ldr.error_free(&m_error);
+    m_inited = false;
+}
+
 dbus_manager::~dbus_manager()
 {
-    if (m_inited) {
-        // unreference system bus connection instead of closing it
-        if (m_dbus_conn) {
-            disconnect_from_signals();
-            m_dbus_ldr.connection_unref(m_dbus_conn);
-            m_dbus_conn = nullptr;
-        }
-        m_dbus_ldr.error_free(&m_error);
-    }
+    deinit();
 }
 
 void dbus_manager::connect_to_signals()
