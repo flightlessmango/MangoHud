@@ -4,7 +4,11 @@
 #ifndef LIBRARY_LOADER_NVML_H
 #define LIBRARY_LOADER_NVML_H
 
+#if USE_SYSTEM_NVML
+#include <nvml.h>
+#else
 #include "nvml.h"
+#endif
 #define LIBRARY_LOADER_NVML_H_DLOPEN
 
 #include <string>

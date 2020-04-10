@@ -82,6 +82,7 @@ vklayer_mesa_overlay = shared_library(
   cpp_args : [
     pre_args,
     cpp_vis_args, 
+    cpp_nvml_args,
     vulkan_wsi_args
     ],
   dependencies : [
