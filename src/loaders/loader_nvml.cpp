@@ -161,6 +161,19 @@ bool libnvml_loader::Load(const std::string& library_name) {
     return false;
   }
 
+#if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
+  nvmlErrorString =
+      reinterpret_cast<decltype(this->nvmlErrorString)>(
+          dlsym(library_, "nvmlErrorString"));
+#endif
+#if defined(LIBRARY_LOADER_NVML_H_DT_NEEDED)
+  nvmlErrorString = &::nvmlErrorString;
+#endif
+  if (!nvmlErrorString) {
+    CleanUp(true);
+    return false;
+  }
+
   loaded_ = true;
   return true;
 }
