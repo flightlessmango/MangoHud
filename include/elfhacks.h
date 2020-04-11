@@ -37,7 +37,8 @@
 extern "C" {
 #endif
 
-#define __PUBLIC __attribute__ ((visibility ("default")))
+//#define __PUBLIC __attribute__ ((visibility ("default")))
+#define __PUBLIC
 
 #if UINTPTR_MAX == 0xffffffffffffffff
 # define __elf64
