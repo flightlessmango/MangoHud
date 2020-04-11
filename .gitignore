@@ -1,11 +1,12 @@
-build/
-builddir/
-__pycache__/
-.vscode/
+build
+builddir
+__pycache__
+.vscode
 MangoHud*.tar.gz
-pkg/*
+pkg
 mangohud*.tar.*
 lib32-mangohud*.tar.*
+v*.tar.gz
 
 # Prerequisites
 *.d

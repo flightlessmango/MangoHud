@@ -61,7 +61,7 @@ If you are using Flatpaks, you will have to add the [Flathub repository](https:/
 
 ##### For Steam flatpak
 ```
-flatpak install com.valvesoftware.Steam.VulkanLayer.MangoHud
+flatpak install com.valvesoftware.Steam.Utility.MangoHud
 ```
 To enable MangoHud for all Steam games:
 ```
