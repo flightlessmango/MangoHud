@@ -1,11 +1,19 @@
+#include <cstdlib>
+#include <functional>
+#include <thread>
 #include <string>
 #include <iostream>
 #include <memory>
+#include <imgui.h>
 #include "font_default.h"
 #include "cpu.h"
 #include "file_utils.h"
-#include "imgui_hud_shared.h"
 #include "imgui_hud.h"
+#include "notify.h"
+
+#ifdef HAVE_DBUS
+#include "dbus_info.h"
+#endif
 
 #include <glad/glad.h>
 
@@ -45,6 +53,29 @@ static swapchain_stats sw_stats {};
 static state state;
 static uint32_t vendorID;
 static std::string deviceName;
+
+static notify_thread notifier;
+static bool cfg_inited = false;
+static ImVec2 window_size;
+static bool inited = false;
+overlay_params params {};
+
+// seems to quit by itself though
+static std::unique_ptr<notify_thread, std::function<void(notify_thread *)>>
+    stop_it(&notifier, [](notify_thread *n){ stop_notifier(*n); });
+
+void imgui_init()
+{
+    if (cfg_inited)
+        return;
+    parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
+    notifier.params = &params;
+    start_notifier(notifier);
+    window_size = ImVec2(params.width, params.height);
+    init_system_info();
+    cfg_inited = true;
+    init_cpu_stats(params);
+}
 
 //static
 void imgui_create(void *ctx)
@@ -91,7 +122,7 @@ void imgui_create(void *ctx)
     ImGui::GetIO().IniFilename = NULL;
     ImGui::GetIO().DisplaySize = ImVec2(last_vp[2], last_vp[3]);
 
-    VARIANT(ImGui_ImplOpenGL3_Init)();
+    ImGui_ImplOpenGL3_Init();
     // Make a dummy GL call (we don't actually need the result)
     // IF YOU GET A CRASH HERE: it probably means that you haven't initialized the OpenGL function loader used by this code.
     // Desktop OpenGL 3/4 need a function loader. See the IMGUI_IMPL_OPENGL_LOADER_xxx explanation above.
@@ -118,34 +149,8 @@ void imgui_create(void *ctx)
     // Restore global context or ours might clash with apps that use Dear ImGui
     ImGui::SetCurrentContext(saved_ctx);
 }
-/*
-#ifdef IMGUI_GLX
-void VARIANT(imgui_create)(void *ctx)
-{
-    if (inited)
-        return;
 
-    if (!ctx)
-        return;
-
-    imgui_create(ctx);
-}
-#endif
-
-#ifdef IMGUI_EGL
-void VARIANT(imgui_create)(void *ctx)
-{
-    if (inited)
-        return;
-
-    if (!ctx)
-        return;
-
-    imgui_create(ctx);
-}
-#endif*/
-
-void VARIANT(imgui_shutdown)()
+void imgui_shutdown()
 {
 #ifndef NDEBUG
     std::cerr << __func__ << std::endl;
@@ -153,26 +158,26 @@ void VARIANT(imgui_shutdown)()
 
     if (state.imgui_ctx) {
         ImGui::SetCurrentContext(state.imgui_ctx);
-        VARIANT(ImGui_ImplOpenGL3_Shutdown)();
+        ImGui_ImplOpenGL3_Shutdown();
         ImGui::DestroyContext(state.imgui_ctx);
         state.imgui_ctx = nullptr;
     }
     inited = false;
 }
 
-void VARIANT(imgui_set_context)(void *ctx)
+void imgui_set_context(void *ctx)
 {
     if (!ctx) {
-        VARIANT(imgui_shutdown)();
+        imgui_shutdown();
         return;
     }
 #ifndef NDEBUG
     std::cerr << __func__ << ": " << ctx << std::endl;
 #endif
-    VARIANT(imgui_create)(ctx);
+    imgui_create(ctx);
 }
 
-void VARIANT(imgui_render)(unsigned int width, unsigned int height)
+void imgui_render(unsigned int width, unsigned int height)
 {
     if (!state.imgui_ctx)
         return;
@@ -184,7 +189,7 @@ void VARIANT(imgui_render)(unsigned int width, unsigned int height)
     ImGui::SetCurrentContext(state.imgui_ctx);
     ImGui::GetIO().DisplaySize = ImVec2(width, height);
 
-    VARIANT(ImGui_ImplOpenGL3_NewFrame)();
+    ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
     {
         std::lock_guard<std::mutex> lk(notifier.mutex);
@@ -194,7 +199,7 @@ void VARIANT(imgui_render)(unsigned int width, unsigned int height)
     ImGui::PopStyleVar(3);
 
     ImGui::Render();
-    VARIANT(ImGui_ImplOpenGL3_RenderDrawData)(ImGui::GetDrawData());
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     ImGui::SetCurrentContext(saved_ctx);
 }
 

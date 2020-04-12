@@ -400,7 +400,7 @@ void GetOpenGLVersion(int& major, int& minor, bool& isGLES)
     //}
 }
 
-bool    VARIANT(ImGui_ImplOpenGL3_Init)(const char* glsl_version)
+bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
 {
     GLint major = 0, minor = 0;
     GetOpenGLVersion(major, minor, g_IsGLES);
@@ -458,18 +458,18 @@ bool    VARIANT(ImGui_ImplOpenGL3_Init)(const char* glsl_version)
     return true;
 }
 
-void    VARIANT(ImGui_ImplOpenGL3_Shutdown)()
+void    ImGui_ImplOpenGL3_Shutdown()
 {
     ImGui_ImplOpenGL3_DestroyDeviceObjects();
 }
 
-void    VARIANT(ImGui_ImplOpenGL3_NewFrame)()
+void    ImGui_ImplOpenGL3_NewFrame()
 {
     if (!g_ShaderHandle)
         ImGui_ImplOpenGL3_CreateDeviceObjects();
 }
 
-static void VARIANT(ImGui_ImplOpenGL3_SetupRenderState)(ImDrawData* draw_data, int fb_width, int fb_height, GLuint vertex_array_object)
+static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_width, int fb_height, GLuint vertex_array_object)
 {
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, polygon fill
     glEnable(GL_BLEND);
@@ -523,7 +523,7 @@ static void VARIANT(ImGui_ImplOpenGL3_SetupRenderState)(ImDrawData* draw_data, i
 // OpenGL3 Render function.
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
 // Note that this implementation is little overcomplicated because we are saving/setting up/restoring every OpenGL state explicitly, in order to be able to run within any OpenGL engine that doesn't do so.
-void    VARIANT(ImGui_ImplOpenGL3_RenderDrawData)(ImDrawData* draw_data)
+void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
 {
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
     int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
@@ -584,7 +584,7 @@ void    VARIANT(ImGui_ImplOpenGL3_RenderDrawData)(ImDrawData* draw_data)
     if (g_GlVersion >= 3000)
         glGenVertexArrays(1, &vertex_array_object);
 
-    VARIANT(ImGui_ImplOpenGL3_SetupRenderState)(draw_data, fb_width, fb_height, vertex_array_object);
+    ImGui_ImplOpenGL3_SetupRenderState(draw_data, fb_width, fb_height, vertex_array_object);
 
     // Will project scissor/clipping rectangles into framebuffer space
     ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
@@ -607,7 +607,7 @@ void    VARIANT(ImGui_ImplOpenGL3_RenderDrawData)(ImDrawData* draw_data)
                 // User callback, registered via ImDrawList::AddCallback()
                 // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
                 if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
-                    VARIANT(ImGui_ImplOpenGL3_SetupRenderState)(draw_data, fb_width, fb_height, vertex_array_object);
+                    ImGui_ImplOpenGL3_SetupRenderState(draw_data, fb_width, fb_height, vertex_array_object);
                 else
                     pcmd->UserCallback(cmd_list, pcmd);
             }

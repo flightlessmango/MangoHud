@@ -11,7 +11,6 @@
 #include <chrono>
 #include <iomanip>
 
-#include "imgui_hud_shared.h"
 #include "imgui_hud.h"
 
 using namespace MangoHud::GL;
@@ -66,7 +65,7 @@ EXPORT_C_(int) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
 
     int ret = glx.MakeCurrent(dpy, drawable, ctx);
     if (ret)
-        VARIANT(imgui_set_context)(ctx);
+        imgui_set_context(ctx);
 
     if (params.gl_vsync >= -1) {
         if (glx.SwapIntervalEXT)
@@ -82,7 +81,7 @@ EXPORT_C_(int) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
 
 EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
     glx.Load();
-    VARIANT(imgui_create)(glx.GetCurrentContext());
+    imgui_create(glx.GetCurrentContext());
 
     unsigned int width = -1, height = -1;
 
@@ -105,7 +104,7 @@ EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
     width = vp[2];
     height = vp[3];*/
 
-    VARIANT(imgui_render)(width, height);
+    imgui_render(width, height);
     glx.SwapBuffers(dpy, drawable);
     if (fps_limit_stats.targetFrameTime > 0){
         fps_limit_stats.frameStart = os_time_get_nano();

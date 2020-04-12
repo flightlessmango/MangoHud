@@ -25,33 +25,13 @@
 
 namespace MangoHud {
 
-/*
-#if defined(IMGUI_GLX) && defined(IMGUI_EGL)
-#error Both IMGUI_GLX and IMGUI_EGL can not be defined at the same time!
-#elif !defined(IMGUI_GLX) && !defined(IMGUI_EGL)
-#error Define IMGUI_GLX or IMGUI_EGL!
-#endif
-
-#undef VARIANT
-#ifdef IMGUI_GLX
-#define VARIANT(x) x##_GLX
-#endif
-
-#ifdef IMGUI_EGL
-#define VARIANT(x) x##_EGL
-#endif
-*/
-
-// FIXME might not be needed, GLX/EGL _can_ maybe live together
-#define VARIANT(x) x
-
 void GetOpenGLVersion(int& major, int& minor, bool& isGLES);
 
 // Backend API
-IMGUI_IMPL_API bool     VARIANT(ImGui_ImplOpenGL3_Init)(const char* glsl_version = nullptr);
-IMGUI_IMPL_API void     VARIANT(ImGui_ImplOpenGL3_Shutdown)();
-IMGUI_IMPL_API void     VARIANT(ImGui_ImplOpenGL3_NewFrame)();
-IMGUI_IMPL_API void     VARIANT(ImGui_ImplOpenGL3_RenderDrawData)(ImDrawData* draw_data);
+IMGUI_IMPL_API bool     ImGui_ImplOpenGL3_Init(const char* glsl_version = nullptr);
+IMGUI_IMPL_API void     ImGui_ImplOpenGL3_Shutdown();
+IMGUI_IMPL_API void     ImGui_ImplOpenGL3_NewFrame();
+IMGUI_IMPL_API void     ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data);
 
 // (Optional) Called by Init/NewFrame/Shutdown
 //IMGUI_IMPL_API bool     ImGui_ImplOpenGL3_CreateFontsTexture();

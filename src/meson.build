@@ -56,7 +56,6 @@ vklayer_files = files(
 )
 
 opengl_files = files(
-  'gl/imgui_hud_shared.cpp',
   'gl/glad.c',
   'gl/imgui_impl_opengl3.cpp',
   'gl/imgui_hud.cpp',
