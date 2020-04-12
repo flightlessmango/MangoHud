@@ -92,7 +92,7 @@ void *find_egl_ptr(const char *name)
 }
 
 EXPORT_C_(void *) eglGetProcAddress(const char* procName) {
-    std::cerr << __func__ << ": " << procName << std::endl;
+    //std::cerr << __func__ << ": " << procName << std::endl;
 
     void* func = find_egl_ptr(procName);
     if (func)

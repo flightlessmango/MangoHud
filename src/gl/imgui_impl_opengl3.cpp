@@ -395,7 +395,6 @@ void GetOpenGLVersion(int& major, int& minor, bool& isGLES)
             }
         }
 
-        printf("%s\n", version);
         sscanf(version, "%d.%d", &major, &minor);
     //}
 }
