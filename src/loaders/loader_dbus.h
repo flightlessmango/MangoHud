@@ -42,6 +42,7 @@ class libdbus_loader {
   decltype(&::dbus_message_unref) message_unref;
   decltype(&::dbus_move_error) move_error;
   decltype(&::dbus_threads_init_default) threads_init_default;
+  decltype(&::dbus_message_get_sender) message_get_sender;
 
 
  private:

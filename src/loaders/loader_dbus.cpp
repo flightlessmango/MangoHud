@@ -207,6 +207,14 @@ bool libdbus_loader::Load(const std::string& library_name) {
     return false;
   }
 
+  message_get_sender =
+      reinterpret_cast<decltype(this->message_get_sender)>(
+          dlsym(library_, "dbus_message_get_sender"));
+  if (!message_get_sender) {
+    CleanUp(true);
+    return false;
+  }
+
 #endif
 
 #if defined(LIBRARY_LOADER_DBUS_H_DT_NEEDED)
