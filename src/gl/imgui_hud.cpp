@@ -60,9 +60,9 @@ void imgui_create(void *ctx)
 
     gladLoadGL();
 
-    std::cerr << "GL version: " << glGetString(GL_VERSION) << std::endl;
-    glGetIntegerv(GL_MAJOR_VERSION, &sw_stats.version_gl.major);
-    glGetIntegerv(GL_MINOR_VERSION, &sw_stats.version_gl.minor);
+    GetOpenGLVersion(sw_stats.version_gl.major,
+        sw_stats.version_gl.minor,
+        sw_stats.version_gl.is_gles);
 
     deviceName = (char*)glGetString(GL_RENDERER);
     if (deviceName.find("Radeon") != std::string::npos

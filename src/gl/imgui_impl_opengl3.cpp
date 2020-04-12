@@ -175,7 +175,7 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
     //#ifndef IMGUI_IMPL_OPENGL_ES2
     GLint last_vertex_array;
-    if (!g_IsGLES || (g_IsGLES && g_GlVersion >= 3000))
+    if (g_GlVersion >= 3000)
         glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
 
     // Parse GLSL version string
@@ -345,7 +345,7 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     glBindTexture(GL_TEXTURE_2D, last_texture);
     glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
     //#ifndef IMGUI_IMPL_OPENGL_ES2
-    if (!g_IsGLES || (g_IsGLES && g_GlVersion >= 3000))
+    if (g_GlVersion >= 3000)
         glBindVertexArray(last_vertex_array);
 
     return true;
@@ -367,20 +367,50 @@ static void    ImGui_ImplOpenGL3_DestroyDeviceObjects()
     ImGui_ImplOpenGL3_DestroyFontsTexture();
 }
 
+void GetOpenGLVersion(int& major, int& minor, bool& isGLES)
+{
+    //glGetIntegerv(GL_MAJOR_VERSION, &major);
+    //glGetIntegerv(GL_MINOR_VERSION, &minor);
+
+    const char* version;
+    const char* prefixes[] = {
+        "OpenGL ES-CM ",
+        "OpenGL ES-CL ",
+        "OpenGL ES ",
+        nullptr
+    };
+
+    version = (const char*) glGetString(GL_VERSION);
+    if (!version)
+        return;
+
+    //if (glGetError() == 0x500) {
+
+        for (int i = 0;  prefixes[i];  i++) {
+            const size_t length = strlen(prefixes[i]);
+            if (strncmp(version, prefixes[i], length) == 0) {
+                version += length;
+                isGLES = true;
+                break;
+            }
+        }
+
+        printf("%s\n", version);
+        sscanf(version, "%d.%d", &major, &minor);
+    //}
+}
+
 bool    VARIANT(ImGui_ImplOpenGL3_Init)(const char* glsl_version)
 {
-    // Query for GL version
-    const char *glVersionStr = (const char *)glGetString(GL_VERSION);
+    GLint major = 0, minor = 0;
+    GetOpenGLVersion(major, minor, g_IsGLES);
 
-    GLint major = -1, minor = -1;
-    glGetIntegerv(GL_MAJOR_VERSION, &major);
-    glGetIntegerv(GL_MINOR_VERSION, &minor);
+    printf("Version: %d.%d %s\n", major, minor, g_IsGLES ? "ES" : "");
 
-    if (strncmp(glVersionStr, "OpenGL ES", 9)) {
+    if (!g_IsGLES) {
         // Not GL ES
         glsl_version = "#version 130";
         g_GlVersion = major * 1000 + minor;
-        printf("Version: %d.%d\n", major, minor);
         if (major >= 4 && minor >= 1)
             glsl_version = "#version 410";
         else if (major > 3 || (major == 3 && minor >= 2))
@@ -388,7 +418,6 @@ bool    VARIANT(ImGui_ImplOpenGL3_Init)(const char* glsl_version)
         else if (major < 2)
             glsl_version = "#version 100";
     } else {
-        g_IsGLES = true;
         if (major >= 3)
             g_GlVersion = major * 1000 + minor; // GLES >= 3
         else
@@ -408,7 +437,7 @@ bool    VARIANT(ImGui_ImplOpenGL3_Init)(const char* glsl_version)
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_opengl3";
     //#if IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
-    if ((!g_IsGLES && g_GlVersion >= 3200) || (g_IsGLES && g_GlVersion >= 3000))
+    if ((!g_IsGLES && g_GlVersion >= 3200) || (g_IsGLES && g_GlVersion >= 3002))
         io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
     // Store GLSL version string so we can refer to it later in case we recreate shaders.
@@ -477,7 +506,7 @@ static void VARIANT(ImGui_ImplOpenGL3_SetupRenderState)(ImDrawData* draw_data, i
 
     (void)vertex_array_object;
     //#ifndef IMGUI_IMPL_OPENGL_ES2
-    if (!g_IsGLES || (g_IsGLES && g_GlVersion >= 3000))
+    if (g_GlVersion >= 3000)
         glBindVertexArray(vertex_array_object);
 
     // Bind vertex/index buffers and setup attributes for ImDrawVert
@@ -517,7 +546,7 @@ void    VARIANT(ImGui_ImplOpenGL3_RenderDrawData)(ImDrawData* draw_data)
 
 //#ifndef IMGUI_IMPL_OPENGL_ES2
     GLint last_vertex_array_object;
-    if (!g_IsGLES || (g_IsGLES && g_GlVersion >= 3000))
+    if (g_GlVersion >= 3000)
         glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array_object);
 
     GLint last_polygon_mode[2]; 
@@ -552,7 +581,7 @@ void    VARIANT(ImGui_ImplOpenGL3_RenderDrawData)(ImDrawData* draw_data)
     // Recreate the VAO every time (this is to easily allow multiple GL contexts to be rendered to. VAO are not shared among GL contexts)
     // The renderer would actually work without any VAO bound, but then our VertexAttrib calls would overwrite the default one currently bound.
     GLuint vertex_array_object = 0;
-    if (!g_IsGLES || (g_IsGLES && g_GlVersion >= 3000))
+    if (g_GlVersion >= 3000)
         glGenVertexArrays(1, &vertex_array_object);
 
     VARIANT(ImGui_ImplOpenGL3_SetupRenderState)(draw_data, fb_width, fb_height, vertex_array_object);
@@ -602,7 +631,7 @@ void    VARIANT(ImGui_ImplOpenGL3_RenderDrawData)(ImDrawData* draw_data)
                     // Bind texture, Draw
                     glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
                     //#if IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
-                    if ((!g_IsGLES && g_GlVersion >= 3200) || (g_IsGLES && g_GlVersion >= 3000))
+                    if ((!g_IsGLES && g_GlVersion >= 3200) || (g_IsGLES && g_GlVersion >= 3002))
                         glDrawElementsBaseVertex(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)), (GLint)pcmd->VtxOffset);
                     else
                         glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)));
@@ -612,7 +641,7 @@ void    VARIANT(ImGui_ImplOpenGL3_RenderDrawData)(ImDrawData* draw_data)
     }
 
     // Destroy the temporary VAO
-    if (!g_IsGLES || (g_IsGLES && g_GlVersion >= 3000))
+    if (g_GlVersion >= 3000)
         glDeleteVertexArrays(1, &vertex_array_object);
 
     // Restore modified GL state
@@ -624,7 +653,7 @@ void    VARIANT(ImGui_ImplOpenGL3_RenderDrawData)(ImDrawData* draw_data)
 
     glActiveTexture(last_active_texture);
 
-    if (!g_IsGLES || (g_IsGLES && g_GlVersion >= 3000))
+    if (g_GlVersion >= 3000)
         glBindVertexArray(last_vertex_array_object);
 
     glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);

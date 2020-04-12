@@ -45,6 +45,8 @@ namespace MangoHud {
 // FIXME might not be needed, GLX/EGL _can_ maybe live together
 #define VARIANT(x) x
 
+void GetOpenGLVersion(int& major, int& minor, bool& isGLES);
+
 // Backend API
 IMGUI_IMPL_API bool     VARIANT(ImGui_ImplOpenGL3_Init)(const char* glsl_version = nullptr);
 IMGUI_IMPL_API void     VARIANT(ImGui_ImplOpenGL3_Shutdown)();

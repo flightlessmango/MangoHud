@@ -1229,7 +1229,8 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             }
          } else {
             ImGui::TextColored(engine_color,
-               "%d.%d", data.version_gl.major, data.version_gl.minor);
+               "%d.%d%s", data.version_gl.major, data.version_gl.minor,
+               data.version_gl.is_gles ? " ES" : "");
          }
          if (params.enabled[OVERLAY_PARAM_ENABLED_arch]){
             ImGui::Dummy(ImVec2(0.0,5.0f));

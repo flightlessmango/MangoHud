@@ -26,6 +26,7 @@ struct swapchain_stats {
    struct {
       int32_t major;
       int32_t minor;
+      bool is_gles;
    } version_gl;
    struct {
       int32_t major;
