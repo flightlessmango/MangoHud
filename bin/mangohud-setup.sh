@@ -4,7 +4,7 @@ SU_CMD=$(command -v sudo || command -v doas)
 
 # doas requires a double dash if the command it runs will include any dashes,
 # so append a double dash to the command
-[[ $SU_CMD == *doas ]] && $SU_CMD="$SU_CMD -- "
+[[ $SU_CMD == *doas ]] && SU_CMD="$SU_CMD -- "
 
 
 mangohud_usage() {
