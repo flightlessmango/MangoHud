@@ -16,14 +16,16 @@ bool nvctrlSuccess = false;
 
 bool checkXNVCtrl()
 {
-    if (init_x11() && nvctrl.IsLoaded()) {
-        nvctrlSuccess = nvctrl.XNVCTRLIsNvScreen(get_xdisplay(), 0);
-        if (!nvctrlSuccess)
-            std::cerr << "MANGOHUD: XNVCtrl didn't find the correct display" << std::endl;
-        return nvctrlSuccess;
+    if (init_x11()) {
+        if (nvctrl.IsLoaded()) {
+            nvctrlSuccess = nvctrl.XNVCTRLIsNvScreen(get_xdisplay(), 0);
+            if (!nvctrlSuccess)
+                std::cerr << "MANGOHUD: XNVCtrl didn't find the correct display" << std::endl;
+            return nvctrlSuccess;
+        } else {
+            std::cerr << "MANGOHUD: XNVCtrl failed to load\n";
+        }
     }
-
-    std::cerr << "MANGOHUD: XNVCtrl failed to load\n";
 
     return false;
 }
