@@ -1054,6 +1054,58 @@ float get_ticker_limited_pos(float pos, float tw, float& left_limit, float& righ
    return new_pos_x;
 }
 
+#ifdef HAVE_DBUS
+void render_mpris_metadata(swapchain_stats& data, metadata& meta, uint64_t frame_timing)
+{
+   scoped_lock lk(meta.mutex);
+   if (meta.valid) {
+      ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,0));
+      ImGui::Dummy(ImVec2(0.0f, 20.0f));
+      ImGui::PushFont(data.font1);
+
+      if (meta.ticker.needs_recalc) {
+         meta.ticker.tw0 = ImGui::CalcTextSize(meta.title.c_str()).x;
+         meta.ticker.tw1 = ImGui::CalcTextSize(meta.artists.c_str()).x;
+         meta.ticker.tw2 = ImGui::CalcTextSize(meta.album.c_str()).x;
+         meta.ticker.longest = std::max(std::max(
+               meta.ticker.tw0,
+               meta.ticker.tw1),
+            meta.ticker.tw2);
+         meta.ticker.needs_recalc = false;
+      }
+
+      float new_pos, left_limit = 0, right_limit = 0;
+      get_ticker_limited_pos(meta.ticker.pos, meta.ticker.longest, left_limit, right_limit);
+
+      if (meta.ticker.pos < left_limit - g_overflow * .5f) {
+         meta.ticker.dir = -1;
+         meta.ticker.pos = (left_limit - g_overflow * .5f) + 1.f /* random */;
+      } else if (meta.ticker.pos > right_limit + g_overflow) {
+         meta.ticker.dir = 1;
+         meta.ticker.pos = (right_limit + g_overflow) - 1.f /* random */;
+      }
+
+      meta.ticker.pos -= .5f * (frame_timing / 16666.7f) * meta.ticker.dir;
+
+      new_pos = get_ticker_limited_pos(meta.ticker.pos, meta.ticker.tw0, left_limit, right_limit);
+      ImGui::SetCursorPosX(new_pos);
+      ImGui::Text("%s", meta.title.c_str());
+
+      new_pos = get_ticker_limited_pos(meta.ticker.pos, meta.ticker.tw1, left_limit, right_limit);
+      ImGui::SetCursorPosX(new_pos);
+      ImGui::Text("%s", meta.artists.c_str());
+      //ImGui::NewLine();
+      if (!meta.album.empty()) {
+         new_pos = get_ticker_limited_pos(meta.ticker.pos, meta.ticker.tw2, left_limit, right_limit);
+         ImGui::SetCursorPosX(new_pos);
+         ImGui::Text("%s", meta.album.c_str());
+      }
+      ImGui::PopFont();
+      ImGui::PopStyleVar();
+   }
+}
+#endif
+
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan)
 {
    uint32_t f_idx = (data.n_frames - 1) % ARRAY_SIZE(data.frames_stats);
@@ -1276,54 +1328,8 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       }
 
 #ifdef HAVE_DBUS
-      {
-         scoped_lock lk(spotify.mutex);
-         if (spotify.valid) {
-            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,0));
-            ImGui::Dummy(ImVec2(0.0f, 20.0f));
-            ImGui::PushFont(data.font1);
-
-            if (spotify.ticker.needs_recalc) {
-               spotify.ticker.tw0 = ImGui::CalcTextSize(spotify.title.c_str()).x;
-               spotify.ticker.tw1 = ImGui::CalcTextSize(spotify.artists.c_str()).x;
-               spotify.ticker.tw2 = ImGui::CalcTextSize(spotify.album.c_str()).x;
-               spotify.ticker.longest = std::max(std::max(
-                     spotify.ticker.tw0,
-                     spotify.ticker.tw1),
-                  spotify.ticker.tw2);
-               spotify.ticker.needs_recalc = false;
-            }
-
-            float new_pos, left_limit = 0, right_limit = 0;
-            get_ticker_limited_pos(spotify.ticker.pos, spotify.ticker.longest, left_limit, right_limit);
-
-            if (spotify.ticker.pos < left_limit - g_overflow * .5f) {
-               spotify.ticker.dir = -1;
-               spotify.ticker.pos = (left_limit - g_overflow * .5f) + 1.f /* random */;
-            } else if (spotify.ticker.pos > right_limit + g_overflow) {
-               spotify.ticker.dir = 1;
-               spotify.ticker.pos = (right_limit + g_overflow) - 1.f /* random */;
-            }
-
-            spotify.ticker.pos -= .5f * (frame_timing / 16666.7f) * spotify.ticker.dir;
-
-            new_pos = get_ticker_limited_pos(spotify.ticker.pos, spotify.ticker.tw0, left_limit, right_limit);
-            ImGui::SetCursorPosX(new_pos);
-            ImGui::Text("%s", spotify.title.c_str());
-
-            new_pos = get_ticker_limited_pos(spotify.ticker.pos, spotify.ticker.tw1, left_limit, right_limit);
-            ImGui::SetCursorPosX(new_pos);
-            ImGui::Text("%s", spotify.artists.c_str());
-            //ImGui::NewLine();
-            if (!spotify.album.empty()) {
-               new_pos = get_ticker_limited_pos(spotify.ticker.pos, spotify.ticker.tw2, left_limit, right_limit);
-               ImGui::SetCursorPosX(new_pos);
-               ImGui::Text("%s", spotify.album.c_str());
-            }
-            ImGui::PopFont();
-            ImGui::PopStyleVar();
-         }
-      }
+      render_mpris_metadata(data, spotify, frame_timing);
+      render_mpris_metadata(data, generic_mpris, frame_timing);
 #endif
 
       window_size = ImVec2(window_size.x, ImGui::GetCursorPosY() + 10.0f);

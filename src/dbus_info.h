@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <unordered_map>
 #include <mutex>
 #include "loaders/loader_dbus.h"
 
@@ -45,6 +46,7 @@ struct DBusSignal
 };
 
 extern struct metadata spotify;
+extern struct metadata generic_mpris;
 
 namespace dbusmgr {
     using callback_func = std::function<void(/*metadata*/)>;
@@ -107,6 +109,7 @@ namespace dbusmgr {
         std::thread m_thread;
         std::map<CBENUM, callback_func> m_callbacks;
         libdbus_loader m_dbus_ldr;
+        std::unordered_map<std::string, std::string> m_name_owners;
 
         const std::array<DBusSignal, 2> m_signals {{
             { "org.freedesktop.DBus", "NameOwnerChanged", ST_NAMEOWNERCHANGED },

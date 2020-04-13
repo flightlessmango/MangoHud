@@ -3,11 +3,16 @@
 #include <sstream>
 #include <array>
 #include "dbus_info.h"
+#include "string_utils.h"
 
 using ms = std::chrono::milliseconds;
 
 struct metadata spotify;
+struct metadata generic_mpris;
+
 typedef std::vector<std::pair<std::string, std::string>> string_pair_vec;
+typedef std::unordered_map<std::string, string_pair_vec> string_pair_vec_map;
+typedef std::unordered_map<std::string, std::string> string_map;
 
 std::string format_signal(const DBusSignal& s)
 {
@@ -104,7 +109,6 @@ static void parse_mpris_metadata(libdbus_loader& dbus, DBusMessageIter *iter_, s
 
     while (dbus.message_iter_get_arg_type(&iter) != DBUS_TYPE_INVALID)
     {
-        dbus.message_iter_next (&iter);
         //std::cerr << "\ttype: " << (char)dbus.message_iter_get_arg_type(&iter) << std::endl;
         if (!get_variant_string(dbus, &iter, key))
             return;
@@ -123,10 +127,11 @@ static void parse_mpris_metadata(libdbus_loader& dbus, DBusMessageIter *iter_, s
                 entries.push_back({key, s});
             }
         }
+        dbus.message_iter_next (&iter);
     }
 }
 
-static void parse_mpris_properties(libdbus_loader& dbus, DBusMessage *msg, std::string& source, string_pair_vec& entries)
+static void parse_mpris_properties(libdbus_loader& dbus, DBusMessage *msg, std::string& source, string_pair_vec_map& entries_map)
 {
     const char *val_char = nullptr;
     DBusMessageIter iter;
@@ -180,14 +185,14 @@ static void parse_mpris_properties(libdbus_loader& dbus, DBusMessage *msg, std::
                 continue;
             dbus.message_iter_recurse (&iter, &iter);
 
-            parse_mpris_metadata(dbus, &iter, entries);
+            parse_mpris_metadata(dbus, &iter, entries_map["Metadata"]);
         }
         else if (key == "PlaybackStatus") {
             dbus.message_iter_recurse (&stack.back(), &iter);
             dbus.message_iter_next (&iter);
 
             if (get_variant_string(dbus, &iter, val))
-                entries.push_back({key, val});
+                entries_map["PlaybackStatus"].push_back({key, val});
         }
 
         dbus.message_iter_next (&stack.back());
@@ -351,37 +356,48 @@ bool get_dict_string_array(libdbus_loader& dbus, DBusMessage *msg, string_pair_v
     return true;
 }
 
-static void assign_metadata(metadata& meta, string_pair_vec& entries)
+static void assign_metadata(metadata& meta, string_pair_vec_map& entries_map)
 {
-    meta.title.clear();
-    meta.artists.clear();
-    meta.album.clear();
+    string_pair_vec_map::const_iterator it;
+    it = entries_map.find("Metadata");
+    if (it != entries_map.end()) {
+        meta.title.clear();
+        meta.artists.clear();
+        meta.album.clear();
 
-    std::lock_guard<std::mutex> lk(meta.mutex);
-    std::vector<std::string> artists;
-    meta.valid = false;
-    for (auto& kv : entries) {
-#ifndef NDEBUG
-        std::cerr << kv.first << " = " << kv.second << std::endl;
-#endif
-        if (kv.first == "xesam:artist") {
-            artists.push_back(kv.second);
+        std::lock_guard<std::mutex> lk(meta.mutex);
+        std::vector<std::string> artists;
+        meta.valid = false;
+        for (auto& kv : it->second) {
+    #ifndef NDEBUG
+            std::cerr << kv.first << " = " << kv.second << std::endl;
+    #endif
+            if (kv.first == "xesam:artist")
+                artists.push_back(kv.second);
+            else if (kv.first == "xesam:title")
+                meta.title = kv.second;
+            else if (kv.first == "xesam:album")
+                meta.album = kv.second;
+            else if (kv.first == "mpris:artUrl")
+                meta.artUrl = kv.second;
+            else if (kv.first == "PlaybackStatus")
+                meta.playing = (kv.second == "Playing");
         }
-        else if (kv.first == "xesam:title")
-            meta.title = kv.second;
-        else if (kv.first == "xesam:album")
-            meta.album = kv.second;
-        else if (kv.first == "mpris:artUrl")
-            meta.artUrl = kv.second;
-        else if (kv.first == "PlaybackStatus")
-            meta.playing = (kv.second == "Playing");
+
+        // XXX Spotify only sends one artist anyway
+        for (auto p = artists.begin(); p != artists.end(); p++) {
+            meta.artists += *p;
+            if (p != artists.end() - 1)
+                meta.artists += ", ";
+        }
     }
 
-    // XXX Spotify only sends one artist anyway
-    for (auto p = artists.begin(); p != artists.end(); p++) {
-        meta.artists += *p;
-        if (p != artists.end() - 1)
-            meta.artists += ", ";
+    it = entries_map.find("PlaybackStatus");
+    if (it != entries_map.end()) {
+        for (auto& kv : it->second) {
+            if (kv.first == "PlaybackStatus")
+                meta.playing = (kv.second == "Playing");
+        }
     }
 
     if (meta.artists.size() || !meta.title.empty())
@@ -393,7 +409,97 @@ static void assign_metadata(metadata& meta, string_pair_vec& entries)
     meta.ticker.dir = -1;
 }
 
-void dbus_get_spotify_property(dbusmgr::dbus_manager& dbus_mgr, string_pair_vec& entries, const char * prop)
+bool dbus_get_name_owner(dbusmgr::dbus_manager& dbus_mgr, std::string& name_owner, const char *name)
+{
+    auto& dbus = dbus_mgr.dbus();
+    DBusError error;
+    dbus.error_init(&error);
+
+    DBusMessage * dbus_reply = nullptr;
+    DBusMessage * dbus_msg = nullptr;
+
+    // dbus-send --session --dest=org.freedesktop.DBus --type=method_call --print-reply /org/freedesktop/DBus org.freedesktop.DBus.GetNameOwner string:"org.mpris.MediaPlayer2.spotify"
+    if (nullptr == (dbus_msg = dbus.message_new_method_call("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "GetNameOwner"))) {
+       throw std::runtime_error("unable to allocate memory for dbus message");
+    }
+
+    if (!dbus.message_append_args (dbus_msg, DBUS_TYPE_STRING, &name, DBUS_TYPE_INVALID)) {
+        dbus.message_unref(dbus_msg);
+        std::cerr << "MANGOHUD: " << __func__ << ": dbus_message_append_args failed\n";
+        dbus.error_free(&error);
+        return false;
+    }
+
+    if (nullptr == (dbus_reply = dbus.connection_send_with_reply_and_block(dbus_mgr.get_conn(), dbus_msg, DBUS_TIMEOUT_USE_DEFAULT, &error))) {
+        dbus.message_unref(dbus_msg);
+        std::cerr << "MANGOHUD: " << __func__ << ": "<< error.message << "\n";
+        dbus.error_free(&error);
+        return false;
+    }
+
+    const char* val = nullptr;
+    DBusMessageIter iter;
+    dbus.message_iter_init (dbus_reply, &iter);
+
+    if (dbus.message_iter_get_arg_type(&iter) != DBUS_TYPE_STRING)
+        return false;
+
+    dbus.message_iter_get_basic(&iter, &val);
+    if (val)
+        name_owner = val;
+
+    dbus.message_unref(dbus_msg);
+    dbus.message_unref(dbus_reply);
+    dbus.error_free(&error);
+    return true;
+}
+
+bool dbus_list_name_to_owner(dbusmgr::dbus_manager& dbus_mgr, string_map& name_owners)
+{
+    auto& dbus = dbus_mgr.dbus();
+    DBusError error;
+    dbus.error_init(&error);
+
+    std::vector<std::string> names;
+    std::string owner;
+    DBusMessageIter iter;
+
+    DBusMessage * dbus_reply = nullptr;
+    DBusMessage * dbus_msg = nullptr;
+
+    // dbus-send --session --dest=org.freedesktop.DBus --type=method_call --print-reply /org/freedesktop/DBus org.freedesktop.DBus.GetNameOwner string:"org.mpris.MediaPlayer2.spotify"
+    if (nullptr == (dbus_msg = dbus.message_new_method_call("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "ListNames"))) {
+       throw std::runtime_error("unable to allocate memory for dbus message");
+    }
+
+    if (nullptr == (dbus_reply = dbus.connection_send_with_reply_and_block(dbus_mgr.get_conn(), dbus_msg, DBUS_TIMEOUT_USE_DEFAULT, &error))) {
+        dbus.message_unref(dbus_msg);
+        std::cerr << "MANGOHUD: " << __func__ << ": "<< error.message << "\n";
+        dbus.error_free(&error);
+        return false;
+    }
+
+    dbus.message_iter_init (dbus_reply, &iter);
+
+    if (!get_string_array(dbus, &iter, names))
+        return false;
+
+    for (auto& name : names) {
+        if (!starts_with(name, "org.mpris.MediaPlayer2."))
+            continue;
+
+        if (dbus_get_name_owner(dbus_mgr, owner, name.c_str())) {
+            name_owners[name] = owner;
+        }
+    }
+
+    dbus.message_unref(dbus_msg);
+    dbus.message_unref(dbus_reply);
+    dbus.error_free(&error);
+    return true;
+}
+
+void dbus_get_player_property(dbusmgr::dbus_manager& dbus_mgr, string_pair_vec& entries, const char * dest, const char * prop)
 {
     auto& dbus = dbus_mgr.dbus();
     DBusError error;
@@ -403,7 +509,7 @@ void dbus_get_spotify_property(dbusmgr::dbus_manager& dbus_mgr, string_pair_vec&
     DBusMessage * dbus_msg = nullptr;
 
     // dbus-send --print-reply --session --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Get string:'org.mpris.MediaPlayer2.Player' string:'Metadata'
-    if (nullptr == (dbus_msg = dbus.message_new_method_call("org.mpris.MediaPlayer2.spotify", "/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Properties", "Get"))) {
+    if (nullptr == (dbus_msg = dbus.message_new_method_call(dest, "/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Properties", "Get"))) {
        throw std::runtime_error("unable to allocate memory for dbus message");
     }
 
@@ -411,10 +517,9 @@ void dbus_get_spotify_property(dbusmgr::dbus_manager& dbus_mgr, string_pair_vec&
         "org.mpris.MediaPlayer2.Player",
     };
 
-    std::cerr << __func__ << ": " << prop << std::endl;
     if (!dbus.message_append_args (dbus_msg, DBUS_TYPE_STRING, &v_STRINGS[0], DBUS_TYPE_STRING, &prop, DBUS_TYPE_INVALID)) {
         dbus.message_unref(dbus_msg);
-        throw std::runtime_error(error.message);
+        throw std::runtime_error("dbus_message_append_args failed");
     }
 
     if (nullptr == (dbus_reply = dbus.connection_send_with_reply_and_block(dbus_mgr.get_conn(), dbus_msg, DBUS_TIMEOUT_USE_DEFAULT, &error))) {
@@ -437,9 +542,9 @@ void dbus_get_spotify_property(dbusmgr::dbus_manager& dbus_mgr, string_pair_vec&
 void get_spotify_metadata(dbusmgr::dbus_manager& dbus, metadata& meta)
 {
     meta.artists.clear();
-    string_pair_vec entries;
-    dbus_get_spotify_property(dbus, entries, "Metadata");
-    dbus_get_spotify_property(dbus, entries, "PlaybackStatus");
+    string_pair_vec_map entries;
+    dbus_get_player_property(dbus, entries["Metadata"], "org.mpris.MediaPlayer2.spotify", "Metadata");
+    dbus_get_player_property(dbus, entries["PlaybackStatus"], "org.mpris.MediaPlayer2.spotify", "PlaybackStatus");
     assign_metadata(meta, entries);
 }
 
@@ -460,6 +565,8 @@ void dbus_manager::init()
         throw dbus_error(m_dbus_ldr, &m_error);
     }
     std::cout << "Connected to D-Bus as \"" << m_dbus_ldr.bus_get_unique_name(m_dbus_conn) << "\"." << std::endl;
+
+    dbus_list_name_to_owner(*this, m_name_owners);
 
     connect_to_signals();
     m_inited = true;
@@ -560,24 +667,35 @@ void dbus_manager::dbus_thread(dbus_manager *pmgr)
             if (dbus.message_is_signal(msg, sig.intf, sig.signal))
             {
 
+                const char *sender = dbus.message_get_sender(msg);
 #ifndef NDEBUG
-                std::cerr << __func__ << ": " << sig.intf << "::" << sig.signal << std::endl;
+                std::cerr << __func__ << ": " << sig.intf << "::" << sig.signal << "\n";
+                std::cerr << "Sender: " << sender << "\n";
 #endif
 
                 switch (sig.type) {
                     case ST_PROPERTIESCHANGED:
                     {
                         std::string source;
-                        std::vector<std::pair<std::string, std::string>> entries;
+                        string_pair_vec_map entries_map;
 
                         //parse_property_changed(msg, source, entries);
-                        parse_mpris_properties(dbus, msg, source, entries);
+                        parse_mpris_properties(dbus, msg, source, entries_map);
 #ifndef NDEBUG
-                        std::cerr << "Source: " << source << std::endl;
+                        std::cerr << "Source: " << source << "\n";
 #endif
                         if (source != "org.mpris.MediaPlayer2.Player")
                             break;
-                        assign_metadata(spotify, entries);
+
+                        if (pmgr->m_name_owners["org.mpris.MediaPlayer2.spotify"] == sender) {
+                            assign_metadata(spotify, entries_map);
+                        } else {
+                            assign_metadata(generic_mpris, entries_map);
+                            if (generic_mpris.playing && !generic_mpris.valid) {
+                                dbus_get_player_property(*pmgr, entries_map["Metadata"], sender, "Metadata");
+                                assign_metadata(generic_mpris, entries_map);
+                            }
+                        }
                     }
                     break;
                     case ST_NAMEOWNERCHANGED:
@@ -593,14 +711,33 @@ void dbus_manager::dbus_thread(dbus_manager *pmgr)
                             dbus.message_iter_next (&iter);
                         }
 
-                        // did spotify quit?
+                        // register new name
                         if (str.size() == 3
-                            && str[0] == "org.mpris.MediaPlayer2.spotify"
-                            && str[2].empty()
+                            && starts_with(str[0], "org.mpris.MediaPlayer2.")
+                            && !str[2].empty()
                         )
                         {
-                            spotify.valid = false;
+                            pmgr->m_name_owners[str[0]] = str[2];
                         }
+
+                        // did a player quit?
+                        if (str[2].empty()) {
+                            if (str.size() == 3
+                                && str[0] == "org.mpris.MediaPlayer2.spotify"
+                            ) {
+                                spotify.valid = false;
+                            } else {
+                                 auto it = pmgr->m_name_owners.find(str[0]);
+                                 if (it != pmgr->m_name_owners.end()
+                                    && it->second == str[1]) {
+                                    generic_mpris.artists.clear();
+                                    generic_mpris.title.clear();
+                                    generic_mpris.album.clear();
+                                    generic_mpris.valid = false;
+                                }
+                            }
+                        }
+
                     }
                     break;
                     default:
