@@ -18,14 +18,13 @@ bool checkNVML(const char* pciBusId){
             std::cerr << "MANGOHUD: Nvidia module not loaded\n";
         } else {
             nvmlReturn_t ret = NVML_ERROR_UNKNOWN;
-            if (pciBusId)
-                ret = nvml.nvmlDeviceGetHandleByPciBusId(pciBusId, &nvidiaDevice);
-
-            if (ret != NVML_SUCCESS) {
+            if (pciBusId && ((ret = nvml.nvmlDeviceGetHandleByPciBusId(pciBusId, &nvidiaDevice)) != NVML_SUCCESS)) {
                 std::cerr << "MANGOHUD: Getting device handle by PCI bus ID failed: " << nvml.nvmlErrorString(ret) << "\n";
                 std::cerr << "          Using index 0.\n";
-                ret = nvml.nvmlDeviceGetHandleByIndex(0, &nvidiaDevice);
             }
+
+            if (ret != NVML_SUCCESS)
+                ret = nvml.nvmlDeviceGetHandleByIndex(0, &nvidiaDevice);
 
             if (ret != NVML_SUCCESS)
                 std::cerr << "MANGOHUD: Getting device handle failed: " << nvml.nvmlErrorString(ret) << "\n";
