@@ -107,6 +107,8 @@ A partial list of parameters are below. See the config file for a complete list.
 | `cpu_temp`<br>`gpu_temp`           | Displays current CPU/GPU temperature                                                  |
 | `core_load`                        | Displays load & frequency per core                                                    |
 | `ram`<br>`vram`                    | Displays system RAM/VRAM usage                                                        |
+| `io_read`                          | Displays MB currently readed from hdd                                                 |                   
+| `io_write`                         | Displays MB currently written on hdd                                                  |  
 | `full`                             | Enables all of the above config options                                               |
 | `crosshair`                        | Adds a crosshair overlay at the centre of the screen                                  |
 | `font_size=`                       | Customizeable font size (default=24)                                                  |
