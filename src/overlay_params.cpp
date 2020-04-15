@@ -30,6 +30,10 @@
 #include "loaders/loader_x11.h"
 #endif
 
+#ifdef HAVE_LIBINPUT
+#include "keybinds_libinput.h"
+#endif
+
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
 #endif
@@ -794,6 +798,10 @@ parse_overlay_config(struct overlay_params *params,
 
    // Needs ImGui context but it is null here for OpenGL so just note it and update somewhere else
    HUDElements.colors.update = true;
+
+#ifdef HAVE_LIBINPUT
+   start_input(*params);
+#endif
 
    if(!logger) logger = std::make_unique<Logger>(params);
    if(params->autostart_log && !logger->is_active())

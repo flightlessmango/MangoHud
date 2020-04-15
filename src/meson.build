@@ -149,6 +149,13 @@ if is_unixy
       'loaders/loader_dbus.cpp',
     )
   endif
+
+  if libinput_dep.found() and libudev_dep.found()
+    pre_args += '-DHAVE_LIBINPUT'
+    vklayer_files += files(
+      'keybinds_libinput.cpp',
+    )
+  endif
 endif
 
 link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL'])
@@ -176,6 +183,8 @@ vklayer_mesa_overlay = shared_library(
   dependencies : [
     vulkan_wsi_deps,
     dearimgui_dep,
+    libinput_dep,
+    libudev_dep,
     dbus_dep,
     dep_dl,
     dep_rt,
@@ -187,6 +196,7 @@ vklayer_mesa_overlay = shared_library(
   install_dir : libdir_mangohud,
   install : true
 )
+
 if is_unixy
   mangohud_dlsym = shared_library(
     'MangoHud_dlsym',
