@@ -157,8 +157,8 @@ build() {
     if [[ ! -f "build/meson64/build.ninja" ]]; then
         configure $@
     fi
-    DESTDIR="$PWD/build/release" ninja -C build/meson32 install
     DESTDIR="$PWD/build/release" ninja -C build/meson64 install
+    DESTDIR="$PWD/build/release" ninja -C build/meson32 install
 }
 
 package() {

@@ -22,6 +22,13 @@ pre_args = [
   '-DPACKAGE_VERSION="@0@"'.format(meson.project_version()),
 ]
 
+sizeof_ptr = cc.sizeof('void*')
+if sizeof_ptr == 8
+  pre_args += '-DMANGOHUD_ARCH="64bit"'
+elif sizeof_ptr == 4
+  pre_args += '-DMANGOHUD_ARCH="32bit"'
+endif
+
 # Define DEBUG for debug builds only (debugoptimized is not included on this one)
 if get_option('buildtype') == 'debug'
   pre_args += '-DDEBUG'
@@ -83,17 +90,34 @@ vulkan_wsi_deps = []
 
 if is_unixy
   dep_x11 = dependency('x11', required: get_option('with_x11'))
-  dep_wayland_client = dependency('wayland-client',
-      required: get_option('with_wayland'), version : '>=1.11')
+  # Not needed right now
+  #dep_wayland_client = dependency('wayland-client',
+  #    required: get_option('with_wayland'), version : '>=1.11')
+  dep_wayland_client = null_dep
   dbus_dep = dependency('dbus-1', required: get_option('with_dbus')).partial_dependency(compile_args : true, includes : true)
   dep_libdrm = dependency('libdrm', required: get_option('with_libdrm_amdgpu')).partial_dependency(compile_args : true, includes : true)
 #  dep_libdrm_amdgpu = dependency('libdrm_amdgpu', version : '>=2.4.79', required: get_option('with_libdrm_amdgpu')).partial_dependency(compile_args : true, includes : true)
+  # Support 32bit only if library is found
+  cc_input_dep = cc.find_library('libinput', required: false)
+  if sizeof_ptr == 8 or cc_input_dep.found()
+    libinput_dep = dependency('libinput', required: get_option('with_wayland')).partial_dependency(compile_args : true, includes : true)
+    libudev_dep = dependency('libudev', required: get_option('with_wayland')).partial_dependency(compile_args : true, includes : true)
+  else
+    libinput_dep = null_dep
+    libudev_dep = null_dep
+  endif
+
+  if not dep_x11.found() and not cc_input_dep.found()
+    message('Hotkey support is not enabled!')
+  endif
 else
   dep_x11 = null_dep
   dep_wayland_client = null_dep
   dbus_dep = null_dep
   dep_libdrm = null_dep
 #  dep_libdrm_amdgpu = null_dep
+  libinput_dep = null_dep
+  libudev_dep = null_dep
 endif
 
 if dep_x11.found()
@@ -103,10 +127,6 @@ endif
 if dep_wayland_client.found()
   vulkan_wsi_args += ['-DVK_USE_PLATFORM_WAYLAND_KHR']
   vulkan_wsi_deps += dep_wayland_client
-endif
-
-if is_unixy and not dep_x11.found() and not dep_wayland_client.found()
-  error('At least one of "with_x11" and "with_wayland" should be enabled')
 endif
 
 inc_common = [
@@ -217,13 +237,6 @@ util_files = files(
   'src/mesa/util/os_socket.c',
   'src/mesa/util/os_time.c',
 )
-
-sizeof_ptr = cc.sizeof('void*')
-if sizeof_ptr == 8
-  pre_args += '-DMANGOHUD_ARCH="64bit"'
-elif sizeof_ptr == 4
-  pre_args += '-DMANGOHUD_ARCH="32bit"'
-endif
 
 dearimgui_sp = subproject('imgui', default_options: [
   'default_library=static',

@@ -33,6 +33,10 @@
 #include "loaders/loader_x11.h"
 #endif
 
+#ifdef HAVE_LIBINPUT
+#include "keybinds_libinput.h"
+#endif
+
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
 #endif
@@ -115,22 +119,26 @@ parse_float(const char *str)
    return val;
 }
 
-#ifdef HAVE_X11
+#if defined(HAVE_X11) || defined(HAVE_LIBINPUT)
 static std::vector<KeySym>
 parse_string_to_keysym_vec(const char *str)
 {
    std::vector<KeySym> keys;
-   if(g_x11->IsLoaded())
-   {
-      auto keyStrings = str_tokenize(str);
-      for (auto& ks : keyStrings) {
-         trim(ks);
-         KeySym xk = g_x11->XStringToKeysym(ks.c_str());
-         if (xk)
-            keys.push_back(xk);
-         else
-            SPDLOG_ERROR("Unrecognized key: '{}'", ks);
-      }
+   KeySym xk = 0;
+
+   auto keyStrings = str_tokenize(str);
+   for (auto& ks : keyStrings) {
+      trim(ks);
+      if (starts_with(ks, "0x"))
+         xk = strtol(ks.c_str() + 2, NULL, 16);
+#ifdef HAVE_X11
+      else if(g_x11->IsLoaded())
+         xk = g_x11->XStringToKeysym(ks.c_str());
+#endif
+      if (xk)
+         keys.push_back(xk);
+      else
+         SPDLOG_ERROR("Unrecognized key: '{}'", ks);
    }
    return keys;
 }
@@ -203,7 +211,7 @@ parse_load_color(const char *str)
       load_colors.push_back(std::stoi(token, NULL, 16));
    }
    while (load_colors.size() != 3) {
-      load_colors.push_back(std::stoi("FFFFFF" , NULL, 16));
+      load_colors.push_back(0xFFFFFF);
    }
 
     return load_colors;
@@ -627,13 +635,13 @@ parse_overlay_config(struct overlay_params *params,
 
 
 
-#ifdef HAVE_X11
-   params->toggle_hud = { XK_Shift_R, XK_F12 };
-   params->toggle_fps_limit = { XK_Shift_L, XK_F1 };
-   params->toggle_logging = { XK_Shift_L, XK_F2 };
-   params->reload_cfg = { XK_Shift_L, XK_F4 };
-   params->upload_log = { XK_Shift_L, XK_F3 };
-   params->upload_logs = { XK_Control_L, XK_F3 };
+#if defined(HAVE_X11) || defined(HAVE_LIBINPUT)
+   params->toggle_hud = { 0xFFE2, 0xFFC9 }; // XK_Shift_R, XK_F12
+   params->toggle_fps_limit = { 0xFFE1, 0xFFBE }; // XK_Shift_L, XK_F1
+   params->toggle_logging = { 0xFFE1, 0xFFBF }; // XK_Shift_L, XK_F2
+   params->reload_cfg = { 0xFFE1, 0xFFC1 }; // XK_Shift_L, XK_F4
+   params->upload_log = { 0xFFE1, 0xFFC0 }; // XK_Shift_L, XK_F3
+   params->upload_logs = { 0xFFE3, 0xFFC0 }; // XK_Control_L, XK_F3
 #endif
 
 #ifdef _WIN32
@@ -799,6 +807,10 @@ parse_overlay_config(struct overlay_params *params,
 
    // Needs ImGui context but it is null here for OpenGL so just note it and update somewhere else
    HUDElements.colors.update = true;
+
+#ifdef HAVE_LIBINPUT
+   start_input(*params);
+#endif
 
    if(!logger) logger = std::make_unique<Logger>(params);
    if(params->autostart_log && !logger->is_active())
