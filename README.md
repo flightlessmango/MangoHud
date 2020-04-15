@@ -94,6 +94,8 @@ MangoHud comes with a config file which can be used to set configuration options
 
 You can find an example config in /usr/share/doc/mangohud
 
+[GOverlay](https://github.com/benjamimgois/goverlay) is a GUI application that can be used to manage the config
+
 ---
 
 ### `MANGOHUD_CONFIG` environment variable
