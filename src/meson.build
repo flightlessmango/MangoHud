@@ -64,12 +64,17 @@ opengl_files = files(
 
 pre_args += '-DHOOK_DLSYM'
 
-glimgui_glx_dep = null_dep
-glimgui_egl_dep = null_dep
+if get_option('with_xnvctrl').enabled()
 
-if get_option('with_x11').enabled() and \
-    get_option('with_xnvctrl').enabled()
-  xnvctrl_h_dep = cc.has_header('NVCtrl/NVCtrl.h')
+  if not get_option('with_x11').enabled()
+    error('XNVCtrl also needs \'with_x11\'')
+  endif
+
+  xnvctrl_h_found = cc.has_header('NVCtrl/NVCtrl.h')
+  if not xnvctrl_h_found
+    error('NVCtrl.h was not found. Disable with \'with_xnvctrl\' if this feature is not needed.')
+  endif
+
   pre_args += '-DHAVE_XNVCTRL'
   vklayer_files += files(
     'loaders/loader_nvctrl.cpp',
@@ -122,8 +127,6 @@ vklayer_mesa_overlay = shared_library(
   dependencies : [
     vulkan_wsi_deps, 
     libimgui_core_dep,
-    glimgui_glx_dep,
-    glimgui_egl_dep,
     dbus_dep,
     dep_dl,
     dep_pthread,

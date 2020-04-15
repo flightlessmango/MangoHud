@@ -215,10 +215,10 @@ util_files = files(
   'src/mesa/util/os_time.c',
 )
 
-if cc.sizeof('void*') == 8
+sizeof_ptr = cc.sizeof('void*')
+if sizeof_ptr == 8
   pre_args += '-DMANGOHUD_ARCH="64bit"'
-endif
-if cc.sizeof('void*') == 4
+elif sizeof_ptr == 4
   pre_args += '-DMANGOHUD_ARCH="32bit"'
 endif
 
