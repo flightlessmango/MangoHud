@@ -33,13 +33,16 @@
 #include "overlay_params.h"
 #include "overlay.h"
 #include "config.h"
-#include "dbus_info.h"
 
 #include "mesa/util/os_socket.h"
 
 #ifdef HAVE_X11
 #include <X11/keysym.h>
 #include "loaders/loader_x11.h"
+#endif
+
+#ifdef HAVE_DBUS
+#include "dbus_info.h"
 #endif
 
 static enum overlay_param_position
