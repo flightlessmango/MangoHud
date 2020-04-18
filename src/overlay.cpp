@@ -57,6 +57,7 @@
 #include "loaders/loader_nvml.h"
 #include "memory.h"
 #include "notify.h"
+#include "blacklist.h"
 
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
@@ -2503,10 +2504,12 @@ static VkResult overlay_CreateDevice(
       get_device_chain_info(pCreateInfo, VK_LOADER_DATA_CALLBACK);
    device_data->set_device_loader_data = load_data_info->u.pfnSetDeviceLoaderData;
 
-   device_map_queues(device_data, pCreateInfo);
+   if (!is_blacklisted()) {
+      device_map_queues(device_data, pCreateInfo);
 
-   init_gpu_stats(device_data->properties.vendorID, instance_data->params);
-   init_system_info();
+      init_gpu_stats(device_data->properties.vendorID, instance_data->params);
+      init_system_info();
+   }
 
    return result;
 }
@@ -2516,7 +2519,8 @@ static void overlay_DestroyDevice(
     const VkAllocationCallbacks*                pAllocator)
 {
    struct device_data *device_data = FIND(struct device_data, device);
-   device_unmap_queues(device_data);
+   if (!is_blacklisted())
+      device_unmap_queues(device_data);
    device_data->vtable.DestroyDevice(device, pAllocator);
    destroy_device_data(device_data);
 }
@@ -2531,21 +2535,23 @@ static VkResult overlay_CreateInstance(
       
 
    std::string engineName, engineVersion;
-   const char* pEngineName = nullptr;
-   if (pCreateInfo->pApplicationInfo)
-      pEngineName = pCreateInfo->pApplicationInfo->pEngineName;
-   if (pEngineName)
-      engineName = pEngineName;
-   if (engineName == "DXVK" || engineName == "vkd3d") {
-      int engineVer = pCreateInfo->pApplicationInfo->engineVersion;
-      engineVersion = to_string(VK_VERSION_MAJOR(engineVer)) + "." + to_string(VK_VERSION_MINOR(engineVer)) + "." + to_string(VK_VERSION_PATCH(engineVer));
+   if (!is_blacklisted()) {
+      const char* pEngineName = nullptr;
+      if (pCreateInfo->pApplicationInfo)
+         pEngineName = pCreateInfo->pApplicationInfo->pEngineName;
+      if (pEngineName)
+         engineName = pEngineName;
+      if (engineName == "DXVK" || engineName == "vkd3d") {
+         int engineVer = pCreateInfo->pApplicationInfo->engineVersion;
+         engineVersion = to_string(VK_VERSION_MAJOR(engineVer)) + "." + to_string(VK_VERSION_MINOR(engineVer)) + "." + to_string(VK_VERSION_PATCH(engineVer));
+      }
+
+      if (engineName != "DXVK" && engineName != "vkd3d" && engineName != "Feral3D")
+         engineName = "VULKAN";
+
+      if (engineName == "vkd3d")
+         engineName = "VKD3D";
    }
-
-   if (engineName != "DXVK" && engineName != "vkd3d" && engineName != "Feral3D")
-      engineName = "VULKAN";
-
-   if (engineName == "vkd3d")
-      engineName = "VKD3D";
 
    assert(chain_info->u.pLayerInfo);
    PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr =
@@ -2568,23 +2574,25 @@ static VkResult overlay_CreateInstance(
                              &instance_data->vtable);
    instance_data_map_physical_devices(instance_data, true);
 
-   parse_overlay_config(&instance_data->params, getenv("MANGOHUD_CONFIG"));
-   instance_data->notifier.params = &instance_data->params;
-   start_notifier(instance_data->notifier);
+   if (!is_blacklisted()) {
+      parse_overlay_config(&instance_data->params, getenv("MANGOHUD_CONFIG"));
+      instance_data->notifier.params = &instance_data->params;
+      start_notifier(instance_data->notifier);
 
-   init_cpu_stats(instance_data->params);
+      init_cpu_stats(instance_data->params);
 
-   // Adjust height for DXVK/VKD3D version number
-   if (engineName == "DXVK" || engineName == "VKD3D"){
-      if (instance_data->params.font_size){
-         instance_data->params.height += instance_data->params.font_size / 2;
-      } else {
-         instance_data->params.height += 24 / 2;
+      // Adjust height for DXVK/VKD3D version number
+      if (engineName == "DXVK" || engineName == "VKD3D"){
+         if (instance_data->params.font_size){
+            instance_data->params.height += instance_data->params.font_size / 2;
+         } else {
+            instance_data->params.height += 24 / 2;
+         }
       }
-   }
 
-   instance_data->engineName = engineName;
-   instance_data->engineVersion = engineVersion;
+      instance_data->engineName = engineName;
+      instance_data->engineVersion = engineVersion;
+   }
 
    return result;
 }
@@ -2596,7 +2604,8 @@ static void overlay_DestroyInstance(
    struct instance_data *instance_data = FIND(struct instance_data, instance);
    instance_data_map_physical_devices(instance_data, false);
    instance_data->vtable.DestroyInstance(instance, pAllocator);
-   stop_notifier(instance_data->notifier);
+   if (!is_blacklisted())
+      stop_notifier(instance_data->notifier);
    destroy_instance_data(instance_data);
 }
 
@@ -2630,42 +2639,11 @@ static const struct {
 #undef ADD_HOOK
 };
 
-static bool checkBlacklisted()
-{
-   std::vector<std::string> blacklist {
-      "Battle.net.exe",
-      "EpicGamesLauncher.exe",
-      "IGOProxy.exe",
-      "IGOProxy64.exe",
-      "Origin.exe",
-      "OriginThinSetupInternal.exe",
-      "Steam.exe",
-      "BethesdaNetLauncher.exe",
-   };
-
-#ifdef _GNU_SOURCE_OFF
-   std::string p(program_invocation_name);
-   std::string procName = p.substr(p.find_last_of("/\\") + 1);
-#else
-   std::string p = get_exe_path();
-   std::string procName;
-   if (ends_with(p, "wine-preloader") || ends_with(p, "wine64-preloader")) {
-      get_wine_exe_name(procName, true);
-   } else {
-      procName = p.substr(p.find_last_of("/\\") + 1);
-   }
-#endif
-
-   return std::find(blacklist.begin(), blacklist.end(), procName) != blacklist.end();
-}
-
-static bool isBlacklisted = checkBlacklisted();
-
 static void *find_ptr(const char *name)
 {
     std::string f(name);
 
-    if (isBlacklisted && (f != "vkCreateInstance" && f != "vkDestroyInstance" && f != "vkCreateDevice" && f != "vkDestroyDevice"))
+    if (is_blacklisted() && (f != "vkCreateInstance" && f != "vkDestroyInstance" && f != "vkCreateDevice" && f != "vkDestroyDevice"))
     {
         return NULL;
     }

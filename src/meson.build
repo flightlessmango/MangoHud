@@ -42,6 +42,7 @@ vklayer_files = files(
   'overlay.cpp',
   'overlay_params.cpp',
   'font_unispace.c',
+  'blacklist.cpp',
   'cpu.cpp',
   'loaders/loader_nvml.cpp',
   'nvml.cpp',
