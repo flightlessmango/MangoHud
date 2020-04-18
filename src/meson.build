@@ -63,7 +63,9 @@ opengl_files = files(
   'gl/inject_egl.cpp',
 )
 
-pre_args += '-DHOOK_DLSYM'
+if get_option('with_dlsym').enabled()
+    pre_args += '-DHOOK_DLSYM'
+endif
 
 if get_option('with_xnvctrl').enabled()
 

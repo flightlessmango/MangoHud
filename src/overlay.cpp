@@ -817,7 +817,10 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
 }
 
 void init_system_info(){
-      unsetenv("LD_PRELOAD");
+      const char* ld_preload = getenv("LD_PRELOAD");
+      if (ld_preload)
+         unsetenv("LD_PRELOAD");
+
       ram =  exec("cat /proc/meminfo | grep 'MemTotal' | awk '{print $2}'");
       trim(ram);
       cpu =  exec("cat /proc/cpuinfo | grep 'model name' | tail -n1 | sed 's/^.*: //' | sed 's/([^)]*)/()/g' | tr -d '(/)'");
@@ -833,6 +836,8 @@ void init_system_info(){
       trim(driver);
       //driver = itox(device_data->properties.driverVersion);
 
+      if (ld_preload)
+         setenv("LD_PRELOAD", ld_preload, 1);
 #ifndef NDEBUG
       std::cout << "Ram:" << ram << "\n"
                 << "Cpu:" << cpu << "\n"

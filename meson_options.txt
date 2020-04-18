@@ -8,3 +8,4 @@ option('with_xnvctrl', type : 'feature', value : 'enabled', description: 'Enable
 option('with_x11', type : 'feature', value : 'enabled')
 option('with_wayland', type : 'feature', value : 'disabled')
 option('with_dbus', type : 'feature', value : 'enabled')
+option('with_dlsym', type : 'feature', value : 'disabled')
