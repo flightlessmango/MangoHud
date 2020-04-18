@@ -7,6 +7,7 @@
 #include "loaders/loader_x11.h"
 #include "mesa/util/macros.h"
 #include "mesa/util/os_time.h"
+#include "blacklist.h"
 
 #include <chrono>
 #include <iomanip>
@@ -64,16 +65,19 @@ EXPORT_C_(int) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
 #endif
 
     int ret = glx.MakeCurrent(dpy, drawable, ctx);
-    if (ret)
-        imgui_set_context(ctx);
 
-    if (params.gl_vsync >= -1) {
-        if (glx.SwapIntervalEXT)
-            glx.SwapIntervalEXT(dpy, drawable, params.gl_vsync);
-        if (glx.SwapIntervalSGI)
-            glx.SwapIntervalSGI(params.gl_vsync);
-        if (glx.SwapIntervalMESA)
-            glx.SwapIntervalMESA(params.gl_vsync);
+    if (!is_blacklisted()) {
+        if (ret)
+            imgui_set_context(ctx);
+
+        if (params.gl_vsync >= -1) {
+            if (glx.SwapIntervalEXT)
+                glx.SwapIntervalEXT(dpy, drawable, params.gl_vsync);
+            if (glx.SwapIntervalSGI)
+                glx.SwapIntervalSGI(params.gl_vsync);
+            if (glx.SwapIntervalMESA)
+                glx.SwapIntervalMESA(params.gl_vsync);
+        }
     }
 
     return ret;
@@ -81,32 +85,37 @@ EXPORT_C_(int) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
 
 EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
     glx.Load();
-    imgui_create(glx.GetCurrentContext());
 
-    unsigned int width = -1, height = -1;
+    if (!is_blacklisted()) {
+        imgui_create(glx.GetCurrentContext());
 
-    // glXQueryDrawable is buggy, use XGetGeometry instead
-    Window unused_window;
-    int unused;
-    static bool xgetgeom_failed = false;
-    if (xgetgeom_failed || !g_x11->XGetGeometry((Display*)dpy,
-        (Window)drawable, &unused_window,
-        &unused, &unused,
-        &width, &height,
-        (unsigned int*) &unused, (unsigned int*) &unused)) {
+        unsigned int width = -1, height = -1;
 
-        xgetgeom_failed = true;
-        glx.QueryDrawable(dpy, drawable, GLX_WIDTH, &width);
-        glx.QueryDrawable(dpy, drawable, GLX_HEIGTH, &height);
+        // glXQueryDrawable is buggy, use XGetGeometry instead
+        Window unused_window;
+        int unused;
+        static bool xgetgeom_failed = false;
+        if (xgetgeom_failed || !g_x11->XGetGeometry((Display*)dpy,
+            (Window)drawable, &unused_window,
+            &unused, &unused,
+            &width, &height,
+            (unsigned int*) &unused, (unsigned int*) &unused)) {
+
+            xgetgeom_failed = true;
+            glx.QueryDrawable(dpy, drawable, GLX_WIDTH, &width);
+            glx.QueryDrawable(dpy, drawable, GLX_HEIGTH, &height);
+        }
+
+        /*GLint vp[4]; glGetIntegerv (GL_VIEWPORT, vp);
+        width = vp[2];
+        height = vp[3];*/
+
+        imgui_render(width, height);
     }
 
-    /*GLint vp[4]; glGetIntegerv (GL_VIEWPORT, vp);
-    width = vp[2];
-    height = vp[3];*/
-
-    imgui_render(width, height);
     glx.SwapBuffers(dpy, drawable);
-    if (fps_limit_stats.targetFrameTime > 0){
+
+    if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0){
         fps_limit_stats.frameStart = os_time_get_nano();
         FpsLimiter(fps_limit_stats);
         fps_limit_stats.frameEnd = os_time_get_nano();
@@ -117,10 +126,11 @@ EXPORT_C_(void) glXSwapIntervalEXT(void *dpy, void *draw, int interval) {
 #ifndef NDEBUG
     std::cerr << __func__ << ": " << interval << std::endl;
 #endif
-
     glx.Load();
-    if (params.gl_vsync >= 0)
+
+    if (!is_blacklisted() && params.gl_vsync >= 0)
         interval = params.gl_vsync;
+
     glx.SwapIntervalEXT(dpy, draw, interval);
 }
 
@@ -129,8 +139,10 @@ EXPORT_C_(int) glXSwapIntervalSGI(int interval) {
     std::cerr << __func__ << ": " << interval << std::endl;
 #endif
     glx.Load();
-    if (params.gl_vsync >= 0)
+
+    if (!is_blacklisted() && params.gl_vsync >= 0)
         interval = params.gl_vsync;
+
     return glx.SwapIntervalSGI(interval);
 }
 
@@ -139,21 +151,26 @@ EXPORT_C_(int) glXSwapIntervalMESA(unsigned int interval) {
     std::cerr << __func__ << ": " << interval << std::endl;
 #endif
     glx.Load();
-    if (params.gl_vsync >= 0)
+
+    if (!is_blacklisted() && params.gl_vsync >= 0)
         interval = (unsigned int)params.gl_vsync;
+
     return glx.SwapIntervalMESA(interval);
 }
 
 EXPORT_C_(int) glXGetSwapIntervalMESA() {
     glx.Load();
-    static bool first_call = true;
     int interval = glx.GetSwapIntervalMESA();
 
-    if (first_call) {
-        first_call = false;
-        if (params.gl_vsync >= 0) {
-            interval = params.gl_vsync;
-            glx.SwapIntervalMESA(interval);
+    if (!is_blacklisted()) {
+        static bool first_call = true;
+
+        if (first_call) {
+            first_call = false;
+            if (params.gl_vsync >= 0) {
+                interval = params.gl_vsync;
+                glx.SwapIntervalMESA(interval);
+            }
         }
     }
 
@@ -185,6 +202,9 @@ static std::array<const func_ptr, 9> name_to_funcptr_map = {{
 
 void *find_glx_ptr(const char *name)
 {
+  if (is_blacklisted())
+      return nullptr;
+
    for (auto& func : name_to_funcptr_map) {
       if (strcmp(name, func.name) == 0)
          return func.ptr;
