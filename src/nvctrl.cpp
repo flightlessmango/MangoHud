@@ -9,7 +9,7 @@
 
 typedef std::unordered_map<std::string, std::string> string_map;
 
-libnvctrl_loader nvctrl("libXNVCtrl.so");
+libnvctrl_loader nvctrl("libXNVCtrl.so.0");
 
 struct nvctrlInfo nvctrl_info;
 bool nvctrlSuccess = false;
