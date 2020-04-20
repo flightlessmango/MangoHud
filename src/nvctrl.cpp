@@ -2,35 +2,70 @@
 #include <cstring>
 #include <sstream>
 #include <unordered_map>
+#include <memory>
+#include <functional>
 #include "nvctrl.h"
 #include "loaders/loader_nvctrl.h"
+#include "loaders/loader_x11.h"
 #include "string_utils.h"
-#include "shared_x11.h"
 
 typedef std::unordered_map<std::string, std::string> string_map;
+static std::unique_ptr<Display, std::function<void(Display*)>> display;
 
 libnvctrl_loader nvctrl("libXNVCtrl.so.0");
 
 struct nvctrlInfo nvctrl_info;
 bool nvctrlSuccess = false;
 
-bool checkXNVCtrl()
+static bool find_nv_x11(Display*& dpy)
 {
-    if (init_x11()) {
-        if (nvctrl.IsLoaded()) {
-            nvctrlSuccess = nvctrl.XNVCTRLIsNvScreen(get_xdisplay(), 0);
-            if (!nvctrlSuccess)
-                std::cerr << "MANGOHUD: XNVCtrl didn't find the correct display" << std::endl;
-            return nvctrlSuccess;
-        } else {
-            std::cerr << "MANGOHUD: XNVCtrl failed to load\n";
+    char buf[8] {};
+    for (int i = 0; i < 16; i++) {
+        snprintf(buf, sizeof(buf), ":%d", i);
+        Display *d = g_x11->XOpenDisplay(buf);
+        if (d) {
+            if (nvctrl.XNVCTRLIsNvScreen(d, 0)) {
+                dpy = d;
+                std::cerr << "MANGOHUD: XNVCtrl is using display " << buf << std::endl;
+                return true;
+            }
+            g_x11->XCloseDisplay(d);
         }
     }
-
     return false;
 }
 
-void parse_token(std::string token, string_map& options) {
+bool checkXNVCtrl()
+{
+    if (!g_x11->IsLoaded()) {
+        std::cerr << "MANGOHUD: XNVCtrl: X11 loader failed to load\n";
+        return false;
+    }
+
+    if (!nvctrl.IsLoaded()) {
+        std::cerr << "MANGOHUD: XNVCtrl loader failed to load\n";
+        return false;
+    }
+
+    Display *dpy;
+    nvctrlSuccess = find_nv_x11(dpy);
+
+    if (!nvctrlSuccess) {
+        std::cerr << "MANGOHUD: XNVCtrl didn't find the correct display" << std::endl;
+        return false;
+    }
+
+    auto local_x11 = g_x11;
+    display = { dpy,
+        [local_x11](Display *dpy) {
+            local_x11->XCloseDisplay(dpy);
+        }
+    };
+
+    return true;
+}
+
+static void parse_token(std::string token, string_map& options) {
     std::string param, value;
 
     size_t equal = token.find("=");
@@ -49,7 +84,7 @@ void parse_token(std::string token, string_map& options) {
 
 char* get_attr_target_string(int attr, int target_type, int target_id) {
     char* c = nullptr;
-    if (!nvctrl.XNVCTRLQueryTargetStringAttribute(get_xdisplay(), target_type, target_id, 0, attr, &c)) {
+    if (!nvctrl.XNVCTRLQueryTargetStringAttribute(display.get(), target_type, target_id, 0, attr, &c)) {
         std::cerr << "Failed to query attribute '" << attr << "'.\n";
     }
     return c;
@@ -59,7 +94,7 @@ void getNvctrlInfo(){
     string_map params;
     std::string token;
 
-    if (!init_x11())
+    if (!display)
         return;
 
     int enums[] = {
@@ -88,7 +123,7 @@ void getNvctrlInfo(){
         nvctrl_info.MemClock = 0;
 
     int64_t temp = 0;
-    nvctrl.XNVCTRLQueryTargetAttribute64(get_xdisplay(),
+    nvctrl.XNVCTRLQueryTargetAttribute64(display.get(),
                         NV_CTRL_TARGET_TYPE_GPU,
                         0,
                         0,
@@ -97,7 +132,7 @@ void getNvctrlInfo(){
     nvctrl_info.temp = temp;
 
     int64_t memtotal = 0;
-    nvctrl.XNVCTRLQueryTargetAttribute64(get_xdisplay(),
+    nvctrl.XNVCTRLQueryTargetAttribute64(display.get(),
                         NV_CTRL_TARGET_TYPE_GPU,
                         0,
                         0,
@@ -106,7 +141,7 @@ void getNvctrlInfo(){
     nvctrl_info.memoryTotal = memtotal;
 
     int64_t memused = 0;
-    nvctrl.XNVCTRLQueryTargetAttribute64(get_xdisplay(),
+    nvctrl.XNVCTRLQueryTargetAttribute64(display.get(),
                         NV_CTRL_TARGET_TYPE_GPU,
                         0,
                         0,
