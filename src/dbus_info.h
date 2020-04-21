@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <stdexcept>
 #include <thread>
 #include <functional>
