@@ -4,6 +4,7 @@
  * For conditions of distribution and use, see copyright notice in elfhacks.h
  */
 
+#include <dlfcn.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "real_dlsym.h"
@@ -57,7 +58,9 @@ void *real_dlopen(const char *filename, int flag)
         FLAG(RTLD_LOCAL)
         FLAG(RTLD_NODELETE)
         FLAG(RTLD_NOLOAD)
+#ifdef RTLD_DEEPBIND
         FLAG(RTLD_DEEPBIND)
+#endif
         #undef FLAG
         printf(") = %p\n", result);
     }
