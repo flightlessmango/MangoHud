@@ -1,6 +1,9 @@
 #include <X11/Xlib.h>
 #include <iostream>
 #include <array>
+#include <thread>
+#include <vector>
+#include <algorithm>
 #include <cstring>
 #include "real_dlsym.h"
 #include "loaders/loader_glx.h"
@@ -27,6 +30,8 @@ EXPORT_C_(void *) glXGetProcAddressARB(const unsigned char* procName);
 #endif
 
 static glx_loader glx;
+
+static std::vector<std::thread::id> gl_threads;
 
 void* get_glx_proc_address(const char* name) {
     glx.Load();
@@ -67,8 +72,23 @@ EXPORT_C_(int) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
     int ret = glx.MakeCurrent(dpy, drawable, ctx);
 
     if (!is_blacklisted()) {
-        if (ret)
-            imgui_set_context(ctx);
+        if (ret) {
+            //TODO might as well just ignore everything here as long as VBOs get recreated anyway
+            auto it = std::find(gl_threads.begin(), gl_threads.end(), std::this_thread::get_id());
+            if (!ctx) {
+                if (it != gl_threads.end())
+                    gl_threads.erase(it);
+                if (!gl_threads.size())
+                    imgui_set_context(nullptr);
+            } else {
+                if (it == gl_threads.end())
+                    gl_threads.push_back(std::this_thread::get_id());
+                imgui_set_context(ctx);
+#ifndef NDEBUG
+                std::cerr << "MANGOHUD: GL thread count: " << gl_threads.size() << "\n";
+#endif
+            }
+        }
 
         if (params.gl_vsync >= -1) {
             if (glx.SwapIntervalEXT)
