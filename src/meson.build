@@ -42,6 +42,7 @@ vklayer_files = files(
   'overlay.cpp',
   'overlay_params.cpp',
   'font_unispace.c',
+  'blacklist.cpp',
   'cpu.cpp',
   'loaders/loader_nvml.cpp',
   'nvml.cpp',
@@ -62,7 +63,9 @@ opengl_files = files(
   'gl/inject_egl.cpp',
 )
 
-pre_args += '-DHOOK_DLSYM'
+if get_option('with_dlsym').enabled()
+    pre_args += '-DHOOK_DLSYM'
+endif
 
 if get_option('with_xnvctrl').enabled()
 

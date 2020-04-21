@@ -4,6 +4,7 @@
 #include "real_dlsym.h"
 #include "mesa/util/macros.h"
 #include "mesa/util/os_time.h"
+#include "blacklist.h"
 
 #include <chrono>
 #include <iomanip>
@@ -51,21 +52,23 @@ EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf)
     if (!pfn_eglSwapBuffers)
         pfn_eglSwapBuffers = reinterpret_cast<decltype(pfn_eglSwapBuffers)>(get_proc_address("eglSwapBuffers"));
 
-    static int (*pfn_eglQuerySurface)(void* dpy, void* surface, int attribute, int *value) = nullptr;
-    if (!pfn_eglQuerySurface)
-        pfn_eglQuerySurface = reinterpret_cast<decltype(pfn_eglQuerySurface)>(get_proc_address("eglQuerySurface"));
+    if (!is_blacklisted()) {
+        static int (*pfn_eglQuerySurface)(void* dpy, void* surface, int attribute, int *value) = nullptr;
+        if (!pfn_eglQuerySurface)
+            pfn_eglQuerySurface = reinterpret_cast<decltype(pfn_eglQuerySurface)>(get_proc_address("eglQuerySurface"));
 
 
-    //std::cerr << __func__ << "\n";
+        //std::cerr << __func__ << "\n";
 
-    imgui_create(surf);
+        imgui_create(surf);
 
-    int width=0, height=0;
-    if (pfn_eglQuerySurface(dpy, surf, 0x3056, &height) &&
-        pfn_eglQuerySurface(dpy, surf, 0x3057, &width))
-        imgui_render(width, height);
+        int width=0, height=0;
+        if (pfn_eglQuerySurface(dpy, surf, 0x3056, &height) &&
+            pfn_eglQuerySurface(dpy, surf, 0x3057, &width))
+            imgui_render(width, height);
 
-    //std::cerr << "\t" << width << " x " << height << "\n";
+        //std::cerr << "\t" << width << " x " << height << "\n";
+    }
 
     return pfn_eglSwapBuffers(dpy, surf);
 }
@@ -83,6 +86,9 @@ static std::array<const func_ptr, 1> name_to_funcptr_map = {{
 
 void *find_egl_ptr(const char *name)
 {
+  if (is_blacklisted())
+      return nullptr;
+
    for (auto& func : name_to_funcptr_map) {
       if (strcmp(name, func.name) == 0)
          return func.ptr;
