@@ -200,7 +200,7 @@ static std::array<const func_ptr, 9> name_to_funcptr_map = {{
 #undef ADD_HOOK
 }};
 
-void *find_glx_ptr(const char *name)
+EXPORT_C_(void *) mangohud_find_glx_ptr(const char *name)
 {
   if (is_blacklisted())
       return nullptr;
@@ -216,7 +216,7 @@ void *find_glx_ptr(const char *name)
 EXPORT_C_(void *) glXGetProcAddress(const unsigned char* procName) {
     //std::cerr << __func__ << ":" << procName << std::endl;
 
-    void* func = find_glx_ptr( (const char*)procName );
+    void* func = mangohud_find_glx_ptr( (const char*)procName );
     if (func)
         return func;
 
@@ -226,7 +226,7 @@ EXPORT_C_(void *) glXGetProcAddress(const unsigned char* procName) {
 EXPORT_C_(void *) glXGetProcAddressARB(const unsigned char* procName) {
     //std::cerr << __func__ << ":" << procName << std::endl;
 
-    void* func = find_glx_ptr( (const char*)procName );
+    void* func = mangohud_find_glx_ptr( (const char*)procName );
     if (func)
         return func;
 

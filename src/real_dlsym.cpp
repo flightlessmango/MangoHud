@@ -91,21 +91,21 @@ void* get_proc_address(const char* name) {
 }
 
 #ifdef HOOK_DLSYM
-extern void *find_glx_ptr(const char *name);
-extern void *find_egl_ptr(const char *name);
+EXPORT_C_(void *) mangohud_find_glx_ptr(const char *name);
+EXPORT_C_(void *) mangohud_find_egl_ptr(const char *name);
 
 EXPORT_C_(void*) dlsym(void * handle, const char * name)
 {
     void* func = nullptr;
 #ifdef HAVE_X11
-    func = find_glx_ptr(name);
+    func = mangohud_find_glx_ptr(name);
     if (func) {
         //fprintf(stderr,"%s: local: %s\n",  __func__ , name);
         return func;
     }
 #endif
 
-    func = find_egl_ptr(name);
+    func = mangohud_find_egl_ptr(name);
     if (func) {
         //fprintf(stderr,"%s: local: %s\n",  __func__ , name);
         return func;

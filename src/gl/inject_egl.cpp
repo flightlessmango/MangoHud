@@ -84,7 +84,7 @@ static std::array<const func_ptr, 1> name_to_funcptr_map = {{
 #undef ADD_HOOK
 }};
 
-void *find_egl_ptr(const char *name)
+EXPORT_C_(void *) mangohud_find_egl_ptr(const char *name)
 {
   if (is_blacklisted())
       return nullptr;
@@ -100,7 +100,7 @@ void *find_egl_ptr(const char *name)
 EXPORT_C_(void *) eglGetProcAddress(const char* procName) {
     //std::cerr << __func__ << ": " << procName << std::endl;
 
-    void* func = find_egl_ptr(procName);
+    void* func = mangohud_find_egl_ptr(procName);
     if (func)
         return func;
 

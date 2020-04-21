@@ -140,6 +140,29 @@ vklayer_mesa_overlay = shared_library(
   install : true
 )
 
+mangohud_dlsym = shared_library(
+  'MangoHud_dlsym',
+  files(
+    'elfhacks.cpp',
+    'real_dlsym.cpp',
+    'hook_dlsym.cpp',
+  ),
+  c_args : [
+    pre_args,
+    c_vis_args,
+    no_override_init_args,
+    ],
+  cpp_args : [
+    pre_args,
+    cpp_vis_args,
+    ],
+  dependencies : [dep_dl],
+  include_directories : [inc_common],
+  link_args : cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL']),
+  install_dir : libdir_mangohud,
+  install : true
+)
+
 configure_file(input : 'mangohud.json.in',
   output : '@0@.@1@.json'.format(meson.project_name(), target_machine.cpu_family()),
   configuration : {'libdir_mangohud' : libdir_mangohud + '/',
