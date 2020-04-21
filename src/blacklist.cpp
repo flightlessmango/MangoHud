@@ -41,7 +41,7 @@ static bool check_blacklisted() {
     std::string proc_name = get_proc_name();
     bool blacklisted = std::find(blacklist.begin(), blacklist.end(), proc_name) != blacklist.end();
 #ifndef NDEBUG
-    std::cerr << "MANGOHUD: process " << proc_name << " is blacklisted: " << blacklisted << std::endl;
+    fprintf(stderr, "MANGOHUD: process %s is blacklisted: %d\n", proc_name.c_str(), blacklisted);
 #endif
     return blacklisted;
 }
