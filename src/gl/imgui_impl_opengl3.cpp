@@ -13,6 +13,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2020-04-12: OpenGL: Fixed context version check mistakenly testing for 4.0+ instead of 3.2+ to enable ImGuiBackendFlags_RendererHasVtxOffset.
 //  2020-01-07: OpenGL: Added support for glbindings OpenGL loader.
 //  2019-10-25: OpenGL: Using a combination of GL define and runtime GL version to decide whether to use glDrawElementsBaseVertex(). Fix building with pre-3.2 GL loaders.
 //  2019-09-22: OpenGL: Detect default GL loader using __has_include compiler facility.
@@ -106,7 +107,7 @@ static bool ImGui_ImplOpenGL3_CreateFontsTexture()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     //#ifdef GL_UNPACK_ROW_LENGTH
-    if (g_IsGLES || g_GlVersion >= 2000)
+    if (g_IsGLES || g_GlVersion >= 200)
         glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
@@ -175,7 +176,7 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
     //#ifndef IMGUI_IMPL_OPENGL_ES2
     GLint last_vertex_array;
-    if (g_GlVersion >= 3000)
+    if (g_GlVersion >= 300)
         glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
 
     // Parse GLSL version string
@@ -345,7 +346,7 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     glBindTexture(GL_TEXTURE_2D, last_texture);
     glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
     //#ifndef IMGUI_IMPL_OPENGL_ES2
-    if (g_GlVersion >= 3000)
+    if (g_GlVersion >= 300)
         glBindVertexArray(last_vertex_array);
 
     return true;
@@ -409,7 +410,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     if (!g_IsGLES) {
         // Not GL ES
         glsl_version = "#version 130";
-        g_GlVersion = major * 1000 + minor;
+        g_GlVersion = major * 100 + minor * 10;
         if (major >= 4 && minor >= 1)
             glsl_version = "#version 410";
         else if (major > 3 || (major == 3 && minor >= 2))
@@ -418,15 +419,15 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
             glsl_version = "#version 100";
     } else {
         if (major >= 3)
-            g_GlVersion = major * 1000 + minor; // GLES >= 3
+            g_GlVersion = major * 100 + minor * 10; // GLES >= 3
         else
-            g_GlVersion = 2000; // GLES 2
+            g_GlVersion = 200; // GLES 2
 
         // Store GLSL version string so we can refer to it later in case we recreate shaders.
         // Note: GLSL version is NOT the same as GL version. Leave this to NULL if unsure.
-        if (g_GlVersion == 2000)
+        if (g_GlVersion == 200)
             glsl_version = "#version 100";
-        else if (g_GlVersion >= 3000)
+        else if (g_GlVersion >= 300)
             glsl_version = "#version 300 es";
         else
             glsl_version = "#version 130";
@@ -436,7 +437,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_opengl3";
     //#if IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
-    if ((!g_IsGLES && g_GlVersion >= 3200) || (g_IsGLES && g_GlVersion >= 3002))
+    if ((!g_IsGLES && g_GlVersion >= 320) || (g_IsGLES && g_GlVersion >= 320))
         io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
     // Store GLSL version string so we can refer to it later in case we recreate shaders.
@@ -479,7 +480,7 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
     glEnable(GL_SCISSOR_TEST);
 
     //#ifdef GL_POLYGON_MODE
-    if (!g_IsGLES && g_GlVersion >= 2000)
+    if (!g_IsGLES && g_GlVersion >= 200)
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     // Setup viewport, orthographic projection matrix
@@ -500,12 +501,12 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
     glUniform1i(g_AttribLocationTex, 0);
     glUniformMatrix4fv(g_AttribLocationProjMtx, 1, GL_FALSE, &ortho_projection[0][0]);
 
-    if (g_GlVersion >= 3003)
+    if (g_GlVersion >= 330)
         glBindSampler(0, 0); // We use combined texture/sampler state. Applications using GL 3.3 may set that otherwise.
 
     (void)vertex_array_object;
     //#ifndef IMGUI_IMPL_OPENGL_ES2
-    if (g_GlVersion >= 3000)
+    if (g_GlVersion >= 300)
         glBindVertexArray(vertex_array_object);
 
     // Bind vertex/index buffers and setup attributes for ImDrawVert
@@ -538,18 +539,18 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
 
     // GL_SAMPLER_BINDING
     GLint last_sampler;
-    if (!g_IsGLES && g_GlVersion >= 3003)
+    if (!g_IsGLES && g_GlVersion >= 330)
         glGetIntegerv(GL_SAMPLER_BINDING, &last_sampler);
 
     GLint last_array_buffer; glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
 
 //#ifndef IMGUI_IMPL_OPENGL_ES2
     GLint last_vertex_array_object;
-    if (g_GlVersion >= 3000)
+    if (g_GlVersion >= 300)
         glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array_object);
 
     GLint last_polygon_mode[2]; 
-    if (!g_IsGLES && g_GlVersion >= 2000)
+    if (!g_IsGLES && g_GlVersion >= 200)
         glGetIntegerv(GL_POLYGON_MODE, last_polygon_mode);
 
     GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
@@ -568,7 +569,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
 
     GLenum last_clip_origin = 0;
     GLenum last_clip_depth_mode = 0;
-    if (!g_IsGLES && /*g_GlVersion >= 4005*/ (glad_glClipControl || glad_glClipControlEXT)) {
+    if (!g_IsGLES && /*g_GlVersion >= 450*/ (glad_glClipControl || glad_glClipControlEXT)) {
         glGetIntegerv(GL_CLIP_ORIGIN, (GLint*)&last_clip_origin); // Support for GL 4.5's glClipControl(GL_UPPER_LEFT)
         glGetIntegerv(GL_CLIP_DEPTH_MODE, (GLint*)&last_clip_depth_mode);
         if (last_clip_origin == GL_UPPER_LEFT) {
@@ -580,7 +581,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     // Recreate the VAO every time (this is to easily allow multiple GL contexts to be rendered to. VAO are not shared among GL contexts)
     // The renderer would actually work without any VAO bound, but then our VertexAttrib calls would overwrite the default one currently bound.
     GLuint vertex_array_object = 0;
-    if (g_GlVersion >= 3000)
+    if (g_GlVersion >= 300)
         glGenVertexArrays(1, &vertex_array_object);
 
     ImGui_ImplOpenGL3_SetupRenderState(draw_data, fb_width, fb_height, vertex_array_object);
@@ -630,7 +631,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
                     // Bind texture, Draw
                     glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
                     //#if IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
-                    if ((!g_IsGLES && g_GlVersion >= 3200) || (g_IsGLES && g_GlVersion >= 3002))
+                    if ((!g_IsGLES && g_GlVersion >= 320) || (g_IsGLES && g_GlVersion >= 320))
                         glDrawElementsBaseVertex(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)), (GLint)pcmd->VtxOffset);
                     else
                         glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)));
@@ -640,19 +641,19 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     }
 
     // Destroy the temporary VAO
-    if (g_GlVersion >= 3000)
+    if (g_GlVersion >= 300)
         glDeleteVertexArrays(1, &vertex_array_object);
 
     // Restore modified GL state
     glUseProgram(last_program);
     glBindTexture(GL_TEXTURE_2D, last_texture);
 
-    if (!g_IsGLES && g_GlVersion >= 3003)
+    if (!g_IsGLES && g_GlVersion >= 330)
         glBindSampler(0, last_sampler);
 
     glActiveTexture(last_active_texture);
 
-    if (g_GlVersion >= 3000)
+    if (g_GlVersion >= 300)
         glBindVertexArray(last_vertex_array_object);
 
     glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
@@ -663,13 +664,13 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     if (last_enable_depth_test) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
     if (last_enable_scissor_test) glEnable(GL_SCISSOR_TEST); else glDisable(GL_SCISSOR_TEST);
 
-    if (!g_IsGLES && g_GlVersion >= 2000)
+    if (!g_IsGLES && g_GlVersion >= 200)
         glPolygonMode(GL_FRONT_AND_BACK, (GLenum)last_polygon_mode[0]);
 
     glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
     glScissor(last_scissor_box[0], last_scissor_box[1], (GLsizei)last_scissor_box[2], (GLsizei)last_scissor_box[3]);
 
-    if (!g_IsGLES && /*g_GlVersion >= 4005*/ glad_glClipControl)
+    if (!g_IsGLES && /*g_GlVersion >= 450*/ glad_glClipControl)
         if (!clip_origin_lower_left)
             glClipControl(last_clip_origin, last_clip_depth_mode);
 }
