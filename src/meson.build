@@ -131,6 +131,7 @@ vklayer_mesa_overlay = shared_library(
     libimgui_core_dep,
     dbus_dep,
     dep_dl,
+    dep_rt,
     dep_pthread,
     dep_vulkan],
   include_directories : [inc_common],
