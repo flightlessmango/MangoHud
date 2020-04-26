@@ -1,3 +1,6 @@
 [submodule "modules/ImGui/src"]
 	path = modules/ImGui/src
 	url = https://github.com/flightlessmango/imgui.git
+[submodule "modules/minhook"]
+	path = modules/minhook
+	url = https://github.com/TsudaKageyu/minhook
