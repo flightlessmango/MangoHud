@@ -240,5 +240,22 @@ else
   cpp_nvml_args = []
 endif
 
+if ['windows', 'mingw'].contains(host_machine.system())
+  subdir('modules/minhook')
+  lib_dxgi        = cc.find_library('dxgi')
+  lib_d3d11       = cc.find_library('d3d11')
+  lib_d3dcompiler = cc.find_library('d3dcompiler')
+  lib_xinput      = cc.find_library('xinput')
+  windows_deps = [
+    minhook_dep,
+    lib_dxgi,
+    lib_d3d11,
+    lib_d3dcompiler,
+    lib_xinput,
+  ]
+else
+  windows_deps = null_dep
+endif
+
 subdir('modules/ImGui')
 subdir('src')
