@@ -1204,7 +1204,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          
          if (params.enabled[OVERLAY_PARAM_ENABLED_io_read]){
             ImGui::TableNextCell();
-            float val = data.io.diff.read * (1000000 / sampling);
+            float val = data.io.diff.read * 1000000 / sampling;
             right_aligned_text(char_width * 4, val < 100 ? "%.2f" : "%.f", val);
             ImGui::SameLine(0,1.0f);
             ImGui::PushFont(data.font1);
@@ -1213,7 +1213,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          }
          if (params.enabled[OVERLAY_PARAM_ENABLED_io_write]){
             ImGui::TableNextCell();
-            float val = data.io.diff.write * (1000000 / sampling);
+            float val = data.io.diff.write * 1000000 / sampling;
             right_aligned_text(char_width * 4, val < 100 ? "%.2f" : "%.f", val);
             ImGui::SameLine(0,1.0f);
             ImGui::PushFont(data.font1);
