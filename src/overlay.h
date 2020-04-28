@@ -35,6 +35,7 @@ struct swapchain_stats {
    } version_vk;
    std::string engineName;
    std::string engineVersion;
+   std::string deviceName;
 };
 
 struct fps_limit {

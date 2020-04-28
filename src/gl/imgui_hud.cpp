@@ -96,6 +96,7 @@ void imgui_create(void *ctx)
         sw_stats.version_gl.is_gles);
 
     deviceName = (char*)glGetString(GL_RENDERER);
+    sw_stats.deviceName = deviceName;
     if (deviceName.find("Radeon") != std::string::npos
     || deviceName.find("AMD") != std::string::npos){
         vendorID = 0x1002;

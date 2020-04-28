@@ -1290,6 +1290,9 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
                "%d.%d%s", data.version_gl.major, data.version_gl.minor,
                data.version_gl.is_gles ? " ES" : "");
          }
+         ImGui::SameLine();
+         ImGui::TextColored(engine_color,
+                 "/ %s", data.deviceName.c_str());
          if (params.enabled[OVERLAY_PARAM_ENABLED_arch]){
             ImGui::Dummy(ImVec2(0.0,5.0f));
             ImGui::TextColored(engine_color, "%s", "" MANGOHUD_ARCH);
@@ -2282,6 +2285,14 @@ static VkResult overlay_CreateSwapchainKHR(
    swapchain_data->sw_stats.version_vk.patch = VK_VERSION_PATCH(device_data->properties.apiVersion);
    swapchain_data->sw_stats.engineName    = device_data->instance->engineName;
    swapchain_data->sw_stats.engineVersion = device_data->instance->engineVersion;
+
+   std::stringstream ss;
+   ss << device_data->properties.deviceName;
+   ss << " (" << VK_VERSION_MAJOR(device_data->properties.driverVersion);
+   ss << "."  << VK_VERSION_MINOR(device_data->properties.driverVersion);
+   ss << "."  << VK_VERSION_PATCH(device_data->properties.driverVersion);
+   ss << ")";
+   swapchain_data->sw_stats.deviceName = ss.str();
 
    return result;
 }
