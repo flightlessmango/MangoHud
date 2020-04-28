@@ -11,7 +11,8 @@
 #endif
 #define LIBRARY_LOADER_NVML_H_DLOPEN
 
-#define NVMLQUERY_DEFAULT_NVML_DLL_PATH "C:\\Program Files\\NVIDIA Corporation\\NVSMI\\NVML.DLL"
+// #define NVMLQUERY_DEFAULT_NVML_DLL_PATH "C:\\Program Files\\NVIDIA Corporation\\NVSMI\\NVML.DLL"
+#define NVMLQUERY_DEFAULT_NVML_DLL_PATH "NVML.DLL"
 #include <string>
 
 class libnvml_loader {
