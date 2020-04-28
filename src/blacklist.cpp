@@ -36,6 +36,8 @@ static bool check_blacklisted() {
         "gldriverquery",
         "vulkandriverquery",
         "Steam.exe",
+        "ffxivlauncher.exe",
+        "ffxivlauncher64.exe",
     };
 
     std::string proc_name = get_proc_name();
