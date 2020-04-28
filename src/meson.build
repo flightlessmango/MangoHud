@@ -55,7 +55,6 @@ if ['windows', 'mingw'].contains(host_machine.system())
     'kiero/main.cpp',
     'kiero/kiero.cpp',
     'kiero/d3d11_impl.cpp',
-    'kiero/shared.cpp',
     'kiero/imgui_impl_dx11.cpp',
     'kiero/imgui_impl_win32.cpp',
     'file_utils_win32.cpp',
