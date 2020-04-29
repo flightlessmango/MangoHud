@@ -195,7 +195,7 @@ void imgui_render(unsigned int width, unsigned int height)
     {
         std::lock_guard<std::mutex> lk(notifier.mutex);
         position_layer(params, window_size);
-        render_imgui(sw_stats, params, window_size, false);
+        render_imgui(sw_stats, params, window_size, "OpenGL");
     }
     ImGui::PopStyleVar(3);
 

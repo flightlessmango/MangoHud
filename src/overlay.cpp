@@ -1137,7 +1137,7 @@ void render_mpris_metadata(swapchain_stats& data, metadata& meta, uint64_t frame
 }
 #endif
 
-void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan)
+void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, const char* renderName)
 {
    uint32_t f_idx = (data.n_frames - 1) % ARRAY_SIZE(data.frames_stats);
    uint64_t frame_timing = data.frames_stats[f_idx].stats[OVERLAY_PLOTS_frame_timing];
@@ -1281,7 +1281,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
 #endif
       if (params.enabled[OVERLAY_PARAM_ENABLED_fps]){
          ImGui::TableNextRow();
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", is_vulkan ? data.engineName.c_str() : "OpenGL");
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", renderName);
          ImGui::TableNextCell();
          right_aligned_text(char_width * 4, "%.0f", data.fps);
          ImGui::SameLine(0, 1.0f);
@@ -1301,7 +1301,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::PushFont(data.font1);
          ImGui::Dummy(ImVec2(0, 8.0f));
          auto engine_color = ImGui::ColorConvertU32ToFloat4(params.engine_color);
-         if (is_vulkan) {
+         if (renderName == "Vulkan") {
             if ((data.engineName == "DXVK" || data.engineName == "VKD3D")){
                ImGui::TextColored(engine_color,
                   "%s/%d.%d.%d", data.engineVersion.c_str(),
@@ -1315,7 +1315,8 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
                   data.version_vk.minor,
                   data.version_vk.patch);
             }
-         } else {
+         } 
+         if (renderName == "OpenGL") {
             ImGui::TextColored(engine_color,
                "%d.%d%s", data.version_gl.major, data.version_gl.minor,
                data.version_gl.is_gles ? " ES" : "");
@@ -1412,7 +1413,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
    {
       scoped_lock lk(instance_data->notifier.mutex);
       position_layer(instance_data->params, data->window_size);
-      render_imgui(data->sw_stats, instance_data->params, data->window_size, true);
+      render_imgui(data->sw_stats, instance_data->params, data->window_size, "Vulkan");
    }
    ImGui::PopStyleVar(3);
 
