@@ -115,8 +115,8 @@ long __stdcall hkPresent11(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT F
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
-	position_layer(params, window_size);
-	render_imgui(sw_stats, params, window_size, false);
+	position_layer(sw_stats, params, window_size);
+	render_imgui(sw_stats, params, window_size, "D3D11");
 
 	ImGui::EndFrame();
 	ImGui::Render();
