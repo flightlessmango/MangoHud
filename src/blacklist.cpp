@@ -49,13 +49,6 @@ static bool check_blacklisted() {
 }
 
 bool& is_blacklisted() {
-    static bool checked     = false;
-    static bool blacklisted = false;
-
-    if (!checked) {
-        checked = true;
-        blacklisted = check_blacklisted();
-    }
-
+    static bool blacklisted = check_blacklisted();
     return blacklisted;
 }
