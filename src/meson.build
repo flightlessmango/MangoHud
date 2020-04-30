@@ -54,8 +54,11 @@ if ['windows', 'mingw'].contains(host_machine.system())
   vklayer_files += files(
     'kiero/main.cpp',
     'kiero/kiero.cpp',
+    'kiero/dx_shared.cpp',
     'kiero/d3d11_impl.cpp',
+    'kiero/d3d9_impl.cpp',
     'kiero/imgui_impl_dx11.cpp',
+    'kiero/imgui_impl_dx9.cpp',
     'kiero/imgui_impl_win32.cpp',
     'file_utils_win32.cpp',
     'loaders/loader_nvml_win32.cpp',

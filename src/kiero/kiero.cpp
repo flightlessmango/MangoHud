@@ -85,8 +85,8 @@ kiero::Status::Enum kiero::init(RenderType::Enum _renderType)
 					return Status::ModuleNotFoundError;
 				}
 
-				void* Direct3DCreate9;
-				if ((Direct3DCreate9 = ::GetProcAddress(libD3D9, "Direct3DCreate9")) == NULL)
+				auto Direct3DCreate9 = reinterpret_cast<decltype(&::D3D11CreateDeviceAndSwapChain)>(::GetProcAddress(libD3D9, "Direct3DCreate9"));
+				if (!Direct3DCreate9)
 				{
 					::DestroyWindow(window);
 					::UnregisterClass(windowClass.lpszClassName, windowClass.hInstance);
