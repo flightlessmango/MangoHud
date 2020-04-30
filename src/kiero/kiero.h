@@ -5,7 +5,7 @@
 
 #define KIERO_VERSION "1.2.8"
 
-#define KIERO_INCLUDE_D3D9   0 // 1 if you need D3D9 hook
+#define KIERO_INCLUDE_D3D9   1 // 1 if you need D3D9 hook
 #define KIERO_INCLUDE_D3D10  0 // 1 if you need D3D10 hook
 #define KIERO_INCLUDE_D3D11  1 // 1 if you need D3D11 hook
 #define KIERO_INCLUDE_D3D12  0 // 1 if you need D3D12 hook
