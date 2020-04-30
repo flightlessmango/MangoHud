@@ -2280,17 +2280,30 @@ static VkResult overlay_CreateSwapchainKHR(
    struct swapchain_data *swapchain_data = new_swapchain_data(*pSwapchain, device_data);
    setup_swapchain_data(swapchain_data, pCreateInfo, device_data->instance->params);
 
-   swapchain_data->sw_stats.version_vk.major = VK_VERSION_MAJOR(device_data->properties.apiVersion);
-   swapchain_data->sw_stats.version_vk.minor = VK_VERSION_MINOR(device_data->properties.apiVersion);
-   swapchain_data->sw_stats.version_vk.patch = VK_VERSION_PATCH(device_data->properties.apiVersion);
+   const VkPhysicalDeviceProperties& prop = device_data->properties;
+   swapchain_data->sw_stats.version_vk.major = VK_VERSION_MAJOR(prop.apiVersion);
+   swapchain_data->sw_stats.version_vk.minor = VK_VERSION_MINOR(prop.apiVersion);
+   swapchain_data->sw_stats.version_vk.patch = VK_VERSION_PATCH(prop.apiVersion);
    swapchain_data->sw_stats.engineName    = device_data->instance->engineName;
    swapchain_data->sw_stats.engineVersion = device_data->instance->engineVersion;
 
    std::stringstream ss;
-   ss << device_data->properties.deviceName;
-   ss << " (" << VK_VERSION_MAJOR(device_data->properties.driverVersion);
-   ss << "."  << VK_VERSION_MINOR(device_data->properties.driverVersion);
-   ss << "."  << VK_VERSION_PATCH(device_data->properties.driverVersion);
+   ss << prop.deviceName;
+   if (prop.vendorID == 0x10de) {
+      ss << " (" << ((prop.driverVersion >> 22) & 0x3ff);
+      ss << "."  << ((prop.driverVersion >> 14) & 0x0ff);
+      ss << "."  << std::setw(2) << std::setfill('0') << ((prop.driverVersion >> 6) & 0x0ff);
+#ifdef _WIN32
+   } else if (prop.vendorID == 0x8086) {
+      ss << " (" << (prop.driverVersion >> 14);
+      ss << "."  << (prop.driverVersion & 0x3fff);
+   }
+#endif
+   } else {
+      ss << " (" << VK_VERSION_MAJOR(prop.driverVersion);
+      ss << "."  << VK_VERSION_MINOR(prop.driverVersion);
+      ss << "."  << VK_VERSION_PATCH(prop.driverVersion);
+   }
    ss << ")";
    swapchain_data->sw_stats.deviceName = ss.str();
 
