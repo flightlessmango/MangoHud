@@ -8,7 +8,6 @@ typedef unsigned long KeySym;
 
 double elapsedF2, elapsedF12, elapsedReloadCfg;
 uint64_t last_f2_press, last_f12_press, reload_cfg_press;
-pthread_t f2;
 
 #ifdef HAVE_X11
 bool key_is_pressed(KeySym ks) {

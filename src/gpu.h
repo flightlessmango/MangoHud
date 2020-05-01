@@ -7,7 +7,6 @@
 
 using namespace std;
 extern FILE *amdGpuFile, *amdTempFile, *amdGpuVramTotalFile, *amdGpuVramUsedFile, *amdGpuCoreClockFile, *amdGpuMemoryClockFile;
-extern pthread_t cpuThread, gpuThread, cpuInfoThread;
 
 struct amdGpu {
     int load;
@@ -30,6 +29,5 @@ struct gpuInfo{
 extern struct amdGpu amdgpu;
 extern struct gpuInfo gpu_info;
 
-void *getNvidiaInfo(void*);
-void *getNvidiaGpuInfo(void*);
-void *getAmdGpuUsage(void*);
+void getNvidiaGpuInfo(void);
+void getAmdGpuUsage(void);

@@ -9,7 +9,7 @@
 #define EVENT_SIZE  ( sizeof (struct inotify_event) )
 #define EVENT_BUF_LEN     ( 1024 * ( EVENT_SIZE + 16 ) )
 
-static void *fileChanged(void *params_void) {
+static void fileChanged(void *params_void) {
     notify_thread *nt = reinterpret_cast<notify_thread *>(params_void);
     int length, i = 0;
     char buffer[EVENT_BUF_LEN];
@@ -30,7 +30,6 @@ static void *fileChanged(void *params_void) {
         i = 0;
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
-    return nullptr;
 }
 
 bool start_notifier(notify_thread& nt)
@@ -48,8 +47,7 @@ bool start_notifier(notify_thread& nt)
         return false;
     }
 
-    pthread_create(&nt.thread, NULL, &fileChanged, &nt);
-
+    std::thread(fileChanged, &nt).detach();
     return true;
 }
 
@@ -62,6 +60,4 @@ void stop_notifier(notify_thread& nt)
     inotify_rm_watch(nt.fd, nt.wd);
     close(nt.fd);
     nt.fd = -1;
-
-    pthread_join(nt.thread, nullptr);
 }

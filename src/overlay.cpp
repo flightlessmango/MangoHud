@@ -870,7 +870,7 @@ void check_keybinds(struct overlay_params& params){
        loggingOn = !loggingOn;
 
        if (loggingOn && log_period != 0)
-         pthread_create(&f2, NULL, &logging, &params);
+         std::thread(logging, &params).detach();
 
      }
    }
@@ -927,18 +927,18 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
 
          if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]) {
             if (vendorID == 0x1002)
-               pthread_create(&gpuThread, NULL, &getAmdGpuUsage, NULL);
+               std::thread(getAmdGpuUsage).detach();
 
             if (vendorID == 0x10de)
-               pthread_create(&gpuThread, NULL, &getNvidiaGpuInfo, NULL);
+               std::thread(getNvidiaGpuInfo).detach();
          }
 
          // get ram usage/max
          if (params.enabled[OVERLAY_PARAM_ENABLED_ram])
-            pthread_create(&memoryThread, NULL, &update_meminfo, NULL);
+            std::thread(update_meminfo).detach();
          if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])
-            pthread_create(&ioThread, NULL, &getIoStats, &sw_stats.io);
-
+            std::thread(getIoStats, &sw_stats.io).detach();
+            
          gpuLoadLog = gpu_info.load;
          cpuLoadLog = sw_stats.total_cpu;
          sw_stats.fps = fps;

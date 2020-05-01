@@ -26,7 +26,6 @@
 #endif
 
 #include "file_utils.h"
-pthread_t cpuTempThread;
 
 void calculateCPUData(CPUData& cpuData,
     unsigned long long int usertime,

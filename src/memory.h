@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <thread>
 
-extern pthread_t memoryThread;
 extern float memused, memmax;
 
 struct memory_information {
@@ -12,5 +11,5 @@ struct memory_information {
   unsigned long long bufmem, buffers, cached;
 };
 
-void *update_meminfo(void*);
+void update_meminfo(void);
 FILE *open_file(const char *file, int *reported);

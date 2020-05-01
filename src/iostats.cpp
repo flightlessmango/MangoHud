@@ -2,8 +2,7 @@
 #include "string_utils.h"
 #include <fstream>
 
-pthread_t ioThread;
-void *getIoStats(void *args) {
+void getIoStats(void *args) {
     iostats *io = reinterpret_cast<iostats *>(args);
     if (io) {
         io->prev.read_bytes  = io->curr.read_bytes;
@@ -22,6 +21,4 @@ void *getIoStats(void *args) {
         io->diff.read  = (io->curr.read_bytes  - io->prev.read_bytes) / (1024.f * 1024.f);
         io->diff.write = (io->curr.write_bytes - io->prev.write_bytes) / (1024.f * 1024.f);
     }
-    pthread_detach(ioThread);
-    return NULL;
 }

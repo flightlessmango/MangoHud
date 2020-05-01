@@ -4,9 +4,8 @@
 
 struct gpuInfo gpu_info;
 FILE *amdGpuFile = nullptr, *amdTempFile = nullptr, *amdGpuVramTotalFile = nullptr, *amdGpuVramUsedFile = nullptr, *amdGpuCoreClockFile = nullptr, *amdGpuMemoryClockFile = nullptr;
-pthread_t cpuThread, gpuThread, cpuInfoThread;
 
-void *getNvidiaGpuInfo(void *){
+void getNvidiaGpuInfo(){
     if (nvmlSuccess){
         getNVMLInfo();
         gpu_info.load = nvidiaUtilization.gpu;
@@ -25,12 +24,9 @@ void *getNvidiaGpuInfo(void *){
         gpu_info.MemClock = nvctrl_info.MemClock;
     }
 #endif
-    
-    pthread_detach(gpuThread);
-    return NULL;
 }
 
-void *getAmdGpuUsage(void *){
+void getAmdGpuUsage(){
     int64_t value = 0;
 
     if (amdGpuFile) {
@@ -87,7 +83,4 @@ void *getAmdGpuUsage(void *){
         amdgpu.MemClock = value / 1000000;
         gpu_info.MemClock = amdgpu.MemClock;
     }
-
-    pthread_detach(gpuThread);
-    return NULL;
 }
