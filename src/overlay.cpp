@@ -1115,6 +1115,7 @@ void position_layer(struct swapchain_stats& data, struct overlay_params& params,
    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,-3));
    ImGui::PushStyleVar(ImGuiStyleVar_Alpha, params.alpha);
+
    switch (params.position) {
    case LAYER_POSITION_TOP_LEFT:
       data.main_window_pos = ImVec2(margin + params.offset_x, margin + params.offset_y);
@@ -1591,6 +1592,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          render_benchmark(data, params, window_size, height, now);
 
    }
+   ImGui::PopStyleVar(3);
 }
 
 static void compute_swapchain_display(struct swapchain_data *data)
@@ -1605,7 +1607,6 @@ static void compute_swapchain_display(struct swapchain_data *data)
       position_layer(data->sw_stats, instance_data->params, data->window_size);
       render_imgui(data->sw_stats, instance_data->params, data->window_size, "VULKAN");
    }
-   ImGui::PopStyleVar(3);
 
    ImGui::EndFrame();
    ImGui::Render();
