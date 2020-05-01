@@ -19,5 +19,5 @@ extern uint32_t vendorID;
 extern std::string deviceName;
 extern bool inited;
 
-void imgui_create(void *ctx);
+void imgui_create(void *ctx, void *device);
 void imgui_init(void);
