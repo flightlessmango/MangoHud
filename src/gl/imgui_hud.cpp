@@ -197,7 +197,6 @@ void imgui_render(unsigned int width, unsigned int height)
         position_layer(params, window_size);
         render_imgui(sw_stats, params, window_size, "OpenGL");
     }
-    ImGui::PopStyleVar(3);
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
