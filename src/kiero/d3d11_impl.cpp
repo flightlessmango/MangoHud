@@ -18,6 +18,7 @@ static Present oPresent = NULL;
 long __stdcall hkPresent11(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags)
 {
 	static bool init = false;
+	auto prev_ctx = ImGui::GetCurrentContext();
 
 	if (!init)
 	{
@@ -30,12 +31,15 @@ long __stdcall hkPresent11(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT F
 		ID3D11DeviceContext* context;
 		device->GetImmediateContext(&context);
 
-		ImGui::CreateContext();
+		imgui_create(context, device);
+		ImGui::SetCurrentContext(state.imgui_ctx);
 		ImGui_ImplWin32_Init(desc.OutputWindow);
 		ImGui_ImplDX11_Init(device, context);
-		imgui_create(context);
 		init = true;
 	}
+
+	ImGui::SetCurrentContext(state.imgui_ctx);
+
 	update_hud_info(sw_stats, params, vendorID);
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
@@ -46,6 +50,8 @@ long __stdcall hkPresent11(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT F
 	ImGui::EndFrame();
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+
+	ImGui::SetCurrentContext(prev_ctx);
 
 	return oPresent(pSwapChain, SyncInterval, Flags);
 }

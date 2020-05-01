@@ -1,4 +1,5 @@
 #include "dx_shared.h"
+#include <dxgi.h>
 
 bool cfg_inited = false;
 ImVec2 window_size;
@@ -19,20 +20,34 @@ void imgui_init()
     init_cpu_stats(params);
 }
 
-void imgui_create(void *ctx)
+void imgui_create(void *ctx, void *device)
 {
     if (inited)
         return;
     inited = true;
 
     imgui_init();
-    deviceName = "something";
-    if (deviceName.find("Radeon") != std::string::npos
-    || deviceName.find("AMD") != std::string::npos){
-        vendorID = 0x1002;
-    } else {
-        vendorID = 0x10de;
+
+    // DX10+
+    if (device) {
+        IUnknown* pUnknown = reinterpret_cast<IUnknown*>(device);
+        IDXGIDevice* pDXGIDevice;
+        HRESULT hr = pUnknown->QueryInterface(__uuidof(IDXGIDevice), (void**)&pDXGIDevice);
+        if (S_OK == hr) {
+            IDXGIAdapter* pDXGIAdapter;
+            pDXGIDevice->GetAdapter(&pDXGIAdapter);
+            DXGI_ADAPTER_DESC adapterDesc;
+            hr = pDXGIAdapter->GetDesc(&adapterDesc);
+
+            if (S_OK == hr) {
+                vendorID = adapterDesc.VendorId;
+                char buf[256]{};
+                wcstombs_s(nullptr, buf, adapterDesc.Description, sizeof(adapterDesc.Description));
+                deviceName = buf;
+            }
+        }
     }
+
     init_gpu_stats(vendorID, params);
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();

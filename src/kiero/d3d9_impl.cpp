@@ -31,18 +31,22 @@ long __stdcall hkEndScene(LPDIRECT3DDEVICE9 pDevice)
 {
 	static bool init = false;
 
+	auto prev_ctx = ImGui::GetCurrentContext();
+
 	if (!init)
 	{
 		D3DDEVICE_CREATION_PARAMETERS params;
 		pDevice->GetCreationParameters(&params);
 
-		auto context = ImGui::CreateContext();
+		imgui_create(pDevice, nullptr);
+		ImGui::SetCurrentContext(state.imgui_ctx);
 		ImGui_ImplWin32_Init(params.hFocusWindow);
 		ImGui_ImplDX9_Init(pDevice);
-		imgui_create(context);
-
 		init = true;
 	}
+
+	ImGui::SetCurrentContext(state.imgui_ctx);
+
 	update_hud_info(sw_stats, params, vendorID);
 	ImGui_ImplDX9_NewFrame();
 	ImGui_ImplWin32_NewFrame();
@@ -52,6 +56,8 @@ long __stdcall hkEndScene(LPDIRECT3DDEVICE9 pDevice)
 	ImGui::EndFrame();
 	ImGui::Render();
 	ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
+
+	ImGui::SetCurrentContext(prev_ctx);
 
 	return oEndScene(pDevice);
 }
