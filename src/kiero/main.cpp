@@ -15,6 +15,7 @@
 #endif
 
 #if KIERO_INCLUDE_D3D12
+# include "d3d12_impl.h"
 #endif
 
 #if KIERO_INCLUDE_OPENGL
@@ -61,9 +62,11 @@ int kieroExampleThread()
             impl::d3d11::init();
             break;
 #endif
+#if KIERO_INCLUDE_D3D12
         case kiero::RenderType::D3D12:
-            // TODO: D3D12 implementation?
+            impl::d3d12::init();
             break;
+#endif
         case kiero::RenderType::OpenGL:
             // TODO: OpenGL implementation?
             break;
