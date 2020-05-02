@@ -1139,9 +1139,10 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       
    if (!params.no_display){
       ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
-      if (params.enabled[OVERLAY_PARAM_ENABLED_version])
+      if (params.enabled[OVERLAY_PARAM_ENABLED_version]){
          ImGui::Text("%s", MANGOHUD_VERSION);
          ImGui::Dummy(ImVec2(0, 8.0f));
+      }
       if (params.enabled[OVERLAY_PARAM_ENABLED_time]){
          ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.00f), "%s", data.time.c_str());
       }
