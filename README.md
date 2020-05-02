@@ -127,6 +127,7 @@ A partial list of parameters are below. See the config file for a complete list.
 | `log_duration`                     | Set amount of time the logging will run for (in seconds)                              |
 | `vsync`<br> `gl_vsync`             | Set vsync for OpenGL or Vulkan                                                        |
 | `media_player`                     | Show Spotify metadata                                                                 |
+| `pci_dev`                          | Select GPU device in multi-gpu setups                                                 |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 
