@@ -89,6 +89,7 @@ endif
 
 vklayer_mesa_overlay = shared_library(
   'MangoHud',
+  mangohud_version,
   util_files,
   vk_enum_to_str,
   vklayer_files,
