@@ -128,6 +128,7 @@ A partial list of parameters are below. See the config file for a complete list.
 | `log_duration`                     | Set amount of time the logging will run for (in seconds)                              |
 | `vsync`<br> `gl_vsync`             | Set vsync for OpenGL or Vulkan                                                        |
 | `media_player`                     | Show Spotify metadata                                                                 |
+| `io_read` `io_write`               | Show non-cached IO read/write in MiB/s                                                |
 | `pci_dev`                          | Select GPU device in multi-gpu setups                                                 |
 | `version`                          | Shows current mangohud version                                                        |
 
