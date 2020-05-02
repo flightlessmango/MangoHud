@@ -95,7 +95,6 @@ vklayer_mesa_overlay = shared_library(
   vklayer_files,
   opengl_files,
   overlay_spv,
-  vk_enum_to_str,
   c_args : [
     pre_args,
     c_vis_args, 
