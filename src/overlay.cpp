@@ -721,17 +721,32 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
 
    PCI_BUS pci;
    bool pci_bus_parsed = false;
-   const char* env_pci_dev = getenv("MANGOHUD_PCI_DEV");
+   const char *pci_dev = nullptr;
+   if (!params.pci_dev.empty())
+      pci_dev = params.pci_dev.c_str();
 
    // for now just checks if pci bus parses correctly, if at all necessary
-   if (env_pci_dev) {
-      if (sscanf(env_pci_dev, "%04x:%02x:%02x.%x",
+   if (pci_dev) {
+      if (sscanf(pci_dev, "%04x:%02x:%02x.%x",
                &pci.domain, &pci.bus,
                &pci.slot, &pci.func) == 4) {
          pci_bus_parsed = true;
+         // reformat back to sysfs file name's and nvml's expected format
+         // so config file param's value format doesn't have to be as strict
+         std::stringstream ss;
+         ss << std::hex
+            << std::setw(4) << std::setfill('0') << pci.domain << ":"
+            << std::setw(2) << pci.bus << ":"
+            << std::setw(2) << pci.slot << "."
+            << std::setw(1) << pci.func;
+         params.pci_dev = ss.str();
+         pci_dev = params.pci_dev.c_str();
+#ifndef NDEBUG
+         std::cerr << "MANGOHUD: PCI device ID: '" << pci_dev << "'\n";
+#endif
       } else {
-         std::cerr << "MANGOHUD: Failed to parse PCI device ID: " << env_pci_dev << "\n";
-         std::cerr << "MANGOHUD: It has to be formatted as 'xxxx:xx:xx.x' (domain:bus:slot.func)\n";
+         std::cerr << "MANGOHUD: Failed to parse PCI device ID: '" << pci_dev << "'\n";
+         std::cerr << "MANGOHUD: Specify it as 'domain:bus:slot.func'\n";
       }
    }
 
@@ -739,7 +754,7 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
    if (vendorID == 0x8086
       || vendorID == 0x10de) {
 
-      bool nvSuccess = (checkNVML(env_pci_dev) && getNVMLInfo());
+      bool nvSuccess = (checkNVML(pci_dev) && getNVMLInfo());
 
 #ifdef HAVE_XNVCTRL
       if (!nvSuccess)
@@ -771,12 +786,12 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
             continue;
 
          path += "/device";
-         if (pci_bus_parsed && env_pci_dev) {
+         if (pci_bus_parsed && pci_dev) {
             string pci_device = readlink(path.c_str());
 #ifndef NDEBUG
             std::cerr << "PCI device symlink: " << pci_device << "\n";
 #endif
-            if (!ends_with(pci_device, env_pci_dev)) {
+            if (!ends_with(pci_device, pci_dev)) {
                std::cerr << "MANGOHUD: skipping GPU, no PCI ID match\n";
                continue;
             }
