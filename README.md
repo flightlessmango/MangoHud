@@ -114,7 +114,7 @@ A partial list of parameters are below. See the config file for a complete list.
 | `font_size=`                       | Customizeable font size (default=24)                                                  |
 | `width=`<br>`height=`              | Customizeable hud dimensions (in pixels)                                              |
 | `position=`                        | Location of the hud: `top-left` (default), `top-right`, `bottom-left`, `bottom-right` |
-| `offset_x` `offset_y`              | Hud position offsets                                                                   |
+| `offset_x` `offset_y`              | Hud position offsets                                                                  |
 | `no_display`                       | Hide the hud by default                                                               |
 | `toggle_hud=`<br>`toggle_logging=` | Modifiable toggle hotkeys. Default are F12 and F2, respectively.                      |
 | `reload_cfg=`                      | Change keybind for reloading the config                                               |
@@ -129,6 +129,7 @@ A partial list of parameters are below. See the config file for a complete list.
 | `vsync`<br> `gl_vsync`             | Set vsync for OpenGL or Vulkan                                                        |
 | `media_player`                     | Show Spotify metadata                                                                 |
 | `pci_dev`                          | Select GPU device in multi-gpu setups                                                 |
+| `version`                          | Shows current mangohud version                                                        |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 
