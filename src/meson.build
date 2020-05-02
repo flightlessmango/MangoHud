@@ -1,23 +1,3 @@
-# Copyright © 2019 Intel Corporation
-
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-
 glslang = find_program('glslangValidator')
 
 # Needs prefix for configure_file()
@@ -42,6 +22,7 @@ vklayer_files = files(
   'overlay.cpp',
   'overlay_params.cpp',
   'font_unispace.c',
+  'blacklist.cpp',
   'cpu.cpp',
   'loaders/loader_nvml.cpp',
   'nvml.cpp',
@@ -52,19 +33,60 @@ vklayer_files = files(
   'gpu.cpp',
   'notify.cpp',
   'elfhacks.cpp',
+  'real_dlsym.cpp',
 )
 
 opengl_files = files(
-  'gl/inject.cpp',
-  'gl/real_dlsym.cpp',
+  'gl/glad.c',
   'gl/imgui_impl_opengl3.cpp',
-  'loaders/loader_gl.cpp',
-  'gl/gl3w/GL/gl3w.c',
+  'gl/imgui_hud.cpp',
+  'gl/inject_egl.cpp',
 )
-pre_args += '-DHOOK_DLSYM'
-inc_opengl = include_directories('gl/gl3w')
 
-# lib_xnvctrl = cc.find_library('XNVCtrl')
+if get_option('with_dlsym').enabled()
+    pre_args += '-DHOOK_DLSYM'
+endif
+
+if get_option('with_xnvctrl').enabled()
+
+  if not get_option('with_x11').enabled()
+    error('XNVCtrl also needs \'with_x11\'')
+  endif
+
+  xnvctrl_h_found = cc.has_header('NVCtrl/NVCtrl.h')
+  if not xnvctrl_h_found
+    error('NVCtrl.h was not found. Disable with \'with_xnvctrl\' if this feature is not needed.')
+  endif
+
+  pre_args += '-DHAVE_XNVCTRL'
+  vklayer_files += files(
+    'loaders/loader_nvctrl.cpp',
+    'nvctrl.cpp',
+  )
+endif
+
+if get_option('with_x11').enabled()
+  pre_args += '-DHAVE_X11'
+
+  vklayer_files += files(
+    'loaders/loader_x11.cpp',
+    'shared_x11.cpp',
+  )
+
+  opengl_files += files(
+    'loaders/loader_glx.cpp',
+    'gl/inject_glx.cpp',
+  )
+endif
+
+if dbus_dep.found() and get_option('with_dbus').enabled()
+  pre_args += '-DHAVE_DBUS'
+  vklayer_files += files(
+    'dbus.cpp',
+    'loaders/loader_dbus.cpp',
+  )
+endif
+
 vklayer_mesa_overlay = shared_library(
   'MangoHud',
   util_files,
@@ -72,7 +94,7 @@ vklayer_mesa_overlay = shared_library(
   vklayer_files,
   opengl_files,
   overlay_spv,
-  vulkan_headers,
+  vk_enum_to_str,
   c_args : [
     pre_args,
     c_vis_args, 
@@ -87,12 +109,36 @@ vklayer_mesa_overlay = shared_library(
     ],
   dependencies : [
     vulkan_wsi_deps, 
-    libimgui_core_dep, 
+    libimgui_core_dep,
+    dbus_dep,
     dep_dl,
     dep_pthread,
     dep_vulkan],
-  include_directories : [inc_common, inc_opengl],
-  link_args : cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro']),
+  include_directories : [inc_common],
+  link_args : cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL']),
+  install_dir : libdir_mangohud,
+  install : true
+)
+
+mangohud_dlsym = shared_library(
+  'MangoHud_dlsym',
+  files(
+    'elfhacks.cpp',
+    'real_dlsym.cpp',
+    'hook_dlsym.cpp',
+  ),
+  c_args : [
+    pre_args,
+    c_vis_args,
+    no_override_init_args,
+    ],
+  cpp_args : [
+    pre_args,
+    cpp_vis_args,
+    ],
+  dependencies : [dep_dl],
+  include_directories : [inc_common],
+  link_args : cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL']),
   install_dir : libdir_mangohud,
   install : true
 )

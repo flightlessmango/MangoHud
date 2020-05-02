@@ -1,26 +1,6 @@
-# Copyright © 2019 Intel Corporation
-
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-
 project('MangoHud',
   ['c', 'cpp'],
-  version : 'v0.3.1',
+  version : 'v0.3.5',
   license : 'MIT',
   default_options : ['buildtype=release', 'c_std=c99', 'cpp_std=c++14']
 )
@@ -29,6 +9,11 @@ cc = meson.get_compiler('c')
 cpp = meson.get_compiler('cpp')
 prog_python = import('python').find_installation('python3')
 null_dep = dependency('', required : false)
+
+mangohud_version = vcs_tag(
+  command: ['git', 'describe', '--tags', '--dirty=+'],
+  input:  'version.h.in',
+  output: 'version.h')
 
 pre_args = [
   '-D__STDC_CONSTANT_MACROS',
@@ -92,18 +77,21 @@ endforeach
 vulkan_wsi_args = []
 vulkan_wsi_deps = []
 
-with_platform_x11 = true
-with_platform_wayland = false
+dep_x11 = dependency('x11', required: get_option('with_x11'))
+dep_wayland_client = dependency('wayland-client',
+    required: get_option('with_wayland'), version : '>=1.11')
 
-if with_platform_x11
-  dep_x11 = dependency('x11')
+if dep_x11.found()
   vulkan_wsi_args += ['-DVK_USE_PLATFORM_XLIB_KHR']
-  vulkan_wsi_deps += dep_x11
+  vulkan_wsi_deps += dep_x11.partial_dependency(compile_args : true, includes : true)
 endif
-if with_platform_wayland
-  dep_wayland_client = dependency('wayland-client', version : '>=1.11')
+if dep_wayland_client.found()
   vulkan_wsi_args += ['-DVK_USE_PLATFORM_WAYLAND_KHR']
   vulkan_wsi_deps += dep_wayland_client
+endif
+
+if not dep_x11.found() and not dep_wayland_client.found()
+  error('At least one of "with_x11" and "with_wayland" should be enabled')
 endif
 
 inc_common = [
@@ -111,6 +99,8 @@ inc_common = [
 ]
 
 dep_vulkan = dependency('vulkan', required: get_option('use_system_vulkan'))
+dep_pthread = dependency('threads')
+dbus_dep = dependency('dbus-1', required: get_option('with_dbus')).partial_dependency(compile_args : true, includes : true)
 
 # Check for generic C arguments
 c_args = []
@@ -183,18 +173,16 @@ else
   dep_dl = cc.find_library('dl')
 endif
 
-dep_pthread = cc.find_library('pthread')
-
 if dep_vulkan.found()
-  vulkan_headers = []
   datadir = get_option('datadir')
   if not datadir.startswith('/')
     datadir = get_option('prefix') / datadir
   endif
   vk_api_xml = files(datadir / 'vulkan/registry/vk.xml')
 else
-  subdir('modules/Vulkan-Headers')
-  vulkan_headers = vk_api_xml
+  vkh_sp = subproject('vulkanheaders')
+  vk_api_xml = vkh_sp.get_variable('vulkan_api_xml')
+  dep_vulkan = vkh_sp.get_variable('vulkanheaders_dep')
 endif
 
 vk_enum_to_str = custom_target(
@@ -211,6 +199,13 @@ util_files = files(
   'src/mesa/util/os_socket.c',
   'src/mesa/util/os_time.c',
 )
+
+sizeof_ptr = cc.sizeof('void*')
+if sizeof_ptr == 8
+  pre_args += '-DMANGOHUD_ARCH="64bit"'
+elif sizeof_ptr == 4
+  pre_args += '-DMANGOHUD_ARCH="32bit"'
+endif
 
 if get_option('use_system_nvml')
   cpp_nvml_args = '-DUSE_SYSTEM_NVML'

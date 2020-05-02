@@ -98,9 +98,11 @@ You can find an example config in /usr/share/doc/mangohud
 
 ---
 
-### `MANGOHUD_CONFIG` environment variable
+### `MANGOHUD_CONFIG` and `MANGOHUD_CONFIGFILE` environment variables
 
 You can also customize the hud by using the `MANGOHUD_CONFIG` environment variable while separating different options with a comma. This takes priority over any config file.
+
+You can also specify configuration file with `MANGOHUD_CONFIGFILE=/path/to/config` for applications whose names are hard to guess (java, python etc).
 
 A partial list of parameters are below. See the config file for a complete list.
 
@@ -114,6 +116,7 @@ A partial list of parameters are below. See the config file for a complete list.
 | `font_size=`                       | Customizeable font size (default=24)                                                  |
 | `width=`<br>`height=`              | Customizeable hud dimensions (in pixels)                                              |
 | `position=`                        | Location of the hud: `top-left` (default), `top-right`, `bottom-left`, `bottom-right` |
+| `offset_x` `offset_y`              | Hud position offsets                                                                  |
 | `no_display`                       | Hide the hud by default                                                               |
 | `toggle_hud=`<br>`toggle_logging=` | Modifiable toggle hotkeys. Default are F12 and F2, respectively.                      |
 | `reload_cfg=`                      | Change keybind for reloading the config                                               |
@@ -126,6 +129,10 @@ A partial list of parameters are below. See the config file for a complete list.
 | `font_file`                        | Change default font (set location to .TTF/.OTF file )                                 |
 | `log_duration`                     | Set amount of time the logging will run for (in seconds)                              |
 | `vsync`<br> `gl_vsync`             | Set vsync for OpenGL or Vulkan                                                        |
+| `media_player`                     | Show Spotify metadata                                                                 |
+| `io_read`<br> `io_write`           | Show non-cached IO read/write, in MiB/s                                               |
+| `pci_dev`                          | Select GPU device in multi-gpu setups                                                 |
+| `version`                          | Shows current mangohud version                                                        |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 

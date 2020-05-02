@@ -1,0 +1,10 @@
+[wrap-file]
+directory = Vulkan-Headers-1.2.136
+
+source_url = https://github.com/KhronosGroup/Vulkan-Headers/archive/v1.2.136.tar.gz
+source_filename = vulkanheaders-1.2.136.tar.gz
+source_hash = d67e61ade037906d76ae4f1a6d5adf38008b30783774a5957a84527f3a5ebdb4
+
+patch_url = https://github.com/stephanlachnit/vulkanheaders-wrap/releases/download/v1.2.136/v1.2.136.zip
+patch_filename = vulkanheaders-1.2.136-wrap.zip
+patch_hash = 4b0e8ba1f37458b660f4d3ed3f5259ca5b0bd46ef309cc3ccaf22a2a203bda49

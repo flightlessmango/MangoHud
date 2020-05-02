@@ -28,20 +28,21 @@
 
   Pyry Haulos <pyry.haulos@gmail.com>
 */
-
+#pragma once
 #include <elf.h>
 #include <link.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define __PUBLIC __attribute__ ((visibility ("default")))
+//#define __PUBLIC __attribute__ ((visibility ("default")))
+#define __PUBLIC
 
-#ifdef __x86_64__
+#if UINTPTR_MAX == 0xffffffffffffffff
 # define __elf64
-#endif
-#ifdef __i386__
+#else
 # define __elf32
 #endif
 

@@ -1,4 +1,6 @@
-#!/bin/bash    
+#!/usr/bin/env bash
+set -e
+
 OS_RELEASE_FILES=("/etc/os-release" "/usr/lib/os-release")
 XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
@@ -33,6 +35,7 @@ dependencies() {
             esac
         }
         install() {
+            set +e
             for i in $(eval echo $DEPS); do
                 $MANAGER_QUERY "$i" &> /dev/null
                 if [[ $? == 1 ]]; then
@@ -45,20 +48,21 @@ dependencies() {
                     $SU_CMD $MANAGER_INSTALL $INSTALL
                 fi
             fi
+            set -e
         }
         echo "# Checking Dependencies"
         
         case $DISTRO in
-            "Arch Linux"|"Manjaro")
+            "Arch Linux"|"Manjaro Linux")
                 MANAGER_QUERY="pacman -Q"
                 MANAGER_INSTALL="pacman -S"
-                DEPS="{gcc,meson,pkgconf,python-mako,glslang,libglvnd,lib32-libglvnd}"
+                DEPS="{gcc,meson,pkgconf,python-mako,glslang,libglvnd,lib32-libglvnd,libxnvctrl}"
                 install
             ;;
             "Fedora")
                 MANAGER_QUERY="dnf list installed"
                 MANAGER_INSTALL="dnf install"
-                DEPS="{meson,gcc,gcc-c++,libX11-devel,glslang,python3-mako,mesa-libGL-devel}"
+                DEPS="{meson,gcc,gcc-c++,libX11-devel,glslang,python3-mako,mesa-libGL-devel,libXNVCtrl-devel}"
                 install
 
                 unset INSTALL
@@ -68,11 +72,11 @@ dependencies() {
             *"buntu"|"Linux Mint"|"Debian GNU/Linux"|"Zorin OS"|"Pop!_OS"|"elementary OS")
                 MANAGER_QUERY="dpkg-query -s"
                 MANAGER_INSTALL="apt install"
-                DEPS="{gcc,g++,gcc-multilib,g++-multilib,ninja-build,python3-pip,python3-setuptools,python3-wheel,pkg-config,mesa-common-dev,libx11-dev:i386}"
+                DEPS="{gcc,g++,gcc-multilib,g++-multilib,ninja-build,python3-pip,python3-setuptools,python3-wheel,pkg-config,mesa-common-dev,libx11-dev,libxnvctrl-dev,libdbus-1-dev}"
                 install
                 
                 if [[ $($SU_CMD pip3 show meson; echo $?) == 1 || $($SU_CMD pip3 show mako; echo $?) == 1 ]]; then
-                    $SU_CMD pip3 install meson mako
+                    $SU_CMD pip3 install 'meson>=0.54' mako
                 fi
                 if [[ ! -f /usr/local/bin/glslangValidator ]]; then
                     wget https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip
@@ -82,10 +86,27 @@ dependencies() {
                 fi
             ;;
             "openSUSE Leap"|"openSUSE Tumbleweed")
+
+                PACKMAN_PKGS="libXNVCtrl-devel"
+                case $DISTRO in
+                    "openSUSE Leap")
+                        echo "You may have to enable packman repository for some extra packages: ${PACKMAN_PKGS}"
+                        echo "zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Leap_15.1/ packman"
+                    ;;
+                    "openSUSE Tumbleweed")
+                        echo "You may have to enable packman repository for some extra packages: ${PACKMAN_PKGS}"
+                        echo "zypper ar -cfp 90 http://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/ packman"
+                    ;;
+                esac
+
                 MANAGER_QUERY="rpm -q"
                 MANAGER_INSTALL="zypper install"
-                DEPS="{gcc-c++,gcc-c++-32bit,meson,libpkgconf-devel,python3-Mako,libX11-devel,libX11-devel-32bit,glslang-devel,libglvnd-devel,libglvnd-devel-32bit,glibc-devel,glibc-devel-32bit,libstdc++-devel,libstdc++-devel-32bit,Mesa-libGL-devel}"
+                DEPS="{gcc-c++,gcc-c++-32bit,libpkgconf-devel,ninja,python3-pip,python3-Mako,libX11-devel,glslang-devel,glibc-devel,glibc-devel-32bit,libstdc++-devel,libstdc++-devel-32bit,Mesa-libGL-devel,dbus-1-devel,${PACKMAN_PKGS}}"
                 install
+
+                if [[ $(sudo pip3 show meson; echo $?) == 1 ]]; then
+                    sudo pip3 install 'meson>=0.54'
+                fi
             ;;
             "Solus")
                 unset MANAGER_QUERY
@@ -121,14 +142,14 @@ configure() {
     dependencies
     git submodule update --init --depth 50
     if [[ ! -f "build/meson64/build.ninja" ]]; then
-        meson build/meson64 --libdir lib/mangohud/lib64 --prefix /usr -Dappend_libdir_mangohud=false
+        meson build/meson64 --libdir lib/mangohud/lib64 --prefix /usr -Dappend_libdir_mangohud=false ${CONFIGURE_OPTS}
     fi
     if [[ ! -f "build/meson32/build.ninja" ]]; then
         export CC="gcc -m32"
         export CXX="g++ -m32"
         export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH_32}"
         export LLVM_CONFIG="/usr/bin/llvm-config32"
-        meson build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false
+        meson build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false ${CONFIGURE_OPTS}
     fi
 }
 
@@ -169,6 +190,8 @@ install() {
 
     /usr/bin/install -vm644 -D ./build/release/usr/lib/mangohud/lib32/libMangoHud.so /usr/lib/mangohud/lib32/libMangoHud.so
     /usr/bin/install -vm644 -D ./build/release/usr/lib/mangohud/lib64/libMangoHud.so /usr/lib/mangohud/lib64/libMangoHud.so
+    /usr/bin/install -vm644 -D ./build/release/usr/lib/mangohud/lib32/libMangoHud_dlsym.so /usr/lib/mangohud/lib32/libMangoHud_dlsym.so
+    /usr/bin/install -vm644 -D ./build/release/usr/lib/mangohud/lib64/libMangoHud_dlsym.so /usr/lib/mangohud/lib64/libMangoHud_dlsym.so
     /usr/bin/install -vm644 -D ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86.json
     /usr/bin/install -vm644 -D ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json
     /usr/bin/install -vm644 -D ./build/release/usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example

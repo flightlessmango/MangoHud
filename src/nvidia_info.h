@@ -1,5 +1,3 @@
-#include <stdbool.h>
-#include <stdio.h>
 #include <nvml.h>
 
 extern nvmlReturn_t result;
@@ -9,5 +7,5 @@ extern struct nvmlUtilization_st nvidiaUtilization;
 extern struct nvmlMemory_st nvidiaMemory;
 extern bool nvmlSuccess;
 
-bool checkNvidia(void);
-void getNvidiaInfo(void);
+bool checkNVML(const char* pciBusId);
+bool getNVMLInfo(void);

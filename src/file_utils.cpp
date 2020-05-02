@@ -27,6 +27,7 @@ bool find_folder(const char* root, const char* prefix, std::string& dest)
         return false;
     }
 
+    // XXX xfs/jfs need stat() for inode type
     while ((dp = readdir(dirp))) {
         if ((dp->d_type == DT_LNK || dp->d_type == DT_DIR) && starts_with(dp->d_name, prefix)) {
             dest = dp->d_name;
@@ -99,11 +100,43 @@ bool dir_exists(const std::string& path)
     return !stat(path.c_str(), &s) && S_ISDIR(s.st_mode);
 }
 
-std::string get_exe_path()
+std::string readlink(const char * link)
 {
     char result[PATH_MAX] {};
-    ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+    ssize_t count = readlink(link, result, PATH_MAX);
     return std::string(result, (count > 0) ? count : 0);
+}
+
+std::string get_exe_path()
+{
+    return readlink("/proc/self/exe");
+}
+
+bool get_wine_exe_name(std::string& name, bool keep_ext)
+{
+    std::string line;
+    std::ifstream cmdline("/proc/self/cmdline");
+    auto n = std::string::npos;
+    while (std::getline(cmdline, line, '\0'))
+    {
+        if (!line.empty()
+            && ((n = line.find_last_of("/\\")) != std::string::npos)
+            && n < line.size() - 1) // have at least one character
+        {
+            auto dot = keep_ext ? std::string::npos : line.find_last_of('.');
+            if (dot < n)
+                dot = line.size();
+            name = line.substr(n + 1, dot - n - 1);
+            return true;
+        }
+        else if (ends_with(line, ".exe", true))
+        {
+            auto dot = keep_ext ? std::string::npos : line.find_last_of('.');
+            name =  line.substr(0, dot);
+            return true;
+        }
+    }
+    return false;
 }
 
 std::string get_home_dir()

@@ -1,8 +1,8 @@
 #!/bin/sh
 
 MANGOHUD_LIB_NAME="libMangoHud.so"
-if [ "$MANGOHUD_NODLSYM" = "1" ]; then
-	MANGOHUD_LIB_NAME="libMangoHud_nodlsym.so"
+if [ "$MANGOHUD_DLSYM" = "1" ]; then
+	MANGOHUD_LIB_NAME="libMangoHud_dlsym.so:${MANGOHUD_LIB_NAME}"
 fi
 
 if [ "$#" -eq 0 ]; then

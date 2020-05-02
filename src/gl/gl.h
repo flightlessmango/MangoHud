@@ -11,11 +11,12 @@ void glXSwapIntervalEXT(void*, void*, int);
 int glXSwapIntervalSGI(int);
 int glXSwapIntervalMESA(unsigned int);
 int glXGetSwapIntervalMESA(void);
-bool glXMakeCurrent(void*, void*, void*);
+int glXMakeCurrent(void*, void*, void*);
 void* glXGetCurrentContext();
 
 void* glXGetProcAddress(const unsigned char*);
 void* glXGetProcAddressARB(const unsigned char*);
+int glXQueryDrawable(void *dpy, void* glxdraw, int attr, unsigned int * value);
 
 unsigned int eglSwapBuffers( void*, void* );
 

@@ -4,14 +4,13 @@
 #include "overlay_params.h"
 #include "iostats.h"
 
-extern std::string engineName;
 struct frame_stat {
-   uint64_t stats[OVERLAY_PARAM_ENABLED_MAX];
+   uint64_t stats[OVERLAY_PLOTS_MAX];
 };
 
 struct swapchain_stats {
    uint64_t n_frames;
-   enum overlay_param_enabled stat_selector;
+   enum overlay_plots stat_selector;
    double time_dividor;
    struct frame_stat stats_min, stats_max;
    struct frame_stat frames_stats[200];
@@ -27,12 +26,16 @@ struct swapchain_stats {
    struct {
       int32_t major;
       int32_t minor;
+      bool is_gles;
    } version_gl;
    struct {
       int32_t major;
       int32_t minor;
       int32_t patch;
    } version_vk;
+   std::string engineName;
+   std::string engineVersion;
+   std::string deviceName;
 };
 
 struct fps_limit {

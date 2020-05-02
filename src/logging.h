@@ -37,7 +37,7 @@ void writeFile(string filename){
   logArray.clear();
 }
 
-void *logging(void *params_void){
+void logging(void *params_void){
   overlay_params *params = reinterpret_cast<overlay_params *>(params_void);
   time_t now_log = time(0);
   tm *log_time = localtime(&now_log);
@@ -65,5 +65,4 @@ void *logging(void *params_void){
   }
 
   writeFile(params->output_file + date);
-  return NULL; 
 }

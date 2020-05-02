@@ -26,9 +26,8 @@ void parseConfigLine(std::string line, std::unordered_map<std::string,std::strin
         options[param] = value;
 }
 
-void parseConfigFile(overlay_params& params) {
-    params.options.clear();
-    std::vector<std::string> paths;
+void enumerate_config_files(std::vector<std::string>& paths)
+{
     static const char *mangohud_dir = "/MangoHud/";
 
     std::string env_data = get_data_dir();
@@ -50,29 +49,23 @@ void parseConfigFile(overlay_params& params) {
 
         // find executable's path when run in Wine
         if (!env_config.empty() && (basename == "wine-preloader" || basename == "wine64-preloader")) {
-            std::string line;
-            std::ifstream stream("/proc/self/cmdline");
-            while (std::getline(stream, line, '\0'))
-            {
-                if (!line.empty()
-                    && ((n = line.find_last_of("/\\")) != std::string::npos)
-                    && n < line.size() - 1) // have at least one character
-                {
-                    auto dot = line.find_last_of('.');
-                    if (dot < n)
-                        dot = line.size();
-                    paths.push_back(env_config + mangohud_dir + "wine-" + line.substr(n + 1, dot - n - 1) + ".conf");
-                    break;
-                }
-                else if (ends_with(line, ".exe", true))
-                {
-                    auto dot = line.find_last_of('.');
-                    paths.push_back(env_config + mangohud_dir + "wine-" + line.substr(0, dot) + ".conf");
-                    break;
-                }
+            std::string name;
+            if (get_wine_exe_name(name)) {
+                paths.push_back(env_config + mangohud_dir + "wine-" + name + ".conf");
             }
         }
     }
+}
+
+void parseConfigFile(overlay_params& params) {
+    params.options.clear();
+    std::vector<std::string> paths;
+    const char *cfg_file = getenv("MANGOHUD_CONFIGFILE");
+
+    if (cfg_file)
+        paths.push_back(cfg_file);
+    else
+        enumerate_config_files(paths);
 
     std::string line;
     for (auto p = paths.rbegin(); p != paths.rend(); p++) {

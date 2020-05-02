@@ -37,3 +37,7 @@ v*.tar.gz
 *.out
 *.app
 
+# subprojects
+subprojects/packagecache/
+subprojects/imgui-*/
+subprojects/Vulkan-Headers-*/

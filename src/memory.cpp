@@ -6,7 +6,6 @@
 #include <thread>
 
 struct memory_information mem_info;
-pthread_t memoryThread;
 float memused, memmax;
 
 FILE *open_file(const char *file, int *reported) {
@@ -25,7 +24,7 @@ FILE *open_file(const char *file, int *reported) {
   return fp;
 }
 
-void *update_meminfo(void *) {
+void update_meminfo(void) {
   FILE *meminfo_fp;
   static int reported = 0;
 
@@ -97,6 +96,4 @@ void *update_meminfo(void *) {
   memmax = float(mem_info.memmax) / (1024 * 1024);
 
   fclose(meminfo_fp);
-  pthread_detach(memoryThread);
-  return NULL;
 }

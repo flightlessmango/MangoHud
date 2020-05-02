@@ -2,8 +2,6 @@
 #include <pthread.h>
 #include <inttypes.h>
 
-extern pthread_t ioThread;
-
 struct iostats {
     struct {
       unsigned long long read_bytes;
@@ -19,4 +17,4 @@ struct iostats {
     } diff;
 };
 
-void *getIoStats(void *args);
+void getIoStats(void *args);
