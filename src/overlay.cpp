@@ -1502,6 +1502,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
                "%d.%d%s", data.version_gl.major, data.version_gl.minor,
                data.version_gl.is_gles ? " ES" : "");
          }
+#ifdef __gnu_linux__ 
          // ImGui::SameLine();
          ImGui::PopFont();
       }
@@ -1523,6 +1524,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::PushFont(data.font1);
          ImGui::Dummy(ImVec2(0.0,5.0f));
          ImGui::TextColored(engine_color, "%s", "" MANGOHUD_ARCH);
+#endif
          ImGui::PopFont();
       }
 
