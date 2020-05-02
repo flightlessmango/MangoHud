@@ -42,6 +42,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(gpu_core_clock)                \
    OVERLAY_PARAM_BOOL(arch)                          \
    OVERLAY_PARAM_BOOL(media_player)                  \
+   OVERLAY_PARAM_BOOL(version)                       \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
    OVERLAY_PARAM_CUSTOM(font_file)                   \

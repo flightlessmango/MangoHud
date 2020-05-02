@@ -10,6 +10,11 @@ cpp = meson.get_compiler('cpp')
 prog_python = import('python').find_installation('python3')
 null_dep = dependency('', required : false)
 
+mangohud_version = vcs_tag(
+  command: ['git', 'describe', '--tags', '--dirty=+'],
+  input:  'version.h.in',
+  output: 'version.h')
+
 pre_args = [
   '-D__STDC_CONSTANT_MACROS',
   '-D__STDC_FORMAT_MACROS',
