@@ -1,6 +1,7 @@
 #!/bin/sh
 
-VERSION=$(git describe --tags)
+# ensure that working tree is clean
+VERSION=$(git describe --tags --dirty=+)
 
 # include imgui specifically because it is in the gitignore
 FILE_PATTERN="--exclude-vcs ./subprojects/imgui-* --exclude-vcs-ignores ."
