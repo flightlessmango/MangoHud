@@ -2,7 +2,9 @@
 
 VERSION=$(git describe --tags)
 
-EXCLUDE_PATTERN="--exclude-vcs --exclude-vcs-ignores"
+FILE_PATTERN="--exclude-vcs --exclude-vcs-ignores ."
 
-tar -cf MangoHud-$VERSION-Source.tar.gz $EXCLUDE_PATTERN .
-tar -cf MangoHud-$VERSION-Source-DFSG.tar.gz $EXCLUDE_PATTERN --exclude=include/nvml.h .
+# default version
+tar -czf MangoHud-$VERSION-Source.tar.gz $FILE_PATTERN
+# DFSG compliant version, excludes NVML
+tar -czf MangoHud-$VERSION-Source-DFSG.tar.gz --exclude=include/nvml.h $FILE_PATTERN
