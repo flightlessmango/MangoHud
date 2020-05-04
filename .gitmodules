@@ -1,3 +1,0 @@
-[submodule "modules/ImGui/src"]
-	path = modules/ImGui/src
-	url = https://github.com/flightlessmango/imgui.git
