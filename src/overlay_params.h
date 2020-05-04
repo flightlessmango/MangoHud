@@ -85,6 +85,7 @@ enum overlay_param_position {
    LAYER_POSITION_TOP_RIGHT,
    LAYER_POSITION_BOTTOM_LEFT,
    LAYER_POSITION_BOTTOM_RIGHT,
+   LAYER_POSITION_TOP_CENTER,
 };
 
 enum overlay_plots {

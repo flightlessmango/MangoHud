@@ -1038,6 +1038,12 @@ void position_layer(struct overlay_params& params, ImVec2 window_size)
                                      height - window_size.y - margin + params.offset_y),
                               ImGuiCond_Always);
       break;
+   case LAYER_POSITION_TOP_CENTER:
+      printf("%f\n", width - window_size.x);
+      ImGui::SetNextWindowPos(ImVec2((width / 2) - (window_size.x / 2),
+                                     margin + params.offset_y),
+                              ImGuiCond_Always);
+      break;
    }
 }
 

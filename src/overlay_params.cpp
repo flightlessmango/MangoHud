@@ -34,6 +34,8 @@ parse_position(const char *str)
       return LAYER_POSITION_BOTTOM_LEFT;
    if (!strcmp(str, "bottom-right"))
       return LAYER_POSITION_BOTTOM_RIGHT;
+   if (!strcmp(str, "top-center"))
+      return LAYER_POSITION_TOP_CENTER;
    return LAYER_POSITION_TOP_LEFT;
 }
 
