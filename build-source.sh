@@ -1,6 +1,6 @@
 #!/bin/sh
 
-VERSION=$(git describe --tags)
+VERSION=$(git describe --tags --dirty=+)
 
 FILE_PATTERN="--exclude-vcs --exclude-vcs-ignores ."
 
