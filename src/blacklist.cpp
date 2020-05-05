@@ -38,6 +38,7 @@ static bool check_blacklisted() {
         "Steam.exe",
         "ffxivlauncher.exe",
         "ffxivlauncher64.exe",
+        "lutris"
     };
 
     std::string proc_name = get_proc_name();
