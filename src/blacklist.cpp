@@ -39,8 +39,7 @@ static bool check_blacklisted() {
         "ffxivlauncher.exe",
         "ffxivlauncher64.exe",
         "LeagueClient.exe",
-        "LeagueClientUxRender.exe",
-        "lutris"
+        "LeagueClientUxRender.exe"
     };
 
     std::string proc_name = get_proc_name();
