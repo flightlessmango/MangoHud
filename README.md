@@ -94,6 +94,8 @@ MangoHud comes with a config file which can be used to set configuration options
 
 You can find an example config in /usr/share/doc/mangohud
 
+[GOverlay](https://github.com/benjamimgois/goverlay) is a GUI application that can be used to manage the config
+
 ---
 
 ### `MANGOHUD_CONFIG` and `MANGOHUD_CONFIGFILE` environment variables
@@ -108,6 +110,7 @@ A partial list of parameters are below. See the config file for a complete list.
 |------------------------------------|---------------------------------------------------------------------------------------|
 | `cpu_temp`<br>`gpu_temp`           | Displays current CPU/GPU temperature                                                  |
 | `core_load`                        | Displays load & frequency per core                                                    |
+| `gpu_core_clock`<br>`gpu_mem_clock`| Displays GPU core/memory frequency                                                    |
 | `ram`<br>`vram`                    | Displays system RAM/VRAM usage                                                        |
 | `full`                             | Enables all of the above config options                                               |
 | `crosshair`                        | Adds a crosshair overlay at the centre of the screen                                  |
@@ -131,6 +134,8 @@ A partial list of parameters are below. See the config file for a complete list.
 | `io_read`<br> `io_write`           | Show non-cached IO read/write, in MiB/s                                               |
 | `pci_dev`                          | Select GPU device in multi-gpu setups                                                 |
 | `version`                          | Shows current mangohud version                                                        |
+| `fps_limit=`                       | Limit the application's FPS                                                           |
+| `arch`                             | Show if the application is 32 or 64 bit                                               |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 

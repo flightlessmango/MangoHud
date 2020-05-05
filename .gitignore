@@ -6,7 +6,6 @@ MangoHud*.tar.gz
 pkg
 mangohud*.tar.*
 lib32-mangohud*.tar.*
-v*.tar.gz
 
 # Prerequisites
 *.d

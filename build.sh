@@ -10,13 +10,18 @@ LAYER="build/release/usr/share/vulkan/implicit_layer.d/mangohud.json"
 INSTALL_DIR="build/package/"
 IMPLICIT_LAYER_DIR="$XDG_DATA_HOME/vulkan/implicit_layer.d"
 VERSION=$(git describe --long --tags --always | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/^v//')
+SU_CMD=$(command -v sudo || command -v doas)
+
+# doas requires a double dash if the command it runs will include any dashes,
+# so append a double dash to the command
+[[ $SU_CMD == *doas ]] && SU_CMD="$SU_CMD -- "
 
 # Correctly identify the os-release file.
 for os_release in ${OS_RELEASE_FILES[@]} ; do
     if [[ ! -e "${os_release}" ]]; then
         continue
     fi
-    DISTRO=$(sed 1q ${os_release} | sed 's/NAME=//g' | sed 's/"//g')
+    DISTRO=$(sed -rn 's/^NAME="(.+)"/\1/p' ${os_release})
 done
 
 dependencies() {
@@ -40,7 +45,7 @@ dependencies() {
             if [[ ! -z "$INSTALL" ]]; then
                 missing_deps
                 if [[ "$PERMISSION" == "Y" || "$PERMISSION" == "y" ]]; then
-                    sudo $MANAGER_INSTALL $INSTALL
+                    $SU_CMD $MANAGER_INSTALL $INSTALL
                 fi
             fi
             set -e
@@ -64,19 +69,19 @@ dependencies() {
                 DEPS="{glibc-devel.i686,libstdc++-devel.i686,libX11-devel.i686}"
                 install
             ;;
-            *"buntu"|"Linux Mint"|"Debian"|"Zorin OS"|"Pop!_OS"|"elementary OS")
+            *"buntu"|"Linux Mint"|"Debian GNU/Linux"|"Zorin OS"|"Pop!_OS"|"elementary OS")
                 MANAGER_QUERY="dpkg-query -s"
                 MANAGER_INSTALL="apt install"
                 DEPS="{gcc,g++,gcc-multilib,g++-multilib,ninja-build,python3-pip,python3-setuptools,python3-wheel,pkg-config,mesa-common-dev,libx11-dev,libxnvctrl-dev,libdbus-1-dev}"
                 install
                 
-                if [[ $(sudo pip3 show meson; echo $?) == 1 || $(sudo pip3 show mako; echo $?) == 1 ]]; then
-                    sudo pip3 install 'meson>=0.54' mako
+                if [[ $($SU_CMD pip3 show meson; echo $?) == 1 || $($SU_CMD pip3 show mako; echo $?) == 1 ]]; then
+                    $SU_CMD pip3 install 'meson>=0.54' mako
                 fi
                 if [[ ! -f /usr/local/bin/glslangValidator ]]; then
                     wget https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip
                     unzip glslang-master-linux-Release.zip bin/glslangValidator
-                    sudo install -m755 bin/glslangValidator /usr/local/bin/
+                    $SU_CMD install -m755 bin/glslangValidator /usr/local/bin/
                     rm bin/glslangValidator glslang-master-linux-Release.zip
                 fi
             ;;
@@ -181,7 +186,7 @@ install() {
     rm -f "$HOME/.local/share/vulkan/implicit_layer.d/"{mangohud32.json,mangohud64.json}
 
     [ "$UID" -eq 0 ] || mkdir -pv "${CONFIG_DIR}"
-    [ "$UID" -eq 0 ] || exec sudo bash "$0" install
+    [ "$UID" -eq 0 ] || exec $SU_CMD bash "$0" install
 
     /usr/bin/install -vm644 -D ./build/release/usr/lib/mangohud/lib32/libMangoHud.so /usr/lib/mangohud/lib32/libMangoHud.so
     /usr/bin/install -vm644 -D ./build/release/usr/lib/mangohud/lib64/libMangoHud.so /usr/lib/mangohud/lib64/libMangoHud.so
@@ -202,7 +207,7 @@ clean() {
 }
 
 uninstall() {
-    [ "$UID" -eq 0 ] || exec sudo bash "$0" uninstall
+    [ "$UID" -eq 0 ] || exec $SU_CMD bash "$0" uninstall
     rm -rfv "/usr/lib/mangohud"
     rm -rfv "/usr/share/doc/mangohud"
     rm -fv "/usr/share/vulkan/implicit_layer.d/mangohud.json"
