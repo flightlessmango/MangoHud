@@ -38,6 +38,7 @@ static bool check_blacklisted() {
         "Steam.exe",
         "ffxivlauncher.exe",
         "ffxivlauncher64.exe",
+        "LeagueClient.exe",
         "lutris"
     };
 
