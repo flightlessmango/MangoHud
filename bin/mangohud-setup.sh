@@ -37,6 +37,8 @@ mangohud_install() {
     install -vm755 ./usr/bin/mangohud.x86 /usr/bin/mangohud.x86
     install -vm755 ./usr/bin/mangohud /usr/bin/mangohud
 
+    rm -rf ./usr
+
     echo "MangoHud Installed"
 }
 
