@@ -39,7 +39,7 @@ static bool check_blacklisted() {
         "ffxivlauncher.exe",
         "ffxivlauncher64.exe",
         "LeagueClient.exe",
-        "wine-LeagueClientUxRender",
+        "LeagueClientUxRender.exe",
         "lutris"
     };
 
