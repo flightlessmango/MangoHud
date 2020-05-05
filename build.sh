@@ -202,6 +202,12 @@ install() {
     echo "MangoHud Installed"
 }
 
+reinstall() {
+    build
+    package
+    install
+}
+
 clean() {
     rm -rf "build"
 }
@@ -244,6 +250,7 @@ for a in $@; do
         "build") build;;
         "package") package;;
         "install") install;;
+        "reinstall") reinstall;;
         "clean") clean;;
         "uninstall") uninstall;;
         "release") release;;
