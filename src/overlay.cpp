@@ -876,7 +876,7 @@ void check_keybinds(struct overlay_params& params){
   
   if (elapsedF2 >= 500000 && !params.output_file.empty()){
 #ifdef HAVE_X11
-     pressed = key_is_pressed(params.toggle_logging);
+     pressed = keys_are_pressed(params.toggle_logging);
 #else
      pressed = false;
 #endif
@@ -893,7 +893,7 @@ void check_keybinds(struct overlay_params& params){
 
    if (elapsedF12 >= 500000){
 #ifdef HAVE_X11
-      pressed = key_is_pressed(params.toggle_hud);
+      pressed = keys_are_pressed(params.toggle_hud);
 #else
       pressed = false;
 #endif
@@ -905,7 +905,7 @@ void check_keybinds(struct overlay_params& params){
 
    if (elapsedReloadCfg >= 500000){
 #ifdef HAVE_X11
-      pressed = key_is_pressed(params.reload_cfg);
+      pressed = keys_are_pressed(params.reload_cfg);
 #else
       pressed = false;
 #endif

@@ -6,6 +6,9 @@
 #include <wordexp.h>
 #include "imgui.h"
 #include <iostream>
+#include <sstream>
+#include <istream>
+#include <string>
 
 #include "overlay_params.h"
 #include "overlay.h"
@@ -71,28 +74,63 @@ parse_alpha(const char *str)
 }
 
 #ifdef HAVE_X11
-static KeySym
+static std::vector<std::string>
+split(std::string str, std::string token){
+    std::vector<std::string>result;
+    while(str.size()){
+        int index = str.find(token);
+        if(index!=std::string::npos){
+            result.push_back(str.substr(0,index));
+            str = str.substr(index+token.size());
+            if(str.size()==0)result.push_back(str);
+        }else{
+            result.push_back(str);
+            str = "";
+        }
+    }
+    return result;
+}
+
+static std::vector<KeySym>
+parse_string_to_keysym_vec(const char *str)
+{
+   if(g_x11->IsLoaded())
+   {
+      std::vector<std::string> keyStrings = split(str, " ");
+      std::vector<KeySym> keys;
+      for(int i=0; i < keyStrings.size(); i++){
+         std::string keyString = keyStrings.at(i);
+         KeySym xk = g_x11->XStringToKeysym(keyString.c_str());
+         if(xk)
+         {
+            keys.push_back(xk);
+         }
+         else
+         {
+            fprintf(stderr, "WARNING: Unrecoginized key: '%s' \n", keyString.c_str());
+         }
+      }
+      return keys;
+   }
+   return std::vector<KeySym>();
+}
+
+static std::vector<KeySym>
 parse_toggle_hud(const char *str)
 {
-   if (g_x11->IsLoaded())
-      return g_x11->XStringToKeysym(str);
-   return 0;
+   return parse_string_to_keysym_vec(str);
 }
 
-static KeySym
+static std::vector<KeySym>
 parse_toggle_logging(const char *str)
 {
-   if (g_x11->IsLoaded())
-      return g_x11->XStringToKeysym(str);
-   return 0;
+   return parse_string_to_keysym_vec(str);
 }
 
-static KeySym
+static std::vector<KeySym>
 parse_reload_cfg(const char *str)
 {
-   if (g_x11->IsLoaded())
-      return g_x11->XStringToKeysym(str);
-   return 0;
+   return parse_string_to_keysym_vec(str);
 }
 #else
 #define parse_toggle_hud(x)      0
@@ -348,9 +386,9 @@ parse_overlay_config(struct overlay_params *params,
    params->text_color = strtol("ffffff", NULL, 16);
 
 #ifdef HAVE_X11
-   params->toggle_hud = XK_F12;
-   params->toggle_logging = XK_F2;
-   params->reload_cfg = XK_F4;
+   params->toggle_hud = std::vector<KeySym>(XK_Shift_L, XK_F12);
+   params->toggle_logging = std::vector<KeySym>(XK_F2);
+   params->reload_cfg = std::vector<KeySym>(XK_F4);
 #endif
 
    // first pass with env var
