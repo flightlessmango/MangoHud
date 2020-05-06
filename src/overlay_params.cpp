@@ -6,8 +6,6 @@
 #include <wordexp.h>
 #include "imgui.h"
 #include <iostream>
-#include <sstream>
-#include <istream>
 #include <string>
 
 #include "overlay_params.h"
