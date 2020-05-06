@@ -386,9 +386,9 @@ parse_overlay_config(struct overlay_params *params,
    params->text_color = strtol("ffffff", NULL, 16);
 
 #ifdef HAVE_X11
-   params->toggle_hud = std::vector<KeySym>(XK_Shift_L, XK_F12);
+   params->toggle_hud = std::vector<KeySym>(XK_F12);
    params->toggle_logging = std::vector<KeySym>(XK_F2);
-   params->reload_cfg = std::vector<KeySym>(XK_F4);
+   params->reload_cfg = std::vector<KeySym>(XK_Shift_L, XK_F4);
 #endif
 
    // first pass with env var
