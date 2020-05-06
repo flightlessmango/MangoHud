@@ -6,6 +6,8 @@
 #include <wordexp.h>
 #include "imgui.h"
 #include <iostream>
+#include <string>
+#include <sstream>
 
 #include "overlay_params.h"
 #include "overlay.h"
@@ -71,28 +73,41 @@ parse_alpha(const char *str)
 }
 
 #ifdef HAVE_X11
-static KeySym
+static std::vector<KeySym>
+parse_string_to_keysym_vec(const char *str)
+{
+   std::vector<KeySym> keys;
+   if(g_x11->IsLoaded())
+   {
+      std::stringstream keyStrings(str);
+      std::string ks;
+      while (std::getline(keyStrings, ks, ' ')) {
+         KeySym xk = g_x11->XStringToKeysym(ks.c_str());
+         if (xk)
+            keys.push_back(xk);
+         else
+            std::cerr << "MANGOHUD: Unrecognized key: '" << ks << "'\n";
+      }
+   }
+   return keys;
+}
+
+static std::vector<KeySym>
 parse_toggle_hud(const char *str)
 {
-   if (g_x11->IsLoaded())
-      return g_x11->XStringToKeysym(str);
-   return 0;
+   return parse_string_to_keysym_vec(str);
 }
 
-static KeySym
+static std::vector<KeySym>
 parse_toggle_logging(const char *str)
 {
-   if (g_x11->IsLoaded())
-      return g_x11->XStringToKeysym(str);
-   return 0;
+   return parse_string_to_keysym_vec(str);
 }
 
-static KeySym
+static std::vector<KeySym>
 parse_reload_cfg(const char *str)
 {
-   if (g_x11->IsLoaded())
-      return g_x11->XStringToKeysym(str);
-   return 0;
+   return parse_string_to_keysym_vec(str);
 }
 #else
 #define parse_toggle_hud(x)      0
@@ -348,9 +363,9 @@ parse_overlay_config(struct overlay_params *params,
    params->text_color = strtol("ffffff", NULL, 16);
 
 #ifdef HAVE_X11
-   params->toggle_hud = XK_F12;
-   params->toggle_logging = XK_F2;
-   params->reload_cfg = XK_F4;
+   params->toggle_hud = { XK_F12 };
+   params->toggle_logging = { XK_F2 };
+   params->reload_cfg = { XK_Shift_L, XK_F4 };
 #endif
 
    // first pass with env var

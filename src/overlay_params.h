@@ -2,6 +2,7 @@
 #define OVERLAY_PARAMS_H
 
 #include <string>
+#include <vector>
 #include <unordered_map>
 
 #ifdef __cplusplus
@@ -122,9 +123,9 @@ struct overlay_params {
    unsigned tableCols;
    float font_size;
    float background_alpha, alpha;
-   KeySym toggle_hud;
-   KeySym toggle_logging;
-   KeySym reload_cfg;
+   std::vector<KeySym> toggle_hud;
+   std::vector<KeySym> toggle_logging;
+   std::vector<KeySym> reload_cfg;
    std::string time_format, output_file, font_file;
    std::string pci_dev;
 
