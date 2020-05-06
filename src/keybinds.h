@@ -16,7 +16,7 @@ bool keys_are_pressed(std::vector<KeySym>& keys) {
         return false;
 
     char keys_return[32];
-    std::vector<bool> pressed;
+    size_t pressed = 0;
 
     g_x11->XQueryKeymap(get_xdisplay(), keys_return);
 
@@ -27,11 +27,11 @@ bool keys_are_pressed(std::vector<KeySym>& keys) {
 
         if(isPressed)
         {
-            pressed.push_back(true);
+            pressed++;
         }
     }
 
-    if(pressed.size() == keys.size() && pressed.size() > 0)
+    if(pressed > 0 && pressed == keys.size())
     {
         return true;
     }
