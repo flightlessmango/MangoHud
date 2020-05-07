@@ -79,6 +79,8 @@ struct instance_data {
 
    struct overlay_params params;
 
+   uint32_t api_version;
+
    bool first_line_printed;
 
    int control_client;
@@ -2540,6 +2542,39 @@ static VkResult overlay_CreateDevice(
    VkPhysicalDeviceFeatures device_features = {};
    VkDeviceCreateInfo device_info = *pCreateInfo;
 
+   std::vector<const char*> enabled_extensions(device_info.ppEnabledExtensionNames,
+                                               device_info.ppEnabledExtensionNames +
+                                               device_info.enabledExtensionCount);
+
+   uint32_t extension_count;
+   instance_data->vtable.EnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extension_count, nullptr);
+
+   std::vector<VkExtensionProperties> available_extensions(extension_count);
+   instance_data->vtable.EnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extension_count, available_extensions.data());
+
+
+   bool can_get_driver_info = instance_data->api_version < VK_API_VERSION_1_1 ? false : true;
+
+   // VK_KHR_driver_properties became core in 1.2
+   if (instance_data->api_version < VK_API_VERSION_1_2 && can_get_driver_info) {
+      for (auto& extension : available_extensions) {
+         if (extension.extensionName == std::string(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME)) {
+            for (auto& enabled : enabled_extensions) {
+               if (enabled == std::string(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME))
+                  goto DONT;
+            }
+            enabled_extensions.push_back(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME);
+            DONT:
+            goto FOUND;
+         }
+      }
+      can_get_driver_info = false;
+      FOUND:;
+   }
+
+   device_info.enabledExtensionCount = enabled_extensions.size();
+   device_info.ppEnabledExtensionNames = enabled_extensions.data();
+
    if (pCreateInfo->pEnabledFeatures)
       device_features = *(pCreateInfo->pEnabledFeatures);
    device_info.pEnabledFeatures = &device_features;
@@ -2558,6 +2593,16 @@ static VkResult overlay_CreateDevice(
    VkLayerDeviceCreateInfo *load_data_info =
       get_device_chain_info(pCreateInfo, VK_LOADER_DATA_CALLBACK);
    device_data->set_device_loader_data = load_data_info->u.pfnSetDeviceLoaderData;
+
+   VkPhysicalDeviceDriverProperties driverProps = {};
+   driverProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES;
+   driverProps.pNext = nullptr;
+   if (can_get_driver_info) {
+       VkPhysicalDeviceProperties2 deviceProps = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &driverProps};
+       instance_data->vtable.GetPhysicalDeviceProperties2(device_data->physical_device, &deviceProps);
+   }
+
+   // TODO do something with driverProps
 
    if (!is_blacklisted()) {
       device_map_queues(device_data, pCreateInfo);
@@ -2620,6 +2665,7 @@ static VkResult overlay_CreateInstance(
    // Advance the link info for the next element on the chain
    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
 
+
    VkResult result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);
    if (result != VK_SUCCESS) return result;
 
@@ -2648,6 +2694,8 @@ static VkResult overlay_CreateInstance(
       instance_data->engineName = engineName;
       instance_data->engineVersion = engineVersion;
    }
+
+   instance_data->api_version = pCreateInfo->pApplicationInfo ? pCreateInfo->pApplicationInfo->apiVersion : VK_API_VERSION_1_0;
 
    return result;
 }
