@@ -66,6 +66,14 @@ bool glx_loader::Load() {
     return false;
   }
 
+  SwapBuffersMscOML =
+      reinterpret_cast<decltype(this->SwapBuffersMscOML)>(
+          GetProcAddress((const unsigned char *)"glXSwapBuffersMscOML"));
+  /*if (!SwapBuffersMscOML) {
+    CleanUp(true);
+    return false;
+  }*/
+
   SwapIntervalEXT =
       reinterpret_cast<decltype(this->SwapIntervalEXT)>(
           GetProcAddress((const unsigned char *)"glXSwapIntervalEXT"));

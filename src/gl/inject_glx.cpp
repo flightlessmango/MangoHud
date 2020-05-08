@@ -103,9 +103,8 @@ EXPORT_C_(int) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
     return ret;
 }
 
-EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
-    glx.Load();
-
+static void do_imgui_swap(void *dpy, void *drawable)
+{
     if (!is_blacklisted()) {
         imgui_create(glx.GetCurrentContext());
 
@@ -114,7 +113,7 @@ EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
         // glXQueryDrawable is buggy, use XGetGeometry instead
         Window unused_window;
         int unused;
-        static bool xgetgeom_failed = false;
+        static bool xgetgeom_failed = true; // FIXME XGetGeometry may not like the drawable so disable for now
         if (xgetgeom_failed || !g_x11->XGetGeometry((Display*)dpy,
             (Window)drawable, &unused_window,
             &unused, &unused,
@@ -132,7 +131,12 @@ EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
 
         imgui_render(width, height);
     }
+}
 
+EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
+    glx.Load();
+
+    do_imgui_swap(dpy, drawable);
     glx.SwapBuffers(dpy, drawable);
 
     if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0){
@@ -140,6 +144,21 @@ EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
         FpsLimiter(fps_limit_stats);
         fps_limit_stats.frameEnd = os_time_get_nano();
     }
+}
+
+EXPORT_C_(int64_t) glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t target_msc, int64_t divisor, int64_t remainder)
+{
+    glx.Load();
+
+    do_imgui_swap(dpy, drawable);
+    int64_t ret = glx.SwapBuffersMscOML(dpy, drawable, target_msc, divisor, remainder);
+
+    if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0){
+        fps_limit_stats.frameStart = os_time_get_nano();
+        FpsLimiter(fps_limit_stats);
+        fps_limit_stats.frameEnd = os_time_get_nano();
+    }
+    return ret;
 }
 
 EXPORT_C_(void) glXSwapIntervalEXT(void *dpy, void *draw, int interval) {
@@ -205,13 +224,14 @@ struct func_ptr {
    void *ptr;
 };
 
-static std::array<const func_ptr, 9> name_to_funcptr_map = {{
+static std::array<const func_ptr, 10> name_to_funcptr_map = {{
 #define ADD_HOOK(fn) { #fn, (void *) fn }
    ADD_HOOK(glXGetProcAddress),
    ADD_HOOK(glXGetProcAddressARB),
    ADD_HOOK(glXCreateContext),
    ADD_HOOK(glXMakeCurrent),
    ADD_HOOK(glXSwapBuffers),
+   ADD_HOOK(glXSwapBuffersMscOML),
 
    ADD_HOOK(glXSwapIntervalEXT),
    ADD_HOOK(glXSwapIntervalSGI),

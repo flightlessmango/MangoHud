@@ -18,6 +18,8 @@ void* glXGetProcAddress(const unsigned char*);
 void* glXGetProcAddressARB(const unsigned char*);
 int glXQueryDrawable(void *dpy, void* glxdraw, int attr, unsigned int * value);
 
+int64_t glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t target_msc, int64_t divisor, int64_t remainder);
+
 unsigned int eglSwapBuffers( void*, void* );
 
 #ifdef __cplusplus
