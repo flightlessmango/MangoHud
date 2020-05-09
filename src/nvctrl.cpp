@@ -8,12 +8,12 @@
 #include "loaders/loader_nvctrl.h"
 #include "loaders/loader_x11.h"
 #include "string_utils.h"
+#include "overlay.h"
 
 typedef std::unordered_map<std::string, std::string> string_map;
 static std::unique_ptr<Display, std::function<void(Display*)>> display;
 
 libnvctrl_loader nvctrl("libXNVCtrl.so.0");
-
 struct nvctrlInfo nvctrl_info;
 bool nvctrlSuccess = false;
 
@@ -61,6 +61,17 @@ bool checkXNVCtrl()
             local_x11->XCloseDisplay(dpy);
         }
     };
+    // get device id at init
+    int64_t pci_id;
+    char pci_device_id[16];
+    nvctrl.XNVCTRLQueryTargetAttribute64(display.get(),
+                    NV_CTRL_TARGET_TYPE_GPU,
+                    0,
+                    0,
+                    NV_CTRL_PCI_ID,
+                    &pci_id);
+    snprintf(pci_device_id, 16, "0x%04x", (pci_id & 0xFFFF));
+    deviceID = strtol(pci_device_id, NULL, 16);
 
     return true;
 }

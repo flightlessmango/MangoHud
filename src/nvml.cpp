@@ -1,11 +1,13 @@
 #include "loaders/loader_nvml.h"
 #include "nvidia_info.h"
 #include <iostream>
+#include "overlay.h"
 
 libnvml_loader nvml("libnvidia-ml.so.1");
 
 nvmlReturn_t result;
 nvmlDevice_t nvidiaDevice;
+nvmlPciInfo_t nvidiaPciInfo;
 bool nvmlSuccess = false;
 unsigned int nvidiaTemp, nvidiaCoreClock, nvidiaMemClock;
 struct nvmlUtilization_st nvidiaUtilization;
@@ -45,6 +47,9 @@ bool getNVMLInfo(){
     nvml.nvmlDeviceGetMemoryInfo(nvidiaDevice, &nvidiaMemory);
     nvml.nvmlDeviceGetClockInfo(nvidiaDevice, NVML_CLOCK_GRAPHICS, &nvidiaCoreClock);
     nvml.nvmlDeviceGetClockInfo(nvidiaDevice, NVML_CLOCK_MEM, &nvidiaMemClock);
+    nvml.nvmlDeviceGetPciInfo_v3(nvidiaDevice, &nvidiaPciInfo);
+    deviceID = nvidiaPciInfo.pciDeviceId >> 16;
+    
     if (response == NVML_ERROR_NOT_SUPPORTED)
         nvmlSuccess = false;
     return nvmlSuccess;

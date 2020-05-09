@@ -71,6 +71,7 @@ float offset_x, offset_y, hudSpacing;
 int hudFirstRow, hudSecondRow;
 struct amdGpu amdgpu;
 struct fps_limit fps_limit_stats;
+int32_t deviceID;
 
 /* Mapped from VkInstace/VkPhysicalDevice */
 struct instance_data {
@@ -780,7 +781,8 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
 #ifndef NDEBUG
          std::cerr << "amdgpu path check: " << path << "/device/vendor" << std::endl;
 #endif
-
+         string device = read_line(path + "/device/device");
+         deviceID = strtol(device.c_str(), NULL, 16);
          string line = read_line(path + "/device/vendor");
          trim(line);
          if (line != "0x1002" || !file_exists(path + "/device/gpu_busy_percent"))
