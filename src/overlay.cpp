@@ -863,8 +863,10 @@ void init_system_info(){
                 << "Driver:" << driver << std::endl;
 #endif
 
-      if (!log_period_env || !try_stoi(log_period, log_period_env))
+      if (!log_period_env || !try_stoi(log_period, log_period_env)){
         log_period = 100;
+      } else {
+         out.open("/tmp/mango", ios::out | ios::app);
 }
 
 void check_keybinds(struct overlay_params& params){
@@ -1324,7 +1326,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          uint64_t now = os_time_get();
          elapsedLog = (double)(now - log_start);
          if ((elapsedLog) >= params.log_duration * 1000000)
-            loggingOn = false;
+            // loggingOn = false;
 
          out << fps << "," <<  cpuLoadLog << "," << gpuLoadLog << "," << (now - log_start) << endl;
       }
