@@ -1320,9 +1320,10 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
                "%d.%d%s", data.version_gl.major, data.version_gl.minor,
                data.version_gl.is_gles ? " ES" : "");
          }
-         ImGui::SameLine();
+         // ImGui::SameLine();
+         ImGui::Dummy(ImVec2(0.0,5.0f));
          ImGui::TextColored(engine_color,
-                 "/ %s", data.deviceName.c_str());
+                 "%s", data.gpuName.c_str());
          if (params.enabled[OVERLAY_PARAM_ENABLED_arch]){
             ImGui::Dummy(ImVec2(0.0,5.0f));
             ImGui::TextColored(engine_color, "%s", "" MANGOHUD_ARCH);
@@ -2290,6 +2291,19 @@ static struct overlay_draw *before_present(struct swapchain_data *swapchain_data
    return draw;
 }
 
+void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats){
+   if (!pci_ids[vendorID].second[deviceID].desc.empty()){
+      size_t position = pci_ids[vendorID].second[deviceID].desc.find("[");
+      string desc = pci_ids[vendorID].second[deviceID].desc.substr(position);
+      string chars = "[]";
+      for (char c: chars)
+         desc.erase(remove(desc.begin(), desc.end(), c), desc.end());
+      sw_stats.gpuName = desc;
+   } else {
+      sw_stats.gpuName = "";
+   }
+}
+
 static VkResult overlay_CreateSwapchainKHR(
     VkDevice                                    device,
     const VkSwapchainCreateInfoKHR*             pCreateInfo,
@@ -2336,7 +2350,7 @@ static VkResult overlay_CreateSwapchainKHR(
    }
    ss << ")";
    swapchain_data->sw_stats.deviceName = ss.str();
-
+   get_device_name(prop.vendorID, prop.deviceID, swapchain_data->sw_stats);
    return result;
 }
 

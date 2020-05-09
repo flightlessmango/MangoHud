@@ -36,6 +36,7 @@ struct swapchain_stats {
    std::string engineName;
    std::string engineVersion;
    std::string deviceName;
+   std::string gpuName;
 };
 
 struct fps_limit {
@@ -58,3 +59,4 @@ void check_keybinds(struct overlay_params& params);
 void init_system_info(void);
 void FpsLimiter(struct fps_limit& stats);
 void imgui_custom_style(struct overlay_params& params);
+void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats);
