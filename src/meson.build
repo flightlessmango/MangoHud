@@ -34,6 +34,7 @@ vklayer_files = files(
   'notify.cpp',
   'elfhacks.cpp',
   'real_dlsym.cpp',
+  'pci_ids.cpp',
 )
 
 opengl_files = files(

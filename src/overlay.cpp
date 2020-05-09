@@ -59,6 +59,7 @@
 #include "notify.h"
 #include "blacklist.h"
 #include "version.h"
+#include "pci_ids.h"
 
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
@@ -832,6 +833,7 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
          params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
       }
    }
+   parse_pciids();
 }
 
 void init_system_info(){
