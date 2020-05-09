@@ -867,6 +867,7 @@ void init_system_info(){
         log_period = 100;
       } else {
          out.open("/tmp/mango", ios::out | ios::app);
+      }
 }
 
 void check_keybinds(struct overlay_params& params){
