@@ -1321,9 +1321,11 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
                data.version_gl.is_gles ? " ES" : "");
          }
          // ImGui::SameLine();
+         if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_name] && !data.gpuName.empty()){
          ImGui::Dummy(ImVec2(0.0,5.0f));
          ImGui::TextColored(engine_color,
                  "%s", data.gpuName.c_str());
+         }
          if (params.enabled[OVERLAY_PARAM_ENABLED_arch]){
             ImGui::Dummy(ImVec2(0.0,5.0f));
             ImGui::TextColored(engine_color, "%s", "" MANGOHUD_ARCH);
