@@ -2359,7 +2359,7 @@ static VkResult overlay_CreateSwapchainKHR(
 //       ss << "."  << VK_VERSION_PATCH(prop.driverVersion);
 //    }
 //    ss << ")";
-   swapchain_data->sw_stats.deviceName = prop.deviceName;
+   std::string deviceName = prop.deviceName;
    get_device_name(prop.vendorID, prop.deviceID, swapchain_data->sw_stats);
    if(driverProps.driverID == VK_DRIVER_ID_NVIDIA_PROPRIETARY){ 
       ss << "NVIDIA";
@@ -2374,7 +2374,7 @@ static VkResult overlay_CreateSwapchainKHR(
    if(driverProps.driverID == VK_DRIVER_ID_AMD_OPEN_SOURCE)
       swapchain_data->sw_stats.driverName = "AMDVLK";
    if(driverProps.driverID == VK_DRIVER_ID_MESA_RADV){
-      if(swapchain_data->sw_stats.deviceName.find("ACO") != std::string::npos){
+      if(deviceName.find("ACO") != std::string::npos){
          swapchain_data->sw_stats.driverName = "RADV/ACO";
       } else {
          swapchain_data->sw_stats.driverName = "RADV";
