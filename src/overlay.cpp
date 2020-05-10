@@ -2359,7 +2359,7 @@ static VkResult overlay_CreateSwapchainKHR(
 //       ss << "."  << VK_VERSION_PATCH(prop.driverVersion);
 //    }
 //    ss << ")";
-   swapchain_data->sw_stats.deviceName = ss.str();
+   swapchain_data->sw_stats.deviceName = prop.deviceName;
    get_device_name(prop.vendorID, prop.deviceID, swapchain_data->sw_stats);
    if(driverProps.driverID == VK_DRIVER_ID_NVIDIA_PROPRIETARY){ 
       ss << "NVIDIA";
