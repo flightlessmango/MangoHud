@@ -91,7 +91,7 @@ void update_meminfo(void) {
   mem_info.mem = curmem;
   mem_info.bufmem = curbufmem;
   mem_info.memeasyfree = cureasyfree;
-	
+
   memused = (float(mem_info.memmax) - float(mem_info.memeasyfree)) / (1024 * 1024);
   memmax = float(mem_info.memmax) / (1024 * 1024);
 

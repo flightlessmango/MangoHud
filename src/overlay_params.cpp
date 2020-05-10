@@ -422,7 +422,7 @@ parse_overlay_config(struct overlay_params *params,
       }
 
    params->tableCols = 3;
-   
+
    if (!params->font_size) {
       params->font_size = 24;
    } else {
@@ -437,7 +437,7 @@ parse_overlay_config(struct overlay_params *params,
       params->tableCols = 4;
       params->width = 20 * params->font_size;
    }
-   
+
    // set frametime limit
    if (params->fps_limit >= 0)
       fps_limit_stats.targetFrameTime = int64_t(1000000000.0 / params->fps_limit);

@@ -880,7 +880,7 @@ void check_keybinds(struct overlay_params& params){
    elapsedF2 = (double)(now - last_f2_press);
    elapsedF12 = (double)(now - last_f12_press);
    elapsedReloadCfg = (double)(now - reload_cfg_press);
-  
+
   if (elapsedF2 >= 500000 && !params.output_file.empty()){
 #ifdef HAVE_X11
      pressed = key_is_pressed(params.toggle_logging);
@@ -961,7 +961,7 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
             std::thread(update_meminfo).detach();
          if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])
             std::thread(getIoStats, &sw_stats.io).detach();
-            
+
          gpuLoadLog = gpu_info.load;
          cpuLoadLog = sw_stats.total_cpu;
          sw_stats.fps = fps;
@@ -1149,7 +1149,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    window_size = ImVec2(params.width, params.height);
    unsigned width = ImGui::GetIO().DisplaySize.x;
    unsigned height = ImGui::GetIO().DisplaySize.y;
-      
+
    if (!params.no_display){
       ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
       if (params.enabled[OVERLAY_PARAM_ENABLED_version]){
@@ -1193,7 +1193,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::Text("%%");
          // ImGui::SameLine(150);
          // ImGui::Text("%s", "%");
-      
+
          if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp]){
             ImGui::TableNextCell();
             right_aligned_text(char_width * 4, "%i", cpuStats.GetCPUDataTotal().temp);
@@ -1201,7 +1201,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             ImGui::Text("°C");
          }
       }
-      
+
       if (params.enabled[OVERLAY_PARAM_ENABLED_core_load]){
          int i = 0;
          for (const CPUData &cpuData : cpuStats.GetCPUData())
@@ -1234,7 +1234,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.io_color), "IO RW");
          if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] && params.enabled[OVERLAY_PARAM_ENABLED_io_write])
             ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.io_color), "IO RD/RW");
-         
+
          if (params.enabled[OVERLAY_PARAM_ENABLED_io_read]){
             ImGui::TableNextCell();
             float val = data.io.diff.read * 1000000 / sampling;
@@ -2361,7 +2361,7 @@ static VkResult overlay_CreateSwapchainKHR(
 //    ss << ")";
    std::string deviceName = prop.deviceName;
    get_device_name(prop.vendorID, prop.deviceID, swapchain_data->sw_stats);
-   if(driverProps.driverID == VK_DRIVER_ID_NVIDIA_PROPRIETARY){ 
+   if(driverProps.driverID == VK_DRIVER_ID_NVIDIA_PROPRIETARY){
       ss << "NVIDIA";
       ss << " (" << ((prop.driverVersion >> 22) & 0x3ff);
       ss << "."  << ((prop.driverVersion >> 14) & 0x0ff);
@@ -2459,7 +2459,7 @@ static VkResult overlay_QueuePresentKHR(
       FpsLimiter(fps_limit_stats);
       fps_limit_stats.frameEnd = os_time_get_nano();
    }
-   
+
    return result;
 }
 
@@ -2675,7 +2675,7 @@ static VkResult overlay_CreateInstance(
 {
    VkLayerInstanceCreateInfo *chain_info =
       get_instance_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
-      
+
 
    std::string engineName, engineVersion;
    if (!is_blacklisted()) {

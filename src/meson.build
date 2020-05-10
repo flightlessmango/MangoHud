@@ -98,18 +98,18 @@ vklayer_mesa_overlay = shared_library(
   overlay_spv,
   c_args : [
     pre_args,
-    c_vis_args, 
-    no_override_init_args, 
+    c_vis_args,
+    no_override_init_args,
     vulkan_wsi_args
     ],
   cpp_args : [
     pre_args,
-    cpp_vis_args, 
+    cpp_vis_args,
     cpp_nvml_args,
     vulkan_wsi_args
     ],
   dependencies : [
-    vulkan_wsi_deps, 
+    vulkan_wsi_deps,
     libimgui_core_dep,
     dbus_dep,
     dep_dl,

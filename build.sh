@@ -51,7 +51,7 @@ dependencies() {
             set -e
         }
         echo "# Checking Dependencies"
-        
+
         case $DISTRO in
             "Arch Linux"|"Manjaro Linux")
                 MANAGER_QUERY="pacman -Q"
@@ -74,7 +74,7 @@ dependencies() {
                 MANAGER_INSTALL="apt install"
                 DEPS="{gcc,g++,gcc-multilib,g++-multilib,ninja-build,python3-pip,python3-setuptools,python3-wheel,pkg-config,mesa-common-dev,libx11-dev,libxnvctrl-dev,libdbus-1-dev}"
                 install
-                
+
                 if [[ $($SU_CMD pip3 show meson; echo $?) == 1 || $($SU_CMD pip3 show mako; echo $?) == 1 ]]; then
                     $SU_CMD pip3 install 'meson>=0.54' mako
                 fi

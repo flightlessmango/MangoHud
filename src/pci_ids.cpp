@@ -35,7 +35,7 @@ void parse_pciids()
 
         ss.str(""); ss.clear();
         ss << line;
-        
+
         switch(tabs)
         {
             case 0:
