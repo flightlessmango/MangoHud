@@ -478,6 +478,7 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_SCISSOR_TEST);
+    glDisable(GL_FRAMEBUFFER_SRGB);
 
     //#ifdef GL_POLYGON_MODE
     if (!g_IsGLES && g_GlVersion >= 200)
@@ -549,7 +550,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     if (g_GlVersion >= 300)
         glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array_object);
 
-    GLint last_polygon_mode[2]; 
+    GLint last_polygon_mode[2];
     if (!g_IsGLES && g_GlVersion >= 200)
         glGetIntegerv(GL_POLYGON_MODE, last_polygon_mode);
 
@@ -565,6 +566,8 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     GLboolean last_enable_cull_face = glIsEnabled(GL_CULL_FACE);
     GLboolean last_enable_depth_test = glIsEnabled(GL_DEPTH_TEST);
     GLboolean last_enable_scissor_test = glIsEnabled(GL_SCISSOR_TEST);
+    // Disable and store SRGB state.
+    GLboolean last_srgb_enabled = glIsEnabled(GL_FRAMEBUFFER_SRGB);
     bool clip_origin_lower_left = true;
 
     GLenum last_clip_origin = 0;
@@ -669,6 +672,9 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
 
     glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
     glScissor(last_scissor_box[0], last_scissor_box[1], (GLsizei)last_scissor_box[2], (GLsizei)last_scissor_box[3]);
+
+    if (last_srgb_enabled)
+        glEnable(GL_FRAMEBUFFER_SRGB);
 
     if (!g_IsGLES && /*g_GlVersion >= 450*/ glad_glClipControl)
         if (!clip_origin_lower_left)
