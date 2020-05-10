@@ -63,15 +63,13 @@ bool checkXNVCtrl()
     };
     // get device id at init
     int64_t pci_id;
-    char pci_device_id[16];
     nvctrl.XNVCTRLQueryTargetAttribute64(display.get(),
                     NV_CTRL_TARGET_TYPE_GPU,
                     0,
                     0,
                     NV_CTRL_PCI_ID,
                     &pci_id);
-    snprintf(pci_device_id, 16, "0x%04x", (pci_id & 0xFFFF));
-    deviceID = strtol(pci_device_id, NULL, 16);
+    deviceID = (pci_id & 0xFFFF);
 
     return true;
 }
