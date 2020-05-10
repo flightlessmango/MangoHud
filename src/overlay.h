@@ -37,6 +37,7 @@ struct swapchain_stats {
    std::string engineVersion;
    std::string deviceName;
    std::string gpuName;
+   std::string driverName;
 };
 
 struct fps_limit {

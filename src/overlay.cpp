@@ -72,6 +72,7 @@ float offset_x, offset_y, hudSpacing;
 int hudFirstRow, hudSecondRow;
 struct amdGpu amdgpu;
 struct fps_limit fps_limit_stats;
+VkPhysicalDeviceDriverProperties driverProps = {};
 int32_t deviceID;
 
 /* Mapped from VkInstace/VkPhysicalDevice */
@@ -80,6 +81,8 @@ struct instance_data {
    VkInstance instance;
 
    struct overlay_params params;
+
+   uint32_t api_version;
 
    bool first_line_printed;
 
@@ -1322,9 +1325,14 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          }
          // ImGui::SameLine();
          if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_name] && !data.gpuName.empty()){
-         ImGui::Dummy(ImVec2(0.0,5.0f));
-         ImGui::TextColored(engine_color,
-                 "%s", data.gpuName.c_str());
+            ImGui::Dummy(ImVec2(0.0,5.0f));
+            ImGui::TextColored(engine_color,
+                  "%s", data.gpuName.c_str());
+         }
+         if (params.enabled[OVERLAY_PARAM_ENABLED_vulkan_driver] && !data.driverName.empty()){
+            ImGui::Dummy(ImVec2(0.0,5.0f));
+            ImGui::TextColored(engine_color,
+                  "%s", data.driverName.c_str());
          }
          if (params.enabled[OVERLAY_PARAM_ENABLED_arch]){
             ImGui::Dummy(ImVec2(0.0,5.0f));
@@ -2353,6 +2361,26 @@ static VkResult overlay_CreateSwapchainKHR(
    ss << ")";
    swapchain_data->sw_stats.deviceName = ss.str();
    get_device_name(prop.vendorID, prop.deviceID, swapchain_data->sw_stats);
+   if(driverProps.driverID == VK_DRIVER_ID_NVIDIA_PROPRIETARY){ 
+      ss << "NVIDIA";
+      ss << " (" << ((prop.driverVersion >> 22) & 0x3ff);
+      ss << "."  << ((prop.driverVersion >> 14) & 0x0ff);
+      ss << "."  << std::setw(2) << std::setfill('0') << ((prop.driverVersion >> 6) & 0x0ff);
+      ss << ")";
+      swapchain_data->sw_stats.driverName = ss.str();
+   }
+   if(driverProps.driverID == VK_DRIVER_ID_AMD_PROPRIETARY)
+      swapchain_data->sw_stats.driverName = "AMDGPU-PRO";
+   if(driverProps.driverID == VK_DRIVER_ID_AMD_OPEN_SOURCE)
+      swapchain_data->sw_stats.driverName = "AMDVLK";
+   if(driverProps.driverID == VK_DRIVER_ID_MESA_RADV){
+      if(swapchain_data->sw_stats.deviceName.find("ACO") != std::string::npos){
+         swapchain_data->sw_stats.driverName = "RADV/ACO";
+      } else {
+         swapchain_data->sw_stats.driverName = "RADV";
+      }
+   }
+
    return result;
 }
 
@@ -2560,6 +2588,39 @@ static VkResult overlay_CreateDevice(
    VkPhysicalDeviceFeatures device_features = {};
    VkDeviceCreateInfo device_info = *pCreateInfo;
 
+   std::vector<const char*> enabled_extensions(device_info.ppEnabledExtensionNames,
+                                               device_info.ppEnabledExtensionNames +
+                                               device_info.enabledExtensionCount);
+
+   uint32_t extension_count;
+   instance_data->vtable.EnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extension_count, nullptr);
+
+   std::vector<VkExtensionProperties> available_extensions(extension_count);
+   instance_data->vtable.EnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extension_count, available_extensions.data());
+
+
+   bool can_get_driver_info = instance_data->api_version < VK_API_VERSION_1_1 ? false : true;
+
+   // VK_KHR_driver_properties became core in 1.2
+   if (instance_data->api_version < VK_API_VERSION_1_2 && can_get_driver_info) {
+      for (auto& extension : available_extensions) {
+         if (extension.extensionName == std::string(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME)) {
+            for (auto& enabled : enabled_extensions) {
+               if (enabled == std::string(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME))
+                  goto DONT;
+            }
+            enabled_extensions.push_back(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME);
+            DONT:
+            goto FOUND;
+         }
+      }
+      can_get_driver_info = false;
+      FOUND:;
+   }
+
+   device_info.enabledExtensionCount = enabled_extensions.size();
+   device_info.ppEnabledExtensionNames = enabled_extensions.data();
+
    if (pCreateInfo->pEnabledFeatures)
       device_features = *(pCreateInfo->pEnabledFeatures);
    device_info.pEnabledFeatures = &device_features;
@@ -2578,6 +2639,13 @@ static VkResult overlay_CreateDevice(
    VkLayerDeviceCreateInfo *load_data_info =
       get_device_chain_info(pCreateInfo, VK_LOADER_DATA_CALLBACK);
    device_data->set_device_loader_data = load_data_info->u.pfnSetDeviceLoaderData;
+
+   driverProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES;
+   driverProps.pNext = nullptr;
+   if (can_get_driver_info) {
+      VkPhysicalDeviceProperties2 deviceProps = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &driverProps};
+      instance_data->vtable.GetPhysicalDeviceProperties2(device_data->physical_device, &deviceProps);
+   }
 
    if (!is_blacklisted()) {
       device_map_queues(device_data, pCreateInfo);
@@ -2640,6 +2708,7 @@ static VkResult overlay_CreateInstance(
    // Advance the link info for the next element on the chain
    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
 
+
    VkResult result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);
    if (result != VK_SUCCESS) return result;
 
@@ -2668,6 +2737,8 @@ static VkResult overlay_CreateInstance(
       instance_data->engineName = engineName;
       instance_data->engineVersion = engineVersion;
    }
+
+   instance_data->api_version = pCreateInfo->pApplicationInfo ? pCreateInfo->pApplicationInfo->apiVersion : VK_API_VERSION_1_0;
 
    return result;
 }
