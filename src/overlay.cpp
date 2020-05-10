@@ -2342,23 +2342,23 @@ static VkResult overlay_CreateSwapchainKHR(
    swapchain_data->sw_stats.engineVersion = device_data->instance->engineVersion;
 
    std::stringstream ss;
-   ss << prop.deviceName;
-   if (prop.vendorID == 0x10de) {
-      ss << " (" << ((prop.driverVersion >> 22) & 0x3ff);
-      ss << "."  << ((prop.driverVersion >> 14) & 0x0ff);
-      ss << "."  << std::setw(2) << std::setfill('0') << ((prop.driverVersion >> 6) & 0x0ff);
-#ifdef _WIN32
-   } else if (prop.vendorID == 0x8086) {
-      ss << " (" << (prop.driverVersion >> 14);
-      ss << "."  << (prop.driverVersion & 0x3fff);
-   }
-#endif
-   } else {
-      ss << " (" << VK_VERSION_MAJOR(prop.driverVersion);
-      ss << "."  << VK_VERSION_MINOR(prop.driverVersion);
-      ss << "."  << VK_VERSION_PATCH(prop.driverVersion);
-   }
-   ss << ")";
+//    ss << prop.deviceName;
+//    if (prop.vendorID == 0x10de) {
+//       ss << " (" << ((prop.driverVersion >> 22) & 0x3ff);
+//       ss << "."  << ((prop.driverVersion >> 14) & 0x0ff);
+//       ss << "."  << std::setw(2) << std::setfill('0') << ((prop.driverVersion >> 6) & 0x0ff);
+// #ifdef _WIN32
+//    } else if (prop.vendorID == 0x8086) {
+//       ss << " (" << (prop.driverVersion >> 14);
+//       ss << "."  << (prop.driverVersion & 0x3fff);
+//    }
+// #endif
+//    } else {
+//       ss << " (" << VK_VERSION_MAJOR(prop.driverVersion);
+//       ss << "."  << VK_VERSION_MINOR(prop.driverVersion);
+//       ss << "."  << VK_VERSION_PATCH(prop.driverVersion);
+//    }
+//    ss << ")";
    swapchain_data->sw_stats.deviceName = ss.str();
    get_device_name(prop.vendorID, prop.deviceID, swapchain_data->sw_stats);
    if(driverProps.driverID == VK_DRIVER_ID_NVIDIA_PROPRIETARY){ 
