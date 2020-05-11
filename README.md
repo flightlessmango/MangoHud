@@ -86,7 +86,7 @@ Or alternatively, add `MANGOHUD=1` to your shell profile (Vulkan only).
 
 ## OpenGL
 
-OpenGL games may also need `dlsym` hooking. Add `MANGOHUD_DLSYM=1` your command like `MANGOHUD_DLSYM=1 mangohud %command%` for Steam.
+OpenGL games may also need `dlsym` hooking. Add `MANGOHUD_DLSYM=1` to your command like `MANGOHUD_DLSYM=1 mangohud %command%` for Steam.
 
 ## Hud configuration
 
