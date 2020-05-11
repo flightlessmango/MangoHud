@@ -78,6 +78,10 @@ Or
 
 `mangohud.x86 /path/to/app` for 32bit OpenGL
 
+For Lutris games, go to the System options in Lutris (make sure that advanced options are enabled) and add this to the `Command prefix` setting:
+
+`mangohud`
+
 For Steam games, you can add this as a launch option:
 
 `mangohud %command%`
