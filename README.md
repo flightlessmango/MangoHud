@@ -84,6 +84,10 @@ For Steam games, you can add this as a launch option:
 
 Or alternatively, add `MANGOHUD=1` to your shell profile (Vulkan only).
 
+## OpenGL
+
+OpenGL games may also need `dlsym` hooking. Add `MANGOHUD_DLSYM=1` your command like `MANGOHUD_DLSYM=1 mangohud %command%` for Steam.
+
 ## Hud configuration
 
 MangoHud comes with a config file which can be used to set configuration options globally or per application. The priorities of different config files are:
