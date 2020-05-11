@@ -86,7 +86,7 @@ Or alternatively, add `MANGOHUD=1` to your shell profile (Vulkan only).
 
 ## OpenGL
 
-OpenGL games may also need `dlsym` hooking. Add `MANGOHUD_DLSYM=1` your command like `MANGOHUD_DLSYM=1 mangohud %command%` for Steam.
+OpenGL games may also need `dlsym` hooking. Add `MANGOHUD_DLSYM=1` to your command like `MANGOHUD_DLSYM=1 mangohud %command%` for Steam.
 
 Some Linux native OpenGL games overrides LD_PRELOAD and stops MangoHud from working. You can sometimes fix this by editing LD_PRELOAD in the start script
 `LD_PRELOAD=/path/to/mangohud/lib/`
