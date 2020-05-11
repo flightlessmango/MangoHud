@@ -21,7 +21,7 @@ for os_release in ${OS_RELEASE_FILES[@]} ; do
     if [[ ! -e "${os_release}" ]]; then
         continue
     fi
-    DISTRO=$(sed -rn 's/^NAME="(.+)"/\1/p' ${os_release})
+    DISTRO=$(sed -rn 's/^NAME=(.+)/\1/p' ${os_release} | sed 's/"//g')
 done
 
 dependencies() {
