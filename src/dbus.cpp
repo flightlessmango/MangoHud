@@ -7,7 +7,7 @@
 
 using ms = std::chrono::milliseconds;
 
-struct metadata spotify;
+struct metadata main_metadata;
 struct metadata generic_mpris;
 
 typedef std::vector<std::pair<std::string, std::string>> string_pair_vec;
@@ -401,7 +401,7 @@ static void assign_metadata(metadata& meta, string_pair_vec_map& entries_map)
     }
 
     if (meta.artists.size() || !meta.title.empty())
-        meta.valid = meta.playing;
+        meta.valid = true;
 
     meta.ticker.needs_recalc = true;
     meta.ticker.pos = 0;
@@ -539,17 +539,18 @@ void dbus_get_player_property(dbusmgr::dbus_manager& dbus_mgr, string_pair_vec& 
     dbus.error_free(&error);
 }
 
-void get_spotify_metadata(dbusmgr::dbus_manager& dbus, metadata& meta)
+void get_media_player_metadata(dbusmgr::dbus_manager& dbus, const std::string& name, metadata& meta)
 {
     meta.artists.clear();
     string_pair_vec_map entries;
-    dbus_get_player_property(dbus, entries["Metadata"], "org.mpris.MediaPlayer2.spotify", "Metadata");
-    dbus_get_player_property(dbus, entries["PlaybackStatus"], "org.mpris.MediaPlayer2.spotify", "PlaybackStatus");
+    std::string dest = "org.mpris.MediaPlayer2." + name;
+    dbus_get_player_property(dbus, entries["Metadata"], dest.c_str(), "Metadata");
+    dbus_get_player_property(dbus, entries["PlaybackStatus"], dest.c_str(), "PlaybackStatus");
     assign_metadata(meta, entries);
 }
 
 namespace dbusmgr {
-void dbus_manager::init()
+void dbus_manager::init(const std::string& dest)
 {
     if (m_inited)
         return;
@@ -566,6 +567,7 @@ void dbus_manager::init()
     }
     std::cout << "Connected to D-Bus as \"" << m_dbus_ldr.bus_get_unique_name(m_dbus_conn) << "\"." << std::endl;
 
+    m_dest = dest;
     dbus_list_name_to_owner(*this, m_name_owners);
 
     connect_to_signals();
@@ -648,6 +650,8 @@ void dbus_manager::dbus_thread(dbus_manager *pmgr)
     DBusMessage *msg = nullptr;
     auto& dbus = pmgr->dbus();
 
+    const std::string main_dest = "org.mpris.MediaPlayer2." + pmgr->m_dest;
+
     // loop listening for signals being emmitted
     while (!pmgr->m_quit) {
 
@@ -687,8 +691,8 @@ void dbus_manager::dbus_thread(dbus_manager *pmgr)
                         if (source != "org.mpris.MediaPlayer2.Player")
                             break;
 
-                        if (pmgr->m_name_owners["org.mpris.MediaPlayer2.spotify"] == sender) {
-                            assign_metadata(spotify, entries_map);
+                        if (pmgr->m_name_owners[main_dest] == sender) {
+                            assign_metadata(main_metadata, entries_map);
                         } else {
                             assign_metadata(generic_mpris, entries_map);
                             if (generic_mpris.playing && !generic_mpris.valid) {
@@ -723,9 +727,9 @@ void dbus_manager::dbus_thread(dbus_manager *pmgr)
                         // did a player quit?
                         if (str[2].empty()) {
                             if (str.size() == 3
-                                && str[0] == "org.mpris.MediaPlayer2.spotify"
+                                && str[0] == main_dest
                             ) {
-                                spotify.valid = false;
+                                main_metadata.valid = false;
                             } else {
                                  auto it = pmgr->m_name_owners.find(str[0]);
                                  if (it != pmgr->m_name_owners.end()

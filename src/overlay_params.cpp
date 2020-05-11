@@ -184,6 +184,7 @@ parse_path(const char *str)
 #define parse_io_read(s) parse_unsigned(s)
 #define parse_io_write(s) parse_unsigned(s)
 #define parse_pci_dev(s) parse_str(s)
+#define parse_media_player_name(s) parse_str(s)
 
 #define parse_crosshair_color(s) parse_color(s)
 #define parse_cpu_color(s) parse_color(s)
@@ -195,6 +196,7 @@ parse_path(const char *str)
 #define parse_frametime_color(s) parse_color(s)
 #define parse_background_color(s) parse_color(s)
 #define parse_text_color(s) parse_color(s)
+#define parse_media_player_color(s) parse_color(s)
 
 static bool
 parse_help(const char *str)
@@ -339,15 +341,17 @@ parse_overlay_config(struct overlay_params *params,
    params->background_alpha = 0.5;
    params->alpha = 1.0;
    params->time_format = "%T";
-   params->gpu_color = strtol("2e9762", NULL, 16);
-   params->cpu_color = strtol("2e97cb", NULL, 16);
-   params->vram_color = strtol("ad64c1", NULL, 16);
-   params->ram_color = strtol("c26693", NULL, 16);
-   params->engine_color = strtol("eb5b5b", NULL, 16);
-   params->io_color = strtol("a491d3", NULL, 16);
-   params->frametime_color = strtol("00ff00", NULL, 16);
-   params->background_color = strtol("020202", NULL, 16);
-   params->text_color = strtol("ffffff", NULL, 16);
+   params->gpu_color = 0x2e9762;
+   params->cpu_color = 0x2e97cb;
+   params->vram_color = 0xad64c1;
+   params->ram_color = 0xc26693;
+   params->engine_color = 0xeb5b5b;
+   params->io_color = 0xa491d3;
+   params->frametime_color = 0x00ff00;
+   params->background_color = 0x020202;
+   params->text_color = 0xffffff;
+   params->media_player_color = 0xffffff;
+   params->media_player_name = "spotify";
 
 #ifdef HAVE_X11
    params->toggle_hud = XK_F12;
@@ -400,7 +404,7 @@ parse_overlay_config(struct overlay_params *params,
       parse_overlay_env(params, env);
 
    // Convert from 0xRRGGBB to ImGui's format
-   std::array<unsigned *, 10> colors = {
+   std::array<unsigned *, 11> colors = {
       &params->crosshair_color,
       &params->cpu_color,
       &params->gpu_color,
@@ -411,6 +415,7 @@ parse_overlay_config(struct overlay_params *params,
       &params->background_color,
       &params->frametime_color,
       &params->text_color,
+      &params->media_player_color,
    };
 
    for (auto color : colors){
@@ -445,14 +450,14 @@ parse_overlay_config(struct overlay_params *params,
 #ifdef HAVE_DBUS
    if (params->enabled[OVERLAY_PARAM_ENABLED_media_player]) {
       try {
-         dbusmgr::dbus_mgr.init();
-         get_spotify_metadata(dbusmgr::dbus_mgr, spotify);
+         dbusmgr::dbus_mgr.init(params->media_player_name);
+         get_media_player_metadata(dbusmgr::dbus_mgr, params->media_player_name, main_metadata);
       } catch (std::runtime_error& e) {
          std::cerr << "Failed to get initial Spotify metadata: " << e.what() << std::endl;
       }
    } else {
       dbusmgr::dbus_mgr.deinit();
-      spotify.valid = false;
+      main_metadata.valid = false;
    }
 #endif
 

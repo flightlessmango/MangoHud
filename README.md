@@ -122,7 +122,7 @@ A partial list of parameters are below. See the config file for a complete list.
 | `toggle_hud=`<br>`toggle_logging=` | Modifiable toggle hotkeys. Default are F12 and F2, respectively.                      |
 | `reload_cfg=`                      | Change keybind for reloading the config                                               |
 | `time`<br>`time_format=%T`         | Displays local time. See [std::put_time](https://en.cppreference.com/w/cpp/io/manip/put_time) for formatting help. |
-| `gpu_color`<br>`gpu_color`<br>`vram_color`<br>`ram_color`<br>`io_color`<br>`engine_color`<br>`frametime_color`<br>`background_color`<br>`text_color`         | Change default colors: `gpu_color=RRGGBB`|
+| `gpu_color`<br>`gpu_color`<br>`vram_color`<br>`ram_color`<br>`io_color`<br>`engine_color`<br>`frametime_color`<br>`background_color`<br>`text_color`<br>`media_player_color`         | Change default colors: `gpu_color=RRGGBB`|
 | `alpha`                            | Set the opacity of all text and frametime graph `0.0-1.0`                             |
 | `background_alpha`                 | Set the opacity of the background `0.0-1.0`                                           |
 | `read_cfg`                         | Add to MANGOHUD_CONFIG as first parameter to also load config file. Otherwise only MANGOHUD_CONFIG parameters are used. |
@@ -130,7 +130,8 @@ A partial list of parameters are below. See the config file for a complete list.
 | `font_file`                        | Change default font (set location to .TTF/.OTF file )                                 |
 | `log_duration`                     | Set amount of time the logging will run for (in seconds)                              |
 | `vsync`<br> `gl_vsync`             | Set vsync for OpenGL or Vulkan                                                        |
-| `media_player`                     | Show Spotify metadata                                                                 |
+| `media_player`                     | Show media player metadata                                                            |
+| `media_player_name`                | Set main media player DBus service name without the `org.mpris.MediaPlayer2` part, like `spotify`, `vlc`, `audacious` or `cantata`. Defaults to `spotify`. |
 | `io_read`<br> `io_write`           | Show non-cached IO read/write, in MiB/s                                               |
 | `pci_dev`                          | Select GPU device in multi-gpu setups                                                 |
 | `version`                          | Shows current mangohud version                                                        |

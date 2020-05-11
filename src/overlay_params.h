@@ -80,6 +80,8 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(alpha)                       \
    OVERLAY_PARAM_CUSTOM(log_duration)                \
    OVERLAY_PARAM_CUSTOM(pci_dev)                     \
+   OVERLAY_PARAM_CUSTOM(media_player_name)           \
+   OVERLAY_PARAM_CUSTOM(media_player_color)          \
    OVERLAY_PARAM_CUSTOM(help)
 
 enum overlay_param_position {
@@ -122,6 +124,7 @@ struct overlay_params {
    int gl_vsync;
    int log_duration;
    unsigned crosshair_color, cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color;
+   unsigned media_player_color;
    unsigned tableCols;
    float font_size;
    float background_alpha, alpha;
@@ -130,6 +133,7 @@ struct overlay_params {
    KeySym reload_cfg;
    std::string time_format, output_file, font_file;
    std::string pci_dev;
+   std::string media_player_name;
 
    std::string config_file_path;
    std::unordered_map<std::string,std::string> options;

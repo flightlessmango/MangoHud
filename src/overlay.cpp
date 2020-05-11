@@ -1090,7 +1090,7 @@ float get_ticker_limited_pos(float pos, float tw, float& left_limit, float& righ
 }
 
 #ifdef HAVE_DBUS
-void render_mpris_metadata(swapchain_stats& data, metadata& meta, uint64_t frame_timing)
+void render_mpris_metadata(swapchain_stats& data, const ImVec4& color, metadata& meta, uint64_t frame_timing, bool is_main)
 {
    scoped_lock lk(meta.mutex);
    if (meta.valid) {
@@ -1124,17 +1124,22 @@ void render_mpris_metadata(swapchain_stats& data, metadata& meta, uint64_t frame
 
       new_pos = get_ticker_limited_pos(meta.ticker.pos, meta.ticker.tw0, left_limit, right_limit);
       ImGui::SetCursorPosX(new_pos);
-      ImGui::Text("%s", meta.title.c_str());
+      ImGui::TextColored(color, "%s", meta.title.c_str());
 
       new_pos = get_ticker_limited_pos(meta.ticker.pos, meta.ticker.tw1, left_limit, right_limit);
       ImGui::SetCursorPosX(new_pos);
-      ImGui::Text("%s", meta.artists.c_str());
+      ImGui::TextColored(color, "%s", meta.artists.c_str());
       //ImGui::NewLine();
       if (!meta.album.empty()) {
          new_pos = get_ticker_limited_pos(meta.ticker.pos, meta.ticker.tw2, left_limit, right_limit);
          ImGui::SetCursorPosX(new_pos);
-         ImGui::Text("%s", meta.album.c_str());
+         ImGui::TextColored(color, "%s", meta.album.c_str());
       }
+
+      if (is_main && main_metadata.valid && !main_metadata.playing) {
+         ImGui::TextColored(color, "(paused)");
+      }
+
       ImGui::PopFont();
       ImGui::PopStyleVar();
    }
@@ -1378,8 +1383,9 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       }
 
 #ifdef HAVE_DBUS
-      render_mpris_metadata(data, spotify, frame_timing);
-      render_mpris_metadata(data, generic_mpris, frame_timing);
+      auto media_color = ImGui::ColorConvertU32ToFloat4(params.media_player_color);
+      render_mpris_metadata(data, media_color, main_metadata, frame_timing, true);
+      render_mpris_metadata(data, media_color, generic_mpris, frame_timing, false);
 #endif
 
       window_size = ImVec2(window_size.x, ImGui::GetCursorPosY() + 10.0f);

@@ -46,7 +46,7 @@ struct DBusSignal
     SignalType type;
 };
 
-extern struct metadata spotify;
+extern struct metadata main_metadata;
 extern struct metadata generic_mpris;
 
 namespace dbusmgr {
@@ -82,7 +82,7 @@ namespace dbusmgr {
 
         ~dbus_manager();
 
-        void init();
+        void init(const std::string& dest);
         void deinit();
         void add_callback(CBENUM type, callback_func func);
         void connect_to_signals();
@@ -111,6 +111,7 @@ namespace dbusmgr {
         std::map<CBENUM, callback_func> m_callbacks;
         libdbus_loader m_dbus_ldr;
         std::unordered_map<std::string, std::string> m_name_owners;
+        std::string m_dest;
 
         const std::array<DBusSignal, 2> m_signals {{
             { "org.freedesktop.DBus", "NameOwnerChanged", ST_NAMEOWNERCHANGED },
@@ -122,4 +123,4 @@ namespace dbusmgr {
     extern dbus_manager dbus_mgr;
 }
 
-void get_spotify_metadata(dbusmgr::dbus_manager& dbus, metadata& meta);
+void get_media_player_metadata(dbusmgr::dbus_manager& dbus, const std::string& name, metadata& meta);
