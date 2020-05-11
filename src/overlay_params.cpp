@@ -453,7 +453,7 @@ parse_overlay_config(struct overlay_params *params,
          dbusmgr::dbus_mgr.init(params->media_player_name);
          get_media_player_metadata(dbusmgr::dbus_mgr, params->media_player_name, main_metadata);
       } catch (std::runtime_error& e) {
-         std::cerr << "Failed to get initial Spotify metadata: " << e.what() << std::endl;
+         std::cerr << "MANGOHUD: Failed to get initial media player metadata: " << e.what() << std::endl;
       }
    } else {
       dbusmgr::dbus_mgr.deinit();
