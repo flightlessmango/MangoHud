@@ -1,4 +1,4 @@
-#include <vector>
+#include <array>
 #include <string>
 #include <algorithm>
 
@@ -23,7 +23,7 @@ static std::string get_proc_name() {
 }
 
 static bool check_blacklisted() {
-    std::vector<std::string> blacklist {
+    static const std::array<const char *, 15> blacklist {
         "Battle.net.exe",
         "BethesdaNetLauncher.exe",
         "EpicGamesLauncher.exe",
@@ -48,7 +48,7 @@ static bool check_blacklisted() {
     return blacklisted;
 }
 
-bool& is_blacklisted() {
+bool is_blacklisted() {
     static bool blacklisted = check_blacklisted();
     return blacklisted;
 }
