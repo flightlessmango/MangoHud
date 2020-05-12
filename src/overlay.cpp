@@ -2309,17 +2309,17 @@ static struct overlay_draw *before_present(struct swapchain_data *swapchain_data
    return draw;
 }
 
-void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats){
-   if (!pci_ids[vendorID].second[deviceID].desc.empty()){
-      size_t position = pci_ids[vendorID].second[deviceID].desc.find("[");
-      string desc = pci_ids[vendorID].second[deviceID].desc.substr(position);
+void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats)
+{
+   string desc = pci_ids[vendorID].second[deviceID].desc;
+   size_t position = desc.find("[");
+   if (position != std::string::npos) {
+      desc = desc.substr(position);
       string chars = "[]";
       for (char c: chars)
          desc.erase(remove(desc.begin(), desc.end(), c), desc.end());
-      sw_stats.gpuName = desc;
-   } else {
-      sw_stats.gpuName = "";
    }
+   sw_stats.gpuName = desc;
 }
 
 static VkResult overlay_CreateSwapchainKHR(
