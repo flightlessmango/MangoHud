@@ -10,7 +10,8 @@ using namespace std;
 
 string os, cpu, gpu, ram, kernel, driver;
 bool sysInfoFetched = false;
-int gpuLoadLog = 0, cpuLoadLog = 0, log_period = 0, elapsedLog;
+int gpuLoadLog = 0, cpuLoadLog = 0, log_period = 0;
+int64_t elapsedLog;
 
 struct logData{
   double fps;
