@@ -17,7 +17,7 @@ struct logData{
   double fps;
   int cpu;
   int gpu;
-  int previous;
+  uint64_t previous;
 };
 
 double fps;
