@@ -1,5 +1,6 @@
 #include <string>
 #include <stdint.h>
+#include <vector>
 #include "imgui.h"
 #include "overlay_params.h"
 #include "iostats.h"
@@ -23,6 +24,8 @@ struct swapchain_stats {
    uint64_t last_present_time;
    unsigned n_frames_since_update;
    uint64_t last_fps_update;
+   ImVec2 main_window_pos;
+
    struct {
       int32_t major;
       int32_t minor;
@@ -48,10 +51,20 @@ struct fps_limit {
    int64_t sleepTime;
 };
 
+struct benchmark_stats {
+   float ninety;
+   float avg;
+   float oneP;
+   float total;
+   std::vector<float> fps_data;
+};
+
 extern struct fps_limit fps_limit_stats;
 extern int32_t deviceID;
 
-void position_layer(struct overlay_params& params, ImVec2 window_size);
+extern struct benchmark_stats benchmark;
+
+void position_layer(struct swapchain_stats& data, struct overlay_params& params, ImVec2 window_size);
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan);
 void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID);
 void init_gpu_stats(uint32_t& vendorID, overlay_params& params);
@@ -61,3 +74,4 @@ void init_system_info(void);
 void FpsLimiter(struct fps_limit& stats);
 void imgui_custom_style(struct overlay_params& params);
 void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats);
+void calculate_benchmark_data(void);

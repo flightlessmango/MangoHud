@@ -26,7 +26,7 @@ ofstream out;
 const char* log_period_env = std::getenv("LOG_PERIOD");
 int num;
 bool loggingOn;
-uint64_t log_start;
+uint64_t log_start, log_end;
 
 void writeFile(string filename){
   out.open(filename, ios::out | ios::app);
@@ -48,7 +48,6 @@ void logging(void *params_void){
                 to_string(1 + log_time->tm_hour) + "-" +
                 to_string(1 + log_time->tm_min) + "-" +
                 to_string(1 + log_time->tm_sec);
-  log_start = os_time_get();
   out.open(params->output_file + date, ios::out | ios::app);
   out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver" << endl;
   out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << endl;

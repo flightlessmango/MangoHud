@@ -74,6 +74,7 @@ struct amdGpu amdgpu;
 struct fps_limit fps_limit_stats;
 VkPhysicalDeviceDriverProperties driverProps = {};
 int32_t deviceID;
+struct benchmark_stats benchmark;
 
 /* Mapped from VkInstace/VkPhysicalDevice */
 struct instance_data {
@@ -883,18 +884,25 @@ void check_keybinds(struct overlay_params& params){
    elapsedF12 = (double)(now - last_f12_press);
    elapsedReloadCfg = (double)(now - reload_cfg_press);
 
-  if (elapsedF2 >= 500000 && !params.output_file.empty()){
+  if (elapsedF2 >= 500000){
 #ifdef HAVE_X11
      pressed = key_is_pressed(params.toggle_logging);
 #else
      pressed = false;
 #endif
-     if (pressed){
+     if (pressed && (now - log_end) / 1000000 > 11){
        last_f2_press = now;
-       log_start = now;
-       loggingOn = !loggingOn;
+       if(loggingOn){
+         log_end = now;
+         std::thread(calculate_benchmark_data).detach();
+       } else {
+         benchmark.fps_data.clear();
+         log_start = now;
+       }
 
-       if (loggingOn && log_period != 0)
+       loggingOn = !loggingOn;
+       
+       if (loggingOn && log_period != 0 && !params.output_file.empty())
          std::thread(logging, &params).detach();
 
      }
@@ -925,12 +933,35 @@ void check_keybinds(struct overlay_params& params){
    }
 }
 
+void calculate_benchmark_data(){
+   vector<float> sorted;
+   sorted = benchmark.fps_data;
+   sort(sorted.begin(), sorted.end());
+   // 97th percentile
+   int index = sorted.size() * 0.97;
+   benchmark.ninety = sorted[index];
+   // avg
+   benchmark.total = 0.f;
+   for (auto fps_ : sorted){
+      benchmark.total = benchmark.total + fps_;
+   }
+   benchmark.avg = benchmark.total / sorted.size();
+   // 1% min
+   benchmark.total = 0.f;
+   for (size_t i = 0; i < sorted.size() * 0.1; i++){
+      benchmark.total = sorted[i];
+   }
+   benchmark.oneP = benchmark.total;   
+}
+
 void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
    uint32_t f_idx = sw_stats.n_frames % ARRAY_SIZE(sw_stats.frames_stats);
    uint64_t now = os_time_get(); /* us */
 
    double elapsed = (double)(now - sw_stats.last_fps_update); /* us */
    fps = 1000000.0f * sw_stats.n_frames_since_update / elapsed;
+   if (loggingOn)
+      benchmark.fps_data.push_back(fps);
 
    if (sw_stats.last_present_time) {
         sw_stats.frames_stats[f_idx].stats[OVERLAY_PLOTS_frame_timing] =
@@ -1016,7 +1047,7 @@ static float get_time_stat(void *_data, int _idx)
    return data->frames_stats[idx].stats[data->stat_selector] / data->time_dividor;
 }
 
-void position_layer(struct overlay_params& params, ImVec2 window_size)
+void position_layer(struct swapchain_stats& data, struct overlay_params& params, ImVec2 window_size)
 {
    unsigned width = ImGui::GetIO().DisplaySize.x;
    unsigned height = ImGui::GetIO().DisplaySize.y;
@@ -1029,29 +1060,26 @@ void position_layer(struct overlay_params& params, ImVec2 window_size)
    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,-3));
    ImGui::PushStyleVar(ImGuiStyleVar_Alpha, params.alpha);
-
    switch (params.position) {
    case LAYER_POSITION_TOP_LEFT:
-      ImGui::SetNextWindowPos(ImVec2(margin + params.offset_x, margin + params.offset_y), ImGuiCond_Always);
+      data.main_window_pos = ImVec2(margin + params.offset_x, margin + params.offset_y);
+      ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
       break;
    case LAYER_POSITION_TOP_RIGHT:
-      ImGui::SetNextWindowPos(ImVec2(width - window_size.x - margin + params.offset_x, margin + params.offset_y),
-                              ImGuiCond_Always);
+      data.main_window_pos = ImVec2(width - window_size.x - margin + params.offset_x, margin + params.offset_y);
+      ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
       break;
    case LAYER_POSITION_BOTTOM_LEFT:
-      ImGui::SetNextWindowPos(ImVec2(margin + params.offset_x, height - window_size.y - margin + params.offset_y),
-                              ImGuiCond_Always);
+      data.main_window_pos = ImVec2(margin + params.offset_x, height - window_size.y - margin + params.offset_y);
+      ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
       break;
    case LAYER_POSITION_BOTTOM_RIGHT:
-      ImGui::SetNextWindowPos(ImVec2(width - window_size.x - margin + params.offset_x,
-                                     height - window_size.y - margin + params.offset_y),
-                              ImGuiCond_Always);
+      data.main_window_pos = ImVec2(width - window_size.x - margin + params.offset_x, height - window_size.y - margin + params.offset_y);
+      ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
       break;
    case LAYER_POSITION_TOP_CENTER:
-      printf("%f\n", width - window_size.x);
-      ImGui::SetNextWindowPos(ImVec2((width / 2) - (window_size.x / 2),
-                                     margin + params.offset_y),
-                              ImGuiCond_Always);
+      data.main_window_pos = ImVec2((width / 2) - (window_size.x / 2), margin + params.offset_y);
+      ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
       break;
    }
 }
@@ -1148,6 +1176,51 @@ void render_mpris_metadata(swapchain_stats& data, const ImVec4& color, metadata&
 }
 #endif
 
+void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, unsigned height, uint64_t now){
+   // TODO, FIX LOG_DURATION FOR BENCHMARK
+   ImGui::SetNextWindowSize(ImVec2(window_size.x, 5 * params.font_size + 10.0f), ImGuiCond_Always);
+   if (height - (window_size.y + data.main_window_pos.y + window_size.y + 5) < 0)
+      ImGui::SetNextWindowPos(ImVec2(data.main_window_pos.x, data.main_window_pos.y - (5 * params.font_size) - 15), ImGuiCond_Always);
+   else
+      ImGui::SetNextWindowPos(ImVec2(data.main_window_pos.x, data.main_window_pos.y + window_size.y + 5), ImGuiCond_Always);
+
+   vector<pair<string, float>> benchmark_data = {{"97%", benchmark.ninety}, {"AVG", benchmark.avg}, {"1% ", benchmark.oneP}};
+   float display_time = float(now - log_end) / 1000000;
+   float display_for = 10.0f;
+   float alpha;
+   if (display_for >= display_time){
+      alpha = float(now - log_end) / 1000000 * params.background_alpha;
+      if (alpha >= params.background_alpha){
+         ImGui::SetNextWindowBgAlpha(0.5f);
+      }else{
+         ImGui::SetNextWindowBgAlpha(alpha);
+      }
+   } else {
+      alpha = 6.0 - float(now - log_end) / 1000000 * params.background_alpha;
+      if (alpha >= params.background_alpha){
+         ImGui::SetNextWindowBgAlpha(0.5f);
+      }else{
+         ImGui::SetNextWindowBgAlpha(alpha);
+      }
+   }
+   ImGui::Begin("Benchmark", &open, ImGuiWindowFlags_NoDecoration);
+   string finished = "Logging Finished";
+   ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2 )- (ImGui::CalcTextSize(finished.c_str()).x / 2));
+   ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), finished.c_str());
+   ImGui::Dummy(ImVec2(0.0f, 8.0f));
+   char duration[20];
+   sprintf(duration, "Duration: %.1fs", float(log_end - log_start) / 1000000);
+   ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2 )- (ImGui::CalcTextSize(duration).x / 2));
+   ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), duration);
+   for (auto& data_ : benchmark_data){
+      char buffer[20];
+      sprintf(buffer, "%s %.1f", data_.first.c_str(), data_.second);
+      ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2 )- (ImGui::CalcTextSize(buffer).x / 2));
+      ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), "%s %.1f", data_.first.c_str(), data_.second);
+   }
+   ImGui::End();
+}
+
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan)
 {
    uint32_t f_idx = (data.n_frames - 1) % ARRAY_SIZE(data.frames_stats);
@@ -1156,6 +1229,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    window_size = ImVec2(params.width, params.height);
    unsigned width = ImGui::GetIO().DisplaySize.x;
    unsigned height = ImGui::GetIO().DisplaySize.y;
+   uint64_t now = os_time_get();
 
    if (!params.no_display){
       ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
@@ -1349,7 +1423,6 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       }
 
       if (loggingOn && log_period == 0){
-         uint64_t now = os_time_get();
          elapsedLog = (double)(now - log_start);
          if ((elapsedLog) >= params.log_duration * 1000000)
             loggingOn = false;
@@ -1390,24 +1463,24 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       render_mpris_metadata(data, media_color, generic_mpris, frame_timing, false);
 #endif
 
+      if(loggingOn)
+         ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(data.main_window_pos.x + window_size.x - 15, data.main_window_pos.y + 15), 10, params.engine_color, 20);
+
       window_size = ImVec2(window_size.x, ImGui::GetCursorPosY() + 10.0f);
       ImGui::End();
-      if(loggingOn){
-         ImGui::SetNextWindowBgAlpha(0.0);
-         ImGui::SetNextWindowSize(ImVec2(params.font_size * 13, params.font_size * 13), ImGuiCond_Always);
-         ImGui::SetNextWindowPos(ImVec2(width - params.font_size * 13,
-                                       0),
-                                       ImGuiCond_Always);
-         ImGui::Begin("Logging", &open, ImGuiWindowFlags_NoDecoration);
-         ImGui::Text("Logging...");
-         ImGui::Text("Elapsed: %isec", int((elapsedLog) / 1000000));
-         ImGui::End();
+      if (loggingOn && 'params.log_duration '&& (now - log_start) >= params.log_duration * 1000000){
+         loggingOn = false;
+         log_end = now;
+         std::thread(calculate_benchmark_data).detach();
       }
+      if((now - log_end) / 1000000 < 12)
+         render_benchmark(data, params, window_size, height, now);
+
       if (params.enabled[OVERLAY_PARAM_ENABLED_crosshair]){
          ImGui::SetNextWindowBgAlpha(0.0);
          ImGui::SetNextWindowSize(ImVec2(width, height), ImGuiCond_Always);
          ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
-         ImGui::Begin("Logging", &open, ImGuiWindowFlags_NoDecoration);
+         ImGui::Begin("Crosshair", &open, ImGuiWindowFlags_NoDecoration);
          ImVec2 horiz = ImVec2(width / 2 - (params.crosshair_size / 2), height / 2);
          ImVec2 vert = ImVec2(width / 2, height / 2 - (params.crosshair_size / 2));
          ImGui::GetWindowDrawList()->AddLine(horiz,
@@ -1430,7 +1503,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
    ImGui::NewFrame();
    {
       scoped_lock lk(instance_data->notifier.mutex);
-      position_layer(instance_data->params, data->window_size);
+      position_layer(data->sw_stats, instance_data->params, data->window_size);
       render_imgui(data->sw_stats, instance_data->params, data->window_size, true);
    }
    ImGui::PopStyleVar(3);
