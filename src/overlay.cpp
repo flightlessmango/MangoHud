@@ -1178,9 +1178,9 @@ void render_mpris_metadata(swapchain_stats& data, const ImVec4& color, metadata&
 
 void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, unsigned height, uint64_t now){
    // TODO, FIX LOG_DURATION FOR BENCHMARK
-   ImGui::SetNextWindowSize(ImVec2(window_size.x, 5 * params.font_size + 10.0f + 50), ImGuiCond_Always);
+   ImGui::SetNextWindowSize(ImVec2(window_size.x, 5 * params.font_size + 10.0f + 58), ImGuiCond_Always);
    if (height - (window_size.y + data.main_window_pos.y + window_size.y + 5) < 0)
-      ImGui::SetNextWindowPos(ImVec2(data.main_window_pos.x, data.main_window_pos.y - (5 * params.font_size) - 15), ImGuiCond_Always);
+      ImGui::SetNextWindowPos(ImVec2(data.main_window_pos.x, data.main_window_pos.y - (5 * params.font_size) - 73), ImGuiCond_Always);
    else
       ImGui::SetNextWindowPos(ImVec2(data.main_window_pos.x, data.main_window_pos.y + window_size.y + 5), ImGuiCond_Always);
 
@@ -1224,6 +1224,7 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
    plotColor.w = alpha;
    ImGui::PushStyleColor(ImGuiCol_PlotLines, plotColor);
    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0, 0.0, 0.0, alpha / 0.8));
+   ImGui::Dummy(ImVec2(0.0f, 8.0f));
    ImGui::PlotLines("", benchmark.fps_data.data(), benchmark.fps_data.size(), 0, "", 0.0f, max + 10, ImVec2(ImGui::GetContentRegionAvailWidth(), 50));
    ImGui::PopStyleColor(2);
    ImGui::End();
