@@ -12,6 +12,7 @@
 #include "overlay_params.h"
 #include "overlay.h"
 #include "config.h"
+#include "string_utils.h"
 
 #include "mesa/util/os_socket.h"
 
@@ -83,7 +84,8 @@ parse_string_to_keysym_vec(const char *str)
    {
       std::stringstream keyStrings(str);
       std::string ks;
-      while (std::getline(keyStrings, ks, ' ')) {
+      while (std::getline(keyStrings, ks, '+')) {
+         trim(ks);
          KeySym xk = g_x11->XStringToKeysym(ks.c_str());
          if (xk)
             keys.push_back(xk);
