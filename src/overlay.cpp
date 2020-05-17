@@ -1476,7 +1476,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
 
       window_size = ImVec2(window_size.x, ImGui::GetCursorPosY() + 10.0f);
       ImGui::End();
-      if (loggingOn && 'params.log_duration '&& (now - log_start) >= params.log_duration * 1000000){
+      if (loggingOn && params.log_duration && (now - log_start) >= params.log_duration * 1000000){
          loggingOn = false;
          log_end = now;
          std::thread(calculate_benchmark_data).detach();
