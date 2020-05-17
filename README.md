@@ -116,7 +116,7 @@ A partial list of parameters are below. See the config file for a complete list.
 | `crosshair`                        | Adds a crosshair overlay at the centre of the screen                                  |
 | `font_size=`                       | Customizeable font size (default=24)                                                  |
 | `width=`<br>`height=`              | Customizeable hud dimensions (in pixels)                                              |
-| `position=`                        | Location of the hud: `top-left` (default), `top-right`, `bottom-left`, `bottom-right` |
+| `position=`                        | Location of the hud: `top-left` (default), `top-right`, `bottom-left`, `bottom-right`, `top-center` |
 | `offset_x` `offset_y`              | Hud position offsets                                                                  |
 | `no_display`                       | Hide the hud by default                                                               |
 | `toggle_hud=`<br>`toggle_logging=` | Modifiable toggle hotkeys. Default are F12 and F2, respectively.                      |
