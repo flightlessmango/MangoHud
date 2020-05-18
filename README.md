@@ -1,6 +1,6 @@
 # MangoHud
 
-A modification of the Mesa Vulkan overlay. Including GUI improvements, temperature reporting, and logging capabilities.
+A Vulkan and OpenGL overlay for monitoring FPS, temperatures, CPU/GPU load and more.
 
 #### Example:
 ![](assets/overlay_example.gif)
