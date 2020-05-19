@@ -1178,8 +1178,9 @@ void render_mpris_metadata(swapchain_stats& data, const ImVec4& color, metadata&
 
 void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, unsigned height, uint64_t now){
    // TODO, FIX LOG_DURATION FOR BENCHMARK
+   cout << height - ( 5 * params.font_size + 10.0f + 58) << endl;
    ImGui::SetNextWindowSize(ImVec2(window_size.x, 5 * params.font_size + 10.0f + 58), ImGuiCond_Always);
-   if (height - (window_size.y + data.main_window_pos.y + window_size.y + 5) < 0)
+   if (height - (window_size.y + data.main_window_pos.y + 5) < 0)
       ImGui::SetNextWindowPos(ImVec2(data.main_window_pos.x, data.main_window_pos.y - (5 * params.font_size) - 73), ImGuiCond_Always);
    else
       ImGui::SetNextWindowPos(ImVec2(data.main_window_pos.x, data.main_window_pos.y + window_size.y + 5), ImGuiCond_Always);
