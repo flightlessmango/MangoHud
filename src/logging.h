@@ -30,9 +30,13 @@ uint64_t log_start, log_end;
 
 void writeFile(string filename){
   out.open(filename, ios::out | ios::app);
+  out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver" << endl;
+  out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << endl;
 
-  for (size_t i = 0; i < logArray.size(); i++)
+  for (size_t i = 0; i < logArray.size(); i++){
+    cout << logArray[i].fps << endl;
     out << logArray[i].fps << "," << logArray[i].cpu  << "," << logArray[i].gpu << "," << logArray[i].previous << endl;
+  }
 
   out.close();
   logArray.clear();
@@ -42,16 +46,10 @@ void logging(void *params_void){
   overlay_params *params = reinterpret_cast<overlay_params *>(params_void);
   time_t now_log = time(0);
   tm *log_time = localtime(&now_log);
-  string date = to_string(log_time->tm_year + 1900) + "-" +
-                to_string(1 + log_time->tm_mon) + "-" +
-                to_string(log_time->tm_mday) + "_" +
-                to_string(1 + log_time->tm_hour) + "-" +
-                to_string(1 + log_time->tm_min) + "-" +
-                to_string(1 + log_time->tm_sec);
-  out.open(params->output_file + date, ios::out | ios::app);
-  out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver" << endl;
-  out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << endl;
-  out.close();
+  std::ostringstream buffer;
+  buffer << std::put_time(log_time, "%Y-%m-%d_%H-%M-%S");
+  string date = buffer.str();
+
 
   while (loggingOn){
     uint64_t now = os_time_get();
