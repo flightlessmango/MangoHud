@@ -33,10 +33,8 @@ void writeFile(string filename){
   out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver" << endl;
   out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << endl;
 
-  for (size_t i = 0; i < logArray.size(); i++){
-    cout << logArray[i].fps << endl;
+  for (size_t i = 0; i < logArray.size(); i++)
     out << logArray[i].fps << "," << logArray[i].cpu  << "," << logArray[i].gpu << "," << logArray[i].previous << endl;
-  }
 
   out.close();
   logArray.clear();
