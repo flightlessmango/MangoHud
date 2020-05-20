@@ -1486,21 +1486,6 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       if((now - log_end) / 1000000 < 12)
          render_benchmark(data, params, window_size, height, now);
 
-      if (params.enabled[OVERLAY_PARAM_ENABLED_crosshair]){
-         ImGui::SetNextWindowBgAlpha(0.0);
-         ImGui::SetNextWindowSize(ImVec2(width, height), ImGuiCond_Always);
-         ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
-         ImGui::Begin("Crosshair", &open, ImGuiWindowFlags_NoDecoration);
-         ImVec2 horiz = ImVec2(width / 2 - (params.crosshair_size / 2), height / 2);
-         ImVec2 vert = ImVec2(width / 2, height / 2 - (params.crosshair_size / 2));
-         ImGui::GetWindowDrawList()->AddLine(horiz,
-            ImVec2(horiz.x + params.crosshair_size, horiz.y + 0),
-            params.crosshair_color, 2.0f);
-         ImGui::GetWindowDrawList()->AddLine(vert,
-            ImVec2(vert.x + 0, vert.y + params.crosshair_size),
-            params.crosshair_color, 2.0f);
-         ImGui::End();
-      }
    }
 }
 

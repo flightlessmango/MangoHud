@@ -33,7 +33,6 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(gpu_stats)                     \
    OVERLAY_PARAM_BOOL(ram)                           \
    OVERLAY_PARAM_BOOL(vram)                          \
-   OVERLAY_PARAM_BOOL(crosshair)                     \
    OVERLAY_PARAM_BOOL(time)                          \
    OVERLAY_PARAM_BOOL(full)                          \
    OVERLAY_PARAM_BOOL(read_cfg)                      \
@@ -61,10 +60,8 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(toggle_hud)                  \
    OVERLAY_PARAM_CUSTOM(toggle_logging)              \
    OVERLAY_PARAM_CUSTOM(reload_cfg)                  \
-   OVERLAY_PARAM_CUSTOM(crosshair_size)              \
    OVERLAY_PARAM_CUSTOM(offset_x)                    \
    OVERLAY_PARAM_CUSTOM(offset_y)                    \
-   OVERLAY_PARAM_CUSTOM(crosshair_color)             \
    OVERLAY_PARAM_CUSTOM(background_alpha)            \
    OVERLAY_PARAM_CUSTOM(time_format)                 \
    OVERLAY_PARAM_CUSTOM(io_read)                     \
@@ -113,7 +110,6 @@ struct overlay_params {
    int control;
    uint32_t fps_sampling_period; /* us */
    uint32_t fps_limit;
-   uint32_t crosshair_size;
    bool help;
    bool no_display;
    bool full;
@@ -124,7 +120,7 @@ struct overlay_params {
    unsigned vsync;
    int gl_vsync;
    int log_duration;
-   unsigned crosshair_color, cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color;
+   unsigned cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color;
    unsigned media_player_color;
    unsigned tableCols;
    float font_size;
