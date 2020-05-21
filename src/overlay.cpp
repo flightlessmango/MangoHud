@@ -1190,14 +1190,14 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
    float display_for = 10.0f;
    float alpha;
    if (display_for >= display_time){
-      alpha = float(now - log_end) / 1000000 * params.background_alpha;
+      alpha = display_time * params.background_alpha;
       if (alpha >= params.background_alpha){
          ImGui::SetNextWindowBgAlpha(0.5f);
       }else{
          ImGui::SetNextWindowBgAlpha(alpha);
       }
    } else {
-      alpha = 6.0 - float(now - log_end) / 1000000 * params.background_alpha;
+      alpha = 6.0 - display_time * params.background_alpha;
       if (alpha >= params.background_alpha){
          ImGui::SetNextWindowBgAlpha(0.5f);
       }else{
