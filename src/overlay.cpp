@@ -70,7 +70,6 @@ bool open = false;
 string gpuString;
 float offset_x, offset_y, hudSpacing;
 int hudFirstRow, hudSecondRow;
-struct amdGpu amdgpu;
 struct fps_limit fps_limit_stats;
 VkPhysicalDeviceDriverProperties driverProps = {};
 int32_t deviceID;
@@ -811,22 +810,24 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
            std::cerr << "using amdgpu path: " << path << std::endl;
 #endif
 
-         if (!amdGpuFile)
-            amdGpuFile = fopen((path + "/gpu_busy_percent").c_str(), "r");
-         if (!amdGpuVramTotalFile)
-            amdGpuVramTotalFile = fopen((path + "/mem_info_vram_total").c_str(), "r");
-         if (!amdGpuVramUsedFile)
-            amdGpuVramUsedFile = fopen((path + "/mem_info_vram_used").c_str(), "r");
+         if (!amdgpu.busy)
+            amdgpu.busy = fopen((path + "/gpu_busy_percent").c_str(), "r");
+         if (!amdgpu.vram_total)
+            amdgpu.vram_total = fopen((path + "/mem_info_vram_total").c_str(), "r");
+         if (!amdgpu.vram_used)
+            amdgpu.vram_used = fopen((path + "/mem_info_vram_used").c_str(), "r");
 
          path += "/hwmon/";
          string tempFolder;
          if (find_folder(path, "hwmon", tempFolder)) {
-            if (!amdGpuCoreClockFile)
-               amdGpuCoreClockFile = fopen((path + tempFolder + "/freq1_input").c_str(), "r");
-            if (!amdGpuMemoryClockFile)
-               amdGpuMemoryClockFile = fopen((path + tempFolder + "/freq2_input").c_str(), "r");
-            if (!amdTempFile)
-               amdTempFile = fopen((path + tempFolder + "/temp1_input").c_str(), "r");
+            if (!amdgpu.core_clock)
+               amdgpu.core_clock = fopen((path + tempFolder + "/freq1_input").c_str(), "r");
+            if (!amdgpu.memory_clock)
+               amdgpu.memory_clock = fopen((path + tempFolder + "/freq2_input").c_str(), "r");
+            if (!amdgpu.temp)
+               amdgpu.temp = fopen((path + tempFolder + "/temp1_input").c_str(), "r");
+            if (!amdgpu.power_usage)
+               amdgpu.power_usage = fopen((path + tempFolder + "/power1_average").c_str(), "r");
 
             params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = true;
             vendorID = 0x1002;
@@ -835,7 +836,7 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
       }
 
       // don't bother then
-      if (!amdGpuFile && !amdTempFile && !amdGpuVramTotalFile && !amdGpuVramUsedFile) {
+      if (!amdgpu.busy && !amdgpu.temp && !amdgpu.vram_total && !amdgpu.vram_used) {
          params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
       }
    }
@@ -983,7 +984,7 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
 
          if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]) {
             if (vendorID == 0x1002)
-               std::thread(getAmdGpuUsage).detach();
+               std::thread(getAmdGpuInfo).detach();
 
             if (vendorID == 0x10de)
                std::thread(getNvidiaGpuInfo).detach();
@@ -1267,12 +1268,23 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             ImGui::Text("°C");
          }
          if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]){
+            if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_power])
+               ImGui::TableNextRow();
             ImGui::TableNextCell();
             right_aligned_text(char_width * 4, "%i", gpu_info.CoreClock);
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(data.font1);
             ImGui::Text("MHz");
             ImGui::PopFont();
+
+            if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_power]) {
+               ImGui::TableNextCell();
+               right_aligned_text(char_width * 4, "%i", gpu_info.powerUsage);
+               ImGui::SameLine(0, 1.0f);
+               ImGui::PushFont(data.font1);
+               ImGui::Text("W");
+               ImGui::PopFont();
+            }
          }
       }
       if(params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats]){

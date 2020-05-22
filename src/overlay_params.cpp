@@ -338,7 +338,7 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_io_read] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_io_write] = false;
    params->fps_sampling_period = 500000; /* 500ms */
-   params->width = 280;
+   params->width = 0;
    params->height = 140;
    params->control = -1;
    params->fps_limit = 0;
@@ -436,17 +436,21 @@ parse_overlay_config(struct overlay_params *params,
 
    if (!params->font_size) {
       params->font_size = 24;
-   } else {
-      params->width = params->font_size * 11.7;
    }
 
    //increase hud width if io read and write
-   if (params->enabled[OVERLAY_PARAM_ENABLED_io_read] && params->enabled[OVERLAY_PARAM_ENABLED_io_write] && params->width == 280)
-      params->width = 15 * params->font_size;
-
-   if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock] && params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp] && params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
-      params->tableCols = 4;
-      params->width = 20 * params->font_size;
+   if (!params->width) {
+      if (!params->enabled[OVERLAY_PARAM_ENABLED_gpu_power]
+            && params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]
+            && params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp]
+            && params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats]) {
+         params->tableCols = 4;
+         params->width = 20 * params->font_size;
+      } else if ((params->enabled[OVERLAY_PARAM_ENABLED_io_read] || params->enabled[OVERLAY_PARAM_ENABLED_io_write])) {
+         params->width = 15 * params->font_size;
+      } else {
+         params->width = params->font_size * 11.7;
+      }
    }
 
    // set frametime limit

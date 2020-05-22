@@ -3,7 +3,7 @@
 #include "gpu.h"
 
 struct gpuInfo gpu_info;
-FILE *amdGpuFile = nullptr, *amdTempFile = nullptr, *amdGpuVramTotalFile = nullptr, *amdGpuVramUsedFile = nullptr, *amdGpuCoreClockFile = nullptr, *amdGpuMemoryClockFile = nullptr;
+amdgpu_files amdgpu {};
 
 void getNvidiaGpuInfo(){
     if (nvmlSuccess){
@@ -13,6 +13,7 @@ void getNvidiaGpuInfo(){
         gpu_info.memoryUsed = nvidiaMemory.used / (1024.f * 1024.f * 1024.f);
         gpu_info.CoreClock = nvidiaCoreClock;
         gpu_info.MemClock = nvidiaMemClock;
+        gpu_info.powerUsage = nvidiaPowerUsage / 1000;
     }
 #ifdef HAVE_XNVCTRL
     else if (nvctrlSuccess) {
@@ -22,65 +23,70 @@ void getNvidiaGpuInfo(){
         gpu_info.memoryUsed = nvctrl_info.memoryUsed / (1024.f);
         gpu_info.CoreClock = nvctrl_info.CoreClock;
         gpu_info.MemClock = nvctrl_info.MemClock;
+        gpu_info.powerUsage = 0;
     }
 #endif
 }
 
-void getAmdGpuUsage(){
+void getAmdGpuInfo(){
     int64_t value = 0;
 
-    if (amdGpuFile) {
-        rewind(amdGpuFile);
-        fflush(amdGpuFile);
-        if (fscanf(amdGpuFile, "%d", &amdgpu.load) != 1)
-            amdgpu.load = 0;
-        gpu_info.load = amdgpu.load;
+    if (amdgpu.busy) {
+        rewind(amdgpu.busy);
+        fflush(amdgpu.busy);
+        if (fscanf(amdgpu.busy, "%d", &gpu_info.load) != 1)
+            gpu_info.load = 0;
+        gpu_info.load = gpu_info.load;
     }
 
-    if (amdTempFile) {
-        rewind(amdTempFile);
-        fflush(amdTempFile);
-        if (fscanf(amdTempFile, "%d", &amdgpu.temp) != 1)
-            amdgpu.temp = 0;
-        amdgpu.temp /= 1000;
-        gpu_info.temp = amdgpu.temp;
+    if (amdgpu.temp) {
+        rewind(amdgpu.temp);
+        fflush(amdgpu.temp);
+        if (fscanf(amdgpu.temp, "%d", &gpu_info.temp) != 1)
+            gpu_info.temp = 0;
+        gpu_info.temp /= 1000;
     }
 
-    if (amdGpuVramTotalFile) {
-        rewind(amdGpuVramTotalFile);
-        fflush(amdGpuVramTotalFile);
-        if (fscanf(amdGpuVramTotalFile, "%" PRId64, &value) != 1)
+    if (amdgpu.vram_total) {
+        rewind(amdgpu.vram_total);
+        fflush(amdgpu.vram_total);
+        if (fscanf(amdgpu.vram_total, "%" PRId64, &value) != 1)
             value = 0;
-        amdgpu.memoryTotal = float(value) / (1024 * 1024 * 1024);
-        gpu_info.memoryTotal = amdgpu.memoryTotal;
+        gpu_info.memoryTotal = float(value) / (1024 * 1024 * 1024);
     }
 
-    if (amdGpuVramUsedFile) {
-        rewind(amdGpuVramUsedFile);
-        fflush(amdGpuVramUsedFile);
-        if (fscanf(amdGpuVramUsedFile, "%" PRId64, &value) != 1)
+    if (amdgpu.vram_used) {
+        rewind(amdgpu.vram_used);
+        fflush(amdgpu.vram_used);
+        if (fscanf(amdgpu.vram_used, "%" PRId64, &value) != 1)
             value = 0;
-        amdgpu.memoryUsed = float(value) / (1024 * 1024 * 1024);
-        gpu_info.memoryUsed = amdgpu.memoryUsed;
+        gpu_info.memoryUsed = float(value) / (1024 * 1024 * 1024);
     }
 
-    if (amdGpuCoreClockFile) {
-        rewind(amdGpuCoreClockFile);
-        fflush(amdGpuCoreClockFile);
-        if (fscanf(amdGpuCoreClockFile, "%" PRId64, &value) != 1)
+    if (amdgpu.core_clock) {
+        rewind(amdgpu.core_clock);
+        fflush(amdgpu.core_clock);
+        if (fscanf(amdgpu.core_clock, "%" PRId64, &value) != 1)
             value = 0;
 
-        amdgpu.CoreClock = value / 1000000;
-        gpu_info.CoreClock = amdgpu.CoreClock;
+        gpu_info.CoreClock = value / 1000000;
     }
 
-    if (amdGpuMemoryClockFile) {
-        rewind(amdGpuMemoryClockFile);
-        fflush(amdGpuMemoryClockFile);
-        if (fscanf(amdGpuMemoryClockFile, "%" PRId64, &value) != 1)
+    if (amdgpu.memory_clock) {
+        rewind(amdgpu.memory_clock);
+        fflush(amdgpu.memory_clock);
+        if (fscanf(amdgpu.memory_clock, "%" PRId64, &value) != 1)
             value = 0;
 
-        amdgpu.MemClock = value / 1000000;
-        gpu_info.MemClock = amdgpu.MemClock;
+        gpu_info.MemClock = value / 1000000;
+    }
+
+    if (amdgpu.power_usage) {
+        rewind(amdgpu.power_usage);
+        fflush(amdgpu.power_usage);
+        if (fscanf(amdgpu.power_usage, "%" PRId64, &value) != 1)
+            value = 0;
+
+        gpu_info.powerUsage = value / 1000000;
     }
 }

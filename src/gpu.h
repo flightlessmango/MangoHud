@@ -5,17 +5,18 @@
 #include "nvidia_info.h"
 #include "nvctrl.h"
 
-using namespace std;
-extern FILE *amdGpuFile, *amdTempFile, *amdGpuVramTotalFile, *amdGpuVramUsedFile, *amdGpuCoreClockFile, *amdGpuMemoryClockFile;
-
-struct amdGpu {
-    int load;
-    int temp;
-    float memoryUsed;
-    float memoryTotal;
-    int MemClock;
-    int CoreClock;
+struct amdgpu_files
+{
+    FILE *busy;
+    FILE *temp;
+    FILE *vram_total;
+    FILE *vram_used;
+    FILE *core_clock;
+    FILE *memory_clock;
+    FILE *power_usage;
 };
+
+extern amdgpu_files amdgpu;
 
 struct gpuInfo{
     int load;
@@ -24,10 +25,10 @@ struct gpuInfo{
     float memoryTotal;
     int MemClock;
     int CoreClock;
+    int powerUsage;
 };
 
-extern struct amdGpu amdgpu;
 extern struct gpuInfo gpu_info;
 
 void getNvidiaGpuInfo(void);
-void getAmdGpuUsage(void);
+void getAmdGpuInfo(void);

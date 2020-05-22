@@ -1,7 +1,7 @@
 #include <nvml.h>
 
 extern nvmlReturn_t result;
-extern unsigned int nvidiaTemp, processSamplesCount, *vgpuInstanceSamplesCount, nvidiaCoreClock, nvidiaMemClock;
+extern unsigned int nvidiaTemp, processSamplesCount, *vgpuInstanceSamplesCount, nvidiaCoreClock, nvidiaMemClock, nvidiaPowerUsage;
 extern nvmlDevice_t nvidiaDevice;
 extern struct nvmlUtilization_st nvidiaUtilization;
 extern struct nvmlMemory_st nvidiaMemory;

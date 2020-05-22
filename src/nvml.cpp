@@ -9,7 +9,7 @@ nvmlReturn_t result;
 nvmlDevice_t nvidiaDevice;
 nvmlPciInfo_t nvidiaPciInfo;
 bool nvmlSuccess = false;
-unsigned int nvidiaTemp, nvidiaCoreClock, nvidiaMemClock;
+unsigned int nvidiaTemp = 0, nvidiaCoreClock = 0, nvidiaMemClock = 0, nvidiaPowerUsage = 0;
 struct nvmlUtilization_st nvidiaUtilization;
 struct nvmlMemory_st nvidiaMemory {};
 
@@ -48,6 +48,7 @@ bool getNVMLInfo(){
     nvml.nvmlDeviceGetClockInfo(nvidiaDevice, NVML_CLOCK_GRAPHICS, &nvidiaCoreClock);
     nvml.nvmlDeviceGetClockInfo(nvidiaDevice, NVML_CLOCK_MEM, &nvidiaMemClock);
     nvml.nvmlDeviceGetPciInfo_v3(nvidiaDevice, &nvidiaPciInfo);
+    nvml.nvmlDeviceGetPowerUsage(nvidiaDevice, &nvidiaPowerUsage);
     deviceID = nvidiaPciInfo.pciDeviceId >> 16;
 
     if (response == NVML_ERROR_NOT_SUPPORTED)
