@@ -499,7 +499,7 @@ bool dbus_list_name_to_owner(dbusmgr::dbus_manager& dbus_mgr, string_map& name_o
     return true;
 }
 
-void dbus_get_player_property(dbusmgr::dbus_manager& dbus_mgr, string_pair_vec& entries, const char * dest, const char * prop)
+bool dbus_get_player_property(dbusmgr::dbus_manager& dbus_mgr, string_pair_vec& entries, const char * dest, const char * prop)
 {
     auto& dbus = dbus_mgr.dbus();
     DBusError error;
@@ -510,21 +510,27 @@ void dbus_get_player_property(dbusmgr::dbus_manager& dbus_mgr, string_pair_vec& 
 
     // dbus-send --print-reply --session --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Get string:'org.mpris.MediaPlayer2.Player' string:'Metadata'
     if (nullptr == (dbus_msg = dbus.message_new_method_call(dest, "/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Properties", "Get"))) {
-       throw std::runtime_error("unable to allocate memory for dbus message");
+        std::cerr << "MANGOHUD: unable to allocate memory for dbus message" << std::endl;
+        dbus.error_free(&error);
+        return false;
     }
 
-    const char *v_STRINGS[] = {
+    static const char *v_STRINGS[] = {
         "org.mpris.MediaPlayer2.Player",
     };
 
     if (!dbus.message_append_args (dbus_msg, DBUS_TYPE_STRING, &v_STRINGS[0], DBUS_TYPE_STRING, &prop, DBUS_TYPE_INVALID)) {
+        std::cerr << "MANGOHUD: dbus_message_append_args failed" << std::endl;
+        dbus.error_free(&error);
         dbus.message_unref(dbus_msg);
-        throw std::runtime_error("dbus_message_append_args failed");
+        return false;
     }
 
     if (nullptr == (dbus_reply = dbus.connection_send_with_reply_and_block(dbus_mgr.get_conn(), dbus_msg, DBUS_TIMEOUT_USE_DEFAULT, &error))) {
         dbus.message_unref(dbus_msg);
-        throw dbusmgr::dbus_error(dbus, &error);
+        std::cerr << "MANGOHUD: " << error.message << std::endl;
+        dbus.error_free(&error);
+        return false;
     }
 
     std::string entry;
@@ -537,41 +543,50 @@ void dbus_get_player_property(dbusmgr::dbus_manager& dbus_mgr, string_pair_vec& 
     dbus.message_unref(dbus_msg);
     dbus.message_unref(dbus_reply);
     dbus.error_free(&error);
+    return true;
 }
 
-void get_media_player_metadata(dbusmgr::dbus_manager& dbus, const std::string& name, metadata& meta)
+bool get_media_player_metadata(dbusmgr::dbus_manager& dbus, const std::string& name, metadata& meta)
 {
     meta.artists.clear();
     string_pair_vec_map entries;
     std::string dest = "org.mpris.MediaPlayer2." + name;
-    dbus_get_player_property(dbus, entries["Metadata"], dest.c_str(), "Metadata");
+    if (!dbus_get_player_property(dbus, entries["Metadata"], dest.c_str(), "Metadata"))
+        return false;
     dbus_get_player_property(dbus, entries["PlaybackStatus"], dest.c_str(), "PlaybackStatus");
     assign_metadata(meta, entries);
+    return true;
 }
 
 namespace dbusmgr {
-void dbus_manager::init(const std::string& dest)
+bool dbus_manager::init(const std::string& dest)
 {
     if (m_inited)
-        return;
+        return true;
 
-    if (!m_dbus_ldr.IsLoaded() && !m_dbus_ldr.Load("libdbus-1.so.3"))
-        throw std::runtime_error("Could not load libdbus-1.so.3");
+    if (!m_dbus_ldr.IsLoaded() && !m_dbus_ldr.Load("libdbus-1.so.3")) {
+        std::cerr << "MANGOHUD: Could not load libdbus-1.so.3\n";
+        return false;
+    }
 
     m_dbus_ldr.error_init(&m_error);
 
     m_dbus_ldr.threads_init_default();
 
     if ( nullptr == (m_dbus_conn = m_dbus_ldr.bus_get(DBUS_BUS_SESSION, &m_error)) ) {
-        throw dbus_error(m_dbus_ldr, &m_error);
+        std::cerr << "MANGOHUD: " << m_error.message << std::endl;
+        m_dbus_ldr.error_free(&m_error);
+        return false;
     }
-    std::cout << "Connected to D-Bus as \"" << m_dbus_ldr.bus_get_unique_name(m_dbus_conn) << "\"." << std::endl;
+
+    std::cout << "MANGOHUD: Connected to D-Bus as \"" << m_dbus_ldr.bus_get_unique_name(m_dbus_conn) << "\"." << std::endl;
 
     m_dest = dest;
     dbus_list_name_to_owner(*this, m_name_owners);
 
     connect_to_signals();
     m_inited = true;
+    return true;
 }
 
 void dbus_manager::deinit()

@@ -31,6 +31,17 @@ struct metadata {
 
     bool valid = false;
     std::mutex mutex;
+
+    void clear()
+    {
+        artists.clear();
+        title.clear();
+        album.clear();
+        artUrl.clear();
+        ticker = {};
+        ticker.dir = -1;
+        valid = false;
+    }
 };
 
 enum SignalType
@@ -58,7 +69,7 @@ namespace dbusmgr {
         CB_NEW_METADATA,
     };
 
-    class dbus_error : public std::runtime_error
+/*    class dbus_error : public std::runtime_error
     {
     public:
         dbus_error(libdbus_loader& dbus_, DBusError *src) : std::runtime_error(src->message)
@@ -71,7 +82,7 @@ namespace dbusmgr {
     private:
         DBusError error;
         libdbus_loader *dbus;
-    };
+    };*/
 
     class dbus_manager
     {
@@ -82,7 +93,7 @@ namespace dbusmgr {
 
         ~dbus_manager();
 
-        void init(const std::string& dest);
+        bool init(const std::string& dest);
         void deinit();
         void add_callback(CBENUM type, callback_func func);
         void connect_to_signals();
@@ -123,4 +134,4 @@ namespace dbusmgr {
     extern dbus_manager dbus_mgr;
 }
 
-void get_media_player_metadata(dbusmgr::dbus_manager& dbus, const std::string& name, metadata& meta);
+bool get_media_player_metadata(dbusmgr::dbus_manager& dbus, const std::string& name, metadata& meta);

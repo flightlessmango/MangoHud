@@ -455,11 +455,11 @@ parse_overlay_config(struct overlay_params *params,
 
 #ifdef HAVE_DBUS
    if (params->enabled[OVERLAY_PARAM_ENABLED_media_player]) {
-      try {
-         dbusmgr::dbus_mgr.init(params->media_player_name);
-         get_media_player_metadata(dbusmgr::dbus_mgr, params->media_player_name, main_metadata);
-      } catch (std::runtime_error& e) {
-         std::cerr << "MANGOHUD: Failed to get initial media player metadata: " << e.what() << std::endl;
+      main_metadata.clear();
+      generic_mpris.clear();
+      if (dbusmgr::dbus_mgr.init(params->media_player_name)) {
+         if (!get_media_player_metadata(dbusmgr::dbus_mgr, params->media_player_name, main_metadata))
+            std::cerr << "MANGOHUD: Failed to get initial media player metadata." << std::endl;
       }
    } else {
       dbusmgr::dbus_mgr.deinit();
