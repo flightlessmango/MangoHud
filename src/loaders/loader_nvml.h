@@ -36,6 +36,7 @@ class libnvml_loader {
   decltype(&::nvmlDeviceGetMemoryInfo) nvmlDeviceGetMemoryInfo;
   decltype(&::nvmlDeviceGetClockInfo) nvmlDeviceGetClockInfo;
   decltype(&::nvmlErrorString) nvmlErrorString;
+  decltype(&::nvmlDeviceGetPowerUsage) nvmlDeviceGetPowerUsage;
 
  private:
   void CleanUp(bool unload);

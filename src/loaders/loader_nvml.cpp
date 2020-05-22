@@ -174,6 +174,19 @@ bool libnvml_loader::Load(const std::string& library_name) {
     return false;
   }
 
+#if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
+  nvmlDeviceGetPowerUsage =
+      reinterpret_cast<decltype(this->nvmlDeviceGetPowerUsage)>(
+          dlsym(library_, "nvmlDeviceGetPowerUsage"));
+#endif
+#if defined(LIBRARY_LOADER_NVML_H_DT_NEEDED)
+  nvmlDeviceGetPowerUsage = &::nvmlDeviceGetPowerUsage;
+#endif
+  if (!nvmlDeviceGetPowerUsage) {
+    CleanUp(true);
+    return false;
+  }
+
   loaded_ = true;
   return true;
 }
