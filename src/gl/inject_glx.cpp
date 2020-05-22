@@ -110,20 +110,10 @@ static void do_imgui_swap(void *dpy, void *drawable)
 
         unsigned int width = -1, height = -1;
 
-        // glXQueryDrawable is buggy, use XGetGeometry instead
         Window unused_window;
         int unused;
-        static bool xgetgeom_failed = true; // FIXME XGetGeometry may not like the drawable so disable for now
-        if (xgetgeom_failed || !g_x11->XGetGeometry((Display*)dpy,
-            (Window)drawable, &unused_window,
-            &unused, &unused,
-            &width, &height,
-            (unsigned int*) &unused, (unsigned int*) &unused)) {
-
-            xgetgeom_failed = true;
-            glx.QueryDrawable(dpy, drawable, GLX_WIDTH, &width);
-            glx.QueryDrawable(dpy, drawable, GLX_HEIGTH, &height);
-        }
+        glx.QueryDrawable(dpy, drawable, GLX_WIDTH, &width);
+        glx.QueryDrawable(dpy, drawable, GLX_HEIGTH, &height);
 
         /*GLint vp[4]; glGetIntegerv (GL_VIEWPORT, vp);
         width = vp[2];
