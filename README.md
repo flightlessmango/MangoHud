@@ -152,11 +152,12 @@ Note: Width and Height are set automatically based on the font_size, but can be 
 - `n`  = Sync to refresh rate / n.
 
 ### Vulkan Vsync
-- `0` = Adaptive VSync
-- `1` = Off
-- `2` = Mailbox (VSync with uncapped FPS)
-- `3` = On
+- `0` = Adaptive VSync (FIFO_RELAXED_KHR)
+- `1` = Off (IMMEDIATE_KHR)
+- `2` = Mailbox (VSync with uncapped FPS) (MAILBOX_KHR)
+- `3` = On (FIFO_KHR)
 
+All vulkan vsync options might not be supported on your device, you can check what your device supports here [vulkan.gpuinfo.org](https://vulkan.gpuinfo.org/listsurfacepresentmodes.php?platform=linux)
 
 ## Keybindings
 
