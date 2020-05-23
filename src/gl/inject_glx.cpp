@@ -110,8 +110,6 @@ static void do_imgui_swap(void *dpy, void *drawable)
 
         unsigned int width = -1, height = -1;
 
-        Window unused_window;
-        int unused;
         glx.QueryDrawable(dpy, drawable, GLX_WIDTH, &width);
         glx.QueryDrawable(dpy, drawable, GLX_HEIGTH, &height);
 
