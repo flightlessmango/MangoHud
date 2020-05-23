@@ -1402,11 +1402,11 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::PopFont();
       }
       ImGui::EndTable();
-
-      if (params.enabled[OVERLAY_PARAM_ENABLED_fps]){
+      
+      auto engine_color = ImGui::ColorConvertU32ToFloat4(params.engine_color);
+      if (params.enabled[OVERLAY_PARAM_ENABLED_fps] && params.enabled[OVERLAY_PARAM_ENABLED_engine_version]){
          ImGui::PushFont(data.font1);
          ImGui::Dummy(ImVec2(0, 8.0f));
-         auto engine_color = ImGui::ColorConvertU32ToFloat4(params.engine_color);
          if (is_vulkan) {
             if ((data.engineName == "DXVK" || data.engineName == "VKD3D")){
                ImGui::TextColored(engine_color,
@@ -1427,22 +1427,28 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
                data.version_gl.is_gles ? " ES" : "");
          }
          // ImGui::SameLine();
+         ImGui::PopFont();
+      }
          if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_name] && !data.gpuName.empty()){
+            ImGui::PushFont(data.font1);
             ImGui::Dummy(ImVec2(0.0,5.0f));
             ImGui::TextColored(engine_color,
                   "%s", data.gpuName.c_str());
+            ImGui::PopFont();
          }
          if (params.enabled[OVERLAY_PARAM_ENABLED_vulkan_driver] && !data.driverName.empty()){
+            ImGui::PushFont(data.font1);
             ImGui::Dummy(ImVec2(0.0,5.0f));
             ImGui::TextColored(engine_color,
                   "%s", data.driverName.c_str());
+            ImGui::PopFont();
          }
          if (params.enabled[OVERLAY_PARAM_ENABLED_arch]){
+            ImGui::PushFont(data.font1);
             ImGui::Dummy(ImVec2(0.0,5.0f));
             ImGui::TextColored(engine_color, "%s", "" MANGOHUD_ARCH);
+            ImGui::PopFont();
          }
-         ImGui::PopFont();
-      }
 
       if (loggingOn && log_period == 0){
          elapsedLog = (double)(now - log_start);
