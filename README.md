@@ -84,6 +84,9 @@ For Steam games, you can add this as a launch option:
 
 Or alternatively, add `MANGOHUD=1` to your shell profile (Vulkan only).
 
+Some linux native games overrides LD_PRELOAD and stopping MangoHud from working. You can sometimes fix this by editing LD_PRELOAD in the start script
+`LD_PRELOAD=/path/to/mangohud/lib/`
+
 ## Hud configuration
 
 MangoHud comes with a config file which can be used to set configuration options globally or per application. The priorities of different config files are:
