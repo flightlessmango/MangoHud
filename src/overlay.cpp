@@ -253,6 +253,41 @@ static void unmap_object(uint64_t obj)
 
 /**/
 
+void create_fonts(const overlay_params& params, ImFont*& default_font, ImFont*& small_font)
+{
+   auto& io = ImGui::GetIO();
+   int font_size = params.font_size;
+   if (!font_size)
+      font_size = 24;
+
+   static const ImWchar glyph_ranges[] =
+   {
+      0x0020, 0x00FF, // Basic Latin + Latin Supplement
+      0x0100, 0x017f, // Latin Extended-A
+      0x0400, 0x052F, // Cyrillic + Cyrillic Supplement
+      0x2DE0, 0x2DFF, // Cyrillic Extended-A
+      0xA640, 0xA69F, // Cyrillic Extended-B
+      0,
+   };
+
+   // ImGui takes ownership of the data, no need to free it
+   if (!params.font_file.empty() && file_exists(params.font_file)) {
+      default_font = io.Fonts->AddFontFromFileTTF(params.font_file.c_str(), font_size, nullptr, glyph_ranges);
+      small_font = io.Fonts->AddFontFromFileTTF(params.font_file.c_str(), font_size * 0.55f, nullptr, io.Fonts->GetGlyphRangesDefault());
+   } else {
+      const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
+      default_font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size, nullptr, io.Fonts->GetGlyphRangesDefault());
+      small_font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size * 0.55, nullptr, io.Fonts->GetGlyphRangesDefault());
+   }
+}
+
+// FIXME "temporary" hack until Dear ImGui has an actual API for this
+void scale_default_font(ImFont& scaled_font, float scale)
+{
+   scaled_font = *ImGui::GetIO().Fonts->Fonts[0];
+   scaled_font.Scale = scale;
+}
+
 static VkLayerInstanceCreateInfo *get_instance_chain_info(const VkInstanceCreateInfo *pCreateInfo,
                                                           VkLayerFunction func)
 {
@@ -1127,7 +1162,7 @@ void render_mpris_metadata(swapchain_stats& data, const ImVec4& color, metadata&
    if (meta.valid) {
       ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,0));
       ImGui::Dummy(ImVec2(0.0f, 20.0f));
-      ImGui::PushFont(data.font1);
+      //ImGui::PushFont(data.font1);
 
       if (meta.ticker.needs_recalc) {
          meta.ticker.tw0 = ImGui::CalcTextSize(meta.title.c_str()).x;
@@ -1171,7 +1206,7 @@ void render_mpris_metadata(swapchain_stats& data, const ImVec4& color, metadata&
          ImGui::TextColored(color, "(paused)");
       }
 
-      ImGui::PopFont();
+      //ImGui::PopFont();
       ImGui::PopStyleVar();
    }
 }
@@ -1496,9 +1531,13 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       }
 
 #ifdef HAVE_DBUS
+      ImFont scaled_font;
+      scale_default_font(scaled_font, params.font_scale_media_player);
+      ImGui::PushFont(&scaled_font);
       auto media_color = ImGui::ColorConvertU32ToFloat4(params.media_player_color);
       render_mpris_metadata(data, media_color, main_metadata, frame_timing, true);
       render_mpris_metadata(data, media_color, generic_mpris, frame_timing, false);
+      ImGui::PopFont();
 #endif
 
       if(loggingOn)
@@ -2137,22 +2176,7 @@ static void setup_swapchain_data_pipeline(struct swapchain_data *data)
    device_data->vtable.DestroyShaderModule(device_data->device, frag_module, NULL);
 
    ImGuiIO& io = ImGui::GetIO();
-   int font_size = device_data->instance->params.font_size;
-   if (!font_size)
-      font_size = 24;
-
-   // ImGui takes ownership of the data, no need to free it
-   if (!device_data->instance->params.font_file.empty() && file_exists(device_data->instance->params.font_file)) {
-      data->font = io.Fonts->AddFontFromFileTTF(device_data->instance->params.font_file.c_str(), font_size);
-      data->sw_stats.font1 = io.Fonts->AddFontFromFileTTF(device_data->instance->params.font_file.c_str(), font_size * 0.55f);
-   } else {
-      ImFontConfig font_cfg = ImFontConfig();
-      const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
-      const ImWchar* glyph_ranges = io.Fonts->GetGlyphRangesDefault();
-
-      data->font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size, &font_cfg, glyph_ranges);
-      data->sw_stats.font1 = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size * 0.55, &font_cfg, glyph_ranges);
-   }
+   create_fonts(device_data->instance->params, data->font, data->sw_stats.font1);
    unsigned char* pixels;
    int width, height;
    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);

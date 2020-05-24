@@ -60,6 +60,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(vsync)                       \
    OVERLAY_PARAM_CUSTOM(gl_vsync)                    \
    OVERLAY_PARAM_CUSTOM(font_size)                   \
+   OVERLAY_PARAM_CUSTOM(font_scale_media_player)     \
    OVERLAY_PARAM_CUSTOM(toggle_hud)                  \
    OVERLAY_PARAM_CUSTOM(toggle_logging)              \
    OVERLAY_PARAM_CUSTOM(reload_cfg)                  \
@@ -127,6 +128,7 @@ struct overlay_params {
    unsigned media_player_color;
    unsigned tableCols;
    float font_size;
+   float font_scale_media_player;
    float background_alpha, alpha;
    std::vector<KeySym> toggle_hud;
    std::vector<KeySym> toggle_logging;

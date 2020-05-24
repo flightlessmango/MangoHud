@@ -131,21 +131,7 @@ void imgui_create(void *ctx)
     GLint current_texture;
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &current_texture);
 
-    int font_size = params.font_size;
-    if (!font_size)
-        font_size = 24;
-
-    if (!params.font_file.empty() && file_exists(params.font_file)) {
-        state.font = io.Fonts->AddFontFromFileTTF(params.font_file.c_str(), font_size);
-        state.font1 = io.Fonts->AddFontFromFileTTF(params.font_file.c_str(), font_size * 0.55f);
-    } else {
-        ImFontConfig font_cfg = ImFontConfig();
-        const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
-        const ImWchar* glyph_ranges = io.Fonts->GetGlyphRangesDefault();
-
-        state.font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size, &font_cfg, glyph_ranges);
-        state.font1 = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size * 0.55, &font_cfg, glyph_ranges);
-    }
+    create_fonts(params, state.font, state.font1);
     sw_stats.font1 = state.font1;
 
     // Restore global context or ours might clash with apps that use Dear ImGui
