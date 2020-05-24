@@ -1472,10 +1472,17 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
          double min_time = 0.0f;
          double max_time = 50.0f;
-         ImGui::PlotLines(hash, get_time_stat, &data,
-                              ARRAY_SIZE(data.frames_stats), 0,
-                              NULL, min_time, max_time,
-                              ImVec2(ImGui::GetContentRegionAvailWidth() - params.font_size * 2.2, 50));
+         if (params.enabled[OVERLAY_PARAM_ENABLED_histogram]){
+            ImGui::PlotHistogram(hash, get_time_stat, &data,
+                                 ARRAY_SIZE(data.frames_stats), 0,
+                                 NULL, min_time, max_time,
+                                 ImVec2(ImGui::GetContentRegionAvailWidth() - params.font_size * 2.2, 50));
+         } else {
+            ImGui::PlotLines(hash, get_time_stat, &data,
+                     ARRAY_SIZE(data.frames_stats), 0,
+                     NULL, min_time, max_time,
+                     ImVec2(ImGui::GetContentRegionAvailWidth() - params.font_size * 2.2, 50));
+         }
          ImGui::PopStyleColor();
       }
       if (params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
@@ -2208,6 +2215,7 @@ static void setup_swapchain_data_pipeline(struct swapchain_data *data)
 void imgui_custom_style(struct overlay_params& params){
    ImGuiStyle& style = ImGui::GetStyle();
    style.Colors[ImGuiCol_PlotLines] = ImGui::ColorConvertU32ToFloat4(params.frametime_color);
+   style.Colors[ImGuiCol_PlotHistogram] = ImGui::ColorConvertU32ToFloat4(params.frametime_color);
    style.Colors[ImGuiCol_WindowBg]  = ImGui::ColorConvertU32ToFloat4(params.background_color);
    style.Colors[ImGuiCol_Text] = ImGui::ColorConvertU32ToFloat4(params.text_color);
    style.CellPadding.y = -2;
