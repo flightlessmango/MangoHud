@@ -140,6 +140,7 @@ A partial list of parameters are below. See the config file for a complete list.
 | `version`                          | Shows current mangohud version                                                        |
 | `fps_limit`                        | Limit the apps framerate                                                              |
 | `arch`                             | Show if the application is 32 or 64 bit                                               |
+| `histogram`                        | Change fps graph to histogram                                                         |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 
