@@ -114,9 +114,9 @@ parse_reload_cfg(const char *str)
    return parse_string_to_keysym_vec(str);
 }
 #else
-#define parse_toggle_hud(x)      0
-#define parse_toggle_logging(x)  0
-#define parse_reload_cfg(x)      0
+#define parse_toggle_hud(x)      {}
+#define parse_toggle_logging(x)  {}
+#define parse_reload_cfg(x)      {}
 #endif
 
 static uint32_t
