@@ -75,7 +75,7 @@ dependencies() {
                 DEPS="{gcc,g++,gcc-multilib,g++-multilib,ninja-build,python3-pip,python3-setuptools,python3-wheel,pkg-config,mesa-common-dev,libx11-dev,libxnvctrl-dev,libdbus-1-dev}"
                 dep_install
 
-                if [[ $($SU_CMD pip3 show meson; echo $?) == 1 || $($SU_CMD pip3 show mako; echo $?) == 1 ]]; then
+                if [[ $(pip3 show meson; echo $?) == 1 || $(pip3 show mako; echo $?) == 1 ]]; then
                     $SU_CMD pip3 install 'meson>=0.54' mako
                 fi
                 if [[ ! -f /usr/local/bin/glslangValidator ]]; then
@@ -104,8 +104,8 @@ dependencies() {
                 DEPS="{gcc-c++,gcc-c++-32bit,libpkgconf-devel,ninja,python3-pip,python3-Mako,libX11-devel,glslang-devel,glibc-devel,glibc-devel-32bit,libstdc++-devel,libstdc++-devel-32bit,Mesa-libGL-devel,dbus-1-devel,${PACKMAN_PKGS}}"
                 dep_install
 
-                if [[ $(sudo pip3 show meson; echo $?) == 1 ]]; then
-                    sudo pip3 install 'meson>=0.54'
+                if [[ $(pip3 show meson; echo $?) == 1 ]]; then
+                    $SU_CMD pip3 install 'meson>=0.54'
                 fi
             ;;
             "Solus")
