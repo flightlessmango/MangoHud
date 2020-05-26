@@ -34,7 +34,7 @@ dependencies() {
                 *) echo "Continuing with missing dependencies"; sleep 1;;
             esac
         }
-        install() {
+        dep_install() {
             set +e
             for i in $(eval echo $DEPS); do
                 $MANAGER_QUERY "$i" &> /dev/null
@@ -57,23 +57,23 @@ dependencies() {
                 MANAGER_QUERY="pacman -Q"
                 MANAGER_INSTALL="pacman -S"
                 DEPS="{gcc,meson,pkgconf,python-mako,glslang,libglvnd,lib32-libglvnd,libxnvctrl}"
-                install
+                dep_install
             ;;
             "Fedora")
                 MANAGER_QUERY="dnf list installed"
                 MANAGER_INSTALL="dnf install"
                 DEPS="{meson,gcc,gcc-c++,libX11-devel,glslang,python3-mako,mesa-libGL-devel,libXNVCtrl-devel}"
-                install
+                dep_install
 
                 unset INSTALL
                 DEPS="{glibc-devel.i686,libstdc++-devel.i686,libX11-devel.i686}"
-                install
+                dep_install
             ;;
             *"buntu"|"Linux Mint"|"Debian GNU/Linux"|"Zorin OS"|"Pop!_OS"|"elementary OS")
                 MANAGER_QUERY="dpkg-query -s"
                 MANAGER_INSTALL="apt install"
                 DEPS="{gcc,g++,gcc-multilib,g++-multilib,ninja-build,python3-pip,python3-setuptools,python3-wheel,pkg-config,mesa-common-dev,libx11-dev,libxnvctrl-dev,libdbus-1-dev}"
-                install
+                dep_install
 
                 if [[ $($SU_CMD pip3 show meson; echo $?) == 1 || $($SU_CMD pip3 show mako; echo $?) == 1 ]]; then
                     $SU_CMD pip3 install 'meson>=0.54' mako
@@ -102,7 +102,7 @@ dependencies() {
                 MANAGER_QUERY="rpm -q"
                 MANAGER_INSTALL="zypper install"
                 DEPS="{gcc-c++,gcc-c++-32bit,libpkgconf-devel,ninja,python3-pip,python3-Mako,libX11-devel,glslang-devel,glibc-devel,glibc-devel-32bit,libstdc++-devel,libstdc++-devel-32bit,Mesa-libGL-devel,dbus-1-devel,${PACKMAN_PKGS}}"
-                install
+                dep_install
 
                 if [[ $(sudo pip3 show meson; echo $?) == 1 ]]; then
                     sudo pip3 install 'meson>=0.54'
@@ -129,7 +129,7 @@ dependencies() {
                 if [[ $? -ne 0 ]]; then
                     INSTALL="${INSTALL}""-c system.devel "
                 fi
-                install
+                dep_install
                 ;;
             *)
                 echo "# Unable to find distro information!"
