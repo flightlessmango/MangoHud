@@ -14,6 +14,8 @@ typedef std::vector<std::pair<std::string, std::string>> string_pair_vec;
 typedef std::unordered_map<std::string, string_pair_vec> string_pair_vec_map;
 typedef std::unordered_map<std::string, std::string> string_map;
 
+#define DBUS_TIMEOUT 2000 // ms
+
 std::string format_signal(const DBusSignal& s)
 {
     std::stringstream ss;
@@ -413,24 +415,24 @@ bool dbus_get_name_owner(dbusmgr::dbus_manager& dbus_mgr, std::string& name_owne
 {
     auto& dbus = dbus_mgr.dbus();
     DBusError error;
-    dbus.error_init(&error);
 
     DBusMessage * dbus_reply = nullptr;
     DBusMessage * dbus_msg = nullptr;
 
     // dbus-send --session --dest=org.freedesktop.DBus --type=method_call --print-reply /org/freedesktop/DBus org.freedesktop.DBus.GetNameOwner string:"org.mpris.MediaPlayer2.spotify"
     if (nullptr == (dbus_msg = dbus.message_new_method_call("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "GetNameOwner"))) {
-       throw std::runtime_error("unable to allocate memory for dbus message");
+        std::cerr << "MANGOHUD: " << __func__ << ": unable to allocate memory for dbus message\n";
+        return false;
     }
 
     if (!dbus.message_append_args (dbus_msg, DBUS_TYPE_STRING, &name, DBUS_TYPE_INVALID)) {
         dbus.message_unref(dbus_msg);
         std::cerr << "MANGOHUD: " << __func__ << ": dbus_message_append_args failed\n";
-        dbus.error_free(&error);
         return false;
     }
 
-    if (nullptr == (dbus_reply = dbus.connection_send_with_reply_and_block(dbus_mgr.get_conn(), dbus_msg, DBUS_TIMEOUT_USE_DEFAULT, &error))) {
+    dbus.error_init(&error);
+    if (nullptr == (dbus_reply = dbus.connection_send_with_reply_and_block(dbus_mgr.get_conn(), dbus_msg, DBUS_TIMEOUT, &error))) {
         dbus.message_unref(dbus_msg);
         std::cerr << "MANGOHUD: " << __func__ << ": "<< error.message << "\n";
         dbus.error_free(&error);
@@ -458,7 +460,6 @@ bool dbus_list_name_to_owner(dbusmgr::dbus_manager& dbus_mgr, string_map& name_o
 {
     auto& dbus = dbus_mgr.dbus();
     DBusError error;
-    dbus.error_init(&error);
 
     std::vector<std::string> names;
     std::string owner;
@@ -469,10 +470,12 @@ bool dbus_list_name_to_owner(dbusmgr::dbus_manager& dbus_mgr, string_map& name_o
 
     // dbus-send --session --dest=org.freedesktop.DBus --type=method_call --print-reply /org/freedesktop/DBus org.freedesktop.DBus.GetNameOwner string:"org.mpris.MediaPlayer2.spotify"
     if (nullptr == (dbus_msg = dbus.message_new_method_call("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "ListNames"))) {
-       throw std::runtime_error("unable to allocate memory for dbus message");
+        std::cerr << "MANGOHUD: " << __func__ << ": unable to allocate memory for dbus message\n";
+        return false;
     }
 
-    if (nullptr == (dbus_reply = dbus.connection_send_with_reply_and_block(dbus_mgr.get_conn(), dbus_msg, DBUS_TIMEOUT_USE_DEFAULT, &error))) {
+    dbus.error_init(&error);
+    if (nullptr == (dbus_reply = dbus.connection_send_with_reply_and_block(dbus_mgr.get_conn(), dbus_msg, DBUS_TIMEOUT, &error))) {
         dbus.message_unref(dbus_msg);
         std::cerr << "MANGOHUD: " << __func__ << ": "<< error.message << "\n";
         dbus.error_free(&error);
@@ -503,7 +506,6 @@ bool dbus_get_player_property(dbusmgr::dbus_manager& dbus_mgr, string_pair_vec& 
 {
     auto& dbus = dbus_mgr.dbus();
     DBusError error;
-    dbus.error_init(&error);
 
     DBusMessage * dbus_reply = nullptr;
     DBusMessage * dbus_msg = nullptr;
@@ -511,7 +513,6 @@ bool dbus_get_player_property(dbusmgr::dbus_manager& dbus_mgr, string_pair_vec& 
     // dbus-send --print-reply --session --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Get string:'org.mpris.MediaPlayer2.Player' string:'Metadata'
     if (nullptr == (dbus_msg = dbus.message_new_method_call(dest, "/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Properties", "Get"))) {
         std::cerr << "MANGOHUD: unable to allocate memory for dbus message" << std::endl;
-        dbus.error_free(&error);
         return false;
     }
 
@@ -521,12 +522,12 @@ bool dbus_get_player_property(dbusmgr::dbus_manager& dbus_mgr, string_pair_vec& 
 
     if (!dbus.message_append_args (dbus_msg, DBUS_TYPE_STRING, &v_STRINGS[0], DBUS_TYPE_STRING, &prop, DBUS_TYPE_INVALID)) {
         std::cerr << "MANGOHUD: dbus_message_append_args failed" << std::endl;
-        dbus.error_free(&error);
         dbus.message_unref(dbus_msg);
         return false;
     }
 
-    if (nullptr == (dbus_reply = dbus.connection_send_with_reply_and_block(dbus_mgr.get_conn(), dbus_msg, DBUS_TIMEOUT_USE_DEFAULT, &error))) {
+    dbus.error_init(&error);
+    if (nullptr == (dbus_reply = dbus.connection_send_with_reply_and_block(dbus_mgr.get_conn(), dbus_msg, DBUS_TIMEOUT, &error))) {
         dbus.message_unref(dbus_msg);
         std::cerr << "MANGOHUD: " << error.message << std::endl;
         dbus.error_free(&error);
@@ -744,15 +745,12 @@ void dbus_manager::dbus_thread(dbus_manager *pmgr)
                             if (str.size() == 3
                                 && str[0] == main_dest
                             ) {
-                                main_metadata.valid = false;
+                                main_metadata.clear();
                             } else {
                                  auto it = pmgr->m_name_owners.find(str[0]);
                                  if (it != pmgr->m_name_owners.end()
                                     && it->second == str[1]) {
-                                    generic_mpris.artists.clear();
-                                    generic_mpris.title.clear();
-                                    generic_mpris.album.clear();
-                                    generic_mpris.valid = false;
+                                    generic_mpris.clear();
                                 }
                             }
                         }
