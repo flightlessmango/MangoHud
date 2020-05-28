@@ -470,6 +470,7 @@ parse_overlay_config(struct overlay_params *params,
    } else {
       dbusmgr::dbus_mgr.deinit();
       main_metadata.valid = false;
+      generic_mpris.valid = false;
    }
 #endif
 
