@@ -23,6 +23,8 @@ std::istream& get_uncommented_line(std::istream& is, std::string &line)
 void parse_pciids()
 {
     std::ifstream file("/usr/share/hwdata/pci.ids");
+    if(file.fail())
+        printf("MANGOHUD: can't find file pci.ids\n");
     std::string line;
     size_t tabs = 0;
 
