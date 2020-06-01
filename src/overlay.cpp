@@ -1294,7 +1294,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::TableNextRow();
          const char* gpu_text;
          if (params.gpu_text.empty())
-            gpu_text = "gPU";
+            gpu_text = "GPU";
          else
             gpu_text = params.gpu_text.c_str();
          ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.gpu_color), gpu_text);
