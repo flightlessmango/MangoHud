@@ -1297,7 +1297,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             gpu_text = "GPU";
          else
             gpu_text = params.gpu_text.c_str();
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.gpu_color), gpu_text);
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.gpu_color), "%s", gpu_text);
          ImGui::TableNextCell();
          right_aligned_text(char_width * 4, "%i", gpu_info.load);
          ImGui::SameLine(0, 1.0f);
@@ -1337,7 +1337,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             cpu_text = "CPU";
          else
             cpu_text = params.cpu_text.c_str();
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.cpu_color), cpu_text);
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.cpu_color), "%s", cpu_text);
          ImGui::TableNextCell();
          right_aligned_text(char_width * 4, "%d", data.total_cpu);
          ImGui::SameLine(0, 1.0f);
