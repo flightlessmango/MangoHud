@@ -84,6 +84,8 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(pci_dev)                     \
    OVERLAY_PARAM_CUSTOM(media_player_name)           \
    OVERLAY_PARAM_CUSTOM(media_player_color)          \
+   OVERLAY_PARAM_CUSTOM(cpu_text)                    \
+   OVERLAY_PARAM_CUSTOM(gpu_text)                    \
    OVERLAY_PARAM_CUSTOM(help)
 
 enum overlay_param_position {
@@ -136,6 +138,7 @@ struct overlay_params {
    std::string time_format, output_file, font_file;
    std::string pci_dev;
    std::string media_player_name;
+   std::string cpu_text, gpu_text;
 
    std::string config_file_path;
    std::unordered_map<std::string,std::string> options;

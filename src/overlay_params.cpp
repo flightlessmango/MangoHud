@@ -197,6 +197,8 @@ parse_path(const char *str)
 #define parse_pci_dev(s) parse_str(s)
 #define parse_media_player_name(s) parse_str(s)
 #define parse_font_scale_media_player(s) parse_font_size(s)
+#define parse_cpu_text(s) parse_str(s)
+#define parse_gpu_text(s) parse_str(s)
 
 #define parse_cpu_color(s) parse_color(s)
 #define parse_gpu_color(s) parse_color(s)

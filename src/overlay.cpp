@@ -1292,7 +1292,12 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       ImGui::BeginTable("hud", params.tableCols);
       if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
          ImGui::TableNextRow();
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.gpu_color), "GPU");
+         const char* gpu_text;
+         if (params.gpu_text.empty())
+            gpu_text = "gPU";
+         else
+            gpu_text = params.gpu_text.c_str();
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.gpu_color), gpu_text);
          ImGui::TableNextCell();
          right_aligned_text(char_width * 4, "%i", gpu_info.load);
          ImGui::SameLine(0, 1.0f);
@@ -1327,7 +1332,12 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       }
       if(params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats]){
          ImGui::TableNextRow();
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.cpu_color), "CPU");
+         const char* cpu_text;
+         if (params.cpu_text.empty())
+            cpu_text = "CPU";
+         else
+            cpu_text = params.cpu_text.c_str();
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.cpu_color), cpu_text);
          ImGui::TableNextCell();
          right_aligned_text(char_width * 4, "%d", data.total_cpu);
          ImGui::SameLine(0, 1.0f);
