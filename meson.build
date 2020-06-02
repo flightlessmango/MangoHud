@@ -180,9 +180,9 @@ if dep_vulkan.found()
   endif
   vk_api_xml = files(datadir / 'vulkan/registry/vk.xml')
 else
-  vkh_sp = subproject('vulkanheaders')
+  vkh_sp = subproject('vulkan-headers')
   vk_api_xml = vkh_sp.get_variable('vulkan_api_xml')
-  dep_vulkan = vkh_sp.get_variable('vulkanheaders_dep')
+  dep_vulkan = vkh_sp.get_variable('vulkan_headers_dep')
 endif
 
 vk_enum_to_str = custom_target(
