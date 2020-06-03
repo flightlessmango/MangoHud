@@ -155,13 +155,16 @@ configure_file(input : 'mangohud.json.in',
 
 if target_machine.cpu_family() == 'x86_64'
   mangohud_cpu_family = ''
+  mangohud_opposite_bin = 'mangohud.x86'
 else
   mangohud_cpu_family = '.@0@'.format(target_machine.cpu_family())
+#this is probably dumb but works for now
+  mangohud_opposite_bin = 'intentionally_borked'
 endif
 
 configure_file(input : '../bin/mangohud.in',
   output : 'mangohud@0@'.format(mangohud_cpu_family),
-  configuration : {'libdir_mangohud' : libdir_mangohud},
+  configuration : {'libdir_mangohud' : libdir_mangohud, 'mangohud_sh' : mangohud_opposite_bin},
   install_dir : get_option('bindir'),
 )
 
