@@ -908,9 +908,6 @@ void init_system_info(){
                 << "Gpu:" << gpu << "\n"
                 << "Driver:" << driver << std::endl;
 #endif
-
-      if (!log_period_env || !try_stoi(log_period, log_period_env))
-        log_period = 100;
 }
 
 void check_keybinds(struct overlay_params& params){
@@ -939,7 +936,7 @@ void check_keybinds(struct overlay_params& params){
          writeFile(params.output_file + get_current_time());
        loggingOn = !loggingOn;
        
-       if (!params.output_file.empty() && loggingOn && log_period != 0)
+       if (!params.output_file.empty() && loggingOn && params.log_interval != 0)
          std::thread(logging, &params).detach();
 
      }
@@ -1499,7 +1496,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             ImGui::PopFont();
          }
 
-      if (loggingOn && log_period == 0){
+      if (loggingOn && params.log_interval == 0){
          elapsedLog = (double)(now - log_start);
          if (params.log_duration && (elapsedLog) >= params.log_duration * 1000000)
             loggingOn = false;

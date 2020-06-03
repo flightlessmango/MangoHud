@@ -199,6 +199,7 @@ parse_path(const char *str)
 #define parse_font_scale_media_player(s) parse_font_size(s)
 #define parse_cpu_text(s) parse_str(s)
 #define parse_gpu_text(s) parse_str(s)
+#define parse_log_interval(s) parse_unsigned(s)
 
 #define parse_cpu_color(s) parse_color(s)
 #define parse_gpu_color(s) parse_color(s)
@@ -364,6 +365,7 @@ parse_overlay_config(struct overlay_params *params,
    params->media_player_color = 0xffffff;
    params->media_player_name = "spotify";
    params->font_scale_media_player = 0.55f;
+   params->log_interval = 100;
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_F12 };
