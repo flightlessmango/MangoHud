@@ -142,6 +142,7 @@ A partial list of parameters are below. See the config file for a complete list.
 | `arch`                             | Show if the application is 32 or 64 bit                                               |
 | `histogram`                        | Change fps graph to histogram                                                         |
 | `cpu_text`<br>`gpu_text`           | Override CPU and GPU text                                                             |
+| `log_interval`                     | Change the default log interval, `100` is default                                     |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 
