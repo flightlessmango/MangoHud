@@ -935,10 +935,11 @@ void check_keybinds(struct overlay_params& params){
          benchmark.fps_data.clear();
          log_start = now;
        }
-
+       if (!params.output_file.empty() && params.log_duration == 0 && loggingOn)
+         writeFile(params.output_file + get_current_time());
        loggingOn = !loggingOn;
        
-       if (loggingOn && log_period != 0 && !params.output_file.empty())
+       if (!params.output_file.empty() && loggingOn && log_period != 0)
          std::thread(logging, &params).detach();
 
      }
@@ -1500,10 +1501,10 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
 
       if (loggingOn && log_period == 0){
          elapsedLog = (double)(now - log_start);
-         if ((elapsedLog) >= params.log_duration * 1000000)
+         if (params.log_duration && (elapsedLog) >= params.log_duration * 1000000)
             loggingOn = false;
 
-         out << fps << "," <<  cpuLoadLog << "," << gpuLoadLog << "," << (now - log_start) << endl;
+         logArray.push_back({fps, cpuLoadLog, gpuLoadLog, elapsedLog});
       }
 
       if (params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){

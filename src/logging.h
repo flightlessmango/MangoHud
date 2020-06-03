@@ -40,15 +40,17 @@ void writeFile(string filename){
   logArray.clear();
 }
 
-void logging(void *params_void){
-  overlay_params *params = reinterpret_cast<overlay_params *>(params_void);
+string get_current_time(){
   time_t now_log = time(0);
   tm *log_time = localtime(&now_log);
   std::ostringstream buffer;
   buffer << std::put_time(log_time, "%Y-%m-%d_%H-%M-%S");
   string date = buffer.str();
+  return date;
+}
 
-
+void logging(void *params_void){
+  overlay_params *params = reinterpret_cast<overlay_params *>(params_void);
   while (loggingOn){
     uint64_t now = os_time_get();
     elapsedLog = now - log_start;
@@ -60,5 +62,5 @@ void logging(void *params_void){
       this_thread::sleep_for(chrono::milliseconds(log_period));
   }
 
-  writeFile(params->output_file + date);
+  writeFile(params->output_file + get_current_time());
 }
