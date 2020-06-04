@@ -10,7 +10,7 @@ using namespace std;
 
 string os, cpu, gpu, ram, kernel, driver;
 bool sysInfoFetched = false;
-int gpuLoadLog = 0, cpuLoadLog = 0, log_period = 0;
+int gpuLoadLog = 0, cpuLoadLog = 0;
 int64_t elapsedLog;
 
 struct logData{
@@ -23,7 +23,6 @@ struct logData{
 double fps;
 std::vector<logData> logArray;
 ofstream out;
-const char* log_period_env = std::getenv("LOG_PERIOD");
 int num;
 bool loggingOn;
 uint64_t log_start, log_end;
@@ -59,7 +58,7 @@ void logging(void *params_void){
     if (params->log_duration && (elapsedLog) >= params->log_duration * 1000000)
       loggingOn = false;
     else
-      this_thread::sleep_for(chrono::milliseconds(log_period));
+      this_thread::sleep_for(chrono::milliseconds(params->log_interval));
   }
 
   writeFile(params->output_file + get_current_time());
