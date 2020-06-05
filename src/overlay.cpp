@@ -1475,26 +1475,26 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          // ImGui::SameLine();
          ImGui::PopFont();
       }
-         if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_name] && !data.gpuName.empty()){
-            ImGui::PushFont(data.font1);
-            ImGui::Dummy(ImVec2(0.0,5.0f));
-            ImGui::TextColored(engine_color,
-                  "%s", data.gpuName.c_str());
-            ImGui::PopFont();
-         }
-         if (params.enabled[OVERLAY_PARAM_ENABLED_vulkan_driver] && !data.driverName.empty()){
-            ImGui::PushFont(data.font1);
-            ImGui::Dummy(ImVec2(0.0,5.0f));
-            ImGui::TextColored(engine_color,
-                  "%s", data.driverName.c_str());
-            ImGui::PopFont();
-         }
-         if (params.enabled[OVERLAY_PARAM_ENABLED_arch]){
-            ImGui::PushFont(data.font1);
-            ImGui::Dummy(ImVec2(0.0,5.0f));
-            ImGui::TextColored(engine_color, "%s", "" MANGOHUD_ARCH);
-            ImGui::PopFont();
-         }
+      if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_name] && !data.gpuName.empty()){
+         ImGui::PushFont(data.font1);
+         ImGui::Dummy(ImVec2(0.0,5.0f));
+         ImGui::TextColored(engine_color,
+               "%s", data.gpuName.c_str());
+         ImGui::PopFont();
+      }
+      if (params.enabled[OVERLAY_PARAM_ENABLED_vulkan_driver] && !data.driverName.empty()){
+         ImGui::PushFont(data.font1);
+         ImGui::Dummy(ImVec2(0.0,5.0f));
+         ImGui::TextColored(engine_color,
+               "%s", data.driverName.c_str());
+         ImGui::PopFont();
+      }
+      if (params.enabled[OVERLAY_PARAM_ENABLED_arch]){
+         ImGui::PushFont(data.font1);
+         ImGui::Dummy(ImVec2(0.0,5.0f));
+         ImGui::TextColored(engine_color, "%s", "" MANGOHUD_ARCH);
+         ImGui::PopFont();
+      }
 
       if (loggingOn && params.log_interval == 0){
          elapsedLog = (double)(now - log_start);
