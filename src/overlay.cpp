@@ -932,7 +932,7 @@ void check_keybinds(struct overlay_params& params){
          benchmark.fps_data.clear();
          log_start = now;
        }
-       if (!params.output_file.empty() && params.log_duration == 0 && loggingOn)
+       if (!params.output_file.empty() && params.log_duration == 0 && params.log_interval == 0 && loggingOn)
          writeFile(params.output_file + get_current_time());
        loggingOn = !loggingOn;
        
