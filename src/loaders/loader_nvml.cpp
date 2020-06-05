@@ -2,6 +2,7 @@
 // Path to the code generator: /home/crz/git/MangoHud/generate_library_loader.py .
 
 #include "loader_nvml.h"
+#include <iostream>
 
 // Put these sanity checks here so that they fire at most once
 // (to avoid cluttering the build output).
@@ -26,8 +27,10 @@ bool libnvml_loader::Load(const std::string& library_name) {
 
 #if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
   library_ = dlopen(library_name.c_str(), RTLD_LAZY);
-  if (!library_)
+  if (!library_) {
+    std::cerr << "MANGOHUD: Failed to open " << "" MANGOHUD_ARCH << " " << library_name << ": " << dlerror() << std::endl;
     return false;
+  }
 #endif
 
 

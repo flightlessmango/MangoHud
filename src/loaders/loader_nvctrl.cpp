@@ -25,7 +25,7 @@ bool libnvctrl_loader::Load(const std::string& library_name) {
 #if defined(LIBRARY_LOADER_NVCTRL_H_DLOPEN)
   library_ = dlopen(library_name.c_str(), RTLD_LAZY);
   if (!library_) {
-    std::cerr << "MANGOHUD: " << library_name << " dlopen failed: " << dlerror() << std::endl;
+    std::cerr << "MANGOHUD: Failed to open " << "" MANGOHUD_ARCH << " " << library_name << ": " << dlerror() << std::endl;
     return false;
   }
 

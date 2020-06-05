@@ -17,7 +17,7 @@ bool glx_loader::Load() {
   // Force load libGL
   void *handle = real_dlopen("libGL.so.1", RTLD_LAZY);
   if (!handle) {
-    std::cerr << "MANGOHUD: couldn't find libGL.so.1: " << dlerror() << std::endl;
+    std::cerr << "MANGOHUD: Failed to open " << "" MANGOHUD_ARCH << " libGL.so.1: " << dlerror() << std::endl;
     return false;
   }
 
