@@ -381,6 +381,20 @@ parse_overlay_config(struct overlay_params *params,
    params->reload_cfg = { XK_Shift_L, XK_F4 };
 #endif
 
+#ifdef _WIN32
+   params->toggle_hud = { VK_F12 };
+   params->toggle_logging = { VK_F2 };
+   params->reload_cfg = { VK_F4 };
+
+   #undef parse_toggle_hud
+   #undef parse_toggle_logging
+   #undef parse_reload_cfg
+
+   #define parse_toggle_hud(x)      params->toggle_hud
+   #define parse_toggle_logging(x)  params->toggle_logging
+   #define parse_reload_cfg(x)      params->reload_cfg
+#endif
+
    // first pass with env var
    if (env)
       parse_overlay_env(params, env);
