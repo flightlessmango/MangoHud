@@ -1446,10 +1446,13 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::Text("ms");
          ImGui::PopFont();
       }
+      if (!params.enabled[OVERLAY_PARAM_ENABLED_fps] && params.enabled[OVERLAY_PARAM_ENABLED_engine_version]){
+         ImGui::TableNextRow();
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", is_vulkan ? data.engineName.c_str() : "OpenGL");
+      }
       ImGui::EndTable();
-      
       auto engine_color = ImGui::ColorConvertU32ToFloat4(params.engine_color);
-      if (params.enabled[OVERLAY_PARAM_ENABLED_fps] && params.enabled[OVERLAY_PARAM_ENABLED_engine_version]){
+      if (params.enabled[OVERLAY_PARAM_ENABLED_engine_version]){
          ImGui::PushFont(data.font1);
          ImGui::Dummy(ImVec2(0, 8.0f));
          if (is_vulkan) {
