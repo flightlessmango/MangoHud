@@ -1317,15 +1317,14 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             ImGui::PushFont(data.font1);
             ImGui::Text("MHz");
             ImGui::PopFont();
-
-            if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_power]) {
-               ImGui::TableNextCell();
-               right_aligned_text(char_width * 4, "%i", gpu_info.powerUsage);
-               ImGui::SameLine(0, 1.0f);
-               ImGui::PushFont(data.font1);
-               ImGui::Text("W");
-               ImGui::PopFont();
-            }
+         }
+         if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_power]) {
+            ImGui::TableNextCell();
+            right_aligned_text(char_width * 4, "%i", gpu_info.powerUsage);
+            ImGui::SameLine(0, 1.0f);
+            ImGui::PushFont(data.font1);
+            ImGui::Text("W");
+            ImGui::PopFont();
          }
       }
       if(params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats]){

@@ -447,8 +447,8 @@ parse_overlay_config(struct overlay_params *params,
 
    //increase hud width if io read and write
    if (!params->width) {
-      if (!params->enabled[OVERLAY_PARAM_ENABLED_gpu_power]
-            && params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]
+      if (((params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock] && !params->enabled[OVERLAY_PARAM_ENABLED_gpu_power])
+            || (!params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock] && params->enabled[OVERLAY_PARAM_ENABLED_gpu_power]))
             && params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp]
             && params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats]) {
          params->tableCols = 4;
