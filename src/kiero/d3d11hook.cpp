@@ -44,7 +44,7 @@ D3D11_HOOK_API void ImplHookDX11_Present(ID3D11Device *device, ID3D11DeviceConte
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
-	position_layer(params, window_size);
+	position_layer(sw_stats, params, window_size);
 	render_imgui(sw_stats, params, window_size, "D3D11");
 	ImGui::EndFrame();
 	ImGui::Render();

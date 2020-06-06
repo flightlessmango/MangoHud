@@ -51,7 +51,7 @@ long __stdcall hkEndScene(LPDIRECT3DDEVICE9 pDevice)
 	ImGui_ImplDX9_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
-	position_layer(params, window_size);
+	position_layer(sw_stats, params, window_size);
 	render_imgui(sw_stats, params, window_size, "D3D9");
 	ImGui::EndFrame();
 	ImGui::Render();

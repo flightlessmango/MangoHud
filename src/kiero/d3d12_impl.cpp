@@ -119,7 +119,7 @@ long __fastcall hkPresent12(IDXGISwapChain3* pSwapChain, UINT SyncInterval, UINT
 	ImGui_ImplDX12_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
-	position_layer(params, window_size);
+	position_layer(sw_stats, params, window_size);
 	render_imgui(sw_stats, params, window_size, "D3D12");
 	ImGui::EndFrame();
 
