@@ -8,4 +8,6 @@ extern struct nvmlMemory_st nvidiaMemory;
 extern bool nvmlSuccess;
 
 bool checkNVML(const char* pciBusId);
+bool checkNVAPI(void);
 bool getNVMLInfo(void);
+void nvapi_util(void);

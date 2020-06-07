@@ -6,6 +6,7 @@ struct gpuInfo gpu_info;
 amdgpu_files amdgpu {};
 
 void getNvidiaGpuInfo(){
+#ifdef __gnu_linux__
     if (nvmlSuccess){
         getNVMLInfo();
         gpu_info.load = nvidiaUtilization.gpu;
@@ -25,6 +26,10 @@ void getNvidiaGpuInfo(){
         gpu_info.MemClock = nvctrl_info.MemClock;
         gpu_info.powerUsage = 0;
     }
+#endif
+#endif
+#ifdef __WIN32
+    nvapi_util();
 #endif
 }
 
