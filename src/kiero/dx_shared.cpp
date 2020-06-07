@@ -42,7 +42,7 @@ void imgui_create(void *ctx, void *device)
             if (S_OK == hr) {
                 vendorID = adapterDesc.VendorId;
                 char buf[256]{};
-                wcstombs_s(nullptr, buf, adapterDesc.Description, sizeof(adapterDesc.Description));
+                wcstombs_s(nullptr, buf, sizeof(buf), adapterDesc.Description, sizeof(adapterDesc.Description));
                 deviceName = buf;
             }
         }
