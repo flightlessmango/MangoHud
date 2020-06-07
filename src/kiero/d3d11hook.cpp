@@ -40,6 +40,7 @@ DWORD_PTR*                         pDeviceContextVTable = nullptr;
 bool init = false;
 D3D11_HOOK_API void ImplHookDX11_Present(ID3D11Device *device, ID3D11DeviceContext *ctx, IDXGISwapChain *swap_chain)
 {
+	check_keybinds(params);
 	update_hud_info(sw_stats, params, vendorID);
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();

@@ -114,7 +114,8 @@ long __fastcall hkPresent12(IDXGISwapChain3* pSwapChain, UINT SyncInterval, UINT
 	}
 
 	ImGui::SetCurrentContext(state.imgui_ctx);
-
+	
+	check_keybinds(params);
 	update_hud_info(sw_stats, params, vendorID);
 	ImGui_ImplDX12_NewFrame();
 	ImGui_ImplWin32_NewFrame();
