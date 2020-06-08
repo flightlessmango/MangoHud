@@ -23,7 +23,7 @@ static std::string get_proc_name() {
 }
 
 static bool check_blacklisted() {
-    static const std::array<const char *, 17> blacklist {
+    static const std::array<std::string, 17> blacklist {
         "Battle.net.exe",
         "BethesdaNetLauncher.exe",
         "EpicGamesLauncher.exe",
