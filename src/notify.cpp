@@ -33,7 +33,7 @@ static void fileChanged(void *params_void) {
             }
         }
         i = 0;
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
 
@@ -52,7 +52,9 @@ bool start_notifier(notify_thread& nt)
         return false;
     }
 
-    std::thread(fileChanged, &nt).detach();
+    if (nt.thread.joinable())
+        nt.thread.join();
+    nt.thread = std::thread(fileChanged, &nt);
     return true;
 }
 
@@ -62,6 +64,8 @@ void stop_notifier(notify_thread& nt)
         return;
 
     nt.quit = true;
+    if (nt.thread.joinable())
+        nt.thread.join();
     inotify_rm_watch(nt.fd, nt.wd);
     close(nt.fd);
     nt.fd = -1;
