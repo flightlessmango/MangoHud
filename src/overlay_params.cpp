@@ -466,8 +466,15 @@ parse_overlay_config(struct overlay_params *params,
 
 #ifdef HAVE_DBUS
    if (params->enabled[OVERLAY_PARAM_ENABLED_media_player]) {
-      main_metadata.clear();
-      generic_mpris.clear();
+      // lock mutexes for config file change notifier thread
+      {
+         std::lock_guard<std::mutex> lk(main_metadata.mutex);
+         main_metadata.clear();
+      }
+      {
+         std::lock_guard<std::mutex> lk(generic_mpris.mutex);
+         generic_mpris.clear();
+      }
       if (dbusmgr::dbus_mgr.init(params->media_player_name)) {
          if (!get_media_player_metadata(dbusmgr::dbus_mgr, params->media_player_name, main_metadata))
             std::cerr << "MANGOHUD: Failed to get initial media player metadata." << std::endl;
