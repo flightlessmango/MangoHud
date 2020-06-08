@@ -3,7 +3,6 @@
 #include "kiero.h"
 
 #include "d3d11_impl.h"
-#include <d3d11.h>
 #include <assert.h>
 #include <iostream>
 
@@ -132,12 +131,12 @@ void impl::d3d11::init()
 {
 	auto ret = kiero::bind(8, (void**)&oPresent, reinterpret_cast<void *>(hkPresent11));
 	assert(ret == kiero::Status::Success);
-	ret = kiero::bind(12, (void**)&DrawIndexedHook, reinterpret_cast<void *>(phookD3D11DrawIndexed));
+	ret = kiero::bind(73, (void**)&phookD3D11DrawIndexed, reinterpret_cast<void *>(DrawIndexedHook));
 	assert(ret == kiero::Status::Success);
-	ret = kiero::bind(24, (void**)&hookD3D11CreateQuery, reinterpret_cast<void *>(phookD3D11CreateQuery));
+	ret = kiero::bind(42, (void**)&phookD3D11CreateQuery, reinterpret_cast<void *>(hookD3D11CreateQuery));
 	assert(ret == kiero::Status::Success);
-	ret = kiero::bind(8, (void**)&hookD3D11PSSetShaderResources, reinterpret_cast<void *>(phookD3D11PSSetShaderResources));
-	assert(ret == kiero::Status::Success);
-	ret = kiero::bind(50, (void**)&ClearRenderTargetViewHook, reinterpret_cast<void *>(phookD3D11ClearRenderTargetViewHook));
-	assert(ret == kiero::Status::Success);
+	//ret = kiero::bind(unknown_index, (void**)&phookD3D11PSSetShaderResources, reinterpret_cast<void *>(hookD3D11PSSetShaderResources));
+	//assert(ret == kiero::Status::Success);
+	//ret = kiero::bind(111, (void**)&phookD3D11ClearRenderTargetViewHook, reinterpret_cast<void *>(ClearRenderTargetViewHook));
+	//assert(ret == kiero::Status::Success);
 }
