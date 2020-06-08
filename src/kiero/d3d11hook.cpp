@@ -73,8 +73,9 @@ long __stdcall hkPresent11(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT F
 		ImGui_ImplDX11_Init(device, context);
 		init = true;
 	});
-
-	ImplHookDX11_Present(g_pd3dDevice, g_pd3dContext, g_pSwapChain);
+	static auto addr = __builtin_return_address(0);
+	if(addr == __builtin_return_address(0))
+		ImplHookDX11_Present(g_pd3dDevice, g_pd3dContext, g_pSwapChain);
 
 	return oPresent(pSwapChain, SyncInterval, Flags);
 }

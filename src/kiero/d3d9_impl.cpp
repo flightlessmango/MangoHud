@@ -46,17 +46,19 @@ long __stdcall hkEndScene(LPDIRECT3DDEVICE9 pDevice)
 	}
 
 	ImGui::SetCurrentContext(state.imgui_ctx);
-	
-	check_keybinds(params);
-	update_hud_info(sw_stats, params, vendorID);
-	ImGui_ImplDX9_NewFrame();
-	ImGui_ImplWin32_NewFrame();
-	ImGui::NewFrame();
-	position_layer(sw_stats, params, window_size);
-	render_imgui(sw_stats, params, window_size, "D3D9");
-	ImGui::EndFrame();
-	ImGui::Render();
-	ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
+	static auto addr = __builtin_return_address(0);
+	if(addr == __builtin_return_address(0)){
+		check_keybinds(params);
+		update_hud_info(sw_stats, params, vendorID);
+		ImGui_ImplDX9_NewFrame();
+		ImGui_ImplWin32_NewFrame();
+		ImGui::NewFrame();
+		position_layer(sw_stats, params, window_size);
+		render_imgui(sw_stats, params, window_size, "D3D9");
+		ImGui::EndFrame();
+		ImGui::Render();
+		ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
+	}
 
 	ImGui::SetCurrentContext(prev_ctx);
 
