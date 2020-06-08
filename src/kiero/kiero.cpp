@@ -85,7 +85,7 @@ kiero::Status::Enum kiero::init(RenderType::Enum _renderType)
 					return Status::ModuleNotFoundError;
 				}
 
-				auto Direct3DCreate9 = reinterpret_cast<decltype(&::D3D11CreateDeviceAndSwapChain)>(::GetProcAddress(libD3D9, "Direct3DCreate9"));
+				auto Direct3DCreate9 = reinterpret_cast<decltype(&::Direct3DCreate9)>(::GetProcAddress(libD3D9, "Direct3DCreate9"));
 				if (!Direct3DCreate9)
 				{
 					::DestroyWindow(window);
@@ -374,8 +374,8 @@ kiero::Status::Enum kiero::init(RenderType::Enum _renderType)
 					return Status::ModuleNotFoundError;
 				}
 
-				void* CreateDXGIFactory;
-				if ((CreateDXGIFactory = ::GetProcAddress(libDXGI, "CreateDXGIFactory")) == NULL)
+				auto CreateDXGIFactory = reinterpret_cast<decltype(&::CreateDXGIFactory)>(::GetProcAddress(libDXGI, "CreateDXGIFactory"));
+				if (!CreateDXGIFactory)
 				{
 					::DestroyWindow(window);
 					::UnregisterClass(windowClass.lpszClassName, windowClass.hInstance);
@@ -397,9 +397,8 @@ kiero::Status::Enum kiero::init(RenderType::Enum _renderType)
 					::UnregisterClass(windowClass.lpszClassName, windowClass.hInstance);
 					return Status::UnknownError;
 				}
-
-				void* D3D12CreateDevice;
-				if ((D3D12CreateDevice = ::GetProcAddress(libD3D12, "D3D12CreateDevice")) == NULL)
+				auto D3D12CreateDevice = reinterpret_cast<decltype(&::D3D12CreateDevice)>(::GetProcAddress(libD3D12, "D3D12CreateDevice"));
+				if (!D3D12CreateDevice)
 				{
 					::DestroyWindow(window);
 					::UnregisterClass(windowClass.lpszClassName, windowClass.hInstance);
