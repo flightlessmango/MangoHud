@@ -54,7 +54,6 @@
 #include "logging.h"
 #include "keybinds.h"
 #include "cpu.h"
-#include "loaders/loader_nvml.h"
 #include "memory.h"
 #include "notify.h"
 #include "blacklist.h"

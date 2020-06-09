@@ -1,4 +1,3 @@
-#include "nvidia_info.h"
 #include "memory.h"
 #include "gpu.h"
 

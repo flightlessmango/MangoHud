@@ -2,8 +2,10 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "nvidia_info.h"
 #include "nvctrl.h"
+#ifdef HAVE_NVML
+#include "nvidia_info.h"
+#endif
 
 struct amdgpu_files
 {
