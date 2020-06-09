@@ -797,8 +797,10 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
    if (vendorID == 0x8086
       || vendorID == 0x10de) {
 
-      bool nvSuccess = (checkNVML(pci_dev) && getNVMLInfo());
-
+      bool nvSuccess = false;
+#ifdef HAVE_NVML
+      nvSuccess = checkNVML(pci_dev) && getNVMLInfo();
+#endif
 #ifdef HAVE_XNVCTRL
       if (!nvSuccess)
          nvSuccess = checkXNVCtrl();

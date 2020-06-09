@@ -4,6 +4,7 @@ option('use_system_nvml', type : 'boolean', value : false, description : 'Use sy
 option('mangohud_prefix', type : 'string', value : '', description: 'Add prefix to cross-compiled library, like "lib32-".')
 option('append_libdir_mangohud', type : 'boolean', value : true, description: 'Append "mangohud" to libdir path or not.')
 option('include_doc', type : 'boolean', value : true, description: 'Include the example config')
+option('with_nvml', type : 'combo', value : 'enabled', choices: ['enabled', 'system', 'disabled'], description: 'Enable NVML support')
 option('with_xnvctrl', type : 'feature', value : 'enabled', description: 'Enable XNVCtrl support')
 option('with_x11', type : 'feature', value : 'enabled')
 option('with_wayland', type : 'feature', value : 'disabled')

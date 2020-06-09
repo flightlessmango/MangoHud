@@ -24,8 +24,6 @@ vklayer_files = files(
   'font_unispace.c',
   'blacklist.cpp',
   'cpu.cpp',
-  'loaders/loader_nvml.cpp',
-  'nvml.cpp',
   'file_utils.cpp',
   'memory.cpp',
   'config.cpp',
@@ -48,6 +46,22 @@ if get_option('with_dlsym').enabled()
     pre_args += '-DHOOK_DLSYM'
 endif
 
+nvml_h_found = get_option('with_nvml') == 'enabled'
+if get_option('with_nvml') == 'system'
+  nvml_h_found = cc.has_header('nvml.h')
+  if not nvml_h_found
+    error('nvml.h was not found. Disable with \'-Dwith_nvml=disabled\' if gpu stats by NVML is not needed.')
+  endif
+endif
+
+if nvml_h_found
+  pre_args += '-DHAVE_NVML'
+  vklayer_files += files(
+    'nvml.cpp',
+    'loaders/loader_nvml.cpp',
+  )
+endif
+
 if get_option('with_xnvctrl').enabled()
 
   if not get_option('with_x11').enabled()
@@ -56,7 +70,7 @@ if get_option('with_xnvctrl').enabled()
 
   xnvctrl_h_found = cc.has_header('NVCtrl/NVCtrl.h')
   if not xnvctrl_h_found
-    error('NVCtrl.h was not found. Disable with \'with_xnvctrl\' if this feature is not needed.')
+    error('NVCtrl.h was not found. Disable with \'-Dwith_xnvctrl=disabled\' if gpu stats by XNVCtrl is not needed.')
   endif
 
   pre_args += '-DHAVE_XNVCTRL'

@@ -6,6 +6,7 @@ struct gpuInfo gpu_info;
 amdgpu_files amdgpu {};
 
 void getNvidiaGpuInfo(){
+#ifdef HAVE_NVML
     if (nvmlSuccess){
         getNVMLInfo();
         gpu_info.load = nvidiaUtilization.gpu;
@@ -14,9 +15,11 @@ void getNvidiaGpuInfo(){
         gpu_info.CoreClock = nvidiaCoreClock;
         gpu_info.MemClock = nvidiaMemClock;
         gpu_info.powerUsage = nvidiaPowerUsage / 1000;
+        return;
     }
+#endif
 #ifdef HAVE_XNVCTRL
-    else if (nvctrlSuccess) {
+    if (nvctrlSuccess) {
         getNvctrlInfo();
         gpu_info.load = nvctrl_info.load;
         gpu_info.temp = nvctrl_info.temp;
@@ -24,6 +27,7 @@ void getNvidiaGpuInfo(){
         gpu_info.CoreClock = nvctrl_info.CoreClock;
         gpu_info.MemClock = nvctrl_info.MemClock;
         gpu_info.powerUsage = 0;
+        return;
     }
 #endif
 }
