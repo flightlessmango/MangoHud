@@ -175,9 +175,9 @@ All vulkan vsync options might not be supported on your device, you can check wh
 
 ## Keybindings
 
-- `F2` : Toggle Logging
-- `F4` : Reload Config
-- `F12`: Toggle Hud
+- `Shift_L+F2` : Toggle Logging
+- `Shift_L+F4` : Reload Config
+- `Shift_R+F12`: Toggle Hud
 
 ## MangoHud FPS logging
 
