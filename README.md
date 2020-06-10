@@ -135,6 +135,8 @@ A partial list of parameters are below. See the config file for a complete list.
 | `vsync`<br> `gl_vsync`             | Set vsync for OpenGL or Vulkan                                                        |
 | `media_player`                     | Show media player metadata                                                            |
 | `media_player_name`                | Set main media player DBus service name without the `org.mpris.MediaPlayer2` part, like `spotify`, `vlc`, `audacious` or `cantata`. Defaults to `spotify`. |
+| `media_player_color`               | Change color of media player text                                                     |
+| `font_scale_media_player`          | Change size of media player text relative to font_size                                |                                        
 | `io_read`<br> `io_write`           | Show non-cached IO read/write, in MiB/s                                               |
 | `pci_dev`                          | Select GPU device in multi-gpu setups                                                 |
 | `version`                          | Shows current mangohud version                                                        |
@@ -143,6 +145,9 @@ A partial list of parameters are below. See the config file for a complete list.
 | `histogram`                        | Change fps graph to histogram                                                         |
 | `cpu_text`<br>`gpu_text`           | Override CPU and GPU text                                                             |
 | `log_interval`                     | Change the default log interval, `100` is default                                     |
+| `vulkan_driver`                    | Displays used vulkan driver, radv/amdgpu-pro/amdvlk                                   |
+| `gpu_name`                         | Displays GPU name from pci.ids                                                        |
+| `gpu_power`                        | Display GPU draw in watts                                                             |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 
