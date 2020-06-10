@@ -116,7 +116,6 @@ A partial list of parameters are below. See the config file for a complete list.
 | `gpu_core_clock`<br>`gpu_mem_clock`| Displays GPU core/memory frequency                                                    |
 | `ram`<br>`vram`                    | Displays system RAM/VRAM usage                                                        |
 | `full`                             | Enables all of the above config options                                               |
-| `crosshair`                        | Adds a crosshair overlay at the centre of the screen                                  |
 | `font_size=`                       | Customizeable font size (default=24)                                                  |
 | `width=`<br>`height=`              | Customizeable hud dimensions (in pixels)                                              |
 | `position=`                        | Location of the hud: `top-left` (default), `top-right`, `bottom-left`, `bottom-right`, `top-center` |
