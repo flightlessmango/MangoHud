@@ -369,8 +369,8 @@ parse_overlay_config(struct overlay_params *params,
    params->log_interval = 100;
 
 #ifdef HAVE_X11
-   params->toggle_hud = { XK_F12 };
-   params->toggle_logging = { XK_F2 };
+   params->toggle_hud = { XK_Shift_R, XK_F12 };
+   params->toggle_logging = { XK_Shift_L, XK_F2 };
    params->reload_cfg = { XK_Shift_L, XK_F4 };
 #endif
 
