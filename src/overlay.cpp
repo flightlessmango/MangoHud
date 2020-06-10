@@ -936,7 +936,7 @@ void check_keybinds(struct overlay_params& params){
        if (!params.output_file.empty() && params.log_duration == 0 && params.log_interval == 0 && loggingOn)
          writeFile(params.output_file + get_current_time());
        loggingOn = !loggingOn;
-       
+
        if (!params.output_file.empty() && loggingOn && params.log_interval != 0)
          std::thread(logging, &params).detach();
 
@@ -986,7 +986,7 @@ void calculate_benchmark_data(){
    for (size_t i = 0; i < sorted.size() * 0.1; i++){
       benchmark.total = sorted[i];
    }
-   benchmark.oneP = benchmark.total;   
+   benchmark.oneP = benchmark.total;
 }
 
 void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
@@ -1379,10 +1379,10 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::TableNextRow();
          if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] && !params.enabled[OVERLAY_PARAM_ENABLED_io_write])
             ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.io_color), "IO RD");
-         if (params.enabled[OVERLAY_PARAM_ENABLED_io_write] && !params.enabled[OVERLAY_PARAM_ENABLED_io_read])
+         else if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] && params.enabled[OVERLAY_PARAM_ENABLED_io_write])
             ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.io_color), "IO RW");
-         if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] && params.enabled[OVERLAY_PARAM_ENABLED_io_write])
-            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.io_color), "IO RD/RW");
+         else if (params.enabled[OVERLAY_PARAM_ENABLED_io_write] && !params.enabled[OVERLAY_PARAM_ENABLED_io_read])
+            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.io_color), "IO WR");
 
          if (params.enabled[OVERLAY_PARAM_ENABLED_io_read]){
             ImGui::TableNextCell();
