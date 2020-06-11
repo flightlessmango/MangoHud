@@ -1380,14 +1380,14 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] && !params.enabled[OVERLAY_PARAM_ENABLED_io_write])
             ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.io_color), "IO RD");
          else if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] && params.enabled[OVERLAY_PARAM_ENABLED_io_write])
-            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.io_color), "IO RW");
+            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.io_color), "IO RD/WR");
          else if (params.enabled[OVERLAY_PARAM_ENABLED_io_write] && !params.enabled[OVERLAY_PARAM_ENABLED_io_read])
             ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.io_color), "IO WR");
 
          if (params.enabled[OVERLAY_PARAM_ENABLED_io_read]){
             ImGui::TableNextCell();
             float val = data.io.diff.read * 1000000 / sampling;
-            right_aligned_text(char_width * 4, val < 100 ? "%.2f" : "%.f", val);
+            right_aligned_text(char_width * 4, val < 100 ? "%.1f" : "%.f", val);
             ImGui::SameLine(0,1.0f);
             ImGui::PushFont(data.font1);
             ImGui::Text("MiB/s");
@@ -1396,7 +1396,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          if (params.enabled[OVERLAY_PARAM_ENABLED_io_write]){
             ImGui::TableNextCell();
             float val = data.io.diff.write * 1000000 / sampling;
-            right_aligned_text(char_width * 4, val < 100 ? "%.2f" : "%.f", val);
+            right_aligned_text(char_width * 4, val < 100 ? "%.1f" : "%.f", val);
             ImGui::SameLine(0,1.0f);
             ImGui::PushFont(data.font1);
             ImGui::Text("MiB/s");
@@ -1407,7 +1407,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::TableNextRow();
          ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.vram_color), "VRAM");
          ImGui::TableNextCell();
-         right_aligned_text(char_width * 4, "%.2f", gpu_info.memoryUsed);
+         right_aligned_text(char_width * 4, "%.1f", gpu_info.memoryUsed);
          ImGui::SameLine(0,1.0f);
          ImGui::PushFont(data.font1);
          ImGui::Text("GiB");
@@ -1425,7 +1425,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::TableNextRow();
          ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.ram_color), "RAM");
          ImGui::TableNextCell();
-         right_aligned_text(char_width * 4, "%.2f", memused);
+         right_aligned_text(char_width * 4, "%.1f", memused);
          ImGui::SameLine(0,1.0f);
          ImGui::PushFont(data.font1);
          ImGui::Text("GiB");
@@ -1553,7 +1553,8 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
 
       if(loggingOn)
          ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(data.main_window_pos.x + window_size.x - 15, data.main_window_pos.y + 15), 10, params.engine_color, 20);
-
+      if ((params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])) 
+         params.width = 15 * params.font_size;
       window_size = ImVec2(window_size.x, ImGui::GetCursorPosY() + 10.0f);
       ImGui::End();
       if (loggingOn && params.log_duration && (now - log_start) >= params.log_duration * 1000000){
