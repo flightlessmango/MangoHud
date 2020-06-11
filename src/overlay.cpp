@@ -1354,7 +1354,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       if(loggingOn)
          ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(data.main_window_pos.x + window_size.x - 15, data.main_window_pos.y + 15), 10, params.engine_color, 20);
       if ((params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])) 
-         params.width = 15 * params.font_size;
+         params.width = 13 * params.font_size;
       window_size = ImVec2(window_size.x, ImGui::GetCursorPosY() + 10.0f);
       ImGui::End();
       if (loggingOn && params.log_duration && (now - log_start) >= params.log_duration * 1000000){
