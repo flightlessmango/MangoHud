@@ -2453,6 +2453,7 @@ void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats&
          desc.erase(remove(desc.begin(), desc.end(), c), desc.end());
    }
    sw_stats.gpuName = desc;
+   trim(sw_stats.gpuName);
 }
 
 static VkResult overlay_CreateSwapchainKHR(
