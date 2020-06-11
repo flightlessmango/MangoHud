@@ -126,7 +126,7 @@ struct overlay_params {
    int offset_x, offset_y;
    unsigned vsync;
    int gl_vsync;
-   int log_duration;
+   uint64_t log_duration;
    unsigned cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color;
    unsigned media_player_color;
    unsigned tableCols;
