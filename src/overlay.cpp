@@ -1044,12 +1044,12 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
    ImGui::Begin("Benchmark", &open, ImGuiWindowFlags_NoDecoration);
    static const char* finished = "Logging Finished";
    ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2 )- (ImGui::CalcTextSize(finished).x / 2));
-   ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), finished);
+   ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), "%s", finished);
    ImGui::Dummy(ImVec2(0.0f, 8.0f));
    char duration[20];
    snprintf(duration, sizeof(duration), "Duration: %.1fs", float(log_end - log_start) / 1000000);
    ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2 )- (ImGui::CalcTextSize(duration).x / 2));
-   ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), duration);
+   ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), "%s", duration);
    for (auto& data_ : benchmark_data){
       char buffer[20];
       snprintf(buffer, sizeof(buffer), "%s %.1f", data_.first.c_str(), data_.second);
