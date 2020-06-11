@@ -154,6 +154,7 @@ A partial list of parameters are below. See the config file for a complete list.
 | `vulkan_driver`                    | Displays used vulkan driver, radv/amdgpu-pro/amdvlk                                   |
 | `gpu_name`                         | Displays GPU name from pci.ids                                                        |
 | `gpu_power`                        | Display GPU draw in watts                                                             |
+| `engine_version`                   | Display OpenGL or vulkan and vulkan-based render engine's version                     |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 
