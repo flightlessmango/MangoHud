@@ -37,6 +37,12 @@ If you have compiled MangoHud from source, to install it, execute:
 ./build.sh install
 ```
 
+You can then subsequently uninstall MangoHud via the following command
+
+```
+./build.sh uninstall
+```
+
 ### Pre-packaged binaries
 
 #### GitHub releases
