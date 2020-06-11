@@ -1109,8 +1109,9 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             ImGui::SameLine(0, 1.0f);
             ImGui::Text("°C");
          }
-         if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]){
+         if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock] || params.enabled[OVERLAY_PARAM_ENABLED_gpu_power])
             ImGui::TableNextRow();
+         if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]){
             ImGui::TableNextCell();
             right_aligned_text(char_width * 4, "%i", gpu_info.CoreClock);
             ImGui::SameLine(0, 1.0f);
