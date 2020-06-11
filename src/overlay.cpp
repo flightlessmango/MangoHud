@@ -1380,7 +1380,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] && !params.enabled[OVERLAY_PARAM_ENABLED_io_write])
             ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.io_color), "IO RD");
          else if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] && params.enabled[OVERLAY_PARAM_ENABLED_io_write])
-            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.io_color), "IO RD/WR");
+            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.io_color), "IO RW");
          else if (params.enabled[OVERLAY_PARAM_ENABLED_io_write] && !params.enabled[OVERLAY_PARAM_ENABLED_io_read])
             ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.io_color), "IO WR");
 
