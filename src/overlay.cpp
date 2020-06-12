@@ -1024,21 +1024,31 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
 
    vector<pair<string, float>> benchmark_data = {{"97%", benchmark.ninety}, {"AVG", benchmark.avg}, {"1% ", benchmark.oneP}};
    float display_time = float(now - log_end) / 1000000;
-   float display_for = 10.0f;
+   static float display_for = 10.0f;
    float alpha;
-   if (display_for >= display_time){
-      alpha = display_time * params.background_alpha;
-      if (alpha >= params.background_alpha){
-         ImGui::SetNextWindowBgAlpha(0.5f);
-      }else{
-         ImGui::SetNextWindowBgAlpha(alpha);
+   if(params.background_alpha != 0){
+      if (display_for >= display_time){
+         alpha = display_time * params.background_alpha;
+         if (alpha >= params.background_alpha){
+            ImGui::SetNextWindowBgAlpha(params.background_alpha);
+         }else{
+            ImGui::SetNextWindowBgAlpha(alpha);
+         }
+      } else {
+         alpha = 6.0 - display_time * params.background_alpha;
+         if (alpha >= params.background_alpha){
+            ImGui::SetNextWindowBgAlpha(params.background_alpha);
+         }else{
+            ImGui::SetNextWindowBgAlpha(alpha);
+         }
       }
    } else {
-      alpha = 6.0 - display_time * params.background_alpha;
-      if (alpha >= params.background_alpha){
-         ImGui::SetNextWindowBgAlpha(0.5f);
-      }else{
-         ImGui::SetNextWindowBgAlpha(alpha);
+      if (display_for >= display_time){
+         alpha = display_time * 0.0001;
+         ImGui::SetNextWindowBgAlpha(params.background_alpha);
+      } else {
+         alpha = 6.0 - display_time * 0.0001;
+         ImGui::SetNextWindowBgAlpha(params.background_alpha);
       }
    }
    ImGui::Begin("Benchmark", &open, ImGuiWindowFlags_NoDecoration);
@@ -1058,9 +1068,9 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
    }
    float max = *max_element(benchmark.fps_data.begin(), benchmark.fps_data.end());
    ImVec4 plotColor = ImGui::ColorConvertU32ToFloat4(params.frametime_color);
-   plotColor.w = alpha;
+   plotColor.w = alpha / params.background_alpha;
    ImGui::PushStyleColor(ImGuiCol_PlotLines, plotColor);
-   ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0, 0.0, 0.0, alpha / 0.8));
+   ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0, 0.0, 0.0, alpha / params.background_alpha));
    ImGui::Dummy(ImVec2(0.0f, 8.0f));
    if (params.enabled[OVERLAY_PARAM_ENABLED_histogram])
       ImGui::PlotHistogram("", benchmark.fps_data.data(), benchmark.fps_data.size(), 0, "", 0.0f, max + 10, ImVec2(ImGui::GetContentRegionAvailWidth(), 50));
