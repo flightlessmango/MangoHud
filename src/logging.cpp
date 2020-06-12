@@ -40,7 +40,7 @@ string exec(string command) {
 void upload_file(){
   std::string command = "curl --include --request POST https://flightlessmango.com/logs -F 'log[game_id]=26506' -F 'log[user_id]=176' -F 'attachment=true' -A 'mangohud' ";
   command += " -F 'log[uploads][]=@" + logFiles.back() + "'";
-  
+
   command += " | grep Location | cut -c11-";
   std::string url = exec(command);
   exec("xdg-open " + url);
@@ -50,7 +50,7 @@ void upload_files(){
   std::string command = "curl --include --request POST https://flightlessmango.com/logs -F 'log[game_id]=26506' -F 'log[user_id]=176' -F 'attachment=true' -A 'mangohud' ";
   for (auto& file : logFiles)
     command += " -F 'log[uploads][]=@" + file + "'";
-  
+
   command += " | grep Location | cut -c11-";
   std::string url = exec(command);
   exec("xdg-open " + url);
@@ -79,13 +79,13 @@ void writeFile(string filename){
   logArray.clear();
 }
 
-string get_current_time(){
+string get_log_suffix(){
   time_t now_log = time(0);
   tm *log_time = localtime(&now_log);
   std::ostringstream buffer;
-  buffer << std::put_time(log_time, "%Y-%m-%d_%H-%M-%S");
-  string date = buffer.str();
-  return date;
+  buffer << std::put_time(log_time, "%Y-%m-%d_%H-%M-%S") << ".csv";
+  string log_name = buffer.str();
+  return log_name;
 }
 
 void logging(void *params_void){
@@ -104,5 +104,5 @@ void logging(void *params_void){
       this_thread::sleep_for(chrono::milliseconds(params->log_interval));
   }
 
-  writeFile(params->output_file + get_current_time());
+  writeFile(params->output_file + get_log_suffix());
 }

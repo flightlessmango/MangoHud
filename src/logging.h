@@ -34,6 +34,6 @@ extern logData currentLogData;
 void logging(void *params_void);
 void writeFile(string filename);
 string exec(string command);
-string get_current_time(void);
+string get_log_suffix(void);
 void upload_file(void);
 void upload_files(void);
