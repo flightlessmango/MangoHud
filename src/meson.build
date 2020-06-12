@@ -52,6 +52,7 @@ if get_option('with_nvml') == 'system'
   if not nvml_h_found
     error('nvml.h was not found. Disable with \'-Dwith_nvml=disabled\' if gpu stats by NVML is not needed.')
   endif
+  pre_args += '-DUSE_SYSTEM_NVML'
 endif
 
 if nvml_h_found
@@ -119,7 +120,6 @@ vklayer_mesa_overlay = shared_library(
   cpp_args : [
     pre_args,
     cpp_vis_args,
-    cpp_nvml_args,
     vulkan_wsi_args
     ],
   dependencies : [

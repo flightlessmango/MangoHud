@@ -1,6 +1,5 @@
 option('glibcxx_asserts', type : 'boolean', value : false)
 option('use_system_vulkan', type : 'feature', value : 'disabled', description: 'Use system vulkan headers instead of the provided ones')
-option('use_system_nvml', type : 'boolean', value : false, description : 'Use system nvml headers instead of the provided ones')
 option('mangohud_prefix', type : 'string', value : '', description: 'Add prefix to cross-compiled library, like "lib32-".')
 option('append_libdir_mangohud', type : 'boolean', value : true, description: 'Append "mangohud" to libdir path or not.')
 option('include_doc', type : 'boolean', value : true, description: 'Include the example config')
