@@ -678,7 +678,6 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
          params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
       }
    }
-   parse_pciids();
 }
 
 void init_system_info(){
@@ -711,6 +710,7 @@ void init_system_info(){
                 << "Gpu:" << gpu << "\n"
                 << "Driver:" << driver << std::endl;
 #endif
+      parse_pciids();
 }
 
 void check_keybinds(struct overlay_params& params){
