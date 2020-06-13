@@ -8,6 +8,8 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <algorithm>
+#include <cctype>
 
 #include "overlay_params.h"
 #include "overlay.h"
@@ -180,6 +182,25 @@ parse_path(const char *str)
    }
 #endif
    return str;
+}
+
+static std::vector<media_player_order>
+parse_media_player_order(const char *str)
+{
+   std::vector<media_player_order> order;
+   std::stringstream ss(str);
+   std::string token;
+   while (std::getline(ss, token, ',')) {
+      trim(token);
+      std::transform(token.begin(), token.end(), token.begin(), ::tolower);
+      if (token == "title")
+         order.push_back(MP_ORDER_TITLE);
+      else if (token == "artist")
+         order.push_back(MP_ORDER_ARTIST);
+      else if (token == "album")
+         order.push_back(MP_ORDER_ALBUM);
+   }
+   return order;
 }
 
 #define parse_width(s) parse_unsigned(s)
@@ -367,6 +388,7 @@ parse_overlay_config(struct overlay_params *params,
    params->media_player_name = "spotify";
    params->font_scale_media_player = 0.55f;
    params->log_interval = 100;
+   params->media_player_order = { MP_ORDER_TITLE, MP_ORDER_ARTIST, MP_ORDER_ALBUM };
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_Shift_R, XK_F12 };

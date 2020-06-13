@@ -84,6 +84,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(pci_dev)                     \
    OVERLAY_PARAM_CUSTOM(media_player_name)           \
    OVERLAY_PARAM_CUSTOM(media_player_color)          \
+   OVERLAY_PARAM_CUSTOM(media_player_order)          \
    OVERLAY_PARAM_CUSTOM(cpu_text)                    \
    OVERLAY_PARAM_CUSTOM(gpu_text)                    \
    OVERLAY_PARAM_CUSTOM(log_interval)                \
@@ -100,6 +101,12 @@ enum overlay_param_position {
 enum overlay_plots {
     OVERLAY_PLOTS_frame_timing,
     OVERLAY_PLOTS_MAX,
+};
+
+enum media_player_order {
+   MP_ORDER_TITLE,
+   MP_ORDER_ARTIST,
+   MP_ORDER_ALBUM,
 };
 
 enum overlay_param_enabled {
@@ -141,6 +148,7 @@ struct overlay_params {
    std::string media_player_name;
    std::string cpu_text, gpu_text;
    unsigned log_interval;
+   std::vector<media_player_order> media_player_order;
 
    std::string config_file_path;
    std::unordered_map<std::string,std::string> options;
