@@ -25,7 +25,7 @@ from __future__ import print_function
 import argparse
 import os
 import textwrap
-import xml.etree.cElementTree as et
+import xml.etree.ElementTree as et
 
 from mako.template import Template
 
