@@ -225,19 +225,31 @@ else
   cpp_nvml_args = []
 endif
 
+if (target_machine.cpu_family() == 'x86_64')
+  mango_library_path = meson.source_root() + '/lib'
+else
+  mango_library_path = meson.source_root() + '/lib32'
+endif
+
 if ['windows', 'mingw'].contains(host_machine.system())
   subdir('modules/minhook')
-  lib_dxgi        = cc.find_library('dxgi')
-  lib_d3d11       = cc.find_library('d3d11')
-  lib_d3d12       = cc.find_library('d3d12')
-  lib_d3dcompiler = cc.find_library('d3dcompiler')
-  lib_xinput      = cc.find_library('xinput')
+  lib_dxgi            = cc.find_library('dxgi')
+  lib_d3d11           = cc.find_library('d3d11')
+  lib_d3d12           = cc.find_library('d3d12')
+  lib_d3dcompiler     = cc.find_library('d3dcompiler')
+  lib_d3dcompiler_43  = cc.find_library('d3dcompiler_43', dirs : mango_library_path)
+  lib_xinput          = cc.find_library('xinput')
+  lib_ags             = cc.find_library('amd_ags', dirs : mango_library_path)
+  lib_d3dcompiler_47  = cc.find_library('d3dcompiler_47')
   windows_deps = [
     minhook_dep,
     lib_dxgi,
     lib_d3d11,
     lib_d3d12,
+    lib_ags,
     lib_d3dcompiler,
+    lib_d3dcompiler_43,
+    lib_d3dcompiler_47,
     lib_xinput,
   ]
 else

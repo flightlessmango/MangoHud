@@ -1,0 +1,1 @@
+int query_ags(void);

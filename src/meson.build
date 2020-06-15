@@ -49,6 +49,7 @@ if ['windows', 'mingw'].contains(host_machine.system())
     'loaders/loader_nvml_win32.cpp',
     'cpu_win32.cpp',
     'nvapi.cpp',
+    'ags.cpp',
 #    'MangoHud.def',
   )
 endif
