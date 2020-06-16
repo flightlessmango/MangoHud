@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 MANGOHUD_CONFIG_DIR="$XDG_CONFIG_HOME/MangoHud"
 SU_CMD=$(command -v sudo || command -v doas)
