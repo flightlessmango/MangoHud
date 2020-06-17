@@ -48,6 +48,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(gpu_name)                      \
    OVERLAY_PARAM_BOOL(engine_version)                \
    OVERLAY_PARAM_BOOL(histogram)                     \
+   OVERLAY_PARAM_BOOL(crosshair)                     \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
    OVERLAY_PARAM_CUSTOM(font_file)                   \
@@ -67,6 +68,9 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(offset_x)                    \
    OVERLAY_PARAM_CUSTOM(offset_y)                    \
    OVERLAY_PARAM_CUSTOM(background_alpha)            \
+   OVERLAY_PARAM_CUSTOM(crosshair_radius)            \
+   OVERLAY_PARAM_CUSTOM(crosshair_color)             \
+   OVERLAY_PARAM_CUSTOM(crosshair_border)            \
    OVERLAY_PARAM_CUSTOM(time_format)                 \
    OVERLAY_PARAM_CUSTOM(io_read)                     \
    OVERLAY_PARAM_CUSTOM(io_write)                    \
@@ -133,6 +137,9 @@ struct overlay_params {
    float font_size;
    float font_scale_media_player;
    float background_alpha, alpha;
+   unsigned crosshair_radius;
+   unsigned crosshair_color;
+   unsigned crosshair_border;
    std::vector<KeySym> toggle_hud;
    std::vector<KeySym> toggle_logging;
    std::vector<KeySym> reload_cfg;

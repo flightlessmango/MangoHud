@@ -212,6 +212,10 @@ parse_path(const char *str)
 #define parse_text_color(s) parse_color(s)
 #define parse_media_player_color(s) parse_color(s)
 
+#define parse_crosshair_radius(s) parse_unsigned(s)
+#define parse_crosshair_color(s) parse_color(s)
+#define parse_crosshair_border(s) parse_unsigned(s)
+
 static bool
 parse_help(const char *str)
 {
@@ -367,6 +371,9 @@ parse_overlay_config(struct overlay_params *params,
    params->media_player_name = "spotify";
    params->font_scale_media_player = 0.55f;
    params->log_interval = 100;
+   params->crosshair_radius = 10;
+   params->crosshair_color = 0xFF00FF00;
+   params->crosshair_border = 2;
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_Shift_R, XK_F12 };
