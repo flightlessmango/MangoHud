@@ -202,6 +202,36 @@ parse_media_player_order(const char *str)
    return order;
 }
 
+static std::vector<std::string>
+parse_benchmark_percentiles(const char *str)
+{
+   std::vector<std::string> percentiles;
+   std::stringstream percentStrings(str);
+   std::string value;
+
+   size_t maxLength = 0;  // for padding later on
+
+   while (std::getline(percentStrings, value, '+')) {
+      trim(value);
+
+      // everything except AVG is assumed to be a percentile.
+      if (value != "AVG")
+         value += '%';
+
+      percentiles.push_back(value);
+
+      if (value.length() > maxLength)
+         maxLength = value.length();
+   }
+
+   // now reiterate over the strings and add equal padding
+   for (size_t i = 0; i < percentiles.size(); i++) {
+      percentiles[i].append(maxLength - percentiles[i].length(), ' ');
+   }
+
+   return percentiles;
+}
+
 #define parse_width(s) parse_unsigned(s)
 #define parse_height(s) parse_unsigned(s)
 #define parse_vsync(s) parse_unsigned(s)
@@ -392,7 +422,11 @@ parse_overlay_config(struct overlay_params *params,
    params->font_scale_media_player = 0.55f;
    params->log_interval = 100;
    params->media_player_order = { MP_ORDER_TITLE, MP_ORDER_ARTIST, MP_ORDER_ALBUM };
+<<<<<<< HEAD
    params->permit_upload = 0;
+=======
+   params->benchmark_percentiles = { "97% ", "AVG ", "1%  ", "0.1%" };
+>>>>>>> 6d4ed4e... implement configurable benchmark percentiles.
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_Shift_R, XK_F12 };

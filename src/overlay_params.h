@@ -89,7 +89,11 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(cpu_text)                    \
    OVERLAY_PARAM_CUSTOM(gpu_text)                    \
    OVERLAY_PARAM_CUSTOM(log_interval)                \
+<<<<<<< HEAD
    OVERLAY_PARAM_CUSTOM(permit_upload)               \
+=======
+   OVERLAY_PARAM_CUSTOM(benchmark_percentiles)       \
+>>>>>>> 6d4ed4e... implement configurable benchmark percentiles.
    OVERLAY_PARAM_CUSTOM(help)
 
 enum overlay_param_position {
@@ -152,6 +156,7 @@ struct overlay_params {
    std::string cpu_text, gpu_text;
    unsigned log_interval;
    std::vector<media_player_order> media_player_order;
+   std::vector<std::string> benchmark_percentiles;
 
    std::string config_file_path;
    std::unordered_map<std::string,std::string> options;

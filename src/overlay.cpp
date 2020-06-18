@@ -750,7 +750,7 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
        last_f2_press = now;
        if(loggingOn){
          log_end = now;
-         std::thread(calculate_benchmark_data).detach();
+         std::thread(calculate_benchmark_data, &params).detach();
        } else {
          logUpdate = false;
          std::thread(update_hw_info, std::ref(sw_stats), std::ref(params), vendorID).detach();
@@ -805,27 +805,38 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
    }   
 }
 
-void calculate_benchmark_data(){
-   vector<float> sorted;
-   sorted = benchmark.fps_data;
+void calculate_benchmark_data(void *params_void){
+   overlay_params *params = reinterpret_cast<overlay_params *>(params_void);
+
+   vector<float> sorted = benchmark.fps_data;
    sort(sorted.begin(), sorted.end());
-   // 97th percentile
-   int index = sorted.size() * 0.97;
-   benchmark.ninety = sorted[index];
-   // avg
+   benchmark.percentile_data.clear();
+
    benchmark.total = 0.f;
    for (auto fps_ : sorted){
       benchmark.total = benchmark.total + fps_;
    }
-   benchmark.avg = benchmark.total / sorted.size();
-   // 1% min
-   benchmark.total = 0.f;
-   for (size_t i = 0; i < sorted.size() * 0.01; i++){
-      benchmark.total = sorted[i];
+
+   for (std::string percentile : params->benchmark_percentiles) {
+      float result;
+
+      // special case handling for a mean-based average
+      if (percentile.find("AVG") == 0) {
+         result = benchmark.total / sorted.size();
+      }
+      // everything else is used to calculate percentiles
+      else {
+         char *endChar;
+         float fraction = std::strtof(percentile.c_str(), &endChar) / 100;
+
+         if (*endChar != '%' || fraction <= 0.0 || fraction > 1.0) {
+            std::cerr << "MANGOHUD: Invalid percentile value for benchmark: '" << percentile << "'\n";
+            continue;
+         }
+         result = sorted[(fraction * sorted.size()) - 1];
+      }
+      benchmark.percentile_data.push_back({percentile, result});
    }
-   benchmark.oneP = benchmark.total;
-   // 0.1% min
-   benchmark.pointOneP = sorted[sorted.size() * 0.001];
 }
 
 void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
@@ -1040,14 +1051,13 @@ static void render_mpris_metadata(struct overlay_params& params, metadata& meta,
 
 void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, unsigned height, uint64_t now){
    // TODO, FIX LOG_DURATION FOR BENCHMARK
-   int benchHeight = 6 * params.font_size + 10.0f + 58;
+   int benchHeight = (2 + benchmark.percentile_data.size()) * params.font_size + 10.0f + 58;
    ImGui::SetNextWindowSize(ImVec2(window_size.x, benchHeight), ImGuiCond_Always);
    if (height - (window_size.y + data.main_window_pos.y + 5) < benchHeight)
       ImGui::SetNextWindowPos(ImVec2(data.main_window_pos.x, data.main_window_pos.y - benchHeight - 5), ImGuiCond_Always);
    else
       ImGui::SetNextWindowPos(ImVec2(data.main_window_pos.x, data.main_window_pos.y + window_size.y + 5), ImGuiCond_Always);
 
-   vector<pair<string, float>> benchmark_data = {{"97% ", benchmark.ninety}, {"AVG ", benchmark.avg}, {"1%  ", benchmark.oneP}, {"0.1%", benchmark.pointOneP}};
    float display_time = float(now - log_end) / 1000000;
    static float display_for = 10.0f;
    float alpha;
@@ -1085,7 +1095,7 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
    snprintf(duration, sizeof(duration), "Duration: %.1fs", float(log_end - log_start) / 1000000);
    ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2 )- (ImGui::CalcTextSize(duration).x / 2));
    ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), "%s", duration);
-   for (auto& data_ : benchmark_data){
+   for (auto& data_ : benchmark.percentile_data){
       char buffer[20];
       snprintf(buffer, sizeof(buffer), "%s %.1f", data_.first.c_str(), data_.second);
       ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2 )- (ImGui::CalcTextSize(buffer).x / 2));
@@ -1394,7 +1404,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       if (loggingOn && params.log_duration && (now - log_start) >= params.log_duration * 1000000){
          loggingOn = false;
          log_end = now;
-         std::thread(calculate_benchmark_data).detach();
+         std::thread(calculate_benchmark_data, &params).detach();
       }
       if((now - log_end) / 1000000 < 12)
          render_benchmark(data, params, window_size, height, now);
