@@ -47,7 +47,11 @@ You can then subsequently uninstall MangoHud via the following command
 
 #### GitHub releases
 
-If you do not wish to compile anything, simply download the file under [Releases](https://github.com/flightlessmango/MangoHud/releases), extract it, and run `./mangohud-setup.sh install` from within the extracted folder.
+If you do not wish to compile anything, simply download the file under [Releases](https://github.com/flightlessmango/MangoHud/releases), extract it, and from within the extracted folder in terminal, execute:
+
+```
+./mangohud-setup.sh install
+```
 
 #### Arch-based distributions
 
