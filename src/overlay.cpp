@@ -785,10 +785,12 @@ void calculate_benchmark_data(){
    benchmark.avg = benchmark.total / sorted.size();
    // 1% min
    benchmark.total = 0.f;
-   for (size_t i = 0; i < sorted.size() * 0.1; i++){
+   for (size_t i = 0; i < sorted.size() * 0.01; i++){
       benchmark.total = sorted[i];
    }
    benchmark.oneP = benchmark.total;
+   // 0.1% min
+   benchmark.pointOneP = sorted[sorted.size() * 0.001];
 }
 
 void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
@@ -1032,14 +1034,14 @@ static void render_mpris_metadata(struct overlay_params& params, metadata& meta,
 
 void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, unsigned height, uint64_t now){
    // TODO, FIX LOG_DURATION FOR BENCHMARK
-   int benchHeight = 5 * params.font_size + 10.0f + 58;
+   int benchHeight = 6 * params.font_size + 10.0f + 58;
    ImGui::SetNextWindowSize(ImVec2(window_size.x, benchHeight), ImGuiCond_Always);
    if (height - (window_size.y + data.main_window_pos.y + 5) < benchHeight)
       ImGui::SetNextWindowPos(ImVec2(data.main_window_pos.x, data.main_window_pos.y - benchHeight - 5), ImGuiCond_Always);
    else
       ImGui::SetNextWindowPos(ImVec2(data.main_window_pos.x, data.main_window_pos.y + window_size.y + 5), ImGuiCond_Always);
 
-   vector<pair<string, float>> benchmark_data = {{"97%", benchmark.ninety}, {"AVG", benchmark.avg}, {"1% ", benchmark.oneP}};
+   vector<pair<string, float>> benchmark_data = {{"97% ", benchmark.ninety}, {"AVG ", benchmark.avg}, {"1%  ", benchmark.oneP}, {"0.1%", benchmark.pointOneP}};
    float display_time = float(now - log_end) / 1000000;
    static float display_for = 10.0f;
    float alpha;
@@ -1071,12 +1073,12 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
    ImGui::Begin("Benchmark", &open, ImGuiWindowFlags_NoDecoration);
    static const char* finished = "Logging Finished";
    ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2 )- (ImGui::CalcTextSize(finished).x / 2));
-   ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), finished);
+   ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), "%s", finished);
    ImGui::Dummy(ImVec2(0.0f, 8.0f));
    char duration[20];
    snprintf(duration, sizeof(duration), "Duration: %.1fs", float(log_end - log_start) / 1000000);
    ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2 )- (ImGui::CalcTextSize(duration).x / 2));
-   ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), duration);
+   ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), "%s", duration);
    for (auto& data_ : benchmark_data){
       char buffer[20];
       snprintf(buffer, sizeof(buffer), "%s %.1f", data_.first.c_str(), data_.second);

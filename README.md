@@ -37,11 +37,21 @@ If you have compiled MangoHud from source, to install it, execute:
 ./build.sh install
 ```
 
+You can then subsequently uninstall MangoHud via the following command
+
+```
+./build.sh uninstall
+```
+
 ### Pre-packaged binaries
 
 #### GitHub releases
 
-If you do not wish to compile anything, simply download the file under [Releases](https://github.com/flightlessmango/MangoHud/releases), extract it, and run `./mangohud-setup.sh install` from within the extracted folder.
+If you do not wish to compile anything, simply download the file under [Releases](https://github.com/flightlessmango/MangoHud/releases), extract it, and from within the extracted folder in terminal, execute:
+
+```
+./mangohud-setup.sh install
+```
 
 #### Arch-based distributions
 
@@ -155,6 +165,7 @@ A partial list of parameters are below. See the config file for a complete list.
 | `vulkan_driver`                    | Displays used vulkan driver, radv/amdgpu-pro/amdvlk                                   |
 | `gpu_name`                         | Displays GPU name from pci.ids                                                        |
 | `gpu_power`                        | Display GPU draw in watts                                                             |
+| `engine_version`                   | Display OpenGL or vulkan and vulkan-based render engine's version                     |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 
