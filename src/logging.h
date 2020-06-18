@@ -15,6 +15,8 @@ struct logData{
   int gpu_temp;
   int gpu_core_clock;
   int gpu_mem_clock;
+  float gpu_vram_used;
+  float ram_used;
 
   uint64_t previous;
 };
@@ -95,6 +97,8 @@ void writeFile(string filename, overlay_params* params){
     out << logArray[i].gpu_temp << ",";
     out << logArray[i].gpu_core_clock << ",";
     out << logArray[i].gpu_mem_clock << ",";
+    out << logArray[i].gpu_vram_used << ",";
+    out << logArray[i].ram_used << ",";
     out << logArray[i].previous << "\n";
   }
 

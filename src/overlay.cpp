@@ -830,6 +830,8 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
          currentLogData.gpu_temp = gpu_info.temp;
          currentLogData.gpu_core_clock = gpu_info.CoreClock;
          currentLogData.gpu_mem_clock = gpu_info.MemClock;
+         currentLogData.gpu_vram_used = gpu_info.memoryUsed;
+         currentLogData.ram_used = memused;
 
          currentLogData.cpu_load = cpuStats.GetCPUDataTotal().percent;
          currentLogData.cpu_temp = cpuStats.GetCPUDataTotal().temp;
