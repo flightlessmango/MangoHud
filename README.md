@@ -149,7 +149,6 @@ A partial list of parameters are below. See the config file for a complete list.
 | `output_file`                      | Define name and location of the output file (Required for logging)                    |
 | `font_file`                        | Change default font (set location to .TTF/.OTF file )                                 |
 | `log_duration`                     | Set amount of time the logging will run for (in seconds)                              |
-| `log_fps` <br> `log_cpu_load` <br> `log_gpu_load` <br> `log_cpu_temp` <br> `log_gpu_temp` <br> `log_gpu_core_clock` <br> `log_gpu_mem_clock`  | Enable logging for different statistics |
 | `vsync`<br> `gl_vsync`             | Set vsync for OpenGL or Vulkan                                                        |
 | `media_player`                     | Show media player metadata                                                            |
 | `media_player_name`                | Set main media player DBus service name without the `org.mpris.MediaPlayer2` part, like `spotify`, `vlc`, `audacious` or `cantata`. Defaults to `spotify`. |

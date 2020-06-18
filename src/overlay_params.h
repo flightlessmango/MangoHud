@@ -48,13 +48,6 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(gpu_name)                      \
    OVERLAY_PARAM_BOOL(engine_version)                \
    OVERLAY_PARAM_BOOL(histogram)                     \
-   OVERLAY_PARAM_BOOL(log_fps)                       \
-   OVERLAY_PARAM_BOOL(log_cpu_load)                  \
-   OVERLAY_PARAM_BOOL(log_gpu_load)                  \
-   OVERLAY_PARAM_BOOL(log_cpu_temp)                  \
-   OVERLAY_PARAM_BOOL(log_gpu_temp)                  \
-   OVERLAY_PARAM_BOOL(log_gpu_core_clock)            \
-   OVERLAY_PARAM_BOOL(log_gpu_mem_clock)             \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
    OVERLAY_PARAM_CUSTOM(font_file)                   \

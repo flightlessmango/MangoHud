@@ -87,22 +87,14 @@ void writeFile(string filename, overlay_params* params){
   out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver" << endl;
   out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << endl;
 
-  if(params->enabled[OVERLAY_PARAM_ENABLED_log_fps]) out << "fps,";
-  if(params->enabled[OVERLAY_PARAM_ENABLED_log_cpu_load]) out << "cpu_load,";
-  if(params->enabled[OVERLAY_PARAM_ENABLED_log_gpu_load]) out << "gpu_load,";
-  if(params->enabled[OVERLAY_PARAM_ENABLED_log_cpu_temp]) out << "cpu_temp,";
-  if(params->enabled[OVERLAY_PARAM_ENABLED_log_gpu_temp]) out << "gpu_temp,";
-  if(params->enabled[OVERLAY_PARAM_ENABLED_log_gpu_core_clock]) out << "gpu_core_clock,";
-  if(params->enabled[OVERLAY_PARAM_ENABLED_log_gpu_mem_clock]) out << "gpu_mem_clock,";
-  out << "time\n";
   for (size_t i = 0; i < logArray.size(); i++){
-    if(params->enabled[OVERLAY_PARAM_ENABLED_log_fps]) out << logArray[i].fps << ",";
-    if(params->enabled[OVERLAY_PARAM_ENABLED_log_cpu_load]) out << logArray[i].cpu_load << ",";
-    if(params->enabled[OVERLAY_PARAM_ENABLED_log_gpu_load]) out << logArray[i].gpu_load << ",";
-    if(params->enabled[OVERLAY_PARAM_ENABLED_log_cpu_temp]) out << logArray[i].cpu_temp << ",";
-    if(params->enabled[OVERLAY_PARAM_ENABLED_log_gpu_temp]) out << logArray[i].gpu_temp << ",";
-    if(params->enabled[OVERLAY_PARAM_ENABLED_log_gpu_core_clock]) out << logArray[i].gpu_core_clock << ",";
-    if(params->enabled[OVERLAY_PARAM_ENABLED_log_gpu_mem_clock]) out << logArray[i].gpu_mem_clock << ",";
+    out << logArray[i].fps << ",";
+    out << logArray[i].cpu_load << ",";
+    out << logArray[i].gpu_load << ",";
+    out << logArray[i].cpu_temp << ",";
+    out << logArray[i].gpu_temp << ",";
+    out << logArray[i].gpu_core_clock << ",";
+    out << logArray[i].gpu_mem_clock << ",";
     out << logArray[i].previous << "\n";
   }
 

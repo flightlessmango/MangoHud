@@ -366,13 +366,6 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_io_read] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_io_write] = false;
-   params->enabled[OVERLAY_PARAM_ENABLED_log_fps] = true;
-   params->enabled[OVERLAY_PARAM_ENABLED_log_gpu_load] = true;
-   params->enabled[OVERLAY_PARAM_ENABLED_log_cpu_load] = true;
-   params->enabled[OVERLAY_PARAM_ENABLED_log_gpu_temp] = false;
-   params->enabled[OVERLAY_PARAM_ENABLED_log_cpu_temp] = false;
-   params->enabled[OVERLAY_PARAM_ENABLED_log_gpu_core_clock] = false;
-   params->enabled[OVERLAY_PARAM_ENABLED_log_gpu_mem_clock] = false;
    params->fps_sampling_period = 500000; /* 500ms */
    params->width = 0;
    params->height = 140;

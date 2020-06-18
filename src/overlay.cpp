@@ -802,20 +802,17 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
    if (sw_stats.last_fps_update) {
       if (elapsed >= params.fps_sampling_period) {
 
-         if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || 
-             params.enabled[OVERLAY_PARAM_ENABLED_log_cpu_load] ||
-             params.enabled[OVERLAY_PARAM_ENABLED_log_cpu_temp]) {
+         if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || loggingOn) {
             cpuStats.UpdateCPUData();
             sw_stats.total_cpu = cpuStats.GetCPUDataTotal().percent;
 
             if (params.enabled[OVERLAY_PARAM_ENABLED_core_load])
                cpuStats.UpdateCoreMhz();
-            if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp] || 
-                params.enabled[OVERLAY_PARAM_ENABLED_log_cpu_temp])
+            if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp] || loggingOn)
                cpuStats.UpdateCpuTemp();
          }
 
-         if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]) {
+         if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || loggingOn) {
             if (vendorID == 0x1002)
                std::thread(getAmdGpuInfo).detach();
 
