@@ -715,7 +715,7 @@ void check_keybinds(struct overlay_params& params){
          log_start = now;
        }
        if (!params.output_file.empty() && params.log_duration == 0 && params.log_interval == 0 && loggingOn)
-         writeFile(params.output_file + get_current_time());
+         writeFile(params.output_file + get_current_time(), &params);
        loggingOn = !loggingOn;
 
        if (!params.output_file.empty() && loggingOn && params.log_interval != 0)
@@ -802,13 +802,16 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
    if (sw_stats.last_fps_update) {
       if (elapsed >= params.fps_sampling_period) {
 
-         if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats]) {
+         if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || 
+             params.enabled[OVERLAY_PARAM_ENABLED_log_cpu_load] ||
+             params.enabled[OVERLAY_PARAM_ENABLED_log_cpu_temp]) {
             cpuStats.UpdateCPUData();
             sw_stats.total_cpu = cpuStats.GetCPUDataTotal().percent;
 
             if (params.enabled[OVERLAY_PARAM_ENABLED_core_load])
                cpuStats.UpdateCoreMhz();
-            if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp])
+            if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp] || 
+                params.enabled[OVERLAY_PARAM_ENABLED_log_cpu_temp])
                cpuStats.UpdateCpuTemp();
          }
 
@@ -826,8 +829,14 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
          if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])
             std::thread(getIoStats, &sw_stats.io).detach();
 
-         gpuLoadLog = gpu_info.load;
-         cpuLoadLog = sw_stats.total_cpu;
+         currentLogData.gpu_load = gpu_info.load;
+         currentLogData.gpu_temp = gpu_info.temp;
+         currentLogData.gpu_core_clock = gpu_info.CoreClock;
+         currentLogData.gpu_mem_clock = gpu_info.MemClock;
+
+         currentLogData.cpu_load = cpuStats.GetCPUDataTotal().percent;
+         currentLogData.cpu_temp = cpuStats.GetCPUDataTotal().temp;
+
          sw_stats.fps = fps;
 
          if (params.enabled[OVERLAY_PARAM_ENABLED_time]) {
@@ -1325,7 +1334,9 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          if (params.log_duration && (elapsedLog) >= params.log_duration * 1000000)
             loggingOn = false;
 
-         logArray.push_back({fps, cpuLoadLog, gpuLoadLog, elapsedLog});
+         currentLogData.fps = fps;
+         currentLogData.previous = elapsedLog;
+         logArray.push_back(currentLogData);
       }
 
       if (params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
