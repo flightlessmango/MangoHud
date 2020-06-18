@@ -55,6 +55,7 @@ struct benchmark_stats {
    float ninety;
    float avg;
    float oneP;
+   float pointOneP;
    float total;
    std::vector<float> fps_data;
 };

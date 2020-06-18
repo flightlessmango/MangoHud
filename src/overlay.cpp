@@ -789,6 +789,8 @@ void calculate_benchmark_data(){
       benchmark.total = sorted[i];
    }
    benchmark.oneP = benchmark.total;
+   // 0.1% min
+   benchmark.pointOneP = sorted[sorted.size() * 0.01];
 }
 
 void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
@@ -1022,7 +1024,7 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
    else
       ImGui::SetNextWindowPos(ImVec2(data.main_window_pos.x, data.main_window_pos.y + window_size.y + 5), ImGuiCond_Always);
 
-   vector<pair<string, float>> benchmark_data = {{"97%", benchmark.ninety}, {"AVG", benchmark.avg}, {"1% ", benchmark.oneP}};
+   vector<pair<string, float>> benchmark_data = {{"97% ", benchmark.ninety}, {"AVG ", benchmark.avg}, {"1%  ", benchmark.oneP}, {"0.1%", benchmark.pointOneP}};
    float display_time = float(now - log_end) / 1000000;
    float display_for = 10.0f;
    float alpha;
