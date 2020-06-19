@@ -213,7 +213,7 @@ static float parse_float(const std::string& s, std::size_t* float_len = nullptr)
     if(float_len != nullptr) {
         *float_len = (it - s.begin());
     }
-    return result;
+    return result*sign;
 }
 
 #pragma GCC diagnostic pop
