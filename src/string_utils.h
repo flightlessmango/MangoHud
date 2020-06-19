@@ -92,4 +92,18 @@ static bool try_stoull(unsigned long long& val, const std::string& str)
     return false;
 }
 
+static float parse_float(const std::string& s, std::size_t* float_len = nullptr){
+    std::stringstream ss(s);
+    ss.imbue(std::locale::classic());
+    float ret;
+    ss >> ret;
+    if(ss.fail()) throw std::invalid_argument("parse_float: Not a float");
+    if(float_len != nullptr){
+        auto pos = ss.tellg();
+        if(ss.fail()) *float_len = s.size();
+        else *float_len = pos;
+    }
+    return ret;
+}
+
 #pragma GCC diagnostic pop
