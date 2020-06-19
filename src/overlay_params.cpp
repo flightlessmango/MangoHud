@@ -63,7 +63,7 @@ parse_float(const char *str)
 {
    float val = 0;
    std::stringstream ss(str);
-   ss.imbue(std::locale("C"));
+   ss.imbue(std::locale::classic());
    ss >> val;
    return val;
 }
