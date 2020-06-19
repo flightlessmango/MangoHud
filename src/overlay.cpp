@@ -697,6 +697,7 @@ void check_keybinds(struct overlay_params& params){
    elapsedF2 = (double)(now - last_f2_press);
    elapsedF12 = (double)(now - last_f12_press);
    elapsedReloadCfg = (double)(now - reload_cfg_press);
+   elapsedUpload = (double)(now - last_upload_press);
 
   if (elapsedF2 >= 500000){
 #ifdef HAVE_X11
@@ -746,6 +747,19 @@ void check_keybinds(struct overlay_params& params){
          reload_cfg_press = now;
       }
    }
+   
+   if (params.permit_upload && elapsedUpload >= 500000){
+#ifdef HAVE_X11
+      pressed = keys_are_pressed(params.upload_log);
+#else
+      pressed = false;
+#endif
+      if (pressed){
+         last_upload_press = now;
+         if (logFiles.size() > 0)
+            std::thread(upload_file).detach();
+      }
+   }   
 }
 
 void calculate_benchmark_data(){
