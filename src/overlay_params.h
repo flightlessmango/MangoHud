@@ -64,6 +64,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(toggle_hud)                  \
    OVERLAY_PARAM_CUSTOM(toggle_logging)              \
    OVERLAY_PARAM_CUSTOM(reload_cfg)                  \
+   OVERLAY_PARAM_CUSTOM(upload_log)                  \
    OVERLAY_PARAM_CUSTOM(offset_x)                    \
    OVERLAY_PARAM_CUSTOM(offset_y)                    \
    OVERLAY_PARAM_CUSTOM(background_alpha)            \
@@ -88,6 +89,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(cpu_text)                    \
    OVERLAY_PARAM_CUSTOM(gpu_text)                    \
    OVERLAY_PARAM_CUSTOM(log_interval)                \
+   OVERLAY_PARAM_CUSTOM(permit_upload)               \
    OVERLAY_PARAM_CUSTOM(help)
 
 enum overlay_param_position {
@@ -143,6 +145,7 @@ struct overlay_params {
    std::vector<KeySym> toggle_hud;
    std::vector<KeySym> toggle_logging;
    std::vector<KeySym> reload_cfg;
+   std::vector<KeySym> upload_log;
    std::string time_format, output_file, font_file;
    std::string pci_dev;
    std::string media_player_name;
@@ -152,7 +155,7 @@ struct overlay_params {
 
    std::string config_file_path;
    std::unordered_map<std::string,std::string> options;
-
+   int permit_upload;
 };
 
 const extern char *overlay_param_names[];
