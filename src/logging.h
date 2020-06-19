@@ -12,6 +12,7 @@ string os, cpu, gpu, ram, kernel, driver;
 bool sysInfoFetched = false;
 int gpuLoadLog = 0, cpuLoadLog = 0;
 uint64_t elapsedLog;
+std::vector<std::string> logFiles;
 
 struct logData{
   double fps;
@@ -50,6 +51,7 @@ string exec(string command) {
 }
 
 void writeFile(string filename){
+  logFiles.push_back(filename);
   out.open(filename, ios::out | ios::app);
   out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver" << endl;
   out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << endl;
