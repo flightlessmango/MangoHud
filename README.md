@@ -166,6 +166,8 @@ A partial list of parameters are below. See the config file for a complete list.
 | `gpu_name`                         | Displays GPU name from pci.ids                                                        |
 | `gpu_power`                        | Display GPU draw in watts                                                             |
 | `engine_version`                   | Display OpenGL or vulkan and vulkan-based render engine's version                     |
+| `permit_upload`                    | Allow uploading of logs to Flightlessmango.com                                        |
+| `upload_log`                       | Change keybind for uploading log                                                      |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 
