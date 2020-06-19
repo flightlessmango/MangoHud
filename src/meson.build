@@ -104,6 +104,10 @@ if dbus_dep.found() and get_option('with_dbus').enabled()
   )
 endif
 
+link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL'])
+# meson fails to check version-script so just force add
+link_args += '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version'))
+
 vklayer_mesa_overlay = shared_library(
   'MangoHud',
   mangohud_version,
@@ -131,7 +135,7 @@ vklayer_mesa_overlay = shared_library(
     dep_pthread,
     dep_vulkan],
   include_directories : [inc_common],
-  link_args : cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL']),
+  link_args : link_args,
   install_dir : libdir_mangohud,
   install : true
 )
@@ -154,7 +158,7 @@ mangohud_dlsym = shared_library(
     ],
   dependencies : [dep_dl],
   include_directories : [inc_common],
-  link_args : cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL']),
+  link_args : link_args,
   install_dir : libdir_mangohud,
   install : true
 )
