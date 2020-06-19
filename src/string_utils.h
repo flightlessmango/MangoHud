@@ -106,7 +106,7 @@ static bool try_stoull(unsigned long long& val, const std::string& str, std::siz
 
 static float parse_float(const std::string& s, std::size_t* float_len = nullptr){
     std::stringstream ss(s);
-    ss.imbue(std::locale("C"));
+    ss.imbue(std::locale::classic());
     float ret;
     ss >> ret;
     if(ss.fail()) throw std::invalid_argument("parse_float: Not a float");
