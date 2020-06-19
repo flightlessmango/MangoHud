@@ -15,7 +15,7 @@ bool find_folder(const std::string& root, const std::string& prefix, std::string
 std::vector<std::string> ls(const char* root, const char* prefix = nullptr, LS_FLAGS flags = LS_DIRS);
 bool file_exists(const std::string& path);
 bool dir_exists(const std::string& path);
-std::string readlink(const char * link);
+std::string read_symlink(const char * link);
 std::string get_exe_path();
 bool get_wine_exe_name(std::string& name, bool keep_ext = false);
 std::string get_home_dir();

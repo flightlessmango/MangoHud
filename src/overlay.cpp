@@ -612,7 +612,7 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
 
          path += "/device";
          if (pci_bus_parsed && pci_dev) {
-            string pci_device = readlink(path.c_str());
+            string pci_device = read_symlink(path.c_str());
 #ifndef NDEBUG
             std::cerr << "PCI device symlink: " << pci_device << "\n";
 #endif
