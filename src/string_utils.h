@@ -105,115 +105,17 @@ static bool try_stoull(unsigned long long& val, const std::string& str, std::siz
 }
 
 static float parse_float(const std::string& s, std::size_t* float_len = nullptr){
-    enum class State {
-        Start,
-        Sign,
-        IntegerPart,
-        DecimalPoint,
-        FractionalPart,
-        End
-    };
-    if(s.size() == 0) return; 
-    
-    float sign = 1.0f;
-    std::string integer_part;
-    std::string fractional_part;
-
-    auto part_begin = s.begin();
-    State state = State::Start;
-    auto it = s.begin();
-    for(; (it != s.end()) && (state != State::End); it++){
-        switch(state){
-        case State::Start: {
-            if(std::isspace(*it)){
-                // Ignore whitespace
-                continue;
-            }
-            else if (std::isdigit(*it)){
-                part_begin = it;
-                state = State::IntegerPart;
-            }
-            else if(*it == '-') {
-                sign = -1.0f;
-                state = State::Sign;
-            }
-            else if(*it == '+') {
-                state = State::Sign;
-            }
-            else {
-                // Invalid character at the beginning
-                throw std::invalid_argument("invalid char at beginning");
-            }
-        } break;
-        case State::Sign: {
-            if(std::isdigit(*it)){
-                part_begin = it;
-                state = State::IntegerPart;
-            }
-            else {
-                // Invalid character after [+-]
-                throw std::invalid_argument("invalid char after [+-]");
-            }
-        } break;
-        case State::IntegerPart: {
-            if(std::isdigit(*it)) {
-                continue;
-            }
-            else if (*it == '.') {
-                integer_part = std::string(part_begin, it);
-                state = State::DecimalPoint;
-            }
-            else {
-                integer_part = std::string(part_begin, it);
-                state = State::End;
-            }
-        } break;
-        case State::DecimalPoint: {
-            if(std::isdigit(*it)){
-                part_begin = it;
-                state = State::FractionalPart;
-            }
-            else {
-                // Invalid character after the decimal point
-                throw std::invalid_argument("invalid char after decimal point");
-            }
-        } break;
-        case State::FractionalPart: {
-            if(std::isdigit(*it)){
-                continue;
-            }
-            else{
-                fractional_part = std::string(part_begin, it);
-                state = State::End;
-            }
-        } break;
-        };
+    std::stringstream ss(s);
+    ss.imbue(std::locale("C"));
+    float ret;
+    ss >> ret;
+    if(ss.fail()) throw std::invalid_argument("parse_float: Not a float");
+    if(float_len != nullptr){
+        auto pos = ss.tellg();
+        if(ss.fail()) *float_len = s.size();
+        else *float_len = pos;
     }
-    
-    // Check if we reached the end
-    if(it == s.end()) {
-        if(state == State::IntegerPart){
-            integer_part = std::string(part_begin, it);
-        }
-        else if(state == State::FractionalPart) {
-            fractional_part = std::string(part_begin, it);
-        }
-        else {
-            throw std::invalid_argument("invalid end-of-string");
-        }
-    }
-
-    float result = static_cast<float>(std::stoull(integer_part));
-    if(not fractional_part.empty()){
-        float frac_part = static_cast<float>(std::stoull(fractional_part));
-        while(frac_part > 1.0f) frac_part /= 10;
-        result += frac_part;
-    }
-
-    if(float_len != nullptr) {
-        *float_len = (it - s.begin());
-    }
-    return result*sign;
+    return ret;
 }
 
 #pragma GCC diagnostic pop
