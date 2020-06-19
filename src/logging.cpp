@@ -11,9 +11,9 @@ std::vector<std::string> logFiles;
 double fps;
 std::vector<logData> logArray;
 ofstream out;
-int num;
 bool loggingOn;
 uint64_t log_start, log_end;
+logData currentLogData = {};
 
 string exec(string command) {
    char buffer[128];
@@ -62,8 +62,18 @@ void writeFile(string filename){
   out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver" << endl;
   out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << endl;
 
-  for (size_t i = 0; i < logArray.size(); i++)
-    out << logArray[i].fps << "," << logArray[i].cpu  << "," << logArray[i].gpu << "," << logArray[i].previous << endl;
+  for (size_t i = 0; i < logArray.size(); i++){
+    out << logArray[i].fps << ",";
+    out << logArray[i].cpu_load << ",";
+    out << logArray[i].gpu_load << ",";
+    out << logArray[i].cpu_temp << ",";
+    out << logArray[i].gpu_temp << ",";
+    out << logArray[i].gpu_core_clock << ",";
+    out << logArray[i].gpu_mem_clock << ",";
+    out << logArray[i].gpu_vram_used << ",";
+    out << logArray[i].ram_used << ",";
+    out << logArray[i].previous << "\n";
+  }
 
   out.close();
   logArray.clear();
@@ -83,7 +93,10 @@ void logging(void *params_void){
   while (loggingOn){
     uint64_t now = os_time_get();
     elapsedLog = now - log_start;
-    logArray.push_back({fps, cpuLoadLog, gpuLoadLog, elapsedLog});
+
+    currentLogData.fps = fps;
+    currentLogData.previous = elapsedLog;
+    logArray.push_back(currentLogData);
 
     if (params->log_duration && (elapsedLog) >= params->log_duration * 1000000)
       loggingOn = false;

@@ -9,22 +9,27 @@
 using namespace std;
 struct logData{
   double fps;
-  int cpu;
-  int gpu;
+  int cpu_load;
+  int gpu_load;
+  int cpu_temp;
+  int gpu_temp;
+  int gpu_core_clock;
+  int gpu_mem_clock;
+  float gpu_vram_used;
+  float ram_used;
+
   uint64_t previous;
 };
 
 extern string os, cpu, gpu, ram, kernel, driver;
 extern bool sysInfoFetched;
-extern int gpuLoadLog, cpuLoadLog;
 extern uint64_t elapsedLog;
 extern std::vector<std::string> logFiles;
 extern double fps;
 extern std::vector<logData> logArray;
-extern ofstream out;
-extern int num;
 extern bool loggingOn;
 extern uint64_t log_start, log_end;
+extern logData currentLogData;
 
 void logging(void *params_void);
 void writeFile(string filename);
