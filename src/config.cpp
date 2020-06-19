@@ -76,6 +76,7 @@ void parseConfigFile(overlay_params& params) {
             continue;
         }
 
+        stream.imbue(std::locale::classic());
         std::cerr << "parsing config: " << *p;
         while (std::getline(stream, line))
         {
