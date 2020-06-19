@@ -538,8 +538,8 @@ struct PCI_BUS {
 
 void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
 {
-   if (!params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
-      return;
+   //if (!params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
+   //   return;
 
    PCI_BUS pci;
    bool pci_bus_parsed = false;
@@ -585,7 +585,10 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
          nvSuccess = checkXNVCtrl();
 #endif
 
-      if ((params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = nvSuccess)) {
+      if(not nvSuccess) {
+         params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
+      }
+      else {
          vendorID = 0x10de;
       }
    }
@@ -645,7 +648,6 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
             if (!amdgpu.power_usage)
                amdgpu.power_usage = fopen((path + tempFolder + "/power1_average").c_str(), "r");
 
-            params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = true;
             vendorID = 0x1002;
             break;
          }
