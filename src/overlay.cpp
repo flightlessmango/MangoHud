@@ -821,7 +821,7 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
          }
 
          // get ram usage/max
-         if (params.enabled[OVERLAY_PARAM_ENABLED_ram])
+         if (params.enabled[OVERLAY_PARAM_ENABLED_ram] || loggingOn)
             std::thread(update_meminfo).detach();
          if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])
             std::thread(getIoStats, &sw_stats.io).detach();
