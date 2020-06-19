@@ -19,6 +19,7 @@ foreach s : ['overlay.frag', 'overlay.vert']
 endforeach
 
 vklayer_files = files(
+  'readlink.c',
   'overlay.cpp',
   'overlay_params.cpp',
   'font_unispace.c',
