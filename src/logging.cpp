@@ -93,7 +93,6 @@ string get_log_suffix(){
 void logging(void *params_void){
   overlay_params *params = reinterpret_cast<overlay_params *>(params_void);
   while (loggingOn){
-      cout << logUpdate << endl;
       uint64_t now = os_time_get();
       elapsedLog = now - log_start;
 
