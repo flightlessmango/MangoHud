@@ -30,6 +30,7 @@ extern std::vector<logData> logArray;
 extern bool loggingOn;
 extern uint64_t log_start, log_end;
 extern logData currentLogData;
+extern bool logUpdate;
 
 void logging(void *params_void);
 void writeFile(string filename);

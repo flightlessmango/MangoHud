@@ -14,6 +14,7 @@ ofstream out;
 bool loggingOn;
 uint64_t log_start, log_end;
 logData currentLogData = {};
+bool logUpdate = false;
 
 string exec(string command) {
    char buffer[128];
@@ -92,17 +93,20 @@ string get_log_suffix(){
 void logging(void *params_void){
   overlay_params *params = reinterpret_cast<overlay_params *>(params_void);
   while (loggingOn){
-    uint64_t now = os_time_get();
-    elapsedLog = now - log_start;
+      cout << logUpdate << endl;
+      uint64_t now = os_time_get();
+      elapsedLog = now - log_start;
 
-    currentLogData.fps = fps;
-    currentLogData.previous = elapsedLog;
-    logArray.push_back(currentLogData);
+      currentLogData.fps = fps;
+      currentLogData.previous = elapsedLog;
+      if (logUpdate)
+        logArray.push_back(currentLogData);
 
-    if (params->log_duration && (elapsedLog) >= params->log_duration * 1000000)
-      loggingOn = false;
-    else
-      this_thread::sleep_for(chrono::milliseconds(params->log_interval));
+      if (params->log_duration && (elapsedLog) >= params->log_duration * 1000000)
+        loggingOn = false;
+      else
+        this_thread::sleep_for(chrono::milliseconds(params->log_interval));
+
   }
 
   writeFile(params->output_file + get_log_suffix());

@@ -713,6 +713,7 @@ void check_keybinds(struct overlay_params& params){
          log_end = now;
          std::thread(calculate_benchmark_data).detach();
        } else {
+         logUpdate = false;
          benchmark.fps_data.clear();
          log_start = now;
        }
@@ -801,7 +802,7 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
             now - sw_stats.last_present_time;
    }
 
-   if (sw_stats.last_fps_update) {
+
       if (elapsed >= params.fps_sampling_period) {
 
          if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || loggingOn) {
@@ -839,6 +840,8 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
          currentLogData.cpu_temp = cpuStats.GetCPUDataTotal().temp;
 
          sw_stats.fps = fps;
+         if (!logUpdate)
+            logUpdate = true;
 
          if (params.enabled[OVERLAY_PARAM_ENABLED_time]) {
             std::time_t t = std::time(nullptr);
@@ -851,9 +854,6 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
          sw_stats.last_fps_update = now;
 
       }
-   } else {
-      sw_stats.last_fps_update = now;
-   }
 
    sw_stats.last_present_time = now;
    sw_stats.n_frames++;
