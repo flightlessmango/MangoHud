@@ -45,3 +45,7 @@ subprojects/Vulkan-Headers-*/
 **/GPATH
 **/GRTAGS
 **/GTAGS
+
+# deb/rpm ignores
+*.deb
+*.rpm
