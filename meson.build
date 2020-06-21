@@ -120,11 +120,6 @@ foreach a : ['missing-field-initializers', 'format-truncation']
   endif
 endforeach
 
-c_vis_args = []
-if cc.has_argument('-fvisibility=hidden')
-  c_vis_args += '-fvisibility=hidden'
-endif
-
 # Check for generic C++ arguments
 cpp_args = []
 foreach a : ['-Werror=return-type',
@@ -150,11 +145,6 @@ foreach a : ['override-init', 'initializer-overrides']
     no_override_init_args += '-Wno-' + a
   endif
 endforeach
-
-cpp_vis_args = []
-if cpp.has_argument('-fvisibility=hidden')
-  cpp_vis_args += '-fvisibility=hidden'
-endif
 
 foreach a : pre_args
   add_project_arguments(a, language : ['c', 'cpp'])

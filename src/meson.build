@@ -118,15 +118,14 @@ vklayer_mesa_overlay = shared_library(
   overlay_spv,
   c_args : [
     pre_args,
-    c_vis_args,
     no_override_init_args,
     vulkan_wsi_args
     ],
   cpp_args : [
     pre_args,
-    cpp_vis_args,
     vulkan_wsi_args
     ],
+  gnu_symbol_visibility : 'hidden',
   dependencies : [
     vulkan_wsi_deps,
     libimgui_core_dep,
@@ -149,13 +148,12 @@ mangohud_dlsym = shared_library(
   ),
   c_args : [
     pre_args,
-    c_vis_args,
     no_override_init_args,
     ],
   cpp_args : [
     pre_args,
-    cpp_vis_args,
     ],
+  gnu_symbol_visibility : 'hidden',
   dependencies : [dep_dl],
   include_directories : [inc_common],
   link_args : link_args,
