@@ -172,7 +172,7 @@ void imgui_render(unsigned int width, unsigned int height)
     if (!state.imgui_ctx)
         return;
 
-    check_keybinds(params);
+    check_keybinds(sw_stats, params, vendorID);
     update_hud_info(sw_stats, params, vendorID);
 
     ImGuiContext *saved_ctx = ImGui::GetCurrentContext();

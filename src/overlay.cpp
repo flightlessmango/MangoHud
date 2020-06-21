@@ -693,7 +693,46 @@ void init_system_info(){
       parse_pciids();
 }
 
-void check_keybinds(struct overlay_params& params){
+void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
+         if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || loggingOn) {
+         cpuStats.UpdateCPUData();
+         sw_stats.total_cpu = cpuStats.GetCPUDataTotal().percent;
+
+         if (params.enabled[OVERLAY_PARAM_ENABLED_core_load])
+            cpuStats.UpdateCoreMhz();
+         if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp] || loggingOn)
+            cpuStats.UpdateCpuTemp();
+         }
+
+         if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || loggingOn) {
+            if (vendorID == 0x1002)
+               getAmdGpuInfo();
+
+            if (vendorID == 0x10de)
+               getNvidiaGpuInfo();
+         }
+
+         // get ram usage/max
+         if (params.enabled[OVERLAY_PARAM_ENABLED_ram] || loggingOn)
+            update_meminfo();
+         if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])
+            getIoStats(&sw_stats.io);
+
+         currentLogData.gpu_load = gpu_info.load;
+         currentLogData.gpu_temp = gpu_info.temp;
+         currentLogData.gpu_core_clock = gpu_info.CoreClock;
+         currentLogData.gpu_mem_clock = gpu_info.MemClock;
+         currentLogData.gpu_vram_used = gpu_info.memoryUsed;
+         currentLogData.ram_used = memused;
+
+         currentLogData.cpu_load = cpuStats.GetCPUDataTotal().percent;
+         currentLogData.cpu_temp = cpuStats.GetCPUDataTotal().temp;
+
+         if (!logUpdate)
+            logUpdate = true;
+}
+
+void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
    bool pressed = false; // FIXME just a placeholder until wayland support
    uint64_t now = os_time_get(); /* us */
    elapsedF2 = (double)(now - last_f2_press);
@@ -714,6 +753,7 @@ void check_keybinds(struct overlay_params& params){
          std::thread(calculate_benchmark_data).detach();
        } else {
          logUpdate = false;
+         std::thread(update_hw_info, std::ref(sw_stats), std::ref(params), vendorID).detach();
          benchmark.fps_data.clear();
          log_start = now;
        }
@@ -802,46 +842,10 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
             now - sw_stats.last_present_time;
    }
 
-
       if (elapsed >= params.fps_sampling_period) {
 
-         if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || loggingOn) {
-            cpuStats.UpdateCPUData();
-            sw_stats.total_cpu = cpuStats.GetCPUDataTotal().percent;
-
-            if (params.enabled[OVERLAY_PARAM_ENABLED_core_load])
-               cpuStats.UpdateCoreMhz();
-            if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp] || loggingOn)
-               cpuStats.UpdateCpuTemp();
-         }
-
-         if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || loggingOn) {
-            if (vendorID == 0x1002)
-               std::thread(getAmdGpuInfo).detach();
-
-            if (vendorID == 0x10de)
-               std::thread(getNvidiaGpuInfo).detach();
-         }
-
-         // get ram usage/max
-         if (params.enabled[OVERLAY_PARAM_ENABLED_ram] || loggingOn)
-            std::thread(update_meminfo).detach();
-         if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])
-            std::thread(getIoStats, &sw_stats.io).detach();
-
-         currentLogData.gpu_load = gpu_info.load;
-         currentLogData.gpu_temp = gpu_info.temp;
-         currentLogData.gpu_core_clock = gpu_info.CoreClock;
-         currentLogData.gpu_mem_clock = gpu_info.MemClock;
-         currentLogData.gpu_vram_used = gpu_info.memoryUsed;
-         currentLogData.ram_used = memused;
-
-         currentLogData.cpu_load = cpuStats.GetCPUDataTotal().percent;
-         currentLogData.cpu_temp = cpuStats.GetCPUDataTotal().temp;
-
+         std::thread(update_hw_info, std::ref(sw_stats), std::ref(params), vendorID).detach();
          sw_stats.fps = fps;
-         if (!logUpdate)
-            logUpdate = true;
 
          if (params.enabled[OVERLAY_PARAM_ENABLED_time]) {
             std::time_t t = std::time(nullptr);
@@ -865,7 +869,7 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
    struct device_data *device_data = data->device;
    struct instance_data *instance_data = device_data->instance;
    update_hud_info(data->sw_stats, instance_data->params, device_data->properties.vendorID);
-   check_keybinds(instance_data->params);
+   check_keybinds(data->sw_stats, instance_data->params, device_data->properties.vendorID);
 
    // not currently used
    // if (instance_data->params.control >= 0) {
