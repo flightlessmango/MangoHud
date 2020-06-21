@@ -2649,9 +2649,8 @@ static VkResult overlay_CreateInstance(
    VkLayerInstanceCreateInfo *chain_info =
       get_instance_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
-
    std::string engineName, engineVersion;
-   if (!is_blacklisted()) {
+   if (!is_blacklisted(true)) {
       const char* pEngineName = nullptr;
       if (pCreateInfo->pApplicationInfo)
          pEngineName = pCreateInfo->pApplicationInfo->pEngineName;

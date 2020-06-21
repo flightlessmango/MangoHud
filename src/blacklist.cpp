@@ -53,7 +53,9 @@ static bool check_blacklisted() {
     return blacklisted;
 }
 
-bool is_blacklisted() {
+bool is_blacklisted(bool force_recheck) {
     static bool blacklisted = check_blacklisted();
+    if (force_recheck)
+        blacklisted = check_blacklisted();
     return blacklisted;
 }
