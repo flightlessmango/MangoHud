@@ -5,16 +5,11 @@
 
 string os, cpu, gpu, ram, kernel, driver;
 bool sysInfoFetched = false;
-int gpuLoadLog = 0, cpuLoadLog = 0;
-Clock::duration elapsedLog;
 std::vector<std::string> logFiles;
 double fps;
-std::vector<logData> logArray;
-ofstream out;
-bool loggingOn;
-Clock::time_point log_start, log_end;
 logData currentLogData = {};
-bool logUpdate = false;
+
+std::unique_ptr<Logger> logger;
 
 string exec(string command) {
    char buffer[128];
@@ -58,8 +53,10 @@ void upload_files(){
 }
 
 void writeFile(string filename){
+  auto& logArray = logger->get_log_data();
+  std::cerr << "writeFile(" << filename << ", vector<logData>(" << logArray.size() << "))\n";
   logFiles.push_back(filename);
-  out.open(filename, ios::out | ios::app);
+  std::ofstream out(filename, ios::out | ios::app);
   out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver" << endl;
   out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << endl;
   out << "fps," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "ram_used," << "elapsed" << endl;
@@ -76,9 +73,7 @@ void writeFile(string filename){
     out << logArray[i].ram_used << ",";
     out << std::chrono::duration_cast<std::chrono::microseconds>(logArray[i].previous).count() << "\n";
   }
-
-  out.close();
-  logArray.clear();
+  logger->clear_log_data();
 }
 
 string get_log_suffix(){
@@ -92,23 +87,68 @@ string get_log_suffix(){
 
 void logging(void *params_void){
   overlay_params *params = reinterpret_cast<overlay_params *>(params_void);
-  while (loggingOn){
-      auto now = Clock::now();
-      elapsedLog = now - log_start;
-
-      currentLogData.fps = fps;
-      currentLogData.previous = elapsedLog;
-      if (logUpdate)
-        logArray.push_back(currentLogData);
-
-      if (params->log_duration && (elapsedLog >= std::chrono::seconds(params->log_duration)))
-        loggingOn = false;
-      else
-        if (logUpdate)
-          this_thread::sleep_for(std::chrono::milliseconds(params->log_interval));
-        else
-          this_thread::sleep_for(chrono::milliseconds(0));
+  logger->wait_until_data_valid();
+  while (logger->is_active()){
+      logger->try_log();
+      this_thread::sleep_for(chrono::milliseconds(params->log_interval));
   }
+}
 
-  writeFile(params->output_file + get_log_suffix());
+Logger::Logger(overlay_params* in_params)
+  : loggingOn(false), 
+    values_valid(false), 
+    params(in_params)
+{
+#ifndef NDEBUG
+  std::cerr << "Logger constructed!\n";
+#endif
+}
+
+void Logger::start_logging() {
+  if(loggingOn) return;
+  values_valid = false;
+  loggingOn = true;
+  log_start = Clock::now();
+  if((not params->output_file.empty()) and (params->log_interval != 0)){
+    std::thread(logging, params).detach();
+  }
+}
+
+void Logger::stop_logging() {
+  if(not loggingOn) return;
+  loggingOn = false;
+  log_end = Clock::now();
+
+  std::thread(calculate_benchmark_data).detach();
+
+  if(not params->output_file.empty()) {
+    std::thread(writeFile, params->output_file + get_log_suffix()).detach();
+  }
+}
+
+
+void Logger::try_log() {
+  if(not is_active()) return;
+  if(not values_valid) return;
+  auto now = Clock::now();
+  auto elapsedLog = now - log_start;
+
+  currentLogData.previous = elapsedLog;
+  currentLogData.fps = fps;
+  logArray.push_back(currentLogData);
+
+  if(params->log_duration and (elapsedLog >= std::chrono::seconds(params->log_duration))){
+    stop_logging();
+  }
+}
+
+void Logger::wait_until_data_valid() {
+  std::unique_lock<std::mutex> lck(values_valid_mtx);
+  while(! values_valid) values_valid_cv.wait(lck);
+}
+
+void Logger::notify_data_valid() {
+  std::unique_lock<std::mutex> lck(values_valid_mtx);
+  values_valid = true;
+  values_valid_cv.notify_all();
 }
