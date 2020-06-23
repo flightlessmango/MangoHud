@@ -89,11 +89,8 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(cpu_text)                    \
    OVERLAY_PARAM_CUSTOM(gpu_text)                    \
    OVERLAY_PARAM_CUSTOM(log_interval)                \
-<<<<<<< HEAD
    OVERLAY_PARAM_CUSTOM(permit_upload)               \
-=======
    OVERLAY_PARAM_CUSTOM(benchmark_percentiles)       \
->>>>>>> 6d4ed4e... implement configurable benchmark percentiles.
    OVERLAY_PARAM_CUSTOM(help)
 
 enum overlay_param_position {

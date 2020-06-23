@@ -422,11 +422,8 @@ parse_overlay_config(struct overlay_params *params,
    params->font_scale_media_player = 0.55f;
    params->log_interval = 100;
    params->media_player_order = { MP_ORDER_TITLE, MP_ORDER_ARTIST, MP_ORDER_ALBUM };
-<<<<<<< HEAD
    params->permit_upload = 0;
-=======
    params->benchmark_percentiles = { "97% ", "AVG ", "1%  ", "0.1%" };
->>>>>>> 6d4ed4e... implement configurable benchmark percentiles.
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_Shift_R, XK_F12 };
