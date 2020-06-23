@@ -91,8 +91,20 @@ static unsigned int g_VboHandle = 0, g_ElementsHandle = 0;
 static bool         g_IsGLES = false;
 
 // Functions
+static void ImGui_ImplOpenGL3_DestroyFontsTexture()
+{
+    if (g_FontTexture)
+    {
+        ImGuiIO& io = ImGui::GetIO();
+        glDeleteTextures(1, &g_FontTexture);
+        io.Fonts->TexID = 0;
+        g_FontTexture = 0;
+    }
+}
+
 static bool ImGui_ImplOpenGL3_CreateFontsTexture()
 {
+    ImGui_ImplOpenGL3_DestroyFontsTexture();
     // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
     unsigned char* pixels;
@@ -119,17 +131,6 @@ static bool ImGui_ImplOpenGL3_CreateFontsTexture()
     glBindTexture(GL_TEXTURE_2D, last_texture);
 
     return true;
-}
-
-static void ImGui_ImplOpenGL3_DestroyFontsTexture()
-{
-    if (g_FontTexture)
-    {
-        ImGuiIO& io = ImGui::GetIO();
-        glDeleteTextures(1, &g_FontTexture);
-        io.Fonts->TexID = 0;
-        g_FontTexture = 0;
-    }
 }
 
 // If you get an error please report on github. You may try different GL context version or GLSL version. See GL<>GLSL version table at the top of this file.
@@ -467,6 +468,13 @@ void    ImGui_ImplOpenGL3_NewFrame()
 {
     if (!g_ShaderHandle)
         ImGui_ImplOpenGL3_CreateDeviceObjects();
+    if (!glIsTexture(g_FontTexture)) {
+#ifndef NDEBUG
+        fprintf(stderr, "MANGOHUD: GL Texture lost? Regenerating.\n");
+#endif
+        g_FontTexture = 0;
+        ImGui_ImplOpenGL3_CreateFontsTexture();
+    }
 }
 
 static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_width, int fb_height, GLuint vertex_array_object)
