@@ -68,6 +68,7 @@
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
 #include <stdint.h>     // intptr_t
+#include <sstream>
 
 #include <glad/glad.h>
 
@@ -312,16 +313,25 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         fragment_shader = fragment_shader_glsl_130;
     }
 
+    std::stringstream ss;
+    ss << g_GlslVersionString << vertex_shader;
+    std::string shader = ss.str();
+
     // Create shaders
-    const GLchar* vertex_shader_with_version[2] = { g_GlslVersionString, vertex_shader };
+    //const GLchar* vertex_shader_with_version[2] = { g_GlslVersionString, vertex_shader };
+    const GLchar* vertex_shader_with_version[1] = { shader.c_str() };
     g_VertHandle = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(g_VertHandle, 2, vertex_shader_with_version, NULL);
+    glShaderSource(g_VertHandle, 1, vertex_shader_with_version, NULL);
     glCompileShader(g_VertHandle);
     CheckShader(g_VertHandle, "vertex shader");
 
-    const GLchar* fragment_shader_with_version[2] = { g_GlslVersionString, fragment_shader };
+    ss.str(""); ss.clear();
+    ss << g_GlslVersionString << fragment_shader;
+    shader = ss.str();
+
+    const GLchar* fragment_shader_with_version[1] = { shader.c_str() };
     g_FragHandle = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(g_FragHandle, 2, fragment_shader_with_version, NULL);
+    glShaderSource(g_FragHandle, 1, fragment_shader_with_version, NULL);
     glCompileShader(g_FragHandle);
     CheckShader(g_FragHandle, "fragment shader");
 
