@@ -11,7 +11,7 @@ using namespace std;
 string os, cpu, gpu, ram, kernel, driver;
 bool sysInfoFetched = false;
 int gpuLoadLog = 0, cpuLoadLog = 0;
-int64_t elapsedLog;
+uint64_t elapsedLog;
 
 struct logData{
   double fps;
