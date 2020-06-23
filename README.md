@@ -168,6 +168,7 @@ A partial list of parameters are below. See the config file for a complete list.
 | `engine_version`                   | Display OpenGL or vulkan and vulkan-based render engine's version                     |
 | `permit_upload`                    | Allow uploading of logs to Flightlessmango.com                                        |
 | `upload_log`                       | Change keybind for uploading log                                                      |
+| `benchmark_percentiles`            | Configure which framerate percentiles are shown in the logging summary. Default is `97+AVG+1+0.1` |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 
