@@ -34,6 +34,7 @@ void getNvidiaGpuInfo(){
 }
 
 void getAmdGpuInfo(){
+#ifdef __gnu_linux__
     int64_t value = 0;
 
     if (amdgpu.busy) {
@@ -94,4 +95,8 @@ void getAmdGpuInfo(){
 
         gpu_info.powerUsage = value / 1000000;
     }
+#endif
+#ifdef __WIN32
+    query_adl();
+#endif
 }
