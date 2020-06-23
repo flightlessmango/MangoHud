@@ -817,25 +817,30 @@ void calculate_benchmark_data(void *params_void){
       benchmark.total = benchmark.total + fps_;
    }
 
+   size_t max_label_size = 0;
+
    for (std::string percentile : params->benchmark_percentiles) {
       float result;
 
       // special case handling for a mean-based average
-      if (percentile.find("AVG") == 0) {
+      if (percentile == "AVG") {
          result = benchmark.total / sorted.size();
-      }
-      // everything else is used to calculate percentiles
-      else {
-         char *endChar;
-         float fraction = std::strtof(percentile.c_str(), &endChar) / 100;
+      } else {
+         // the percentiles are already validated when they're parsed from the config.
+         float fraction = parse_float(percentile) / 100;
 
-         if (*endChar != '%' || fraction <= 0.0 || fraction > 1.0) {
-            std::cerr << "MANGOHUD: Invalid percentile value for benchmark: '" << percentile << "'\n";
-            continue;
-         }
          result = sorted[(fraction * sorted.size()) - 1];
+         percentile += "%";
       }
+
+      if (percentile.length() > max_label_size)
+         max_label_size = percentile.length();
+
       benchmark.percentile_data.push_back({percentile, result});
+   }
+
+   for (auto& entry : benchmark.percentile_data) {
+      entry.first.append(max_label_size - entry.first.length(), ' ');
    }
 }
 
