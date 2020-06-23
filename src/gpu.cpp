@@ -28,7 +28,7 @@ void getNvidiaGpuInfo(){
     }
 #endif
 #endif
-#ifdef __WIN32
+#ifdef _WIN32
     nvapi_util();
 #endif
 }
@@ -96,7 +96,7 @@ void getAmdGpuInfo(){
         gpu_info.powerUsage = value / 1000000;
     }
 #endif
-#ifdef __WIN32
+#ifdef _WIN32
     query_adl();
 #endif
 }
