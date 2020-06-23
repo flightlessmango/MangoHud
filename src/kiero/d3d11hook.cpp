@@ -11,6 +11,9 @@
 #include "imgui_impl_win32.h"
 #include "dx_shared.h"
 #include "d3d11hook.h"
+#ifdef _MSC_VER
+        #include <intrin.h>
+#endif
 
 #pragma comment(lib, "d3d11.lib")
 
@@ -73,9 +76,15 @@ long __stdcall hkPresent11(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT F
 		ImGui_ImplDX11_Init(device, context);
 		init = true;
 	});
-	static auto addr = __builtin_return_address(0);
-	if(addr == __builtin_return_address(0))
+#ifdef _MSC_VER
+        static auto addr = _ReturnAddress();
+        if(addr == _ReturnAddress()){
+#else
+        static auto addr = __builtin_return_address(0);
+        if(addr == __builtin_return_address(0)){
+#endif
 		ImplHookDX11_Present(g_pd3dDevice, g_pd3dContext, g_pSwapChain);
+		}
 
 	return oPresent(pSwapChain, SyncInterval, Flags);
 }

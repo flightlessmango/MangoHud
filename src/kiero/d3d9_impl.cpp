@@ -11,6 +11,9 @@
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx9.h"
 #include "dx_shared.h"
+#ifdef _MSC_VER
+        #include <intrin.h>
+#endif
 
 typedef long(__stdcall* Reset)(LPDIRECT3DDEVICE9, D3DPRESENT_PARAMETERS*);
 static Reset oReset = NULL;
@@ -46,8 +49,13 @@ long __stdcall hkEndScene(LPDIRECT3DDEVICE9 pDevice)
 	}
 
 	ImGui::SetCurrentContext(state.imgui_ctx);
-	static auto addr = __builtin_return_address(0);
-	if(addr == __builtin_return_address(0)){
+#ifdef _MSC_VER
+        static auto addr = _ReturnAddress();
+        if(addr == _ReturnAddress()){
+#else
+        static auto addr = __builtin_return_address(0);
+        if(addr == __builtin_return_address(0)){
+#endif
 		check_keybinds(params);
 		update_hud_info(sw_stats, params, vendorID);
 		ImGui_ImplDX9_NewFrame();
