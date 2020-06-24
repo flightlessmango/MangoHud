@@ -59,6 +59,7 @@
 #include "blacklist.h"
 #include "version.h"
 #include "pci_ids.h"
+#include "timing.hpp"
 
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
@@ -733,20 +734,23 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
 }
 
 void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
+   using namespace std::chrono_literals;
    bool pressed = false; // FIXME just a placeholder until wayland support
-   uint64_t now = os_time_get(); /* us */
-   elapsedF2 = (double)(now - last_f2_press);
-   elapsedF12 = (double)(now - last_f12_press);
-   elapsedReloadCfg = (double)(now - reload_cfg_press);
-   elapsedUpload = (double)(now - last_upload_press);
+   auto now = Clock::now(); /* us */
+   auto elapsedF2 = now - last_f2_press;
+   auto elapsedF12 = now - last_f12_press;
+   auto elapsedReloadCfg = now - reload_cfg_press;
+   auto elapsedUpload = now - last_upload_press;
 
-  if (elapsedF2 >= 500000){
+   auto keyPressDelay = 500ms;
+
+  if (elapsedF2 >= keyPressDelay){
 #ifdef HAVE_X11
      pressed = keys_are_pressed(params.toggle_logging);
 #else
      pressed = false;
 #endif
-     if (pressed && (now - log_end) / 1000000 > 11){
+     if (pressed && (now - log_end > 11s)){
        last_f2_press = now;
        if(loggingOn){
          log_end = now;
@@ -767,7 +771,7 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
      }
    }
 
-   if (elapsedF12 >= 500000){
+   if (elapsedF12 >= keyPressDelay){
 #ifdef HAVE_X11
       pressed = keys_are_pressed(params.toggle_hud);
 #else
@@ -779,7 +783,7 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
       }
    }
 
-   if (elapsedReloadCfg >= 500000){
+   if (elapsedReloadCfg >= keyPressDelay){
 #ifdef HAVE_X11
       pressed = keys_are_pressed(params.reload_cfg);
 #else
@@ -791,7 +795,7 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
       }
    }
    
-   if (params.permit_upload && elapsedUpload >= 500000){
+   if (params.permit_upload && elapsedUpload >= keyPressDelay){
 #ifdef HAVE_X11
       pressed = keys_are_pressed(params.upload_log);
 #else
@@ -1038,7 +1042,7 @@ static void render_mpris_metadata(struct overlay_params& params, metadata& meta,
 }
 #endif
 
-void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, unsigned height, uint64_t now){
+void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, unsigned height, Clock::time_point now){
    // TODO, FIX LOG_DURATION FOR BENCHMARK
    int benchHeight = 6 * params.font_size + 10.0f + 58;
    ImGui::SetNextWindowSize(ImVec2(window_size.x, benchHeight), ImGuiCond_Always);
@@ -1048,7 +1052,7 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
       ImGui::SetNextWindowPos(ImVec2(data.main_window_pos.x, data.main_window_pos.y + window_size.y + 5), ImGuiCond_Always);
 
    vector<pair<string, float>> benchmark_data = {{"97% ", benchmark.ninety}, {"AVG ", benchmark.avg}, {"1%  ", benchmark.oneP}, {"0.1%", benchmark.pointOneP}};
-   float display_time = float(now - log_end) / 1000000;
+   float display_time = std::chrono::duration<float>(now - log_end).count();
    static float display_for = 10.0f;
    float alpha;
    if(params.background_alpha != 0){
@@ -1082,7 +1086,7 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
    ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), "%s", finished);
    ImGui::Dummy(ImVec2(0.0f, 8.0f));
    char duration[20];
-   snprintf(duration, sizeof(duration), "Duration: %.1fs", float(log_end - log_start) / 1000000);
+   snprintf(duration, sizeof(duration), "Duration: %.1fs", std::chrono::duration<float>(log_end - log_start).count());
    ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2 )- (ImGui::CalcTextSize(duration).x / 2));
    ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), "%s", duration);
    for (auto& data_ : benchmark_data){
@@ -1112,7 +1116,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    static float char_width = ImGui::CalcTextSize("A").x;
    window_size = ImVec2(params.width, params.height);
    unsigned height = ImGui::GetIO().DisplaySize.y;
-   uint64_t now = os_time_get();
+   auto now = Clock::now();
 
    if (!params.no_display){
       ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
@@ -1335,8 +1339,8 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       }
 
       if (loggingOn && params.log_interval == 0){
-         elapsedLog = (double)(now - log_start);
-         if (params.log_duration && (elapsedLog) >= params.log_duration * 1000000)
+         elapsedLog = now - log_start;
+         if (params.log_duration && (elapsedLog) >= std::chrono::seconds(params.log_duration))
             loggingOn = false;
 
          currentLogData.fps = fps;
@@ -1391,12 +1395,12 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(data.main_window_pos.x + window_size.x - 15, data.main_window_pos.y + 15), 10, params.engine_color, 20);
       window_size = ImVec2(window_size.x, ImGui::GetCursorPosY() + 10.0f);
       ImGui::End();
-      if (loggingOn && params.log_duration && (now - log_start) >= params.log_duration * 1000000){
+      if (loggingOn && params.log_duration && (now - log_start) >= std::chrono::seconds(params.log_duration)){
          loggingOn = false;
          log_end = now;
          std::thread(calculate_benchmark_data).detach();
       }
-      if((now - log_end) / 1000000 < 12)
+      if((now - log_end) < 12s)
          render_benchmark(data, params, window_size, height, now);
 
    }
