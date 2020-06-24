@@ -789,14 +789,15 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
 #else
      pressed = false;
 #endif
-     if (pressed && (now - log_end > 11s)){
+     if (pressed && (now - logger->last_log_end() > 11s)) {
        last_f2_press = now;
-       if(logger->is_active()){
+       if (logger->is_active()) {
          logger->stop_logging();
-         std::thread(calculate_benchmark_data).detach();
        } else {
          logger->start_logging();
-         std::thread(update_hw_info, std::ref(sw_stats), std::ref(params), vendorID).detach();
+         std::thread(update_hw_info, std::ref(sw_stats), std::ref(params),
+                     vendorID)
+             .detach();
          benchmark.fps_data.clear();
        }
      }
@@ -834,8 +835,7 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
 #endif
       if (pressed){
          last_upload_press = now;
-         if (logFiles.size() > 0)
-            std::thread(upload_file).detach();
+         logger->upload_last_log();
       }
    }   
 }

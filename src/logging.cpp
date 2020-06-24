@@ -5,7 +5,6 @@
 
 string os, cpu, gpu, ram, kernel, driver;
 bool sysInfoFetched = false;
-std::vector<std::string> logFiles;
 double fps;
 logData currentLogData = {};
 
@@ -33,16 +32,16 @@ string exec(string command) {
    return result;
 }
 
-void upload_file(){
+void upload_file(std::string logFile){
   std::string command = "curl --include --request POST https://flightlessmango.com/logs -F 'log[game_id]=26506' -F 'log[user_id]=176' -F 'attachment=true' -A 'mangohud' ";
-  command += " -F 'log[uploads][]=@" + logFiles.back() + "'";
+  command += " -F 'log[uploads][]=@" + logFile + "'";
 
   command += " | grep Location | cut -c11-";
   std::string url = exec(command);
   exec("xdg-open " + url);
 }
 
-void upload_files(){
+void upload_files(const std::vector<std::string>& logFiles){
   std::string command = "curl --include --request POST https://flightlessmango.com/logs -F 'log[game_id]=26506' -F 'log[user_id]=176' -F 'attachment=true' -A 'mangohud' ";
   for (auto& file : logFiles)
     command += " -F 'log[uploads][]=@" + file + "'";
@@ -54,8 +53,9 @@ void upload_files(){
 
 void writeFile(string filename){
   auto& logArray = logger->get_log_data();
-  std::cerr << "writeFile(" << filename << ", vector<logData>(" << logArray.size() << "))\n";
-  logFiles.push_back(filename);
+#ifndef NDEBUG
+  std::cerr << "Writing log file [" << filename << "], " << logArray.size() << " entries\n";
+#endif
   std::ofstream out(filename, ios::out | ios::app);
   out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver" << endl;
   out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << endl;
@@ -95,9 +95,9 @@ void logging(void *params_void){
 }
 
 Logger::Logger(overlay_params* in_params)
-  : loggingOn(false), 
-    values_valid(false), 
-    params(in_params)
+  : m_logging_on(false), 
+    m_values_valid(false), 
+    m_params(in_params)
 {
 #ifndef NDEBUG
   std::cerr << "Logger constructed!\n";
@@ -105,50 +105,55 @@ Logger::Logger(overlay_params* in_params)
 }
 
 void Logger::start_logging() {
-  if(loggingOn) return;
-  values_valid = false;
-  loggingOn = true;
-  log_start = Clock::now();
-  if((not params->output_file.empty()) and (params->log_interval != 0)){
-    std::thread(logging, params).detach();
+  if(m_logging_on) return;
+  m_values_valid = false;
+  m_logging_on = true;
+  m_log_start = Clock::now();
+  if((not m_params->output_file.empty()) and (m_params->log_interval != 0)){
+    std::thread(logging, m_params).detach();
   }
 }
 
 void Logger::stop_logging() {
-  if(not loggingOn) return;
-  loggingOn = false;
-  log_end = Clock::now();
+  if(not m_logging_on) return;
+  m_logging_on = false;
+  m_log_end = Clock::now();
 
   std::thread(calculate_benchmark_data).detach();
 
-  if(not params->output_file.empty()) {
-    std::thread(writeFile, params->output_file + get_log_suffix()).detach();
+  if(not m_params->output_file.empty()) {
+    m_log_files.emplace_back(m_params->output_file + get_log_suffix());
+    std::thread(writeFile, m_log_files.back()).detach();
   }
 }
 
-
 void Logger::try_log() {
   if(not is_active()) return;
-  if(not values_valid) return;
+  if(not m_values_valid) return;
   auto now = Clock::now();
-  auto elapsedLog = now - log_start;
+  auto elapsedLog = now - m_log_start;
 
   currentLogData.previous = elapsedLog;
   currentLogData.fps = fps;
-  logArray.push_back(currentLogData);
+  m_log_array.push_back(currentLogData);
 
-  if(params->log_duration and (elapsedLog >= std::chrono::seconds(params->log_duration))){
+  if(m_params->log_duration and (elapsedLog >= std::chrono::seconds(m_params->log_duration))){
     stop_logging();
   }
 }
 
 void Logger::wait_until_data_valid() {
-  std::unique_lock<std::mutex> lck(values_valid_mtx);
-  while(! values_valid) values_valid_cv.wait(lck);
+  std::unique_lock<std::mutex> lck(m_values_valid_mtx);
+  while(! m_values_valid) m_values_valid_cv.wait(lck);
 }
 
 void Logger::notify_data_valid() {
-  std::unique_lock<std::mutex> lck(values_valid_mtx);
-  values_valid = true;
-  values_valid_cv.notify_all();
+  std::unique_lock<std::mutex> lck(m_values_valid_mtx);
+  m_values_valid = true;
+  m_values_valid_cv.notify_all();
+}
+
+void Logger::upload_last_log() {
+  if(m_log_files.empty()) return;
+  std::thread(upload_file, m_log_files.back()).detach();
 }

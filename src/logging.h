@@ -33,27 +33,30 @@ public:
 
   void try_log();
 
-  bool is_active() const { return loggingOn; }
+  bool is_active() const { return m_logging_on; }
 
   void wait_until_data_valid();
   void notify_data_valid();
 
-  auto last_log_end() const noexcept { return log_end; }
-  auto last_log_begin() const noexcept { return log_start; }
+  auto last_log_end() const noexcept { return m_log_end; }
+  auto last_log_begin() const noexcept { return m_log_start; }
 
-  const std::vector<logData>& get_log_data() const noexcept { return logArray; }
-  void clear_log_data() noexcept { logArray.clear(); }
+  const std::vector<logData>& get_log_data() const noexcept { return m_log_array; }
+  void clear_log_data() noexcept { m_log_array.clear(); }
+
+  void upload_last_log();
 private:
-  std::vector<logData> logArray;
-  Clock::time_point log_start;
-  Clock::time_point log_end;
-  bool loggingOn;
+  std::vector<logData> m_log_array;
+  std::vector<std::string> m_log_files;
+  Clock::time_point m_log_start;
+  Clock::time_point m_log_end;
+  bool m_logging_on;
 
-  std::mutex values_valid_mtx;
-  std::condition_variable values_valid_cv;
-  bool values_valid;
+  std::mutex m_values_valid_mtx;
+  std::condition_variable m_values_valid_cv;
+  bool m_values_valid;
 
-  overlay_params* params;
+  overlay_params* m_params;
 };
 
 extern std::unique_ptr<Logger> logger;
