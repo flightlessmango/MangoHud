@@ -2381,11 +2381,11 @@ static void overlay_DestroySwapchainKHR(
 void FpsLimiter(struct fps_limit& stats){
    stats.sleepTime = stats.targetFrameTime - (stats.frameStart - stats.frameEnd);
    if (stats.sleepTime > stats.frameOverhead) {
-      int64_t adjustedSleep = stats.sleepTime - stats.frameOverhead;
-      this_thread::sleep_for(chrono::nanoseconds(adjustedSleep));
-      stats.frameOverhead = ((os_time_get_nano() - stats.frameStart) - adjustedSleep);
+      auto adjustedSleep = stats.sleepTime - stats.frameOverhead;
+      this_thread::sleep_for(adjustedSleep);
+      stats.frameOverhead = ((Clock::now() - stats.frameStart) - adjustedSleep);
       if (stats.frameOverhead > stats.targetFrameTime)
-         stats.frameOverhead = 0;
+         stats.frameOverhead = Clock::duration(0);
    }
 }
 
@@ -2435,10 +2435,12 @@ static VkResult overlay_QueuePresentKHR(
          result = chain_result;
    }
 
-   if (fps_limit_stats.targetFrameTime > 0){
-      fps_limit_stats.frameStart = os_time_get_nano();
+   using namespace std::chrono_literals;
+   
+   if (fps_limit_stats.targetFrameTime > 0s){
+      fps_limit_stats.frameStart = Clock::now();
       FpsLimiter(fps_limit_stats);
-      fps_limit_stats.frameEnd = os_time_get_nano();
+      fps_limit_stats.frameEnd = Clock::now();
    }
 
    return result;
