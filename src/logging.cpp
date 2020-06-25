@@ -6,13 +6,13 @@
 string os, cpu, gpu, ram, kernel, driver;
 bool sysInfoFetched = false;
 int gpuLoadLog = 0, cpuLoadLog = 0;
-uint64_t elapsedLog;
+Clock::duration elapsedLog;
 std::vector<std::string> logFiles;
 double fps;
 std::vector<logData> logArray;
 ofstream out;
 bool loggingOn;
-uint64_t log_start, log_end;
+Clock::time_point log_start, log_end;
 logData currentLogData = {};
 bool logUpdate = false;
 
@@ -74,7 +74,7 @@ void writeFile(string filename){
     out << logArray[i].gpu_mem_clock << ",";
     out << logArray[i].gpu_vram_used << ",";
     out << logArray[i].ram_used << ",";
-    out << logArray[i].previous << "\n";
+    out << std::chrono::duration_cast<std::chrono::microseconds>(logArray[i].previous).count() << "\n";
   }
 
   out.close();
@@ -93,7 +93,7 @@ string get_log_suffix(){
 void logging(void *params_void){
   overlay_params *params = reinterpret_cast<overlay_params *>(params_void);
   while (loggingOn){
-      uint64_t now = os_time_get();
+      auto now = Clock::now();
       elapsedLog = now - log_start;
 
       currentLogData.fps = fps;
@@ -101,11 +101,11 @@ void logging(void *params_void){
       if (logUpdate)
         logArray.push_back(currentLogData);
 
-      if (params->log_duration && (elapsedLog) >= params->log_duration * 1000000)
+      if (params->log_duration && (elapsedLog >= std::chrono::seconds(params->log_duration)))
         loggingOn = false;
       else
         if (logUpdate)
-          this_thread::sleep_for(chrono::milliseconds(params->log_interval));
+          this_thread::sleep_for(std::chrono::milliseconds(params->log_interval));
         else
           this_thread::sleep_for(chrono::milliseconds(0));
   }

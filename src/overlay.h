@@ -4,6 +4,7 @@
 #include "imgui.h"
 #include "overlay_params.h"
 #include "iostats.h"
+#include "timing.hpp"
 
 struct frame_stat {
    uint64_t stats[OVERLAY_PLOTS_MAX];
@@ -44,11 +45,11 @@ struct swapchain_stats {
 };
 
 struct fps_limit {
-   int64_t frameStart;
-   int64_t frameEnd;
-   int64_t targetFrameTime;
-   int64_t frameOverhead;
-   int64_t sleepTime;
+   Clock::time_point frameStart;
+   Clock::time_point frameEnd;
+   Clock::duration targetFrameTime;
+   Clock::duration frameOverhead;
+   Clock::duration sleepTime;
 };
 
 struct benchmark_stats {

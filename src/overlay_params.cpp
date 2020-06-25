@@ -485,8 +485,9 @@ parse_overlay_config(struct overlay_params *params,
    }
 
    // set frametime limit
+   using namespace std::chrono;
    if (params->fps_limit >= 0)
-      fps_limit_stats.targetFrameTime = int64_t(1000000000.0 / params->fps_limit);
+      fps_limit_stats.targetFrameTime = duration_cast<Clock::duration>(duration<double>(1) / params->fps_limit);
 
 #ifdef HAVE_DBUS
    if (params->enabled[OVERLAY_PARAM_ENABLED_media_player]) {

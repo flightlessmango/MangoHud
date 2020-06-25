@@ -4,7 +4,7 @@
 #include <chrono>
 #include <thread>
 
-#include "mesa/util/os_time.h"
+#include "timing.hpp"
 
 using namespace std;
 struct logData{
@@ -18,17 +18,17 @@ struct logData{
   float gpu_vram_used;
   float ram_used;
 
-  uint64_t previous;
+  Clock::duration previous;
 };
 
 extern string os, cpu, gpu, ram, kernel, driver;
 extern bool sysInfoFetched;
-extern uint64_t elapsedLog;
+extern Clock::duration elapsedLog;
 extern std::vector<std::string> logFiles;
 extern double fps;
 extern std::vector<logData> logArray;
 extern bool loggingOn;
-extern uint64_t log_start, log_end;
+extern Clock::time_point log_start, log_end;
 extern logData currentLogData;
 extern bool logUpdate;
 
