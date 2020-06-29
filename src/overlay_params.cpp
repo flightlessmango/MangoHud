@@ -202,6 +202,38 @@ parse_media_player_order(const char *str)
    return order;
 }
 
+static uint32_t
+parse_font_glyph_ranges(const char *str)
+{
+   uint32_t fg = 0;
+   std::stringstream ss(str);
+   std::string token;
+   while (std::getline(ss, token, ',')) {
+      trim(token);
+      std::transform(token.begin(), token.end(), token.begin(), ::tolower);
+
+      if (token == "korean")
+         fg |= FG_KOREAN;
+      else if (token == "chinese")
+         fg |= FG_CHINESE_FULL;
+      else if (token == "chinese_simplified")
+         fg |= FG_CHINESE_SIMPLIFIED;
+      else if (token == "japanese")
+         fg |= FG_JAPANESE;
+      else if (token == "cyrillic")
+         fg |= FG_CYRILLIC;
+      else if (token == "thai")
+         fg |= FG_THAI;
+      else if (token == "vietnamese")
+         fg |= FG_VIETNAMESE;
+      else if (token == "latin_ext_a")
+         fg |= FG_LATIN_EXT_A;
+      else if (token == "latin_ext_b")
+         fg |= FG_LATIN_EXT_B;
+   }
+   return fg;
+}
+
 #define parse_width(s) parse_unsigned(s)
 #define parse_height(s) parse_unsigned(s)
 #define parse_vsync(s) parse_unsigned(s)
@@ -212,6 +244,7 @@ parse_media_player_order(const char *str)
 #define parse_time_format(s) parse_str(s)
 #define parse_output_file(s) parse_path(s)
 #define parse_font_file(s) parse_path(s)
+#define parse_font_file_text(s) parse_path(s)
 #define parse_io_read(s) parse_unsigned(s)
 #define parse_io_write(s) parse_unsigned(s)
 #define parse_pci_dev(s) parse_str(s)
@@ -221,6 +254,8 @@ parse_media_player_order(const char *str)
 #define parse_gpu_text(s) parse_str(s)
 #define parse_log_interval(s) parse_unsigned(s)
 #define parse_font_size(s) parse_float(s)
+#define parse_font_size_text(s) parse_float(s)
+#define parse_font_scale(s) parse_float(s)
 #define parse_background_alpha(s) parse_float(s)
 #define parse_alpha(s) parse_float(s)
 #define parse_permit_upload(s) parse_unsigned(s)
@@ -389,6 +424,7 @@ parse_overlay_config(struct overlay_params *params,
    params->text_color = 0xffffff;
    params->media_player_color = 0xffffff;
    params->media_player_name = "spotify";
+   params->font_scale = 1.0f;
    params->font_scale_media_player = 0.55f;
    params->log_interval = 100;
    params->media_player_order = { MP_ORDER_TITLE, MP_ORDER_ARTIST, MP_ORDER_ALBUM };
@@ -478,9 +514,9 @@ parse_overlay_config(struct overlay_params *params,
    //increase hud width if io read and write
    if (!params->width) {
       if ((params->enabled[OVERLAY_PARAM_ENABLED_io_read] || params->enabled[OVERLAY_PARAM_ENABLED_io_write])) {
-         params->width = 13 * params->font_size;
+         params->width = 13 * params->font_size * params->font_scale;
       } else {
-         params->width = params->font_size * 11.7;
+         params->width = params->font_size * params->font_scale * 11.7;
       }
    }
 

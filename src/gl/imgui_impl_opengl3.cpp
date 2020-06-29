@@ -72,6 +72,8 @@
 
 #include <glad/glad.h>
 
+#include "overlay.h"
+
 namespace MangoHud {
 
 // Desktop GL 3.2+ has glDrawElementsBaseVertex() which GL ES and WebGL don't have.
@@ -110,7 +112,7 @@ static bool ImGui_ImplOpenGL3_CreateFontsTexture()
     ImGuiIO& io = ImGui::GetIO();
     unsigned char* pixels;
     int width, height;
-    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
+    io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
 
     // Upload texture to graphics system
     GLint last_texture;
@@ -123,7 +125,14 @@ static bool ImGui_ImplOpenGL3_CreateFontsTexture()
     if (g_IsGLES || g_GlVersion >= 200)
         glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    // FIXME can compress?
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_ALPHA, width, height, 0, GL_ALPHA, GL_UNSIGNED_BYTE, pixels);
+
+#ifndef NDEBUG
+    GLint compFlag= 0;
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_COMPRESSED, &compFlag);
+    fprintf(stderr, "GL tex compressed: %s\n", compFlag ? "yes" : "no");
+#endif
 
     // Store our identifier
     io.Fonts->TexID = (ImTextureID)(intptr_t)g_FontTexture;
@@ -252,7 +261,7 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "varying vec4 Frag_Color;\n"
         "void main()\n"
         "{\n"
-        "    gl_FragColor = Frag_Color * texture2D(Texture, Frag_UV.st);\n"
+        "    gl_FragColor = Frag_Color * vec4(1, 1, 1, texture2D(Texture, Frag_UV.st).a);\n"
         "}\n";
 
     const GLchar* fragment_shader_glsl_130 =
@@ -262,7 +271,7 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "out vec4 Out_Color;\n"
         "void main()\n"
         "{\n"
-        "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
+        "    Out_Color = Frag_Color * vec4(1, 1, 1, texture(Texture, Frag_UV.st).a);\n"
         "}\n";
 
     const GLchar* fragment_shader_glsl_300_es =
@@ -273,7 +282,7 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "layout (location = 0) out vec4 Out_Color;\n"
         "void main()\n"
         "{\n"
-        "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
+        "    Out_Color = Frag_Color * vec4(1, 1, 1, texture(Texture, Frag_UV.st).a);\n"
         "}\n";
 
     const GLchar* fragment_shader_glsl_410_core =
@@ -283,7 +292,7 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "layout (location = 0) out vec4 Out_Color;\n"
         "void main()\n"
         "{\n"
-        "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
+        "    Out_Color = Frag_Color * vec4(1, 1, 1, texture(Texture, Frag_UV.st).a);\n"
         "}\n";
 
 #ifndef NDEBUG
@@ -547,7 +556,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
     int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
     int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
-    if (fb_width <= 0 || fb_height <= 0)
+    if (fb_width <= 0 || fb_height <= 0 || draw_data->TotalVtxCount == 0)
         return;
 
     // Backup GL state

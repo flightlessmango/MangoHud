@@ -51,6 +51,12 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
    OVERLAY_PARAM_CUSTOM(font_file)                   \
+   OVERLAY_PARAM_CUSTOM(font_file_text)              \
+   OVERLAY_PARAM_CUSTOM(font_glyph_ranges)           \
+   OVERLAY_PARAM_CUSTOM(font_size)                   \
+   OVERLAY_PARAM_CUSTOM(font_size_text)              \
+   OVERLAY_PARAM_CUSTOM(font_scale)                  \
+   OVERLAY_PARAM_CUSTOM(font_scale_media_player)     \
    OVERLAY_PARAM_CUSTOM(position)                    \
    OVERLAY_PARAM_CUSTOM(width)                       \
    OVERLAY_PARAM_CUSTOM(height)                      \
@@ -59,8 +65,6 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(fps_limit)                   \
    OVERLAY_PARAM_CUSTOM(vsync)                       \
    OVERLAY_PARAM_CUSTOM(gl_vsync)                    \
-   OVERLAY_PARAM_CUSTOM(font_size)                   \
-   OVERLAY_PARAM_CUSTOM(font_scale_media_player)     \
    OVERLAY_PARAM_CUSTOM(toggle_hud)                  \
    OVERLAY_PARAM_CUSTOM(toggle_logging)              \
    OVERLAY_PARAM_CUSTOM(reload_cfg)                  \
@@ -111,6 +115,18 @@ enum media_player_order {
    MP_ORDER_ALBUM,
 };
 
+enum font_glyph_ranges {
+   FG_KOREAN                  = (1u << 0),
+   FG_CHINESE_FULL            = (1u << 1),
+   FG_CHINESE_SIMPLIFIED      = (1u << 2),
+   FG_JAPANESE                = (1u << 3),
+   FG_CYRILLIC                = (1u << 4),
+   FG_THAI                    = (1u << 5),
+   FG_VIETNAMESE              = (1u << 6),
+   FG_LATIN_EXT_A             = (1u << 7),
+   FG_LATIN_EXT_B             = (1u << 8),
+};
+
 enum overlay_param_enabled {
 #define OVERLAY_PARAM_BOOL(name) OVERLAY_PARAM_ENABLED_##name,
 #define OVERLAY_PARAM_CUSTOM(name)
@@ -139,19 +155,23 @@ struct overlay_params {
    unsigned cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color;
    unsigned media_player_color;
    unsigned tableCols;
-   float font_size;
+   float font_size, font_scale;
+   float font_size_text;
    float font_scale_media_player;
    float background_alpha, alpha;
    std::vector<KeySym> toggle_hud;
    std::vector<KeySym> toggle_logging;
    std::vector<KeySym> reload_cfg;
    std::vector<KeySym> upload_log;
-   std::string time_format, output_file, font_file;
+   std::string time_format, output_file;
    std::string pci_dev;
    std::string media_player_name;
    std::string cpu_text, gpu_text;
    unsigned log_interval;
    std::vector<media_player_order> media_player_order;
+
+   std::string font_file, font_file_text;
+   uint32_t font_glyph_ranges;
 
    std::string config_file_path;
    std::unordered_map<std::string,std::string> options;
