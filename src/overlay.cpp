@@ -735,17 +735,17 @@ void init_system_info(){
 }
 
 void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
-         if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || loggingOn) {
+         if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
          cpuStats.UpdateCPUData();
          sw_stats.total_cpu = cpuStats.GetCPUDataTotal().percent;
 
          if (params.enabled[OVERLAY_PARAM_ENABLED_core_load])
             cpuStats.UpdateCoreMhz();
-         if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp] || loggingOn)
+         if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp] || logger->is_active())
             cpuStats.UpdateCpuTemp();
          }
 
-         if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || loggingOn) {
+         if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || logger->is_active()) {
             if (vendorID == 0x1002)
                getAmdGpuInfo();
 
@@ -754,7 +754,7 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
          }
 
          // get ram usage/max
-         if (params.enabled[OVERLAY_PARAM_ENABLED_ram] || loggingOn)
+         if (params.enabled[OVERLAY_PARAM_ENABLED_ram] || logger->is_active())
             update_meminfo();
          if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])
             getIoStats(&sw_stats.io);
@@ -769,8 +769,7 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
          currentLogData.cpu_load = cpuStats.GetCPUDataTotal().percent;
          currentLogData.cpu_temp = cpuStats.GetCPUDataTotal().temp;
 
-         if (!logUpdate)
-            logUpdate = true;
+         logger->notify_data_valid();
 }
 
 void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
@@ -790,24 +789,17 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
 #else
      pressed = false;
 #endif
-     if (pressed && (now - log_end > 11s)){
+     if (pressed && (now - logger->last_log_end() > 11s)) {
        last_f2_press = now;
-       if(loggingOn){
-         log_end = now;
-         std::thread(calculate_benchmark_data).detach();
+       if (logger->is_active()) {
+         logger->stop_logging();
        } else {
-         logUpdate = false;
-         std::thread(update_hw_info, std::ref(sw_stats), std::ref(params), vendorID).detach();
+         logger->start_logging();
+         std::thread(update_hw_info, std::ref(sw_stats), std::ref(params),
+                     vendorID)
+             .detach();
          benchmark.fps_data.clear();
-         log_start = now;
        }
-       if (!params.output_file.empty() && params.log_duration == 0 && params.log_interval == 0 && loggingOn)
-         writeFile(params.output_file + get_log_suffix());
-       loggingOn = !loggingOn;
-
-       if (!params.output_file.empty() && loggingOn && params.log_interval != 0)
-         std::thread(logging, &params).detach();
-
      }
    }
 
@@ -843,8 +835,7 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
 #endif
       if (pressed){
          last_upload_press = now;
-         if (logFiles.size() > 0)
-            std::thread(upload_file).detach();
+         logger->upload_last_log();
       }
    }   
 }
@@ -873,12 +864,13 @@ void calculate_benchmark_data(){
 }
 
 void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
+   if(not logger) logger = std::make_unique<Logger>(&params);
    uint32_t f_idx = sw_stats.n_frames % ARRAY_SIZE(sw_stats.frames_stats);
    uint64_t now = os_time_get(); /* us */
 
    double elapsed = (double)(now - sw_stats.last_fps_update); /* us */
    fps = 1000000.0f * sw_stats.n_frames_since_update / elapsed;
-   if (loggingOn)
+   if (logger->is_active())
       benchmark.fps_data.push_back(fps);
 
    if (sw_stats.last_present_time) {
@@ -1092,7 +1084,7 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
       ImGui::SetNextWindowPos(ImVec2(data.main_window_pos.x, data.main_window_pos.y + window_size.y + 5), ImGuiCond_Always);
 
    vector<pair<string, float>> benchmark_data = {{"97% ", benchmark.ninety}, {"AVG ", benchmark.avg}, {"1%  ", benchmark.oneP}, {"0.1%", benchmark.pointOneP}};
-   float display_time = std::chrono::duration<float>(now - log_end).count();
+   float display_time = std::chrono::duration<float>(now - logger->last_log_end()).count();
    static float display_for = 10.0f;
    float alpha;
    if(params.background_alpha != 0){
@@ -1126,7 +1118,7 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
    ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), "%s", finished);
    ImGui::Dummy(ImVec2(0.0f, 8.0f));
    char duration[20];
-   snprintf(duration, sizeof(duration), "Duration: %.1fs", std::chrono::duration<float>(log_end - log_start).count());
+   snprintf(duration, sizeof(duration), "Duration: %.1fs", std::chrono::duration<float>(logger->last_log_end() - logger->last_log_begin()).count());
    ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2 )- (ImGui::CalcTextSize(duration).x / 2));
    ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), "%s", duration);
    for (auto& data_ : benchmark_data){
@@ -1152,6 +1144,7 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan)
 {
    ImGui::GetIO().FontGlobalScale = params.font_scale;
+   if(not logger) logger = std::make_unique<Logger>(&params);
    uint32_t f_idx = (data.n_frames - 1) % ARRAY_SIZE(data.frames_stats);
    uint64_t frame_timing = data.frames_stats[f_idx].stats[OVERLAY_PLOTS_frame_timing];
    static float char_width = ImGui::CalcTextSize("A").x;
@@ -1379,14 +1372,8 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::PopFont();
       }
 
-      if (loggingOn && params.log_interval == 0){
-         elapsedLog = now - log_start;
-         if (params.log_duration && (elapsedLog) >= std::chrono::seconds(params.log_duration))
-            loggingOn = false;
-
-         currentLogData.fps = fps;
-         currentLogData.previous = elapsedLog;
-         logArray.push_back(currentLogData);
+      if (params.log_interval == 0){
+         logger->try_log();
       }
 
       if (params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
@@ -1432,18 +1419,12 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       ImGui::PopFont();
 #endif
 
-      if(loggingOn)
+      if(logger->is_active())
          ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(data.main_window_pos.x + window_size.x - 15, data.main_window_pos.y + 15), 10, params.engine_color, 20);
       window_size = ImVec2(window_size.x, ImGui::GetCursorPosY() + 10.0f);
       ImGui::End();
-      if (loggingOn && params.log_duration && (now - log_start) >= std::chrono::seconds(params.log_duration)){
-         loggingOn = false;
-         log_end = now;
-         std::thread(calculate_benchmark_data).detach();
-      }
-      if((now - log_end) < 12s)
+      if((now - logger->last_log_end()) < 12s)
          render_benchmark(data, params, window_size, height, now);
-
    }
 }
 
