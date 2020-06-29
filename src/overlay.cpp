@@ -1143,11 +1143,8 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
 
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan)
 {
-<<<<<<< HEAD
    ImGui::GetIO().FontGlobalScale = params.font_scale;
-=======
    if(not logger) logger = std::make_unique<Logger>(&params);
->>>>>>> 9c2e489... Move logging functionality into a class
    uint32_t f_idx = (data.n_frames - 1) % ARRAY_SIZE(data.frames_stats);
    uint64_t frame_timing = data.frames_stats[f_idx].stats[OVERLAY_PLOTS_frame_timing];
    static float char_width = ImGui::CalcTextSize("A").x;
