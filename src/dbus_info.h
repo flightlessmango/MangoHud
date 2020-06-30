@@ -55,16 +55,21 @@ enum SignalType
     ST_PROPERTIESCHANGED,
 };
 
-struct DBusSignal
-{
-    const char * intf;
-    const char * signal;
-    SignalType type;
-};
 
 extern struct metadata main_metadata;
 
 namespace dbusmgr {
+
+    class dbus_manager;
+    using signal_handler_func = bool (dbus_manager::*)(DBusMessage*, const char*);
+
+    struct DBusSignal
+    {
+        const char * intf;
+        const char * signal;
+        signal_handler_func handler;
+    };
+
     using callback_func = std::function<void(/*metadata*/)>;
 
     enum CBENUM {
@@ -105,6 +110,11 @@ namespace dbusmgr {
         bool dbus_list_name_to_owner();
         bool select_active_player();
 
+        static DBusHandlerResult filter_signals(DBusConnection*, DBusMessage*, void*);
+
+        bool handle_properties_changed(DBusMessage*, const char*);
+        bool handle_name_owner_changed(DBusMessage*, const char*);
+
         DBusError m_error;
         DBusConnection * m_dbus_conn = nullptr;
         DBusMessage * m_dbus_msg = nullptr;
@@ -121,8 +131,8 @@ namespace dbusmgr {
 
 
         const std::array<DBusSignal, 2> m_signals {{
-            { "org.freedesktop.DBus", "NameOwnerChanged", ST_NAMEOWNERCHANGED },
-            { "org.freedesktop.DBus.Properties", "PropertiesChanged", ST_PROPERTIESCHANGED },
+            { "org.freedesktop.DBus", "NameOwnerChanged", &dbus_manager::handle_name_owner_changed },
+            { "org.freedesktop.DBus.Properties", "PropertiesChanged", &dbus_manager::handle_properties_changed },
         }};
 
     };

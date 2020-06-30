@@ -63,6 +63,14 @@ bool libdbus_loader::Load(const std::string& library_name) {
     return false;
   }
 
+  connection_add_filter =
+      reinterpret_cast<decltype(this->connection_add_filter)>(
+          dlsym(library_, "dbus_connection_add_filter"));
+  if (!connection_add_filter) {
+    CleanUp(true);
+    return false;
+  }
+
   connection_pop_message =
       reinterpret_cast<decltype(this->connection_pop_message)>(
           dlsym(library_, "dbus_connection_pop_message"));
@@ -75,6 +83,22 @@ bool libdbus_loader::Load(const std::string& library_name) {
       reinterpret_cast<decltype(this->connection_read_write)>(
           dlsym(library_, "dbus_connection_read_write"));
   if (!connection_read_write) {
+    CleanUp(true);
+    return false;
+  }
+
+  connection_read_write_dispatch =
+      reinterpret_cast<decltype(this->connection_read_write)>(
+          dlsym(library_, "dbus_connection_read_write_dispatch"));
+  if (!connection_read_write_dispatch) {
+    CleanUp(true);
+    return false;
+  }
+
+  connection_remove_filter =
+      reinterpret_cast<decltype(this->connection_remove_filter)>(
+          dlsym(library_, "dbus_connection_remove_filter"));
+  if (!connection_remove_filter) {
     CleanUp(true);
     return false;
   }
@@ -123,6 +147,22 @@ bool libdbus_loader::Load(const std::string& library_name) {
       reinterpret_cast<decltype(this->message_append_args)>(
           dlsym(library_, "dbus_message_append_args"));
   if (!message_append_args) {
+    CleanUp(true);
+    return false;
+  }
+
+  message_get_interface =
+      reinterpret_cast<decltype(this->message_get_interface)>(
+          dlsym(library_, "dbus_message_get_interface"));
+  if (!message_get_interface) {
+    CleanUp(true);
+    return false;
+  }
+
+  message_get_member =
+      reinterpret_cast<decltype(this->message_get_member)>(
+          dlsym(library_, "dbus_message_get_member"));
+  if (!message_get_member) {
     CleanUp(true);
     return false;
   }

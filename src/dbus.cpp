@@ -13,9 +13,13 @@ typedef std::vector<std::pair<std::string, std::string>> string_pair_vec;
 typedef std::unordered_map<std::string, string_pair_vec> string_pair_vec_map;
 typedef std::unordered_map<std::string, std::string> string_map;
 
+namespace dbusmgr { 
+dbus_manager dbus_mgr;
+}
+
 #define DBUS_TIMEOUT 2000 // ms
 
-std::string format_signal(const DBusSignal& s)
+std::string format_signal(const dbusmgr::DBusSignal& s)
 {
     std::stringstream ss;
     ss << "type='signal',interface='" << s.intf << "'";
@@ -144,8 +148,10 @@ static void parse_mpris_properties(libdbus_loader& dbus, DBusMessage *msg, std::
     dbus.message_iter_init (msg, &stack.back());
 
     // Should be 'org.mpris.MediaPlayer2.Player'
-    if (!check_msg_arg(dbus, &stack.back(), DBUS_TYPE_STRING))
+    if (!check_msg_arg(dbus, &stack.back(), DBUS_TYPE_STRING)){
+        std::cerr << "Not a string\n";
         return;
+    }
 
     dbus.message_iter_get_basic(&stack.back(), &val_char);
     source = val_char;
@@ -154,7 +160,6 @@ static void parse_mpris_properties(libdbus_loader& dbus, DBusMessage *msg, std::
         return;
 
     dbus.message_iter_next (&stack.back());
-    //std::cerr << "type: " << (char)dbus.message_iter_get_arg_type(&stack.back()) << std::endl;
     if (!check_msg_arg(dbus, &stack.back(), DBUS_TYPE_ARRAY))
         return;
 
@@ -455,8 +460,6 @@ bool dbus_get_name_owner(dbusmgr::dbus_manager& dbus_mgr, std::string& name_owne
     return true;
 }
 
-
-
 bool dbus_get_player_property(dbusmgr::dbus_manager& dbus_mgr, string_pair_vec& entries, const char * dest, const char * prop)
 {
     auto& dbus = dbus_mgr.dbus();
@@ -595,6 +598,86 @@ dbus_manager::~dbus_manager()
     deinit();
 }
 
+DBusHandlerResult dbus_manager::filter_signals(DBusConnection* conn, DBusMessage* msg, void* userData) {
+    auto& manager = *reinterpret_cast<dbus_manager*>(userData);
+
+    for(auto& sig : manager.m_signals) {
+        if(manager.m_dbus_ldr.message_is_signal(msg, sig.intf, sig.signal)){
+            auto sender = manager.m_dbus_ldr.message_get_sender(msg);
+            if((manager.*(sig.handler))(msg, sender)) 
+                return DBUS_HANDLER_RESULT_HANDLED;
+            else
+                return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+        }
+    }
+    return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+}
+
+bool dbus_manager::handle_properties_changed(DBusMessage* msg, const char* sender) {
+    std::string source;
+    string_pair_vec_map entries_map;
+
+    //parse_property_changed(msg, source, entries);
+    parse_mpris_properties(m_dbus_ldr, msg, source, entries_map);
+#ifndef NDEBUG
+    std::cerr << "Source: " << source << "\n";
+#endif
+    if (source != "org.mpris.MediaPlayer2.Player")
+        return false;
+
+    if(m_active_player == "") {
+        select_active_player();
+    }
+#ifndef NDEBUG
+    std::cerr << "active_player:         " << m_active_player << "\n";
+    std::cerr << "active_player's owner: " << m_name_owners[m_active_player] << "\n";
+    std::cerr << "sender:                " << sender << "\n";
+#endif
+    if (m_name_owners[m_active_player] == sender) {
+        assign_metadata(main_metadata, entries_map);
+    }
+    return true;
+}
+
+bool dbus_manager::handle_name_owner_changed(DBusMessage* msg, const char* sender) {
+    DBusMessageIter iter;
+    m_dbus_ldr.message_iter_init (msg, &iter);
+    std::vector<std::string> str;
+    const char *value = nullptr;
+
+    while (m_dbus_ldr.message_iter_get_arg_type (&iter) == DBUS_TYPE_STRING) {
+        m_dbus_ldr.message_iter_get_basic (&iter, &value);
+        str.push_back(value);
+        m_dbus_ldr.message_iter_next (&iter);
+    }
+
+    // register new name
+    if (str.size() == 3
+        && starts_with(str[0], "org.mpris.MediaPlayer2.")
+        && !str[2].empty()
+    )
+    {
+        m_name_owners[str[0]] = str[2];
+        if(str[0] == m_requested_player){
+            select_active_player();
+            get_media_player_metadata(main_metadata);
+        }
+    }
+
+    // did a player quit?
+    if (str[2].empty()) {
+        if (str.size() == 3
+            && str[0] == m_active_player
+        ) {
+            main_metadata.clear();
+            m_name_owners.erase(str[0]);
+            select_active_player();
+            get_media_player_metadata(main_metadata);
+        } 
+    }
+    return true;
+}
+
 void dbus_manager::connect_to_signals()
 {
     for (auto kv : m_signals) {
@@ -607,12 +690,14 @@ void dbus_manager::connect_to_signals()
             //return;
         }
     }
+    m_dbus_ldr.connection_add_filter(m_dbus_conn, filter_signals, reinterpret_cast<void*>(this), nullptr);
 
     start_thread();
 }
 
 void dbus_manager::disconnect_from_signals()
 {
+    m_dbus_ldr.connection_remove_filter(m_dbus_conn, filter_signals, reinterpret_cast<void*>(this));
     for (auto kv : m_signals) {
         auto signal = format_signal(kv);
         m_dbus_ldr.bus_remove_match(m_dbus_conn, signal.c_str(), &m_error);
@@ -693,112 +778,9 @@ void dbus_manager::start_thread()
 
 void dbus_manager::dbus_thread()
 {
-    (void)parse_property_changed;
-    DBusMessage *msg = nullptr;
-
-    // loop listening for signals being emmitted
-    while (!m_quit) {
-
-        // non blocking read of the next available message
-        if (!m_dbus_ldr.connection_read_write(m_dbus_conn, 0))
-            return; // connection closed
-
-        msg = m_dbus_ldr.connection_pop_message(m_dbus_conn);
-
-        // loop again if we haven't read a message
-        if (nullptr == msg) {
-            std::this_thread::yield();
-            //std::this_thread::sleep_for(ms(10));
-            continue;
-        }
-
-        for (auto& sig : m_signals) {
-            if (m_dbus_ldr.message_is_signal(msg, sig.intf, sig.signal))
-            {
-
-                const char *sender = m_dbus_ldr.message_get_sender(msg);
-#ifndef NDEBUG
-                std::cerr << __func__ << ": " << sig.intf << "::" << sig.signal << "\n";
-                std::cerr << "Sender: " << sender << "\n";
-#endif
-
-                switch (sig.type) {
-                    case ST_PROPERTIESCHANGED:
-                    {
-                        std::string source;
-                        string_pair_vec_map entries_map;
-
-                        //parse_property_changed(msg, source, entries);
-                        parse_mpris_properties(m_dbus_ldr, msg, source, entries_map);
-#ifndef NDEBUG
-                        std::cerr << "Source: " << source << "\n";
-#endif
-                        if (source != "org.mpris.MediaPlayer2.Player")
-                            break;
-
-                        if(m_active_player == "") {
-                            select_active_player();
-                        }
-#ifndef NDEBUG
-                        std::cerr << "active_player:         " << m_active_player << "\n";
-                        std::cerr << "active_player's owner: " << m_name_owners[m_active_player] << "\n";
-                        std::cerr << "sender:                " << sender << "\n";
-#endif
-                        if (m_name_owners[m_active_player] == sender) {
-                            assign_metadata(main_metadata, entries_map);
-                        }
-                    }
-                    break;
-                    case ST_NAMEOWNERCHANGED:
-                    {
-                        DBusMessageIter iter;
-                        m_dbus_ldr.message_iter_init (msg, &iter);
-                        std::vector<std::string> str;
-                        const char *value = nullptr;
-
-                        while (m_dbus_ldr.message_iter_get_arg_type (&iter) == DBUS_TYPE_STRING) {
-                            m_dbus_ldr.message_iter_get_basic (&iter, &value);
-                            str.push_back(value);
-                            m_dbus_ldr.message_iter_next (&iter);
-                        }
-
-                        // register new name
-                        if (str.size() == 3
-                            && starts_with(str[0], "org.mpris.MediaPlayer2.")
-                            && !str[2].empty()
-                        )
-                        {
-                            m_name_owners[str[0]] = str[2];
-                            if(str[0] == m_requested_player){
-                                select_active_player();
-                                get_media_player_metadata(main_metadata);
-                            }
-                        }
-
-                        // did a player quit?
-                        if (str[2].empty()) {
-                            if (str.size() == 3
-                                && str[0] == m_active_player
-                            ) {
-                                main_metadata.clear();
-                                m_name_owners.erase(str[0]);
-                                select_active_player();
-                                get_media_player_metadata(main_metadata);
-                            } 
-                        }
-
-                    }
-                    break;
-                    default:
-                    break;
-                }
-            }
-        }
-
-        // free the message
-        m_dbus_ldr.message_unref(msg);
-    }
+    using namespace std::chrono_literals;
+    while(!m_quit && m_dbus_ldr.connection_read_write_dispatch(m_dbus_conn, 0))
+        std::this_thread::sleep_for(10ms);
 }
 
-   dbus_manager dbus_mgr;
 }
