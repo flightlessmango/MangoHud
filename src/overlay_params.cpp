@@ -532,18 +532,13 @@ parse_overlay_config(struct overlay_params *params,
          std::lock_guard<std::mutex> lk(main_metadata.mutex);
          main_metadata.clear();
       }
-      {
-         std::lock_guard<std::mutex> lk(generic_mpris.mutex);
-         generic_mpris.clear();
-      }
       if (dbusmgr::dbus_mgr.init(params->media_player_name)) {
-         if (!get_media_player_metadata(dbusmgr::dbus_mgr, params->media_player_name, main_metadata))
+         if (!dbusmgr::dbus_mgr.get_media_player_metadata(main_metadata))
             std::cerr << "MANGOHUD: Failed to get initial media player metadata." << std::endl;
       }
    } else {
       dbusmgr::dbus_mgr.deinit();
       main_metadata.valid = false;
-      generic_mpris.valid = false;
    }
 #endif
 

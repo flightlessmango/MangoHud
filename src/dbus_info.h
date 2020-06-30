@@ -13,6 +13,8 @@
 #include <mutex>
 #include "loaders/loader_dbus.h"
 
+typedef std::unordered_map<std::string, std::string> string_map;
+
 struct metadata {
     //std::vector<std::string> artists;
     std::string artists; // pre-concatenate
@@ -61,7 +63,6 @@ struct DBusSignal
 };
 
 extern struct metadata main_metadata;
-extern struct metadata generic_mpris;
 
 namespace dbusmgr {
     using callback_func = std::function<void(/*metadata*/)>;
@@ -72,21 +73,6 @@ namespace dbusmgr {
         CB_NEW_METADATA,
     };
 
-/*    class dbus_error : public std::runtime_error
-    {
-    public:
-        dbus_error(libdbus_loader& dbus_, DBusError *src) : std::runtime_error(src->message)
-        {
-            dbus = &dbus_;
-            dbus->error_init(&error);
-            dbus->move_error (src, &error);
-        }
-        virtual ~dbus_error() { dbus->error_free (&error); }
-    private:
-        DBusError error;
-        libdbus_loader *dbus;
-    };*/
-
     class dbus_manager
     {
     public:
@@ -96,8 +82,9 @@ namespace dbusmgr {
 
         ~dbus_manager();
 
-        bool init(const std::string& dest);
+        bool init(const std::string& requested_player);
         void deinit();
+        bool get_media_player_metadata(metadata& meta, std::string name = "");
         void add_callback(CBENUM type, callback_func func);
         void connect_to_signals();
         void disconnect_from_signals();
@@ -113,7 +100,10 @@ namespace dbusmgr {
     protected:
         void stop_thread();
         void start_thread();
-        static void dbus_thread(dbus_manager *pmgr);
+        void dbus_thread();
+
+        bool dbus_list_name_to_owner();
+        bool select_active_player();
 
         DBusError m_error;
         DBusConnection * m_dbus_conn = nullptr;
@@ -125,7 +115,10 @@ namespace dbusmgr {
         std::map<CBENUM, callback_func> m_callbacks;
         libdbus_loader m_dbus_ldr;
         std::unordered_map<std::string, std::string> m_name_owners;
-        std::string m_dest;
+        std::string m_requested_player;
+        std::string m_active_player; 
+
+
 
         const std::array<DBusSignal, 2> m_signals {{
             { "org.freedesktop.DBus", "NameOwnerChanged", ST_NAMEOWNERCHANGED },
@@ -137,6 +130,10 @@ namespace dbusmgr {
     extern dbus_manager dbus_mgr;
 }
 
+<<<<<<< HEAD
 bool get_media_player_metadata(dbusmgr::dbus_manager& dbus, const std::string& name, metadata& meta);
 
 #endif //MANGOHUD_DBUS_INFO_H
+=======
+//bool get_media_player_metadata(dbusmgr::dbus_manager& dbus, const std::string& name, metadata& meta);
+>>>>>>> 9c064df... Change the media player functionality to allow changing active media

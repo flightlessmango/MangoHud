@@ -1385,7 +1385,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       scaled_font.Scale = params.font_scale_media_player;
       ImGui::PushFont(&scaled_font);
       render_mpris_metadata(params, main_metadata, frame_timing, true);
-      render_mpris_metadata(params, generic_mpris, frame_timing, false);
+      //render_mpris_metadata(params, generic_mpris, frame_timing, false);
       ImGui::PopFont();
 #endif
 
