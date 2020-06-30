@@ -1,9 +1,12 @@
+#pragma once
+
 #include <string>
 #include <stdint.h>
 #include <vector>
 #include "imgui.h"
 #include "overlay_params.h"
 #include "iostats.h"
+#include "timing.hpp"
 
 struct frame_stat {
    uint64_t stats[OVERLAY_PLOTS_MAX];
@@ -17,6 +20,7 @@ struct swapchain_stats {
    struct frame_stat frames_stats[200];
 
    ImFont* font1 = nullptr;
+   ImFont* font_text = nullptr;
    std::string time;
    double fps;
    struct iostats io;
@@ -44,11 +48,11 @@ struct swapchain_stats {
 };
 
 struct fps_limit {
-   int64_t frameStart;
-   int64_t frameEnd;
-   int64_t targetFrameTime;
-   int64_t frameOverhead;
-   int64_t sleepTime;
+   Clock::time_point frameStart;
+   Clock::time_point frameEnd;
+   Clock::duration targetFrameTime;
+   Clock::duration frameOverhead;
+   Clock::duration sleepTime;
 };
 
 struct benchmark_stats {
@@ -72,5 +76,5 @@ void init_system_info(void);
 void FpsLimiter(struct fps_limit& stats);
 void imgui_custom_style(struct overlay_params& params);
 void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats);
-void calculate_benchmark_data(void *params_void);
-void create_fonts(const overlay_params& params, ImFont*& default_font, ImFont*& small_font);
+void calculate_benchmark_data(void);
+void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& text_font);

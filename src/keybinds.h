@@ -6,8 +6,7 @@
 typedef unsigned long KeySym;
 #endif
 
-double elapsedF2, elapsedF12, elapsedReloadCfg, elapsedUpload;
-uint64_t last_f2_press, last_f12_press, reload_cfg_press, last_upload_press;
+Clock::time_point last_f2_press, last_f12_press, reload_cfg_press, last_upload_press;
 
 #ifdef HAVE_X11
 bool keys_are_pressed(const std::vector<KeySym>& keys) {

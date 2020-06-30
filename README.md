@@ -135,6 +135,11 @@ A partial list of parameters are below. See the config file for a complete list.
 | `ram`<br>`vram`                    | Displays system RAM/VRAM usage                                                        |
 | `full`                             | Enables all of the above config options                                               |
 | `font_size=`                       | Customizeable font size (default=24)                                                  |
+| `font_size_text=`                  | Customizeable font size for other text like media metadata (default=24)               |
+| `font_scale=`                      | Set global font scale (default=1.0)                                                   |
+| `font_file`                        | Change default font (set location to .TTF/.OTF file )                                 |
+| `font_file_text`                   | Change text font. Otherwise `font_file` is used                                       |
+| `font_glyph_ranges`                | Specify extra font glyph ranges, comma separated: `korean`, `chinese`, `chinese_simplified`, `japanese`, `cyrillic`, `thai`, `vietnamese`, `latin_ext_a`, `latin_ext_b`. If you experience crashes or text is just squares, reduce font size or glyph ranges. |
 | `width=`<br>`height=`              | Customizeable hud dimensions (in pixels)                                              |
 | `position=`                        | Location of the hud: `top-left` (default), `top-right`, `bottom-left`, `bottom-right`, `top-center` |
 | `offset_x` `offset_y`              | Hud position offsets                                                                  |
@@ -147,7 +152,6 @@ A partial list of parameters are below. See the config file for a complete list.
 | `background_alpha`                 | Set the opacity of the background `0.0-1.0`                                           |
 | `read_cfg`                         | Add to MANGOHUD_CONFIG as first parameter to also load config file. Otherwise only MANGOHUD_CONFIG parameters are used. |
 | `output_file`                      | Define name and location of the output file (Required for logging)                    |
-| `font_file`                        | Change default font (set location to .TTF/.OTF file )                                 |
 | `log_duration`                     | Set amount of time the logging will run for (in seconds)                              |
 | `vsync`<br> `gl_vsync`             | Set vsync for OpenGL or Vulkan                                                        |
 | `media_player`                     | Show media player metadata                                                            |

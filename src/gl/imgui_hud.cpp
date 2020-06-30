@@ -45,8 +45,6 @@ struct GLVec
 
 struct state {
     ImGuiContext *imgui_ctx = nullptr;
-    ImFont* font = nullptr;
-    ImFont* font1 = nullptr;
 };
 
 static GLVec last_vp {}, last_sb {};
@@ -133,8 +131,7 @@ void imgui_create(void *ctx)
     GLint current_texture;
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &current_texture);
 
-    create_fonts(params, state.font, state.font1);
-    sw_stats.font1 = state.font1;
+    create_fonts(params, sw_stats.font1, sw_stats.font_text);
 
     // Restore global context or ours might clash with apps that use Dear ImGui
     ImGui::SetCurrentContext(saved_ctx);

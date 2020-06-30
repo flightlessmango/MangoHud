@@ -163,6 +163,13 @@ else
   dep_dl = cc.find_library('dl')
 endif
 
+# check for linking with rt by default
+if cc.has_function('clock_gettime')
+  dep_rt = null_dep
+else
+  dep_rt = cc.find_library('rt')
+endif
+
 if dep_vulkan.found()
   datadir = get_option('datadir')
   if not datadir.startswith('/')

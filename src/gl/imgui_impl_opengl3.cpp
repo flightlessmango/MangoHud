@@ -68,8 +68,11 @@
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
 #include <stdint.h>     // intptr_t
+#include <sstream>
 
 #include <glad/glad.h>
+
+#include "overlay.h"
 
 namespace MangoHud {
 
@@ -91,13 +94,25 @@ static unsigned int g_VboHandle = 0, g_ElementsHandle = 0;
 static bool         g_IsGLES = false;
 
 // Functions
+static void ImGui_ImplOpenGL3_DestroyFontsTexture()
+{
+    if (g_FontTexture)
+    {
+        ImGuiIO& io = ImGui::GetIO();
+        glDeleteTextures(1, &g_FontTexture);
+        io.Fonts->TexID = 0;
+        g_FontTexture = 0;
+    }
+}
+
 static bool ImGui_ImplOpenGL3_CreateFontsTexture()
 {
+    ImGui_ImplOpenGL3_DestroyFontsTexture();
     // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
     unsigned char* pixels;
     int width, height;
-    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
+    io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
 
     // Upload texture to graphics system
     GLint last_texture;
@@ -110,7 +125,7 @@ static bool ImGui_ImplOpenGL3_CreateFontsTexture()
     if (g_IsGLES || g_GlVersion >= 200)
         glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, pixels);
 
     // Store our identifier
     io.Fonts->TexID = (ImTextureID)(intptr_t)g_FontTexture;
@@ -119,17 +134,6 @@ static bool ImGui_ImplOpenGL3_CreateFontsTexture()
     glBindTexture(GL_TEXTURE_2D, last_texture);
 
     return true;
-}
-
-static void ImGui_ImplOpenGL3_DestroyFontsTexture()
-{
-    if (g_FontTexture)
-    {
-        ImGuiIO& io = ImGui::GetIO();
-        glDeleteTextures(1, &g_FontTexture);
-        io.Fonts->TexID = 0;
-        g_FontTexture = 0;
-    }
 }
 
 // If you get an error please report on github. You may try different GL context version or GLSL version. See GL<>GLSL version table at the top of this file.
@@ -250,7 +254,7 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "varying vec4 Frag_Color;\n"
         "void main()\n"
         "{\n"
-        "    gl_FragColor = Frag_Color * texture2D(Texture, Frag_UV.st);\n"
+        "    gl_FragColor = Frag_Color * vec4(1, 1, 1, texture2D(Texture, Frag_UV.st).r);\n"
         "}\n";
 
     const GLchar* fragment_shader_glsl_130 =
@@ -260,7 +264,7 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "out vec4 Out_Color;\n"
         "void main()\n"
         "{\n"
-        "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
+        "    Out_Color = Frag_Color * vec4(1, 1, 1, texture(Texture, Frag_UV.st).r);\n"
         "}\n";
 
     const GLchar* fragment_shader_glsl_300_es =
@@ -271,7 +275,7 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "layout (location = 0) out vec4 Out_Color;\n"
         "void main()\n"
         "{\n"
-        "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
+        "    Out_Color = Frag_Color * vec4(1, 1, 1, texture(Texture, Frag_UV.st).r);\n"
         "}\n";
 
     const GLchar* fragment_shader_glsl_410_core =
@@ -281,7 +285,7 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "layout (location = 0) out vec4 Out_Color;\n"
         "void main()\n"
         "{\n"
-        "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
+        "    Out_Color = Frag_Color * vec4(1, 1, 1, texture(Texture, Frag_UV.st).r);\n"
         "}\n";
 
 #ifndef NDEBUG
@@ -311,16 +315,25 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         fragment_shader = fragment_shader_glsl_130;
     }
 
+    std::stringstream ss;
+    ss << g_GlslVersionString << vertex_shader;
+    std::string shader = ss.str();
+
     // Create shaders
-    const GLchar* vertex_shader_with_version[2] = { g_GlslVersionString, vertex_shader };
+    //const GLchar* vertex_shader_with_version[2] = { g_GlslVersionString, vertex_shader };
+    const GLchar* vertex_shader_with_version[1] = { shader.c_str() };
     g_VertHandle = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(g_VertHandle, 2, vertex_shader_with_version, NULL);
+    glShaderSource(g_VertHandle, 1, vertex_shader_with_version, NULL);
     glCompileShader(g_VertHandle);
     CheckShader(g_VertHandle, "vertex shader");
 
-    const GLchar* fragment_shader_with_version[2] = { g_GlslVersionString, fragment_shader };
+    ss.str(""); ss.clear();
+    ss << g_GlslVersionString << fragment_shader;
+    shader = ss.str();
+
+    const GLchar* fragment_shader_with_version[1] = { shader.c_str() };
     g_FragHandle = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(g_FragHandle, 2, fragment_shader_with_version, NULL);
+    glShaderSource(g_FragHandle, 1, fragment_shader_with_version, NULL);
     glCompileShader(g_FragHandle);
     CheckShader(g_FragHandle, "fragment shader");
 
@@ -467,6 +480,13 @@ void    ImGui_ImplOpenGL3_NewFrame()
 {
     if (!g_ShaderHandle)
         ImGui_ImplOpenGL3_CreateDeviceObjects();
+    if (!glIsTexture(g_FontTexture)) {
+#ifndef NDEBUG
+        fprintf(stderr, "MANGOHUD: GL Texture lost? Regenerating.\n");
+#endif
+        g_FontTexture = 0;
+        ImGui_ImplOpenGL3_CreateFontsTexture();
+    }
 }
 
 static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_width, int fb_height, GLuint vertex_array_object)
@@ -529,7 +549,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
     int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
     int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
-    if (fb_width <= 0 || fb_height <= 0)
+    if (fb_width <= 0 || fb_height <= 0 || draw_data->TotalVtxCount == 0)
         return;
 
     // Backup GL state
@@ -634,7 +654,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
                     // Bind texture, Draw
                     glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
                     //#if IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
-                    if ((!g_IsGLES && g_GlVersion >= 320) || (g_IsGLES && g_GlVersion >= 320))
+                    if (g_GlVersion >= 320) // OGL and OGL ES
                         glDrawElementsBaseVertex(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)), (GLint)pcmd->VtxOffset);
                     else
                         glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)));
