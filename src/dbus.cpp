@@ -52,9 +52,14 @@ public:
     DBusMessageIter_wrap(DBusMessage* msg, libdbus_loader* loader)
     {
         m_DBus = loader;
-        m_DBus->message_iter_init(msg, &m_Iter);
-        m_resolved_iter = resolve_variants();
-        m_type = m_DBus->message_iter_get_arg_type(&m_resolved_iter);
+        if(msg){
+            m_DBus->message_iter_init(msg, &m_Iter);
+            m_resolved_iter = resolve_variants();
+            m_type = m_DBus->message_iter_get_arg_type(&m_resolved_iter);
+        }
+        else {
+            m_type = DBUS_TYPE_INVALID;
+        }
     }
 
     DBusMessageIter_wrap(DBusMessageIter iter, libdbus_loader* loader)
@@ -253,24 +258,114 @@ void string_multimap_for_each_stringify(DBusMessageIter_wrap iter, T action) {
     });
 }
 
+class DBusMessage_wrap {
+public:
+    DBusMessage_wrap(DBusMessage* msg, libdbus_loader* ldr, bool owning = false)
+        : m_owning(owning), m_msg(msg), m_DBus(ldr)
+    {}
+
+    ~DBusMessage_wrap(){
+        free_if_owning();
+    }
+
+    DBusMessage_wrap(const DBusMessage_wrap&) = delete;
+    DBusMessage_wrap(DBusMessage_wrap&&) = default;
+
+    operator bool() const {
+        return m_msg != nullptr;
+    }
+
+    template<class T>
+    DBusMessage_wrap& argument(T arg) {
+        if(not m_msg) return *this;
+        if(not m_DBus->message_append_args(
+            m_msg, 
+            dbus_type_identifier_v<T>, 
+            &arg,
+            DBUS_TYPE_INVALID
+        )){
+            free_if_owning();
+        }
+        return *this;
+    }
+
+    DBusMessage_wrap send_with_reply_and_block(DBusConnection* conn) {
+        if(not m_msg){
+            return DBusMessage_wrap(nullptr, m_DBus);
+        }
+        DBusError err;
+        m_DBus->error_init(&err);
+        auto reply = m_DBus->connection_send_with_reply_and_block(
+            conn,
+            m_msg,
+            DBUS_TIMEOUT,
+            &err
+        );
+        if(reply == nullptr) {
+            std::cerr << "MangoHud[" << __func__ << "]: " << err.message << "\n";
+            free_if_owning();
+            m_DBus->error_free(&err);
+        }
+        return DBusMessage_wrap(reply, m_DBus, true);
+    }
+
+    DBusMessageIter_wrap iter() {
+        return DBusMessageIter_wrap(m_msg, m_DBus);
+    }
+
+    static DBusMessage_wrap new_method_call(
+        const std::string& bus_name,
+        const std::string& path,
+        const std::string& iface,
+        const std::string& method,
+        libdbus_loader* loader
+    ){
+        auto msg = loader->message_new_method_call(
+            (bus_name.empty()) ? nullptr : bus_name.c_str(),
+            path.c_str(),
+            (iface.empty()) ? nullptr : iface.c_str(),
+            method.c_str()
+        );
+        return DBusMessage_wrap(msg, loader, true);
+    }
+private:
+    void free_if_owning() {
+        if(m_msg and m_owning) m_DBus->message_unref(m_msg);
+        m_msg = nullptr;
+    }
+    bool m_owning;
+    DBusMessage* m_msg;
+    libdbus_loader* m_DBus;
+    std::vector<std::string> m_args;
+};
+
+template<>
+DBusMessage_wrap& DBusMessage_wrap::argument<const std::string&>(const std::string& str)
+{
+    return argument<const char*>(str.c_str());
+}
 
 template<class T>
 static void assign_metadata_value(metadata& meta, const std::string& key, const T& value) {
     if(key == "PlaybackStatus") {
         meta.playing = (value == "Playing");
+        meta.got_playback_data = true;
     }
     else if(key == "xesam:title"){
         meta.title = value;
+        meta.got_song_data = true;
     }
     else if(key == "xesam:artist") {
-        if(meta.artists.empty()) meta.artists = value;
-        else meta.artists += ", " + value;
+        meta.artists = value;
+        meta.got_song_data = true;
     }
     else if(key == "xesam:album") {
         meta.album = value;
+        meta.got_song_data = true;
     }
     else if(key == "mpris:artUrl"){
         meta.artUrl = value;
+        meta.got_song_data = true;
     }
 }
 
@@ -311,99 +406,76 @@ static void parse_mpris_properties(libdbus_loader& dbus, DBusMessage *msg, std::
     if (not iter.is_array())
         return;
 
+    std::cerr << "Parsing mpris update...\n";
     string_map_for_each(iter, [&](std::string& key, DBusMessageIter_wrap it){
         if(key == "Metadata"){
+            std::cerr << "\tMetadata:\n";
+            string_map_for_each(it, [&](const std::string& key, DBusMessageIter_wrap it){
+                if(it.is_primitive()){
+                    auto val = it.get_stringified();
+                    std::cerr << "\t\t" << key << " -> " << val << "\n";
+                    assign_metadata_value(meta, key, val);
+                }
+                else if(it.is_array()){
+                    std::string val;
+                    array_for_each_stringify(it, [&](const std::string& str){
+                        if(val.empty()){
+                            val = str;
+                        }
+                        else {
+                            val += ", " + str;
+                        }
+                    });
+                    std::cerr << "\t\t" << key << " -> " << val << "\n";
+                    assign_metadata_value(meta, key, val);
+                }
+            });
             string_multimap_for_each_stringify(it, [&](const std::string& key, const std::string& val){
                 assign_metadata_value(meta, key, val);
             });
         }
         else if(key == "PlaybackStatus"){
-            assign_metadata_value(meta, key, it.get_stringified());
+            auto val = it.get_stringified();
+            std::cerr << "\tPlaybackStatus:\n";
+            std::cerr << "\t\t" << key << " -> " << val << "\n";
+            assign_metadata_value(meta, key, val);
         }
     });
     meta.valid = (meta.artists.size() || !meta.title.empty());
 }
 
-
-
 bool dbus_get_name_owner(dbusmgr::dbus_manager& dbus_mgr, std::string& name_owner, const char *name)
 {
-    auto& dbus = dbus_mgr.dbus();
-    DBusError error;
+    auto reply = DBusMessage_wrap::new_method_call(
+        "org.freedesktop.DBus", 
+        "/org/freedesktop/DBus", 
+        "org.freedesktop.DBus", 
+        "GetNameOwner",
+        &dbus_mgr.dbus()
+    ).argument(name).send_with_reply_and_block(dbus_mgr.get_conn());
+    if(not reply) return false;
 
-    DBusMessage * dbus_reply = nullptr;
-    DBusMessage * dbus_msg = nullptr;
-
-    // dbus-send --session --dest=org.freedesktop.DBus --type=method_call --print-reply /org/freedesktop/DBus org.freedesktop.DBus.GetNameOwner string:"org.mpris.MediaPlayer2.spotify"
-    if (nullptr == (dbus_msg = dbus.message_new_method_call("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "GetNameOwner"))) {
-        std::cerr << "MANGOHUD: " << __func__ << ": unable to allocate memory for dbus message\n";
-        return false;
-    }
-
-    if (!dbus.message_append_args (dbus_msg, DBUS_TYPE_STRING, &name, DBUS_TYPE_INVALID)) {
-        dbus.message_unref(dbus_msg);
-        std::cerr << "MANGOHUD: " << __func__ << ": dbus_message_append_args failed\n";
-        return false;
-    }
-
-    dbus.error_init(&error);
-    if (nullptr == (dbus_reply = dbus.connection_send_with_reply_and_block(dbus_mgr.get_conn(), dbus_msg, DBUS_TIMEOUT, &error))) {
-        dbus.message_unref(dbus_msg);
-        std::cerr << "MANGOHUD: " << __func__ << ": "<< error.message << "\n";
-        dbus.error_free(&error);
-        return false;
-    }
-
-    const char* val = nullptr;
-    DBusMessageIter iter;
-    dbus.message_iter_init (dbus_reply, &iter);
-
-    if (dbus.message_iter_get_arg_type(&iter) != DBUS_TYPE_STRING)
-        return false;
-
-    dbus.message_iter_get_basic(&iter, &val);
-    if (val)
-        name_owner = val;
-
-    dbus.message_unref(dbus_msg);
-    dbus.message_unref(dbus_reply);
-    dbus.error_free(&error);
+    auto iter = reply.iter();
+    if(not iter.is_string()) return false;
+    name_owner = iter.get_primitive<std::string>();
     return true;
 }
 
 bool dbus_get_player_property(dbusmgr::dbus_manager& dbus_mgr, metadata& meta, const char * dest, const char * prop)
 {
-    auto& dbus = dbus_mgr.dbus();
-    DBusError error;
+    auto reply = DBusMessage_wrap::new_method_call(
+        dest,
+        "/org/mpris/MediaPlayer2",
+        "org.freedesktop.DBus.Properties",
+        "Get",
+        &dbus_mgr.dbus()
+    ).argument("org.mpris.MediaPlayer2.Player")
+    .argument(prop)
+    .send_with_reply_and_block(dbus_mgr.get_conn());
 
-    DBusMessage * dbus_reply = nullptr;
-    DBusMessage * dbus_msg = nullptr;
+    if(not reply) return false;
 
-    // dbus-send --print-reply --session --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Get string:'org.mpris.MediaPlayer2.Player' string:'Metadata'
-    if (nullptr == (dbus_msg = dbus.message_new_method_call(dest, "/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Properties", "Get"))) {
-        std::cerr << "MANGOHUD: unable to allocate memory for dbus message" << std::endl;
-        return false;
-    }
-
-    static const char *v_STRINGS[] = {
-        "org.mpris.MediaPlayer2.Player",
-    };
-
-    if (!dbus.message_append_args (dbus_msg, DBUS_TYPE_STRING, &v_STRINGS[0], DBUS_TYPE_STRING, &prop, DBUS_TYPE_INVALID)) {
-        std::cerr << "MANGOHUD: dbus_message_append_args failed" << std::endl;
-        dbus.message_unref(dbus_msg);
-        return false;
-    }
-
-    dbus.error_init(&error);
-    if (nullptr == (dbus_reply = dbus.connection_send_with_reply_and_block(dbus_mgr.get_conn(), dbus_msg, DBUS_TIMEOUT, &error))) {
-        dbus.message_unref(dbus_msg);
-        std::cerr << "MANGOHUD: " << error.message << std::endl;
-        dbus.error_free(&error);
-        return false;
-    }
-
-    auto iter = DBusMessageIter_wrap(dbus_reply, &dbus);
+    auto iter = reply.iter();
     if(iter.is_array()){
         string_multimap_for_each_stringify(iter, [&](const std::string& key, const std::string& val){
             assign_metadata_value(meta, key, val);
@@ -413,15 +485,8 @@ bool dbus_get_player_property(dbusmgr::dbus_manager& dbus_mgr, metadata& meta, c
         assign_metadata_value(meta, prop, iter.get_stringified());
     }
     else {
-        dbus.message_unref(dbus_msg);
-        dbus.message_unref(dbus_reply);
-        dbus.error_free(&error);
         return false;
     }
-
-    dbus.message_unref(dbus_msg);
-    dbus.message_unref(dbus_reply);
-    dbus.error_free(&error);
     return true;
 }
 
@@ -554,7 +619,13 @@ bool dbus_manager::handle_properties_changed(DBusMessage* msg, const char* sende
     }
     if (m_name_owners[m_active_player] == sender) {
         std::lock_guard<std::mutex> lck(main_metadata.mtx);
-        main_metadata.meta = meta;
+        if(meta.got_song_data){
+            main_metadata.meta = meta;
+            main_metadata.meta.playing = true;
+        }
+        if(meta.got_playback_data){
+            main_metadata.meta.playing = meta.playing;
+        }
     }
     return true;
 }
@@ -665,7 +736,12 @@ bool dbus_manager::dbus_list_name_to_owner()
     }
 
     auto iter = DBusMessageIter_wrap(dbus_reply, &m_dbus_ldr);
-    if(not iter.is_array()) return false;
+    if(not iter.is_array()) {
+        m_dbus_ldr.message_unref(dbus_msg);
+        m_dbus_ldr.message_unref(dbus_reply);
+        m_dbus_ldr.error_free(&error);
+        return false;
+    }
     array_for_each<std::string>(iter, [&](std::string name){
         if(!starts_with(name.c_str(), "org.mpris.MediaPlayer2.")) return;
         if(dbus_get_name_owner(dbus_mgr, owner, name.c_str())){

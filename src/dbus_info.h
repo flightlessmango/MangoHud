@@ -35,6 +35,8 @@ struct metadata {
     } ticker;
 
     bool valid = false;
+    bool got_song_data = false;
+    bool got_playback_data = false;
 
     void clear()
     {
