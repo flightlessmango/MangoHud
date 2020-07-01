@@ -13,8 +13,6 @@
 #include <mutex>
 #include "loaders/loader_dbus.h"
 
-typedef std::unordered_map<std::string, std::string> string_map;
-
 struct metadata {
     //std::vector<std::string> artists;
     std::string artists; // pre-concatenate
@@ -23,17 +21,7 @@ struct metadata {
     std::string something;
     std::string artUrl;
     bool playing = false;
-    struct {
-        float pos;
-        float longest;
-        int dir = -1;
-        bool needs_recalc;
-
-        float tw0;
-        float tw1;
-        float tw2;
-    } ticker;
-
+    
     bool valid = false;
     bool got_song_data = false;
     bool got_playback_data = false;
@@ -44,8 +32,6 @@ struct metadata {
         title.clear();
         album.clear();
         artUrl.clear();
-        ticker = {};
-        ticker.dir = -1;
         valid = false;
     }
 };
@@ -53,6 +39,16 @@ struct metadata {
 struct mutexed_metadata {
     std::mutex mtx;
     metadata meta;
+    struct {
+        float pos;
+        float longest;
+        int dir = -1;
+        bool needs_recalc = true;
+
+        float tw0;
+        float tw1;
+        float tw2;
+    } ticker;
 };
 
 enum SignalType
@@ -114,7 +110,7 @@ namespace dbusmgr {
         void dbus_thread();
 
         bool dbus_list_name_to_owner();
-        bool select_active_player();
+        bool select_active_player(metadata* meta = nullptr);
 
         static DBusHandlerResult filter_signals(DBusConnection*, DBusMessage*, void*);
 

@@ -971,18 +971,18 @@ float get_ticker_limited_pos(float pos, float tw, float& left_limit, float& righ
 }
 
 #ifdef HAVE_DBUS
-static void render_mpris_metadata(struct overlay_params& params, metadata& meta, uint64_t frame_timing, bool is_main)
+static void render_mpris_metadata(struct overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing, bool is_main)
 {
-   if (meta.valid) {
+   if (meta.meta.valid) {
       auto color = ImGui::ColorConvertU32ToFloat4(params.media_player_color);
       ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,0));
       ImGui::Dummy(ImVec2(0.0f, 20.0f));
       //ImGui::PushFont(data.font1);
 
       if (meta.ticker.needs_recalc) {
-         meta.ticker.tw0 = ImGui::CalcTextSize(meta.title.c_str()).x;
-         meta.ticker.tw1 = ImGui::CalcTextSize(meta.artists.c_str()).x;
-         meta.ticker.tw2 = ImGui::CalcTextSize(meta.album.c_str()).x;
+         meta.ticker.tw0 = ImGui::CalcTextSize(meta.meta.title.c_str()).x;
+         meta.ticker.tw1 = ImGui::CalcTextSize(meta.meta.artists.c_str()).x;
+         meta.ticker.tw2 = ImGui::CalcTextSize(meta.meta.album.c_str()).x;
          meta.ticker.longest = std::max(std::max(
                meta.ticker.tw0,
                meta.ticker.tw1),
@@ -1009,23 +1009,23 @@ static void render_mpris_metadata(struct overlay_params& params, metadata& meta,
             {
                new_pos = get_ticker_limited_pos(meta.ticker.pos, meta.ticker.tw0, left_limit, right_limit);
                ImGui::SetCursorPosX(new_pos);
-               ImGui::TextColored(color, "%s", meta.title.c_str());
+               ImGui::TextColored(color, "%s", meta.meta.title.c_str());
             }
             break;
             case MP_ORDER_ARTIST:
             {
                new_pos = get_ticker_limited_pos(meta.ticker.pos, meta.ticker.tw1, left_limit, right_limit);
                ImGui::SetCursorPosX(new_pos);
-               ImGui::TextColored(color, "%s", meta.artists.c_str());
+               ImGui::TextColored(color, "%s", meta.meta.artists.c_str());
             }
             break;
             case MP_ORDER_ALBUM:
             {
                //ImGui::NewLine();
-               if (!meta.album.empty()) {
+               if (!meta.meta.album.empty()) {
                   new_pos = get_ticker_limited_pos(meta.ticker.pos, meta.ticker.tw2, left_limit, right_limit);
                   ImGui::SetCursorPosX(new_pos);
-                  ImGui::TextColored(color, "%s", meta.album.c_str());
+                  ImGui::TextColored(color, "%s", meta.meta.album.c_str());
                }
             }
             break;
@@ -1033,7 +1033,7 @@ static void render_mpris_metadata(struct overlay_params& params, metadata& meta,
          }
       }
 
-      if (!meta.playing) {
+      if (!meta.meta.playing) {
          ImGui::TextColored(color, "(paused)");
       }
 
@@ -1385,7 +1385,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       ImGui::PushFont(&scaled_font);
       {
          std::lock_guard<std::mutex> lck(main_metadata.mtx);
-         render_mpris_metadata(params, main_metadata.meta, frame_timing, true);
+         render_mpris_metadata(params, main_metadata, frame_timing, true);
       }
       //render_mpris_metadata(params, generic_mpris, frame_timing, false);
       ImGui::PopFont();
