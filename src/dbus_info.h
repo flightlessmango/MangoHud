@@ -35,7 +35,6 @@ struct metadata {
     } ticker;
 
     bool valid = false;
-    std::mutex mutex;
 
     void clear()
     {
@@ -49,6 +48,11 @@ struct metadata {
     }
 };
 
+struct mutexed_metadata {
+    std::mutex mtx;
+    metadata meta;
+};
+
 enum SignalType
 {
     ST_NAMEOWNERCHANGED,
@@ -56,7 +60,7 @@ enum SignalType
 };
 
 
-extern struct metadata main_metadata;
+extern struct mutexed_metadata main_metadata;
 
 namespace dbusmgr {
 

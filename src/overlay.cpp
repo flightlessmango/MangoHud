@@ -973,7 +973,6 @@ float get_ticker_limited_pos(float pos, float tw, float& left_limit, float& righ
 #ifdef HAVE_DBUS
 static void render_mpris_metadata(struct overlay_params& params, metadata& meta, uint64_t frame_timing, bool is_main)
 {
-   scoped_lock lk(meta.mutex);
    if (meta.valid) {
       auto color = ImGui::ColorConvertU32ToFloat4(params.media_player_color);
       ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,0));
@@ -1034,7 +1033,7 @@ static void render_mpris_metadata(struct overlay_params& params, metadata& meta,
          }
       }
 
-      if (is_main && main_metadata.valid && !main_metadata.playing) {
+      if (!meta.playing) {
          ImGui::TextColored(color, "(paused)");
       }
 
@@ -1384,7 +1383,10 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       ImFont scaled_font = *data.font_text;
       scaled_font.Scale = params.font_scale_media_player;
       ImGui::PushFont(&scaled_font);
-      render_mpris_metadata(params, main_metadata, frame_timing, true);
+      {
+         std::lock_guard<std::mutex> lck(main_metadata.mtx);
+         render_mpris_metadata(params, main_metadata.meta, frame_timing, true);
+      }
       //render_mpris_metadata(params, generic_mpris, frame_timing, false);
       ImGui::PopFont();
 #endif

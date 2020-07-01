@@ -6,8 +6,9 @@
 #include "string_utils.h"
 
 using ms = std::chrono::milliseconds;
+#define DBUS_TIMEOUT 2000 // ms
 
-struct metadata main_metadata;
+struct mutexed_metadata main_metadata;
 
 typedef std::vector<std::pair<std::string, std::string>> string_pair_vec;
 typedef std::unordered_map<std::string, string_pair_vec> string_pair_vec_map;
@@ -17,7 +18,261 @@ namespace dbusmgr {
 dbus_manager dbus_mgr;
 }
 
-#define DBUS_TIMEOUT 2000 // ms
+template<class T> struct dbus_type_identifier{};
+template<> struct dbus_type_identifier<uint8_t> { const int value = DBUS_TYPE_BYTE; };
+template<> struct dbus_type_identifier<uint16_t> { const int value = DBUS_TYPE_UINT16; };
+template<> struct dbus_type_identifier<uint32_t> { const int value = DBUS_TYPE_UINT32; };
+template<> struct dbus_type_identifier<uint64_t> { const int value = DBUS_TYPE_UINT64; };
+template<> struct dbus_type_identifier<int16_t> { const int value = DBUS_TYPE_INT16; };
+template<> struct dbus_type_identifier<int32_t> { const int value = DBUS_TYPE_INT32; };
+template<> struct dbus_type_identifier<int64_t> { const int value = DBUS_TYPE_INT64; };
+template<> struct dbus_type_identifier<double> { const int value = DBUS_TYPE_DOUBLE; };
+template<> struct dbus_type_identifier<const char*> { const int value = DBUS_TYPE_STRING; };
+
+template<class T>
+const int dbus_type_identifier_v = dbus_type_identifier<T>().value;
+
+class DBusMessageIter_wrap {
+private:
+    DBusMessageIter resolve_variants() {
+        auto iter = m_Iter;
+        auto field_type = m_DBus->message_iter_get_arg_type(&m_Iter);
+        while(field_type == DBUS_TYPE_VARIANT){
+            m_DBus->message_iter_recurse(&iter, &iter);
+            field_type = m_DBus->message_iter_get_arg_type(&iter);
+        }
+        return iter;
+    }
+
+    DBusMessageIter m_Iter;
+    DBusMessageIter m_resolved_iter;
+    int m_type;
+    libdbus_loader* m_DBus;
+public:
+    DBusMessageIter_wrap(DBusMessage* msg, libdbus_loader* loader)
+    {
+        m_DBus = loader;
+        m_DBus->message_iter_init(msg, &m_Iter);
+        m_resolved_iter = resolve_variants();
+        m_type = m_DBus->message_iter_get_arg_type(&m_resolved_iter);
+    }
+
+    DBusMessageIter_wrap(DBusMessageIter iter, libdbus_loader* loader)
+        : m_Iter(iter), m_DBus(loader)
+    {
+        m_resolved_iter = resolve_variants();
+        m_type = m_DBus->message_iter_get_arg_type(&m_resolved_iter);
+    }
+
+    operator bool() {
+        return type() != DBUS_TYPE_INVALID;
+    }
+
+    int type() {
+        return m_type;
+    }
+
+    auto next() {
+        m_DBus->message_iter_next(&m_Iter);
+        // Resolve any variants
+        m_resolved_iter = resolve_variants();
+        m_type = m_DBus->message_iter_get_arg_type(&m_resolved_iter);
+        return *this;
+    }
+
+    auto get_array_iter() {
+        if(not is_array()) {
+            std::cerr << "Not an array\n";
+            return DBusMessageIter_wrap(DBusMessageIter{}, m_DBus);
+        }
+
+        DBusMessageIter ret;
+        m_DBus->message_iter_recurse(&m_resolved_iter, &ret);
+        return DBusMessageIter_wrap(ret, m_DBus);
+    }
+
+    auto get_dict_entry_iter() {
+        if(type() != DBUS_TYPE_DICT_ENTRY){
+            std::cerr << "Not a dict entry\n";
+            return DBusMessageIter_wrap(DBusMessageIter{}, m_DBus);
+        }
+
+        DBusMessageIter ret;
+        m_DBus->message_iter_recurse(&m_resolved_iter, &ret);
+        return DBusMessageIter_wrap(ret, m_DBus);
+    }
+
+    auto get_stringified() -> std::string;
+
+    template<class T>
+    auto get_primitive() -> T;
+
+    bool is_unsigned() {
+        return (
+            (type() == DBUS_TYPE_BYTE) ||
+            (type() == DBUS_TYPE_INT16) ||
+            (type() == DBUS_TYPE_INT32) ||
+            (type() == DBUS_TYPE_INT64)
+        );
+    }
+
+    bool is_signed() {
+        return (
+            (type() == DBUS_TYPE_INT16) ||
+            (type() == DBUS_TYPE_INT32) ||
+            (type() == DBUS_TYPE_INT64)
+        );
+    }
+
+    bool is_string() {
+        return (type() == DBUS_TYPE_STRING);
+    }
+
+    bool is_double() {
+        return (type() == DBUS_TYPE_DOUBLE);
+    }
+
+    bool is_primitive() {
+        return (
+            is_double() ||
+            is_signed() ||
+            is_unsigned() ||
+            is_string()
+        );
+    }
+
+    bool is_array() {
+        return (type() == DBUS_TYPE_ARRAY);
+    }
+
+    uint64_t get_unsigned() {
+        auto t = type();
+        switch (t)
+        {
+        case DBUS_TYPE_BYTE:
+            return get_primitive<uint8_t>();
+        case DBUS_TYPE_UINT16:
+            return get_primitive<uint16_t>();
+        case DBUS_TYPE_UINT32:
+            return get_primitive<uint32_t>();
+        case DBUS_TYPE_UINT64:
+            return get_primitive<uint64_t>();
+        default:
+            return 0;
+        }
+    }
+
+    uint64_t get_signed() {
+        auto t = type();
+        switch (t)
+        {
+        case DBUS_TYPE_INT16:
+            return get_primitive<int16_t>();
+        case DBUS_TYPE_INT32:
+            return get_primitive<int32_t>();
+        case DBUS_TYPE_INT64:
+            return get_primitive<int64_t>();
+        default:
+            return 0;
+        }
+    }
+};
+
+template<class T>
+auto DBusMessageIter_wrap::get_primitive() -> T {
+    auto requested_type = dbus_type_identifier_v<T>;
+    if(requested_type != type()){
+        std::cerr << "Type mismatch: '" << (char) requested_type << "' vs '" << (char) type() << "'\n";
+#ifndef NDEBUG
+        exit(-1);
+#else
+        return T();
+#endif
+    }
+
+    T ret;
+    m_DBus->message_iter_get_basic(&m_resolved_iter, &ret);
+    return ret;
+}
+
+template<>
+auto DBusMessageIter_wrap::get_primitive<std::string>() -> std::string {
+    return std::string(get_primitive<const char*>());
+}
+
+auto DBusMessageIter_wrap::get_stringified() -> std::string {
+    if(is_string()) return get_primitive<std::string>();
+    if(is_unsigned()) return std::to_string(get_unsigned());
+    if(is_signed()) return std::to_string(get_signed());
+    if(is_double()) return std::to_string(get_primitive<double>());
+    std::cerr << "stringify failed\n";
+    return std::string();
+}
+
+// Precondition: iter points to a dict of string -> any
+// executes action(key, value_iter) for all entries
+template<class T>
+void string_map_for_each(DBusMessageIter_wrap iter, T action) {
+    iter = iter.get_array_iter();
+    for(; iter; iter.next()) {
+        auto it = iter.get_dict_entry_iter();
+        auto key = it.get_primitive<std::string>();
+
+        it.next();
+        action(key, it);
+    }
+}
+
+template<class T, class Callable>
+void array_for_each(DBusMessageIter_wrap iter, Callable action) {
+    iter = iter.get_array_iter();
+    for(; iter; iter.next()){
+        action(iter.get_primitive<T>());
+    }
+}
+
+template<class Callable>
+void array_for_each_stringify(DBusMessageIter_wrap iter, Callable action) {
+    iter = iter.get_array_iter();
+    for(; iter; iter.next()){
+        action(iter.get_stringified());
+    }
+}
+
+template<class T>
+void string_multimap_for_each_stringify(DBusMessageIter_wrap iter, T action) {
+    string_map_for_each(iter, [&](const std::string& key, DBusMessageIter_wrap it){
+        if(it.is_array()){
+            array_for_each_stringify(it, [&](const std::string& val){
+                action(key, val);
+            });
+        }
+        else if(it.is_primitive()){
+            action(key, it.get_stringified());
+        }
+    });
+}
+
+
+template<class T>
+static void assign_metadata_value(metadata& meta, const std::string& key, const T& value) {
+    if(key == "PlaybackStatus") {
+        meta.playing = (value == "Playing");
+    }
+    else if(key == "xesam:title"){
+        meta.title = value;
+    }
+    else if(key == "xesam:artist") {
+        if(meta.artists.empty()) meta.artists = value;
+        else meta.artists += ", " + value;
+    }
+    else if(key == "xesam:album") {
+        meta.album = value;
+    }
+    else if(key == "mpris:artUrl"){
+        meta.artUrl = value;
+    }
+}
 
 std::string format_signal(const dbusmgr::DBusSignal& s)
 {
@@ -27,393 +282,49 @@ std::string format_signal(const dbusmgr::DBusSignal& s)
     return ss.str();
 }
 
-static bool check_msg_arg(libdbus_loader& dbus, DBusMessageIter *iter, int type)
+static void parse_mpris_properties(libdbus_loader& dbus, DBusMessage *msg, std::string& source, metadata& meta)
 {
-    int curr_type = DBUS_TYPE_INVALID;
-    if ((curr_type = dbus.message_iter_get_arg_type (iter)) != type) {
-#ifndef NDEBUG
-        std::cerr << "Argument is not of type '" << (char)type << "' != '" << (char) curr_type << "'" << std::endl;
-#endif
-        return false;
-    }
-    return true;
-}
+    /**
+     *  Expected response Format:
+     *      string,
+     *      map{
+     *          "Metadata" -> multimap,
+     *          "PlaybackStatus" -> string
+     *      }
+    */
 
-bool get_string_array(libdbus_loader& dbus, DBusMessageIter *iter_, std::vector<std::string>& entries)
-{
-    DBusMessageIter iter = *iter_;
-    DBusMessageIter subiter;
-    int current_type = DBUS_TYPE_INVALID;
-
-    current_type = dbus.message_iter_get_arg_type (&iter);
-    if (current_type == DBUS_TYPE_VARIANT) {
-        dbus.message_iter_recurse (&iter, &iter);
-        current_type = dbus.message_iter_get_arg_type (&iter);
-    }
-
-    if (current_type != DBUS_TYPE_ARRAY) {
-#ifndef NDEBUG
-        std::cerr << "Not an array: '" << (char)current_type << "'" << std::endl;
-#endif
-        return false;
-    }
-
-    char *val = nullptr;
-
-    dbus.message_iter_recurse (&iter, &subiter);
-    entries.clear();
-    while ((current_type = dbus.message_iter_get_arg_type (&subiter)) != DBUS_TYPE_INVALID) {
-        if (current_type == DBUS_TYPE_STRING)
-        {
-            dbus.message_iter_get_basic (&subiter, &val);
-            entries.push_back(val);
-        }
-        dbus.message_iter_next (&subiter);
-    }
-    return true;
-}
-
-static bool get_variant_string(libdbus_loader& dbus, DBusMessageIter *iter_, std::string &val, bool key_or_value = false)
-{
-    DBusMessageIter iter = *iter_;
-    char *str = nullptr;
-    int type = dbus.message_iter_get_arg_type (&iter);
-    if (type != DBUS_TYPE_VARIANT && type != DBUS_TYPE_DICT_ENTRY)
-        return false;
-
-    dbus.message_iter_recurse (&iter, &iter);
-
-    if (key_or_value) {
-        dbus.message_iter_next (&iter);
-        if (!check_msg_arg (dbus, &iter, DBUS_TYPE_VARIANT))
-            return false;
-        dbus.message_iter_recurse (&iter, &iter);
-    }
-
-    if (!check_msg_arg (dbus, &iter, DBUS_TYPE_STRING))
-        return false;
-
-    dbus.message_iter_get_basic(&iter, &str);
-    val = str;
-
-    return true;
-}
-
-static bool get_variant_string(libdbus_loader& dbus, DBusMessage *msg, std::string &val, bool key_or_value = false)
-{
-    DBusMessageIter iter;
-    dbus.message_iter_init (msg, &iter);
-    return get_variant_string(dbus, &iter, val, key_or_value);
-}
-
-static void parse_mpris_metadata(libdbus_loader& dbus, DBusMessageIter *iter_, string_pair_vec& entries)
-{
-    DBusMessageIter subiter, iter = *iter_;
     std::string key, val;
-    std::vector<std::string> list;
-
-    while (dbus.message_iter_get_arg_type(&iter) != DBUS_TYPE_INVALID)
-    {
-        //std::cerr << "\ttype: " << (char)dbus.message_iter_get_arg_type(&iter) << std::endl;
-        if (!get_variant_string(dbus, &iter, key))
-            return;
-
-        dbus.message_iter_recurse (&iter, &subiter);
-        dbus.message_iter_next (&subiter);
-
-        //std::cerr << "\tkey: " << key << std::endl;
-        if (get_variant_string(dbus, &subiter, val)) {
-            //std::cerr << "\t\t" << val << std::endl;
-            entries.push_back({key, val});
-        }
-        else if (get_string_array(dbus, &subiter, list)) {
-            for (auto& s : list) {
-                //std::cerr << "\t\t" << s << std::endl;
-                entries.push_back({key, s});
-            }
-        }
-        dbus.message_iter_next (&iter);
-    }
-}
-
-static void parse_mpris_properties(libdbus_loader& dbus, DBusMessage *msg, std::string& source, string_pair_vec_map& entries_map)
-{
-    const char *val_char = nullptr;
-    DBusMessageIter iter;
-    std::string key, val;
-
-    std::vector<DBusMessageIter> stack;
-    stack.push_back({});
-
-    dbus.message_iter_init (msg, &stack.back());
+    auto iter = DBusMessageIter_wrap(msg, &dbus);
 
     // Should be 'org.mpris.MediaPlayer2.Player'
-    if (!check_msg_arg(dbus, &stack.back(), DBUS_TYPE_STRING)){
-        std::cerr << "Not a string\n";
+    if (not iter.is_string()){
+        std::cerr << "Not a string\n";  //TODO
         return;
     }
 
-    dbus.message_iter_get_basic(&stack.back(), &val_char);
-    source = val_char;
+    source = iter.get_primitive<std::string>();
 
     if (source != "org.mpris.MediaPlayer2.Player")
         return;
 
-    dbus.message_iter_next (&stack.back());
-    if (!check_msg_arg(dbus, &stack.back(), DBUS_TYPE_ARRAY))
+    iter.next();
+    if (not iter.is_array())
         return;
 
-    dbus.message_iter_recurse (&stack.back(), &iter);
-    stack.push_back(iter);
-
-    while (dbus.message_iter_get_arg_type(&stack.back()) != DBUS_TYPE_INVALID)
-    {
-        if (!get_variant_string(dbus, &stack.back(), key)) {
-            dbus.message_iter_next (&stack.back());
-            continue;
+    string_map_for_each(iter, [&](std::string& key, DBusMessageIter_wrap it){
+        if(key == "Metadata"){
+            string_multimap_for_each_stringify(it, [&](const std::string& key, const std::string& val){
+                assign_metadata_value(meta, key, val);
+            });
         }
-
-        if (key == "Metadata") {
-#ifndef NDEBUG
-            std::cerr << __func__ << ": Found Metadata!" << std::endl;
-#endif
-
-            // dive into Metadata
-            dbus.message_iter_recurse (&stack.back(), &iter);
-
-            // get the array of entries
-            dbus.message_iter_next (&iter);
-            if (!check_msg_arg(dbus, &iter, DBUS_TYPE_VARIANT))
-                continue;
-            dbus.message_iter_recurse (&iter, &iter);
-
-            if (!check_msg_arg(dbus, &iter, DBUS_TYPE_ARRAY))
-                continue;
-            dbus.message_iter_recurse (&iter, &iter);
-
-            parse_mpris_metadata(dbus, &iter, entries_map["Metadata"]);
+        else if(key == "PlaybackStatus"){
+            assign_metadata_value(meta, key, it.get_stringified());
         }
-        else if (key == "PlaybackStatus") {
-            dbus.message_iter_recurse (&stack.back(), &iter);
-            dbus.message_iter_next (&iter);
-
-            if (get_variant_string(dbus, &iter, val))
-                entries_map["PlaybackStatus"].push_back({key, val});
-        }
-
-        dbus.message_iter_next (&stack.back());
-    }
+    });
+    meta.valid = (meta.artists.size() || !meta.title.empty());
 }
 
-static void parse_property_changed(libdbus_loader& dbus, DBusMessage *msg, std::string& source, string_pair_vec& entries)
-{
-    char *name = nullptr;
-    int i;
-    uint64_t u64;
-    double d;
 
-    std::vector<DBusMessageIter> stack;
-    stack.push_back({});
-
-#ifndef NDEBUG
-    std::vector<char> padding;
-    padding.push_back('\0');
-#endif
-
-    dbus.message_iter_init (msg, &stack.back());
-    int type, prev_type = 0;
-
-    type = dbus.message_iter_get_arg_type (&stack.back());
-    if (type != DBUS_TYPE_STRING) {
-#ifndef NDEBUG
-        std::cerr << __func__ << "First element is not a string" << std::endl;
-#endif
-        return;
-    }
-
-    dbus.message_iter_get_basic(&stack.back(), &name);
-    source = name;
-#ifndef NDEBUG
-    std::cout << name << std::endl;
-#endif
-
-    std::pair<std::string, std::string> kv;
-
-    dbus.message_iter_next (&stack.back());
-    // the loop should be able parse the whole message if used for generic use-cases
-    while ((type = dbus.message_iter_get_arg_type (&stack.back())) != DBUS_TYPE_INVALID) {
-#ifndef NDEBUG
-        padding.back() = ' ';
-        padding.resize(stack.size() + 1, ' ');
-        padding.back() = '\0';
-        std::cout << padding.data() << "Type: " << (char)type;
-#endif
-
-        if (type == DBUS_TYPE_STRING) {
-            dbus.message_iter_get_basic(&stack.back(), &name);
-#ifndef NDEBUG
-            std::cout << "=" << name << std::endl;
-#endif
-            if (prev_type == DBUS_TYPE_DICT_ENTRY) // is key ?
-                kv.first = name;
-            if (prev_type == DBUS_TYPE_VARIANT || prev_type == DBUS_TYPE_ARRAY) { // is value ?
-                kv.second = name;
-                entries.push_back(kv);
-            }
-        }
-        else if (type == DBUS_TYPE_INT32) {
-            dbus.message_iter_get_basic(&stack.back(), &i);
-#ifndef NDEBUG
-            std::cout << "=" << i << std::endl;
-#endif
-        }
-        else if (type == DBUS_TYPE_UINT64) {
-            dbus.message_iter_get_basic(&stack.back(), &u64);
-#ifndef NDEBUG
-            std::cout << "=" << u64 << std::endl;
-#endif
-        }
-        else if (type == DBUS_TYPE_DOUBLE) {
-            dbus.message_iter_get_basic(&stack.back(), &d);
-#ifndef NDEBUG
-            std::cout << "=" << d << std::endl;
-#endif
-        }
-        else if (type == DBUS_TYPE_ARRAY || type == DBUS_TYPE_DICT_ENTRY || type == DBUS_TYPE_VARIANT) {
-#ifndef NDEBUG
-            std::cout << std::endl;
-#endif
-            prev_type = type;
-            DBusMessageIter iter;
-            dbus.message_iter_recurse (&stack.back(), &iter);
-            if (dbus.message_iter_get_arg_type (&stack.back()) != DBUS_TYPE_INVALID)
-                stack.push_back(iter);
-            continue;
-        } else {
-#ifndef NDEBUG
-            std::cout << std::endl;
-#endif
-        }
-
-        while(FALSE == dbus.message_iter_next (&stack.back()) && stack.size() > 1) {
-            stack.pop_back();
-            prev_type = 0;
-        }
-    }
-}
-
-bool get_dict_string_array(libdbus_loader& dbus, DBusMessage *msg, string_pair_vec& entries)
-{
-    DBusMessageIter iter, outer_iter;
-    dbus.message_iter_init (msg, &outer_iter);
-    int current_type = DBUS_TYPE_INVALID;
-
-    current_type = dbus.message_iter_get_arg_type (&outer_iter);
-
-    if (current_type == DBUS_TYPE_VARIANT) {
-        dbus.message_iter_recurse (&outer_iter, &outer_iter);
-        current_type = dbus.message_iter_get_arg_type (&outer_iter);
-    }
-
-    if (current_type != DBUS_TYPE_ARRAY) {
-#ifndef NDEBUG
-        std::cerr << "Not an array " << (char)current_type << std::endl;
-#endif
-        return false;
-    }
-
-    char *val_key = nullptr, *val_value = nullptr;
-
-    dbus.message_iter_recurse (&outer_iter, &outer_iter);
-    while ((current_type = dbus.message_iter_get_arg_type (&outer_iter)) != DBUS_TYPE_INVALID) {
-        // printf("type: %d\n", current_type);
-
-        if (current_type == DBUS_TYPE_DICT_ENTRY)
-        {
-            dbus.message_iter_recurse (&outer_iter, &iter);
-
-            // dict entry key
-            //printf("\tentry: {%c, ", dbus.message_iter_get_arg_type (&iter));
-            dbus.message_iter_get_basic (&iter, &val_key);
-            std::string key = val_key;
-
-            // dict entry value
-            dbus.message_iter_next (&iter);
-
-            if (dbus.message_iter_get_arg_type (&iter) == DBUS_TYPE_VARIANT)
-                dbus.message_iter_recurse (&iter, &iter);
-
-            if (dbus.message_iter_get_arg_type (&iter) == DBUS_TYPE_ARRAY) {
-                dbus.message_iter_recurse (&iter, &iter);
-                if (dbus.message_iter_get_arg_type (&iter) == DBUS_TYPE_STRING) {
-                    //printf("%c}\n", dbus.message_iter_get_arg_type (&iter));
-                    dbus.message_iter_get_basic (&iter, &val_value);
-                    entries.push_back({val_key, val_value});
-                }
-            }
-            else if (dbus.message_iter_get_arg_type (&iter) == DBUS_TYPE_STRING) {
-                //printf("%c}\n", dbus.message_iter_get_arg_type (&iter));
-                dbus.message_iter_get_basic (&iter, &val_value);
-                entries.push_back({val_key, val_value});
-            }
-        }
-        dbus.message_iter_next (&outer_iter);
-    }
-    return true;
-}
-
-static void assign_metadata(metadata& meta, string_pair_vec_map& entries_map)
-{
-    string_pair_vec_map::const_iterator it;
-    it = entries_map.find("Metadata");
-    if (it != entries_map.end()) {
-        meta.title.clear();
-        meta.artists.clear();
-        meta.album.clear();
-
-        std::lock_guard<std::mutex> lk(meta.mutex);
-        std::vector<std::string> artists;
-        meta.valid = false;
-        for (auto& kv : it->second) {
-    #ifndef NDEBUG
-            std::cerr << kv.first << " = " << kv.second << std::endl;
-    #endif
-            if (kv.first == "xesam:artist")
-                artists.push_back(kv.second);
-            else if (kv.first == "xesam:title")
-                meta.title = kv.second;
-            else if (kv.first == "xesam:album")
-                meta.album = kv.second;
-            else if (kv.first == "mpris:artUrl")
-                meta.artUrl = kv.second;
-            else if (kv.first == "PlaybackStatus")
-                meta.playing = (kv.second == "Playing");
-        }
-
-        // XXX Spotify only sends one artist anyway
-        for (auto p = artists.begin(); p != artists.end(); p++) {
-            meta.artists += *p;
-            if (p != artists.end() - 1)
-                meta.artists += ", ";
-        }
-    }
-
-    it = entries_map.find("PlaybackStatus");
-    if (it != entries_map.end()) {
-        for (auto& kv : it->second) {
-            if (kv.first == "PlaybackStatus")
-                meta.playing = (kv.second == "Playing");
-        }
-    }
-
-    if (meta.artists.size() || !meta.title.empty())
-        meta.valid = true;
-
-    meta.ticker.needs_recalc = true;
-    meta.ticker.pos = 0;
-    meta.ticker.longest = 0;
-    meta.ticker.dir = -1;
-}
 
 bool dbus_get_name_owner(dbusmgr::dbus_manager& dbus_mgr, std::string& name_owner, const char *name)
 {
@@ -460,7 +371,7 @@ bool dbus_get_name_owner(dbusmgr::dbus_manager& dbus_mgr, std::string& name_owne
     return true;
 }
 
-bool dbus_get_player_property(dbusmgr::dbus_manager& dbus_mgr, string_pair_vec& entries, const char * dest, const char * prop)
+bool dbus_get_player_property(dbusmgr::dbus_manager& dbus_mgr, metadata& meta, const char * dest, const char * prop)
 {
     auto& dbus = dbus_mgr.dbus();
     DBusError error;
@@ -492,11 +403,20 @@ bool dbus_get_player_property(dbusmgr::dbus_manager& dbus_mgr, string_pair_vec& 
         return false;
     }
 
-    std::string entry;
-    if (get_dict_string_array(dbus, dbus_reply, entries)) {
-        // nothing
-    } else if (get_variant_string(dbus, dbus_reply, entry)) {
-        entries.push_back({prop, entry});
+    auto iter = DBusMessageIter_wrap(dbus_reply, &dbus);
+    if(iter.is_array()){
+        string_multimap_for_each_stringify(iter, [&](const std::string& key, const std::string& val){
+            assign_metadata_value(meta, key, val);
+        });
+    }
+    else if(iter.is_primitive()){
+        assign_metadata_value(meta, prop, iter.get_stringified());
+    }
+    else {
+        dbus.message_unref(dbus_msg);
+        dbus.message_unref(dbus_reply);
+        dbus.error_free(&error);
+        return false;
     }
 
     dbus.message_unref(dbus_msg);
@@ -509,13 +429,10 @@ namespace dbusmgr {
 bool dbus_manager::get_media_player_metadata(metadata& meta, std::string name) {
     if(name == "") name = m_active_player;
     if(name == "") return false;
-    meta.artists.clear();
-    string_pair_vec_map entries;
-    if(!dbus_get_player_property(*this, entries["Metadata"], name.c_str(), "Metadata")){
-        return false;
-    }
-    dbus_get_player_property(*this, entries["PlaybackStatus"], name.c_str(), "PlaybackStatus");
-    assign_metadata(meta, entries);
+    meta.clear();
+    dbus_get_player_property(*this, meta, name.c_str(), "Metadata");
+    dbus_get_player_property(*this, meta, name.c_str(), "PlaybackStatus");
+    meta.valid = (meta.artists.size() || !meta.title.empty());
     return true;
 }
 
@@ -547,6 +464,10 @@ bool dbus_manager::init(const std::string& requested_player)
     connect_to_signals();
 
     select_active_player();
+    {
+        std::lock_guard<std::mutex> lck(main_metadata.mtx);
+        get_media_player_metadata(main_metadata.meta);
+    }
 
     m_inited = true;
     return true;
@@ -615,12 +536,15 @@ DBusHandlerResult dbus_manager::filter_signals(DBusConnection* conn, DBusMessage
 
 bool dbus_manager::handle_properties_changed(DBusMessage* msg, const char* sender) {
     std::string source;
-    string_pair_vec_map entries_map;
 
-    //parse_property_changed(msg, source, entries);
-    parse_mpris_properties(m_dbus_ldr, msg, source, entries_map);
+    metadata meta;
+    parse_mpris_properties(m_dbus_ldr, msg, source, meta);
 #ifndef NDEBUG
-    std::cerr << "Source: " << source << "\n";
+    std::cerr << "PropertiesChanged Signal received:\n";
+    std::cerr << "\tSource: " << source << "\n";
+    std::cerr << "active_player:         " << m_active_player << "\n";
+    std::cerr << "active_player's owner: " << m_name_owners[m_active_player] << "\n";
+    std::cerr << "sender:                " << sender << "\n";
 #endif
     if (source != "org.mpris.MediaPlayer2.Player")
         return false;
@@ -628,13 +552,9 @@ bool dbus_manager::handle_properties_changed(DBusMessage* msg, const char* sende
     if(m_active_player == "") {
         select_active_player();
     }
-#ifndef NDEBUG
-    std::cerr << "active_player:         " << m_active_player << "\n";
-    std::cerr << "active_player's owner: " << m_name_owners[m_active_player] << "\n";
-    std::cerr << "sender:                " << sender << "\n";
-#endif
     if (m_name_owners[m_active_player] == sender) {
-        assign_metadata(main_metadata, entries_map);
+        std::lock_guard<std::mutex> lck(main_metadata.mtx);
+        main_metadata.meta = meta;
     }
     return true;
 }
@@ -660,7 +580,12 @@ bool dbus_manager::handle_name_owner_changed(DBusMessage* msg, const char* sende
         m_name_owners[str[0]] = str[2];
         if(str[0] == m_requested_player){
             select_active_player();
-            get_media_player_metadata(main_metadata);
+            metadata tmp;
+            get_media_player_metadata(tmp);
+            {
+                std::lock_guard<std::mutex> lck(main_metadata.mtx);
+                main_metadata.meta = tmp;
+            }
         }
     }
 
@@ -669,11 +594,15 @@ bool dbus_manager::handle_name_owner_changed(DBusMessage* msg, const char* sende
         if (str.size() == 3
             && str[0] == m_active_player
         ) {
-            main_metadata.clear();
+            metadata tmp;
             m_name_owners.erase(str[0]);
             select_active_player();
-            get_media_player_metadata(main_metadata);
-        } 
+            get_media_player_metadata(tmp);
+            {
+                std::lock_guard<std::mutex> lck(main_metadata.mtx);
+                std::swap(tmp, main_metadata.meta);
+            }
+        }
     }
     return true;
 }
@@ -711,54 +640,42 @@ void dbus_manager::disconnect_from_signals()
     stop_thread();
 }
 
-void dbus_manager::add_callback(CBENUM type, callback_func func)
-{
-    m_callbacks[type] = func;
-}
-
 bool dbus_manager::dbus_list_name_to_owner()
 {
-    auto& dbus = dbus_mgr.dbus();
     DBusError error;
 
     std::vector<std::string> names;
     std::string owner;
-    DBusMessageIter iter;
 
     DBusMessage * dbus_reply = nullptr;
     DBusMessage * dbus_msg = nullptr;
 
     // dbus-send --session --dest=org.freedesktop.DBus --type=method_call --print-reply /org/freedesktop/DBus org.freedesktop.DBus.GetNameOwner string:"org.mpris.MediaPlayer2.spotify"
-    if (nullptr == (dbus_msg = dbus.message_new_method_call("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "ListNames"))) {
+    if (nullptr == (dbus_msg = m_dbus_ldr.message_new_method_call("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "ListNames"))) {
         std::cerr << "MANGOHUD: " << __func__ << ": unable to allocate memory for dbus message\n";
         return false;
     }
 
-    dbus.error_init(&error);
-    if (nullptr == (dbus_reply = dbus.connection_send_with_reply_and_block(dbus_mgr.get_conn(), dbus_msg, DBUS_TIMEOUT, &error))) {
-        dbus.message_unref(dbus_msg);
+    m_dbus_ldr.error_init(&error);
+    if (nullptr == (dbus_reply = m_dbus_ldr.connection_send_with_reply_and_block(dbus_mgr.get_conn(), dbus_msg, DBUS_TIMEOUT, &error))) {
+        m_dbus_ldr.message_unref(dbus_msg);
         std::cerr << "MANGOHUD: " << __func__ << ": "<< error.message << "\n";
-        dbus.error_free(&error);
+        m_dbus_ldr.error_free(&error);
         return false;
     }
 
-    dbus.message_iter_init (dbus_reply, &iter);
-
-    if (!get_string_array(dbus, &iter, names))
-        return false;
-
-    for (auto& name : names) {
-        if (!starts_with(name, "org.mpris.MediaPlayer2."))
-            continue;
-
-        if (dbus_get_name_owner(dbus_mgr, owner, name.c_str())) {
+    auto iter = DBusMessageIter_wrap(dbus_reply, &m_dbus_ldr);
+    if(not iter.is_array()) return false;
+    array_for_each<std::string>(iter, [&](std::string name){
+        if(!starts_with(name.c_str(), "org.mpris.MediaPlayer2.")) return;
+        if(dbus_get_name_owner(dbus_mgr, owner, name.c_str())){
             m_name_owners[name] = owner;
         }
-    }
+    });
 
-    dbus.message_unref(dbus_msg);
-    dbus.message_unref(dbus_reply);
-    dbus.error_free(&error);
+    m_dbus_ldr.message_unref(dbus_msg);
+    m_dbus_ldr.message_unref(dbus_reply);
+    m_dbus_ldr.error_free(&error);
     return true;
 }
 
