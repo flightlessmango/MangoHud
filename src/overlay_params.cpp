@@ -423,7 +423,7 @@ parse_overlay_config(struct overlay_params *params,
    params->background_color = 0x020202;
    params->text_color = 0xffffff;
    params->media_player_color = 0xffffff;
-   params->media_player_name = "spotify";
+   params->media_player_name = "";
    params->font_scale = 1.0f;
    params->font_scale_media_player = 0.55f;
    params->log_interval = 100;

@@ -157,7 +157,9 @@ bool dbus_manager::get_media_player_metadata(metadata& meta, std::string name) {
 bool dbus_manager::init(const std::string& requested_player) {
     if (m_inited) return true;
 
-    m_requested_player = "org.mpris.MediaPlayer2." + requested_player;
+    if(not requested_player.empty()){
+        m_requested_player = "org.mpris.MediaPlayer2." + requested_player;
+    }
 
     if (!m_dbus_ldr.IsLoaded() && !m_dbus_ldr.Load("libdbus-1.so.3")) {
         std::cerr << "MANGOHUD: Could not load libdbus-1.so.3\n";
@@ -191,22 +193,29 @@ bool dbus_manager::select_active_player() {
     auto old_active_player = m_active_player;
     m_active_player = "";
     metadata meta{};
-    // If the requested player is available, use it
-    if (m_name_owners.count(m_requested_player) > 0) {
-        m_active_player = m_requested_player;
-        std::cerr << "Selecting requested player: " << m_requested_player
-                  << "\n";
-        get_media_player_metadata(meta, m_active_player);
+    if(not m_requested_player.empty()){
+        std::cerr << "Requested player: " << m_requested_player << "\n";
+        // If the requested player is available, use it
+        if (m_name_owners.count(m_requested_player) > 0) {
+            m_active_player = m_requested_player;
+            std::cerr << "Selecting requested player: " << m_requested_player
+                    << "\n";
+            get_media_player_metadata(meta, m_active_player);
+        }
     }
-
-    // Else, use any player that is currently playing..
-    if (m_active_player.empty()) {
-        for (const auto& entry : m_name_owners) {
-            const auto& name = std::get<0>(entry);
-            get_media_player_metadata(meta, name);
-            if (meta.playing) {
-                m_active_player = name;
-                std::cerr << "Selecting fallback player: " << name << "\n";
+    else {
+        // If no player is requested, use any player that is currently playing
+        if (m_active_player.empty()) {
+            for (const auto& entry : m_name_owners) {
+                const auto& name = std::get<0>(entry);
+                get_media_player_metadata(meta, name);
+                if (meta.playing) {
+                    m_active_player = name;
+                    std::cerr << "Selecting fallback player: " << name << "\n";
+                }
+                else {
+                    meta = {};
+                }
             }
         }
     }
