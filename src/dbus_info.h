@@ -3,31 +3,31 @@
 #define MANGOHUD_DBUS_INFO_H
 
 #include <array>
-#include <stdexcept>
-#include <thread>
 #include <functional>
-#include <vector>
-#include <string>
 #include <map>
-#include <unordered_map>
 #include <mutex>
+#include <stdexcept>
+#include <string>
+#include <thread>
+#include <unordered_map>
+#include <vector>
+
 #include "loaders/loader_dbus.h"
 
 struct metadata {
-    //std::vector<std::string> artists;
-    std::string artists; // pre-concatenate
+    // std::vector<std::string> artists;
+    std::string artists;  // pre-concatenate
     std::string title;
     std::string album;
     std::string something;
     std::string artUrl;
     bool playing = false;
-    
+
     bool valid = false;
     bool got_song_data = false;
     bool got_playback_data = false;
 
-    void clear()
-    {
+    void clear() {
         artists.clear();
         title.clear();
         album.clear();
@@ -51,101 +51,79 @@ struct mutexed_metadata {
     } ticker;
 };
 
-enum SignalType
-{
+enum SignalType {
     ST_NAMEOWNERCHANGED,
     ST_PROPERTIESCHANGED,
 };
-
 
 extern struct mutexed_metadata main_metadata;
 
 namespace dbusmgr {
 
-    class dbus_manager;
-    using signal_handler_func = bool (dbus_manager::*)(DBusMessage*, const char*);
+class dbus_manager;
+using signal_handler_func = bool (dbus_manager::*)(DBusMessage*, const char*);
 
-    struct DBusSignal
-    {
-        const char * intf;
-        const char * signal;
-        signal_handler_func handler;
-    };
+struct DBusSignal {
+    const char* intf;
+    const char* signal;
+    signal_handler_func handler;
+};
 
-    using callback_func = std::function<void(/*metadata*/)>;
+class dbus_manager {
+   public:
+    dbus_manager() {}
 
-    enum CBENUM {
-        CB_CONNECTED,
-        CB_DISCONNECTED,
-        CB_NEW_METADATA,
-    };
+    ~dbus_manager();
 
-    class dbus_manager
-    {
-    public:
-        dbus_manager()
-        {
-        }
+    bool init(const std::string& requested_player);
+    void deinit();
+    bool get_media_player_metadata(metadata& meta, std::string name = "");
+    void connect_to_signals();
+    void disconnect_from_signals();
+    DBusConnection* get_conn() const { return m_dbus_conn; }
 
-        ~dbus_manager();
+    libdbus_loader& dbus() { return m_dbus_ldr; }
 
-        bool init(const std::string& requested_player);
-        void deinit();
-        bool get_media_player_metadata(metadata& meta, std::string name = "");
-        void add_callback(CBENUM type, callback_func func);
-        void connect_to_signals();
-        void disconnect_from_signals();
-        DBusConnection* get_conn() const {
-            return m_dbus_conn;
-        }
+   protected:
+    void stop_thread();
+    void start_thread();
+    void dbus_thread();
 
-        libdbus_loader& dbus() {
-            return m_dbus_ldr;
-        }
+    bool dbus_list_name_to_owner();
+    bool select_active_player();
 
+    static DBusHandlerResult filter_signals(DBusConnection*, DBusMessage*,
+                                            void*);
 
-    protected:
-        void stop_thread();
-        void start_thread();
-        void dbus_thread();
+    bool handle_properties_changed(DBusMessage*, const char*);
+    bool handle_name_owner_changed(DBusMessage*, const char*);
 
-        bool dbus_list_name_to_owner();
-        bool select_active_player(metadata* meta = nullptr);
+    void onNewPlayer(
+        metadata& meta);  // A different player has become the active player
+    void onNoPlayer();    // There is no longer any player active
+    void onPlayerUpdate(
+        metadata& meta);  // The active player has sent an update
 
-        static DBusHandlerResult filter_signals(DBusConnection*, DBusMessage*, void*);
+    DBusError m_error;
+    DBusConnection* m_dbus_conn = nullptr;
+    bool m_quit = false;
+    bool m_inited = false;
+    std::thread m_thread;
+    libdbus_loader m_dbus_ldr;
+    std::unordered_map<std::string, std::string> m_name_owners;
+    std::string m_requested_player;
+    std::string m_active_player;
 
-        bool handle_properties_changed(DBusMessage*, const char*);
-        bool handle_name_owner_changed(DBusMessage*, const char*);
+    const std::array<DBusSignal, 2> m_signals{{
+        {"org.freedesktop.DBus", "NameOwnerChanged",
+         &dbus_manager::handle_name_owner_changed},
+        {"org.freedesktop.DBus.Properties", "PropertiesChanged",
+         &dbus_manager::handle_properties_changed},
+    }};
+};
 
-        DBusError m_error;
-        DBusConnection * m_dbus_conn = nullptr;
-        DBusMessage * m_dbus_msg = nullptr;
-        DBusMessage * m_dbus_reply = nullptr;
-        bool m_quit = false;
-        bool m_inited = false;
-        std::thread m_thread;
-        std::map<CBENUM, callback_func> m_callbacks;
-        libdbus_loader m_dbus_ldr;
-        std::unordered_map<std::string, std::string> m_name_owners;
-        std::string m_requested_player;
-        std::string m_active_player; 
-
-
-
-        const std::array<DBusSignal, 2> m_signals {{
-            { "org.freedesktop.DBus", "NameOwnerChanged", &dbus_manager::handle_name_owner_changed },
-            { "org.freedesktop.DBus.Properties", "PropertiesChanged", &dbus_manager::handle_properties_changed },
-        }};
-
-    };
-
-    extern dbus_manager dbus_mgr;
-}
-
-<<<<<<< HEAD
+extern dbus_manager dbus_mgr;
+}  // namespace dbusmgr
 bool get_media_player_metadata(dbusmgr::dbus_manager& dbus, const std::string& name, metadata& meta);
 
 #endif //MANGOHUD_DBUS_INFO_H
-=======
-//bool get_media_player_metadata(dbusmgr::dbus_manager& dbus, const std::string& name, metadata& meta);
->>>>>>> 9c064df... Change the media player functionality to allow changing active media
