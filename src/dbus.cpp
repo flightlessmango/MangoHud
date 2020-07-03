@@ -48,6 +48,25 @@ std::string format_signal(const dbusmgr::DBusSignal& s) {
     return ss.str();
 }
 
+void parse_song_data(DBusMessageIter_wrap iter, metadata& meta){
+    iter.string_map_for_each([&meta](const std::string& key,
+                                       DBusMessageIter_wrap it) {
+        std::string val;
+        if (it.is_primitive()) {
+            val = it.get_stringified();
+        } else if (it.is_array()) {
+            it.array_for_each_stringify([&](const std::string& str) {
+                if (val.empty()) {
+                    val = str;
+                } else {
+                    val += ", " + str;
+                }
+            });
+        }
+        assign_metadata_value(meta, key, val);
+    });
+}
+
 static void parse_mpris_properties(libdbus_loader& dbus, DBusMessage* msg,
                                    std::string& source, metadata& meta) {
     /**
@@ -59,40 +78,16 @@ static void parse_mpris_properties(libdbus_loader& dbus, DBusMessage* msg,
      *      }
      */
 
-    std::string key, val;
     auto iter = DBusMessageIter_wrap(msg, &dbus);
-
-    // Should be 'org.mpris.MediaPlayer2.Player'
-    if (not iter.is_string()) {
-        std::cerr << "Not a string\n";  // TODO
-        return;
-    }
-
     source = iter.get_primitive<std::string>();
-
     if (source != "org.mpris.MediaPlayer2.Player") return;
 
     iter.next();
     if (not iter.is_array()) return;
 
-    iter.string_map_for_each([&](std::string& key, DBusMessageIter_wrap it) {
+    iter.string_map_for_each([&meta](std::string& key, DBusMessageIter_wrap it) {
         if (key == "Metadata") {
-            it.string_map_for_each([&](const std::string& key,
-                                       DBusMessageIter_wrap it) {
-                std::string val;
-                if (it.is_primitive()) {
-                    val = it.get_stringified();
-                } else if (it.is_array()) {
-                    it.array_for_each_stringify([&](const std::string& str) {
-                        if (val.empty()) {
-                            val = str;
-                        } else {
-                            val += ", " + str;
-                        }
-                    });
-                }
-                assign_metadata_value(meta, key, val);
-            });
+            parse_song_data(it, meta);
         } else if (key == "PlaybackStatus") {
             auto val = it.get_stringified();
             assign_metadata_value(meta, key, val);
@@ -130,11 +125,9 @@ bool dbus_get_player_property(dbusmgr::dbus_manager& dbus_mgr, metadata& meta,
     if (not reply) return false;
 
     auto iter = reply.iter();
+
     if (iter.is_array()) {
-        iter.string_multimap_for_each_stringify(
-            [&](const std::string& key, const std::string& val) {
-                assign_metadata_value(meta, key, val);
-            });
+        parse_song_data(iter, meta);
     } else if (iter.is_primitive()) {
         assign_metadata_value(meta, prop, iter.get_stringified());
     } else {
@@ -157,7 +150,7 @@ bool dbus_manager::get_media_player_metadata(metadata& meta, std::string name) {
 bool dbus_manager::init(const std::string& requested_player) {
     if (m_inited) return true;
 
-    if(not requested_player.empty()){
+    if (not requested_player.empty()) {
         m_requested_player = "org.mpris.MediaPlayer2." + requested_player;
     }
 
@@ -192,30 +185,37 @@ bool dbus_manager::init(const std::string& requested_player) {
 bool dbus_manager::select_active_player() {
     auto old_active_player = m_active_player;
     m_active_player = "";
-    metadata meta{};
-    if(not m_requested_player.empty()){
-        std::cerr << "Requested player: " << m_requested_player << "\n";
+    metadata meta {};
+    if (not m_requested_player.empty()) {
         // If the requested player is available, use it
         if (m_name_owners.count(m_requested_player) > 0) {
             m_active_player = m_requested_player;
+#ifndef NDEBUG
             std::cerr << "Selecting requested player: " << m_requested_player
-                    << "\n";
+                      << "\n";
+#endif
             get_media_player_metadata(meta, m_active_player);
         }
-    }
-    else {
+    } else {
         // If no player is requested, use any player that is currently playing
         if (m_active_player.empty()) {
-            for (const auto& entry : m_name_owners) {
-                const auto& name = std::get<0>(entry);
+            auto it = std::find_if(m_name_owners.begin(), m_name_owners.end(), [this, &meta](auto& entry){
+                auto& name = entry.first;
                 get_media_player_metadata(meta, name);
-                if (meta.playing) {
-                    m_active_player = name;
-                    std::cerr << "Selecting fallback player: " << name << "\n";
+                if(meta.playing) {
+                    return true;
                 }
                 else {
                     meta = {};
+                    return false;
                 }
+            });
+
+            if(it != m_name_owners.end()){
+                m_active_player = it->first;
+#ifndef NDEBUG
+                std::cerr << "Selecting fallback player: " << m_active_player << "\n";
+#endif
             }
         }
     }
@@ -226,7 +226,9 @@ bool dbus_manager::select_active_player() {
         }
         return true;
     } else {
+#ifndef NDEBUG
         std::cerr << "No active players\n";
+#endif
         if (not old_active_player.empty()) {
             onNoPlayer();
         }
@@ -282,9 +284,11 @@ bool dbus_manager::handle_properties_changed(DBusMessage* msg,
 #endif
     if (source != "org.mpris.MediaPlayer2.Player") return false;
 
-    if (m_active_player == "") {
+    if (m_active_player == "" or
+        (m_requested_player.empty() and not main_metadata.meta.playing)) {
         select_active_player();
-    } else if (m_name_owners[m_active_player] == sender) {
+    }
+    else if (m_name_owners[m_active_player] == sender) {
         onPlayerUpdate(meta);
     }
     return true;

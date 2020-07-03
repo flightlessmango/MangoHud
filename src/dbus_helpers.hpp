@@ -10,15 +10,16 @@ namespace DBus_helpers {
 namespace detail {
 // clang-format off
 template<class T> struct dbus_type_traits{};
-template<> struct dbus_type_traits<uint8_t>     { const int value = DBUS_TYPE_BYTE;   const bool is_fixed = true; };
-template<> struct dbus_type_traits<uint16_t>    { const int value = DBUS_TYPE_UINT16; const bool is_fixed = true; };
-template<> struct dbus_type_traits<uint32_t>    { const int value = DBUS_TYPE_UINT32; const bool is_fixed = true; };
-template<> struct dbus_type_traits<uint64_t>    { const int value = DBUS_TYPE_UINT64; const bool is_fixed = true; };
-template<> struct dbus_type_traits<int16_t>     { const int value = DBUS_TYPE_INT16;  const bool is_fixed = true; };
-template<> struct dbus_type_traits<int32_t>     { const int value = DBUS_TYPE_INT32;  const bool is_fixed = true; };
-template<> struct dbus_type_traits<int64_t>     { const int value = DBUS_TYPE_INT64;  const bool is_fixed = true; };
-template<> struct dbus_type_traits<double>      { const int value = DBUS_TYPE_DOUBLE; const bool is_fixed = true; };
-template<> struct dbus_type_traits<const char*> { const int value = DBUS_TYPE_STRING; const bool is_fixed = false; };
+template<> struct dbus_type_traits<bool>        { const int value = DBUS_TYPE_BOOLEAN; const bool is_fixed = true; };
+template<> struct dbus_type_traits<uint8_t>     { const int value = DBUS_TYPE_BYTE;    const bool is_fixed = true; };
+template<> struct dbus_type_traits<uint16_t>    { const int value = DBUS_TYPE_UINT16;  const bool is_fixed = true; };
+template<> struct dbus_type_traits<uint32_t>    { const int value = DBUS_TYPE_UINT32;  const bool is_fixed = true; };
+template<> struct dbus_type_traits<uint64_t>    { const int value = DBUS_TYPE_UINT64;  const bool is_fixed = true; };
+template<> struct dbus_type_traits<int16_t>     { const int value = DBUS_TYPE_INT16;   const bool is_fixed = true; };
+template<> struct dbus_type_traits<int32_t>     { const int value = DBUS_TYPE_INT32;   const bool is_fixed = true; };
+template<> struct dbus_type_traits<int64_t>     { const int value = DBUS_TYPE_INT64;   const bool is_fixed = true; };
+template<> struct dbus_type_traits<double>      { const int value = DBUS_TYPE_DOUBLE;  const bool is_fixed = true; };
+template<> struct dbus_type_traits<const char*> { const int value = DBUS_TYPE_STRING;  const bool is_fixed = false; };
 // clang-format on
 
 template <class T>
@@ -50,12 +51,11 @@ class DBusMessageIter_wrap {
     auto get_unsigned() -> uint64_t;
     auto get_signed() -> int64_t;
     auto get_stringified() -> std::string;
-
     //  Composites
     auto get_array_iter() -> DBusMessageIter_wrap;
     auto get_dict_entry_iter() -> DBusMessageIter_wrap;
 
-    // Looping
+    //  Looping
     template <class Callable>
     void array_for_each(Callable);
     template <class Callable>
@@ -68,14 +68,7 @@ class DBusMessageIter_wrap {
     template <class Callable>
     void string_multimap_for_each_stringify(Callable);
 
-    auto next() {
-        if (not *this) return *this;
-        m_DBus->message_iter_next(&m_Iter);
-        // Resolve any variants
-        m_resolved_iter = resolve_variants();
-        m_type = m_DBus->message_iter_get_arg_type(&m_resolved_iter);
-        return *this;
-    }
+    auto next() -> DBusMessageIter_wrap&;
 
    private:
     DBusMessageIter resolve_variants() {
@@ -144,7 +137,7 @@ auto DBusMessageIter_wrap::get_primitive() -> T {
     auto requested_type = detail::dbus_type_identifier<T>;
     if (requested_type != type()) {
         std::cerr << "Type mismatch: '" << ((char)requested_type) << "' vs '"
-                  << (char)type() << "'";
+                  << (char)type() << "'\n";
 #ifndef NDEBUG
         exit(-1);
 #else
@@ -262,13 +255,22 @@ void DBusMessageIter_wrap::string_map_for_each(T action) {
 template <class T>
 void DBusMessageIter_wrap::string_multimap_for_each_stringify(T action) {
     string_map_for_each([&action](const std::string& key, DBusMessageIter_wrap it) {
-            if (it.is_array()) {
-                it.array_for_each_stringify(
-                    [&](const std::string& val) { action(key, val); });
-            } else if (it.is_primitive()) {
-                action(key, it.get_stringified());
-            }
-        });
+        if (it.is_array()) {
+            it.array_for_each_stringify(
+                [&](const std::string& val) { action(key, val); });
+        } else if (it.is_primitive()) {
+            action(key, it.get_stringified());
+        }
+    });
+}
+
+auto DBusMessageIter_wrap::next() -> DBusMessageIter_wrap& {
+    if (not *this) return *this;
+    m_DBus->message_iter_next(&m_Iter);
+    // Resolve any variants
+    m_resolved_iter = resolve_variants();
+    m_type = m_DBus->message_iter_get_arg_type(&m_resolved_iter);
+    return *this;
 }
 
 
