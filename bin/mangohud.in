@@ -1,10 +1,5 @@
 #!/bin/sh
 
-MANGOHUD_LIB_NAME="libMangoHud.so"
-if [ "$MANGOHUD_DLSYM" = "1" ]; then
-	MANGOHUD_LIB_NAME="libMangoHud_dlsym.so:${MANGOHUD_LIB_NAME}"
-fi
-
 if [ "$#" -eq 0 ]; then
 	programname=`basename "$0"`
 	echo "ERROR: No program supplied"
@@ -13,13 +8,16 @@ if [ "$#" -eq 0 ]; then
 	exit 1
 fi
 
-# Execute the program under a clean environment
-# pass through the overriden LD_PRELOAD environment variables
-LD_PRELOAD="${LD_PRELOAD}:${MANGOHUD_LIB_NAME}"
-LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:@libdir_mangohud@"
+MANGOHUD_LIB_NAME="libMangoHud.so"
 
-if hash @mangohud_sh@ 2>/dev/null; then
-  exec env MANGOHUD=1 LD_LIBRARY_PATH="${LD_LIBRARY_PATH}" LD_PRELOAD="${LD_PRELOAD}" @mangohud_sh@ "$@"
-else
-  exec env MANGOHUD=1 LD_LIBRARY_PATH="${LD_LIBRARY_PATH}" LD_PRELOAD="${LD_PRELOAD}" "$@"
+if [ "$MANGOHUD_DLSYM" = "1" ]; then
+	MANGOHUD_LIB_NAME="libMangoHud_dlsym.so:${MANGOHUD_LIB_NAME}"
 fi
+
+# Preload using the plain filesnames of the libs, the dynamic linker will
+# figure out whether the 32 or 64 bit version should be used, and will search
+# for it in the correct directory
+LD_PRELOAD="${LD_PRELOAD}:${MANGOHUD_LIB_NAME}"
+LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:@ld_libdir_mangohud@"
+
+exec env MANGOHUD=1 LD_LIBRARY_PATH="${LD_LIBRARY_PATH}" LD_PRELOAD="${LD_PRELOAD}" "$@"
