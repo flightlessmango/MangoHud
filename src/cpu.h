@@ -7,31 +7,31 @@
 #include <cstdio>
 
 typedef struct CPUData_ {
-   uint64_t totalTime;
-   uint64_t userTime;
-   uint64_t systemTime;
-   uint64_t systemAllTime;
-   uint64_t idleAllTime;
-   uint64_t idleTime;
-   uint64_t niceTime;
-   uint64_t ioWaitTime;
-   uint64_t irqTime;
-   uint64_t softIrqTime;
-   uint64_t stealTime;
-   uint64_t guestTime;
+   unsigned long long int totalTime;
+   unsigned long long int userTime;
+   unsigned long long int systemTime;
+   unsigned long long int systemAllTime;
+   unsigned long long int idleAllTime;
+   unsigned long long int idleTime;
+   unsigned long long int niceTime;
+   unsigned long long int ioWaitTime;
+   unsigned long long int irqTime;
+   unsigned long long int softIrqTime;
+   unsigned long long int stealTime;
+   unsigned long long int guestTime;
 
-   uint64_t totalPeriod;
-   uint64_t userPeriod;
-   uint64_t systemPeriod;
-   uint64_t systemAllPeriod;
-   uint64_t idleAllPeriod;
-   uint64_t idlePeriod;
-   uint64_t nicePeriod;
-   uint64_t ioWaitPeriod;
-   uint64_t irqPeriod;
-   uint64_t softIrqPeriod;
-   uint64_t stealPeriod;
-   uint64_t guestPeriod;
+   unsigned long long int totalPeriod;
+   unsigned long long int userPeriod;
+   unsigned long long int systemPeriod;
+   unsigned long long int systemAllPeriod;
+   unsigned long long int idleAllPeriod;
+   unsigned long long int idlePeriod;
+   unsigned long long int nicePeriod;
+   unsigned long long int ioWaitPeriod;
+   unsigned long long int irqPeriod;
+   unsigned long long int softIrqPeriod;
+   unsigned long long int stealPeriod;
+   unsigned long long int guestPeriod;
    float percent;
    int mhz;
    int temp;
@@ -61,7 +61,7 @@ public:
       return m_cpuDataTotal;
    }
 private:
-   uint64_t m_boottime = 0;
+   unsigned long long int m_boottime = 0;
    std::vector<CPUData> m_cpuData;
    CPUData m_cpuDataTotal {};
    std::vector<int> m_coreMhz;

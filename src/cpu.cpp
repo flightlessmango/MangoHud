@@ -28,26 +28,26 @@
 #include "file_utils.h"
 
 void calculateCPUData(CPUData& cpuData,
-    uint64_t usertime,
-    uint64_t nicetime,
-    uint64_t systemtime,
-    uint64_t idletime,
-    uint64_t ioWait,
-    uint64_t irq,
-    uint64_t softIrq,
-    uint64_t steal,
-    uint64_t guest,
-    uint64_t guestnice)
+    unsigned long long int usertime,
+    unsigned long long int nicetime,
+    unsigned long long int systemtime,
+    unsigned long long int idletime,
+    unsigned long long int ioWait,
+    unsigned long long int irq,
+    unsigned long long int softIrq,
+    unsigned long long int steal,
+    unsigned long long int guest,
+    unsigned long long int guestnice)
 {
     // Guest time is already accounted in usertime
     usertime = usertime - guest;
     nicetime = nicetime - guestnice;
     // Fields existing on kernels >= 2.6
     // (and RHEL's patched kernel 2.4...)
-    uint64_t idlealltime = idletime + ioWait;
-    uint64_t systemalltime = systemtime + irq + softIrq;
-    uint64_t virtalltime = guest + guestnice;
-    uint64_t totaltime = usertime + nicetime + systemalltime + idlealltime + steal + virtalltime;
+    unsigned long long int idlealltime = idletime + ioWait;
+    unsigned long long int systemalltime = systemtime + irq + softIrq;
+    unsigned long long int virtalltime = guest + guestnice;
+    unsigned long long int totaltime = usertime + nicetime + systemalltime + idlealltime + steal + virtalltime;
 
     // Since we do a subtraction (usertime - guest) and cputime64_to_clock_t()
     // used in /proc/stat rounds down numbers, it can lead to a case where the
@@ -154,8 +154,8 @@ bool CPUStats::Init()
 //TODO take sampling interval into account?
 bool CPUStats::UpdateCPUData()
 {
-    uint64_t usertime, nicetime, systemtime, idletime;
-    uint64_t ioWait, irq, softIrq, steal, guest, guestnice;
+    unsigned long long int usertime, nicetime, systemtime, idletime;
+    unsigned long long int ioWait, irq, softIrq, steal, guest, guestnice;
     int cpuid = -1;
 
     if (!m_inited)
