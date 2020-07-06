@@ -1,4 +1,7 @@
 #pragma once
+#ifndef MANGOHUD_KEYBINDS_H
+#define MANGOHUD_KEYBINDS_H
+
 #include "shared_x11.h"
 #include "loaders/loader_x11.h"
 
@@ -34,4 +37,6 @@ bool keys_are_pressed(const std::vector<KeySym>& keys) {
 
     return false;
 }
-#endif
+#endif //HAVE_X11
+
+#endif //MANGOHUD_KEYBINDS_H

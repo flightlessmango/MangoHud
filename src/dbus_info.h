@@ -1,4 +1,7 @@
 #pragma once
+#ifndef MANGOHUD_DBUS_INFO_H
+#define MANGOHUD_DBUS_INFO_H
+
 #include <array>
 #include <stdexcept>
 #include <thread>
@@ -135,3 +138,5 @@ namespace dbusmgr {
 }
 
 bool get_media_player_metadata(dbusmgr::dbus_manager& dbus, const std::string& name, metadata& meta);
+
+#endif //MANGOHUD_DBUS_INFO_H

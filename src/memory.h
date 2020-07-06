@@ -1,3 +1,7 @@
+#pragma once
+#ifndef MANGOHUD_MEMORY_H
+#define MANGOHUD_MEMORY_H
+
 #include <stdio.h>
 #include <thread>
 
@@ -13,3 +17,5 @@ struct memory_information {
 
 void update_meminfo(void);
 FILE *open_file(const char *file, int *reported);
+
+#endif //MANGOHUD_MEMORY_H

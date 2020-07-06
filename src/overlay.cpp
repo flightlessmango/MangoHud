@@ -79,21 +79,8 @@ struct benchmark_stats benchmark;
 struct instance_data {
    struct vk_instance_dispatch_table vtable;
    VkInstance instance;
-
    struct overlay_params params;
-
    uint32_t api_version;
-
-   bool first_line_printed;
-
-   int control_client;
-
-   /* Dumping of frame stats to a file has been enabled. */
-   bool capture_enabled;
-
-   /* Dumping of frame stats to a file has been enabled and started. */
-   bool capture_started;
-
    string engineName, engineVersion;
    notify_thread notifier;
 };
@@ -192,23 +179,7 @@ struct swapchain_data {
    ImGuiContext* imgui_context;
    ImVec2 window_size;
 
-   /**/
-   uint64_t last_present_time;
-
-   unsigned n_frames_since_update;
-   uint64_t last_fps_update;
-   double frametime;
-   double frametimeDisplay;
-   const char* cpuString;
-   const char* gpuString;
-
    struct swapchain_stats sw_stats;
-
-   /* Over a single frame */
-   struct frame_stat frame_stats;
-
-   /* Over fps_sampling_period */
-   struct frame_stat accumulated_stats;
 };
 
 // single global lock, for simplicity
@@ -358,7 +329,6 @@ static struct instance_data *new_instance_data(VkInstance instance)
 {
    struct instance_data *data = new instance_data();
    data->instance = instance;
-   data->control_client = -1;
    data->params = {};
    data->params.control = -1;
    map_object(HKEY(data->instance), data);
