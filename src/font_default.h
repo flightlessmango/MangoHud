@@ -1,5 +1,6 @@
-#ifndef FONT_DEFAULT_H
-#define FONT_DEFAULT_H
+#pragma once
+#ifndef MANGOHUD_FONT_DEFAULT_H
+#define MANGOHUD_FONT_DEFAULT_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -11,4 +12,4 @@ const char* GetDefaultCompressedFontDataTTFBase85(void);
 }
 #endif
 
-#endif
+#endif // MANGOHUD_FONT_DEFAULT_H

@@ -1,3 +1,7 @@
+#pragma once
+#ifndef MANGOHUD_GPU_H
+#define MANGOHUD_GPU_H
+
 #include <thread>
 #include <inttypes.h>
 #include <stdlib.h>
@@ -34,3 +38,5 @@ extern struct gpuInfo gpu_info;
 
 void getNvidiaGpuInfo(void);
 void getAmdGpuInfo(void);
+
+#endif //MANGOHUD_GPU_H

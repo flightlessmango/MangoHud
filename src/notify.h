@@ -1,3 +1,7 @@
+#pragma once
+#ifndef MANGOHUD_NOTIFY_H
+#define MANGOHUD_NOTIFY_H
+
 #include <thread>
 #include <mutex>
 #include "overlay_params.h"
@@ -13,3 +17,5 @@ struct notify_thread
 
 bool start_notifier(notify_thread& nt);
 void stop_notifier(notify_thread& nt);
+
+#endif //MANGOHUD_NOTIFY_H

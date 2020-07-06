@@ -1,3 +1,7 @@
+#pragma once
+#ifndef MANGOHUD_LOGGING_H
+#define MANGOHUD_LOGGING_H
+
 #include <iostream>
 #include <vector>
 #include <fstream>
@@ -67,3 +71,5 @@ extern double fps;
 extern logData currentLogData;
 
 string exec(string command);
+
+#endif //MANGOHUD_LOGGING_H

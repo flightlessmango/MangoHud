@@ -22,6 +22,8 @@
 //  Only override if your GL version doesn't handle this GLSL version. See GLSL version table at the top of imgui_impl_opengl3.cpp.
 
 #pragma once
+#ifndef MANGOHUD_IMGUI_IMPL_OPENGL3_H
+#define MANGOHUD_IMGUI_IMPL_OPENGL3_H
 
 namespace MangoHud {
 
@@ -40,3 +42,5 @@ IMGUI_IMPL_API void     ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data);
 //IMGUI_IMPL_API void     ImGui_ImplOpenGL3_DestroyDeviceObjects();
 
 }
+
+#endif //MANGOHUD_IMGUI_IMPL_OPENGL3_H
