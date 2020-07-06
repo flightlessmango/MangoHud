@@ -1,10 +1,10 @@
 {
     "file_format_version" : "1.0.0",
     "layer" : {
-      "name": "@PROJECT_NAME@@LAYER_SUFFIX@",
+      "name": "VK_LAYER_@PROJECT_NAME@_overlay",
       "type": "GLOBAL",
       "api_version": "1.2.135",
-      "library_path": "@libdir_mangohud@libMangoHud.so",
+      "library_path": "@ld_libdir_mangohud@libMangoHud.so",
       "implementation_version": "1",
       "description": "Vulkan Hud Overlay",
       "functions": {
@@ -19,4 +19,3 @@
       }
     }
 }
-  
