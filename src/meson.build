@@ -9,6 +9,12 @@ else
   ld_libdir_mangohud = get_option('prefix') + '/\$LIB/'
 endif
 
+# For build.sh
+if get_option('ld_libdir_prefix')
+  # FIXME derive from libdir
+  ld_libdir_mangohud = get_option('prefix') + '/lib/mangohud/\$LIB/'
+endif
+
 overlay_shaders = [
   'overlay.frag',
   'overlay.vert',
@@ -167,7 +173,7 @@ mangohud_dlsym = shared_library(
 configure_file(input : 'mangohud.json.in',
   output : '@0@.json'.format(meson.project_name()),
   configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud,
-                  'PROJECT_NAME' : meson.project_name()},
+                  'PROJECT_NAME' : meson.project_name().to_upper()},
   install : true,
   install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
 )

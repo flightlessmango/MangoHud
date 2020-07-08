@@ -25,7 +25,7 @@ for os_release in ${OS_RELEASE_FILES[@]} ; do
 done
 
 dependencies() {
-    if [[ ! -f build/release/usr/lib64/libMangoHud.so ]]; then
+    if [[ ! -f build/release/usr/lib/libMangoHud.so ]]; then
         missing_deps() {
             echo "# Missing dependencies:$INSTALL"
             read -rp "Do you wish the script to install these packages? [y/N]" PERMISSION
@@ -142,14 +142,14 @@ configure() {
     dependencies
     git submodule update --init --depth 50
     if [[ ! -f "build/meson64/build.ninja" ]]; then
-        meson build/meson64 --libdir lib/mangohud/lib64 --prefix /usr -Dappend_libdir_mangohud=false $@ ${CONFIGURE_OPTS}
+        meson build/meson64 --libdir lib/mangohud/lib --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_prefix=true $@ ${CONFIGURE_OPTS}
     fi
     if [[ ! -f "build/meson32/build.ninja" ]]; then
         export CC="gcc -m32"
         export CXX="g++ -m32"
         export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH_32}"
         export LLVM_CONFIG="/usr/bin/llvm-config32"
-        meson build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false $@ ${CONFIGURE_OPTS}
+        meson build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_prefix=true $@ ${CONFIGURE_OPTS}
     fi
 }
 
@@ -162,7 +162,7 @@ build() {
 }
 
 package() {
-    LIB="build/release/usr/lib/mangohud/lib64/libMangoHud.so"
+    LIB="build/release/usr/lib/mangohud/lib/libMangoHud.so"
     LIB32="build/release/usr/lib/mangohud/lib32/libMangoHud.so"
     if [[ ! -f "$LIB" || "$LIB" -ot "build/meson64/src/libMangoHud.so" ]]; then
         build
@@ -181,6 +181,19 @@ release() {
         -C build -czvf build/MangoHud-$VERSION.tar.gz MangoHud
 }
 
+uninstall() {
+    [ "$UID" -eq 0 ] || exec $SU_CMD bash "$0" uninstall
+    rm -rfv "/usr/lib/mangohud"
+    rm -rfv "/usr/share/doc/mangohud"
+    rm -fv "/usr/share/man/man1/mangohud.1"
+    rm -fv "/usr/share/vulkan/implicit_layer.d/mangohud.json"
+    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.json"
+    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json"
+    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json"
+    rm -fv "/usr/bin/mangohud"
+    rm -fv "/usr/bin/mangohud.x86"
+}
+
 install() {
     rm -rf "$HOME/.local/share/MangoHud/"
     rm -f "$HOME/.local/share/vulkan/implicit_layer.d/"{mangohud32.json,mangohud64.json}
@@ -188,16 +201,19 @@ install() {
     [ "$UID" -eq 0 ] || mkdir -pv "${CONFIG_DIR}"
     [ "$UID" -eq 0 ] || exec $SU_CMD bash "$0" install
 
-    /usr/bin/install -vm644 -D ./build/release/usr/lib/mangohud/lib32/libMangoHud.so /usr/lib/mangohud/lib32/libMangoHud.so
-    /usr/bin/install -vm644 -D ./build/release/usr/lib/mangohud/lib64/libMangoHud.so /usr/lib/mangohud/lib64/libMangoHud.so
-    /usr/bin/install -vm644 -D ./build/release/usr/lib/mangohud/lib32/libMangoHud_dlsym.so /usr/lib/mangohud/lib32/libMangoHud_dlsym.so
-    /usr/bin/install -vm644 -D ./build/release/usr/lib/mangohud/lib64/libMangoHud_dlsym.so /usr/lib/mangohud/lib64/libMangoHud_dlsym.so
-    /usr/bin/install -vm644 -D ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86.json
-    /usr/bin/install -vm644 -D ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json
-    /usr/bin/install -vm644 -D ./build/release/usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
+    uninstall
+    $SU_CMD ninja -C build/meson32 install
+    $SU_CMD ninja -C build/meson64 install
 
-    /usr/bin/install -vm755 ./build/release/usr/bin/mangohud.x86 /usr/bin/mangohud.x86
-    /usr/bin/install -vm755 ./build/release/usr/bin/mangohud /usr/bin/mangohud
+    # FIXME get the triplet somehow
+    ln -sv lib /usr/lib/mangohud/lib64
+    ln -sv lib /usr/lib/mangohud/x86_64
+    ln -sv lib /usr/lib/mangohud/x86_64-linux-gnu
+    ln -sv lib32 /usr/lib/mangohud/i686
+    #ln -sv lib32 /usr/lib/mangohud/i386-linux-gnu
+    ln -sv lib32 /usr/lib/mangohud/i686-linux-gnu
+    #ln -sv lib /usr/lib/mangohud/aarch64-linux-gnu
+    #ln -sv lib /usr/lib/mangohud/arm-linux-gnueabihf
 
     echo "MangoHud Installed"
 }
@@ -210,18 +226,6 @@ reinstall() {
 
 clean() {
     rm -rf "build"
-}
-
-uninstall() {
-    [ "$UID" -eq 0 ] || exec $SU_CMD bash "$0" uninstall
-    rm -rfv "/usr/lib/mangohud"
-    rm -rfv "/usr/share/doc/mangohud"
-    rm -fv "/usr/share/vulkan/implicit_layer.d/mangohud.json"
-    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.json"
-    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json"
-    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json"
-    rm -fv "/usr/bin/mangohud"
-    rm -fv "/usr/bin/mangohud.x86"
 }
 
 usage() {
