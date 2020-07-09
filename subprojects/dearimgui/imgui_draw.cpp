@@ -1655,7 +1655,7 @@ ImFontConfig::ImFontConfig()
     FontDataOwnedByAtlas = true;
     FontNo = 0;
     SizePixels = 0.0f;
-    OversampleH = 3; // FIXME: 2 may be a better default?
+    OversampleH = 2; // FIXME: 2 may be a better default?
     OversampleV = 1;
     PixelSnapH = false;
     GlyphExtraSpacing = ImVec2(0.0f, 0.0f);
@@ -2055,6 +2055,7 @@ struct ImFontBuildSrcData
     int                 GlyphsCount;        // Glyph count (excluding missing glyphs and glyphs already set by an earlier source font)
     ImBitVector         GlyphsSet;          // Glyph bit map (random access, 1-bit per codepoint. This will be a maximum of 8KB)
     ImVector<int>       GlyphsList;         // Glyph codepoints list (flattened version of GlyphsMap)
+    ImVector<unsigned char *> GlyphsData;
 };
 
 // Temporary data for one destination ImFont* (multiple source fonts can be merged into one destination ImFont)
@@ -2162,6 +2163,7 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
     {
         ImFontBuildSrcData& src_tmp = src_tmp_array[src_i];
         src_tmp.GlyphsList.reserve(src_tmp.GlyphsCount);
+        src_tmp.GlyphsData.resize(src_tmp.GlyphsCount);
         UnpackBitVectorToFlatIndexList(&src_tmp.GlyphsSet, &src_tmp.GlyphsList);
         src_tmp.GlyphsSet.Clear();
         IM_ASSERT(src_tmp.GlyphsList.Size == src_tmp.GlyphsCount);
@@ -2207,14 +2209,18 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         // Gather the sizes of all rectangles we will need to pack (this loop is based on stbtt_PackFontRangesGatherRects)
         const float scale = (cfg.SizePixels > 0) ? stbtt_ScaleForPixelHeight(&src_tmp.FontInfo, cfg.SizePixels) : stbtt_ScaleForMappingEmToPixels(&src_tmp.FontInfo, -cfg.SizePixels);
         const int padding = atlas->TexGlyphPadding;
+        const int h_oversample = cfg.OversampleH;
+        const int v_oversample = (atlas->Flags & ImFontAtlasFlags_UseSDF) ? cfg.OversampleH : cfg.OversampleV;
         for (int glyph_i = 0; glyph_i < src_tmp.GlyphsList.Size; glyph_i++)
         {
-            int x0, y0, x1, y1;
+            int x0=0, y0=0, x1=0, y1=0;
             const int glyph_index_in_font = stbtt_FindGlyphIndex(&src_tmp.FontInfo, src_tmp.GlyphsList[glyph_i]);
             IM_ASSERT(glyph_index_in_font != 0);
-            stbtt_GetGlyphBitmapBoxSubpixel(&src_tmp.FontInfo, glyph_index_in_font, scale * cfg.OversampleH, scale * cfg.OversampleV, 0, 0, &x0, &y0, &x1, &y1);
-            src_tmp.Rects[glyph_i].w = (stbrp_coord)(x1 - x0 + padding + cfg.OversampleH - 1);
-            src_tmp.Rects[glyph_i].h = (stbrp_coord)(y1 - y0 + padding + cfg.OversampleV - 1);
+
+            stbtt_GetGlyphBitmapBoxSubpixel(&src_tmp.FontInfo, glyph_index_in_font, scale * h_oversample, scale * v_oversample, 0.0f,0.0f, &x0, &y0, &x1, &y1);
+            src_tmp.Rects[glyph_i].w = (stbrp_coord)(x1 - x0 + padding + h_oversample - 1);
+            src_tmp.Rects[glyph_i].h = (stbrp_coord)(y1 - y0 + padding + v_oversample - 1);
+
             total_surface += src_tmp.Rects[glyph_i].w * src_tmp.Rects[glyph_i].h;
         }
     }
@@ -2267,8 +2273,59 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         ImFontBuildSrcData& src_tmp = src_tmp_array[src_i];
         if (src_tmp.GlyphsCount == 0)
             continue;
+        const float scale = (cfg.SizePixels > 0) ? stbtt_ScaleForPixelHeight(&src_tmp.FontInfo, cfg.SizePixels) : stbtt_ScaleForMappingEmToPixels(&src_tmp.FontInfo, -cfg.SizePixels);
 
-        stbtt_PackFontRangesRenderIntoRects(&spc, &src_tmp.FontInfo, &src_tmp.PackRange, 1, src_tmp.Rects);
+        if (atlas->Flags & ImFontAtlasFlags_UseSDF)
+        {
+            for (int glyph_i=0; glyph_i < src_tmp.PackRange.num_chars; ++glyph_i)
+            {
+                stbrp_coord pad = (stbrp_coord) spc.padding;
+                stbtt_packedchar &bc = src_tmp.PackRange.chardata_for_range[glyph_i];
+                int advance, lsb, gw = 0, gh = 0, xoff, yoff, x0, y0, x1, y1;
+                int codepoint = src_tmp.PackRange.array_of_unicode_codepoints == NULL ? src_tmp.PackRange.first_unicode_codepoint_in_range + glyph_i : src_tmp.PackRange.array_of_unicode_codepoints[glyph_i];
+                int glyph = stbtt_FindGlyphIndex(&src_tmp.FontInfo, codepoint);
+                auto& r = src_tmp.Rects[glyph_i];
+
+                stbtt_GetGlyphHMetrics(&src_tmp.FontInfo, glyph, &advance, &lsb);
+                // XXX only h_oversample is used as stbtt_GetGlyphSDF takes single scaler
+                stbtt_GetGlyphBitmapBoxSubpixel(&src_tmp.FontInfo, glyph, scale * src_tmp.PackRange.h_oversample, scale * src_tmp.PackRange.h_oversample, 0, 0, &x0, &y0, &x1, &y1);
+                auto data = stbtt_GetGlyphSDF(&src_tmp.FontInfo, scale * src_tmp.PackRange.h_oversample, glyph, 1, 128, 64.0, &gw, &gh, &xoff, &yoff);
+
+                float recip_h = 1.0f / src_tmp.PackRange.h_oversample;
+                float recip_v = 1.0f / src_tmp.PackRange.h_oversample;
+
+                // pad on left and top
+                r.x += pad;
+                r.y += pad;
+                r.w -= pad;
+                r.h -= pad;
+                bc.x0       = (stbtt_int16)  r.x;
+                bc.y0       = (stbtt_int16)  r.y;
+                bc.x1       = (stbtt_int16) (r.x + gw);
+                bc.y1       = (stbtt_int16) (r.y + gh);
+                bc.xadvance =                scale * advance;
+                bc.xoff     =       (float)  (x0) * recip_h;
+                bc.yoff     =       (float)  (y0) * recip_v;
+                bc.xoff2    =                (x0 + r.w) * recip_h;
+                bc.yoff2    =                (y0 + r.h) * recip_v;
+
+                if (!r.was_packed)
+                    fprintf(stderr, "not packed\n");
+//                 if (!data || !r.was_packed)
+//                     continue;
+
+                for (int y=0; y < gh; y++)
+                    memcpy(&spc.pixels[y * spc.stride_in_bytes + r.x + r.y * spc.stride_in_bytes], &data[y * gw], gw);
+
+                stbtt_FreeSDF(data, NULL);
+
+                //fprintf(stderr, "%04x %04x %dx%d/%dx%d - glyph: %dx%d off: %f/%f\n", codepoint, glyph, r.x, r.y, r.w, r.h, gw, gh, bc.xoff2, bc.yoff2);
+            }
+        }
+        else
+        {
+            stbtt_PackFontRangesRenderIntoRects(&spc, &src_tmp.FontInfo, &src_tmp.PackRange, 1, src_tmp.Rects);
+        }
 
         // Apply multiply operator
         if (cfg.RasterizerMultiply != 1.0f)

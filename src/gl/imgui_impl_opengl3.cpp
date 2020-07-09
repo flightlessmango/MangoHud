@@ -88,7 +88,7 @@ static GLuint       g_GlVersion = 0;                // Extracted at runtime usin
 static char         g_GlslVersionString[32] = "";   // Specified by user or detected based on compile time GL settings.
 static GLuint       g_FontTexture = 0;
 static GLuint       g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
-static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;                                // Uniforms location
+static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0, g_AttribLocationRenderMode = 0;                                // Uniforms location
 static int          g_AttribLocationVtxPos = 0, g_AttribLocationVtxUV = 0, g_AttribLocationVtxColor = 0; // Vertex attributes location
 static unsigned int g_VboHandle = 0, g_ElementsHandle = 0;
 static bool         g_IsGLES = false;
@@ -252,41 +252,43 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "uniform sampler2D Texture;\n"
         "varying vec2 Frag_UV;\n"
         "varying vec4 Frag_Color;\n"
-        "void main()\n"
-        "{\n"
-        "    gl_FragColor = Frag_Color * vec4(1, 1, 1, texture2D(Texture, Frag_UV.st).r);\n"
-        "}\n";
+        "#define texture texture2D\n"
+        "#define Out_Color gl_FragColor\n";
+//         "void main()\n"
+//         "{\n"
+//         "    gl_FragColor = Frag_Color * vec4(1, 1, 1, texture2D(Texture, Frag_UV.st).r);\n"
+//         "}\n";
 
     const GLchar* fragment_shader_glsl_130 =
         "uniform sampler2D Texture;\n"
         "in vec2 Frag_UV;\n"
         "in vec4 Frag_Color;\n"
-        "out vec4 Out_Color;\n"
-        "void main()\n"
-        "{\n"
-        "    Out_Color = Frag_Color * vec4(1, 1, 1, texture(Texture, Frag_UV.st).r);\n"
-        "}\n";
+        "out vec4 Out_Color;\n";
+//         "void main()\n"
+//         "{\n"
+//         "    Out_Color = Frag_Color * vec4(1, 1, 1, texture(Texture, Frag_UV.st).r);\n"
+//         "}\n";
 
     const GLchar* fragment_shader_glsl_300_es =
         "precision mediump float;\n"
         "uniform sampler2D Texture;\n"
         "in vec2 Frag_UV;\n"
         "in vec4 Frag_Color;\n"
-        "layout (location = 0) out vec4 Out_Color;\n"
-        "void main()\n"
-        "{\n"
-        "    Out_Color = Frag_Color * vec4(1, 1, 1, texture(Texture, Frag_UV.st).r);\n"
-        "}\n";
+        "layout (location = 0) out vec4 Out_Color;\n";
+//         "void main()\n"
+//         "{\n"
+//         "    Out_Color = Frag_Color * vec4(1, 1, 1, texture(Texture, Frag_UV.st).r);\n"
+//         "}\n";
 
     const GLchar* fragment_shader_glsl_410_core =
         "in vec2 Frag_UV;\n"
         "in vec4 Frag_Color;\n"
         "uniform sampler2D Texture;\n"
-        "layout (location = 0) out vec4 Out_Color;\n"
-        "void main()\n"
-        "{\n"
-        "    Out_Color = Frag_Color * vec4(1, 1, 1, texture(Texture, Frag_UV.st).r);\n"
-        "}\n";
+        "layout (location = 0) out vec4 Out_Color;\n";
+//         "void main()\n"
+//         "{\n"
+//         "    Out_Color = Frag_Color * vec4(1, 1, 1, texture(Texture, Frag_UV.st).r);\n"
+//         "}\n";
 
 #ifndef NDEBUG
     printf("glsl_version: %d\n", glsl_version);
@@ -329,6 +331,26 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
 
     ss.str(""); ss.clear();
     ss << g_GlslVersionString << fragment_shader;
+    ss <<
+        "uniform int render_mode;\n"
+        "const float smoothing = 3.0/16.0;\n"
+        "const float outlineWidth = 3.0/16.0;\n"
+        "const float outerEdgeCenter = 0.5 - outlineWidth;\n"
+        "const vec4 u_outlineColor = vec4(0, 0, 0, 1);\n"
+        "void main()\n"
+        "{\n"
+        "    float v = texture(Texture, Frag_UV.st).r;\n"
+        "    if (render_mode == 1) {\n"
+        "      float alpha = smoothstep(outerEdgeCenter - smoothing, outerEdgeCenter + smoothing, v);\n"
+        "      float border = smoothstep(0.5 - smoothing, 0.5 + smoothing, v);\n"
+        "      vec4 color = mix(u_outlineColor, Frag_Color, border);\n"
+
+        "     Out_Color = vec4(color.rgb, color.a * alpha);\n"
+        "   } else {\n"
+        "     Out_Color = Frag_Color * vec4(1, 1, 1, v);\n"
+        "   }\n"
+        "}\n";
+
     shader = ss.str();
 
     const GLchar* fragment_shader_with_version[1] = { shader.c_str() };
@@ -348,6 +370,7 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     g_AttribLocationVtxPos = glGetAttribLocation(g_ShaderHandle, "Position");
     g_AttribLocationVtxUV = glGetAttribLocation(g_ShaderHandle, "UV");
     g_AttribLocationVtxColor = glGetAttribLocation(g_ShaderHandle, "Color");
+    g_AttribLocationRenderMode = glGetUniformLocation(g_ShaderHandle, "render_mode");
 
     // Create buffers
     glGenBuffers(1, &g_VboHandle);
@@ -520,6 +543,7 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
     };
     glUseProgram(g_ShaderHandle);
     glUniform1i(g_AttribLocationTex, 0);
+    glUniform1i(g_AttribLocationRenderMode, 0);
     glUniformMatrix4fv(g_AttribLocationProjMtx, 1, GL_FALSE, &ortho_projection[0][0]);
 
     if (g_GlVersion >= 330)
@@ -636,6 +660,10 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
             }
             else
             {
+                if (pcmd->UserCallbackData) {
+                    int render_mode = *(int*)pcmd->UserCallbackData;
+                    glUniform1i(g_AttribLocationRenderMode, render_mode);
+                }
                 // Project scissor/clipping rectangles into framebuffer space
                 ImVec4 clip_rect;
                 clip_rect.x = (pcmd->ClipRect.x - clip_off.x) * clip_scale.x;

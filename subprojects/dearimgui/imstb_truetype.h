@@ -277,6 +277,8 @@
 //
 //  Incomplete text-in-3d-api example, which draws quads properly aligned to be lossless
 //
+#pragma once
+
 #if 0
 #define STB_TRUETYPE_IMPLEMENTATION  // force following include to generate implementation
 #include "stb_truetype.h"
