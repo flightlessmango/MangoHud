@@ -29,7 +29,7 @@ struct gpuInfo{
 };
 
 extern struct gpuInfo gpu_info;
-
+extern bool init_adl;
 // Nvidia linux
 void getNvidiaGpuInfo(void);
 void getAmdGpuInfo(void);
@@ -37,3 +37,4 @@ void getAmdGpuInfo(void);
 // Amd windows
 int query_adl(void);
 uint32_t adl_vendorid(void);
+int initializeADL(void);

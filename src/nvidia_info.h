@@ -6,6 +6,7 @@ extern nvmlDevice_t nvidiaDevice;
 extern struct nvmlUtilization_st nvidiaUtilization;
 extern struct nvmlMemory_st nvidiaMemory;
 extern bool nvmlSuccess;
+extern bool init_nvapi_bool;
 
 bool checkNVML(const char* pciBusId);
 bool checkNVAPI(void);

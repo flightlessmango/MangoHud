@@ -192,6 +192,7 @@ int initializeADL()
         // Get the AdapterInfo structure for all adapters in the system
         ADL_Adapter_AdapterInfo_Get(lpAdapterInfo, sizeof(AdapterInfo)* iNumberAdapters);
     }
+    printf("num adapters: %i", iNumberAdapters);
     return TRUE;
 }
 

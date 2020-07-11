@@ -808,6 +808,13 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
    // NVIDIA or Intel but maybe has Optimus
 #ifdef _WIN32
    bool nvSuccess = (checkNVML(nullptr) && getNVMLInfo());
+   init_adl = initializeADL();
+   init_nvapi_bool = checkNVAPI();
+   if(init_adl)
+      vendorID == 0x1002;
+   if(init_nvapi_bool)
+      vendorID == 0x10de;
+   printf("amd : %i", init_adl);
 #endif
 
 #ifdef __gnu_linux__
