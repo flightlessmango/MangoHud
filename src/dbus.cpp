@@ -38,6 +38,9 @@ static void assign_metadata_value(metadata& meta, const std::string& key,
     } else if (key == "mpris:artUrl") {
         meta.artUrl = value;
         meta.got_song_data = true;
+    } else if (key == "xesam:url") {
+        // HACK if there's no metadata then use this to clear old ones
+        meta.got_song_data = true;
     }
 }
 
