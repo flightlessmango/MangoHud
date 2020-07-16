@@ -522,7 +522,7 @@ parse_overlay_config(struct overlay_params *params,
 
    // set frametime limit
    using namespace std::chrono;
-   if (params->fps_limit >= 0)
+   if (params->fps_limit > 0)
       fps_limit_stats.targetFrameTime = duration_cast<Clock::duration>(duration<double>(1) / params->fps_limit);
    else
       fps_limit_stats.targetFrameTime = {};
