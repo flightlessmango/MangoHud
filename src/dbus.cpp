@@ -221,9 +221,7 @@ bool dbus_manager::select_active_player() {
     }
 
     if (not m_active_player.empty()) {
-        if (m_active_player != old_active_player) {
-            onNewPlayer(meta);
-        }
+        onNewPlayer(meta);
         return true;
     } else {
 #ifndef NDEBUG
