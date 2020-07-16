@@ -70,7 +70,7 @@ bool open = false;
 string gpuString;
 float offset_x, offset_y, hudSpacing;
 int hudFirstRow, hudSecondRow;
-struct fps_limit fps_limit_stats;
+struct fps_limit fps_limit_stats {};
 VkPhysicalDeviceDriverProperties driverProps = {};
 int32_t deviceID;
 struct benchmark_stats benchmark;
