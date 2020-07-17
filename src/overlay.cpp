@@ -226,6 +226,26 @@ static void unmap_object(uint64_t obj)
 #define CHAR_CELSIUS    "\xe2\x84\x83"
 #define CHAR_FAHRENHEIT "\xe2\x84\x89"
 
+void imgui_init_input()
+{
+   auto& io = ImGui::GetIO();
+   io.KeyMap[ImGuiKey_LeftArrow] = ImGuiKey_LeftArrow;
+   io.KeyMap[ImGuiKey_RightArrow] = ImGuiKey_RightArrow;
+   io.KeyMap[ImGuiKey_UpArrow] = ImGuiKey_UpArrow;
+   io.KeyMap[ImGuiKey_DownArrow] = ImGuiKey_DownArrow;
+   io.KeyMap[ImGuiKey_PageUp] = ImGuiKey_PageUp;
+   io.KeyMap[ImGuiKey_PageDown] = ImGuiKey_PageDown;
+   io.KeyMap[ImGuiKey_Home] = ImGuiKey_Home;
+   io.KeyMap[ImGuiKey_End] = ImGuiKey_End;
+   io.KeyMap[ImGuiKey_Insert] = ImGuiKey_Insert;
+   io.KeyMap[ImGuiKey_Delete] = ImGuiKey_Delete;
+   io.KeyMap[ImGuiKey_Backspace] = ImGuiKey_Backspace;
+   io.KeyMap[ImGuiKey_Space] = ImGuiKey_Space;
+   io.KeyMap[ImGuiKey_Enter] = ImGuiKey_Enter;
+   io.KeyMap[ImGuiKey_Escape] = ImGuiKey_Escape;
+   io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+}
+
 void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& text_font)
 {
    auto& io = ImGui::GetIO();
@@ -1509,6 +1529,35 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       ImGui::End();
       if((now - logger->last_log_end()) < 12s)
          render_benchmark(data, params, window_size, height, now);
+
+      if (true)
+      {
+         ImGui::GetIO().KeysDown[ImGuiKey_LeftArrow] = keys_are_pressed({0xff51});
+         ImGui::GetIO().KeysDown[ImGuiKey_UpArrow]   = keys_are_pressed({0xff52});
+         ImGui::GetIO().KeysDown[ImGuiKey_RightArrow] = keys_are_pressed({0xff53});
+         ImGui::GetIO().KeysDown[ImGuiKey_DownArrow] = keys_are_pressed({0xff54});
+         ImGui::GetIO().KeysDown[ImGuiKey_Space] = keys_are_pressed({0x0020});
+
+         ImGui::SetNextWindowPos({data.main_window_pos.x, data.main_window_pos.y + window_size.y + 5});
+         ImGui::SetNextWindowBgAlpha(params.background_alpha);
+         ImGui::Begin("Options", nullptr, ImGuiWindowFlags_NoDecoration| ImGuiWindowFlags_AlwaysAutoResize);
+         ImGui::GetWindowDrawList()->AddCallback(nullptr, &render_mode[0]);
+         ImGui::InputFloat("Smoothing", &render_mode[1].smoothing, 0.01f, 0.1f, "%.3f");
+         ImGui::InputFloat("Outline", &render_mode[1].outline, 0.01f, 0.1f, "%.3f");
+         ImGui::InputFloat("Scale", &params.font_scale, 0.01f, 0.1f, "%.3f");
+
+//          static int selected = -1;
+//          ImGui::Text("Select fps limit:");
+//          for (int n = 0; n < 5; n++)
+//          {
+//                char buf[32];
+//                sprintf(buf, "Object %d", n);
+//                if (ImGui::Selectable(buf, selected == n))
+//                   selected = n;
+//          }
+
+         ImGui::End();
+      }
    }
 
 #if 0
@@ -2320,6 +2369,7 @@ static void setup_swapchain_data(struct swapchain_data *data,
    ImGui::GetIO().IniFilename = NULL;
    ImGui::GetIO().DisplaySize = ImVec2((float)data->width, (float)data->height);
    imgui_custom_style(params);
+   imgui_init_input();
 
    struct device_data *device_data = data->device;
 

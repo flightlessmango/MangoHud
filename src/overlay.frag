@@ -50,10 +50,10 @@ void main()
 
         fColor = vec4(color.rgb, color.a * alpha);
 
-        float shadowDistance = texture(sTexture, In.UV.st - shadowOffset).r;
-        float shadowAlpha = smoothstep(0.5 - shadowSmoothing, 0.5 + shadowSmoothing, shadowDistance);
-        vec4 shadow = vec4(shadowColor.rgb, shadowColor.a * shadowAlpha);
-        fColor = mix(shadow, fColor, fColor.a);
+//         float shadowDistance = texture(sTexture, In.UV.st - shadowOffset).r;
+//         float shadowAlpha = smoothstep(0.5 - shadowSmoothing, 0.5 + shadowSmoothing, shadowDistance);
+//         vec4 shadow = vec4(shadowColor.rgb, shadowColor.a * shadowAlpha);
+//         fColor = mix(shadow, fColor, fColor.a);
 
     //fColor = vec4( mix(u_outlineColor, In.Color.rgb, border), alpha  * In.Color.a);
     } else {
