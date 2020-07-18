@@ -321,6 +321,7 @@ parse_font_glyph_ranges(const char *str)
 #define parse_background_color(s) parse_color(s)
 #define parse_text_color(s) parse_color(s)
 #define parse_media_player_color(s) parse_color(s)
+#define parse_wine_color(s) parse_color(s)
 
 static bool
 parse_help(const char *str)
@@ -452,6 +453,7 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_io_read] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_io_write] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_wine] = false;
    params->fps_sampling_period = 500000; /* 500ms */
    params->width = 0;
    params->height = 140;
@@ -476,6 +478,7 @@ parse_overlay_config(struct overlay_params *params,
    params->media_player_color = 0xffffff;
    params->media_player_name = "";
    params->font_scale = 1.0f;
+   params->wine_color = 0xeb5b5b;
    params->font_scale_media_player = 0.55f;
    params->log_interval = 100;
    params->media_player_order = { MP_ORDER_TITLE, MP_ORDER_ARTIST, MP_ORDER_ALBUM };
@@ -538,7 +541,7 @@ parse_overlay_config(struct overlay_params *params,
       params->font_scale_media_player = 0.55f;
 
    // Convert from 0xRRGGBB to ImGui's format
-   std::array<unsigned *, 10> colors = {
+   std::array<unsigned *, 11> colors = {
       &params->cpu_color,
       &params->gpu_color,
       &params->vram_color,
@@ -549,6 +552,7 @@ parse_overlay_config(struct overlay_params *params,
       &params->frametime_color,
       &params->text_color,
       &params->media_player_color,
+      &params->wine_color,
    };
 
    for (auto color : colors){

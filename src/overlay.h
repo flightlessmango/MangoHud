@@ -56,7 +56,8 @@ struct swapchain_stats {
          frametime,
          background,
          text,
-         media_player;
+         media_player,
+         wine;
    } colors;
 };
 

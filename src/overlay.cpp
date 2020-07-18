@@ -31,6 +31,7 @@
 #include <vector>
 #include <list>
 #include <cmath>
+#include <libgen.h>
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_layer.h>
@@ -68,7 +69,7 @@ float g_overflow = 50.f /* 3333ms * 0.5 / 16.6667 / 2 (to edge and back) */;
 #endif
 
 bool open = false;
-string gpuString;
+string gpuString,wineVersion,wineProcess;
 float offset_x, offset_y, hudSpacing;
 int hudFirstRow, hudSecondRow;
 struct fps_limit fps_limit_stats {};
@@ -694,6 +695,56 @@ void init_system_info(){
       trim(gpu);
       driver = exec("glxinfo | grep 'OpenGL version' | sed 's/^.*: //' | cut -d' ' --output-delimiter=$'\n' -f1- | grep -v '(' | grep -v ')' | tr '\n' ' ' | cut -c 1-");
       trim(driver);
+
+// Get WINE version
+
+      wineProcess = get_exe_path();
+      auto n = wineProcess.find_last_of('/');
+      string preloader = wineProcess.substr(n + 1);
+      if (preloader == "wine-preloader" || preloader == "wine64-preloader") {
+         // Check if using Proton
+         if (wineProcess.find("/dist/bin/wine") != std::string::npos) {
+            stringstream ss;
+            ss << dirname((char*)wineProcess.c_str()) << "/../../version";
+            string protonVersion = ss.str();
+            ss.str(""); ss.clear();
+            ss << read_line(protonVersion);
+            std::getline(ss, wineVersion, ' '); // skip first number string
+            std::getline(ss, wineVersion, ' ');
+            trim(wineVersion);
+            string toReplace = "proton-";
+            size_t pos = wineVersion.find(toReplace);
+            if (pos != std::string::npos) {
+               // If found replace
+               wineVersion.replace(pos, toReplace.length(), "Proton ");
+            }
+            else {
+               // If not found insert for non official proton builds
+               wineVersion.insert(0, "Proton ");
+            }
+         }
+         else {
+            char *dir = dirname((char*)wineProcess.c_str());
+            stringstream findVersion;
+            findVersion << "\"" << dir << "/wine\" --version";
+            bool env_exists = false;
+            if (getenv("WINELOADERNOEXEC")) {
+               static char removenoexec[] = "WINELOADERNOEXEC";
+               putenv(removenoexec);
+               env_exists = true;
+            }
+            wineVersion = exec(findVersion.str());
+            std::cout << "WINE VERSION = " << wineVersion << "\n";
+            if (env_exists) {
+               static char noexec[] = "WINELOADERNOEXEC=1";
+               putenv(noexec);
+            }
+         }
+      }
+      else {
+           wineVersion = "";
+      }
+
       //driver = itox(device_data->properties.driverVersion);
 
       if (ld_preload)
@@ -1449,11 +1500,15 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::TextColored(data.colors.engine, "%s", "" MANGOHUD_ARCH);
          ImGui::PopFont();
       }
-
-      if (params.log_interval == 0){
-         logger->try_log();
+      if (params.enabled[OVERLAY_PARAM_ENABLED_wine]){
+         if (!wineVersion.empty()){
+            //ImGui::TextColored(data.colors.wine, "%s", "WINE");
+            ImGui::PushFont(data.font1);
+            ImGui::Dummy(ImVec2(0.0,5.0f));
+            ImGui::TextColored(data.colors.wine, "%s", wineVersion.c_str());
+            ImGui::PopFont();
+         }
       }
-
       if (params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
          ImGui::Dummy(ImVec2(0.0f, params.font_size * params.font_scale / 2));
          ImGui::PushFont(data.font1);
@@ -1500,6 +1555,9 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       ImGui::PopFont();
 #endif
 
+      if (params.log_interval == 0){
+         logger->try_log();
+      }
       if(logger->is_active())
          ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(data.main_window_pos.x + window_size.x - 15, data.main_window_pos.y + 15), 10, params.engine_color, 20);
       window_size = ImVec2(window_size.x, ImGui::GetCursorPosY() + 10.0f);
@@ -2310,6 +2368,7 @@ void convert_colors(bool do_conv, struct swapchain_stats& sw_stats, struct overl
    sw_stats.colors.background = convert(params.background_color);
    sw_stats.colors.text = convert(params.text_color);
    sw_stats.colors.media_player = convert(params.media_player_color);
+   sw_stats.colors.wine = convert(params.wine_color);
 
    ImGuiStyle& style = ImGui::GetStyle();
    style.Colors[ImGuiCol_PlotLines] = convert(params.frametime_color);
