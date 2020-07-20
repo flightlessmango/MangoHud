@@ -1,6 +1,7 @@
 #include "loaders/loader_nvml.h"
 #include "nvidia_info.h"
 #include <iostream>
+#include <memory>
 #include "overlay.h"
 
 nvmlReturn_t result;

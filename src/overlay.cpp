@@ -21,6 +21,7 @@
  * IN THE SOFTWARE.
  */
 
+#include <iostream>
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -30,6 +31,7 @@
 #include <mutex>
 #include <vector>
 #include <list>
+#include <cmath>
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_layer.h>
@@ -1016,7 +1018,7 @@ float get_ticker_limited_pos(float pos, float tw, float& left_limit, float& righ
 #ifdef HAVE_DBUS
 static void render_mpris_metadata(struct overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing, bool is_main)
 {
-   if (meta.meta.valid) {
+   if (meta.meta.valid && meta.meta.playing) {
       auto color = ImGui::ColorConvertU32ToFloat4(params.media_player_color);
       ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,0));
       ImGui::Dummy(ImVec2(0.0f, 20.0f));
@@ -1140,7 +1142,7 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
       ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), "%s %.1f", data_.first.c_str(), data_.second);
    }
    float max = *max_element(benchmark.fps_data.begin(), benchmark.fps_data.end());
-   ImVec4 plotColor = ImGui::ColorConvertU32ToFloat4(params.frametime_color);
+   ImVec4 plotColor = data.colors.frametime;
    plotColor.w = alpha / params.background_alpha;
    ImGui::PushStyleColor(ImGuiCol_PlotLines, plotColor);
    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0, 0.0, 0.0, alpha / params.background_alpha));
@@ -1268,7 +1270,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             gpu_text = "GPU";
          else
             gpu_text = params.gpu_text.c_str();
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.gpu_color), "%s", gpu_text);
+         ImGui::TextColored(data.colors.gpu, "%s", gpu_text);
          ImGui::TableNextCell();
          right_aligned_text(ralign_width, "%i", gpu_info.load);
          ImGui::SameLine(0, 1.0f);
@@ -1307,7 +1309,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             cpu_text = "CPU";
          else
             cpu_text = params.cpu_text.c_str();
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.cpu_color), "%s", cpu_text);
+         ImGui::TextColored(data.colors.cpu, "%s", cpu_text);
          ImGui::TableNextCell();
          right_aligned_text(ralign_width, "%d", data.total_cpu);
          ImGui::SameLine(0, 1.0f);
@@ -1328,10 +1330,10 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          for (const CPUData &cpuData : cpuStats.GetCPUData())
          {
             ImGui::TableNextRow();
-            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.cpu_color), "CPU");
+            ImGui::TextColored(data.colors.cpu, "CPU");
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(data.font1);
-            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.cpu_color),"%i", i);
+            ImGui::TextColored(data.colors.cpu,"%i", i);
             ImGui::PopFont();
             ImGui::TableNextCell();
             right_aligned_text(ralign_width, "%i", int(cpuData.percent));
@@ -1350,11 +1352,11 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          auto sampling = params.fps_sampling_period;
          ImGui::TableNextRow();
          if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] && !params.enabled[OVERLAY_PARAM_ENABLED_io_write])
-            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.io_color), "IO RD");
+            ImGui::TextColored(data.colors.io, "IO RD");
          else if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] && params.enabled[OVERLAY_PARAM_ENABLED_io_write])
-            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.io_color), "IO RW");
+            ImGui::TextColored(data.colors.io, "IO RW");
          else if (params.enabled[OVERLAY_PARAM_ENABLED_io_write] && !params.enabled[OVERLAY_PARAM_ENABLED_io_read])
-            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.io_color), "IO WR");
+            ImGui::TextColored(data.colors.io, "IO WR");
 
          if (params.enabled[OVERLAY_PARAM_ENABLED_io_read]){
             ImGui::TableNextCell();
@@ -1377,7 +1379,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       }
       if (params.enabled[OVERLAY_PARAM_ENABLED_vram]){
          ImGui::TableNextRow();
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.vram_color), "VRAM");
+         ImGui::TextColored(data.colors.vram, "VRAM");
          ImGui::TableNextCell();
          right_aligned_text(ralign_width, "%.1f", gpu_info.memoryUsed);
          ImGui::SameLine(0,1.0f);
@@ -1395,7 +1397,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       }
       if (params.enabled[OVERLAY_PARAM_ENABLED_ram]){
          ImGui::TableNextRow();
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.ram_color), "RAM");
+         ImGui::TextColored(data.colors.ram, "RAM");
          ImGui::TableNextCell();
          right_aligned_text(ralign_width, "%.1f", memused);
          ImGui::SameLine(0,1.0f);
@@ -1405,7 +1407,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       }
       if (params.enabled[OVERLAY_PARAM_ENABLED_fps]){
          ImGui::TableNextRow();
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", is_vulkan ? data.engineName.c_str() : "OpenGL");
+         ImGui::TextColored(data.colors.engine, "%s", is_vulkan ? data.engineName.c_str() : "OpenGL");
          ImGui::TableNextCell();
          right_aligned_text(ralign_width, "%.0f", data.fps);
          ImGui::SameLine(0, 1.0f);
@@ -1421,10 +1423,10 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       }
       if (!params.enabled[OVERLAY_PARAM_ENABLED_fps] && params.enabled[OVERLAY_PARAM_ENABLED_engine_version]){
          ImGui::TableNextRow();
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", is_vulkan ? data.engineName.c_str() : "OpenGL");
+         ImGui::TextColored(data.colors.engine, "%s", is_vulkan ? data.engineName.c_str() : "OpenGL");
       }
       ImGui::EndTable();
-      auto engine_color = ImGui::ColorConvertU32ToFloat4(params.engine_color);
+      auto engine_color = data.colors.engine;
       if (params.enabled[OVERLAY_PARAM_ENABLED_engine_version]){
          ImGui::PushFont(data.font1);
          ImGui::Dummy(ImVec2(0, 8.0f));
@@ -1478,7 +1480,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       if (params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
          ImGui::Dummy(ImVec2(0.0f, params.font_size * params.font_scale / 2));
          ImGui::PushFont(data.font1);
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", "Frametime");
+         ImGui::TextColored(data.colors.engine, "%s", "Frametime");
          ImGui::PopFont();
 
          char hash[40];
@@ -1530,7 +1532,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       if((now - logger->last_log_end()) < 12s)
          render_benchmark(data, params, window_size, height, now);
 
-      if (true)
+      if (false)
       {
          ImGui::GetIO().KeysDown[ImGuiKey_LeftArrow] = keys_are_pressed({0xff51});
          ImGui::GetIO().KeysDown[ImGuiKey_UpArrow]   = keys_are_pressed({0xff52});
@@ -2347,13 +2349,115 @@ static void setup_swapchain_data_pipeline(struct swapchain_data *data)
 //      update_image_descriptor(data, data->font_image_view[0], data->descriptor_set);
 }
 
-void imgui_custom_style(struct overlay_params& params){
+float SRGBToLinear(float in)
+{
+    if (in <= 0.04045f)
+        return in / 12.92f;
+    else
+        return powf((in + 0.055f) / 1.055f, 2.4f);
+}
+
+float LinearToSRGB(float in)
+{
+    if (in <= 0.0031308f)
+        return in * 12.92f;
+    else
+        return 1.055f * powf(in, 1.0f / 2.4f) - 0.055f;
+}
+
+ImVec4 SRGBToLinear(ImVec4 col)
+{
+    col.x = SRGBToLinear(col.x);
+    col.y = SRGBToLinear(col.y);
+    col.z = SRGBToLinear(col.z);
+    // Alpha component is already linear
+
+    return col;
+}
+
+ImVec4 LinearToSRGB(ImVec4 col)
+{
+    col.x = LinearToSRGB(col.x);
+    col.y = LinearToSRGB(col.y);
+    col.z = LinearToSRGB(col.z);
+    // Alpha component is already linear
+
+    return col;
+}
+
+void convert_colors(bool do_conv, struct swapchain_stats& sw_stats, struct overlay_params& params)
+{
+   auto convert = [&do_conv](unsigned color) -> ImVec4 {
+      ImVec4 fc = ImGui::ColorConvertU32ToFloat4(color);
+      if (do_conv)
+         return SRGBToLinear(fc);
+      return fc;
+   };
+
+   sw_stats.colors.cpu = convert(params.cpu_color);
+   sw_stats.colors.gpu = convert(params.gpu_color);
+   sw_stats.colors.vram = convert(params.vram_color);
+   sw_stats.colors.ram = convert(params.ram_color);
+   sw_stats.colors.engine = convert(params.engine_color);
+   sw_stats.colors.io = convert(params.io_color);
+   sw_stats.colors.frametime = convert(params.frametime_color);
+   sw_stats.colors.background = convert(params.background_color);
+   sw_stats.colors.text = convert(params.text_color);
+   sw_stats.colors.media_player = convert(params.media_player_color);
+
    ImGuiStyle& style = ImGui::GetStyle();
-   style.Colors[ImGuiCol_PlotLines] = ImGui::ColorConvertU32ToFloat4(params.frametime_color);
-   style.Colors[ImGuiCol_PlotHistogram] = ImGui::ColorConvertU32ToFloat4(params.frametime_color);
-   style.Colors[ImGuiCol_WindowBg]  = ImGui::ColorConvertU32ToFloat4(params.background_color);
-   style.Colors[ImGuiCol_Text] = ImGui::ColorConvertU32ToFloat4(params.text_color);
+   style.Colors[ImGuiCol_PlotLines] = convert(params.frametime_color);
+   style.Colors[ImGuiCol_PlotHistogram] = convert(params.frametime_color);
+   style.Colors[ImGuiCol_WindowBg]  = convert(params.background_color);
+   style.Colors[ImGuiCol_Text] = convert(params.text_color);
    style.CellPadding.y = -2;
+}
+
+static void convert_colors_vk(VkFormat format, VkColorSpaceKHR colorspace, struct swapchain_stats& sw_stats, struct overlay_params& params)
+{
+   bool do_conv = false;
+   switch (format) {
+      case VK_FORMAT_R8_SRGB:
+      case VK_FORMAT_R8G8_SRGB:
+      case VK_FORMAT_R8G8B8_SRGB:
+      case VK_FORMAT_B8G8R8_SRGB:
+      case VK_FORMAT_R8G8B8A8_SRGB:
+      case VK_FORMAT_B8G8R8A8_SRGB:
+      case VK_FORMAT_A8B8G8R8_SRGB_PACK32:
+      case VK_FORMAT_BC1_RGB_SRGB_BLOCK:
+      case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
+      case VK_FORMAT_BC2_SRGB_BLOCK:
+      case VK_FORMAT_BC3_SRGB_BLOCK:
+      case VK_FORMAT_BC7_SRGB_BLOCK:
+      case VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK:
+      case VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK:
+      case VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK:
+      case VK_FORMAT_ASTC_4x4_SRGB_BLOCK:
+      case VK_FORMAT_ASTC_5x4_SRGB_BLOCK:
+      case VK_FORMAT_ASTC_5x5_SRGB_BLOCK:
+      case VK_FORMAT_ASTC_6x5_SRGB_BLOCK:
+      case VK_FORMAT_ASTC_6x6_SRGB_BLOCK:
+      case VK_FORMAT_ASTC_8x5_SRGB_BLOCK:
+      case VK_FORMAT_ASTC_8x6_SRGB_BLOCK:
+      case VK_FORMAT_ASTC_8x8_SRGB_BLOCK:
+      case VK_FORMAT_ASTC_10x5_SRGB_BLOCK:
+      case VK_FORMAT_ASTC_10x6_SRGB_BLOCK:
+      case VK_FORMAT_ASTC_10x8_SRGB_BLOCK:
+      case VK_FORMAT_ASTC_10x10_SRGB_BLOCK:
+      case VK_FORMAT_ASTC_12x10_SRGB_BLOCK:
+      case VK_FORMAT_ASTC_12x12_SRGB_BLOCK:
+      case VK_FORMAT_PVRTC1_2BPP_SRGB_BLOCK_IMG:
+      case VK_FORMAT_PVRTC1_4BPP_SRGB_BLOCK_IMG:
+      case VK_FORMAT_PVRTC2_2BPP_SRGB_BLOCK_IMG:
+      case VK_FORMAT_PVRTC2_4BPP_SRGB_BLOCK_IMG:
+         do_conv = true;
+         break;
+      default:
+         break;
+   }
+
+   do_conv = do_conv && (colorspace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR);
+   convert_colors(do_conv, sw_stats, params);
 }
 
 static void setup_swapchain_data(struct swapchain_data *data,
@@ -2368,7 +2472,7 @@ static void setup_swapchain_data(struct swapchain_data *data,
 
    ImGui::GetIO().IniFilename = NULL;
    ImGui::GetIO().DisplaySize = ImVec2((float)data->width, (float)data->height);
-   imgui_custom_style(params);
+   convert_colors_vk(pCreateInfo->imageFormat, pCreateInfo->imageColorSpace, data->sw_stats, data->device->instance->params);
    imgui_init_input();
 
    struct device_data *device_data = data->device;

@@ -396,6 +396,9 @@ parse_overlay_config(struct overlay_params *params,
 
    *params = {};
 
+   static const int default_width = 280;
+   static const int default_font_size = 24;
+
    /* Visible by default */
    params->enabled[OVERLAY_PARAM_ENABLED_fps] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_frame_timing] = true;
@@ -518,7 +521,7 @@ parse_overlay_config(struct overlay_params *params,
    params->tableCols = 3;
 
    if (!params->font_size) {
-      params->font_size = 24;
+      params->font_size = default_font_size;
    }
 
    //increase hud width if io read and write
@@ -526,7 +529,7 @@ parse_overlay_config(struct overlay_params *params,
       if ((params->enabled[OVERLAY_PARAM_ENABLED_io_read] || params->enabled[OVERLAY_PARAM_ENABLED_io_write])) {
          params->width = 13 * params->font_size * params->font_scale;
       } else {
-         params->width = params->font_size * params->font_scale * 11.7;
+         params->width = params->font_size * params->font_scale * default_width / default_font_size;
       }
    }
 

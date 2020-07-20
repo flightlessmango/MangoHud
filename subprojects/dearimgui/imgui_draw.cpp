@@ -2055,7 +2055,6 @@ struct ImFontBuildSrcData
     int                 GlyphsCount;        // Glyph count (excluding missing glyphs and glyphs already set by an earlier source font)
     ImBitVector         GlyphsSet;          // Glyph bit map (random access, 1-bit per codepoint. This will be a maximum of 8KB)
     ImVector<int>       GlyphsList;         // Glyph codepoints list (flattened version of GlyphsMap)
-    ImVector<unsigned char *> GlyphsData;
 };
 
 // Temporary data for one destination ImFont* (multiple source fonts can be merged into one destination ImFont)
@@ -2163,7 +2162,6 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
     {
         ImFontBuildSrcData& src_tmp = src_tmp_array[src_i];
         src_tmp.GlyphsList.reserve(src_tmp.GlyphsCount);
-        src_tmp.GlyphsData.resize(src_tmp.GlyphsCount);
         UnpackBitVectorToFlatIndexList(&src_tmp.GlyphsSet, &src_tmp.GlyphsList);
         src_tmp.GlyphsSet.Clear();
         IM_ASSERT(src_tmp.GlyphsList.Size == src_tmp.GlyphsCount);
@@ -2311,8 +2309,8 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
 
                 if (!r.was_packed)
                     fprintf(stderr, "not packed\n");
-//                 if (!data || !r.was_packed)
-//                     continue;
+                if (!data || !r.was_packed)
+                    continue;
 
                 for (int y=0; y < gh; y++)
                     memcpy(&spc.pixels[y * spc.stride_in_bytes + r.x + r.y * spc.stride_in_bytes], &data[y * gw], gw);
