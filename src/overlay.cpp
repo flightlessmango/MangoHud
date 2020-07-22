@@ -68,7 +68,6 @@ float g_overflow = 50.f /* 3333ms * 0.5 / 16.6667 / 2 (to edge and back) */;
 
 bool open = false;
 string gpuString,wineVersion,wineProcess;
-//string wineVersion;
 float offset_x, offset_y, hudSpacing;
 int hudFirstRow, hudSecondRow;
 struct fps_limit fps_limit_stats {};
@@ -1370,7 +1369,8 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       }
       
        if (params.enabled[OVERLAY_PARAM_ENABLED_wine]){
-           ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.wine_color), "%s","WINE");
+           auto wine_color = ImGui::ColorConvertU32ToFloat4(params.wine_color);
+           ImGui::TextColored(wine_color, "%s", "WINE");
            ImGui::PushFont(data.font1);
            ImGui::TextColored(wine_color, "%s", wineVersion.c_str());
            ImGui::PopFont();
