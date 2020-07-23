@@ -1,3 +1,7 @@
+#pragma once
+#ifndef MANGOHUD_NVIDIA_INFO_H
+#define MANGOHUD_NVIDIA_INFO_H
+
 #include <nvml.h>
 
 extern nvmlReturn_t result;
@@ -9,3 +13,5 @@ extern bool nvmlSuccess;
 
 bool checkNVML(const char* pciBusId);
 bool getNVMLInfo(void);
+
+#endif //MANGOHUD_NVIDIA_INFO_H

@@ -128,7 +128,7 @@ vklayer_mesa_overlay = shared_library(
   gnu_symbol_visibility : 'hidden',
   dependencies : [
     vulkan_wsi_deps,
-    libimgui_core_dep,
+    dearimgui_dep,
     dbus_dep,
     dep_dl,
     dep_rt,

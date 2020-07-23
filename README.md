@@ -155,7 +155,7 @@ A partial list of parameters are below. See the config file for a complete list.
 | `log_duration`                     | Set amount of time the logging will run for (in seconds)                              |
 | `vsync`<br> `gl_vsync`             | Set vsync for OpenGL or Vulkan                                                        |
 | `media_player`                     | Show media player metadata                                                            |
-| `media_player_name`                | Set main media player DBus service name without the `org.mpris.MediaPlayer2` part, like `spotify`, `vlc`, `audacious` or `cantata`. Defaults to `spotify`. |
+| `media_player_name`                | Force media player DBus service name without the `org.mpris.MediaPlayer2` part, like `spotify`, `vlc`, `audacious` or `cantata`. If none is set, MangoHud tries to switch between currently playing players. |
 | `media_player_order`               | Media player metadata field order. Defaults to `title,artist,album`.                  |
 | `font_scale_media_player`          | Change size of media player text relative to font_size                                |
 | `io_read`<br> `io_write`           | Show non-cached IO read/write, in MiB/s                                               |

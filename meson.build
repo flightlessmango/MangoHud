@@ -204,5 +204,7 @@ elif sizeof_ptr == 4
   pre_args += '-DMANGOHUD_ARCH="32bit"'
 endif
 
-subdir('modules/ImGui')
+dearimgui_sp = subproject('dearimgui')
+dearimgui_dep = dearimgui_sp.get_variable('dearimgui_dep')
+
 subdir('src')

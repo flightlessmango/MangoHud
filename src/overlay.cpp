@@ -70,7 +70,7 @@ bool open = false;
 string gpuString;
 float offset_x, offset_y, hudSpacing;
 int hudFirstRow, hudSecondRow;
-struct fps_limit fps_limit_stats;
+struct fps_limit fps_limit_stats {};
 VkPhysicalDeviceDriverProperties driverProps = {};
 int32_t deviceID;
 struct benchmark_stats benchmark;
@@ -79,21 +79,8 @@ struct benchmark_stats benchmark;
 struct instance_data {
    struct vk_instance_dispatch_table vtable;
    VkInstance instance;
-
    struct overlay_params params;
-
    uint32_t api_version;
-
-   bool first_line_printed;
-
-   int control_client;
-
-   /* Dumping of frame stats to a file has been enabled. */
-   bool capture_enabled;
-
-   /* Dumping of frame stats to a file has been enabled and started. */
-   bool capture_started;
-
    string engineName, engineVersion;
    notify_thread notifier;
 };
@@ -192,23 +179,7 @@ struct swapchain_data {
    ImGuiContext* imgui_context;
    ImVec2 window_size;
 
-   /**/
-   uint64_t last_present_time;
-
-   unsigned n_frames_since_update;
-   uint64_t last_fps_update;
-   double frametime;
-   double frametimeDisplay;
-   const char* cpuString;
-   const char* gpuString;
-
    struct swapchain_stats sw_stats;
-
-   /* Over a single frame */
-   struct frame_stat frame_stats;
-
-   /* Over fps_sampling_period */
-   struct frame_stat accumulated_stats;
 };
 
 // single global lock, for simplicity
@@ -358,7 +329,6 @@ static struct instance_data *new_instance_data(VkInstance instance)
 {
    struct instance_data *data = new instance_data();
    data->instance = instance;
-   data->control_client = -1;
    data->params = {};
    data->params.control = -1;
    map_object(HKEY(data->instance), data);
@@ -1018,19 +988,18 @@ float get_ticker_limited_pos(float pos, float tw, float& left_limit, float& righ
 }
 
 #ifdef HAVE_DBUS
-static void render_mpris_metadata(struct overlay_params& params, metadata& meta, uint64_t frame_timing, bool is_main)
+static void render_mpris_metadata(struct overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing, bool is_main)
 {
-   scoped_lock lk(meta.mutex);
-   if (meta.valid) {
+   if (meta.meta.valid) {
       auto color = ImGui::ColorConvertU32ToFloat4(params.media_player_color);
       ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,0));
       ImGui::Dummy(ImVec2(0.0f, 20.0f));
       //ImGui::PushFont(data.font1);
 
       if (meta.ticker.needs_recalc) {
-         meta.ticker.tw0 = ImGui::CalcTextSize(meta.title.c_str()).x;
-         meta.ticker.tw1 = ImGui::CalcTextSize(meta.artists.c_str()).x;
-         meta.ticker.tw2 = ImGui::CalcTextSize(meta.album.c_str()).x;
+         meta.ticker.tw0 = ImGui::CalcTextSize(meta.meta.title.c_str()).x;
+         meta.ticker.tw1 = ImGui::CalcTextSize(meta.meta.artists.c_str()).x;
+         meta.ticker.tw2 = ImGui::CalcTextSize(meta.meta.album.c_str()).x;
          meta.ticker.longest = std::max(std::max(
                meta.ticker.tw0,
                meta.ticker.tw1),
@@ -1057,23 +1026,23 @@ static void render_mpris_metadata(struct overlay_params& params, metadata& meta,
             {
                new_pos = get_ticker_limited_pos(meta.ticker.pos, meta.ticker.tw0, left_limit, right_limit);
                ImGui::SetCursorPosX(new_pos);
-               ImGui::TextColored(color, "%s", meta.title.c_str());
+               ImGui::TextColored(color, "%s", meta.meta.title.c_str());
             }
             break;
             case MP_ORDER_ARTIST:
             {
                new_pos = get_ticker_limited_pos(meta.ticker.pos, meta.ticker.tw1, left_limit, right_limit);
                ImGui::SetCursorPosX(new_pos);
-               ImGui::TextColored(color, "%s", meta.artists.c_str());
+               ImGui::TextColored(color, "%s", meta.meta.artists.c_str());
             }
             break;
             case MP_ORDER_ALBUM:
             {
                //ImGui::NewLine();
-               if (!meta.album.empty()) {
+               if (!meta.meta.album.empty()) {
                   new_pos = get_ticker_limited_pos(meta.ticker.pos, meta.ticker.tw2, left_limit, right_limit);
                   ImGui::SetCursorPosX(new_pos);
-                  ImGui::TextColored(color, "%s", meta.album.c_str());
+                  ImGui::TextColored(color, "%s", meta.meta.album.c_str());
                }
             }
             break;
@@ -1081,7 +1050,7 @@ static void render_mpris_metadata(struct overlay_params& params, metadata& meta,
          }
       }
 
-      if (is_main && main_metadata.valid && !main_metadata.playing) {
+      if (!meta.meta.playing) {
          ImGui::TextColored(color, "(paused)");
       }
 
@@ -1431,8 +1400,11 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       ImFont scaled_font = *data.font_text;
       scaled_font.Scale = params.font_scale_media_player;
       ImGui::PushFont(&scaled_font);
-      render_mpris_metadata(params, main_metadata, frame_timing, true);
-      render_mpris_metadata(params, generic_mpris, frame_timing, false);
+      {
+         std::lock_guard<std::mutex> lck(main_metadata.mtx);
+         render_mpris_metadata(params, main_metadata, frame_timing, true);
+      }
+      //render_mpris_metadata(params, generic_mpris, frame_timing, false);
       ImGui::PopFont();
 #endif
 

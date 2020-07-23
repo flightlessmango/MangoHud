@@ -465,7 +465,7 @@ parse_overlay_config(struct overlay_params *params,
    params->background_color = 0x020202;
    params->text_color = 0xffffff;
    params->media_player_color = 0xffffff;
-   params->media_player_name = "spotify";
+   params->media_player_name = "";
    params->font_scale = 1.0f;
    params->font_scale_media_player = 0.55f;
    params->log_interval = 100;
@@ -565,28 +565,22 @@ parse_overlay_config(struct overlay_params *params,
 
    // set frametime limit
    using namespace std::chrono;
-   if (params->fps_limit >= 0)
+   if (params->fps_limit > 0)
       fps_limit_stats.targetFrameTime = duration_cast<Clock::duration>(duration<double>(1) / params->fps_limit);
+   else
+      fps_limit_stats.targetFrameTime = {};
 
 #ifdef HAVE_DBUS
    if (params->enabled[OVERLAY_PARAM_ENABLED_media_player]) {
       // lock mutexes for config file change notifier thread
       {
-         std::lock_guard<std::mutex> lk(main_metadata.mutex);
-         main_metadata.clear();
+         std::lock_guard<std::mutex> lk(main_metadata.mtx);
+         main_metadata.meta.clear();
       }
-      {
-         std::lock_guard<std::mutex> lk(generic_mpris.mutex);
-         generic_mpris.clear();
-      }
-      if (dbusmgr::dbus_mgr.init(params->media_player_name)) {
-         if (!get_media_player_metadata(dbusmgr::dbus_mgr, params->media_player_name, main_metadata))
-            std::cerr << "MANGOHUD: Failed to get initial media player metadata." << std::endl;
-      }
+      dbusmgr::dbus_mgr.init(params->media_player_name);
    } else {
       dbusmgr::dbus_mgr.deinit();
-      main_metadata.valid = false;
-      generic_mpris.valid = false;
+      main_metadata.meta.valid = false;
    }
 #endif
 
