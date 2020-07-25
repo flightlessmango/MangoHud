@@ -1,0 +1,53 @@
+.\" Manpage for mangohud.
+.TH mangohud 1 "" "" "mangohud"
+
+.SH NAME
+mangohud \- enable MangoHud on any application
+
+.SH SYNOPSIS
+\fBmangohud\fR COMMAND
+
+.SH DESCRIPTION
+MangoHud is a Vulkan/OpenGL overlay for monitoring FPS, temperatures, CPU/GPU load and more.
+
+.SH USAGE
+MangoHud can be enabled for Vulkan applications by setting \fBMANGOHUD=1\fR as envrionment variable.
+.br
+To load MangoHud for any application, including OpenGL applications, the \fBmangohud\fR executable can be used. It preloads a library via ld into the application.
+.br
+Note: some OpenGL applications may also need dlsym hooking. This can be done by setting \fBMANGOHUD_DLSYM=1\fR as envrionment variable.
+
+.SH CONFIG
+MangoHud comes with a config file which can be used to set configuration options globally or per application. The priorities of different config files are:
+.LP
+.RS 4
+/path/to/application/MangoHud.conf
+.br
+$XDG_CONFIG_HOME/MangoHud/{application_name}.conf
+.br
+$XDG_CONFIG_HOME/MangoHud/MangoHud.conf
+.RS -4
+.LP
+An example config file is located in /usr/share/doc/mangohud/MangoHud.conf, containing all available options.
+.LP
+A custom config file location can also be specified with the \fBMANGOHUD_CONFIGFILE\fR envrionment variable.
+.br
+Config options can also be set with the \fBMANGOHUD_CONFIG\fR envrionment variable. This takes priority over any config file.
+
+.SH EXAMPLES
+OpenGL: \fBmangohud glxgears\fR
+.br
+Vulkan: \fBMANGOHUD=1 vkcube\fR
+.br
+Steam: set your launch option to \fBmangohud %command%\fR
+.br
+Lutris: add \fBmangohud\fR to the Command prefix setting
+.br
+OpenGL with dlsym: \fBMANGOHUD_DLSYM=1 mangohud glxgears\fR
+.br
+Custom config options: \fBMANGOHUD_CONFIG="gpu_stats=0,font_size=12" mangohud glxgears\fR
+
+.SH ABOUT
+MangoHud development takes place at \fIhttps://github.com/flightlessmango/MangoHud\fR.
+.br
+Benchmarks created with MangoHud can be uploaded to \fIhttps://flightlessmango.com\fR.
