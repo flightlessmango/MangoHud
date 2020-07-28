@@ -613,6 +613,30 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
     }
 }
 
+void ImGui_ImplDX12_Resize(int num_frames_in_flight)
+{
+    for (UINT i = 0; i < g_numFramesInFlight; i++)
+    {
+        FrameResources* fr = &g_pFrameResources[i];
+        SafeRelease(fr->IndexBuffer);
+        SafeRelease(fr->VertexBuffer);
+    }
+
+    delete[] g_pFrameResources;
+    g_pFrameResources = new FrameResources[num_frames_in_flight];
+    g_numFramesInFlight = num_frames_in_flight;
+    g_frameIndex = UINT_MAX;
+
+    for (int i = 0; i < num_frames_in_flight; i++)
+    {
+        FrameResources* fr = &g_pFrameResources[i];
+        fr->IndexBuffer = NULL;
+        fr->VertexBuffer = NULL;
+        fr->IndexBufferSize = 10000;
+        fr->VertexBufferSize = 5000;
+    }
+}
+
 bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FORMAT rtv_format, ID3D12DescriptorHeap* cbv_srv_heap,
                          D3D12_CPU_DESCRIPTOR_HANDLE font_srv_cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE font_srv_gpu_desc_handle)
 {
