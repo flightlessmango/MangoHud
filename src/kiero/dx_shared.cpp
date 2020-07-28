@@ -38,6 +38,8 @@ void imgui_create(void *ctx, void *device)
             pDXGIDevice->GetAdapter(&pDXGIAdapter);
             DXGI_ADAPTER_DESC adapterDesc;
             hr = pDXGIAdapter->GetDesc(&adapterDesc);
+            pDXGIAdapter->Release();
+            pDXGIDevice->Release();
 
             if (S_OK == hr) {
                 vendorID = adapterDesc.VendorId;
