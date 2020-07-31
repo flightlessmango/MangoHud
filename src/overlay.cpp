@@ -1236,6 +1236,16 @@ struct render_mode
    float outline = 0.18f;
 } render_mode [] { {0}, {1} };
 
+static float calc_alignment(ImFont* small_font)
+{
+   float l = ImGui::CalcTextSize("A").x;
+   ImGui::PushFont(small_font);
+   float s = ImGui::CalcTextSize("A").x;
+   ImGui::PopFont();
+   std::cerr << "l " << l << " s " << s << "\n";
+   return l * 4;// - s * 3;
+}
+
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan)
 {
    ImGui::GetIO().FontGlobalScale = params.font_scale;
