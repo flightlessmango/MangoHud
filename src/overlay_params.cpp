@@ -529,11 +529,6 @@ parse_overlay_config(struct overlay_params *params,
 
 #ifdef HAVE_DBUS
    if (params->enabled[OVERLAY_PARAM_ENABLED_media_player]) {
-      // lock mutexes for config file change notifier thread
-      {
-         std::lock_guard<std::mutex> lk(main_metadata.mtx);
-         main_metadata.meta.clear();
-      }
       dbusmgr::dbus_mgr.init(params->media_player_name);
    } else {
       dbusmgr::dbus_mgr.deinit();

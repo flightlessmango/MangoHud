@@ -26,14 +26,6 @@ struct metadata {
     bool valid = false;
     bool got_song_data = false;
     bool got_playback_data = false;
-
-    void clear() {
-        artists.clear();
-        title.clear();
-        album.clear();
-        artUrl.clear();
-        valid = false;
-    }
 };
 
 struct mutexed_metadata {
