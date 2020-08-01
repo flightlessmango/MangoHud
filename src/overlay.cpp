@@ -670,6 +670,8 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
          params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
       }
    }
+   if (!params.permit_upload)
+      printf("MANGOHUD: Uploading is disabled (permit_upload = 0)\n");
 }
 
 void init_system_info(){
