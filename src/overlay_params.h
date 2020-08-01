@@ -70,6 +70,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(toggle_logging)              \
    OVERLAY_PARAM_CUSTOM(reload_cfg)                  \
    OVERLAY_PARAM_CUSTOM(upload_log)                  \
+   OVERLAY_PARAM_CUSTOM(upload_logs)                 \
    OVERLAY_PARAM_CUSTOM(offset_x)                    \
    OVERLAY_PARAM_CUSTOM(offset_y)                    \
    OVERLAY_PARAM_CUSTOM(background_alpha)            \
@@ -164,6 +165,7 @@ struct overlay_params {
    std::vector<KeySym> toggle_logging;
    std::vector<KeySym> reload_cfg;
    std::vector<KeySym> upload_log;
+   std::vector<KeySym> upload_logs;
    std::string time_format, output_file;
    std::string pci_dev;
    std::string media_player_name;

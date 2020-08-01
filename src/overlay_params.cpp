@@ -113,11 +113,18 @@ parse_upload_log(const char *str)
    return parse_string_to_keysym_vec(str);
 }
 
+static std::vector<KeySym>
+parse_upload_logs(const char *str)
+{
+   return parse_string_to_keysym_vec(str);
+}
+
 #else
 #define parse_toggle_hud(x)      {}
 #define parse_toggle_logging(x)  {}
 #define parse_reload_cfg(x)      {}
 #define parse_upload_log(x)      {}
+#define parse_upload_logs(x)     {}
 #endif
 
 static uint32_t
@@ -435,6 +442,7 @@ parse_overlay_config(struct overlay_params *params,
    params->toggle_logging = { XK_Shift_L, XK_F2 };
    params->reload_cfg = { XK_Shift_L, XK_F4 };
    params->upload_log = { XK_Shift_L, XK_F3 };
+   params->upload_logs = { XK_Control_L, XK_F3 };
 #endif
 
    // first pass with env var

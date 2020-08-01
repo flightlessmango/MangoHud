@@ -157,3 +157,8 @@ void Logger::upload_last_log() {
   if(m_log_files.empty()) return;
   std::thread(upload_file, m_log_files.back()).detach();
 }
+
+void Logger::upload_last_logs() {
+  if(m_log_files.empty()) return;
+  std::thread(upload_files, m_log_files).detach();
+}

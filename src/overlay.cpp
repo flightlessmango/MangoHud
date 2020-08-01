@@ -808,6 +808,17 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
          last_upload_press = now;
          logger->upload_last_log();
       }
+   }   
+   if (params.permit_upload && elapsedUpload >= keyPressDelay){
+#ifdef HAVE_X11
+      pressed = keys_are_pressed(params.upload_logs);
+#else
+      pressed = false;
+#endif
+      if (pressed){
+         last_upload_press = now;
+         logger->upload_last_logs();
+      }
    }
 }
 
