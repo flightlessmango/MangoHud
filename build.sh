@@ -142,20 +142,20 @@ configure() {
     dependencies
     git submodule update --init --depth 50
     if [[ ! -f "build/meson64/build.ninja" ]]; then
-        meson build/meson64 --libdir lib/mangohud/lib64 --prefix /usr -Dappend_libdir_mangohud=false ${CONFIGURE_OPTS}
+        meson build/meson64 --libdir lib/mangohud/lib64 --prefix /usr -Dappend_libdir_mangohud=false $@ ${CONFIGURE_OPTS}
     fi
     if [[ ! -f "build/meson32/build.ninja" ]]; then
         export CC="gcc -m32"
         export CXX="g++ -m32"
         export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH_32}"
         export LLVM_CONFIG="/usr/bin/llvm-config32"
-        meson build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false ${CONFIGURE_OPTS}
+        meson build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false $@ ${CONFIGURE_OPTS}
     fi
 }
 
 build() {
     if [[ ! -f "build/meson64/build.ninja" ]]; then
-        configure
+        configure $@
     fi
     DESTDIR="$PWD/build/release" ninja -C build/meson32 install
     DESTDIR="$PWD/build/release" ninja -C build/meson64 install
@@ -243,12 +243,32 @@ usage() {
     echo -e "\trelease\t\tBuilds a MangoHud release tar package"
 }
 
-for a in $@; do
-    case $a in
-        "") build;;
-        "pull") git pull;;
-        "configure") configure;;
-        "build") build;;
+if [[ -z $@ ]]; then
+    usage no-args
+fi
+
+while [ $# -gt 0 ]; do
+    OPTS=()
+    arg="$1"
+    shift
+
+    while [ $# -gt 0 ] ; do
+        case $1 in
+        -*)
+            OPTS+=("$1")
+            shift
+        ;;
+        *)
+            break
+        ;;
+        esac;
+    done
+
+    echo -e "\e[1mCommand:\e[92m" $arg "\e[94m"${OPTS[@]}"\e[39m\e[0m"
+    case $arg in
+        "pull") git pull ${OPTS[@]};;
+        "configure") configure ${OPTS[@]};;
+        "build") build ${OPTS[@]};;
         "package") package;;
         "install") install;;
         "reinstall") reinstall;;
@@ -259,8 +279,3 @@ for a in $@; do
             usage
     esac
 done
-
-if [[ -z $@ ]]; then
-    usage no-args
-fi
-
