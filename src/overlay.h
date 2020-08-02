@@ -78,7 +78,7 @@ void init_system_info(void);
 void FpsLimiter(struct fps_limit& stats);
 void imgui_custom_style(struct overlay_params& params);
 void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats);
-void calculate_benchmark_data(void);
+void calculate_benchmark_data(void *params_void);
 void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& text_font);
 
 #endif //MANGOHUD_OVERLAY_H

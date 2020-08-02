@@ -1069,7 +1069,6 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
    else
       ImGui::SetNextWindowPos(ImVec2(data.main_window_pos.x, data.main_window_pos.y + window_size.y + 5), ImGuiCond_Always);
 
-   vector<pair<string, float>> benchmark_data = {{"97% ", benchmark.ninety}, {"AVG ", benchmark.avg}, {"1%  ", benchmark.oneP}, {"0.1%", benchmark.pointOneP}};
    float display_time = std::chrono::duration<float>(now - logger->last_log_end()).count();
    static float display_for = 10.0f;
    float alpha;

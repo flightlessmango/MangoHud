@@ -119,7 +119,7 @@ void Logger::stop_logging() {
   m_logging_on = false;
   m_log_end = Clock::now();
 
-  std::thread(calculate_benchmark_data).detach();
+  std::thread(calculate_benchmark_data, m_params).detach();
 
   if(not m_params->output_file.empty()) {
     m_log_files.emplace_back(m_params->output_file + get_log_suffix());

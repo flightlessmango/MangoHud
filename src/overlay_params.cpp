@@ -242,6 +242,7 @@ parse_benchmark_percentiles(const char *str)
    }
 
    return percentiles;
+}
 
 static uint32_t
 parse_font_glyph_ranges(const char *str)
