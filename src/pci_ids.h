@@ -1,3 +1,7 @@
+#pragma once
+#ifndef MANGOHUD_PCI_IDS_H
+#define MANGOHUD_PCI_IDS_H
+
 #include <map>
 #include <vector>
 
@@ -17,3 +21,5 @@ struct device
 extern std::map<uint32_t /*vendor id*/, std::pair<std::string /*vendor desc*/, std::map<uint32_t /*device id*/, device>>> pci_ids;
 
 void parse_pciids(void);
+
+#endif //MANGOHUD_PCI_IDS_H

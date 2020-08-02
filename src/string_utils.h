@@ -1,4 +1,7 @@
 #pragma once
+#ifndef MANGOHUD_STRING_UTILS_H
+#define MANGOHUD_STRING_UTILS_H
+
 #include <string>
 #include <iomanip>
 #include <iostream>
@@ -78,30 +81,34 @@ static std::string itox(T i) {
     return ss.str();
 }
 
-static bool try_stoi(int& val, const std::string& str, std::size_t* pos = 0, int base = 10)
+static bool try_stoi(int& val, const std::string& str)
 {
-    try {
-        val = std::stoi(str, pos, base);
+    if (sscanf(str.c_str(), "%d", &val) == 1)
         return true;
-    } catch (std::invalid_argument& e) {
-#ifndef NDEBUG
-        std::cerr << __func__ << ": invalid argument: '" << str << "'" << std::endl;
-#endif
-    }
     return false;
 }
 
-static bool try_stoull(unsigned long long& val, const std::string& str, std::size_t* pos = 0, int base = 10)
+static bool try_stoull(unsigned long long& val, const std::string& str)
 {
-    try {
-        val = std::stoull(str, pos, base);
+    if (sscanf(str.c_str(), "%llu", &val) == 1)
         return true;
-    } catch (std::invalid_argument& e) {
-#ifndef NDEBUG
-        std::cerr << __func__ << ": invalid argument: '" << str << "'" << std::endl;
-#endif
-    }
     return false;
+}
+
+static float parse_float(const std::string& s, std::size_t* float_len = nullptr){
+    std::stringstream ss(s);
+    ss.imbue(std::locale::classic());
+    float ret;
+    ss >> ret;
+    if(ss.fail()) throw std::invalid_argument("parse_float: Not a float");
+    if(float_len != nullptr){
+        auto pos = ss.tellg();
+        if(ss.fail()) *float_len = s.size();
+        else *float_len = pos;
+    }
+    return ret;
 }
 
 #pragma GCC diagnostic pop
+
+#endif //MANGOHUD_STRING_UTILS_H

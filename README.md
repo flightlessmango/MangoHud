@@ -136,6 +136,11 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `ram`<br>`vram`                    | Displays system RAM/VRAM usage                                                        |
 | `full`                             | Enables most of the toggleable parameters (currently excludes `histogram`)            |
 | `font_size=`                       | Customizeable font size (default=24)                                                  |
+| `font_size_text=`                  | Customizeable font size for other text like media metadata (default=24)               |
+| `font_scale=`                      | Set global font scale (default=1.0)                                                   |
+| `font_file`                        | Change default font (set location to .TTF/.OTF file )                                 |
+| `font_file_text`                   | Change text font. Otherwise `font_file` is used                                       |
+| `font_glyph_ranges`                | Specify extra font glyph ranges, comma separated: `korean`, `chinese`, `chinese_simplified`, `japanese`, `cyrillic`, `thai`, `vietnamese`, `latin_ext_a`, `latin_ext_b`. If you experience crashes or text is just squares, reduce font size or glyph ranges. |
 | `width=`<br>`height=`              | Customizeable hud dimensions (in pixels)                                              |
 | `position=`                        | Location of the hud: `top-left` (default), `top-right`, `bottom-left`, `bottom-right`, `top-center` |
 | `offset_x` `offset_y`              | Hud position offsets                                                                  |
@@ -148,12 +153,12 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `background_alpha`                 | Set the opacity of the background `0.0-1.0`                                           |
 | `read_cfg`                         | Add to MANGOHUD_CONFIG as first parameter to also load config file. Otherwise only MANGOHUD_CONFIG parameters are used. |
 | `output_file`                      | Define name and location of the output file (Required for logging)                    |
-| `font_file`                        | Change default font (set location to .TTF/.OTF file )                                 |
 | `log_duration`                     | Set amount of time the logging will run for (in seconds)                              |
 | `vsync`<br> `gl_vsync`             | Set vsync for OpenGL or Vulkan                                                        |
 | `media_player`                     | Show media player metadata                                                            |
-| `media_player_name`                | Set main media player DBus service name without the `org.mpris.MediaPlayer2` part, like `spotify`, `vlc`, `audacious` or `cantata`. Defaults to `spotify`. |
-| `font_scale_media_player`          | Change size of media player text relative to font_size                                |                                        
+| `media_player_name`                | Force media player DBus service name without the `org.mpris.MediaPlayer2` part, like `spotify`, `vlc`, `audacious` or `cantata`. If none is set, MangoHud tries to switch between currently playing players. |
+| `media_player_order`               | Media player metadata field order. Defaults to `title,artist,album`.                  |
+| `font_scale_media_player`          | Change size of media player text relative to font_size                                |
 | `io_read`<br> `io_write`           | Show non-cached IO read/write, in MiB/s                                               |
 | `pci_dev`                          | Select GPU device in multi-gpu setups                                                 |
 | `version`                          | Shows current mangohud version                                                        |
@@ -166,6 +171,9 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `gpu_name`                         | Displays GPU name from pci.ids                                                        |
 | `gpu_power`                        | Display GPU draw in watts                                                             |
 | `engine_version`                   | Display OpenGL or vulkan and vulkan-based render engine's version                     |
+| `permit_upload`                    | Allow uploading of logs to Flightlessmango.com                                        |
+| `upload_log`                       | Change keybind for uploading log                                                      |
+| `benchmark_percentiles`            | Configure which framerate percentiles are shown in the logging summary. Default is `97+AVG+1+0.1` |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 

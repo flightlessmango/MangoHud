@@ -1,3 +1,7 @@
+#pragma once
+#ifndef MANGOHUD_CPU_H
+#define MANGOHUD_CPU_H
+
 #include <vector>
 #include <cstdint>
 #include <cstdio>
@@ -68,3 +72,5 @@ private:
 };
 
 extern CPUStats cpuStats;
+
+#endif //MANGOHUD_CPU_H

@@ -1,65 +1,75 @@
+#pragma once
+#ifndef MANGOHUD_LOGGING_H
+#define MANGOHUD_LOGGING_H
+
 #include <iostream>
 #include <vector>
 #include <fstream>
 #include <chrono>
 #include <thread>
+#include <condition_variable>
 
-#include "mesa/util/os_time.h"
+#include "timing.hpp"
+
+#include "overlay_params.h"
 
 using namespace std;
-
-string os, cpu, gpu, ram, kernel, driver;
-bool sysInfoFetched = false;
-int gpuLoadLog = 0, cpuLoadLog = 0;
-uint64_t elapsedLog;
-
 struct logData{
   double fps;
-  int cpu;
-  int gpu;
-  uint64_t previous;
+  int cpu_load;
+  int gpu_load;
+  int cpu_temp;
+  int gpu_temp;
+  int gpu_core_clock;
+  int gpu_mem_clock;
+  float gpu_vram_used;
+  float ram_used;
+
+  Clock::duration previous;
 };
 
-double fps;
-std::vector<logData> logArray;
-ofstream out;
-int num;
-bool loggingOn;
-uint64_t log_start, log_end;
+class Logger {
+public:
+  Logger(overlay_params* in_params);
 
-void writeFile(string filename){
-  out.open(filename, ios::out | ios::app);
-  out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver" << endl;
-  out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << endl;
+  void start_logging();
+  void stop_logging();
 
-  for (size_t i = 0; i < logArray.size(); i++)
-    out << logArray[i].fps << "," << logArray[i].cpu  << "," << logArray[i].gpu << "," << logArray[i].previous << endl;
+  void try_log();
 
-  out.close();
-  logArray.clear();
-}
+  bool is_active() const { return m_logging_on; }
 
-string get_current_time(){
-  time_t now_log = time(0);
-  tm *log_time = localtime(&now_log);
-  std::ostringstream buffer;
-  buffer << std::put_time(log_time, "%Y-%m-%d_%H-%M-%S");
-  string date = buffer.str();
-  return date;
-}
+  void wait_until_data_valid();
+  void notify_data_valid();
 
-void logging(void *params_void){
-  overlay_params *params = reinterpret_cast<overlay_params *>(params_void);
-  while (loggingOn){
-    uint64_t now = os_time_get();
-    elapsedLog = now - log_start;
-    logArray.push_back({fps, cpuLoadLog, gpuLoadLog, elapsedLog});
+  auto last_log_end() const noexcept { return m_log_end; }
+  auto last_log_begin() const noexcept { return m_log_start; }
 
-    if (params->log_duration && (elapsedLog) >= params->log_duration * 1000000)
-      loggingOn = false;
-    else
-      this_thread::sleep_for(chrono::milliseconds(params->log_interval));
-  }
+  const std::vector<logData>& get_log_data() const noexcept { return m_log_array; }
+  void clear_log_data() noexcept { m_log_array.clear(); }
 
-  writeFile(params->output_file + get_current_time());
-}
+  void upload_last_log();
+private:
+  std::vector<logData> m_log_array;
+  std::vector<std::string> m_log_files;
+  Clock::time_point m_log_start;
+  Clock::time_point m_log_end;
+  bool m_logging_on;
+
+  std::mutex m_values_valid_mtx;
+  std::condition_variable m_values_valid_cv;
+  bool m_values_valid;
+
+  overlay_params* m_params;
+};
+
+extern std::unique_ptr<Logger> logger;
+
+extern string os, cpu, gpu, ram, kernel, driver;
+extern bool sysInfoFetched;
+extern double fps;
+extern logData currentLogData;
+
+string exec(string command);
+
+#endif //MANGOHUD_LOGGING_H

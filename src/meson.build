@@ -33,6 +33,7 @@ vklayer_files = files(
   'elfhacks.cpp',
   'real_dlsym.cpp',
   'pci_ids.cpp',
+  'logging.cpp',
 )
 
 opengl_files = files(
@@ -103,6 +104,10 @@ if dbus_dep.found() and get_option('with_dbus').enabled()
   )
 endif
 
+link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL'])
+# meson fails to check version-script so just force add
+link_args += '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version'))
+
 vklayer_mesa_overlay = shared_library(
   'MangoHud',
   mangohud_version,
@@ -113,24 +118,24 @@ vklayer_mesa_overlay = shared_library(
   overlay_spv,
   c_args : [
     pre_args,
-    c_vis_args,
     no_override_init_args,
     vulkan_wsi_args
     ],
   cpp_args : [
     pre_args,
-    cpp_vis_args,
     vulkan_wsi_args
     ],
+  gnu_symbol_visibility : 'hidden',
   dependencies : [
     vulkan_wsi_deps,
-    libimgui_core_dep,
+    dearimgui_dep,
     dbus_dep,
     dep_dl,
+    dep_rt,
     dep_pthread,
     dep_vulkan],
   include_directories : [inc_common],
-  link_args : cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL']),
+  link_args : link_args,
   install_dir : libdir_mangohud,
   install : true
 )
@@ -144,16 +149,15 @@ mangohud_dlsym = shared_library(
   ),
   c_args : [
     pre_args,
-    c_vis_args,
     no_override_init_args,
     ],
   cpp_args : [
     pre_args,
-    cpp_vis_args,
     ],
+  gnu_symbol_visibility : 'hidden',
   dependencies : [dep_dl],
   include_directories : [inc_common],
-  link_args : cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL']),
+  link_args : link_args,
   install_dir : libdir_mangohud,
   install : true
 )

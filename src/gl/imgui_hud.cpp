@@ -10,6 +10,7 @@
 #include "file_utils.h"
 #include "imgui_hud.h"
 #include "notify.h"
+#include "blacklist.h"
 
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
@@ -44,8 +45,6 @@ struct GLVec
 
 struct state {
     ImGuiContext *imgui_ctx = nullptr;
-    ImFont* font = nullptr;
-    ImFont* font1 = nullptr;
 };
 
 static GLVec last_vp {}, last_sb {};
@@ -68,6 +67,7 @@ void imgui_init()
 {
     if (cfg_inited)
         return;
+    is_blacklisted(true);
     parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
     notifier.params = &params;
     start_notifier(notifier);
@@ -131,8 +131,7 @@ void imgui_create(void *ctx)
     GLint current_texture;
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &current_texture);
 
-    create_fonts(params, state.font, state.font1);
-    sw_stats.font1 = state.font1;
+    create_fonts(params, sw_stats.font1, sw_stats.font_text);
 
     // Restore global context or ours might clash with apps that use Dear ImGui
     ImGui::SetCurrentContext(saved_ctx);
@@ -170,7 +169,7 @@ void imgui_render(unsigned int width, unsigned int height)
     if (!state.imgui_ctx)
         return;
 
-    check_keybinds(params);
+    check_keybinds(sw_stats, params, vendorID);
     update_hud_info(sw_stats, params, vendorID);
 
     ImGuiContext *saved_ctx = ImGui::GetCurrentContext();

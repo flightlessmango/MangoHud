@@ -62,7 +62,7 @@ dependencies() {
             "Fedora")
                 MANAGER_QUERY="dnf list installed"
                 MANAGER_INSTALL="dnf install"
-                DEPS="{meson,gcc,gcc-c++,libX11-devel,glslang,python3-mako,mesa-libGL-devel,libXNVCtrl-devel}"
+                DEPS="{meson,gcc,gcc-c++,libX11-devel,glslang,python3-mako,mesa-libGL-devel,libXNVCtrl-devel,dbus-devel}"
                 dep_install
 
                 unset INSTALL
@@ -237,6 +237,7 @@ usage() {
     echo -e "\tbuild\t\tIf needed runs configure and then builds (compiles) MangoHud"
     echo -e "\tpackage\t\tRuns build if needed and then builds a tar package from MangoHud"
     echo -e "\tinstall\t\tInstall MangoHud onto your system"
+    echo -e "\treinstall\tRuns build, then package, and finally install"
     echo -e "\tclean\t\tRemoves build directory"
     echo -e "\tuninstall\tRemoves installed MangoHud files from your system"
     echo -e "\trelease\t\tBuilds a MangoHud release tar package"

@@ -5,8 +5,8 @@
 
 EXPORT_C_(void*) dlsym(void * handle, const char * name)
 {
-    void *(*find_glx_ptr)(const char *name) = nullptr;
-    void *(*find_egl_ptr)(const char *name) = nullptr;
+    static void *(*find_glx_ptr)(const char *name) = nullptr;
+    static void *(*find_egl_ptr)(const char *name) = nullptr;
 
     if (!find_glx_ptr)
         find_glx_ptr = reinterpret_cast<decltype(find_glx_ptr)> (real_dlsym(RTLD_NEXT, "mangohud_find_glx_ptr"));
