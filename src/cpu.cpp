@@ -301,10 +301,12 @@ bool CPUStats::GetCpuFile() {
         } else if (name == "atk0110") {
             find_temp_input(path, input, "CPU Temperature");
             break;
+        } else {
+            path.clear();
         }
     }
 
-    if (!file_exists(input) && !find_fallback_temp_input(path, input)) {
+    if (path.empty() || (!file_exists(input) && !find_fallback_temp_input(path, input))) {
         std::cerr << "MANGOHUD: Could not find cpu temp sensor location" << std::endl;
         return false;
     } else {
