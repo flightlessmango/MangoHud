@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 if [ "$#" -eq 0 ]; then
 	programname=`basename "$0"`
@@ -6,6 +6,11 @@ if [ "$#" -eq 0 ]; then
 	echo
 	echo "Usage: $programname <program>"
 	exit 1
+fi
+
+if [ "$1" = "--dlsym" ]; then
+	MANGOHUD_DLSYM=1
+	shift
 fi
 
 MANGOHUD_LIB_NAME="libMangoHud.so"
