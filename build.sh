@@ -183,14 +183,15 @@ release() {
 
 uninstall() {
     [ "$UID" -eq 0 ] || exec $SU_CMD bash "$0" uninstall
+
+    ninja -C build/meson32 uninstall
+    ninja -C build/meson64 uninstall
+
+    # Historic garbage
     rm -rfv "/usr/lib/mangohud"
-    rm -rfv "/usr/share/doc/mangohud"
-    rm -fv "/usr/share/man/man1/mangohud.1"
     rm -fv "/usr/share/vulkan/implicit_layer.d/mangohud.json"
-    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.json"
     rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json"
     rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json"
-    rm -fv "/usr/bin/mangohud"
     rm -fv "/usr/bin/mangohud.x86"
 }
 
@@ -201,9 +202,9 @@ install() {
     [ "$UID" -eq 0 ] || mkdir -pv "${CONFIG_DIR}"
     [ "$UID" -eq 0 ] || exec $SU_CMD bash "$0" install
 
-    uninstall
-    $SU_CMD ninja -C build/meson32 install
-    $SU_CMD ninja -C build/meson64 install
+    uninstall >/dev/null
+    ninja -C build/meson32 install
+    ninja -C build/meson64 install
 
     # FIXME get the triplet somehow
     ln -sv lib /usr/lib/mangohud/lib64
