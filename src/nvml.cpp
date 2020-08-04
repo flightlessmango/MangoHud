@@ -3,8 +3,6 @@
 #include <iostream>
 #include "overlay.h"
 
-libnvml_loader nvml("libnvidia-ml.so.1");
-
 nvmlReturn_t result;
 nvmlDevice_t nvidiaDevice;
 nvmlPciInfo_t nvidiaPciInfo;
@@ -14,6 +12,7 @@ struct nvmlUtilization_st nvidiaUtilization;
 struct nvmlMemory_st nvidiaMemory {};
 
 bool checkNVML(const char* pciBusId){
+    auto& nvml = get_libnvml_loader();
     if (nvml.IsLoaded()){
         result = nvml.nvmlInit();
         if (NVML_SUCCESS != result) {
@@ -42,6 +41,7 @@ bool checkNVML(const char* pciBusId){
 
 bool getNVMLInfo(){
     nvmlReturn_t response;
+    auto& nvml = get_libnvml_loader();
     response = nvml.nvmlDeviceGetUtilizationRates(nvidiaDevice, &nvidiaUtilization);
     nvml.nvmlDeviceGetTemperature(nvidiaDevice, NVML_TEMPERATURE_GPU, &nvidiaTemp);
     nvml.nvmlDeviceGetMemoryInfo(nvidiaDevice, &nvidiaMemory);

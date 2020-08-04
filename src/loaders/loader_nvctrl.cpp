@@ -1,5 +1,6 @@
 #include "loader_nvctrl.h"
 #include <iostream>
+#include <memory>
 
 // Put these sanity checks here so that they fire at most once
 // (to avoid cluttering the build output).
@@ -9,6 +10,15 @@
 #if defined(LIBRARY_LOADER_NVCTRL_H_DLOPEN) && defined(LIBRARY_LOADER_NVCTRL_H_DT_NEEDED)
 #error both LIBRARY_LOADER_NVCTRL_H_DLOPEN and LIBRARY_LOADER_NVCTRL_H_DT_NEEDED defined
 #endif
+
+static std::unique_ptr<libnvctrl_loader> libnvctrl_;
+
+libnvctrl_loader& get_libnvctrl_loader()
+{
+    if (!libnvctrl_)
+        libnvctrl_ = std::make_unique<libnvctrl_loader>("libXNVCtrl.so.0");
+    return *libnvctrl_.get();
+}
 
 libnvctrl_loader::libnvctrl_loader() : loaded_(false) {
 }

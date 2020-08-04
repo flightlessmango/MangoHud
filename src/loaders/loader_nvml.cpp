@@ -3,6 +3,7 @@
 
 #include "loader_nvml.h"
 #include <iostream>
+#include <memory>
 
 // Put these sanity checks here so that they fire at most once
 // (to avoid cluttering the build output).
@@ -12,6 +13,15 @@
 #if defined(LIBRARY_LOADER_NVML_H_DLOPEN) && defined(LIBRARY_LOADER_NVML_H_DT_NEEDED)
 #error both LIBRARY_LOADER_NVML_H_DLOPEN and LIBRARY_LOADER_NVML_H_DT_NEEDED defined
 #endif
+
+static std::unique_ptr<libnvml_loader> libnvml_;
+
+libnvml_loader& get_libnvml_loader()
+{
+    if (!libnvml_)
+        libnvml_ = std::make_unique<libnvml_loader>("libnvidia-ml.so.1");
+    return *libnvml_.get();
+}
 
 libnvml_loader::libnvml_loader() : loaded_(false) {
 }
