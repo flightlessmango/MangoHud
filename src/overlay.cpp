@@ -706,9 +706,9 @@ void init_system_info(){
             putenv(removenoexec);
             env_exists = true;
          }
-           stringstream findVersion;
-           findVersion << wineProcess << " --version";
-           wineVersion = exec(findVersion.str());
+         stringstream findVersion;
+         findVersion << wineProcess << " --version";
+         wineVersion = exec(findVersion.str());
          if (env_exists) {
             static char noexec[] = "WINELOADERNOEXEC=1";
             putenv(noexec);
@@ -717,6 +717,7 @@ void init_system_info(){
       else {
            wineVersion = "";
       }
+
 //driver = itox(device_data->properties.driverVersion);
       //driver = itox(device_data->properties.driverVersion);
 
