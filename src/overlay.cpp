@@ -691,11 +691,14 @@ void init_system_info(){
       trim(driver);
 
 // Get WINE version
-      wineProcess = exec("pgrep -fl wineserver");
-      if (wineProcess == "") {
-         wineVersion = "N/A";
-      } else {
-         wineProcess = exec("/usr/bin/pgrep -fla wineserver |awk '{print $2}'| awk 'NR==1{print $1}'| /usr/bin/sed 's/wineserver/wine/g'");
+
+      wineProcess = get_exe_path();
+      trim(wineProcess);
+      string searchPreload("preloader");
+      if (wineProcess.find(searchPreload) != std::string::npos) {
+         stringstream findPath;
+         findPath <<"echo " << wineProcess << " | sed 's/^/\"/' " <<" | sed 's%/[^/]*$%/wine\"%' ";
+         wineProcess = exec(findPath.str());
          trim(wineProcess);
          bool env_exists = false;
          if (getenv("WINELOADERNOEXEC")) {
@@ -703,14 +706,17 @@ void init_system_info(){
             putenv(removenoexec);
             env_exists = true;
          }
-         stringstream command;
-         command << wineProcess << " --version";
-         wineVersion = exec(command.str());
+           stringstream findVersion;
+           findVersion << wineProcess << " --version";
+           wineVersion = exec(findVersion.str());
          if (env_exists) {
             static char noexec[] = "WINELOADERNOEXEC=1";
             putenv(noexec);
          }
-}
+      }
+      else {
+           wineProcess = "";
+      }
 //driver = itox(device_data->properties.driverVersion);
       //driver = itox(device_data->properties.driverVersion);
 
@@ -1369,11 +1375,13 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       }
       
        if (params.enabled[OVERLAY_PARAM_ENABLED_wine]){
-           auto wine_color = ImGui::ColorConvertU32ToFloat4(params.wine_color);
-           ImGui::TextColored(wine_color, "%s", "WINE");
-           ImGui::PushFont(data.font1);
-           ImGui::TextColored(wine_color, "%s", wineVersion.c_str());
-           ImGui::PopFont();
+          if (wineVersion != ""){
+             auto wine_color = ImGui::ColorConvertU32ToFloat4(params.wine_color);
+             ImGui::TextColored(wine_color, "%s", "WINE");
+             ImGui::PushFont(data.font1);
+             ImGui::TextColored(wine_color, "%s", wineVersion.c_str());
+             ImGui::PopFont();
+         }
       }
 
 
