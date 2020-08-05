@@ -200,6 +200,7 @@ install() {
     rm -f "$HOME/.local/share/vulkan/implicit_layer.d/"{mangohud32.json,mangohud64.json}
 
     [ "$UID" -eq 0 ] || mkdir -pv "${CONFIG_DIR}"
+    [ "$UID" -eq 0 ] || build
     [ "$UID" -eq 0 ] || exec $SU_CMD bash "$0" install
 
     uninstall >/dev/null
