@@ -694,24 +694,40 @@ void init_system_info(){
 
       wineProcess = get_exe_path();
       trim(wineProcess);
-      string searchPreload("preloader");
-      if (wineProcess.find(searchPreload) != std::string::npos) {
-         stringstream findPath;
-         findPath <<"echo " << wineProcess << " | sed 's/^/\"/' " <<" | sed 's%/[^/]*$%/wine\"%' ";
-         wineProcess = exec(findPath.str());
-         trim(wineProcess);
-         bool env_exists = false;
-         if (getenv("WINELOADERNOEXEC")) {
-            static char removenoexec[] = "WINELOADERNOEXEC";
-            putenv(removenoexec);
-            env_exists = true;
+      auto n = wineProcess.find_last_of('/');
+      string preloader = wineProcess.substr(n + 1);
+      string searchProton("/dist/bin/wine");
+      if (preloader == "wine-preloader" || preloader == "wine64-preloader") {
+         // Check if using Proton
+         if (wineProcess.find(searchProton) != std::string::npos) {
+            stringstream protonPath;
+            protonPath << "echo " << wineProcess <<" | rev | cut -d '/' -f3- | rev | sed 's/.*/\"&\"/'";
+            string protonVersion;
+            protonVersion = exec(protonPath.str());
+            trim(protonVersion);
+            stringstream command;
+            command <<"< " <<protonVersion + "/version" <<" cut -d' ' -f2";
+            wineVersion = exec(command.str());
          }
-         stringstream findVersion;
-         findVersion << wineProcess << " --version";
-         wineVersion = exec(findVersion.str());
-         if (env_exists) {
-            static char noexec[] = "WINELOADERNOEXEC=1";
-            putenv(noexec);
+         else {
+            stringstream findPath;
+            findPath <<"echo " << wineProcess << " | sed 's/^/\"/' " <<" | sed 's%/[^/]*$%/wine\"%' ";
+            wineProcess = exec(findPath.str());
+            trim(wineProcess);
+            bool env_exists = false;
+            if (getenv("WINELOADERNOEXEC")) {
+               static char removenoexec[] = "WINELOADERNOEXEC";
+               putenv(removenoexec);
+               env_exists = true;
+            }
+            stringstream findVersion;
+            findVersion << wineProcess << " --version";
+            wineVersion = exec(findVersion.str());
+            std::cout << "WINE VERSION = " <<wineVersion;
+            if (env_exists) {
+               static char noexec[] = "WINELOADERNOEXEC=1";
+               putenv(noexec);
+            }
          }
       }
       else {
