@@ -266,6 +266,7 @@ parse_font_glyph_ranges(const char *str)
 #define parse_background_alpha(s) parse_float(s)
 #define parse_alpha(s) parse_float(s)
 #define parse_permit_upload(s) parse_unsigned(s)
+#define parse_render_mango(s) parse_unsigned(s)
 
 #define parse_cpu_color(s) parse_color(s)
 #define parse_gpu_color(s) parse_color(s)
@@ -436,6 +437,7 @@ parse_overlay_config(struct overlay_params *params,
    params->log_interval = 100;
    params->media_player_order = { MP_ORDER_TITLE, MP_ORDER_ARTIST, MP_ORDER_ALBUM };
    params->permit_upload = 0;
+   params->render_mango = 0;
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_Shift_R, XK_F12 };

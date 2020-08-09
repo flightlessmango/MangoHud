@@ -237,7 +237,8 @@ void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& te
    float font_size_text = params.font_size_text;
    if (font_size_text < FLT_EPSILON)
       font_size_text = font_size;
-
+   if(params.render_mango)
+      font_size = 42;
    static const ImWchar default_range[] =
    {
       0x0020, 0x00FF, // Basic Latin + Latin Supplement
@@ -1123,7 +1124,80 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
    ImGui::PopStyleColor(2);
    ImGui::End();
 }
+void render_mango(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan){
+   static int tableCols = 2;
+   static float ralign_width = 0, old_scale = 0;
+   window_size = ImVec2(300, params.height);
+   unsigned height = ImGui::GetIO().DisplaySize.y;
+   auto now = Clock::now();
 
+   if (old_scale != params.font_scale) {
+      ralign_width = ImGui::CalcTextSize("A").x * 4 /* characters */;
+      old_scale = params.font_scale;
+   }
+   ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
+      ImGui::BeginTable("hud", tableCols);
+      if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
+         ImGui::TableNextRow();
+         const char* gpu_text;
+         if (params.gpu_text.empty())
+            gpu_text = "GPU";
+         else
+            gpu_text = params.gpu_text.c_str();
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.gpu_color), "%s", gpu_text);
+         ImGui::TableNextCell();
+         right_aligned_text(ralign_width, "%i", gpu_info.load);
+         ImGui::SameLine(0, 1.0f);
+         ImGui::Text("%%");
+      }
+      if(params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats]){
+         ImGui::TableNextRow();
+         const char* cpu_text;
+         if (params.cpu_text.empty())
+            cpu_text = "CPU";
+         else
+            cpu_text = params.cpu_text.c_str();
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.cpu_color), "%s", cpu_text);
+         ImGui::TableNextCell();
+         right_aligned_text(ralign_width, "%d", data.total_cpu);
+         ImGui::SameLine(0, 1.0f);
+         ImGui::Text("%%");
+      }
+      if (params.enabled[OVERLAY_PARAM_ENABLED_fps]){
+         ImGui::TableNextRow();
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", is_vulkan ? data.engineName.c_str() : "OpenGL");
+         ImGui::TableNextCell();
+         right_aligned_text(ralign_width, "%.0f", data.fps);
+         ImGui::SameLine(0, 1.0f);
+         ImGui::PushFont(data.font1);
+         ImGui::Text("FPS");
+         ImGui::PopFont();
+      }
+      ImGui::EndTable();
+      if (params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
+         ImGui::Dummy(ImVec2(0.0f, params.font_size * params.font_scale / 2));
+         ImGui::PushFont(data.font1);
+         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", "Frametime");
+         ImGui::PopFont();
+
+         char hash[40];
+         snprintf(hash, sizeof(hash), "##%s", overlay_param_names[OVERLAY_PARAM_ENABLED_frame_timing]);
+         data.stat_selector = OVERLAY_PLOTS_frame_timing;
+         data.time_dividor = 1000.0f;
+
+         ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+         double min_time = 0.0f;
+         double max_time = 50.0f;
+         ImGui::PlotLines(hash, get_time_stat, &data,
+                  ARRAY_SIZE(data.frames_stats), 0,
+                  NULL, min_time, max_time,
+                  ImVec2(ImGui::GetContentRegionAvailWidth(), 50));
+
+         ImGui::PopStyleColor();
+      }
+   ImGui::End();
+   window_size = ImVec2(window_size.x, ImGui::GetCursorPosY() + 150.0f);
+}
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan)
 {
    ImGui::GetIO().FontGlobalScale = params.font_scale;
@@ -1429,7 +1503,10 @@ static void compute_swapchain_display(struct swapchain_data *data)
    {
       scoped_lock lk(instance_data->notifier.mutex);
       position_layer(data->sw_stats, instance_data->params, data->window_size);
-      render_imgui(data->sw_stats, instance_data->params, data->window_size, true);
+      if(instance_data->params.render_mango)
+         render_mango(data->sw_stats, instance_data->params, data->window_size, true);
+      else
+         render_imgui(data->sw_stats, instance_data->params, data->window_size, true);
    }
    ImGui::PopStyleVar(3);
 

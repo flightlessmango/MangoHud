@@ -96,6 +96,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(gpu_text)                    \
    OVERLAY_PARAM_CUSTOM(log_interval)                \
    OVERLAY_PARAM_CUSTOM(permit_upload)               \
+   OVERLAY_PARAM_CUSTOM(render_mango)                \
    OVERLAY_PARAM_CUSTOM(help)
 
 enum overlay_param_position {
@@ -157,6 +158,7 @@ struct overlay_params {
    unsigned cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color;
    unsigned media_player_color;
    unsigned tableCols;
+   unsigned render_mango;
    float font_size, font_scale;
    float font_size_text;
    float font_scale_media_player;
