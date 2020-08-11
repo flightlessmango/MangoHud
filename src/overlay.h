@@ -78,6 +78,12 @@ struct benchmark_stats {
    std::vector<float> fps_data;
 };
 
+extern struct shader_render_mode
+{
+   int mode;
+   float params[2];
+} shader_render_mode [2];
+
 extern struct fps_limit fps_limit_stats;
 extern int32_t deviceID;
 

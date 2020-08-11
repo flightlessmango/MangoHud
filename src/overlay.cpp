@@ -76,6 +76,10 @@ struct fps_limit fps_limit_stats {};
 VkPhysicalDeviceDriverProperties driverProps = {};
 int32_t deviceID;
 struct benchmark_stats benchmark;
+struct shader_render_mode shader_render_mode [] {
+   {0, {}},
+   {1, {4/16.f, 3/16.f}},
+};
 
 /* Mapped from VkInstace/VkPhysicalDevice */
 struct instance_data {
@@ -841,7 +845,7 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
          last_upload_press = now;
          logger->upload_last_log();
       }
-   }   
+   }
    if (params.permit_upload && elapsedUpload >= keyPressDelay){
 #ifdef HAVE_X11
       pressed = keys_are_pressed(params.upload_logs);
@@ -1154,12 +1158,11 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
    ImGui::PopStyleColor(2);
    ImGui::End();
 }
+
 void render_mango(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan){
    static int tableCols = 2;
    static float ralign_width = 0, old_scale = 0;
    window_size = ImVec2(300, params.height);
-   unsigned height = ImGui::GetIO().DisplaySize.y;
-   auto now = Clock::now();
 
    if (old_scale != params.font_scale) {
       ralign_width = ImGui::CalcTextSize("A").x * 4 /* characters */;
@@ -1174,7 +1177,7 @@ void render_mango(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             gpu_text = "GPU";
          else
             gpu_text = params.gpu_text.c_str();
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.gpu_color), "%s", gpu_text);
+         ImGui::TextColored(data.colors.gpu, "%s", gpu_text);
          ImGui::TableNextCell();
          right_aligned_text(ralign_width, "%i", gpu_info.load);
          ImGui::SameLine(0, 1.0f);
@@ -1187,7 +1190,7 @@ void render_mango(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             cpu_text = "CPU";
          else
             cpu_text = params.cpu_text.c_str();
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.cpu_color), "%s", cpu_text);
+         ImGui::TextColored(data.colors.cpu, "%s", cpu_text);
          ImGui::TableNextCell();
          right_aligned_text(ralign_width, "%d", data.total_cpu);
          ImGui::SameLine(0, 1.0f);
@@ -1195,7 +1198,7 @@ void render_mango(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       }
       if (params.enabled[OVERLAY_PARAM_ENABLED_fps]){
          ImGui::TableNextRow();
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", is_vulkan ? data.engineName.c_str() : "OpenGL");
+         ImGui::TextColored(data.colors.engine, "%s", is_vulkan ? data.engineName.c_str() : "OpenGL");
          ImGui::TableNextCell();
          right_aligned_text(ralign_width, "%.0f", data.fps);
          ImGui::SameLine(0, 1.0f);
@@ -1207,7 +1210,7 @@ void render_mango(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       if (params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
          ImGui::Dummy(ImVec2(0.0f, params.font_size * params.font_scale / 2));
          ImGui::PushFont(data.font1);
-         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.engine_color), "%s", "Frametime");
+         ImGui::TextColored(data.colors.engine, "%s", "Frametime");
          ImGui::PopFont();
 
          char hash[40];
@@ -1229,23 +1232,6 @@ void render_mango(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    window_size = ImVec2(window_size.x, ImGui::GetCursorPosY() + 150.0f);
 }
 
-struct render_mode
-{
-   int mode;
-   float smoothing = 0.25f;
-   float outline = 0.18f;
-} render_mode [] { {0}, {1} };
-
-static float calc_alignment(ImFont* small_font)
-{
-   float l = ImGui::CalcTextSize("A").x;
-   ImGui::PushFont(small_font);
-   float s = ImGui::CalcTextSize("A").x;
-   ImGui::PopFont();
-   std::cerr << "l " << l << " s " << s << "\n";
-   return l * 4;// - s * 3;
-}
-
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan)
 {
    ImGui::GetIO().FontGlobalScale = params.font_scale;
@@ -1255,6 +1241,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    static float ralign_width = 0, old_scale = 0;
    window_size = ImVec2(params.width, params.height);
    unsigned height = ImGui::GetIO().DisplaySize.y;
+   struct shader_render_mode *default_rmode = &shader_render_mode[1];
    auto now = Clock::now();
 
    if (old_scale != params.font_scale) {
@@ -1264,7 +1251,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
 
    if (!params.no_display){
       ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
-      ImGui::GetWindowDrawList()->AddCallback(nullptr, &render_mode[1]);
+      ImGui::GetWindowDrawList()->AddCallback(nullptr, default_rmode);
       if (params.enabled[OVERLAY_PARAM_ENABLED_version]){
          ImGui::Text("%s", MANGOHUD_VERSION);
          ImGui::Dummy(ImVec2(0, 8.0f));
@@ -1507,12 +1494,12 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
                                  NULL, min_time, max_time,
                                  ImVec2(ImGui::GetContentRegionAvailWidth() - params.font_size * params.font_scale * 2.2, 50));
          } else {
-            ImGui::GetWindowDrawList()->AddCallback(nullptr, &render_mode[0]);
+            ImGui::GetWindowDrawList()->AddCallback(nullptr, &shader_render_mode[0]);
             ImGui::PlotLines(hash, get_time_stat, &data,
                      ARRAY_SIZE(data.frames_stats), 0,
                      NULL, min_time, max_time,
                      ImVec2(ImGui::GetContentRegionAvailWidth() - params.font_size * params.font_scale * 2.2, 50));
-            ImGui::GetWindowDrawList()->AddCallback(nullptr, &render_mode[1]);
+            ImGui::GetWindowDrawList()->AddCallback(nullptr, default_rmode);
          }
          ImGui::PopStyleColor();
       }
@@ -1553,9 +1540,9 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::SetNextWindowPos({data.main_window_pos.x, data.main_window_pos.y + window_size.y + 5});
          ImGui::SetNextWindowBgAlpha(params.background_alpha);
          ImGui::Begin("Options", nullptr, ImGuiWindowFlags_NoDecoration| ImGuiWindowFlags_AlwaysAutoResize);
-         ImGui::GetWindowDrawList()->AddCallback(nullptr, &render_mode[0]);
-         ImGui::InputFloat("Smoothing", &render_mode[1].smoothing, 0.01f, 0.1f, "%.3f");
-         ImGui::InputFloat("Outline", &render_mode[1].outline, 0.01f, 0.1f, "%.3f");
+         ImGui::GetWindowDrawList()->AddCallback(nullptr, &shader_render_mode[0]);
+         ImGui::InputFloat("Smoothing", &shader_render_mode[1].params[0], 0.01f, 0.1f, "%.3f");
+         ImGui::InputFloat("Outline", &shader_render_mode[1].params[1], 0.01f, 0.1f, "%.3f");
          ImGui::InputFloat("Scale", &params.font_scale, 0.01f, 0.1f, "%.3f");
 
 //          static int selected = -1;
@@ -2026,17 +2013,14 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
       {
          const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
          if (pcmd->UserCallbackData) {
-            auto r = ((struct render_mode*)pcmd->UserCallbackData);
+            auto r = ((struct shader_render_mode*)pcmd->UserCallbackData);
             //std::cerr << "UserCallbackData: " << r->mode << "\n";
             device_data->vtable.CmdPushConstants(draw->command_buffer, data->pipeline_layout,
                                  VK_SHADER_STAGE_FRAGMENT_BIT,
                                  sizeof(float) * 4, sizeof(int) * 1, &r->mode);
             device_data->vtable.CmdPushConstants(draw->command_buffer, data->pipeline_layout,
                                  VK_SHADER_STAGE_FRAGMENT_BIT,
-                                 sizeof(float) * 5, sizeof(float) * 1, &r->smoothing);
-            device_data->vtable.CmdPushConstants(draw->command_buffer, data->pipeline_layout,
-                                 VK_SHADER_STAGE_FRAGMENT_BIT,
-                                 sizeof(float) * 6, sizeof(float) * 1, &r->outline);
+                                 sizeof(float) * 5, sizeof(float) * 2, &r->params);
          }
          // Apply scissor/clipping rectangle
          // FIXME: We could clamp width/height based on clamped min/max values.

@@ -12,12 +12,11 @@ layout(push_constant) uniform uPushConstant{
     vec2 uScale;
     vec2 uTranslate;
     /*layout (offset = 16) */int uMode;
-    float uSmoothing;
-    float uOutline;
+    float params[2]; //mode 1 - uSmoothing, uOutline
 } pc;
 
-const float smoothing = 4.0/16.0; // depends on font scale and SDF "spread"
-const float outlineWidth = 3.0/16.0;
+//const float smoothing = 4.0/16.0; // depends on font scale and SDF "spread"
+//const float outlineWidth = 3.0/16.0;
 //const float outerEdgeCenter = 0.5 - outlineWidth;
 const vec4 u_outlineColor = vec4(0, 0, 0, 1);
 
@@ -36,16 +35,13 @@ const vec2 conv[5] = {
 
 void main()
 {
-    float distance = 0;
-    distance = texture(sTexture, In.UV.st).r;
-//     for (int i=0; i<5; i++)
-//         distance += texture(sTexture, In.UV.st + conv[i]).r;
-//     distance /= 5;
+    float dist = texture(sTexture, In.UV.st).r;
 
     if (pc.uMode == 1) {
-        float outerEdgeCenter = 0.5 - pc.uOutline;
-        float alpha = smoothstep(outerEdgeCenter - pc.uSmoothing, outerEdgeCenter + pc.uSmoothing, distance);
-        float border = smoothstep(0.5 - pc.uSmoothing, 0.5 + pc.uSmoothing, distance);
+        float n = clamp(dist / pc.params[1], 0.0, 1.0);
+        float outerEdgeCenter = 0.5 - pc.params[1];
+        float alpha = smoothstep(outerEdgeCenter - pc.params[0], outerEdgeCenter + pc.params[0], dist);
+        float border = smoothstep(0.5 - pc.params[0], 0.5 + pc.params[0], dist);
         vec4 color = mix(u_outlineColor, In.Color, border);
 
         fColor = vec4(color.rgb, color.a * alpha);
@@ -54,9 +50,9 @@ void main()
 //         float shadowAlpha = smoothstep(0.5 - shadowSmoothing, 0.5 + shadowSmoothing, shadowDistance);
 //         vec4 shadow = vec4(shadowColor.rgb, shadowColor.a * shadowAlpha);
 //         fColor = mix(shadow, fColor, fColor.a);
-
-    //fColor = vec4( mix(u_outlineColor, In.Color.rgb, border), alpha  * In.Color.a);
+//
+//         fColor = vec4( mix(u_outlineColor, In.Color.rgb, border), alpha  * In.Color.a);
     } else {
-        fColor = In.Color * vec4(1, 1, 1, distance);
+        fColor = In.Color * vec4(1, 1, 1, dist);
     }
 }
