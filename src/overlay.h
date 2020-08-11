@@ -26,7 +26,6 @@ struct swapchain_stats {
    std::string time;
    double fps;
    struct iostats io;
-   int total_cpu;
    uint64_t last_present_time;
    unsigned n_frames_since_update;
    uint64_t last_fps_update;

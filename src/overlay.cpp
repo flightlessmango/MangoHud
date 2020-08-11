@@ -708,42 +708,42 @@ void init_system_info(){
       parse_pciids();
 }
 
-void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
-         if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
-         cpuStats.UpdateCPUData();
-         sw_stats.total_cpu = cpuStats.GetCPUDataTotal().percent;
+void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID)
+{
+   if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
+      cpuStats.UpdateCPUData();
 
-         if (params.enabled[OVERLAY_PARAM_ENABLED_core_load])
-            cpuStats.UpdateCoreMhz();
-         if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp] || logger->is_active())
-            cpuStats.UpdateCpuTemp();
-         }
+      if (params.enabled[OVERLAY_PARAM_ENABLED_core_load])
+         cpuStats.UpdateCoreMhz();
+      if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp] || logger->is_active())
+         cpuStats.UpdateCpuTemp();
+   }
 
-         if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || logger->is_active()) {
-            if (vendorID == 0x1002)
-               getAmdGpuInfo();
+   if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || logger->is_active()) {
+      if (vendorID == 0x1002)
+         getAmdGpuInfo();
 
-            if (vendorID == 0x10de)
-               getNvidiaGpuInfo();
-         }
+      if (vendorID == 0x10de)
+         getNvidiaGpuInfo();
+   }
 
-         // get ram usage/max
-         if (params.enabled[OVERLAY_PARAM_ENABLED_ram] || logger->is_active())
-            update_meminfo();
-         if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])
-            getIoStats(&sw_stats.io);
+   // get ram usage/max
+   if (params.enabled[OVERLAY_PARAM_ENABLED_ram] || logger->is_active())
+      update_meminfo();
+   if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])
+      getIoStats(&sw_stats.io);
 
-         currentLogData.gpu_load = gpu_info.load;
-         currentLogData.gpu_temp = gpu_info.temp;
-         currentLogData.gpu_core_clock = gpu_info.CoreClock;
-         currentLogData.gpu_mem_clock = gpu_info.MemClock;
-         currentLogData.gpu_vram_used = gpu_info.memoryUsed;
-         currentLogData.ram_used = memused;
+   currentLogData.gpu_load = gpu_info.load;
+   currentLogData.gpu_temp = gpu_info.temp;
+   currentLogData.gpu_core_clock = gpu_info.CoreClock;
+   currentLogData.gpu_mem_clock = gpu_info.MemClock;
+   currentLogData.gpu_vram_used = gpu_info.memoryUsed;
+   currentLogData.ram_used = memused;
 
-         currentLogData.cpu_load = cpuStats.GetCPUDataTotal().percent;
-         currentLogData.cpu_temp = cpuStats.GetCPUDataTotal().temp;
+   currentLogData.cpu_load = cpuStats.GetCPUDataTotal().percent;
+   currentLogData.cpu_temp = cpuStats.GetCPUDataTotal().temp;
 
-         logger->notify_data_valid();
+   logger->notify_data_valid();
 }
 
 void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
@@ -1159,7 +1159,7 @@ void render_mango(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             cpu_text = params.cpu_text.c_str();
          ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.cpu_color), "%s", cpu_text);
          ImGui::TableNextCell();
-         right_aligned_text(ralign_width, "%d", data.total_cpu);
+         right_aligned_text(ralign_width, "%d", cpuStats.GetCPUDataTotal().percent);
          ImGui::SameLine(0, 1.0f);
          ImGui::Text("%%");
       }
@@ -1272,7 +1272,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             cpu_text = params.cpu_text.c_str();
          ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.cpu_color), "%s", cpu_text);
          ImGui::TableNextCell();
-         right_aligned_text(ralign_width, "%d", data.total_cpu);
+         right_aligned_text(ralign_width, "%d", cpuStats.GetCPUDataTotal().percent);
          ImGui::SameLine(0, 1.0f);
          ImGui::Text("%%");
          // ImGui::SameLine(150);

@@ -227,13 +227,13 @@ bool CPUStats::UpdateCpuTemp() {
     if (!m_cpuTempFile)
         return false;
 
+    int temp = 0;
     rewind(m_cpuTempFile);
     fflush(m_cpuTempFile);
-    if (fscanf(m_cpuTempFile, "%d", &m_cpuDataTotal.temp) != 1)
-        return false;
-    m_cpuDataTotal.temp /= 1000;
+    bool ret = (fscanf(m_cpuTempFile, "%d", &temp) == 1);
+    m_cpuDataTotal.temp = temp / 1000;
 
-    return true;
+    return ret;
 }
 
 static bool find_temp_input(const std::string path, std::string& input, const std::string& name)
