@@ -116,7 +116,7 @@ void imgui_create(void *ctx)
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
-    imgui_custom_style(params);
+    convert_colors(false, sw_stats, params);
 
     glGetIntegerv (GL_VIEWPORT, last_vp.v);
     glGetIntegerv (GL_SCISSOR_BOX, last_sb.v);

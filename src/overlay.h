@@ -46,6 +46,18 @@ struct swapchain_stats {
    std::string deviceName;
    std::string gpuName;
    std::string driverName;
+   struct {
+      ImVec4 cpu,
+         gpu,
+         vram,
+         ram,
+         engine,
+         io,
+         frametime,
+         background,
+         text,
+         media_player;
+   } colors;
 };
 
 struct fps_limit {
@@ -78,9 +90,9 @@ void init_cpu_stats(overlay_params& params);
 void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID);
 void init_system_info(void);
 void FpsLimiter(struct fps_limit& stats);
-void imgui_custom_style(struct overlay_params& params);
 void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats);
 void calculate_benchmark_data(void);
 void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& text_font);
+void convert_colors(bool do_conv, struct swapchain_stats& sw_stats, struct overlay_params& params);
 
 #endif //MANGOHUD_OVERLAY_H
