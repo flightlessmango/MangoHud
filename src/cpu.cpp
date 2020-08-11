@@ -227,7 +227,6 @@ bool CPUStats::UpdateCpuTemp() {
     if (!m_cpuTempFile)
         return false;
 
-    m_cpuDataTotal.temp = 0;
     rewind(m_cpuTempFile);
     fflush(m_cpuTempFile);
     if (fscanf(m_cpuTempFile, "%d", &m_cpuDataTotal.temp) != 1)
