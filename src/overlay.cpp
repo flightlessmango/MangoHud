@@ -811,7 +811,7 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
          last_upload_press = now;
          logger->upload_last_log();
       }
-   }   
+   }
    if (params.permit_upload && elapsedUpload >= keyPressDelay){
 #ifdef HAVE_X11
       pressed = keys_are_pressed(params.upload_logs);
@@ -1124,12 +1124,11 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
    ImGui::PopStyleColor(2);
    ImGui::End();
 }
+
 void render_mango(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan){
    static int tableCols = 2;
    static float ralign_width = 0, old_scale = 0;
    window_size = ImVec2(300, params.height);
-   unsigned height = ImGui::GetIO().DisplaySize.y;
-   auto now = Clock::now();
 
    if (old_scale != params.font_scale) {
       ralign_width = ImGui::CalcTextSize("A").x * 4 /* characters */;
@@ -1159,7 +1158,7 @@ void render_mango(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             cpu_text = params.cpu_text.c_str();
          ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.cpu_color), "%s", cpu_text);
          ImGui::TableNextCell();
-         right_aligned_text(ralign_width, "%d", cpuStats.GetCPUDataTotal().percent);
+         right_aligned_text(ralign_width, "%d", int(cpuStats.GetCPUDataTotal().percent));
          ImGui::SameLine(0, 1.0f);
          ImGui::Text("%%");
       }
@@ -1272,7 +1271,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             cpu_text = params.cpu_text.c_str();
          ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(params.cpu_color), "%s", cpu_text);
          ImGui::TableNextCell();
-         right_aligned_text(ralign_width, "%d", cpuStats.GetCPUDataTotal().percent);
+         right_aligned_text(ralign_width, "%d", int(cpuStats.GetCPUDataTotal().percent));
          ImGui::SameLine(0, 1.0f);
          ImGui::Text("%%");
          // ImGui::SameLine(150);
