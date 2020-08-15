@@ -1,5 +1,6 @@
 #include "logging.h"
 #include "overlay.h"
+#include "config.h"
 #include <sstream>
 #include <iomanip>
 
@@ -109,7 +110,7 @@ void Logger::start_logging() {
   m_values_valid = false;
   m_logging_on = true;
   m_log_start = Clock::now();
-  if((not m_params->output_file.empty()) and (m_params->log_interval != 0)){
+  if((not m_params->output_folder.empty()) and (m_params->log_interval != 0)){
     std::thread(logging, m_params).detach();
   }
 }
@@ -121,8 +122,8 @@ void Logger::stop_logging() {
 
   std::thread(calculate_benchmark_data, m_params).detach();
 
-  if(not m_params->output_file.empty()) {
-    m_log_files.emplace_back(m_params->output_file + get_log_suffix());
+  if(not m_params->output_folder.empty()) {
+    m_log_files.emplace_back(m_params->output_folder + "/" + program_name + "_" + get_log_suffix());
     std::thread(writeFile, m_log_files.back()).detach();
   }
 }

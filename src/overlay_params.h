@@ -50,7 +50,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(engine_version)                \
    OVERLAY_PARAM_BOOL(histogram)                     \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
-   OVERLAY_PARAM_CUSTOM(output_file)                 \
+   OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(font_file)                   \
    OVERLAY_PARAM_CUSTOM(font_file_text)              \
    OVERLAY_PARAM_CUSTOM(font_glyph_ranges)           \
@@ -169,7 +169,7 @@ struct overlay_params {
    std::vector<KeySym> reload_cfg;
    std::vector<KeySym> upload_log;
    std::vector<KeySym> upload_logs;
-   std::string time_format, output_file;
+   std::string time_format, output_folder;
    std::string pci_dev;
    std::string media_player_name;
    std::string cpu_text, gpu_text;

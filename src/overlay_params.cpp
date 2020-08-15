@@ -292,7 +292,7 @@ parse_font_glyph_ranges(const char *str)
 #define parse_offset_y(s) parse_unsigned(s)
 #define parse_log_duration(s) parse_unsigned(s)
 #define parse_time_format(s) parse_str(s)
-#define parse_output_file(s) parse_path(s)
+#define parse_output_folder(s) parse_path(s)
 #define parse_font_file(s) parse_path(s)
 #define parse_font_file_text(s) parse_path(s)
 #define parse_io_read(s) parse_unsigned(s)
@@ -335,7 +335,7 @@ parse_help(const char *str)
    fprintf(stderr, "\tposition=top-left|top-right|bottom-left|bottom-right\n");
    fprintf(stderr, "\tfps_sampling_period=number-of-milliseconds\n");
    fprintf(stderr, "\tno_display=0|1\n");
-   fprintf(stderr, "\toutput_file=/path/to/output.txt\n");
+   fprintf(stderr, "\toutput_folder=/path/to/folder\n");
    fprintf(stderr, "\twidth=width-in-pixels\n");
    fprintf(stderr, "\theight=height-in-pixels\n");
 
