@@ -766,6 +766,7 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
 #endif
      if (pressed && (now - logger->last_log_end() > 11s)) {
        last_f2_press = now;
+
        if (logger->is_active()) {
          logger->stop_logging();
        } else {
@@ -826,27 +827,43 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
    }
 }
 
-void calculate_benchmark_data(){
-   vector<float> sorted;
-   sorted = benchmark.fps_data;
+void calculate_benchmark_data(void *params_void){
+   overlay_params *params = reinterpret_cast<overlay_params *>(params_void);
+
+   vector<float> sorted = benchmark.fps_data;
    sort(sorted.begin(), sorted.end());
-   // 97th percentile
-   int index = sorted.size() * 0.97;
-   benchmark.ninety = sorted[index];
-   // avg
+   benchmark.percentile_data.clear();
+
    benchmark.total = 0.f;
    for (auto fps_ : sorted){
       benchmark.total = benchmark.total + fps_;
    }
-   benchmark.avg = benchmark.total / sorted.size();
-   // 1% min
-   benchmark.total = 0.f;
-   for (size_t i = 0; i < sorted.size() * 0.01; i++){
-      benchmark.total = sorted[i];
+
+   size_t max_label_size = 0;
+
+   for (std::string percentile : params->benchmark_percentiles) {
+      float result;
+
+      // special case handling for a mean-based average
+      if (percentile == "AVG") {
+         result = benchmark.total / sorted.size();
+      } else {
+         // the percentiles are already validated when they're parsed from the config.
+         float fraction = parse_float(percentile) / 100;
+
+         result = sorted[(fraction * sorted.size()) - 1];
+         percentile += "%";
+      }
+
+      if (percentile.length() > max_label_size)
+         max_label_size = percentile.length();
+
+      benchmark.percentile_data.push_back({percentile, result});
    }
-   benchmark.oneP = benchmark.total;
-   // 0.1% min
-   benchmark.pointOneP = sorted[sorted.size() * 0.001];
+
+   for (auto& entry : benchmark.percentile_data) {
+      entry.first.append(max_label_size - entry.first.length(), ' ');
+   }
 }
 
 void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
@@ -1061,14 +1078,13 @@ static void render_mpris_metadata(struct overlay_params& params, mutexed_metadat
 
 void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, unsigned height, Clock::time_point now){
    // TODO, FIX LOG_DURATION FOR BENCHMARK
-   int benchHeight = 6 * params.font_size * params.font_scale + 10.0f + 58;
+   int benchHeight = (2 + benchmark.percentile_data.size()) * params.font_size + 10.0f + 58;
    ImGui::SetNextWindowSize(ImVec2(window_size.x, benchHeight), ImGuiCond_Always);
    if (height - (window_size.y + data.main_window_pos.y + 5) < benchHeight)
       ImGui::SetNextWindowPos(ImVec2(data.main_window_pos.x, data.main_window_pos.y - benchHeight - 5), ImGuiCond_Always);
    else
       ImGui::SetNextWindowPos(ImVec2(data.main_window_pos.x, data.main_window_pos.y + window_size.y + 5), ImGuiCond_Always);
 
-   vector<pair<string, float>> benchmark_data = {{"97% ", benchmark.ninety}, {"AVG ", benchmark.avg}, {"1%  ", benchmark.oneP}, {"0.1%", benchmark.pointOneP}};
    float display_time = std::chrono::duration<float>(now - logger->last_log_end()).count();
    static float display_for = 10.0f;
    float alpha;
@@ -1106,7 +1122,7 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
    snprintf(duration, sizeof(duration), "Duration: %.1fs", std::chrono::duration<float>(logger->last_log_end() - logger->last_log_begin()).count());
    ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2 )- (ImGui::CalcTextSize(duration).x / 2));
    ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), "%s", duration);
-   for (auto& data_ : benchmark_data){
+   for (auto& data_ : benchmark.percentile_data){
       char buffer[20];
       snprintf(buffer, sizeof(buffer), "%s %.1f", data_.first.c_str(), data_.second);
       ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2 )- (ImGui::CalcTextSize(buffer).x / 2));

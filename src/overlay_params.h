@@ -97,6 +97,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(log_interval)                \
    OVERLAY_PARAM_CUSTOM(permit_upload)               \
    OVERLAY_PARAM_CUSTOM(render_mango)                \
+   OVERLAY_PARAM_CUSTOM(benchmark_percentiles)       \
    OVERLAY_PARAM_CUSTOM(help)
 
 enum overlay_param_position {
@@ -174,6 +175,7 @@ struct overlay_params {
    std::string cpu_text, gpu_text;
    unsigned log_interval;
    std::vector<media_player_order> media_player_order;
+   std::vector<std::string> benchmark_percentiles;
 
    std::string font_file, font_file_text;
    uint32_t font_glyph_ranges;

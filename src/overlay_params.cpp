@@ -209,6 +209,48 @@ parse_media_player_order(const char *str)
    return order;
 }
 
+
+static std::vector<std::string>
+parse_benchmark_percentiles(const char *str)
+{
+   std::vector<std::string> percentiles;
+   std::stringstream percent_strings(str);
+   std::string value;
+
+   while (std::getline(percent_strings, value, '+')) {
+      trim(value);
+
+      if (value == "AVG") {
+         percentiles.push_back(value);
+         continue;
+      }
+
+      float as_float;
+      size_t float_len = 0;
+
+      try {
+         as_float = parse_float(value, &float_len);
+      } catch (const std::invalid_argument&) {
+         std::cerr << "MANGOHUD: invalid benchmark percentile: '" << value << "'\n";
+         continue;
+      }
+
+      if (float_len != value.length()) {
+         std::cerr << "MANGOHUD: invalid benchmark percentile: '" << value << "'\n";
+         continue;
+      }
+
+      if (as_float > 100 || as_float < 0) {
+         std::cerr << "MANGOHUD: benchmark percentile is not between 0 and 100 (" << value << ")\n";
+         continue;
+      }
+
+      percentiles.push_back(value);
+   }
+
+   return percentiles;
+}
+
 static uint32_t
 parse_font_glyph_ranges(const char *str)
 {
@@ -239,6 +281,7 @@ parse_font_glyph_ranges(const char *str)
          fg |= FG_LATIN_EXT_B;
    }
    return fg;
+
 }
 
 #define parse_width(s) parse_unsigned(s)
@@ -438,6 +481,7 @@ parse_overlay_config(struct overlay_params *params,
    params->media_player_order = { MP_ORDER_TITLE, MP_ORDER_ARTIST, MP_ORDER_ALBUM };
    params->permit_upload = 0;
    params->render_mango = 0;
+   params->benchmark_percentiles = { "97", "AVG", "1", "0.1" };
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_Shift_R, XK_F12 };

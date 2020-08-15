@@ -69,7 +69,7 @@ dependencies() {
                 DEPS="{glibc-devel.i686,libstdc++-devel.i686,libX11-devel.i686}"
                 dep_install
             ;;
-            *"buntu"|"Linux Mint"|"Debian GNU/Linux"|"Zorin OS"|"Pop!_OS"|"elementary OS")
+            *"buntu"|"Linux Mint"|"Debian GNU/Linux"|"Zorin OS"|"Pop!_OS"|"elementary OS"|"KDE neon")
                 MANAGER_QUERY="dpkg-query -s"
                 MANAGER_INSTALL="apt install"
                 DEPS="{gcc,g++,gcc-multilib,g++-multilib,ninja-build,python3-pip,python3-setuptools,python3-wheel,pkg-config,mesa-common-dev,libx11-dev,libxnvctrl-dev,libdbus-1-dev}"
@@ -79,7 +79,7 @@ dependencies() {
                     $SU_CMD pip3 install 'meson>=0.54' mako
                 fi
                 if [[ ! -f /usr/local/bin/glslangValidator ]]; then
-                    wget https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip
+                    wget https://github.com/KhronosGroup/glslang/releases/download/SDK-candidate-26-Jul-2020/glslang-master-linux-Release.zip
                     unzip glslang-master-linux-Release.zip bin/glslangValidator
                     $SU_CMD install -m755 bin/glslangValidator /usr/local/bin/
                     rm bin/glslangValidator glslang-master-linux-Release.zip
