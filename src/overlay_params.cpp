@@ -427,7 +427,7 @@ parse_overlay_config(struct overlay_params *params,
    params->media_player_color = 0xffffff;
    params->media_player_name = "";
    params->font_scale = 1.0f;
-   params->wine_color = 0x732010;
+   params->wine_color = 0xeb5b5b;
    params->font_scale_media_player = 0.55f;
    params->log_interval = 100;
    params->media_player_order = { MP_ORDER_TITLE, MP_ORDER_ARTIST, MP_ORDER_ALBUM };
