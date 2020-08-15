@@ -1404,7 +1404,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
        if (params.enabled[OVERLAY_PARAM_ENABLED_wine]){
           if (wineVersion != ""){
              auto wine_color = ImGui::ColorConvertU32ToFloat4(params.wine_color);
-             ImGui::TextColored(wine_color, "%s", "WINE");
+             //ImGui::TextColored(wine_color, "%s", "WINE");
              ImGui::PushFont(data.font1);
              ImGui::TextColored(wine_color, "%s", wineVersion.c_str());
              ImGui::PopFont();
