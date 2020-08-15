@@ -31,11 +31,15 @@ bool checkNVML(const char* pciBusId){
                 std::cerr << "MANGOHUD: Getting device handle failed: " << nvml.nvmlErrorString(ret) << "\n";
 
             nvmlSuccess = (ret == NVML_SUCCESS);
+            if (ret == NVML_SUCCESS)
+                nvml.nvmlDeviceGetPciInfo_v3(nvidiaDevice, &nvidiaPciInfo);
+                
             return nvmlSuccess;
         }
     } else {
         std::cerr << "MANGOHUD: Failed to load NVML\n";
     }
+    
     return false;
 }
 
@@ -47,7 +51,6 @@ bool getNVMLInfo(){
     nvml.nvmlDeviceGetMemoryInfo(nvidiaDevice, &nvidiaMemory);
     nvml.nvmlDeviceGetClockInfo(nvidiaDevice, NVML_CLOCK_GRAPHICS, &nvidiaCoreClock);
     nvml.nvmlDeviceGetClockInfo(nvidiaDevice, NVML_CLOCK_MEM, &nvidiaMemClock);
-    nvml.nvmlDeviceGetPciInfo_v3(nvidiaDevice, &nvidiaPciInfo);
     nvml.nvmlDeviceGetPowerUsage(nvidiaDevice, &nvidiaPowerUsage);
     deviceID = nvidiaPciInfo.pciDeviceId >> 16;
 
