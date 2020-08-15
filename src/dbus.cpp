@@ -143,7 +143,7 @@ namespace dbusmgr {
 bool dbus_manager::get_media_player_metadata(metadata& meta, std::string name) {
     if (name == "") name = m_active_player;
     if (name == "") return false;
-    meta.clear();
+    meta = {};
     dbus_get_player_property(*this, meta, name.c_str(), "Metadata");
     dbus_get_player_property(*this, meta, name.c_str(), "PlaybackStatus");
     meta.valid = (meta.artists.size() || !meta.title.empty());

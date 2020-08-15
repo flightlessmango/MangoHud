@@ -49,6 +49,7 @@ public:
   void clear_log_data() noexcept { m_log_array.clear(); }
 
   void upload_last_log();
+  void upload_last_logs();
 private:
   std::vector<logData> m_log_array;
   std::vector<std::string> m_log_files;

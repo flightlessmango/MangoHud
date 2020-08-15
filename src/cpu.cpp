@@ -227,14 +227,13 @@ bool CPUStats::UpdateCpuTemp() {
     if (!m_cpuTempFile)
         return false;
 
-    m_cpuDataTotal.temp = 0;
+    int temp = 0;
     rewind(m_cpuTempFile);
     fflush(m_cpuTempFile);
-    if (fscanf(m_cpuTempFile, "%d", &m_cpuDataTotal.temp) != 1)
-        return false;
-    m_cpuDataTotal.temp /= 1000;
+    bool ret = (fscanf(m_cpuTempFile, "%d", &temp) == 1);
+    m_cpuDataTotal.temp = temp / 1000;
 
-    return true;
+    return ret;
 }
 
 static bool find_temp_input(const std::string path, std::string& input, const std::string& name)
@@ -301,10 +300,12 @@ bool CPUStats::GetCpuFile() {
         } else if (name == "atk0110") {
             find_temp_input(path, input, "CPU Temperature");
             break;
+        } else {
+            path.clear();
         }
     }
 
-    if (!file_exists(input) && !find_fallback_temp_input(path, input)) {
+    if (path.empty() || (!file_exists(input) && !find_fallback_temp_input(path, input))) {
         std::cerr << "MANGOHUD: Could not find cpu temp sensor location" << std::endl;
         return false;
     } else {

@@ -21,6 +21,18 @@ mangohud_config() {
     echo
 }
 
+mangohud_uninstall() {
+    [ "$UID" -eq 0 ] || exec $SU_CMD bash "$0" uninstall
+    rm -rfv "/usr/lib/mangohud"
+    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json"
+    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json"
+    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.json"
+    rm -frv "/usr/share/doc/mangohud"
+    rm -fv "/usr/share/man/man1/mangohud.1"
+    rm -fv "/usr/bin/mangohud"
+    rm -fv "/usr/bin/mangohud.x86"
+}
+
 mangohud_install() {
     rm -rf "$HOME/.local/share/MangoHud/"
     rm -f "$HOME/.local/share/vulkan/implicit_layer.d/"{mangohud32.json,mangohud64.json}
@@ -29,28 +41,34 @@ mangohud_install() {
     [ "$UID" -eq 0 ] || tar xf MangoHud-package.tar
     [ "$UID" -eq 0 ] || exec $SU_CMD bash "$0" install
 
-    install -vm644 -D ./usr/lib/mangohud/lib32/libMangoHud.so /usr/lib/mangohud/lib32/libMangoHud.so
-    install -vm644 -D ./usr/lib/mangohud/lib64/libMangoHud.so /usr/lib/mangohud/lib64/libMangoHud.so
-    install -vm644 -D ./usr/lib/mangohud/lib32/libMangoHud_dlsym.so /usr/lib/mangohud/lib32/libMangoHud_dlsym.so
-    install -vm644 -D ./usr/lib/mangohud/lib64/libMangoHud_dlsym.so /usr/lib/mangohud/lib64/libMangoHud_dlsym.so
-    install -vm644 -D ./usr/share/vulkan/implicit_layer.d/MangoHud.x86.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86.json
-    install -vm644 -D ./usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json
-    install -vm644 -D ./usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
+    mangohud_uninstall
 
-    install -vm755 ./usr/bin/mangohud.x86 /usr/bin/mangohud.x86
+    install -Dvm644 ./usr/lib/mangohud/lib32/libMangoHud.so /usr/lib/mangohud/lib32/libMangoHud.so
+    install -Dvm644 ./usr/lib/mangohud/lib32/libMangoHud_dlsym.so /usr/lib/mangohud/lib32/libMangoHud_dlsym.so
+
+    install -Dvm644 ./usr/lib/mangohud/lib/libMangoHud.so /usr/lib/mangohud/lib/libMangoHud.so
+    install -Dvm644 ./usr/lib/mangohud/lib/libMangoHud_dlsym.so /usr/lib/mangohud/lib/libMangoHud_dlsym.so
+
+    install -Dvm644 ./usr/share/vulkan/implicit_layer.d/MangoHud.json /usr/share/vulkan/implicit_layer.d/MangoHud.json
+    install -Dvm644 ./usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
+    install -Dvm644 ./usr/share/man/man1/mangohud.1 /usr/share/man/man1/mangohud.1
     install -vm755 ./usr/bin/mangohud /usr/bin/mangohud
 
-    echo "MangoHud Installed"
-}
+    # FIXME get the triplet somehow
+    ln -sv lib /usr/lib/mangohud/lib64
+    ln -sv lib /usr/lib/mangohud/x86_64
+    ln -sv lib /usr/lib/mangohud/x86_64-linux-gnu
+    ln -sv . /usr/lib/mangohud/lib/x86_64
+    ln -sv . /usr/lib/mangohud/lib/x86_64-linux-gnu
+    ln -sv lib32 /usr/lib/mangohud/i686
+    ln -sv lib32 /usr/lib/mangohud/i386-linux-gnu
+    ln -sv ../lib32 /usr/lib/mangohud/lib/i386-linux-gnu
+    ln -sv lib32 /usr/lib/mangohud/i686-linux-gnu
+    ln -sv ../lib32 /usr/lib/mangohud/lib/i686-linux-gnu
+    #ln -sv lib /usr/lib/mangohud/aarch64-linux-gnu
+    #ln -sv lib /usr/lib/mangohud/arm-linux-gnueabihf
 
-mangohud_uninstall() {
-    [ "$UID" -eq 0 ] || exec $SU_CMD bash "$0" uninstall
-    rm -rfv "/usr/lib/mangohud"
-    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json"
-    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json"
-    rm -frv "/usr/share/doc/mangohud"
-    rm -fv "/usr/bin/mangohud"
-    rm -fv "/usr/bin/mangohud.x86"
+    echo "MangoHud Installed"
 }
 
 for a in $@; do

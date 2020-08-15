@@ -51,7 +51,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(histogram)                     \
    OVERLAY_PARAM_BOOL(wine)                          \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
-   OVERLAY_PARAM_CUSTOM(output_file)                 \
+   OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(font_file)                   \
    OVERLAY_PARAM_CUSTOM(font_file_text)              \
    OVERLAY_PARAM_CUSTOM(font_glyph_ranges)           \
@@ -71,6 +71,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(toggle_logging)              \
    OVERLAY_PARAM_CUSTOM(reload_cfg)                  \
    OVERLAY_PARAM_CUSTOM(upload_log)                  \
+   OVERLAY_PARAM_CUSTOM(upload_logs)                 \
    OVERLAY_PARAM_CUSTOM(offset_x)                    \
    OVERLAY_PARAM_CUSTOM(offset_y)                    \
    OVERLAY_PARAM_CUSTOM(background_alpha)            \
@@ -97,6 +98,8 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(gpu_text)                    \
    OVERLAY_PARAM_CUSTOM(log_interval)                \
    OVERLAY_PARAM_CUSTOM(permit_upload)               \
+   OVERLAY_PARAM_CUSTOM(render_mango)                \
+   OVERLAY_PARAM_CUSTOM(benchmark_percentiles)       \
    OVERLAY_PARAM_CUSTOM(help)
 
 enum overlay_param_position {
@@ -158,6 +161,7 @@ struct overlay_params {
    unsigned cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color, wine_color;
    unsigned media_player_color;
    unsigned tableCols;
+   unsigned render_mango;
    float font_size, font_scale;
    float font_size_text;
    float font_scale_media_player;
@@ -166,12 +170,14 @@ struct overlay_params {
    std::vector<KeySym> toggle_logging;
    std::vector<KeySym> reload_cfg;
    std::vector<KeySym> upload_log;
-   std::string time_format, output_file;
+   std::vector<KeySym> upload_logs;
+   std::string time_format, output_folder;
    std::string pci_dev;
    std::string media_player_name;
    std::string cpu_text, gpu_text;
    unsigned log_interval;
    std::vector<media_player_order> media_player_order;
+   std::vector<std::string> benchmark_percentiles;
 
    std::string font_file, font_file_text;
    uint32_t font_glyph_ranges;

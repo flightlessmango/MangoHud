@@ -25,7 +25,7 @@ for os_release in ${OS_RELEASE_FILES[@]} ; do
 done
 
 dependencies() {
-    if [[ ! -f build/release/usr/lib64/libMangoHud.so ]]; then
+    if [[ ! -f build/release/usr/lib/libMangoHud.so ]]; then
         missing_deps() {
             echo "# Missing dependencies:$INSTALL"
             read -rp "Do you wish the script to install these packages? [y/N]" PERMISSION
@@ -69,7 +69,7 @@ dependencies() {
                 DEPS="{glibc-devel.i686,libstdc++-devel.i686,libX11-devel.i686}"
                 dep_install
             ;;
-            *"buntu"|"Linux Mint"|"Debian GNU/Linux"|"Zorin OS"|"Pop!_OS"|"elementary OS")
+            *"buntu"|"Linux Mint"|"Debian GNU/Linux"|"Zorin OS"|"Pop!_OS"|"elementary OS"|"KDE neon")
                 MANAGER_QUERY="dpkg-query -s"
                 MANAGER_INSTALL="apt install"
                 DEPS="{gcc,g++,gcc-multilib,g++-multilib,ninja-build,python3-pip,python3-setuptools,python3-wheel,pkg-config,mesa-common-dev,libx11-dev,libxnvctrl-dev,libdbus-1-dev}"
@@ -79,7 +79,7 @@ dependencies() {
                     $SU_CMD pip3 install 'meson>=0.54' mako
                 fi
                 if [[ ! -f /usr/local/bin/glslangValidator ]]; then
-                    wget https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip
+                    wget https://github.com/KhronosGroup/glslang/releases/download/SDK-candidate-26-Jul-2020/glslang-master-linux-Release.zip
                     unzip glslang-master-linux-Release.zip bin/glslangValidator
                     $SU_CMD install -m755 bin/glslangValidator /usr/local/bin/
                     rm bin/glslangValidator glslang-master-linux-Release.zip
@@ -142,27 +142,27 @@ configure() {
     dependencies
     git submodule update --init --depth 50
     if [[ ! -f "build/meson64/build.ninja" ]]; then
-        meson build/meson64 --libdir lib/mangohud/lib64 --prefix /usr -Dappend_libdir_mangohud=false ${CONFIGURE_OPTS}
+        meson build/meson64 --libdir lib/mangohud/lib --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_prefix=true $@ ${CONFIGURE_OPTS}
     fi
     if [[ ! -f "build/meson32/build.ninja" ]]; then
         export CC="gcc -m32"
         export CXX="g++ -m32"
         export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH_32}"
         export LLVM_CONFIG="/usr/bin/llvm-config32"
-        meson build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false ${CONFIGURE_OPTS}
+        meson build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_prefix=true $@ ${CONFIGURE_OPTS}
     fi
 }
 
 build() {
     if [[ ! -f "build/meson64/build.ninja" ]]; then
-        configure
+        configure $@
     fi
     DESTDIR="$PWD/build/release" ninja -C build/meson32 install
     DESTDIR="$PWD/build/release" ninja -C build/meson64 install
 }
 
 package() {
-    LIB="build/release/usr/lib/mangohud/lib64/libMangoHud.so"
+    LIB="build/release/usr/lib/mangohud/lib/libMangoHud.so"
     LIB32="build/release/usr/lib/mangohud/lib32/libMangoHud.so"
     if [[ ! -f "$LIB" || "$LIB" -ot "build/meson64/src/libMangoHud.so" ]]; then
         build
@@ -181,23 +181,51 @@ release() {
         -C build -czvf build/MangoHud-$VERSION.tar.gz MangoHud
 }
 
+uninstall() {
+    [ "$UID" -eq 0 ] || exec $SU_CMD bash "$0" uninstall
+    rm -rfv "/usr/lib/mangohud"
+    rm -rfv "/usr/share/doc/mangohud"
+    rm -fv "/usr/share/man/man1/mangohud.1"
+    rm -fv "/usr/share/vulkan/implicit_layer.d/mangohud.json"
+    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.json"
+    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json"
+    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json"
+    rm -fv "/usr/bin/mangohud"
+    rm -fv "/usr/bin/mangohud.x86"
+}
+
 install() {
     rm -rf "$HOME/.local/share/MangoHud/"
     rm -f "$HOME/.local/share/vulkan/implicit_layer.d/"{mangohud32.json,mangohud64.json}
 
     [ "$UID" -eq 0 ] || mkdir -pv "${CONFIG_DIR}"
+    [ "$UID" -eq 0 ] || build
     [ "$UID" -eq 0 ] || exec $SU_CMD bash "$0" install
 
-    /usr/bin/install -vm644 -D ./build/release/usr/lib/mangohud/lib32/libMangoHud.so /usr/lib/mangohud/lib32/libMangoHud.so
-    /usr/bin/install -vm644 -D ./build/release/usr/lib/mangohud/lib64/libMangoHud.so /usr/lib/mangohud/lib64/libMangoHud.so
-    /usr/bin/install -vm644 -D ./build/release/usr/lib/mangohud/lib32/libMangoHud_dlsym.so /usr/lib/mangohud/lib32/libMangoHud_dlsym.so
-    /usr/bin/install -vm644 -D ./build/release/usr/lib/mangohud/lib64/libMangoHud_dlsym.so /usr/lib/mangohud/lib64/libMangoHud_dlsym.so
-    /usr/bin/install -vm644 -D ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86.json
-    /usr/bin/install -vm644 -D ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json
-    /usr/bin/install -vm644 -D ./build/release/usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
+    uninstall
+    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud.so /usr/lib/mangohud/lib32/libMangoHud.so
+    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib/libMangoHud.so /usr/lib/mangohud/lib/libMangoHud.so
+    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud_dlsym.so /usr/lib/mangohud/lib32/libMangoHud_dlsym.so
+    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib/libMangoHud_dlsym.so /usr/lib/mangohud/lib/libMangoHud_dlsym.so
+    /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.json /usr/share/vulkan/implicit_layer.d/MangoHud.json
+    /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.json /usr/share/vulkan/implicit_layer.d/MangoHud.json
+    /usr/bin/install -Dvm644 ./build/release/usr/share/man/man1/mangohud.1 /usr/share/man/man1/mangohud.1
+    /usr/bin/install -Dvm644 ./build/release/usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
+    /usr/bin/install -vm755  ./build/release/usr/bin/mangohud /usr/bin/mangohud
 
-    /usr/bin/install -vm755 ./build/release/usr/bin/mangohud.x86 /usr/bin/mangohud.x86
-    /usr/bin/install -vm755 ./build/release/usr/bin/mangohud /usr/bin/mangohud
+    # FIXME get the triplet somehow
+    ln -sv lib /usr/lib/mangohud/lib64
+    ln -sv lib /usr/lib/mangohud/x86_64
+    ln -sv lib /usr/lib/mangohud/x86_64-linux-gnu
+    ln -sv . /usr/lib/mangohud/lib/x86_64
+    ln -sv . /usr/lib/mangohud/lib/x86_64-linux-gnu
+    ln -sv lib32 /usr/lib/mangohud/i686
+    ln -sv lib32 /usr/lib/mangohud/i386-linux-gnu
+    ln -sv ../lib32 /usr/lib/mangohud/lib/i386-linux-gnu
+    ln -sv lib32 /usr/lib/mangohud/i686-linux-gnu
+    ln -sv ../lib32 /usr/lib/mangohud/lib/i686-linux-gnu
+    #ln -sv lib /usr/lib/mangohud/aarch64-linux-gnu
+    #ln -sv lib /usr/lib/mangohud/arm-linux-gnueabihf
 
     echo "MangoHud Installed"
 }
@@ -210,18 +238,6 @@ reinstall() {
 
 clean() {
     rm -rf "build"
-}
-
-uninstall() {
-    [ "$UID" -eq 0 ] || exec $SU_CMD bash "$0" uninstall
-    rm -rfv "/usr/lib/mangohud"
-    rm -rfv "/usr/share/doc/mangohud"
-    rm -fv "/usr/share/vulkan/implicit_layer.d/mangohud.json"
-    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.json"
-    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json"
-    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json"
-    rm -fv "/usr/bin/mangohud"
-    rm -fv "/usr/bin/mangohud.x86"
 }
 
 usage() {
@@ -243,12 +259,32 @@ usage() {
     echo -e "\trelease\t\tBuilds a MangoHud release tar package"
 }
 
-for a in $@; do
-    case $a in
-        "") build;;
-        "pull") git pull;;
-        "configure") configure;;
-        "build") build;;
+if [[ -z $@ ]]; then
+    usage no-args
+fi
+
+while [ $# -gt 0 ]; do
+    OPTS=()
+    arg="$1"
+    shift
+
+    while [ $# -gt 0 ] ; do
+        case $1 in
+        -*)
+            OPTS+=("$1")
+            shift
+        ;;
+        *)
+            break
+        ;;
+        esac;
+    done
+
+    echo -e "\e[1mCommand:\e[92m" $arg "\e[94m"${OPTS[@]}"\e[39m\e[0m"
+    case $arg in
+        "pull") git pull ${OPTS[@]};;
+        "configure") configure ${OPTS[@]};;
+        "build") build ${OPTS[@]};;
         "package") package;;
         "install") install;;
         "reinstall") reinstall;;
@@ -259,8 +295,3 @@ for a in $@; do
             usage
     esac
 done
-
-if [[ -z $@ ]]; then
-    usage no-args
-fi
-

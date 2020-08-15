@@ -2,9 +2,17 @@ glslang = find_program('glslangValidator')
 
 # Needs prefix for configure_file()
 if get_option('append_libdir_mangohud')
-  libdir_mangohud = join_paths(get_option('prefix'), get_option('libdir'), 'mangohud')
+  libdir_mangohud = join_paths(get_option('libdir'), 'mangohud')
+  ld_libdir_mangohud = get_option('prefix') + '/\$LIB/mangohud/'
 else
-  libdir_mangohud = join_paths(get_option('prefix'), get_option('libdir'))
+  libdir_mangohud = get_option('libdir')
+  ld_libdir_mangohud = get_option('prefix') + '/\$LIB/'
+endif
+
+# For build.sh
+if get_option('ld_libdir_prefix')
+  # FIXME derive from libdir
+  ld_libdir_mangohud = get_option('prefix') + '/lib/mangohud/\$LIB/'
 endif
 
 overlay_shaders = [
@@ -163,26 +171,16 @@ mangohud_dlsym = shared_library(
 )
 
 configure_file(input : 'mangohud.json.in',
-  output : '@0@.@1@.json'.format(meson.project_name(), target_machine.cpu_family()),
-  configuration : {'libdir_mangohud' : libdir_mangohud + '/',
-                  'PROJECT_NAME' : meson.project_name() + ' ',
-                  'LAYER_SUFFIX' : target_machine.cpu_family()},
+  output : '@0@.json'.format(meson.project_name()),
+  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud,
+                  'PROJECT_NAME' : meson.project_name().to_upper()},
   install : true,
   install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
 )
 
-if target_machine.cpu_family() == 'x86_64'
-  mangohud_cpu_family = ''
-  mangohud_opposite_bin = 'mangohud.x86'
-else
-  mangohud_cpu_family = '.@0@'.format(target_machine.cpu_family())
-#this is probably dumb but works for now
-  mangohud_opposite_bin = 'intentionally_borked'
-endif
-
 configure_file(input : '../bin/mangohud.in',
-  output : 'mangohud@0@'.format(mangohud_cpu_family),
-  configuration : {'libdir_mangohud' : libdir_mangohud, 'mangohud_sh' : mangohud_opposite_bin},
+  output : 'mangohud',
+  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud},
   install_dir : get_option('bindir'),
 )
 

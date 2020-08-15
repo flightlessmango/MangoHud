@@ -126,6 +126,7 @@ You can also customize the hud by using the `MANGOHUD_CONFIG` environment variab
 You can also specify configuration file with `MANGOHUD_CONFIGFILE=/path/to/config` for applications whose names are hard to guess (java, python etc).
 
 A partial list of parameters are below. See the config file for a complete list.
+Parameters that are enabled by default have to be explicitly disabled. These (currently) are `fps`, `frame_timing`, `cpu_stats` (cpu load), `gpu_stats` (gpu load).
 
 | Variable                           | Description                                                                           |
 |------------------------------------|---------------------------------------------------------------------------------------|
@@ -133,7 +134,7 @@ A partial list of parameters are below. See the config file for a complete list.
 | `core_load`                        | Displays load & frequency per core                                                    |
 | `gpu_core_clock`<br>`gpu_mem_clock`| Displays GPU core/memory frequency                                                    |
 | `ram`<br>`vram`                    | Displays system RAM/VRAM usage                                                        |
-| `full`                             | Enables all of the above config options                                               |
+| `full`                             | Enables most of the toggleable parameters (currently excludes `histogram`)            |
 | `font_size=`                       | Customizeable font size (default=24)                                                  |
 | `font_size_text=`                  | Customizeable font size for other text like media metadata (default=24)               |
 | `font_scale=`                      | Set global font scale (default=1.0)                                                   |
@@ -146,7 +147,7 @@ A partial list of parameters are below. See the config file for a complete list.
 | `no_display`                       | Hide the hud by default                                                               |
 | `toggle_hud=`<br>`toggle_logging=` | Modifiable toggle hotkeys. Default are `Shift_R+F12` and `Shift_L+F2`, respectively.      |
 | `reload_cfg=`                      | Change keybind for reloading the config. Default = `Shift_L+F4`                       |
-| `time`<br>`time_format=%T`         | Displays local time. See [std::put_time](https://en.cppreference.com/w/cpp/io/manip/put_time) for formatting help. NOTE: Sometimes apps (or AMDVLK) may set `TZ` environment variable to `GMT+0` |
+| `time`<br>`time_format=%T`         | Displays local time. See [std::put_time](https://en.cppreference.com/w/cpp/io/manip/put_time) for formatting help. NOTE: Sometimes apps (or AMDVLK (should be fixed in latest)) may set `TZ` (timezone) environment variable to UTC/GMT |
 | `gpu_color`<br>`gpu_color`<br>`vram_color`<br>`ram_color`<br>`io_color`<br>`engine_color`<br>`frametime_color`<br>`background_color`<br>`text_color`<br>`media_player_color`         | Change default colors: `gpu_color=RRGGBB`|
 | `alpha`                            | Set the opacity of all text and frametime graph `0.0-1.0`                             |
 | `background_alpha`                 | Set the opacity of the background `0.0-1.0`                                           |
@@ -172,6 +173,7 @@ A partial list of parameters are below. See the config file for a complete list.
 | `engine_version`                   | Display OpenGL or vulkan and vulkan-based render engine's version                     |
 | `permit_upload`                    | Allow uploading of logs to Flightlessmango.com                                        |
 | `upload_log`                       | Change keybind for uploading log                                                      |
+| `benchmark_percentiles`            | Configure which framerate percentiles are shown in the logging summary. Default is `97+AVG+1+0.1` |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 

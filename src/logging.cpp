@@ -1,5 +1,6 @@
 #include "logging.h"
 #include "overlay.h"
+#include "config.h"
 #include <sstream>
 #include <iomanip>
 
@@ -109,7 +110,7 @@ void Logger::start_logging() {
   m_values_valid = false;
   m_logging_on = true;
   m_log_start = Clock::now();
-  if((not m_params->output_file.empty()) and (m_params->log_interval != 0)){
+  if((not m_params->output_folder.empty()) and (m_params->log_interval != 0)){
     std::thread(logging, m_params).detach();
   }
 }
@@ -119,10 +120,10 @@ void Logger::stop_logging() {
   m_logging_on = false;
   m_log_end = Clock::now();
 
-  std::thread(calculate_benchmark_data).detach();
+  std::thread(calculate_benchmark_data, m_params).detach();
 
-  if(not m_params->output_file.empty()) {
-    m_log_files.emplace_back(m_params->output_file + get_log_suffix());
+  if(not m_params->output_folder.empty()) {
+    m_log_files.emplace_back(m_params->output_folder + "/" + program_name + "_" + get_log_suffix());
     std::thread(writeFile, m_log_files.back()).detach();
   }
 }
@@ -156,4 +157,9 @@ void Logger::notify_data_valid() {
 void Logger::upload_last_log() {
   if(m_log_files.empty()) return;
   std::thread(upload_file, m_log_files.back()).detach();
+}
+
+void Logger::upload_last_logs() {
+  if(m_log_files.empty()) return;
+  std::thread(upload_files, m_log_files).detach();
 }

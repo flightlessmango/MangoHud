@@ -7,6 +7,8 @@
 #include "file_utils.h"
 #include "string_utils.h"
 
+std::string program_name;
+
 void parseConfigLine(std::string line, std::unordered_map<std::string,std::string>& options) {
     std::string param, value;
 
@@ -41,6 +43,7 @@ void enumerate_config_files(std::vector<std::string>& paths)
     if (!exe_path.empty() && n != std::string::npos && n < exe_path.size() - 1) {
         // as executable's name
         std::string basename = exe_path.substr(n + 1);
+        program_name = basename;
         if (!env_config.empty())
             paths.push_back(env_config + mangohud_dir + basename + ".conf");
 
@@ -49,12 +52,16 @@ void enumerate_config_files(std::vector<std::string>& paths)
 
         // find executable's path when run in Wine
         if (!env_config.empty() && (basename == "wine-preloader" || basename == "wine64-preloader")) {
+            
             std::string name;
             if (get_wine_exe_name(name)) {
                 paths.push_back(env_config + mangohud_dir + "wine-" + name + ".conf");
             }
+            program_name = name;
         }
     }
+    if (program_name.empty())
+        program_name = "Unknown";
 }
 
 void parseConfigFile(overlay_params& params) {
