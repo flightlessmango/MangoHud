@@ -708,6 +708,19 @@ void init_system_info(){
             std::getline(ss, wineVersion, ' '); // skip first number string
             std::getline(ss, wineVersion, ' ');
             trim(wineVersion);
+            string toReplace ="proton-";
+            size_t pos = wineVersion.find(toReplace);
+            if (pos != std::string::npos)
+            {
+                // If found replace
+               wineVersion.replace(pos, toReplace.length(),"Proton ");
+            }
+
+            else {
+              // If not found insert for non official proton builds
+            wineVersion.insert (0,"Proton ");
+
+            }
          }
          else {
             char *dir = dirname((char*)wineProcess.c_str());
