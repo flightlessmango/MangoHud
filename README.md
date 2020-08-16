@@ -152,7 +152,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `alpha`                            | Set the opacity of all text and frametime graph `0.0-1.0`                             |
 | `background_alpha`                 | Set the opacity of the background `0.0-1.0`                                           |
 | `read_cfg`                         | Add to MANGOHUD_CONFIG as first parameter to also load config file. Otherwise only MANGOHUD_CONFIG parameters are used. |
-| `output_file`                      | Define name and location of the output file (Required for logging)                    |
+| `output_folder`                    | Set location of the output files (Required for logging)                               |
 | `log_duration`                     | Set amount of time the logging will run for (in seconds)                              |
 | `vsync`<br> `gl_vsync`             | Set vsync for OpenGL or Vulkan                                                        |
 | `media_player`                     | Show media player metadata                                                            |
@@ -174,7 +174,8 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `permit_upload`                    | Allow uploading of logs to Flightlessmango.com                                        |
 | `upload_log`                       | Change keybind for uploading log                                                      |
 | `benchmark_percentiles`            | Configure which framerate percentiles are shown in the logging summary. Default is `97+AVG+1+0.1` |
-
+| `wine`                             | Shows current Wine or Proton version in use                                           |
+| `wine_color`                       | Change color of the wine/proton text                                                  |
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 
 Note: Width and Height are set automatically based on the font_size, but can be overridden.
