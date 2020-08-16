@@ -727,18 +727,13 @@ void init_system_info(){
             char *dir = dirname((char*)wineProcess.c_str());
             stringstream findVersion;
             findVersion << "\"" << dir << "/wine\" --version";
-            bool env_exists = false;
-            if (getenv("WINELOADERNOEXEC")) {
-               static char removenoexec[] = "WINELOADERNOEXEC";
-               putenv(removenoexec);
-               env_exists = true;
-            }
+            const char *wine_env = getenv("WINELOADERNOEXEC");
+            if (wine_env)
+               unsetenv("WINELOADERNOEXEC");
             wineVersion = exec(findVersion.str());
             std::cout << "WINE VERSION = " << wineVersion << "\n";
-            if (env_exists) {
-               static char noexec[] = "WINELOADERNOEXEC=1";
-               putenv(noexec);
-            }
+            if (wine_env)
+               setenv("WINELOADERNOEXEC", wine_env, 1);
          }
       }
       else {
