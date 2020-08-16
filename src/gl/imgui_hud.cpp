@@ -82,13 +82,14 @@ void imgui_create(void *ctx)
 {
     if (inited)
         return;
-    inited = true;
 
     if (!ctx)
         return;
-
+    
+    imgui_shutdown();
     imgui_init();
-
+    inited = true;
+    
     gladLoadGL();
 
     GetOpenGLVersion(sw_stats.version_gl.major,
@@ -154,10 +155,9 @@ void imgui_shutdown()
 
 void imgui_set_context(void *ctx)
 {
-    if (!ctx) {
-        imgui_shutdown();
+    if (!ctx)
         return;
-    }
+
 #ifndef NDEBUG
     std::cerr << __func__ << ": " << ctx << std::endl;
 #endif
