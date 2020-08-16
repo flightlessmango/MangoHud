@@ -293,6 +293,7 @@ parse_font_glyph_ranges(const char *str)
 #define parse_log_duration(s) parse_unsigned(s)
 #define parse_time_format(s) parse_str(s)
 #define parse_output_folder(s) parse_path(s)
+#define parse_output_file(s) parse_path(s)
 #define parse_font_file(s) parse_path(s)
 #define parse_font_file_text(s) parse_path(s)
 #define parse_io_read(s) parse_unsigned(s)
@@ -593,5 +594,7 @@ parse_overlay_config(struct overlay_params *params,
       main_metadata.meta.valid = false;
    }
 #endif
+   if(!params->output_file.empty())
+      printf("MANGOHUD: output_file is Deprecated, use output_folder instead\n");
 
 }
