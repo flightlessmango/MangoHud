@@ -835,7 +835,11 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
       if (pressed){
          last_f3_press = now;
          if(params.fps_limit > 0 && fps_limit_stats.targetFrameTime == std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(1) / params.fps_limit)){
-            fps_limit_stats.targetFrameTime = {};
+            if(params.fps_limit_alt > 0) {
+               fps_limit_stats.targetFrameTime = std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(1) / params.fps_limit_alt);
+            } else {
+               fps_limit_stats.targetFrameTime = {};
+            }
          } else {
             fps_limit_stats.targetFrameTime = std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(1) / params.fps_limit);
          }

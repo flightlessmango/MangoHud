@@ -66,10 +66,11 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(no_display)                  \
    OVERLAY_PARAM_CUSTOM(control)                     \
    OVERLAY_PARAM_CUSTOM(fps_limit)                   \
+   OVERLAY_PARAM_CUSTOM(fps_limit_alt)               \
    OVERLAY_PARAM_CUSTOM(vsync)                       \
    OVERLAY_PARAM_CUSTOM(gl_vsync)                    \
    OVERLAY_PARAM_CUSTOM(toggle_hud)                  \
-   OVERLAY_PARAM_CUSTOM(toggle_fps_limit)                \
+   OVERLAY_PARAM_CUSTOM(toggle_fps_limit)            \
    OVERLAY_PARAM_CUSTOM(toggle_logging)              \
    OVERLAY_PARAM_CUSTOM(reload_cfg)                  \
    OVERLAY_PARAM_CUSTOM(upload_log)                  \
@@ -150,6 +151,7 @@ struct overlay_params {
    int control;
    uint32_t fps_sampling_period; /* us */
    uint32_t fps_limit;
+   uint32_t fps_limit_alt; 
    bool help;
    bool no_display;
    bool full;

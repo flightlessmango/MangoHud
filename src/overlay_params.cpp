@@ -146,6 +146,12 @@ parse_fps_limit(const char *str)
    return strtol(str, NULL, 0);
 }
 
+static uint32_t
+parse_fps_limit_alt(const char *str)
+{
+   return strtol(str, NULL, 0);
+}
+
 static bool
 parse_no_display(const char *str)
 {
@@ -467,6 +473,7 @@ parse_overlay_config(struct overlay_params *params,
    params->height = 140;
    params->control = -1;
    params->fps_limit = 0;
+   params->fps_limit_alt = 0;
    params->vsync = -1;
    params->gl_vsync = -2;
    params->offset_x = 0;
