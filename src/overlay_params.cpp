@@ -102,6 +102,12 @@ parse_toggle_logging(const char *str)
 }
 
 static std::vector<KeySym>
+parse_toggle_fps_limit(const char *str)
+{
+   return parse_string_to_keysym_vec(str);
+}
+
+static std::vector<KeySym>
 parse_reload_cfg(const char *str)
 {
    return parse_string_to_keysym_vec(str);
@@ -121,6 +127,7 @@ parse_upload_logs(const char *str)
 
 #else
 #define parse_toggle_hud(x)      {}
+#define parse_toggle_fps_limit(x)    {}
 #define parse_toggle_logging(x)  {}
 #define parse_reload_cfg(x)      {}
 #define parse_upload_log(x)      {}
@@ -489,6 +496,7 @@ parse_overlay_config(struct overlay_params *params,
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_Shift_R, XK_F12 };
+   params->toggle_fps_limit = { XK_Shift_L, XK_F3 };
    params->toggle_logging = { XK_Shift_L, XK_F2 };
    params->reload_cfg = { XK_Shift_L, XK_F4 };
    params->upload_log = { XK_Shift_L, XK_F3 };
