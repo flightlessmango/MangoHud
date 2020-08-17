@@ -499,6 +499,7 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_SCISSOR_TEST);
     glDisable(GL_FRAMEBUFFER_SRGB);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
     //#ifdef GL_POLYGON_MODE
     if (!g_IsGLES && g_GlVersion >= 200)
