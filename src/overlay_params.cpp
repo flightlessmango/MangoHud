@@ -94,35 +94,12 @@ parse_string_to_keysym_vec(const char *str)
    return keys;
 }
 
-static std::vector<KeySym>
-parse_toggle_hud(const char *str)
-{
-   return parse_string_to_keysym_vec(str);
-}
-
-static std::vector<KeySym>
-parse_toggle_logging(const char *str)
-{
-   return parse_string_to_keysym_vec(str);
-}
-
-static std::vector<KeySym>
-parse_reload_cfg(const char *str)
-{
-   return parse_string_to_keysym_vec(str);
-}
-
-static std::vector<KeySym>
-parse_upload_log(const char *str)
-{
-   return parse_string_to_keysym_vec(str);
-}
-
-static std::vector<KeySym>
-parse_upload_logs(const char *str)
-{
-   return parse_string_to_keysym_vec(str);
-}
+#define parse_toggle_hud         parse_string_to_keysym_vec
+#define parse_toggle_logging     parse_string_to_keysym_vec
+#define parse_reload_cfg         parse_string_to_keysym_vec
+#define parse_upload_log         parse_string_to_keysym_vec
+#define parse_upload_logs        parse_string_to_keysym_vec
+#define parse_toggle_fps_limit   parse_string_to_keysym_vec
 
 #else
 #define parse_toggle_hud(x)      {}
@@ -130,6 +107,7 @@ parse_upload_logs(const char *str)
 #define parse_reload_cfg(x)      {}
 #define parse_upload_log(x)      {}
 #define parse_upload_logs(x)     {}
+#define parse_toggle_fps_limit(x)    {}
 #endif
 
 static uint32_t
@@ -138,10 +116,28 @@ parse_fps_sampling_period(const char *str)
    return strtol(str, NULL, 0) * 1000;
 }
 
-static uint32_t
+static std::vector<std::uint32_t>
 parse_fps_limit(const char *str)
 {
-   return strtol(str, NULL, 0);
+   std::vector<std::uint32_t> fps_limit;
+   std::stringstream fps_limit_strings(str);
+   std::string value;
+
+   while (std::getline(fps_limit_strings, value, ',')) {
+      trim(value);
+
+      uint32_t as_int;
+      try {
+         as_int = static_cast<uint32_t>(std::stoul(value));
+      } catch (const std::invalid_argument&) {
+         std::cerr << "MANGOHUD: invalid fps_limit value: '" << value << "'\n";
+         continue;
+      }
+
+      fps_limit.push_back(as_int);
+   }
+
+   return fps_limit;
 }
 
 static bool
@@ -464,7 +460,7 @@ parse_overlay_config(struct overlay_params *params,
    params->width = 0;
    params->height = 140;
    params->control = -1;
-   params->fps_limit = 0;
+   params->fps_limit = { 0 };
    params->vsync = -1;
    params->gl_vsync = -2;
    params->offset_x = 0;
@@ -494,6 +490,7 @@ parse_overlay_config(struct overlay_params *params,
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_Shift_R, XK_F12 };
+   params->toggle_fps_limit = { XK_Shift_L, XK_F3 };
    params->toggle_logging = { XK_Shift_L, XK_F2 };
    params->reload_cfg = { XK_Shift_L, XK_F4 };
    params->upload_log = { XK_Shift_L, XK_F3 };
@@ -601,8 +598,8 @@ parse_overlay_config(struct overlay_params *params,
 
    // set frametime limit
    using namespace std::chrono;
-   if (params->fps_limit > 0)
-      fps_limit_stats.targetFrameTime = duration_cast<Clock::duration>(duration<double>(1) / params->fps_limit);
+   if (params->fps_limit.size() > 0 && params->fps_limit[0] > 0)
+      fps_limit_stats.targetFrameTime = duration_cast<Clock::duration>(duration<double>(1) / params->fps_limit[0]);
    else
       fps_limit_stats.targetFrameTime = {};
 

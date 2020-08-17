@@ -8,6 +8,7 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
    bool pressed = false; // FIXME just a placeholder until wayland support
    auto now = Clock::now(); /* us */
    auto elapsedF2 = now - last_f2_press;
+   auto elapsedF3 = now - last_f3_press;
    auto elapsedF12 = now - last_f12_press;
    auto elapsedReloadCfg = now - reload_cfg_press;
    auto elapsedUpload = now - last_upload_press;
@@ -32,6 +33,31 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
          benchmark.fps_data.clear();
        }
      }
+   }
+
+  if (elapsedF3 >= keyPressDelay){
+#if defined(HAVE_X11) || defined(_WIN32)
+      pressed = keys_are_pressed(params.toggle_fps_limit);
+#else
+      pressed = false;
+#endif
+      if (pressed){
+         last_f3_press = now;
+         for (size_t i = 0; i < params.fps_limit.size(); i++){
+            uint32_t fps_limit = params.fps_limit[i];
+            // current fps limit equals vector entry, use next / first
+            if((fps_limit > 0 && fps_limit_stats.targetFrameTime == std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(1) / params.fps_limit[i]))
+                  || (fps_limit == 0 && fps_limit_stats.targetFrameTime == fps_limit_stats.targetFrameTime.zero())) {
+               uint32_t newFpsLimit = i+1 == params.fps_limit.size() ? params.fps_limit[0] : params.fps_limit[i+1];
+               if(newFpsLimit > 0) {
+                  fps_limit_stats.targetFrameTime = std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(1) / newFpsLimit);
+               } else {
+                  fps_limit_stats.targetFrameTime = {};
+               }
+               break;
+            }
+         }
+      }
    }
 
    if (elapsedF12 >= keyPressDelay){

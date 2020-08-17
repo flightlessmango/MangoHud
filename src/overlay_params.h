@@ -69,6 +69,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(vsync)                       \
    OVERLAY_PARAM_CUSTOM(gl_vsync)                    \
    OVERLAY_PARAM_CUSTOM(toggle_hud)                  \
+   OVERLAY_PARAM_CUSTOM(toggle_fps_limit)            \
    OVERLAY_PARAM_CUSTOM(toggle_logging)              \
    OVERLAY_PARAM_CUSTOM(reload_cfg)                  \
    OVERLAY_PARAM_CUSTOM(upload_log)                  \
@@ -148,7 +149,7 @@ struct overlay_params {
    enum overlay_param_position position;
    int control;
    uint32_t fps_sampling_period; /* us */
-   uint32_t fps_limit;
+   std::vector<std::uint32_t> fps_limit;
    bool help;
    bool no_display;
    bool full;
@@ -168,6 +169,7 @@ struct overlay_params {
    float font_scale_media_player;
    float background_alpha, alpha;
    std::vector<KeySym> toggle_hud;
+   std::vector<KeySym> toggle_fps_limit;
    std::vector<KeySym> toggle_logging;
    std::vector<KeySym> reload_cfg;
    std::vector<KeySym> upload_log;
