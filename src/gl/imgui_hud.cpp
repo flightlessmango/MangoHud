@@ -85,11 +85,11 @@ void imgui_create(void *ctx)
 
     if (!ctx)
         return;
-    
+
     imgui_shutdown();
     imgui_init();
     inited = true;
-    
+
     gladLoadGL();
 
     GetOpenGLVersion(sw_stats.version_gl.major,

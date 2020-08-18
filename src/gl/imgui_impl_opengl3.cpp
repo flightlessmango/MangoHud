@@ -480,6 +480,13 @@ void    ImGui_ImplOpenGL3_NewFrame()
 {
     if (!g_ShaderHandle)
         ImGui_ImplOpenGL3_CreateDeviceObjects();
+    else if (!glIsProgram(g_ShaderHandle)) { // TODO Got created in a now dead context?
+#ifndef NDEBUG
+        fprintf(stderr, "MANGOHUD: recreating lost objects\n");
+#endif
+        ImGui_ImplOpenGL3_CreateDeviceObjects();
+    }
+
     if (!glIsTexture(g_FontTexture)) {
 #ifndef NDEBUG
         fprintf(stderr, "MANGOHUD: GL Texture lost? Regenerating.\n");
