@@ -1257,6 +1257,8 @@ void render_mango(swapchain_stats& data, struct overlay_params& params, ImVec2& 
 
          ImGui::PopStyleColor();
       }
+   if(logger->is_active())
+      ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(data.main_window_pos.x + window_size.x - 15, data.main_window_pos.y + 15), 10, params.engine_color, 20);
    ImGui::End();
    window_size = ImVec2(window_size.x, 200);
 }
