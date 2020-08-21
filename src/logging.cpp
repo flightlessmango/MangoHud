@@ -60,10 +60,11 @@ void writeFile(string filename){
   std::ofstream out(filename, ios::out | ios::app);
   out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver" << endl;
   out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << endl;
-  out << "fps," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "ram_used," << "elapsed" << endl;
+  out << "fps," << "frametime," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "ram_used," << "elapsed" << endl;
 
   for (size_t i = 0; i < logArray.size(); i++){
     out << logArray[i].fps << ",";
+    out << logArray[i].frametime << ",";
     out << logArray[i].cpu_load << ",";
     out << logArray[i].gpu_load << ",";
     out << logArray[i].cpu_temp << ",";
@@ -136,6 +137,7 @@ void Logger::try_log() {
 
   currentLogData.previous = elapsedLog;
   currentLogData.fps = fps;
+  currentLogData.frametime = 1000 / fps;
   m_log_array.push_back(currentLogData);
 
   if(m_params->log_duration and (elapsedLog >= std::chrono::seconds(m_params->log_duration))){
