@@ -30,6 +30,7 @@
 #include <mutex>
 #include <vector>
 #include <list>
+#include <array>
 #include <cmath>
 #include <libgen.h>
 
