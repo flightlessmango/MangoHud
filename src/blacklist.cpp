@@ -23,7 +23,7 @@ static std::string get_proc_name() {
 }
 
 static bool check_blacklisted() {
-    std::vector<std::string> blacklist {
+    static const std::vector<std::string> blacklist {
         "Battle.net.exe",
         "BethesdaNetLauncher.exe",
         "EpicGamesLauncher.exe",
@@ -38,17 +38,24 @@ static bool check_blacklisted() {
         "Steam.exe",
         "ffxivlauncher.exe",
         "ffxivlauncher64.exe",
+        "LeagueClient.exe",
+        "LeagueClientUxRender.exe",
+        "SocialClubHelper.exe",
     };
 
     std::string proc_name = get_proc_name();
     bool blacklisted = std::find(blacklist.begin(), blacklist.end(), proc_name) != blacklist.end();
-#ifndef NDEBUG
-    fprintf(stderr, "MANGOHUD: process %s is blacklisted: %d\n", proc_name.c_str(), blacklisted);
-#endif
+
+    if(blacklisted) {
+        fprintf(stderr, "INFO: process %s is blacklisted in MangoHud\n", proc_name.c_str());
+    }
+
     return blacklisted;
 }
 
-bool& is_blacklisted() {
+bool is_blacklisted(bool force_recheck) {
     static bool blacklisted = check_blacklisted();
+    if (force_recheck)
+        blacklisted = check_blacklisted();
     return blacklisted;
 }

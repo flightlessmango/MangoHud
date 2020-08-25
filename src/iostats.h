@@ -1,4 +1,7 @@
 #pragma once
+#ifndef MANGOHUD_IOSTATS_H
+#define MANGOHUD_IOSTATS_H
+
 #include <pthread.h>
 #include <inttypes.h>
 
@@ -18,3 +21,5 @@ struct iostats {
 };
 
 void getIoStats(void *args);
+
+#endif //MANGOHUD_IOSTATS_H

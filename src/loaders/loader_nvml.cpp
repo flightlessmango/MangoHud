@@ -2,6 +2,8 @@
 // Path to the code generator: /home/crz/git/MangoHud/generate_library_loader.py .
 
 #include "loader_nvml.h"
+#include <iostream>
+#include <memory>
 
 // Put these sanity checks here so that they fire at most once
 // (to avoid cluttering the build output).
@@ -11,6 +13,15 @@
 #if defined(LIBRARY_LOADER_NVML_H_DLOPEN) && defined(LIBRARY_LOADER_NVML_H_DT_NEEDED)
 #error both LIBRARY_LOADER_NVML_H_DLOPEN and LIBRARY_LOADER_NVML_H_DT_NEEDED defined
 #endif
+
+static std::unique_ptr<libnvml_loader> libnvml_;
+
+libnvml_loader& get_libnvml_loader()
+{
+    if (!libnvml_)
+        libnvml_ = std::make_unique<libnvml_loader>("libnvidia-ml.so.1");
+    return *libnvml_.get();
+}
 
 libnvml_loader::libnvml_loader() : loaded_(false) {
 }
@@ -26,8 +37,10 @@ bool libnvml_loader::Load(const std::string& library_name) {
 
 #if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
   library_ = dlopen(library_name.c_str(), RTLD_LAZY);
-  if (!library_)
+  if (!library_) {
+    std::cerr << "MANGOHUD: Failed to open " << "" MANGOHUD_ARCH << " " << library_name << ": " << dlerror() << std::endl;
     return false;
+  }
 #endif
 
 
@@ -170,6 +183,19 @@ bool libnvml_loader::Load(const std::string& library_name) {
   nvmlErrorString = &::nvmlErrorString;
 #endif
   if (!nvmlErrorString) {
+    CleanUp(true);
+    return false;
+  }
+
+#if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
+  nvmlDeviceGetPowerUsage =
+      reinterpret_cast<decltype(this->nvmlDeviceGetPowerUsage)>(
+          dlsym(library_, "nvmlDeviceGetPowerUsage"));
+#endif
+#if defined(LIBRARY_LOADER_NVML_H_DT_NEEDED)
+  nvmlDeviceGetPowerUsage = &::nvmlDeviceGetPowerUsage;
+#endif
+  if (!nvmlDeviceGetPowerUsage) {
     CleanUp(true);
     return false;
   }

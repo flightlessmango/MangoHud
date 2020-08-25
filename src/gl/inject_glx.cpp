@@ -103,28 +103,15 @@ EXPORT_C_(int) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
     return ret;
 }
 
-EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
-    glx.Load();
-
+static void do_imgui_swap(void *dpy, void *drawable)
+{
     if (!is_blacklisted()) {
         imgui_create(glx.GetCurrentContext());
 
         unsigned int width = -1, height = -1;
 
-        // glXQueryDrawable is buggy, use XGetGeometry instead
-        Window unused_window;
-        int unused;
-        static bool xgetgeom_failed = false;
-        if (xgetgeom_failed || !g_x11->XGetGeometry((Display*)dpy,
-            (Window)drawable, &unused_window,
-            &unused, &unused,
-            &width, &height,
-            (unsigned int*) &unused, (unsigned int*) &unused)) {
-
-            xgetgeom_failed = true;
-            glx.QueryDrawable(dpy, drawable, GLX_WIDTH, &width);
-            glx.QueryDrawable(dpy, drawable, GLX_HEIGTH, &height);
-        }
+        glx.QueryDrawable(dpy, drawable, GLX_WIDTH, &width);
+        glx.QueryDrawable(dpy, drawable, GLX_HEIGTH, &height);
 
         /*GLint vp[4]; glGetIntegerv (GL_VIEWPORT, vp);
         width = vp[2];
@@ -132,14 +119,36 @@ EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
 
         imgui_render(width, height);
     }
+}
 
+EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
+    glx.Load();
+
+    do_imgui_swap(dpy, drawable);
     glx.SwapBuffers(dpy, drawable);
 
-    if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0){
-        fps_limit_stats.frameStart = os_time_get_nano();
+    using namespace std::chrono_literals;
+    if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s){
+        fps_limit_stats.frameStart = Clock::now();
         FpsLimiter(fps_limit_stats);
-        fps_limit_stats.frameEnd = os_time_get_nano();
+        fps_limit_stats.frameEnd = Clock::now();
     }
+}
+
+EXPORT_C_(int64_t) glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t target_msc, int64_t divisor, int64_t remainder)
+{
+    glx.Load();
+
+    do_imgui_swap(dpy, drawable);
+    int64_t ret = glx.SwapBuffersMscOML(dpy, drawable, target_msc, divisor, remainder);
+
+    using namespace std::chrono_literals;
+    if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s){
+        fps_limit_stats.frameStart = Clock::now();
+        FpsLimiter(fps_limit_stats);
+        fps_limit_stats.frameEnd = Clock::now();
+    }
+    return ret;
 }
 
 EXPORT_C_(void) glXSwapIntervalEXT(void *dpy, void *draw, int interval) {
@@ -205,13 +214,14 @@ struct func_ptr {
    void *ptr;
 };
 
-static std::array<const func_ptr, 9> name_to_funcptr_map = {{
+static std::array<const func_ptr, 10> name_to_funcptr_map = {{
 #define ADD_HOOK(fn) { #fn, (void *) fn }
    ADD_HOOK(glXGetProcAddress),
    ADD_HOOK(glXGetProcAddressARB),
    ADD_HOOK(glXCreateContext),
    ADD_HOOK(glXMakeCurrent),
    ADD_HOOK(glXSwapBuffers),
+   ADD_HOOK(glXSwapBuffersMscOML),
 
    ADD_HOOK(glXSwapIntervalEXT),
    ADD_HOOK(glXSwapIntervalSGI),

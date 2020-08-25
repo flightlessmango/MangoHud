@@ -227,21 +227,60 @@ bool CPUStats::UpdateCpuTemp() {
     if (!m_cpuTempFile)
         return false;
 
-    m_cpuDataTotal.temp = 0;
+    int temp = 0;
     rewind(m_cpuTempFile);
     fflush(m_cpuTempFile);
-    if (fscanf(m_cpuTempFile, "%d", &m_cpuDataTotal.temp) != 1)
-        return false;
-    m_cpuDataTotal.temp /= 1000;
+    bool ret = (fscanf(m_cpuTempFile, "%d", &temp) == 1);
+    m_cpuDataTotal.temp = temp / 1000;
 
-    return true;
+    return ret;
+}
+
+static bool find_temp_input(const std::string path, std::string& input, const std::string& name)
+{
+    auto files = ls(path.c_str(), "temp", LS_FILES);
+    for (auto& file : files) {
+        if (!ends_with(file, "_label"))
+            continue;
+
+        auto label = read_line(path + "/" + file);
+        if (label != name)
+            continue;
+
+        auto uscore = file.find_first_of("_");
+        if (uscore != std::string::npos) {
+            file.erase(uscore, std::string::npos);
+            input = path + "/" + file + "_input";
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool find_fallback_temp_input(const std::string path, std::string& input)
+{
+    auto files = ls(path.c_str(), "temp", LS_FILES);
+    if (!files.size())
+        return false;
+
+    std::sort(files.begin(), files.end());
+    for (auto& file : files) {
+        if (!ends_with(file, "_input"))
+            continue;
+        input = path + "/" + file;
+#ifndef NDEBUG
+        std::cerr << "fallback cpu temp input: " << input << "\n";
+#endif
+        return true;
+    }
+    return false;
 }
 
 bool CPUStats::GetCpuFile() {
     if (m_cpuTempFile)
         return true;
 
-    std::string name, path;
+    std::string name, path, input;
     std::string hwmon = "/sys/class/hwmon/";
 
     auto dirs = ls(hwmon.c_str());
@@ -251,17 +290,29 @@ bool CPUStats::GetCpuFile() {
 #ifndef NDEBUG
         std::cerr << "hwmon: sensor name: " << name << std::endl;
 #endif
-        if (name == "coretemp" || name == "k10temp" || name == "zenpower") {
-            path += "/temp1_input";
+        if (name == "coretemp") {
+            find_temp_input(path, input, "Package id 0");
             break;
+        }
+        else if ((name == "zenpower" || name == "k10temp")) {
+            find_temp_input(path, input, "Tdie");
+            break;
+        } else if (name == "atk0110") {
+            find_temp_input(path, input, "CPU Temperature");
+            break;
+        } else {
+            path.clear();
         }
     }
 
-    if (!file_exists(path)) {
+    if (path.empty() || (!file_exists(input) && !find_fallback_temp_input(path, input))) {
         std::cerr << "MANGOHUD: Could not find cpu temp sensor location" << std::endl;
         return false;
     } else {
-        m_cpuTempFile = fopen(path.c_str(), "r");
+#ifndef NDEBUG
+        std::cerr << "hwmon: using input: " << input << std::endl;
+#endif
+        m_cpuTempFile = fopen(input.c_str(), "r");
     }
     return true;
 }

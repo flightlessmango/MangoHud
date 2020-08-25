@@ -8,16 +8,15 @@
 #include "loaders/loader_nvctrl.h"
 #include "loaders/loader_x11.h"
 #include "string_utils.h"
+#include "overlay.h"
 
 typedef std::unordered_map<std::string, std::string> string_map;
 static std::unique_ptr<Display, std::function<void(Display*)>> display;
 
-libnvctrl_loader nvctrl("libXNVCtrl.so.0");
-
 struct nvctrlInfo nvctrl_info;
 bool nvctrlSuccess = false;
 
-static bool find_nv_x11(Display*& dpy)
+static bool find_nv_x11(libnvctrl_loader& nvctrl, Display*& dpy)
 {
     char buf[8] {};
     for (int i = 0; i < 16; i++) {
@@ -42,13 +41,14 @@ bool checkXNVCtrl()
         return false;
     }
 
+    auto& nvctrl = get_libnvctrl_loader();
     if (!nvctrl.IsLoaded()) {
         std::cerr << "MANGOHUD: XNVCtrl loader failed to load\n";
         return false;
     }
 
     Display *dpy;
-    nvctrlSuccess = find_nv_x11(dpy);
+    nvctrlSuccess = find_nv_x11(nvctrl, dpy);
 
     if (!nvctrlSuccess) {
         std::cerr << "MANGOHUD: XNVCtrl didn't find the correct display" << std::endl;
@@ -61,6 +61,15 @@ bool checkXNVCtrl()
             local_x11->XCloseDisplay(dpy);
         }
     };
+    // get device id at init
+    int64_t pci_id;
+    nvctrl.XNVCTRLQueryTargetAttribute64(display.get(),
+                    NV_CTRL_TARGET_TYPE_GPU,
+                    0,
+                    0,
+                    NV_CTRL_PCI_ID,
+                    &pci_id);
+    deviceID = (pci_id & 0xFFFF);
 
     return true;
 }
@@ -82,7 +91,7 @@ static void parse_token(std::string token, string_map& options) {
         options[param] = value;
 }
 
-char* get_attr_target_string(int attr, int target_type, int target_id) {
+char* get_attr_target_string(libnvctrl_loader& nvctrl, int attr, int target_type, int target_id) {
     char* c = nullptr;
     if (!nvctrl.XNVCTRLQueryTargetStringAttribute(display.get(), target_type, target_id, 0, attr, &c)) {
         std::cerr << "Failed to query attribute '" << attr << "'.\n";
@@ -93,6 +102,7 @@ char* get_attr_target_string(int attr, int target_type, int target_id) {
 void getNvctrlInfo(){
     string_map params;
     std::string token;
+    auto& nvctrl = get_libnvctrl_loader();
 
     if (!display)
         return;
@@ -104,7 +114,7 @@ void getNvctrlInfo(){
     };
 
     for (size_t i=0; enums[i]; i++) {
-        char* str = get_attr_target_string(enums[i], NV_CTRL_TARGET_TYPE_GPU, 0);
+        char* str = get_attr_target_string(nvctrl, enums[i], NV_CTRL_TARGET_TYPE_GPU, 0);
         if (!str)
             continue;
 

@@ -10,6 +10,7 @@
 #include "file_utils.h"
 #include "imgui_hud.h"
 #include "notify.h"
+#include "blacklist.h"
 
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
@@ -44,8 +45,6 @@ struct GLVec
 
 struct state {
     ImGuiContext *imgui_ctx = nullptr;
-    ImFont* font = nullptr;
-    ImFont* font1 = nullptr;
 };
 
 static GLVec last_vp {}, last_sb {};
@@ -68,6 +67,7 @@ void imgui_init()
 {
     if (cfg_inited)
         return;
+    is_blacklisted(true);
     parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
     notifier.params = &params;
     start_notifier(notifier);
@@ -82,13 +82,14 @@ void imgui_create(void *ctx)
 {
     if (inited)
         return;
-    inited = true;
 
     if (!ctx)
         return;
-
+    
+    imgui_shutdown();
     imgui_init();
-
+    inited = true;
+    
     gladLoadGL();
 
     GetOpenGLVersion(sw_stats.version_gl.major,
@@ -104,6 +105,7 @@ void imgui_create(void *ctx)
         vendorID = 0x10de;
     }
     init_gpu_stats(vendorID, params);
+    get_device_name(vendorID, deviceID, sw_stats);
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGuiContext *saved_ctx = ImGui::GetCurrentContext();
@@ -115,7 +117,7 @@ void imgui_create(void *ctx)
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
-    imgui_custom_style(params);
+    convert_colors(false, sw_stats, params);
 
     glGetIntegerv (GL_VIEWPORT, last_vp.v);
     glGetIntegerv (GL_SCISSOR_BOX, last_sb.v);
@@ -130,22 +132,7 @@ void imgui_create(void *ctx)
     GLint current_texture;
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &current_texture);
 
-    int font_size = params.font_size;
-    if (!font_size)
-        font_size = 24;
-
-    if (!params.font_file.empty() && file_exists(params.font_file)) {
-        state.font = io.Fonts->AddFontFromFileTTF(params.font_file.c_str(), font_size);
-        state.font1 = io.Fonts->AddFontFromFileTTF(params.font_file.c_str(), font_size * 0.55f);
-    } else {
-        ImFontConfig font_cfg = ImFontConfig();
-        const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
-        const ImWchar* glyph_ranges = io.Fonts->GetGlyphRangesDefault();
-
-        state.font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size, &font_cfg, glyph_ranges);
-        state.font1 = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size * 0.55, &font_cfg, glyph_ranges);
-    }
-    sw_stats.font1 = state.font1;
+    create_fonts(params, sw_stats.font1, sw_stats.font_text);
 
     // Restore global context or ours might clash with apps that use Dear ImGui
     ImGui::SetCurrentContext(saved_ctx);
@@ -168,10 +155,9 @@ void imgui_shutdown()
 
 void imgui_set_context(void *ctx)
 {
-    if (!ctx) {
-        imgui_shutdown();
+    if (!ctx)
         return;
-    }
+
 #ifndef NDEBUG
     std::cerr << __func__ << ": " << ctx << std::endl;
 #endif
@@ -183,7 +169,7 @@ void imgui_render(unsigned int width, unsigned int height)
     if (!state.imgui_ctx)
         return;
 
-    check_keybinds(params);
+    check_keybinds(sw_stats, params, vendorID);
     update_hud_info(sw_stats, params, vendorID);
 
     ImGuiContext *saved_ctx = ImGui::GetCurrentContext();
@@ -194,7 +180,7 @@ void imgui_render(unsigned int width, unsigned int height)
     ImGui::NewFrame();
     {
         std::lock_guard<std::mutex> lk(notifier.mutex);
-        position_layer(params, window_size);
+        position_layer(sw_stats, params, window_size);
         render_imgui(sw_stats, params, window_size, false);
     }
     ImGui::PopStyleVar(3);

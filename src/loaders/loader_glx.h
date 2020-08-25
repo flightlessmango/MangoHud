@@ -22,6 +22,7 @@ class glx_loader {
   decltype(&::glXMakeCurrent) MakeCurrent;
   decltype(&::glXGetCurrentContext) GetCurrentContext;
   decltype(&::glXQueryDrawable) QueryDrawable;
+  decltype(&::glXSwapBuffersMscOML) SwapBuffersMscOML;
 
  private:
   void CleanUp(bool unload);

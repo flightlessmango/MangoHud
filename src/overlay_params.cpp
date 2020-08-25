@@ -6,10 +6,15 @@
 #include <wordexp.h>
 #include "imgui.h"
 #include <iostream>
+#include <string>
+#include <sstream>
+#include <algorithm>
+#include <cctype>
 
 #include "overlay_params.h"
 #include "overlay.h"
 #include "config.h"
+#include "string_utils.h"
 
 #include "mesa/util/os_socket.h"
 
@@ -23,7 +28,6 @@
 #endif
 
 static enum overlay_param_position
-
 parse_position(const char *str)
 {
    if (!str || !strcmp(str, "top-left"))
@@ -34,6 +38,8 @@ parse_position(const char *str)
       return LAYER_POSITION_BOTTOM_LEFT;
    if (!strcmp(str, "bottom-right"))
       return LAYER_POSITION_BOTTOM_RIGHT;
+   if (!strcmp(str, "top-center"))
+      return LAYER_POSITION_TOP_CENTER;
    return LAYER_POSITION_TOP_LEFT;
 }
 
@@ -53,51 +59,72 @@ parse_control(const char *str)
 }
 
 static float
-parse_font_size(const char *str)
+parse_float(const char *str)
 {
-   return strtof(str, NULL);
-}
-
-static float
-parse_background_alpha(const char *str)
-{
-   return strtof(str, NULL);
-}
-
-static float
-parse_alpha(const char *str)
-{
-   return strtof(str, NULL);
+   float val = 0;
+   std::stringstream ss(str);
+   ss.imbue(std::locale::classic());
+   ss >> val;
+   return val;
 }
 
 #ifdef HAVE_X11
-static KeySym
+static std::vector<KeySym>
+parse_string_to_keysym_vec(const char *str)
+{
+   std::vector<KeySym> keys;
+   if(g_x11->IsLoaded())
+   {
+      std::stringstream keyStrings(str);
+      std::string ks;
+      while (std::getline(keyStrings, ks, '+')) {
+         trim(ks);
+         KeySym xk = g_x11->XStringToKeysym(ks.c_str());
+         if (xk)
+            keys.push_back(xk);
+         else
+            std::cerr << "MANGOHUD: Unrecognized key: '" << ks << "'\n";
+      }
+   }
+   return keys;
+}
+
+static std::vector<KeySym>
 parse_toggle_hud(const char *str)
 {
-   if (g_x11->IsLoaded())
-      return g_x11->XStringToKeysym(str);
-   return 0;
+   return parse_string_to_keysym_vec(str);
 }
 
-static KeySym
+static std::vector<KeySym>
 parse_toggle_logging(const char *str)
 {
-   if (g_x11->IsLoaded())
-      return g_x11->XStringToKeysym(str);
-   return 0;
+   return parse_string_to_keysym_vec(str);
 }
 
-static KeySym
+static std::vector<KeySym>
 parse_reload_cfg(const char *str)
 {
-   if (g_x11->IsLoaded())
-      return g_x11->XStringToKeysym(str);
-   return 0;
+   return parse_string_to_keysym_vec(str);
 }
+
+static std::vector<KeySym>
+parse_upload_log(const char *str)
+{
+   return parse_string_to_keysym_vec(str);
+}
+
+static std::vector<KeySym>
+parse_upload_logs(const char *str)
+{
+   return parse_string_to_keysym_vec(str);
+}
+
 #else
-#define parse_toggle_hud(x)      0
-#define parse_toggle_logging(x)  0
-#define parse_reload_cfg(x)      0
+#define parse_toggle_hud(x)      {}
+#define parse_toggle_logging(x)  {}
+#define parse_reload_cfg(x)      {}
+#define parse_upload_log(x)      {}
+#define parse_upload_logs(x)     {}
 #endif
 
 static uint32_t
@@ -108,12 +135,6 @@ parse_fps_sampling_period(const char *str)
 
 static uint32_t
 parse_fps_limit(const char *str)
-{
-   return strtol(str, NULL, 0);
-}
-
-static uint32_t
-parse_crosshair_size(const char *str)
 {
    return strtol(str, NULL, 0);
 }
@@ -169,6 +190,100 @@ parse_path(const char *str)
    return str;
 }
 
+static std::vector<media_player_order>
+parse_media_player_order(const char *str)
+{
+   std::vector<media_player_order> order;
+   std::stringstream ss(str);
+   std::string token;
+   while (std::getline(ss, token, ',')) {
+      trim(token);
+      std::transform(token.begin(), token.end(), token.begin(), ::tolower);
+      if (token == "title")
+         order.push_back(MP_ORDER_TITLE);
+      else if (token == "artist")
+         order.push_back(MP_ORDER_ARTIST);
+      else if (token == "album")
+         order.push_back(MP_ORDER_ALBUM);
+   }
+   return order;
+}
+
+
+static std::vector<std::string>
+parse_benchmark_percentiles(const char *str)
+{
+   std::vector<std::string> percentiles;
+   std::stringstream percent_strings(str);
+   std::string value;
+
+   while (std::getline(percent_strings, value, '+')) {
+      trim(value);
+
+      if (value == "AVG") {
+         percentiles.push_back(value);
+         continue;
+      }
+
+      float as_float;
+      size_t float_len = 0;
+
+      try {
+         as_float = parse_float(value, &float_len);
+      } catch (const std::invalid_argument&) {
+         std::cerr << "MANGOHUD: invalid benchmark percentile: '" << value << "'\n";
+         continue;
+      }
+
+      if (float_len != value.length()) {
+         std::cerr << "MANGOHUD: invalid benchmark percentile: '" << value << "'\n";
+         continue;
+      }
+
+      if (as_float > 100 || as_float < 0) {
+         std::cerr << "MANGOHUD: benchmark percentile is not between 0 and 100 (" << value << ")\n";
+         continue;
+      }
+
+      percentiles.push_back(value);
+   }
+
+   return percentiles;
+}
+
+static uint32_t
+parse_font_glyph_ranges(const char *str)
+{
+   uint32_t fg = 0;
+   std::stringstream ss(str);
+   std::string token;
+   while (std::getline(ss, token, ',')) {
+      trim(token);
+      std::transform(token.begin(), token.end(), token.begin(), ::tolower);
+
+      if (token == "korean")
+         fg |= FG_KOREAN;
+      else if (token == "chinese")
+         fg |= FG_CHINESE_FULL;
+      else if (token == "chinese_simplified")
+         fg |= FG_CHINESE_SIMPLIFIED;
+      else if (token == "japanese")
+         fg |= FG_JAPANESE;
+      else if (token == "cyrillic")
+         fg |= FG_CYRILLIC;
+      else if (token == "thai")
+         fg |= FG_THAI;
+      else if (token == "vietnamese")
+         fg |= FG_VIETNAMESE;
+      else if (token == "latin_ext_a")
+         fg |= FG_LATIN_EXT_A;
+      else if (token == "latin_ext_b")
+         fg |= FG_LATIN_EXT_B;
+   }
+   return fg;
+
+}
+
 #define parse_width(s) parse_unsigned(s)
 #define parse_height(s) parse_unsigned(s)
 #define parse_vsync(s) parse_unsigned(s)
@@ -177,13 +292,26 @@ parse_path(const char *str)
 #define parse_offset_y(s) parse_unsigned(s)
 #define parse_log_duration(s) parse_unsigned(s)
 #define parse_time_format(s) parse_str(s)
+#define parse_output_folder(s) parse_path(s)
 #define parse_output_file(s) parse_path(s)
 #define parse_font_file(s) parse_path(s)
+#define parse_font_file_text(s) parse_path(s)
 #define parse_io_read(s) parse_unsigned(s)
 #define parse_io_write(s) parse_unsigned(s)
 #define parse_pci_dev(s) parse_str(s)
+#define parse_media_player_name(s) parse_str(s)
+#define parse_font_scale_media_player(s) parse_float(s)
+#define parse_cpu_text(s) parse_str(s)
+#define parse_gpu_text(s) parse_str(s)
+#define parse_log_interval(s) parse_unsigned(s)
+#define parse_font_size(s) parse_float(s)
+#define parse_font_size_text(s) parse_float(s)
+#define parse_font_scale(s) parse_float(s)
+#define parse_background_alpha(s) parse_float(s)
+#define parse_alpha(s) parse_float(s)
+#define parse_permit_upload(s) parse_unsigned(s)
+#define parse_render_mango(s) parse_unsigned(s)
 
-#define parse_crosshair_color(s) parse_color(s)
 #define parse_cpu_color(s) parse_color(s)
 #define parse_gpu_color(s) parse_color(s)
 #define parse_vram_color(s) parse_color(s)
@@ -193,6 +321,8 @@ parse_path(const char *str)
 #define parse_frametime_color(s) parse_color(s)
 #define parse_background_color(s) parse_color(s)
 #define parse_text_color(s) parse_color(s)
+#define parse_media_player_color(s) parse_color(s)
+#define parse_wine_color(s) parse_color(s)
 
 static bool
 parse_help(const char *str)
@@ -207,7 +337,7 @@ parse_help(const char *str)
    fprintf(stderr, "\tposition=top-left|top-right|bottom-left|bottom-right\n");
    fprintf(stderr, "\tfps_sampling_period=number-of-milliseconds\n");
    fprintf(stderr, "\tno_display=0|1\n");
-   fprintf(stderr, "\toutput_file=/path/to/output.txt\n");
+   fprintf(stderr, "\toutput_folder=/path/to/folder\n");
    fprintf(stderr, "\twidth=width-in-pixels\n");
    fprintf(stderr, "\theight=height-in-pixels\n");
 
@@ -283,7 +413,7 @@ parse_overlay_env(struct overlay_params *params,
          OVERLAY_PARAMS
 #undef OVERLAY_PARAM_BOOL
 #undef OVERLAY_PARAM_CUSTOM
-         params->enabled[OVERLAY_PARAM_ENABLED_crosshair] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_histogram] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = read_cfg;
       }
 #define OVERLAY_PARAM_BOOL(name)                                       \
@@ -324,33 +454,45 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_io_read] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_io_write] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_wine] = false;
    params->fps_sampling_period = 500000; /* 500ms */
-   params->width = 280;
+   params->width = 0;
    params->height = 140;
    params->control = -1;
    params->fps_limit = 0;
    params->vsync = -1;
    params->gl_vsync = -2;
-   params->crosshair_size = 30;
    params->offset_x = 0;
    params->offset_y = 0;
    params->background_alpha = 0.5;
    params->alpha = 1.0;
    params->time_format = "%T";
-   params->gpu_color = strtol("2e9762", NULL, 16);
-   params->cpu_color = strtol("2e97cb", NULL, 16);
-   params->vram_color = strtol("ad64c1", NULL, 16);
-   params->ram_color = strtol("c26693", NULL, 16);
-   params->engine_color = strtol("eb5b5b", NULL, 16);
-   params->io_color = strtol("a491d3", NULL, 16);
-   params->frametime_color = strtol("00ff00", NULL, 16);
-   params->background_color = strtol("020202", NULL, 16);
-   params->text_color = strtol("ffffff", NULL, 16);
+   params->gpu_color = 0x2e9762;
+   params->cpu_color = 0x2e97cb;
+   params->vram_color = 0xad64c1;
+   params->ram_color = 0xc26693;
+   params->engine_color = 0xeb5b5b;
+   params->io_color = 0xa491d3;
+   params->frametime_color = 0x00ff00;
+   params->background_color = 0x020202;
+   params->text_color = 0xffffff;
+   params->media_player_color = 0xffffff;
+   params->media_player_name = "";
+   params->font_scale = 1.0f;
+   params->wine_color = 0xeb5b5b;
+   params->font_scale_media_player = 0.55f;
+   params->log_interval = 100;
+   params->media_player_order = { MP_ORDER_TITLE, MP_ORDER_ARTIST, MP_ORDER_ALBUM };
+   params->permit_upload = 0;
+   params->render_mango = 0;
+   params->benchmark_percentiles = { "97", "AVG", "1", "0.1" };
 
 #ifdef HAVE_X11
-   params->toggle_hud = XK_F12;
-   params->toggle_logging = XK_F2;
-   params->reload_cfg = XK_F4;
+   params->toggle_hud = { XK_Shift_R, XK_F12 };
+   params->toggle_logging = { XK_Shift_L, XK_F2 };
+   params->reload_cfg = { XK_Shift_L, XK_F4 };
+   params->upload_log = { XK_Shift_L, XK_F3 };
+   params->upload_logs = { XK_Control_L, XK_F3 };
 #endif
 
    // first pass with env var
@@ -369,10 +511,9 @@ parse_overlay_config(struct overlay_params *params,
             OVERLAY_PARAMS
 #undef OVERLAY_PARAM_BOOL
 #undef OVERLAY_PARAM_CUSTOM
-         params->enabled[OVERLAY_PARAM_ENABLED_crosshair] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_histogram] = 0;
          params->options.erase("full");
       }
-
       for (auto& it : params->options) {
 #define OVERLAY_PARAM_BOOL(name)                                       \
          if (it.first == #name) {                                      \
@@ -397,9 +538,11 @@ parse_overlay_config(struct overlay_params *params,
    if (env && read_cfg)
       parse_overlay_env(params, env);
 
+   if (params->font_scale_media_player <= 0.f)
+      params->font_scale_media_player = 0.55f;
+
    // Convert from 0xRRGGBB to ImGui's format
-   std::array<unsigned *, 10> colors = {
-      &params->crosshair_color,
+   std::array<unsigned *, 11> colors = {
       &params->cpu_color,
       &params->gpu_color,
       &params->vram_color,
@@ -409,6 +552,8 @@ parse_overlay_config(struct overlay_params *params,
       &params->background_color,
       &params->frametime_color,
       &params->text_color,
+      &params->media_player_color,
+      &params->wine_color,
    };
 
    for (auto color : colors){
@@ -420,38 +565,36 @@ parse_overlay_config(struct overlay_params *params,
       }
 
    params->tableCols = 3;
-   
+
    if (!params->font_size) {
       params->font_size = 24;
-   } else {
-      params->width = params->font_size * 11.7;
    }
 
    //increase hud width if io read and write
-   if (params->enabled[OVERLAY_PARAM_ENABLED_io_read] && params->enabled[OVERLAY_PARAM_ENABLED_io_write] && params->width == 280)
-      params->width = 15 * params->font_size;
-
-   if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock] && params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp] && params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
-      params->tableCols = 4;
-      params->width = 20 * params->font_size;
+   if (!params->width) {
+      if ((params->enabled[OVERLAY_PARAM_ENABLED_io_read] || params->enabled[OVERLAY_PARAM_ENABLED_io_write])) {
+         params->width = 13 * params->font_size * params->font_scale;
+      } else {
+         params->width = params->font_size * params->font_scale * 11.7;
+      }
    }
-   
+
    // set frametime limit
-   if (params->fps_limit >= 0)
-      fps_limit_stats.targetFrameTime = int64_t(1000000000.0 / params->fps_limit);
+   using namespace std::chrono;
+   if (params->fps_limit > 0)
+      fps_limit_stats.targetFrameTime = duration_cast<Clock::duration>(duration<double>(1) / params->fps_limit);
+   else
+      fps_limit_stats.targetFrameTime = {};
 
 #ifdef HAVE_DBUS
    if (params->enabled[OVERLAY_PARAM_ENABLED_media_player]) {
-      try {
-         dbusmgr::dbus_mgr.init();
-         get_spotify_metadata(dbusmgr::dbus_mgr, spotify);
-      } catch (std::runtime_error& e) {
-         std::cerr << "Failed to get initial Spotify metadata: " << e.what() << std::endl;
-      }
+      dbusmgr::dbus_mgr.init(params->media_player_name);
    } else {
       dbusmgr::dbus_mgr.deinit();
-      spotify.valid = false;
+      main_metadata.meta.valid = false;
    }
 #endif
+   if(!params->output_file.empty())
+      printf("MANGOHUD: output_file is Deprecated, use output_folder instead\n");
 
 }

@@ -38,5 +38,9 @@ lib32-mangohud*.tar.*
 
 # subprojects
 subprojects/packagecache/
-subprojects/imgui-*/
 subprojects/Vulkan-Headers-*/
+
+#GNU Global Metadata
+**/GPATH
+**/GRTAGS
+**/GTAGS

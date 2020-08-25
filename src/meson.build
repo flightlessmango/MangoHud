@@ -2,9 +2,17 @@ glslang = find_program('glslangValidator')
 
 # Needs prefix for configure_file()
 if get_option('append_libdir_mangohud')
-  libdir_mangohud = join_paths(get_option('prefix'), get_option('libdir'), 'mangohud')
+  libdir_mangohud = join_paths(get_option('libdir'), 'mangohud')
+  ld_libdir_mangohud = get_option('prefix') + '/\$LIB/mangohud/'
 else
-  libdir_mangohud = join_paths(get_option('prefix'), get_option('libdir'))
+  libdir_mangohud = get_option('libdir')
+  ld_libdir_mangohud = get_option('prefix') + '/\$LIB/'
+endif
+
+# For build.sh
+if get_option('ld_libdir_prefix')
+  # FIXME derive from libdir
+  ld_libdir_mangohud = get_option('prefix') + '/lib/mangohud/\$LIB/'
 endif
 
 overlay_shaders = [
@@ -24,8 +32,6 @@ vklayer_files = files(
   'font_unispace.c',
   'blacklist.cpp',
   'cpu.cpp',
-  'loaders/loader_nvml.cpp',
-  'nvml.cpp',
   'file_utils.cpp',
   'memory.cpp',
   'config.cpp',
@@ -34,6 +40,8 @@ vklayer_files = files(
   'notify.cpp',
   'elfhacks.cpp',
   'real_dlsym.cpp',
+  'pci_ids.cpp',
+  'logging.cpp',
 )
 
 opengl_files = files(
@@ -47,6 +55,23 @@ if get_option('with_dlsym').enabled()
     pre_args += '-DHOOK_DLSYM'
 endif
 
+nvml_h_found = get_option('with_nvml') == 'enabled'
+if get_option('with_nvml') == 'system'
+  nvml_h_found = cc.has_header('nvml.h')
+  if not nvml_h_found
+    error('nvml.h was not found. Disable with \'-Dwith_nvml=disabled\' if gpu stats by NVML is not needed.')
+  endif
+  pre_args += '-DUSE_SYSTEM_NVML'
+endif
+
+if nvml_h_found
+  pre_args += '-DHAVE_NVML'
+  vklayer_files += files(
+    'nvml.cpp',
+    'loaders/loader_nvml.cpp',
+  )
+endif
+
 if get_option('with_xnvctrl').enabled()
 
   if not get_option('with_x11').enabled()
@@ -55,7 +80,7 @@ if get_option('with_xnvctrl').enabled()
 
   xnvctrl_h_found = cc.has_header('NVCtrl/NVCtrl.h')
   if not xnvctrl_h_found
-    error('NVCtrl.h was not found. Disable with \'with_xnvctrl\' if this feature is not needed.')
+    error('NVCtrl.h was not found. Disable with \'-Dwith_xnvctrl=disabled\' if gpu stats by XNVCtrl is not needed.')
   endif
 
   pre_args += '-DHAVE_XNVCTRL'
@@ -87,6 +112,10 @@ if dbus_dep.found() and get_option('with_dbus').enabled()
   )
 endif
 
+link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL'])
+# meson fails to check version-script so just force add
+link_args += '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version'))
+
 vklayer_mesa_overlay = shared_library(
   'MangoHud',
   mangohud_version,
@@ -97,25 +126,24 @@ vklayer_mesa_overlay = shared_library(
   overlay_spv,
   c_args : [
     pre_args,
-    c_vis_args, 
-    no_override_init_args, 
+    no_override_init_args,
     vulkan_wsi_args
     ],
   cpp_args : [
     pre_args,
-    cpp_vis_args, 
-    cpp_nvml_args,
     vulkan_wsi_args
     ],
+  gnu_symbol_visibility : 'hidden',
   dependencies : [
-    vulkan_wsi_deps, 
-    libimgui_core_dep,
+    vulkan_wsi_deps,
+    dearimgui_dep,
     dbus_dep,
     dep_dl,
+    dep_rt,
     dep_pthread,
     dep_vulkan],
   include_directories : [inc_common],
-  link_args : cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL']),
+  link_args : link_args,
   install_dir : libdir_mangohud,
   install : true
 )
@@ -129,38 +157,30 @@ mangohud_dlsym = shared_library(
   ),
   c_args : [
     pre_args,
-    c_vis_args,
     no_override_init_args,
     ],
   cpp_args : [
     pre_args,
-    cpp_vis_args,
     ],
+  gnu_symbol_visibility : 'hidden',
   dependencies : [dep_dl],
   include_directories : [inc_common],
-  link_args : cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL']),
+  link_args : link_args,
   install_dir : libdir_mangohud,
   install : true
 )
 
 configure_file(input : 'mangohud.json.in',
-  output : '@0@.@1@.json'.format(meson.project_name(), target_machine.cpu_family()),
-  configuration : {'libdir_mangohud' : libdir_mangohud + '/',
-                  'PROJECT_NAME' : meson.project_name() + ' ',
-                  'LAYER_SUFFIX' : target_machine.cpu_family()},
+  output : '@0@.json'.format(meson.project_name()),
+  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud,
+                  'PROJECT_NAME' : meson.project_name().to_upper()},
   install : true,
   install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
 )
 
-if target_machine.cpu_family() == 'x86_64'
-  mangohud_cpu_family = ''
-else
-  mangohud_cpu_family = '.@0@'.format(target_machine.cpu_family())
-endif
-
 configure_file(input : '../bin/mangohud.in',
-  output : 'mangohud@0@'.format(mangohud_cpu_family),
-  configuration : {'libdir_mangohud' : libdir_mangohud},
+  output : 'mangohud',
+  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud},
   install_dir : get_option('bindir'),
 )
 
