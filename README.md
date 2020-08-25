@@ -80,13 +80,9 @@ flatpak override --user --env=MANGOHUD=1 com.valvesoftware.Steam
 
 # Normal usage
 
-To enable the MangoHud overlay layer for 64bit Vulkan and OpenGL, run :
+To enable the MangoHud overlay layer for Vulkan and OpenGL, run :
 
 `mangohud /path/to/app`
-
-Or
-
-`mangohud.x86 /path/to/app` for 32bit OpenGL
 
 For Lutris games, go to the System options in Lutris (make sure that advanced options are enabled) and add this to the `Command prefix` setting:
 
