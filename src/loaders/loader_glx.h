@@ -13,6 +13,8 @@ class glx_loader {
   decltype(&::glXGetProcAddress) GetProcAddress;
   decltype(&::glXGetProcAddressARB) GetProcAddressARB;
   decltype(&::glXCreateContext) CreateContext;
+  decltype(&::glXCreateContextAttribsARB) CreateContextAttribs;
+  decltype(&::glXCreateContextAttribsARB) CreateContextAttribsARB;
   decltype(&::glXDestroyContext) DestroyContext;
   decltype(&::glXSwapBuffers) SwapBuffers;
   decltype(&::glXSwapIntervalEXT) SwapIntervalEXT;

@@ -42,6 +42,22 @@ bool glx_loader::Load() {
     return false;
   }
 
+  CreateContextAttribs =
+      reinterpret_cast<decltype(this->CreateContextAttribs)>(
+          GetProcAddress((const unsigned char *)"glXCreateContextAttribs"));
+//   if (!CreateContextAttribs) {
+//     CleanUp(true);
+//     return false;
+//   }
+
+  CreateContextAttribsARB =
+      reinterpret_cast<decltype(this->CreateContextAttribsARB)>(
+          GetProcAddress((const unsigned char *)"glXCreateContextAttribsARB"));
+//   if (!CreateContextAttribsARB) {
+//     CleanUp(true);
+//     return false;
+//   }
+
   DestroyContext =
       reinterpret_cast<decltype(this->DestroyContext)>(
           GetProcAddress((const unsigned char *)"glXDestroyContext"));

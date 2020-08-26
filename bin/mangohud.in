@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 if [ "$#" -eq 0 ]; then
 	programname=`basename "$0"`

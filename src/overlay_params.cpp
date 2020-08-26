@@ -10,6 +10,7 @@
 #include <sstream>
 #include <algorithm>
 #include <cctype>
+#include <array>
 
 #include "overlay_params.h"
 #include "overlay.h"

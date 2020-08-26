@@ -30,6 +30,7 @@
 #include <mutex>
 #include <vector>
 #include <list>
+#include <array>
 #include <cmath>
 #include <libgen.h>
 
@@ -1258,7 +1259,7 @@ void render_mango(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       }
       ImGui::EndTable();
       if (params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
-         ImGui::Dummy(ImVec2(0.0f, params.font_size * params.font_scale / 2));
+         ImGui::Dummy(ImVec2(0.0f, 8.0f));
          ImGui::PushFont(data.font1);
          ImGui::TextColored(data.colors.engine, "%s", "Frametime");
          ImGui::PopFont();
@@ -1278,8 +1279,10 @@ void render_mango(swapchain_stats& data, struct overlay_params& params, ImVec2& 
 
          ImGui::PopStyleColor();
       }
+   if(logger->is_active())
+      ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(data.main_window_pos.x + window_size.x - 15, data.main_window_pos.y + 15), 10, params.engine_color, 20);
    ImGui::End();
-   window_size = ImVec2(window_size.x, ImGui::GetCursorPosY() + 150.0f);
+   window_size = ImVec2(window_size.x, 200);
 }
 
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan)
