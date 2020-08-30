@@ -141,16 +141,28 @@ parse_fps_sampling_period(const char *str)
    return strtol(str, NULL, 0) * 1000;
 }
 
-static uint32_t
+static std::vector<std::uint32_t>
 parse_fps_limit(const char *str)
 {
-   return strtol(str, NULL, 0);
-}
+   std::vector<std::uint32_t> fps_limit;
+   std::stringstream fps_limit_strings(str);
+   std::string value;
 
-static uint32_t
-parse_fps_limit_alt(const char *str)
-{
-   return strtol(str, NULL, 0);
+   while (std::getline(fps_limit_strings, value, ',')) {
+      trim(value);
+
+      uint32_t as_int;
+      try {
+         as_int = static_cast<uint32_t>(std::stoul(value));
+      } catch (const std::invalid_argument&) {
+         std::cerr << "MANGOHUD: invalid fps_limit value: '" << value << "'\n";
+         continue;
+      }
+
+      fps_limit.push_back(as_int);
+   }
+
+   return fps_limit;
 }
 
 static bool
@@ -473,8 +485,7 @@ parse_overlay_config(struct overlay_params *params,
    params->width = 0;
    params->height = 140;
    params->control = -1;
-   params->fps_limit = 0;
-   params->fps_limit_alt = 0;
+   params->fps_limit = { 0 };
    params->vsync = -1;
    params->gl_vsync = -2;
    params->offset_x = 0;
@@ -597,8 +608,8 @@ parse_overlay_config(struct overlay_params *params,
 
    // set frametime limit
    using namespace std::chrono;
-   if (params->fps_limit > 0)
-      fps_limit_stats.targetFrameTime = duration_cast<Clock::duration>(duration<double>(1) / params->fps_limit);
+   if (params->fps_limit.size() > 0 && params->fps_limit[0] > 0)
+      fps_limit_stats.targetFrameTime = duration_cast<Clock::duration>(duration<double>(1) / params->fps_limit[0]);
    else
       fps_limit_stats.targetFrameTime = {};
 
