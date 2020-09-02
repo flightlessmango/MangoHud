@@ -137,7 +137,7 @@ void Logger::try_log() {
 
   currentLogData.previous = elapsedLog;
   currentLogData.fps = fps;
-  currentLogData.frametime = 1000 / fps;
+  currentLogData.frametime = frametime;
   m_log_array.push_back(currentLogData);
 
   if(m_params->log_duration and (elapsedLog >= std::chrono::seconds(m_params->log_duration))){

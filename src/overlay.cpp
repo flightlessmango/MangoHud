@@ -928,6 +928,7 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
             now - sw_stats.last_present_time;
    }
 
+      frametime = now - sw_stats.last_present_time;
       if (elapsed >= params.fps_sampling_period) {
 
          std::thread(update_hw_info, std::ref(sw_stats), std::ref(params), vendorID).detach();
