@@ -1194,6 +1194,9 @@ void render_mango(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    static int tableCols = 2;
    static float ralign_width = 0, old_scale = 0;
    window_size = ImVec2(300, params.height);
+   if (params.log_interval == 0){
+      logger->try_log();
+   }
 
    if (old_scale != params.font_scale) {
       ralign_width = ImGui::CalcTextSize("A").x * 4 /* characters */;
@@ -1275,6 +1278,9 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    window_size = ImVec2(params.width, params.height);
    unsigned height = ImGui::GetIO().DisplaySize.y;
    auto now = Clock::now();
+   if (params.log_interval == 0){
+      logger->try_log();
+   }
 
    if (old_scale != params.font_scale) {
       ralign_width = ImGui::CalcTextSize("A").x * 4 /* characters */;
@@ -1582,10 +1588,6 @@ static void compute_swapchain_display(struct swapchain_data *data)
 
    ImGui::EndFrame();
    ImGui::Render();
-
-   if (instance_data->params.log_interval == 0){
-      logger->try_log();
-   }
    
 }
 
