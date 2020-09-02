@@ -1554,9 +1554,6 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       ImGui::PopFont();
 #endif
 
-      if (params.log_interval == 0){
-         logger->try_log();
-      }
       if(logger->is_active())
          ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(data.main_window_pos.x + window_size.x - 15, data.main_window_pos.y + 15), 10, params.engine_color, 20);
       window_size = ImVec2(window_size.x, ImGui::GetCursorPosY() + 10.0f);
@@ -1585,6 +1582,11 @@ static void compute_swapchain_display(struct swapchain_data *data)
 
    ImGui::EndFrame();
    ImGui::Render();
+
+   if (instance_data->params.log_interval == 0){
+      logger->try_log();
+   }
+   
 }
 
 static uint32_t vk_memory_type(struct device_data *data,
