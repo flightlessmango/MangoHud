@@ -1,3 +1,4 @@
+#include "kiero.h"
 #include "windows.h"
 #include <cstdio>
 
@@ -13,6 +14,7 @@ void ConsoleSetup()
 
 int MainThread(){
     ConsoleSetup();
+    printf("MangoHud Attached!\n");
     return 0;
 }
 
