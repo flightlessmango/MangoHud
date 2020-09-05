@@ -171,15 +171,15 @@ if is_unixy
   else
     dep_dl = cc.find_library('dl')
   endif
+# check for linking with rt by default
+  if cc.has_function('clock_gettime')
+    dep_rt = null_dep
+  else
+    dep_rt = cc.find_library('rt')
+  endif
 else
   dep_dl = null_dep
-endif
-
-# check for linking with rt by default
-if cc.has_function('clock_gettime')
   dep_rt = null_dep
-else
-  dep_rt = cc.find_library('rt')
 endif
 
 if dep_vulkan.found()
@@ -222,7 +222,7 @@ dearimgui_dep = dearimgui_sp.get_variable('dearimgui_dep')
 if ['windows', 'mingw'].contains(host_machine.system())
   subdir('modules/minhook')
   windows_deps = [
-    minhook_dep
+    minhook_dep,
   ]
 else
   windows_deps = null_dep

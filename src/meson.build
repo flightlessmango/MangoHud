@@ -31,7 +31,8 @@ opengl_files  = []
 if ['windows', 'mingw'].contains(host_machine.system())
   vklayer_files += files(
     'win/main.cpp',
-    'win/kiero.cpp'
+    'win/kiero.cpp',
+    'win/d3d12_hook.cpp',
   )
 endif
 

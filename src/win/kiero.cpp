@@ -1,6 +1,7 @@
 #include "kiero.h"
 #include <windows.h>
 #include <assert.h>
+#include <cstdio>
 
 #if KIERO_INCLUDE_D3D9
 # include <d3d9.h>
@@ -19,7 +20,11 @@
 
 #if KIERO_INCLUDE_D3D12
 # include <dxgi.h>
-# include <d3d12.h>
+#ifdef _MSC_VER
+    #include <d3d12.h>
+#else
+    #include "/usr/include/wine/windows/d3d12.h"
+#endif
 #endif
 
 #if KIERO_INCLUDE_OPENGL
@@ -374,8 +379,8 @@ kiero::Status::Enum kiero::init(RenderType::Enum _renderType)
 					return Status::ModuleNotFoundError;
 				}
 
-				void* CreateDXGIFactory;
-				if ((CreateDXGIFactory = ::GetProcAddress(libDXGI, "CreateDXGIFactory")) == NULL)
+				auto CreateDXGIFactory = reinterpret_cast<decltype(&::CreateDXGIFactory)>(::GetProcAddress(libDXGI, "CreateDXGIFactory"));
+				if (!CreateDXGIFactory)
 				{
 					::DestroyWindow(window);
 					::UnregisterClass(windowClass.lpszClassName, windowClass.hInstance);
@@ -398,8 +403,8 @@ kiero::Status::Enum kiero::init(RenderType::Enum _renderType)
 					return Status::UnknownError;
 				}
 
-				void* D3D12CreateDevice;
-				if ((D3D12CreateDevice = ::GetProcAddress(libD3D12, "D3D12CreateDevice")) == NULL)
+				auto D3D12CreateDevice = reinterpret_cast<decltype(&::D3D12CreateDevice)>(::GetProcAddress(libD3D12, "D3D12CreateDevice"));
+				if (!D3D12CreateDevice)
 				{
 					::DestroyWindow(window);
 					::UnregisterClass(windowClass.lpszClassName, windowClass.hInstance);
@@ -508,7 +513,6 @@ kiero::Status::Enum kiero::init(RenderType::Enum _renderType)
 				::UnregisterClass(windowClass.lpszClassName, windowClass.hInstance);
 
 				g_renderType = RenderType::D3D12;
-
 				return Status::Success;
 #endif
 			}

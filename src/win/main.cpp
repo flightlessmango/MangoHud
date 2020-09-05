@@ -1,6 +1,10 @@
-#include "kiero.h"
 #include "windows.h"
 #include <cstdio>
+#include "kiero.h"
+
+#if KIERO_INCLUDE_D3D12
+# include "d3d12_hook.h"
+#endif
 
 void ConsoleSetup()
 {
@@ -12,10 +16,24 @@ void ConsoleSetup()
 	freopen("CONIN$", "r", stdin);
 }
 
-int MainThread(){
+int MainThread()
+{
     ConsoleSetup();
     printf("MangoHud Attached!\n");
-    return 0;
+    if (kiero::init(kiero::RenderType::Auto) == kiero::Status::Success)
+    {
+        switch (kiero::getRenderType())
+        {
+#if KIERO_INCLUDE_D3D12
+        case kiero::RenderType::D3D12:
+            impl::d3d12::init();
+            break;
+#endif
+        }
+
+        return 1;
+    }
+	return 0;
 }
 
 BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD fdwReason, LPVOID)
