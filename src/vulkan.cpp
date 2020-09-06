@@ -74,7 +74,6 @@ bool open = false;
 string gpuString,wineVersion,wineProcess;
 float offset_x, offset_y, hudSpacing;
 int hudFirstRow, hudSecondRow;
-struct fps_limit fps_limit_stats {};
 VkPhysicalDeviceDriverProperties driverProps = {};
 int32_t deviceID;
 
