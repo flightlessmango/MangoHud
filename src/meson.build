@@ -26,19 +26,24 @@ foreach s : ['overlay.frag', 'overlay.vert']
     command : [glslang, '-V', '-x', '-o', '@OUTPUT@', '@INPUT@'])
 endforeach
 
-vklayer_files = []
+vklayer_files = files(
+  'overlay.cpp',
+  'font.cpp',
+  'keybinds.cpp'
+)
 opengl_files  = []
 if ['windows', 'mingw'].contains(host_machine.system())
   vklayer_files += files(
     'win/main.cpp',
     'win/kiero.cpp',
     'win/d3d12_hook.cpp',
+    'win/d3d_shared.cpp'
   )
 endif
 
 if is_unixy
-  vklayer_files = files(
-    'overlay.cpp',
+  vklayer_files += files(
+    'vulkan.cpp',
     'overlay_params.cpp',
     'font_unispace.c',
     'blacklist.cpp',
