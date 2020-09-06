@@ -221,6 +221,7 @@ dearimgui_dep = dearimgui_sp.get_variable('dearimgui_dep')
 
 if ['windows', 'mingw'].contains(host_machine.system())
   subdir('modules/minhook')
+  inc_common += ( include_directories('modules/minhook/include'))
   windows_deps = [
     minhook_dep,
   ]
