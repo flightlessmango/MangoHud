@@ -2,7 +2,6 @@
 #include "d3d12_hook.h"
 #include <cstdio>
 #include <cassert>
-#include <functional>
 
 typedef long(__fastcall* PresentD3D12) (IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags);
 PresentD3D12 oPresentD3D12;
