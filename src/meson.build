@@ -29,7 +29,10 @@ endforeach
 vklayer_files = files(
   'overlay.cpp',
   'font.cpp',
-  'keybinds.cpp'
+  'keybinds.cpp',
+  'font_unispace.c',
+  'logging.cpp',
+  'config.cpp',
 )
 opengl_files  = []
 if ['windows', 'mingw'].contains(host_machine.system())
@@ -46,19 +49,16 @@ if is_unixy
   vklayer_files += files(
     'vulkan.cpp',
     'overlay_params.cpp',
-    'font_unispace.c',
     'blacklist.cpp',
     'cpu.cpp',
     'file_utils.cpp',
     'memory.cpp',
-    'config.cpp',
     'iostats.cpp',
     'gpu.cpp',
     'notify.cpp',
     'elfhacks.cpp',
     'real_dlsym.cpp',
     'pci_ids.cpp',
-    'logging.cpp',
   )
 
   opengl_files = files(
