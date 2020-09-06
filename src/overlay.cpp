@@ -1,6 +1,7 @@
 #include <sstream>
 #include <iomanip>
 #include <ctime>
+#include <algorithm>
 #include "overlay.h"
 #include "logging.h"
 #include "cpu.h"
@@ -8,9 +9,13 @@
 #include "memory.h"
 #include "timing.hpp"
 #include "mesa/util/macros.h"
+#include "string_utils.h"
+
+struct benchmark_stats benchmark;
 
 void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID)
 {
+#ifdef __gnu_linux__
    if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
       cpuStats.UpdateCPUData();
 
@@ -29,6 +34,7 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
    }
 
    // get ram usage/max
+
    if (params.enabled[OVERLAY_PARAM_ENABLED_ram] || logger->is_active())
       update_meminfo();
    if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])
@@ -43,6 +49,7 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
 
    currentLogData.cpu_load = cpuStats.GetCPUDataTotal().percent;
    currentLogData.cpu_temp = cpuStats.GetCPUDataTotal().temp;
+#endif
 
    logger->notify_data_valid();
 }
@@ -87,4 +94,43 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
    sw_stats.last_present_time = now;
    sw_stats.n_frames++;
    sw_stats.n_frames_since_update++;
+}
+
+void calculate_benchmark_data(void *params_void){
+   overlay_params *params = reinterpret_cast<overlay_params *>(params_void);
+
+   vector<float> sorted = benchmark.fps_data;
+   std::sort(sorted.begin(), sorted.end());
+   benchmark.percentile_data.clear();
+
+   benchmark.total = 0.f;
+   for (auto fps_ : sorted){
+      benchmark.total = benchmark.total + fps_;
+   }
+
+   size_t max_label_size = 0;
+
+   for (std::string percentile : params->benchmark_percentiles) {
+      float result;
+
+      // special case handling for a mean-based average
+      if (percentile == "AVG") {
+         result = benchmark.total / sorted.size();
+      } else {
+         // the percentiles are already validated when they're parsed from the config.
+         float fraction = parse_float(percentile) / 100;
+
+         result = sorted[(fraction * sorted.size()) - 1];
+         percentile += "%";
+      }
+
+      if (percentile.length() > max_label_size)
+         max_label_size = percentile.length();
+
+      benchmark.percentile_data.push_back({percentile, result});
+   }
+
+   for (auto& entry : benchmark.percentile_data) {
+      entry.first.append(max_label_size - entry.first.length(), ' ');
+   }
 }
