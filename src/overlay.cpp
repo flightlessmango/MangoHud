@@ -928,23 +928,27 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
             now - sw_stats.last_present_time;
    }
 
-      frametime = now - sw_stats.last_present_time;
-      if (elapsed >= params.fps_sampling_period) {
+   frametime = now - sw_stats.last_present_time;
+   if (elapsed >= params.fps_sampling_period) {
 
-         std::thread(update_hw_info, std::ref(sw_stats), std::ref(params), vendorID).detach();
-         sw_stats.fps = fps;
+      std::thread(update_hw_info, std::ref(sw_stats), std::ref(params), vendorID).detach();
+      sw_stats.fps = fps;
 
-         if (params.enabled[OVERLAY_PARAM_ENABLED_time]) {
-            std::time_t t = std::time(nullptr);
-            std::stringstream time;
-            time << std::put_time(std::localtime(&t), params.time_format.c_str());
-            sw_stats.time = time.str();
-         }
-
-         sw_stats.n_frames_since_update = 0;
-         sw_stats.last_fps_update = now;
-
+      if (params.enabled[OVERLAY_PARAM_ENABLED_time]) {
+         std::time_t t = std::time(nullptr);
+         std::stringstream time;
+         time << std::put_time(std::localtime(&t), params.time_format.c_str());
+         sw_stats.time = time.str();
       }
+
+      sw_stats.n_frames_since_update = 0;
+      sw_stats.last_fps_update = now;
+
+   }
+
+   if (params.log_interval == 0){
+      logger->try_log();
+   }
 
    sw_stats.last_present_time = now;
    sw_stats.n_frames++;
@@ -1194,9 +1198,6 @@ void render_mango(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    static int tableCols = 2;
    static float ralign_width = 0, old_scale = 0;
    window_size = ImVec2(300, params.height);
-   if (params.log_interval == 0){
-      logger->try_log();
-   }
 
    if (old_scale != params.font_scale) {
       ralign_width = ImGui::CalcTextSize("A").x * 4 /* characters */;
