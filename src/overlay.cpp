@@ -12,19 +12,20 @@
 #include "string_utils.h"
 
 struct benchmark_stats benchmark;
+struct fps_limit fps_limit_stats {};
 
 void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID)
 {
-#ifdef __gnu_linux__
    if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
       cpuStats.UpdateCPUData();
+#ifdef __gnu_linux__
 
       if (params.enabled[OVERLAY_PARAM_ENABLED_core_load])
          cpuStats.UpdateCoreMhz();
       if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp] || logger->is_active())
          cpuStats.UpdateCpuTemp();
+#endif
    }
-
    if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || logger->is_active()) {
       if (vendorID == 0x1002)
          getAmdGpuInfo();
@@ -35,21 +36,24 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
 
    // get ram usage/max
 
+#ifdef __gnu_linux__
    if (params.enabled[OVERLAY_PARAM_ENABLED_ram] || logger->is_active())
       update_meminfo();
    if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])
       getIoStats(&sw_stats.io);
+#endif
 
    currentLogData.gpu_load = gpu_info.load;
    currentLogData.gpu_temp = gpu_info.temp;
    currentLogData.gpu_core_clock = gpu_info.CoreClock;
    currentLogData.gpu_mem_clock = gpu_info.MemClock;
    currentLogData.gpu_vram_used = gpu_info.memoryUsed;
+#ifdef __gnu_linux__
    currentLogData.ram_used = memused;
+#endif
 
    currentLogData.cpu_load = cpuStats.GetCPUDataTotal().percent;
    currentLogData.cpu_temp = cpuStats.GetCPUDataTotal().temp;
-#endif
 
    logger->notify_data_valid();
 }
