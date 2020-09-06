@@ -28,6 +28,7 @@ endforeach
 
 vklayer_files = files(
   'overlay.cpp',
+  'overlay_params.cpp',
   'font.cpp',
   'keybinds.cpp',
   'font_unispace.c',
