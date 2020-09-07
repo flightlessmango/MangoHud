@@ -38,5 +38,5 @@ extern struct gpuInfo gpu_info;
 
 void getNvidiaGpuInfo(void);
 void getAmdGpuInfo(void);
-
+extern void nvapi_util();
 #endif //MANGOHUD_GPU_H

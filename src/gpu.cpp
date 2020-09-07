@@ -29,6 +29,9 @@ void getNvidiaGpuInfo(){
         return;
     }
 #endif
+#ifdef _WIN32
+nvapi_util();
+#endif
 }
 
 void getAmdGpuInfo(){
