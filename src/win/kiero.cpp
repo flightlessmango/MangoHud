@@ -281,8 +281,8 @@ kiero::Status::Enum kiero::init(RenderType::Enum _renderType)
 					return Status::ModuleNotFoundError;
 				}
 
-				void* D3D11CreateDeviceAndSwapChain;
-				if ((D3D11CreateDeviceAndSwapChain = ::GetProcAddress(libD3D11, "D3D11CreateDeviceAndSwapChain")) == NULL)
+				auto D3D11CreateDeviceAndSwapChain = reinterpret_cast<decltype(&::D3D11CreateDeviceAndSwapChain)>(::GetProcAddress(libD3D11, "D3D11CreateDeviceAndSwapChain"));
+				if (!D3D11CreateDeviceAndSwapChain)
 				{
 					::DestroyWindow(window);
 					::UnregisterClass(windowClass.lpszClassName, windowClass.hInstance);

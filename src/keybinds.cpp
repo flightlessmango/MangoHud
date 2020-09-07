@@ -22,7 +22,6 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
 #endif
      if (pressed && (now - logger->last_log_end() > 11s)) {
        last_f2_press = now;
-       printf("pressed\n");
        if (logger->is_active()) {
          logger->stop_logging();
        } else {

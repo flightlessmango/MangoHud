@@ -1,7 +1,9 @@
 #include "windows.h"
 #include <cstdio>
 #include "kiero.h"
-
+#if KIERO_INCLUDE_D3D11
+# include "d3d11_hook.h"
+#endif
 #if KIERO_INCLUDE_D3D12
 # include "d3d12_hook.h"
 #endif
@@ -24,6 +26,11 @@ int MainThread()
     {
         switch (kiero::getRenderType())
         {
+#if KIERO_INCLUDE_D3D11
+        case kiero::RenderType::D3D11:
+            impl::d3d11::init();
+            break;
+#endif
 #if KIERO_INCLUDE_D3D12
         case kiero::RenderType::D3D12:
             impl::d3d12::init();

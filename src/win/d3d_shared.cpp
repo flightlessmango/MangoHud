@@ -1,4 +1,5 @@
 #include "d3d_shared.h"
+#include "overlay.h"
 
 bool cfg_inited = false;
 ImVec2 window_size;
@@ -13,4 +14,9 @@ void init_d3d_shared(){
      parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
      cfg_inited = true;
     //  init_cpu_stats(params);
+}
+
+void d3d_run(){
+    check_keybinds(sw_stats, params, vendorID);
+	update_hud_info(sw_stats, params, vendorID);
 }

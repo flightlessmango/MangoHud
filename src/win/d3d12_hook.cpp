@@ -9,8 +9,7 @@ typedef long(__fastcall* PresentD3D12) (IDXGISwapChain* pSwapChain, UINT SyncInt
 PresentD3D12 oPresentD3D12;
 
 long __fastcall hkPresent12(IDXGISwapChain3* pSwapChain, UINT SyncInterval, UINT Flags){
-    check_keybinds(sw_stats, params, vendorID);
-	update_hud_info(sw_stats, params, vendorID);
+    d3d_run();
     return oPresentD3D12(pSwapChain, SyncInterval, Flags);
 }
 
