@@ -7,6 +7,7 @@ struct swapchain_stats sw_stats {};
 uint32_t vendorID;
 
 void init_d3d_shared(){
+    vendorID = get_device_id_dxgi();
     if (cfg_inited)
         return;
      parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));

@@ -41,6 +41,7 @@ if ['windows', 'mingw'].contains(host_machine.system())
   vklayer_files += files(
     'file_utils_win32.cpp',
     'cpu_win32.cpp',
+    'win/dxgi.cpp',
     'win/main.cpp',
     'win/kiero.cpp',
     'win/d3d12_hook.cpp',
