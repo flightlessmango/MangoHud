@@ -13,7 +13,15 @@ static Present oPresent = NULL;
 
 long __stdcall hkPresent11(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags)
 {
-    d3d_run();
+#ifdef _MSC_VER
+    static auto addr = _ReturnAddress();
+    if(addr == _ReturnAddress()){
+#else
+    static auto addr = __builtin_return_address(0);
+    if(addr == __builtin_return_address(0)){
+#endif
+        d3d_run();
+    }
 	return oPresent(pSwapChain, SyncInterval, Flags);
 }
 
