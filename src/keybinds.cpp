@@ -15,14 +15,14 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
    auto keyPressDelay = 500ms;
 
   if (elapsedF2 >= keyPressDelay){
-#ifdef HAVE_X11
+#if defined(HAVE_X11) || defined(_WIN32)
      pressed = keys_are_pressed(params.toggle_logging);
 #else
      pressed = false;
 #endif
      if (pressed && (now - logger->last_log_end() > 11s)) {
        last_f2_press = now;
-
+       printf("pressed\n");
        if (logger->is_active()) {
          logger->stop_logging();
        } else {
@@ -36,7 +36,7 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
    }
 
    if (elapsedF12 >= keyPressDelay){
-#ifdef HAVE_X11
+#if defined(HAVE_X11) || defined(_WIN32)
       pressed = keys_are_pressed(params.toggle_hud);
 #else
       pressed = false;
@@ -48,7 +48,7 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
    }
 
    if (elapsedReloadCfg >= keyPressDelay){
-#ifdef HAVE_X11
+#if defined(HAVE_X11) || defined(_WIN32)
       pressed = keys_are_pressed(params.reload_cfg);
 #else
       pressed = false;
@@ -60,7 +60,7 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
    }
 
    if (params.permit_upload && elapsedUpload >= keyPressDelay){
-#ifdef HAVE_X11
+#if defined(HAVE_X11) || defined(_WIN32)
       pressed = keys_are_pressed(params.upload_log);
 #else
       pressed = false;
@@ -71,7 +71,7 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
       }
    }
    if (params.permit_upload && elapsedUpload >= keyPressDelay){
-#ifdef HAVE_X11
+#if defined(HAVE_X11) || defined(_WIN32)
       pressed = keys_are_pressed(params.upload_logs);
 #else
       pressed = false;
