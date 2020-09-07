@@ -11,7 +11,6 @@
 #endif
 
 uint32_t get_device_id_dxgi(){
-    printf("start get device id\n");
     HMODULE libDXGI;
     if ((libDXGI = ::GetModuleHandle(KIERO_TEXT("dxgi.dll"))) == NULL){
         printf("dxgi not found\n");
@@ -34,7 +33,6 @@ uint32_t get_device_id_dxgi(){
     int i;
     for (i = 0; SUCCEEDED(dxgi_factory->EnumAdapters(i, &dxgi_adapter)); i++) {
         dxgi_adapter->GetDesc(&AdapterDesc);
-        printf("%ls\n", AdapterDesc.Description);
         if (AdapterDesc.VendorId == 0x10de)
             return AdapterDesc.VendorId;
         if (AdapterDesc.VendorId == 0x1002)
