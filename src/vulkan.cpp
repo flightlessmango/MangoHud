@@ -462,11 +462,13 @@ struct overlay_draw *get_overlay_draw(struct swapchain_data *data)
 
 void init_cpu_stats(overlay_params& params)
 {
+#ifdef __gnu_linux__   
    auto& enabled = params.enabled;
    enabled[OVERLAY_PARAM_ENABLED_cpu_stats] = cpuStats.Init()
                            && enabled[OVERLAY_PARAM_ENABLED_cpu_stats];
    enabled[OVERLAY_PARAM_ENABLED_cpu_temp] = cpuStats.GetCpuFile()
                            && enabled[OVERLAY_PARAM_ENABLED_cpu_temp];
+#endif
 }
 
 struct PCI_BUS {
@@ -524,6 +526,10 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
       if (!nvSuccess)
          nvSuccess = checkXNVCtrl();
 #endif
+#ifdef _WIN32
+      if (!nvSuccess)
+         nvSuccess = checkNVAPI();
+#endif
 
       if(not nvSuccess) {
          params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
@@ -532,7 +538,7 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
          vendorID = 0x10de;
       }
    }
-
+#ifdef __gnu_linux__
    if (vendorID == 0x8086 || vendorID == 0x1002
        || gpu.find("Radeon") != std::string::npos
        || gpu.find("AMD") != std::string::npos) {
@@ -598,11 +604,13 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
          params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
       }
    }
+#endif
    if (!params.permit_upload)
       printf("MANGOHUD: Uploading is disabled (permit_upload = 0)\n");
 }
 
 void init_system_info(){
+   #ifdef __gnu_linux__
       const char* ld_preload = getenv("LD_PRELOAD");
       if (ld_preload)
          unsetenv("LD_PRELOAD");
@@ -678,6 +686,7 @@ void init_system_info(){
                 << "Driver:" << driver << std::endl;
 #endif
       parse_pciids();
+#endif
 }
 
 static void snapshot_swapchain_frame(struct swapchain_data *data)
@@ -1155,6 +1164,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             ImGui::PopFont();
          }
       }
+#ifdef __gnu_linux__  
       if (params.enabled[OVERLAY_PARAM_ENABLED_ram]){
          ImGui::TableNextRow();
          ImGui::TextColored(data.colors.ram, "RAM");
@@ -1165,6 +1175,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::Text("GiB");
          ImGui::PopFont();
       }
+#endif
       if (params.enabled[OVERLAY_PARAM_ENABLED_fps]){
          ImGui::TableNextRow();
          ImGui::TextColored(data.colors.engine, "%s", is_vulkan ? data.engineName.c_str() : "OpenGL");
@@ -1305,10 +1316,12 @@ static void compute_swapchain_display(struct swapchain_data *data)
    {
       scoped_lock lk(instance_data->notifier.mutex);
       position_layer(data->sw_stats, instance_data->params, data->window_size);
+#ifdef __gnu_linux__  
       if(instance_data->params.render_mango)
          render_mango(data->sw_stats, instance_data->params, data->window_size, true);
       else
          render_imgui(data->sw_stats, instance_data->params, data->window_size, true);
+#endif
    }
    ImGui::PopStyleVar(3);
 
@@ -2337,6 +2350,7 @@ static struct overlay_draw *before_present(struct swapchain_data *swapchain_data
 
 void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats)
 {
+#ifdef __gnu_linux__  
    string desc = pci_ids[vendorID].second[deviceID].desc;
    size_t position = desc.find("[");
    if (position != std::string::npos) {
@@ -2347,6 +2361,7 @@ void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats&
    }
    sw_stats.gpuName = desc;
    trim(sw_stats.gpuName);
+#endif
 }
 
 static VkResult overlay_CreateSwapchainKHR(
@@ -2382,13 +2397,14 @@ static VkResult overlay_CreateSwapchainKHR(
       ss << " " << ((prop.driverVersion >> 22) & 0x3ff);
       ss << "."  << ((prop.driverVersion >> 14) & 0x0ff);
       ss << "."  << std::setw(2) << std::setfill('0') << ((prop.driverVersion >> 6) & 0x0ff);
+   }
 #ifdef _WIN32
-   } else if (prop.vendorID == 0x8086) {
+    else if (prop.vendorID == 0x8086) {
       ss << " " << (prop.driverVersion >> 14);
       ss << "."  << (prop.driverVersion & 0x3fff);
    }
 #endif
-   } else {
+   else {
       ss << " " << VK_VERSION_MAJOR(prop.driverVersion);
       ss << "."  << VK_VERSION_MINOR(prop.driverVersion);
       ss << "."  << VK_VERSION_PATCH(prop.driverVersion);
@@ -2757,8 +2773,10 @@ static VkResult overlay_CreateInstance(
 
    if (!is_blacklisted()) {
       parse_overlay_config(&instance_data->params, getenv("MANGOHUD_CONFIG"));
+#ifdef __gnu_linux__  
       instance_data->notifier.params = &instance_data->params;
       start_notifier(instance_data->notifier);
+#endif
 
       init_cpu_stats(instance_data->params);
 
@@ -2788,7 +2806,9 @@ static void overlay_DestroyInstance(
    instance_data_map_physical_devices(instance_data, false);
    instance_data->vtable.DestroyInstance(instance, pAllocator);
    if (!is_blacklisted())
+#ifdef __gnu_linux__  
       stop_notifier(instance_data->notifier);
+#endif
    destroy_instance_data(instance_data);
 }
 

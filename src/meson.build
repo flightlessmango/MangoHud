@@ -35,6 +35,7 @@ vklayer_files = files(
   'logging.cpp',
   'config.cpp',
   'gpu.cpp',
+  'vulkan.cpp',
 )
 opengl_files  = []
 if ['windows', 'mingw'].contains(host_machine.system())
@@ -42,6 +43,7 @@ if ['windows', 'mingw'].contains(host_machine.system())
     'file_utils_win32.cpp',
     'cpu_win32.cpp',
     'nvapi.cpp',
+    'blacklist.cpp',
     'win/dxgi.cpp',
     'win/main.cpp',
     'win/kiero.cpp',
@@ -52,8 +54,6 @@ endif
 
 if is_unixy
   vklayer_files += files(
-    'vulkan.cpp',
-    'blacklist.cpp',
     'cpu.cpp',
     'file_utils.cpp',
     'memory.cpp',
