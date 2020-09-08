@@ -200,7 +200,7 @@ All vulkan vsync options might not be supported on your device, you can check wh
 
 You must set a valid path for `output_folder` in your configuration to store logs in.
 
-When you toggle logging (using the keybind `Shift_L+F2`), a file is created the game name plus a date & timestamp in your `output_folder`.
+When you toggle logging (using the keybind `Shift_L+F2`), a file is created with the game name plus a date & timestamp in your `output_folder`.
 
 Log files can be uploaded to [Flightlessmango.com](https://flightlessmango.com/games/user_benchmarks) to create graphs automatically.
 
