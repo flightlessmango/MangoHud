@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <errno.h>
 #ifdef __gnu_linux__
-#include <sys/sysinfo.h>
 #include <wordexp.h>
 #endif
 #include "imgui.h"
