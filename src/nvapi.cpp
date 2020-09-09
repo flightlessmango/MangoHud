@@ -25,10 +25,12 @@ unsigned int gpuUsages[NVAPI_MAX_USAGES_PER_GPU] = { 0 };
 
 bool checkNVAPI(){
 
-    if (MANGOHUD_ARCH == "64bit")
-        hmod = LoadLibraryA("nvapi64.dll");
-    else
-        hmod = LoadLibraryA("nvapi.dll");
+#if _WIN64
+    hmod = LoadLibraryA("nvapi64.dll");
+#else
+    hmod = LoadLibraryA("nvapi.dll");
+#endif
+
     if (hmod == NULL)
     {
         printf("Failed to load nvapi.dll");
