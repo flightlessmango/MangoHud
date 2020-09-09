@@ -518,26 +518,12 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
    if (vendorID == 0x8086
       || vendorID == 0x10de) {
 
-      bool nvSuccess = false;
-#ifdef HAVE_NVML
-      nvSuccess = checkNVML(pci_dev) && getNVMLInfo();
-#endif
-#ifdef HAVE_XNVCTRL
-      if (!nvSuccess)
-         nvSuccess = checkXNVCtrl();
-#endif
-#ifdef _WIN32
-      if (!nvSuccess)
-         nvSuccess = checkNVAPI();
-#endif
-
-      if(not nvSuccess) {
-         params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
-      }
-      else {
+      if(checkNvidia(pci_dev))
          vendorID = 0x10de;
-      }
+      else
+         params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
    }
+
 #ifdef __gnu_linux__
    if (vendorID == 0x8086 || vendorID == 0x1002
        || gpu.find("Radeon") != std::string::npos

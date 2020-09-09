@@ -2,14 +2,7 @@
 #ifndef MANGOHUD_GPU_H
 #define MANGOHUD_GPU_H
 
-#include <thread>
-#include <inttypes.h>
-#include <stdlib.h>
 #include <stdio.h>
-#include "nvctrl.h"
-#ifdef HAVE_NVML
-#include "nvidia_info.h"
-#endif
 
 struct amdgpu_files
 {
@@ -38,6 +31,7 @@ extern struct gpuInfo gpu_info;
 
 void getNvidiaGpuInfo(void);
 void getAmdGpuInfo(void);
+bool checkNvidia(const char *pci_dev);
 extern void nvapi_util();
 extern bool checkNVAPI();
 #endif //MANGOHUD_GPU_H
