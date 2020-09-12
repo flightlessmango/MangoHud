@@ -1,9 +1,13 @@
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <sys/sysinfo.h>
+#ifdef __gnu_linux__
 #include <wordexp.h>
+#endif
 #include "imgui.h"
 #include <iostream>
 #include <string>
@@ -521,6 +525,21 @@ parse_overlay_config(struct overlay_params *params,
    params->upload_log = { XK_Shift_L, XK_F3 };
    params->upload_logs = { XK_Control_L, XK_F3 };
 #endif
+
+#ifdef _WIN32
+   params->toggle_hud = { VK_F12 };
+   params->toggle_logging = { VK_F2 };
+   params->reload_cfg = { VK_F4 };
+
+   #undef parse_toggle_hud
+   #undef parse_toggle_logging
+   #undef parse_reload_cfg
+
+   #define parse_toggle_hud(x)      params->toggle_hud
+   #define parse_toggle_logging(x)  params->toggle_logging
+   #define parse_reload_cfg(x)      params->reload_cfg
+#endif
+
 
    // first pass with env var
    if (env)

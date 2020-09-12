@@ -7,6 +7,7 @@
 string os, cpu, gpu, ram, kernel, driver;
 bool sysInfoFetched = false;
 double fps;
+uint64_t frametime;
 logData currentLogData = {};
 
 std::unique_ptr<Logger> logger;
@@ -73,7 +74,7 @@ void writeFile(string filename){
     out << logArray[i].gpu_mem_clock << ",";
     out << logArray[i].gpu_vram_used << ",";
     out << logArray[i].ram_used << ",";
-    out << std::chrono::duration_cast<std::chrono::microseconds>(logArray[i].previous).count() << "\n";
+    out << std::chrono::duration_cast<std::chrono::nanoseconds>(logArray[i].previous).count() << "\n";
   }
   logger->clear_log_data();
 }
@@ -137,7 +138,7 @@ void Logger::try_log() {
 
   currentLogData.previous = elapsedLog;
   currentLogData.fps = fps;
-  currentLogData.frametime = 1000 / fps;
+  currentLogData.frametime = frametime;
   m_log_array.push_back(currentLogData);
 
   if(m_params->log_duration and (elapsedLog >= std::chrono::seconds(m_params->log_duration))){

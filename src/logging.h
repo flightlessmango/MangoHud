@@ -16,7 +16,7 @@
 using namespace std;
 struct logData{
   double fps;
-  double frametime;
+  uint64_t frametime;
   int cpu_load;
   int gpu_load;
   int cpu_temp;
@@ -70,6 +70,7 @@ extern std::unique_ptr<Logger> logger;
 extern string os, cpu, gpu, ram, kernel, driver;
 extern bool sysInfoFetched;
 extern double fps;
+extern uint64_t frametime;
 extern logData currentLogData;
 
 string exec(string command);

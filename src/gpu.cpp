@@ -1,8 +1,28 @@
-#include "memory.h"
 #include "gpu.h"
+#include <inttypes.h>
+#include "nvctrl.h"
+#ifdef HAVE_NVML
+#include "nvidia_info.h"
+#endif
 
 struct gpuInfo gpu_info;
 amdgpu_files amdgpu {};
+
+bool checkNvidia(const char *pci_dev){
+    bool nvSuccess = false;
+#ifdef HAVE_NVML
+    nvSuccess = checkNVML(pci_dev) && getNVMLInfo();
+#endif
+#ifdef HAVE_XNVCTRL
+    if (!nvSuccess)
+        nvSuccess = checkXNVCtrl();
+#endif
+#ifdef _WIN32
+    if (!nvSuccess)
+        nvSuccess = checkNVAPI();
+#endif
+    return nvSuccess;
+}
 
 void getNvidiaGpuInfo(){
 #ifdef HAVE_NVML
@@ -28,6 +48,9 @@ void getNvidiaGpuInfo(){
         gpu_info.powerUsage = 0;
         return;
     }
+#endif
+#ifdef _WIN32
+nvapi_util();
 #endif
 }
 
