@@ -2103,7 +2103,7 @@ void convert_colors(bool do_conv, struct swapchain_stats& sw_stats, struct overl
    style.Colors[ImGuiCol_PlotHistogram] = convert(params.frametime_color);
    style.Colors[ImGuiCol_WindowBg]  = convert(params.background_color);
    style.Colors[ImGuiCol_Text] = convert(params.text_color);
-   style.CellPadding.y = -2;
+   style.CellPadding.y = -0.085 * params.font_size;
 }
 
 // TODO probably needs colorspace check too
