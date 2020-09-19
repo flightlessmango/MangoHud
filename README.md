@@ -162,7 +162,8 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `io_read`<br> `io_write`           | Show non-cached IO read/write, in MiB/s                                               |
 | `pci_dev`                          | Select GPU device in multi-gpu setups                                                 |
 | `version`                          | Shows current mangohud version                                                        |
-| `fps_limit`                        | Limit the apps framerate                                                              |
+| `fps_limit`                        | Limit the apps framerate. Comma-separated list of one or more FPS values. `0` means unlimited. |
+| `toggle_fps_limit`                 | Cycle between FPS limits. Defaults to `Shift_L+F1`.                                   |
 | `arch`                             | Show if the application is 32 or 64 bit                                               |
 | `histogram`                        | Change fps graph to histogram                                                         |
 | `cpu_text`<br>`gpu_text`           | Override CPU and GPU text                                                             |
