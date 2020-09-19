@@ -8,7 +8,7 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
    bool pressed = false; // FIXME just a placeholder until wayland support
    auto now = Clock::now(); /* us */
    auto elapsedF2 = now - last_f2_press;
-   auto elapsedF3 = now - last_f3_press;
+   auto elapsedFpsLimitToggle = now - toggle_fps_limit_press;
    auto elapsedF12 = now - last_f12_press;
    auto elapsedReloadCfg = now - reload_cfg_press;
    auto elapsedUpload = now - last_upload_press;
@@ -35,14 +35,14 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
      }
    }
 
-  if (elapsedF3 >= keyPressDelay){
+  if (elapsedFpsLimitToggle >= keyPressDelay){
 #if defined(HAVE_X11) || defined(_WIN32)
       pressed = keys_are_pressed(params.toggle_fps_limit);
 #else
       pressed = false;
 #endif
       if (pressed){
-         last_f3_press = now;
+         toggle_fps_limit_press = now;
          for (size_t i = 0; i < params.fps_limit.size(); i++){
             uint32_t fps_limit = params.fps_limit[i];
             // current fps limit equals vector entry, use next / first

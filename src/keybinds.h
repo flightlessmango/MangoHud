@@ -11,7 +11,7 @@
 typedef unsigned long KeySym;
 #endif
 
-Clock::time_point last_f2_press, last_f3_press , last_f12_press, reload_cfg_press, last_upload_press;
+Clock::time_point last_f2_press, toggle_fps_limit_press , last_f12_press, reload_cfg_press, last_upload_press;
 
 #ifdef HAVE_X11
 bool keys_are_pressed(const std::vector<KeySym>& keys) {
