@@ -1007,14 +1007,15 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
 
    if (!params.no_display){
       ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
+      ImGui::BeginTable("hud", params.tableCols, ImGuiTableFlags_NoClipX);
       if (params.enabled[OVERLAY_PARAM_ENABLED_version]){
+         ImGui::TableNextCell();
          ImGui::Text("%s", MANGOHUD_VERSION);
-         ImGui::Dummy(ImVec2(0, 8.0f));
       }
       if (params.enabled[OVERLAY_PARAM_ENABLED_time]){
+         ImGui::TableNextRow();
          ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.00f), "%s", data.time.c_str());
       }
-      ImGui::BeginTable("hud", params.tableCols);
       if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
          ImGui::TableNextRow();
          const char* gpu_text;
