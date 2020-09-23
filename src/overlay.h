@@ -79,6 +79,7 @@ extern struct fps_limit fps_limit_stats;
 extern int32_t deviceID;
 
 extern struct benchmark_stats benchmark;
+extern ImVec2 real_font_size;
 
 void position_layer(struct swapchain_stats& data, struct overlay_params& params, ImVec2 window_size);
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan);

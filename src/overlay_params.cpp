@@ -616,5 +616,6 @@ parse_overlay_config(struct overlay_params *params,
 #endif
    if(!params->output_file.empty())
       printf("MANGOHUD: output_file is Deprecated, use output_folder instead\n");
-
+   auto real_size = params->font_size * params->font_scale;
+   real_font_size = ImVec2(real_size, real_size / 2);
 }

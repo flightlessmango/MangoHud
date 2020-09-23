@@ -850,7 +850,7 @@ static void render_mpris_metadata(struct overlay_params& params, mutexed_metadat
 
 void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, unsigned height, Clock::time_point now){
    // TODO, FIX LOG_DURATION FOR BENCHMARK
-   int benchHeight = (2 + benchmark.percentile_data.size()) * params.font_size + 10.0f + 58;
+   int benchHeight = (2 + benchmark.percentile_data.size()) * real_font_size.x + 10.0f + 58;
    ImGui::SetNextWindowSize(ImVec2(window_size.x, benchHeight), ImGuiCond_Always);
    if (height - (window_size.y + data.main_window_pos.y + 5) < benchHeight)
       ImGui::SetNextWindowPos(ImVec2(data.main_window_pos.x, data.main_window_pos.y - benchHeight - 5), ImGuiCond_Always);
@@ -1236,7 +1236,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          }
       }
       if (params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
-         ImGui::Dummy(ImVec2(0.0f, params.font_size * params.font_scale / 2));
+         ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
          ImGui::PushFont(data.font1);
          ImGui::TextColored(data.colors.engine, "%s", "Frametime");
          ImGui::PopFont();
@@ -1253,12 +1253,12 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             ImGui::PlotHistogram(hash, get_time_stat, &data,
                                  ARRAY_SIZE(data.frames_stats), 0,
                                  NULL, min_time, max_time,
-                                 ImVec2(ImGui::GetContentRegionAvailWidth() - params.font_size * params.font_scale * 2.2, 50));
+                                 ImVec2(ImGui::GetContentRegionAvailWidth() - real_font_size.x * 2.2, 50));
          } else {
             ImGui::PlotLines(hash, get_time_stat, &data,
                      ARRAY_SIZE(data.frames_stats), 0,
                      NULL, min_time, max_time,
-                     ImVec2(ImGui::GetContentRegionAvailWidth() - params.font_size * params.font_scale * 2.2, 50));
+                     ImVec2(ImGui::GetContentRegionAvailWidth() - real_font_size.x * 2.2, 50));
          }
          ImGui::PopStyleColor();
       }
@@ -2101,7 +2101,7 @@ void convert_colors(bool do_conv, struct swapchain_stats& sw_stats, struct overl
    style.Colors[ImGuiCol_PlotHistogram] = convert(params.frametime_color);
    style.Colors[ImGuiCol_WindowBg]  = convert(params.background_color);
    style.Colors[ImGuiCol_Text] = convert(params.text_color);
-   style.CellPadding.y = -0.085 * params.font_size;
+   style.CellPadding.y = -0.085 * real_font_size.y;
 }
 
 // TODO probably needs colorspace check too
