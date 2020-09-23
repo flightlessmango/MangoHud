@@ -141,6 +141,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `font_file`                        | Change default font (set location to .TTF/.OTF file )                                 |
 | `font_file_text`                   | Change text font. Otherwise `font_file` is used                                       |
 | `font_glyph_ranges`                | Specify extra font glyph ranges, comma separated: `korean`, `chinese`, `chinese_simplified`, `japanese`, `cyrillic`, `thai`, `vietnamese`, `latin_ext_a`, `latin_ext_b`. If you experience crashes or text is just squares, reduce font size or glyph ranges. |
+| `no_small_font`                    | Use primary font size for smaller text like units                                     |
 | `width=`<br>`height=`              | Customizeable hud dimensions (in pixels)                                              |
 | `position=`                        | Location of the hud: `top-left` (default), `top-right`, `bottom-left`, `bottom-right`, `top-center` |
 | `offset_x` `offset_y`              | Hud position offsets                                                                  |
