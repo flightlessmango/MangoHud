@@ -935,7 +935,7 @@ void render_mango(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             gpu_text = params.gpu_text.c_str();
          ImGui::TextColored(data.colors.gpu, "%s", gpu_text);
          ImGui::TableNextCell();
-         right_aligned_text(data.colors.text,ralign_width, "%i", gpu_info.load);
+         right_aligned_text(data.colors.text, ralign_width, "%i", gpu_info.load);
          ImGui::SameLine(0, 1.0f);
          ImGui::Text("%%");
       }
@@ -948,7 +948,7 @@ void render_mango(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             cpu_text = params.cpu_text.c_str();
          ImGui::TextColored(data.colors.cpu, "%s", cpu_text);
          ImGui::TableNextCell();
-         right_aligned_text(data.colors.text,ralign_width, "%d", int(cpuStats.GetCPUDataTotal().percent));
+         right_aligned_text(data.colors.text, ralign_width, "%d", int(cpuStats.GetCPUDataTotal().percent));
          ImGui::SameLine(0, 1.0f);
          ImGui::Text("%%");
       }
@@ -956,7 +956,7 @@ void render_mango(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::TableNextRow();
          ImGui::TextColored(data.colors.engine, "%s", is_vulkan ? data.engineName.c_str() : "OpenGL");
          ImGui::TableNextCell();
-         right_aligned_text(data.colors.text,ralign_width, "%.0f", data.fps);
+         right_aligned_text(data.colors.text, ralign_width, "%.0f", data.fps);
          ImGui::SameLine(0, 1.0f);
          ImGui::PushFont(data.font1);
          ImGui::Text("FPS");
@@ -1026,25 +1026,29 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             gpu_text = params.gpu_text.c_str();
          ImGui::TextColored(data.colors.gpu, "%s", gpu_text);
          ImGui::TableNextCell();
-         if(params.enabled[OVERLAY_PARAM_ENABLED_gpu_load_change]){
-            if(gpu_info.load >= params.gpu_load_high){
-                right_aligned_text(data.colors.gpu_load_high,ralign_width, "%i", gpu_info.load);
-                ImGui::SameLine(0, 1.0f);
-                ImGui::TextColored(data.colors.gpu_load_high,"%%");
+         auto gpu_high_color = data.colors.gpu_load_high;
+         auto gpu_med_color = data.colors.gpu_load_med;
+         auto gpu_low_color = data.colors.gpu_load_low;
+         auto text_color = data.colors.text;
+         if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_load_change]){
+            if (gpu_info.load >= params.gpu_load_high){
+               right_aligned_text(gpu_high_color, ralign_width, "%i", gpu_info.load);
+               ImGui::SameLine(0, 1.0f);
+               ImGui::TextColored(gpu_high_color, "%%");
             }
             else if (gpu_info.load >= params.gpu_load_med && gpu_info.load < params.gpu_load_high && gpu_info.load > params.gpu_load_low) {
-                right_aligned_text(data.colors.gpu_load_med,ralign_width, "%i", gpu_info.load);
+                right_aligned_text(gpu_med_color, ralign_width, "%i", gpu_info.load);
                 ImGui::SameLine(0, 1.0f);
-                ImGui::TextColored(data.colors.gpu_load_med,"%%");
+                ImGui::TextColored(gpu_med_color, "%%");
             }
             else {
-               right_aligned_text(data.colors.gpu_load_low,ralign_width, "%i", gpu_info.load);
+               right_aligned_text(gpu_low_color, ralign_width, "%i", gpu_info.load);
                ImGui::SameLine(0, 1.0f);
-               ImGui::TextColored(data.colors.gpu_load_low,"%%");
+               ImGui::TextColored(gpu_low_color, "%%");
             }
          }
          else {
-            right_aligned_text(data.colors.text,ralign_width, "%i", gpu_info.load);
+            right_aligned_text(text_color, ralign_width, "%i", gpu_info.load);
             ImGui::SameLine(0, 1.0f);
             ImGui::Text("%%");
          }
@@ -1052,7 +1056,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          // ImGui::Text("%s", "%");
          if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_temp]){
             ImGui::TableNextCell();
-            right_aligned_text(data.colors.text,ralign_width, "%i", gpu_info.temp);
+            right_aligned_text(text_color, ralign_width, "%i", gpu_info.temp);
             ImGui::SameLine(0, 1.0f);
             ImGui::Text("°C");
          }
@@ -1060,7 +1064,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             ImGui::TableNextRow();
          if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]){
             ImGui::TableNextCell();
-            right_aligned_text(data.colors.text,ralign_width, "%i", gpu_info.CoreClock);
+            right_aligned_text(text_color, ralign_width, "%i", gpu_info.CoreClock);
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(data.font1);
             ImGui::Text("MHz");
@@ -1068,7 +1072,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          }
          if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_power]) {
             ImGui::TableNextCell();
-            right_aligned_text(data.colors.text,ralign_width, "%i", gpu_info.powerUsage);
+            right_aligned_text(text_color, ralign_width, "%i", gpu_info.powerUsage);
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(data.font1);
             ImGui::Text("W");
@@ -1084,7 +1088,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             cpu_text = params.cpu_text.c_str();
          ImGui::TextColored(data.colors.cpu, "%s", cpu_text);
          ImGui::TableNextCell();
-         right_aligned_text(data.colors.text,ralign_width, "%d", int(cpuStats.GetCPUDataTotal().percent));
+         right_aligned_text(data.colors.text, ralign_width, "%d", int(cpuStats.GetCPUDataTotal().percent));
          ImGui::SameLine(0, 1.0f);
          ImGui::Text("%%");
          // ImGui::SameLine(150);
@@ -1092,7 +1096,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
 
          if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp]){
             ImGui::TableNextCell();
-            right_aligned_text(data.colors.text,ralign_width, "%i", cpuStats.GetCPUDataTotal().temp);
+            right_aligned_text(data.colors.text, ralign_width, "%i", cpuStats.GetCPUDataTotal().temp);
             ImGui::SameLine(0, 1.0f);
             ImGui::Text("°C");
          }
@@ -1109,11 +1113,11 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             ImGui::TextColored(data.colors.cpu,"%i", i);
             ImGui::PopFont();
             ImGui::TableNextCell();
-            right_aligned_text(data.colors.text,ralign_width, "%i", int(cpuData.percent));
+            right_aligned_text(data.colors.text, ralign_width, "%i", int(cpuData.percent));
             ImGui::SameLine(0, 1.0f);
             ImGui::Text("%%");
             ImGui::TableNextCell();
-            right_aligned_text(data.colors.text,ralign_width, "%i", cpuData.mhz);
+            right_aligned_text(data.colors.text, ralign_width, "%i", cpuData.mhz);
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(data.font1);
             ImGui::Text("MHz");
@@ -1134,7 +1138,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          if (params.enabled[OVERLAY_PARAM_ENABLED_io_read]){
             ImGui::TableNextCell();
             float val = data.io.diff.read * 1000000 / sampling;
-            right_aligned_text(data.colors.text,ralign_width, val < 100 ? "%.1f" : "%.f", val);
+            right_aligned_text(data.colors.text, ralign_width, val < 100 ? "%.1f" : "%.f", val);
             ImGui::SameLine(0,1.0f);
             ImGui::PushFont(data.font1);
             ImGui::Text("MiB/s");
@@ -1143,7 +1147,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          if (params.enabled[OVERLAY_PARAM_ENABLED_io_write]){
             ImGui::TableNextCell();
             float val = data.io.diff.write * 1000000 / sampling;
-            right_aligned_text(data.colors.text,ralign_width, val < 100 ? "%.1f" : "%.f", val);
+            right_aligned_text(data.colors.text, ralign_width, val < 100 ? "%.1f" : "%.f", val);
             ImGui::SameLine(0,1.0f);
             ImGui::PushFont(data.font1);
             ImGui::Text("MiB/s");
@@ -1154,14 +1158,14 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::TableNextRow();
          ImGui::TextColored(data.colors.vram, "VRAM");
          ImGui::TableNextCell();
-         right_aligned_text(data.colors.text,ralign_width, "%.1f", gpu_info.memoryUsed);
+         right_aligned_text(data.colors.text, ralign_width, "%.1f", gpu_info.memoryUsed);
          ImGui::SameLine(0,1.0f);
          ImGui::PushFont(data.font1);
          ImGui::Text("GiB");
          ImGui::PopFont();
          if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_mem_clock]){
             ImGui::TableNextCell();
-            right_aligned_text(data.colors.text,ralign_width, "%i", gpu_info.MemClock);
+            right_aligned_text(data.colors.text, ralign_width, "%i", gpu_info.MemClock);
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(data.font1);
             ImGui::Text("MHz");
@@ -1173,7 +1177,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::TableNextRow();
          ImGui::TextColored(data.colors.ram, "RAM");
          ImGui::TableNextCell();
-         right_aligned_text(data.colors.text,ralign_width, "%.1f", memused);
+         right_aligned_text(data.colors.text, ralign_width, "%.1f", memused);
          ImGui::SameLine(0,1.0f);
          ImGui::PushFont(data.font1);
          ImGui::Text("GiB");
@@ -1184,13 +1188,13 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          ImGui::TableNextRow();
          ImGui::TextColored(data.colors.engine, "%s", is_vulkan ? data.engineName.c_str() : "OpenGL");
          ImGui::TableNextCell();
-         right_aligned_text(data.colors.text,ralign_width, "%.0f", data.fps);
+         right_aligned_text(data.colors.text, ralign_width, "%.0f", data.fps);
          ImGui::SameLine(0, 1.0f);
          ImGui::PushFont(data.font1);
          ImGui::Text("FPS");
          ImGui::PopFont();
          ImGui::TableNextCell();
-         right_aligned_text(data.colors.text,ralign_width, "%.1f", 1000 / data.fps);
+         right_aligned_text(data.colors.text, ralign_width, "%.1f", 1000 / data.fps);
          ImGui::SameLine(0, 1.0f);
          ImGui::PushFont(data.font1);
          ImGui::Text("ms");
