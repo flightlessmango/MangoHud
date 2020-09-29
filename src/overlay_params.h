@@ -50,6 +50,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(engine_version)                \
    OVERLAY_PARAM_BOOL(histogram)                     \
    OVERLAY_PARAM_BOOL(wine)                          \
+   OVERLAY_PARAM_BOOL(gpu_load_change)               \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
@@ -90,6 +91,9 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(io_color)                    \
    OVERLAY_PARAM_CUSTOM(text_color)                  \
    OVERLAY_PARAM_CUSTOM (wine_color)                 \
+   OVERLAY_PARAM_CUSTOM(gpu_load_high_color)         \
+   OVERLAY_PARAM_CUSTOM(gpu_load_med_color)          \
+   OVERLAY_PARAM_CUSTOM(gpu_load_low_color)          \
    OVERLAY_PARAM_CUSTOM(alpha)                       \
    OVERLAY_PARAM_CUSTOM(log_duration)                \
    OVERLAY_PARAM_CUSTOM(pci_dev)                     \
@@ -102,7 +106,11 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(permit_upload)               \
    OVERLAY_PARAM_CUSTOM(render_mango)                \
    OVERLAY_PARAM_CUSTOM(benchmark_percentiles)       \
-   OVERLAY_PARAM_CUSTOM(help)
+   OVERLAY_PARAM_CUSTOM(help)                        \
+   OVERLAY_PARAM_CUSTOM(gpu_load_high)               \
+   OVERLAY_PARAM_CUSTOM(gpu_load_med)                \
+   OVERLAY_PARAM_CUSTOM(gpu_load_low)
+
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -161,6 +169,8 @@ struct overlay_params {
    int gl_vsync;
    uint64_t log_duration;
    unsigned cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color, wine_color;
+   unsigned gpu_load_high_color,gpu_load_med_color,gpu_load_low_color;
+   int gpu_load_high,gpu_load_med,gpu_load_low,gpu_load_change;
    unsigned media_player_color;
    unsigned tableCols;
    unsigned render_mango;

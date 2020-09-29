@@ -1026,9 +1026,28 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             gpu_text = params.gpu_text.c_str();
          ImGui::TextColored(data.colors.gpu, "%s", gpu_text);
          ImGui::TableNextCell();
-         right_aligned_text(data.colors.text,ralign_width, "%i", gpu_info.load);
-         ImGui::SameLine(0, 1.0f);
-         ImGui::Text("%%");
+         if(params.enabled[OVERLAY_PARAM_ENABLED_gpu_load_change]){
+            if(gpu_info.load >= params.gpu_load_high){
+                right_aligned_text(data.colors.gpu_load_high,ralign_width, "%i", gpu_info.load);
+                ImGui::SameLine(0, 1.0f);
+                ImGui::TextColored(data.colors.gpu_load_high,"%%");
+            }
+            else if (gpu_info.load >= params.gpu_load_med && gpu_info.load < params.gpu_load_high && gpu_info.load > params.gpu_load_low) {
+                right_aligned_text(data.colors.gpu_load_med,ralign_width, "%i", gpu_info.load);
+                ImGui::SameLine(0, 1.0f);
+                ImGui::TextColored(data.colors.gpu_load_med,"%%");
+            }
+            else {
+               right_aligned_text(data.colors.gpu_load_low,ralign_width, "%i", gpu_info.load);
+               ImGui::SameLine(0, 1.0f);
+               ImGui::TextColored(data.colors.gpu_load_low,"%%");
+            }
+         }
+         else {
+            right_aligned_text(data.colors.text,ralign_width, "%i", gpu_info.load);
+            ImGui::SameLine(0, 1.0f);
+            ImGui::Text("%%");
+         }
          // ImGui::SameLine(150);
          // ImGui::Text("%s", "%");
          if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_temp]){
@@ -2096,6 +2115,9 @@ void convert_colors(bool do_conv, struct swapchain_stats& sw_stats, struct overl
    sw_stats.colors.text = convert(params.text_color);
    sw_stats.colors.media_player = convert(params.media_player_color);
    sw_stats.colors.wine = convert(params.wine_color);
+   sw_stats.colors.gpu_load_high = convert(params.gpu_load_high_color);
+   sw_stats.colors.gpu_load_med = convert(params.gpu_load_med_color);
+   sw_stats.colors.gpu_load_low = convert(params.gpu_load_low_color);
 
    ImGuiStyle& style = ImGui::GetStyle();
    style.Colors[ImGuiCol_PlotLines] = convert(params.frametime_color);
