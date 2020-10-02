@@ -990,6 +990,19 @@ void render_mango(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    window_size = ImVec2(window_size.x, 200);
 }
 
+
+int change_on_load_temp ( int info, int high, int med) {
+    if (info >= high){
+      return 1;
+    }
+    else if (info >= med && info < high) {
+      return 2;
+   }
+   else {
+      return 3;
+   }
+}
+
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan)
 {
    ImGui::GetIO().FontGlobalScale = params.font_scale;
@@ -1030,21 +1043,26 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          auto gpu_med_color = data.colors.gpu_load_med;
          auto gpu_low_color = data.colors.gpu_load_low;
          auto text_color = data.colors.text;
+
          if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_load_change]){
-            if (gpu_info.load >= params.gpu_load_high){
-               right_aligned_text(gpu_high_color, ralign_width, "%i", gpu_info.load);
-               ImGui::SameLine(0, 1.0f);
-               ImGui::TextColored(gpu_high_color, "%%");
-            }
-            else if (gpu_info.load >= params.gpu_load_med && gpu_info.load < params.gpu_load_high && gpu_info.load > params.gpu_load_low) {
-                right_aligned_text(gpu_med_color, ralign_width, "%i", gpu_info.load);
-                ImGui::SameLine(0, 1.0f);
-                ImGui::TextColored(gpu_med_color, "%%");
-            }
-            else {
-               right_aligned_text(gpu_low_color, ralign_width, "%i", gpu_info.load);
-               ImGui::SameLine(0, 1.0f);
-               ImGui::TextColored(gpu_low_color, "%%");
+            int gpu_load = change_on_load_temp(gpu_info.load, params.gpu_load_high, params.gpu_load_med);
+            // 1 is high, 2 is medium, and 3 is low load/temp
+            switch (gpu_load) {
+               case 1:
+                  right_aligned_text(gpu_high_color, ralign_width, "%i", gpu_info.load);
+                  ImGui::SameLine(0, 1.0f);
+                  ImGui::TextColored(gpu_high_color, "%%");
+                  break;
+               case 2:
+                  right_aligned_text(gpu_med_color, ralign_width, "%i", gpu_info.load);
+                  ImGui::SameLine(0, 1.0f);
+                  ImGui::TextColored(gpu_med_color, "%%");
+                  break;
+               case 3:
+                  right_aligned_text(gpu_low_color, ralign_width, "%i", gpu_info.load);
+                  ImGui::SameLine(0, 1.0f);
+                  ImGui::TextColored(gpu_low_color, "%%");
+                  break;
             }
          }
          else {
@@ -2895,3 +2913,5 @@ extern "C" VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetI
    if (instance_data->vtable.GetInstanceProcAddr == NULL) return NULL;
    return instance_data->vtable.GetInstanceProcAddr(instance, funcName);
 }
+
+
