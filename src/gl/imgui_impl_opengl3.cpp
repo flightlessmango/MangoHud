@@ -184,7 +184,7 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
 
     // Parse GLSL version string
-    int glsl_version = 130;
+    int glsl_version = 120;
     sscanf(g_GlslVersionString, "#version %d", &glsl_version);
 
     const GLchar* vertex_shader_glsl_120 =
@@ -422,12 +422,14 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
 
     if (!g_IsGLES) {
         // Not GL ES
-        glsl_version = "#version 130";
+        glsl_version = "#version 120";
         g_GlVersion = major * 100 + minor * 10;
         if (major >= 4 && minor >= 1)
             glsl_version = "#version 410";
         else if (major > 3 || (major == 3 && minor >= 2))
             glsl_version = "#version 150";
+        else if (major == 3)
+            glsl_version = "#version 130";
         else if (major < 2)
             glsl_version = "#version 100";
     } else {
@@ -443,7 +445,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
         else if (g_GlVersion >= 300)
             glsl_version = "#version 300 es";
         else
-            glsl_version = "#version 130";
+            glsl_version = "#version 120";
     }
 
     // Setup back-end capabilities flags
@@ -456,7 +458,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     // Store GLSL version string so we can refer to it later in case we recreate shaders.
     // Note: GLSL version is NOT the same as GL version. Leave this to NULL if unsure.
     if (glsl_version == NULL)
-        glsl_version = "#version 130";
+        glsl_version = "#version 120";
 
     IM_ASSERT((int)strlen(glsl_version) + 2 < IM_ARRAYSIZE(g_GlslVersionString));
     strcpy(g_GlslVersionString, glsl_version);
