@@ -2913,5 +2913,3 @@ extern "C" VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetI
    if (instance_data->vtable.GetInstanceProcAddr == NULL) return NULL;
    return instance_data->vtable.GetInstanceProcAddr(instance, funcName);
 }
-
-

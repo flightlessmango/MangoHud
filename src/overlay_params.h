@@ -108,8 +108,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(benchmark_percentiles)       \
    OVERLAY_PARAM_CUSTOM(help)                        \
    OVERLAY_PARAM_CUSTOM(gpu_load_high)               \
-   OVERLAY_PARAM_CUSTOM(gpu_load_med)                \
-   OVERLAY_PARAM_CUSTOM(gpu_load_low)
+   OVERLAY_PARAM_CUSTOM(gpu_load_med)
 
 
 enum overlay_param_position {
@@ -170,7 +169,7 @@ struct overlay_params {
    uint64_t log_duration;
    unsigned cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color, wine_color;
    unsigned gpu_load_high_color,gpu_load_med_color,gpu_load_low_color;
-   int gpu_load_high,gpu_load_med,gpu_load_low,gpu_load_change;
+   int gpu_load_high,gpu_load_med,gpu_load_change;
    unsigned media_player_color;
    unsigned tableCols;
    unsigned render_mango;
