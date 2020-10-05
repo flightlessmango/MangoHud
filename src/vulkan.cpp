@@ -992,10 +992,10 @@ void render_mango(swapchain_stats& data, struct overlay_params& params, ImVec2& 
 
 
 int change_on_load_temp ( int info, int high, int med) {
-    if (info >= high){
+   if (info >= high) {
       return 1;
-    }
-    else if (info >= med && info < high) {
+   }
+   else if (info >= med && info < high) {
       return 2;
    }
    else {
@@ -1106,9 +1106,37 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             cpu_text = params.cpu_text.c_str();
          ImGui::TextColored(data.colors.cpu, "%s", cpu_text);
          ImGui::TableNextCell();
-         right_aligned_text(data.colors.text, ralign_width, "%d", int(cpuStats.GetCPUDataTotal().percent));
-         ImGui::SameLine(0, 1.0f);
-         ImGui::Text("%%");
+         auto cpu_high_color = data.colors.cpu_load_high;
+         auto cpu_med_color = data.colors.cpu_load_med;
+         auto cpu_low_color = data.colors.cpu_load_low;
+         auto text_color = data.colors.text;
+         int cpu_load_percent = int(cpuStats.GetCPUDataTotal().percent);
+         if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_load_change]){
+            int cpu_load = change_on_load_temp(cpu_load_percent, params.cpu_load_high, params.cpu_load_med);
+            // 1 is high, 2 is medium, and 3 is low load/temp
+            switch (cpu_load) {
+               case 1:
+                  right_aligned_text(cpu_high_color, ralign_width, "%d", cpu_load_percent);
+                  ImGui::SameLine(0, 1.0f);
+                  ImGui::TextColored(cpu_high_color, "%%");
+                  break;
+               case 2:
+                  right_aligned_text(cpu_med_color, ralign_width, "%d", cpu_load_percent);
+                  ImGui::SameLine(0, 1.0f);
+                  ImGui::TextColored(cpu_med_color, "%%");
+                  break;
+               case 3:
+                  right_aligned_text(cpu_low_color, ralign_width, "%d", cpu_load_percent);
+                  ImGui::SameLine(0, 1.0f);
+                  ImGui::TextColored(cpu_low_color, "%%");
+                  break;
+            }
+         }
+         else {
+            right_aligned_text(text_color, ralign_width, "%d", int(cpuStats.GetCPUDataTotal().percent));
+            ImGui::SameLine(0, 1.0f);
+            ImGui::Text("%%");
+         }
          // ImGui::SameLine(150);
          // ImGui::Text("%s", "%");
 
@@ -2140,6 +2168,9 @@ void convert_colors(bool do_conv, struct swapchain_stats& sw_stats, struct overl
    sw_stats.colors.gpu_load_high = convert(params.gpu_load_high_color);
    sw_stats.colors.gpu_load_med = convert(params.gpu_load_med_color);
    sw_stats.colors.gpu_load_low = convert(params.gpu_load_low_color);
+   sw_stats.colors.cpu_load_high = convert(params.cpu_load_high_color);
+   sw_stats.colors.cpu_load_med = convert(params.cpu_load_med_color);
+   sw_stats.colors.cpu_load_low = convert(params.cpu_load_low_color);
 
    ImGuiStyle& style = ImGui::GetStyle();
    style.Colors[ImGuiCol_PlotLines] = convert(params.frametime_color);

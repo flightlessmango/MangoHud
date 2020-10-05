@@ -329,7 +329,11 @@ parse_font_glyph_ranges(const char *str)
 #define parse_gpu_load_low_color(s) parse_color(s)
 #define parse_gpu_load_high(s) parse_unsigned(s)
 #define parse_gpu_load_med(s) parse_unsigned(s)
-#define parse_gpu_load_low(s) parse_unsigned(s)
+#define parse_cpu_load_high_color(s) parse_color(s)
+#define parse_cpu_load_med_color(s) parse_color(s)
+#define parse_cpu_load_low_color(s) parse_color(s)
+#define parse_cpu_load_high(s) parse_unsigned(s)
+#define parse_cpu_load_med(s) parse_unsigned(s)
 
 static bool
 parse_help(const char *str)
@@ -490,6 +494,9 @@ parse_overlay_config(struct overlay_params *params,
    params->gpu_load_high_color=0xb22222;
    params->gpu_load_med_color=0xfdfd09;
    params->gpu_load_low_color=0x39f900;
+   params->cpu_load_high_color=0xb22222;
+   params->cpu_load_med_color=0xfdfd09;
+   params->cpu_load_low_color=0x39f900;
    params->font_scale_media_player = 0.55f;
    params->log_interval = 100;
    params->media_player_order = { MP_ORDER_TITLE, MP_ORDER_ARTIST, MP_ORDER_ALBUM };
@@ -571,7 +578,7 @@ parse_overlay_config(struct overlay_params *params,
       params->font_scale_media_player = 0.55f;
 
    // Convert from 0xRRGGBB to ImGui's format
-   std::array<unsigned *, 14> colors = {
+   std::array<unsigned *, 17> colors = {
       &params->cpu_color,
       &params->gpu_color,
       &params->vram_color,
@@ -586,6 +593,9 @@ parse_overlay_config(struct overlay_params *params,
       &params->gpu_load_high_color,
       &params-> gpu_load_med_color,
       &params->gpu_load_low_color,
+      &params->cpu_load_high_color,
+      &params->cpu_load_med_color,
+      &params->cpu_load_low_color,
 
    };
 
