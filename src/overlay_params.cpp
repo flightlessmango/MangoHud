@@ -466,6 +466,8 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_io_read] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_io_write] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_wine] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_gpu_load_change] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_cpu_load_change] = false;
    params->fps_sampling_period = 500000; /* 500ms */
    params->width = 0;
    params->height = 140;
@@ -503,6 +505,10 @@ parse_overlay_config(struct overlay_params *params,
    params->permit_upload = 0;
    params->render_mango = 0;
    params->benchmark_percentiles = { "97", "AVG", "1", "0.1" };
+   params->gpu_load_high = 90;
+   params->gpu_load_med = 60;
+   params->cpu_load_high = 90;
+   params->cpu_load_med= 60;
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_Shift_R, XK_F12 };
