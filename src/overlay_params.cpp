@@ -495,12 +495,12 @@ parse_overlay_config(struct overlay_params *params,
    params->media_player_name = "";
    params->font_scale = 1.0f;
    params->wine_color = 0xeb5b5b;
-   params->gpu_load_high_color=0xb22222;
-   params->gpu_load_med_color=0xfdfd09;
-   params->gpu_load_low_color=0x39f900;
-   params->cpu_load_high_color=0xb22222;
-   params->cpu_load_med_color=0xfdfd09;
-   params->cpu_load_low_color=0x39f900;
+   params->gpu_load_high_color = 0xb22222;
+   params->gpu_load_med_color = 0xfdfd09;
+   params->gpu_load_low_color = 0x39f900;
+   params->cpu_load_high_color = 0xb22222;
+   params->cpu_load_med_color = 0xfdfd09;
+   params->cpu_load_low_color = 0x39f900;
    params->font_scale_media_player = 0.55f;
    params->log_interval = 100;
    params->media_player_order = { MP_ORDER_TITLE, MP_ORDER_ARTIST, MP_ORDER_ALBUM };
@@ -510,7 +510,7 @@ parse_overlay_config(struct overlay_params *params,
    params->gpu_load_high = 90;
    params->gpu_load_med = 60;
    params->cpu_load_high = 90;
-   params->cpu_load_med= 60;
+   params->cpu_load_med = 60;
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_Shift_R, XK_F12 };
@@ -599,7 +599,7 @@ parse_overlay_config(struct overlay_params *params,
       &params->media_player_color,
       &params->wine_color,
       &params->gpu_load_high_color,
-      &params-> gpu_load_med_color,
+      &params->gpu_load_med_color,
       &params->gpu_load_low_color,
       &params->cpu_load_high_color,
       &params->cpu_load_med_color,
