@@ -65,6 +65,14 @@ If you are using Fedora, to install the [MangoHud](https://src.fedoraproject.org
 sudo dnf install mangohud
 ```
 
+#### Solus
+
+If you are using Solus, to install [MangoHud](https://dev.getsol.us/source/mangohud/) simply execute:
+
+```
+sudo eopkg it mangohud
+```
+
 #### Flatpak
 
 If you are using Flatpaks, you will have to add the [Flathub repository](https://flatpak.org/setup/) for your specific distribution, and then, to install it, execute:
