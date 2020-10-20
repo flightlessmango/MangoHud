@@ -92,9 +92,6 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(io_color)                    \
    OVERLAY_PARAM_CUSTOM(text_color)                  \
    OVERLAY_PARAM_CUSTOM (wine_color)                 \
-   OVERLAY_PARAM_CUSTOM(gpu_load_high_color)         \
-   OVERLAY_PARAM_CUSTOM(gpu_load_med_color)          \
-   OVERLAY_PARAM_CUSTOM(gpu_load_low_color)          \
    OVERLAY_PARAM_CUSTOM(cpu_load_high_color)         \
    OVERLAY_PARAM_CUSTOM(cpu_load_med_color)          \
    OVERLAY_PARAM_CUSTOM(cpu_load_low_color)          \
@@ -114,7 +111,8 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(gpu_load_high)               \
    OVERLAY_PARAM_CUSTOM(gpu_load_med)                \
    OVERLAY_PARAM_CUSTOM(cpu_load_high)               \
-   OVERLAY_PARAM_CUSTOM(cpu_load_med)
+   OVERLAY_PARAM_CUSTOM(cpu_load_med)                \
+   OVERLAY_PARAM_CUSTOM (gpu_load_color)
 
 
 enum overlay_param_position {
@@ -174,8 +172,8 @@ struct overlay_params {
    int gl_vsync;
    uint64_t log_duration;
    unsigned cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color, wine_color;
-   unsigned gpu_load_high_color, gpu_load_med_color, gpu_load_low_color;
    unsigned cpu_load_high_color, cpu_load_med_color, cpu_load_low_color;
+   std::vector<unsigned> gpu_load_color;
    int gpu_load_high, gpu_load_med, gpu_load_change;
    int cpu_load_high, cpu_load_med, cpu_load_change;
    unsigned media_player_color;
@@ -198,7 +196,6 @@ struct overlay_params {
    unsigned log_interval;
    std::vector<media_player_order> media_player_order;
    std::vector<std::string> benchmark_percentiles;
-
    std::string font_file, font_file_text;
    uint32_t font_glyph_ranges;
 

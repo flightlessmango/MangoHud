@@ -1046,6 +1046,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             // 1 is high, 2 is medium, and 3 is low load/temp
             switch (gpu_load) {
                case 1:
+                  ///load_color = data.colors.gpu_load_high;
                   load_color = data.colors.gpu_load_high;
                   break;
                case 2:
@@ -2154,12 +2155,15 @@ void convert_colors(bool do_conv, struct swapchain_stats& sw_stats, struct overl
    sw_stats.colors.text = convert(params.text_color);
    sw_stats.colors.media_player = convert(params.media_player_color);
    sw_stats.colors.wine = convert(params.wine_color);
-   sw_stats.colors.gpu_load_high = convert(params.gpu_load_high_color);
-   sw_stats.colors.gpu_load_med = convert(params.gpu_load_med_color);
-   sw_stats.colors.gpu_load_low = convert(params.gpu_load_low_color);
+   sw_stats.colors.gpu_load_high = convert(params.gpu_load_color[0]);
+   sw_stats.colors.gpu_load_med = convert(params.gpu_load_color[1]);
+   sw_stats.colors.gpu_load_low = convert(params.gpu_load_color[2]);
+
    sw_stats.colors.cpu_load_high = convert(params.cpu_load_high_color);
    sw_stats.colors.cpu_load_med = convert(params.cpu_load_med_color);
    sw_stats.colors.cpu_load_low = convert(params.cpu_load_low_color);
+
+
 
    ImGuiStyle& style = ImGui::GetStyle();
    style.Colors[ImGuiCol_PlotLines] = convert(params.frametime_color);
