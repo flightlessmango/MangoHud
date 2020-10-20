@@ -165,6 +165,20 @@ parse_load_color(const char *str)
     return load_colors;
 }
 
+static std::vector<unsigned>
+parse_load_value(const char *str)
+{
+   std::vector<unsigned> load_value;
+   std::stringstream ss(str);
+   std::string token;
+   while (std::getline(ss, token, ',')) {
+      trim(token);
+      load_value.push_back(std::stoi(token));
+   }
+    return load_value;
+}
+
+
 static unsigned
 parse_unsigned(const char *str)
 {
@@ -339,10 +353,8 @@ parse_font_glyph_ranges(const char *str)
 #define parse_wine_color(s) parse_color(s)
 #define parse_gpu_load_color(s) parse_load_color(s)
 #define parse_cpu_load_color(s) parse_load_color(s)
-#define parse_gpu_load_high(s) parse_unsigned(s)
-#define parse_gpu_load_med(s) parse_unsigned(s)
-#define parse_cpu_load_high(s) parse_unsigned(s)
-#define parse_cpu_load_med(s) parse_unsigned(s)
+#define parse_gpu_load_value(s) parse_load_value(s)
+#define parse_cpu_load_value(s) parse_load_value(s)
 
 static bool
 parse_help(const char *str)
@@ -512,10 +524,9 @@ parse_overlay_config(struct overlay_params *params,
    params->permit_upload = 0;
    params->render_mango = 0;
    params->benchmark_percentiles = { "97", "AVG", "1", "0.1" };
-   params->gpu_load_high = 90;
-   params->gpu_load_med = 60;
-   params->cpu_load_high = 90;
-   params->cpu_load_med = 60;
+   params->gpu_load_value = { 90, 60 };
+   params->cpu_load_value = { 90, 60 };
+
 
 
 #ifdef HAVE_X11

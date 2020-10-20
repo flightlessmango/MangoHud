@@ -1042,7 +1042,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          auto text_color = data.colors.text;
          if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_load_change]){
             auto load_color = data.colors.text;
-            int gpu_load = change_on_load_temp(gpu_info.load, params.gpu_load_high, params.gpu_load_med);
+            int gpu_load = change_on_load_temp(gpu_info.load, params.gpu_load_value[0], params.gpu_load_value[1]);
             // 1 is high, 2 is medium, and 3 is low load/temp
             switch (gpu_load) {
                case 1:
@@ -1104,7 +1104,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_load_change]){
             int cpu_load_percent = int(cpuStats.GetCPUDataTotal().percent);
             auto load_color = data.colors.text;
-            int cpu_load = change_on_load_temp(cpu_load_percent, params.cpu_load_high, params.cpu_load_med);
+            int cpu_load = change_on_load_temp(cpu_load_percent, params.cpu_load_value[0], params.cpu_load_value[1]);
             // 1 is high, 2 is medium, and 3 is low load/temp
             switch (cpu_load) {
                case 1:

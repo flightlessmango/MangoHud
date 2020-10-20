@@ -105,10 +105,8 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(render_mango)                \
    OVERLAY_PARAM_CUSTOM(benchmark_percentiles)       \
    OVERLAY_PARAM_CUSTOM(help)                        \
-   OVERLAY_PARAM_CUSTOM(gpu_load_high)               \
-   OVERLAY_PARAM_CUSTOM(gpu_load_med)                \
-   OVERLAY_PARAM_CUSTOM(cpu_load_high)               \
-   OVERLAY_PARAM_CUSTOM(cpu_load_med)                \
+   OVERLAY_PARAM_CUSTOM(gpu_load_value)              \
+   OVERLAY_PARAM_CUSTOM(cpu_load_value)              \
    OVERLAY_PARAM_CUSTOM (gpu_load_color)             \
    OVERLAY_PARAM_CUSTOM (cpu_load_color)
 
@@ -172,6 +170,8 @@ struct overlay_params {
    unsigned cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color, wine_color;
    std::vector<unsigned> gpu_load_color;
    std::vector<unsigned> cpu_load_color;
+   std::vector<unsigned> gpu_load_value;
+   std::vector<unsigned> cpu_load_value;
    int gpu_load_high, gpu_load_med, gpu_load_change;
    int cpu_load_high, cpu_load_med, cpu_load_change;
    unsigned media_player_color;
