@@ -107,8 +107,8 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(help)                        \
    OVERLAY_PARAM_CUSTOM(gpu_load_value)              \
    OVERLAY_PARAM_CUSTOM(cpu_load_value)              \
-   OVERLAY_PARAM_CUSTOM (gpu_load_color)             \
-   OVERLAY_PARAM_CUSTOM (cpu_load_color)
+   OVERLAY_PARAM_CUSTOM(gpu_load_color)             \
+   OVERLAY_PARAM_CUSTOM(cpu_load_color)
 
 
 enum overlay_param_position {
@@ -172,7 +172,6 @@ struct overlay_params {
    std::vector<unsigned> cpu_load_color;
    std::vector<unsigned> gpu_load_value;
    std::vector<unsigned> cpu_load_value;
-   //int  gpu_load_change, cpu_load_change;
    unsigned media_player_color;
    unsigned tableCols;
    unsigned render_mango;
