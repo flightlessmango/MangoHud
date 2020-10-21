@@ -172,7 +172,7 @@ struct overlay_params {
    std::vector<unsigned> cpu_load_color;
    std::vector<unsigned> gpu_load_value;
    std::vector<unsigned> cpu_load_value;
-   int  gpu_load_change, cpu_load_change;
+   //int  gpu_load_change, cpu_load_change;
    unsigned media_player_color;
    unsigned tableCols;
    unsigned render_mango;
