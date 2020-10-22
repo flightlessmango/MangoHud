@@ -1003,6 +1003,17 @@ int change_on_load_temp (int info, int high, int med) {
    }
 }
 
+
+struct LOAD_DATA {
+   ImVec4 color_high;
+   ImVec4 color_med;
+   ImVec4 color_low;
+   unsigned high_load;
+   unsigned med_load;
+};
+
+
+
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan)
 {
    ImGui::GetIO().FontGlobalScale = params.font_scale;
@@ -1042,6 +1053,13 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          auto text_color = data.colors.text;
          if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_load_change]){
             auto load_color = data.colors.text;
+            struct LOAD_DATA gpu_data = {data.colors.gpu_load_high,
+                                         data.colors.gpu_load_med,
+                                         data.colors.gpu_load_low,
+                                         params.gpu_load_value[0],
+                                         params.gpu_load_value[1]
+                                        };
+
             int gpu_load = change_on_load_temp(gpu_info.load, params.gpu_load_value[0], params.gpu_load_value[1]);
             // 1 is high, 2 is medium, and 3 is low load/temp
             switch (gpu_load) {
