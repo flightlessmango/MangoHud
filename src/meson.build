@@ -149,6 +149,16 @@ if is_unixy
       'loaders/loader_dbus.cpp',
     )
   endif
+
+#  if get_option('with_libdrm_amdgpu').enabled() and dep_libdrm.found() and dep_libdrm_amdgpu.found()
+  if get_option('with_libdrm_amdgpu').enabled() and dep_libdrm.found()
+    pre_args += '-DHAVE_LIBDRM_AMDGPU'
+    #if dep_xcb.found() and dep_xcb_dri2.found()
+      vklayer_files += files(
+        'loaders/loader_libdrm.cpp',
+      )
+    #endif
+  endif
 endif
 
 link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL'])
@@ -176,6 +186,8 @@ vklayer_mesa_overlay = shared_library(
   dependencies : [
     vulkan_wsi_deps,
     dearimgui_dep,
+    dep_libdrm,
+    #dep_libdrm_amdgpu,
     dbus_dep,
     dep_dl,
     dep_rt,

@@ -57,8 +57,8 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
 #endif
    }
    if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || logger->is_active()) {
-      if (vendorID == 0x1002)
-         getAmdGpuInfo();
+      if (vendorID == 0x1002 && getAmdGpuInfo_actual)
+         getAmdGpuInfo_actual();
 
       if (vendorID == 0x10de)
          getNvidiaGpuInfo();
@@ -542,6 +542,8 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
        || gpu.find("AMD") != std::string::npos) {
       string path;
       string drm = "/sys/class/drm/";
+      getAmdGpuInfo_actual = getAmdGpuInfo;
+      bool using_libdrm = false;
 
       auto dirs = ls(drm.c_str(), "card");
       for (auto& dir : dirs) {
@@ -557,9 +559,8 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
          if (line != "0x1002" || !file_exists(path + "/device/gpu_busy_percent"))
             continue;
 
-         path += "/device";
          if (pci_bus_parsed && pci_dev) {
-            string pci_device = read_symlink(path.c_str());
+            string pci_device = read_symlink((path + "/device").c_str());
 #ifndef NDEBUG
             std::cerr << "PCI device symlink: " << pci_device << "\n";
 #endif
@@ -570,9 +571,30 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
          }
 
 #ifndef NDEBUG
-           std::cerr << "using amdgpu path: " << path << std::endl;
+         std::cerr << "using amdgpu path: " << path << std::endl;
 #endif
 
+#ifdef HAVE_LIBDRM_AMDGPU
+         int idx = -1;
+         //TODO make neater
+         int res = sscanf(path.c_str(), "/sys/class/drm/card%d", &idx);
+         std::string dri_path = "/dev/dri/card" + std::to_string(idx);
+
+         if (!params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon] && res == 1 && amdgpu_open(dri_path.c_str())) {
+            vendorID = 0x1002;
+            using_libdrm = true;
+            getAmdGpuInfo_actual = getAmdGpuInfo_libdrm;
+            amdgpu_set_sampling_period(params.fps_sampling_period);
+#ifndef NDEBUG
+            std::cerr << "MANGOHUD: using libdrm\n";
+#endif
+            // fall through and open sysfs handles for fallback or check DRM version beforehand
+         } else if (!params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon]) {
+            std::cerr << "MANGOHUD: Failed to open device '/dev/dri/card" << idx << "' with libdrm, falling back to using hwmon sysfs.\n";
+         }
+#endif
+
+         path += "/device";
          if (!amdgpu.busy)
             amdgpu.busy = fopen((path + "/gpu_busy_percent").c_str(), "r");
          if (!amdgpu.vram_total)
@@ -598,7 +620,7 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
       }
 
       // don't bother then
-      if (!amdgpu.busy && !amdgpu.temp && !amdgpu.vram_total && !amdgpu.vram_used) {
+      if (!using_libdrm && !amdgpu.busy && !amdgpu.temp && !amdgpu.vram_total && !amdgpu.vram_used) {
          params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
       }
    }
