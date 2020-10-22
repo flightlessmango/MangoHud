@@ -152,6 +152,33 @@ parse_color(const char *str)
    return strtol(str, NULL, 16);
 }
 
+static std::vector<unsigned>
+parse_load_color(const char *str)
+{
+   std::vector<unsigned> load_colors;
+   std::stringstream ss(str);
+   std::string token;
+   while (std::getline(ss, token, ',')) {
+      trim(token);
+      load_colors.push_back(std::stoi(token, NULL, 16));
+   }
+    return load_colors;
+}
+
+static std::vector<unsigned>
+parse_load_value(const char *str)
+{
+   std::vector<unsigned> load_value;
+   std::stringstream ss(str);
+   std::string token;
+   while (std::getline(ss, token, ',')) {
+      trim(token);
+      load_value.push_back(std::stoi(token));
+   }
+    return load_value;
+}
+
+
 static unsigned
 parse_unsigned(const char *str)
 {
@@ -324,6 +351,10 @@ parse_font_glyph_ranges(const char *str)
 #define parse_text_color(s) parse_color(s)
 #define parse_media_player_color(s) parse_color(s)
 #define parse_wine_color(s) parse_color(s)
+#define parse_gpu_load_color(s) parse_load_color(s)
+#define parse_cpu_load_color(s) parse_load_color(s)
+#define parse_gpu_load_value(s) parse_load_value(s)
+#define parse_cpu_load_value(s) parse_load_value(s)
 
 static bool
 parse_help(const char *str)
@@ -415,6 +446,8 @@ parse_overlay_env(struct overlay_params *params,
 #undef OVERLAY_PARAM_BOOL
 #undef OVERLAY_PARAM_CUSTOM
          params->enabled[OVERLAY_PARAM_ENABLED_histogram] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_gpu_load_change] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_cpu_load_change] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = read_cfg;
       }
 #define OVERLAY_PARAM_BOOL(name)                                       \
@@ -456,6 +489,8 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_io_read] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_io_write] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_wine] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_gpu_load_change] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_cpu_load_change] = false;
    params->fps_sampling_period = 500000; /* 500ms */
    params->width = 0;
    params->height = 140;
@@ -481,12 +516,18 @@ parse_overlay_config(struct overlay_params *params,
    params->media_player_name = "";
    params->font_scale = 1.0f;
    params->wine_color = 0xeb5b5b;
+   params->gpu_load_color = { 0xb22222, 0xfdfd09, 0x39f900 };
+   params->cpu_load_color = { 0xb22222, 0xfdfd09, 0x39f900 };
    params->font_scale_media_player = 0.55f;
    params->log_interval = 100;
    params->media_player_order = { MP_ORDER_TITLE, MP_ORDER_ARTIST, MP_ORDER_ALBUM };
    params->permit_upload = 0;
    params->render_mango = 0;
    params->benchmark_percentiles = { "97", "AVG", "1", "0.1" };
+   params->gpu_load_value = { 90, 60 };
+   params->cpu_load_value = { 90, 60 };
+
+
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_Shift_R, XK_F12 };
@@ -562,7 +603,7 @@ parse_overlay_config(struct overlay_params *params,
       params->font_scale_media_player = 0.55f;
 
    // Convert from 0xRRGGBB to ImGui's format
-   std::array<unsigned *, 11> colors = {
+   std::array<unsigned *, 17> colors = {
       &params->cpu_color,
       &params->gpu_color,
       &params->vram_color,
@@ -574,6 +615,13 @@ parse_overlay_config(struct overlay_params *params,
       &params->text_color,
       &params->media_player_color,
       &params->wine_color,
+      &params->gpu_load_color[0],
+      &params->gpu_load_color[1],
+      &params->gpu_load_color[2],
+      &params->cpu_load_color[0],
+      &params->cpu_load_color[1],
+      &params->cpu_load_color[2],
+
    };
 
    for (auto color : colors){

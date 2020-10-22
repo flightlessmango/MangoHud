@@ -57,7 +57,13 @@ struct swapchain_stats {
          background,
          text,
          media_player,
-         wine;
+         wine,
+         gpu_load_high,
+         gpu_load_med,
+         gpu_load_low,
+         cpu_load_high,
+         cpu_load_med,
+         cpu_load_low;
    } colors;
 };
 
