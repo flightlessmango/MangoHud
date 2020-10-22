@@ -162,6 +162,10 @@ parse_load_color(const char *str)
       trim(token);
       load_colors.push_back(std::stoi(token, NULL, 16));
    }
+   while (load_colors.size() != 3) {
+      load_colors.push_back(std::stoi("FFFFFF" , NULL, 16));
+   }
+
     return load_colors;
 }
 
