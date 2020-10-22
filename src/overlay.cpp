@@ -39,8 +39,8 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
 #endif
    }
    if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || logger->is_active()) {
-      if (vendorID == 0x1002)
-         getAmdGpuInfo();
+      if (vendorID == 0x1002 && getAmdGpuInfo_actual)
+         getAmdGpuInfo_actual();
 
       if (vendorID == 0x10de)
          getNvidiaGpuInfo();
