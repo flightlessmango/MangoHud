@@ -81,6 +81,14 @@ struct benchmark_stats {
    std::vector<std::pair<std::string, float>> percentile_data;
 };
 
+struct LOAD_DATA {
+   ImVec4 color_high;
+   ImVec4 color_med;
+   ImVec4 color_low;
+   unsigned high_load;
+   unsigned med_load;
+};
+
 extern struct fps_limit fps_limit_stats;
 extern int32_t deviceID;
 
