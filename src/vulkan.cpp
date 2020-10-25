@@ -991,7 +991,10 @@ void render_mango(swapchain_stats& data, struct overlay_params& params, ImVec2& 
 }
 
 ImVec4 change_on_load_temp (struct LOAD_DATA& data, int current) {
-   if (current >= data.med_load){
+   if (current >= data.high_load){
+      return data.color_high;
+      }
+   else if (current >= data.med_load){
       float diff = float(current - data.med_load) / float(data.high_load - data.med_load);
       float x = (data.color_high.x - data.color_med.x) * diff;
       float y = (data.color_high.y - data.color_med.y) * diff;
