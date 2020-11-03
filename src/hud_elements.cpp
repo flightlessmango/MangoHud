@@ -346,35 +346,35 @@ void HudElements::frame_timing(){
 
 void HudElements::sort_elements(std::string string){
     if (string == "version")
-        HUDElements.ordered_functions.push_back(HUDElements.version);
+        ordered_functions.push_back(&version);
     if (string == "time")
-        HUDElements.ordered_functions.push_back(HUDElements.time);
+        ordered_functions.push_back(time);
     if (string == "gpu_stats")
-        HUDElements.ordered_functions.push_back(HUDElements.gpu_stats);
+        ordered_functions.push_back(gpu_stats);
     if (string == "cpu_stats")
-        HUDElements.ordered_functions.push_back(HUDElements.cpu_stats);
+        ordered_functions.push_back(cpu_stats);
     if (string == "core_load")
-        HUDElements.ordered_functions.push_back(HUDElements.core_load);
+        ordered_functions.push_back(core_load);
     if (string == "io_stats")
-        HUDElements.ordered_functions.push_back(HUDElements.io_stats);
+        ordered_functions.push_back(io_stats);
     if (string == "vram")
-        HUDElements.ordered_functions.push_back(HUDElements.vram);
+        ordered_functions.push_back(vram);
     if (string == "ram")
-        HUDElements.ordered_functions.push_back(HUDElements.ram);
+        ordered_functions.push_back(ram);
     if (string == "fps")
-        HUDElements.ordered_functions.push_back(HUDElements.fps);
+        ordered_functions.push_back(fps);
     if (string == "engine_version")
-        HUDElements.ordered_functions.push_back(HUDElements.engine_version);
+        ordered_functions.push_back(engine_version);
     if (string == "gpu_name")
-        HUDElements.ordered_functions.push_back(HUDElements.gpu_name);
+        ordered_functions.push_back(gpu_name);
     if (string == "vulkan_driver")
-        HUDElements.ordered_functions.push_back(HUDElements.vulkan_driver);
+        ordered_functions.push_back(vulkan_driver);
     if (string == "arch")
-        HUDElements.ordered_functions.push_back(HUDElements.arch);
+        ordered_functions.push_back(arch);
     if (string == "wine")
-        HUDElements.ordered_functions.push_back(HUDElements.wine);
+        ordered_functions.push_back(wine);
     if (string == "frame_timing")
-        HUDElements.ordered_functions.push_back(HUDElements.frame_timing);
+        ordered_functions.push_back(frame_timing);
 }
 
 HudElements HUDElements;
