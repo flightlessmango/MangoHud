@@ -6,7 +6,7 @@
 #include "config.h"
 #include "file_utils.h"
 #include "string_utils.h"
-
+#include "hud_elements.h"
 std::string program_name;
 
 void parseConfigLine(std::string line, std::unordered_map<std::string,std::string>& options) {
@@ -24,8 +24,10 @@ void parseConfigLine(std::string line, std::unordered_map<std::string,std::strin
     param = line.substr(0, equal);
     trim(param);
     trim(value);
-    if (!param.empty())
+    if (!param.empty()){
+        HUDElements.options.push_back(param);
         options[param] = value;
+    }
 }
 
 void enumerate_config_files(std::vector<std::string>& paths)
@@ -67,6 +69,7 @@ void enumerate_config_files(std::vector<std::string>& paths)
 }
 
 void parseConfigFile(overlay_params& params) {
+    HUDElements.options.clear();
     params.options.clear();
     std::vector<std::string> paths;
     const char *cfg_file = getenv("MANGOHUD_CONFIGFILE");
