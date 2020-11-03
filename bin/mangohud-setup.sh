@@ -58,6 +58,9 @@ mangohud_install() {
     mkdir -p /usr/lib/mangohud/tls
     ln -sv ../lib /usr/lib/mangohud/tls/x86_64
     ln -sv ../lib32 /usr/lib/mangohud/tls/i686
+    # Some distros search in $prefix/x86_64-linux-gnu/tls/x86_64 etc instead
+    ln -sv . /usr/lib/mangohud/lib/i686-linux-gnu
+    ln -sv . /usr/lib/mangohud/lib/x86_64-linux-gnu
     # $LIB can be "lib/tls/x86_64"?
     ln -sv ../tls /usr/lib/mangohud/lib/tls
     #ln -sv lib /usr/lib/mangohud/aarch64-linux-gnu

@@ -102,7 +102,6 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(gpu_text)                    \
    OVERLAY_PARAM_CUSTOM(log_interval)                \
    OVERLAY_PARAM_CUSTOM(permit_upload)               \
-   OVERLAY_PARAM_CUSTOM(render_mango)                \
    OVERLAY_PARAM_CUSTOM(benchmark_percentiles)       \
    OVERLAY_PARAM_CUSTOM(help)                        \
    OVERLAY_PARAM_CUSTOM(gpu_load_value)              \
@@ -174,7 +173,6 @@ struct overlay_params {
    std::vector<unsigned> cpu_load_value;
    unsigned media_player_color;
    unsigned tableCols;
-   unsigned render_mango;
    float font_size, font_scale;
    float font_size_text;
    float font_scale_media_player;

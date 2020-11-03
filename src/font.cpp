@@ -13,8 +13,6 @@ void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& te
    float font_size_text = params.font_size_text;
    if (font_size_text < FLT_EPSILON)
       font_size_text = font_size;
-   if(params.render_mango)
-      font_size = 42;
    static const ImWchar default_range[] =
    {
       0x0020, 0x00FF, // Basic Latin + Latin Supplement

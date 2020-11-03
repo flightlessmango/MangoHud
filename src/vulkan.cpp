@@ -915,81 +915,6 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
    ImGui::End();
 }
 
-void render_mango(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan){
-   static int tableCols = 2;
-   static float ralign_width = 0, old_scale = 0;
-   window_size = ImVec2(300, params.height);
-
-   if (old_scale != params.font_scale) {
-      ralign_width = ImGui::CalcTextSize("A").x * 4 /* characters */;
-      old_scale = params.font_scale;
-   }
-   ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
-      ImGui::BeginTable("hud", tableCols);
-      if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
-         ImGui::TableNextRow();
-         const char* gpu_text;
-         if (params.gpu_text.empty())
-            gpu_text = "GPU";
-         else
-            gpu_text = params.gpu_text.c_str();
-         ImGui::TextColored(data.colors.gpu, "%s", gpu_text);
-         ImGui::TableNextCell();
-         right_aligned_text(data.colors.text, ralign_width, "%i", gpu_info.load);
-         ImGui::SameLine(0, 1.0f);
-         ImGui::Text("%%");
-      }
-      if(params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats]){
-         ImGui::TableNextRow();
-         const char* cpu_text;
-         if (params.cpu_text.empty())
-            cpu_text = "CPU";
-         else
-            cpu_text = params.cpu_text.c_str();
-         ImGui::TextColored(data.colors.cpu, "%s", cpu_text);
-         ImGui::TableNextCell();
-         right_aligned_text(data.colors.text, ralign_width, "%d", int(cpuStats.GetCPUDataTotal().percent));
-         ImGui::SameLine(0, 1.0f);
-         ImGui::Text("%%");
-      }
-      if (params.enabled[OVERLAY_PARAM_ENABLED_fps]){
-         ImGui::TableNextRow();
-         ImGui::TextColored(data.colors.engine, "%s", is_vulkan ? data.engineName.c_str() : "OpenGL");
-         ImGui::TableNextCell();
-         right_aligned_text(data.colors.text, ralign_width, "%.0f", data.fps);
-         ImGui::SameLine(0, 1.0f);
-         ImGui::PushFont(data.font1);
-         ImGui::Text("FPS");
-         ImGui::PopFont();
-      }
-      ImGui::EndTable();
-      if (params.enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
-         ImGui::Dummy(ImVec2(0.0f, 8.0f));
-         ImGui::PushFont(data.font1);
-         ImGui::TextColored(data.colors.engine, "%s", "Frametime");
-         ImGui::PopFont();
-
-         char hash[40];
-         snprintf(hash, sizeof(hash), "##%s", overlay_param_names[OVERLAY_PARAM_ENABLED_frame_timing]);
-         data.stat_selector = OVERLAY_PLOTS_frame_timing;
-         data.time_dividor = 1000.0f;
-
-         ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-         double min_time = 0.0f;
-         double max_time = 50.0f;
-         ImGui::PlotLines(hash, get_time_stat, &data,
-                  ARRAY_SIZE(data.frames_stats), 0,
-                  NULL, min_time, max_time,
-                  ImVec2(ImGui::GetContentRegionAvailWidth(), 50));
-
-         ImGui::PopStyleColor();
-      }
-   if(logger->is_active())
-      ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(data.main_window_pos.x + window_size.x - 15, data.main_window_pos.y + 15), 10, params.engine_color, 20);
-   ImGui::End();
-   window_size = ImVec2(window_size.x, 200);
-}
-
 ImVec4 change_on_load_temp (struct LOAD_DATA& data, int current) {
    if (current >= data.high_load){
       return data.color_high;
@@ -1355,12 +1280,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
    {
       scoped_lock lk(instance_data->notifier.mutex);
       position_layer(data->sw_stats, instance_data->params, data->window_size);
-#ifdef __gnu_linux__  
-      if(instance_data->params.render_mango)
-         render_mango(data->sw_stats, instance_data->params, data->window_size, true);
-      else
-         render_imgui(data->sw_stats, instance_data->params, data->window_size, true);
-#endif
+      render_imgui(data->sw_stats, instance_data->params, data->window_size, true);
    }
    ImGui::PopStyleVar(3);
 
