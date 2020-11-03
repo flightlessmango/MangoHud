@@ -344,6 +344,22 @@ void HudElements::frame_timing(){
     }
 }
 
+void HudElements::media_player(){
+#ifdef HAVE_DBUS
+    ImGui::TableNextRow();
+    uint32_t f_idx = (HUDElements.sw_stats->n_frames - 1) % ARRAY_SIZE(HUDElements.sw_stats->frames_stats);
+    uint64_t frame_timing = HUDElements.sw_stats->frames_stats[f_idx].stats[OVERLAY_PLOTS_frame_timing];
+    ImFont scaled_font = *HUDElements.sw_stats->font_text;
+    scaled_font.Scale = HUDElements.params->font_scale_media_player;
+    ImGui::PushFont(&scaled_font);
+    {
+        std::lock_guard<std::mutex> lck(main_metadata.mtx);
+        render_mpris_metadata(*HUDElements.params, main_metadata, frame_timing, true);
+    }
+    ImGui::PopFont();
+#endif
+}
+
 void HudElements::sort_elements(std::string string){
     if (string == "version")
         ordered_functions.push_back(&version);
@@ -375,6 +391,8 @@ void HudElements::sort_elements(std::string string){
         ordered_functions.push_back(wine);
     if (string == "frame_timing")
         ordered_functions.push_back(frame_timing);
+    if (string == "media_player")
+        ordered_functions.push_back(media_player);
 }
 
 HudElements HUDElements;

@@ -939,8 +939,6 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    HUDElements.is_vulkan = is_vulkan;
    ImGui::GetIO().FontGlobalScale = params.font_scale;
    if(not logger) logger = std::make_unique<Logger>(&params);
-   uint32_t f_idx = (data.n_frames - 1) % ARRAY_SIZE(data.frames_stats);
-   uint64_t frame_timing = data.frames_stats[f_idx].stats[OVERLAY_PLOTS_frame_timing];
    static float ralign_width = 0, old_scale = 0;
    window_size = ImVec2(params.width, params.height);
    unsigned height = ImGui::GetIO().DisplaySize.y;
@@ -957,18 +955,6 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       for (auto& func : HUDElements.ordered_functions)
          func();
       ImGui::EndTable();
-
-#ifdef HAVE_DBUS
-      ImFont scaled_font = *data.font_text;
-      scaled_font.Scale = params.font_scale_media_player;
-      ImGui::PushFont(&scaled_font);
-      {
-         std::lock_guard<std::mutex> lck(main_metadata.mtx);
-         render_mpris_metadata(params, main_metadata, frame_timing, true);
-      }
-      //render_mpris_metadata(params, generic_mpris, frame_timing, false);
-      ImGui::PopFont();
-#endif
 
       if(logger->is_active())
          ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(data.main_window_pos.x + window_size.x - 15, data.main_window_pos.y + 15), 10, params.engine_color, 20);

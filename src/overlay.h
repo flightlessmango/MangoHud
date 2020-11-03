@@ -118,4 +118,9 @@ void convert_colors(bool do_conv, struct swapchain_stats& sw_stats, struct overl
 void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...);
 ImVec4 change_on_load_temp (struct LOAD_DATA& data, int current);
 float get_time_stat(void *_data, int _idx);
+
+#ifdef HAVE_DBUS
+void render_mpris_metadata(struct overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing, bool is_main);
+#endif
+
 #endif //MANGOHUD_OVERLAY_H

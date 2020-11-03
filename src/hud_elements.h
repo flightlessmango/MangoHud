@@ -28,6 +28,7 @@ class HudElements{
         static void arch();
         static void wine();
         static void frame_timing();
+        static void media_player();
 };
 
 extern HudElements HUDElements;
