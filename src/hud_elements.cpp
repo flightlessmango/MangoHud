@@ -362,7 +362,7 @@ void HudElements::media_player(){
 
 void HudElements::sort_elements(std::string string){
     if (string == "version")
-        ordered_functions.push_back(&version);
+        ordered_functions.push_back(version);
     if (string == "time")
         ordered_functions.push_back(time);
     if (string == "gpu_stats")

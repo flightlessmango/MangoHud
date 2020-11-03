@@ -441,6 +441,7 @@ parse_overlay_env(struct overlay_params *params,
    char key[256], value[256];
    while ((num = parse_string(env, key, value)) != 0) {
       env += num;
+      HUDElements.sort_elements(key);
       if (!strcmp("full", key)) {
          bool read_cfg = params->enabled[OVERLAY_PARAM_ENABLED_read_cfg];
 #define OVERLAY_PARAM_BOOL(name) \
@@ -559,7 +560,7 @@ parse_overlay_config(struct overlay_params *params,
    #define parse_reload_cfg(x)         params->reload_cfg
 #endif
 
-
+   HUDElements.ordered_functions.clear();
    // first pass with env var
    if (env)
       parse_overlay_env(params, env);
@@ -600,8 +601,8 @@ parse_overlay_config(struct overlay_params *params,
    }
 
    // second pass, override config file settings with MANGOHUD_CONFIG
-   if (env && read_cfg)
-      parse_overlay_env(params, env);
+   // if (env && read_cfg)
+   //    parse_overlay_env(params, env);
 
    if (params->font_scale_media_player <= 0.f)
       params->font_scale_media_player = 0.55f;
@@ -670,7 +671,6 @@ parse_overlay_config(struct overlay_params *params,
       printf("MANGOHUD: output_file is Deprecated, use output_folder instead\n");
    auto real_size = params->font_size * params->font_scale;
    real_font_size = ImVec2(real_size, real_size / 2);
-   HUDElements.ordered_functions.clear();
    for (auto& option : HUDElements.options)
       HUDElements.sort_elements(option);
 }
