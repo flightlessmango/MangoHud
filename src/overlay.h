@@ -9,7 +9,13 @@
 #include "overlay_params.h"
 #include "iostats.h"
 #include "timing.hpp"
-
+#include "hud_elements.h"
+#include "version.h"
+#include "gpu.h"
+#ifdef HAVE_DBUS
+#include "dbus_info.h"
+extern float g_overflow;
+#endif
 struct frame_stat {
    uint64_t stats[OVERLAY_PLOTS_MAX];
 };
@@ -94,6 +100,7 @@ extern int32_t deviceID;
 
 extern struct benchmark_stats benchmark;
 extern ImVec2 real_font_size;
+extern std::string wineVersion;
 
 void position_layer(struct swapchain_stats& data, struct overlay_params& params, ImVec2 window_size);
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan);
@@ -108,5 +115,7 @@ void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats&
 void calculate_benchmark_data(void *params_void);
 void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& text_font);
 void convert_colors(bool do_conv, struct swapchain_stats& sw_stats, struct overlay_params& params);
-
+void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...);
+ImVec4 change_on_load_temp (struct LOAD_DATA& data, int current);
+float get_time_stat(void *_data, int _idx);
 #endif //MANGOHUD_OVERLAY_H

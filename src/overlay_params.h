@@ -39,6 +39,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(read_cfg)                      \
    OVERLAY_PARAM_BOOL(io_read)                       \
    OVERLAY_PARAM_BOOL(io_write)                      \
+   OVERLAY_PARAM_BOOL(io_stats)                      \
    OVERLAY_PARAM_BOOL(gpu_mem_clock)                 \
    OVERLAY_PARAM_BOOL(gpu_core_clock)                \
    OVERLAY_PARAM_BOOL(gpu_power)                     \
@@ -159,7 +160,7 @@ struct overlay_params {
    bool help;
    bool no_display;
    bool full;
-   bool io_read, io_write;
+   bool io_read, io_write, io_stats;
    unsigned width;
    unsigned height;
    int offset_x, offset_y;
