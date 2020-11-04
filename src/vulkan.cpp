@@ -2425,7 +2425,7 @@ void FpsLimiter(struct fps_limit& stats){
       auto adjustedSleep = stats.sleepTime - stats.frameOverhead;
       this_thread::sleep_for(adjustedSleep);
       stats.frameOverhead = ((Clock::now() - stats.frameStart) - adjustedSleep);
-      if (stats.frameOverhead > stats.targetFrameTime)
+      if (stats.frameOverhead > stats.targetFrameTime / 2)
          stats.frameOverhead = Clock::duration(0);
    }
 }
