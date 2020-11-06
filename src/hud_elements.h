@@ -2,6 +2,8 @@
 #include "overlay.h"
 #include "overlay_params.h"
 #include <functional>
+#include <map>
+#include <sstream>
 
 class HudElements{
     public:
@@ -10,9 +12,11 @@ class HudElements{
         float ralign_width;
         float old_scale;
         bool is_vulkan;
-        std::vector<std::string> options;
-        std::vector<void(*)()> ordered_functions;
-        void sort_elements(std::string string);
+        int place;
+        std::vector<std::pair<std::string, std::string>> options;
+        std::vector<std::pair<void(*)(), std::string >> ordered_functions;
+        int min, max, gpu_core_max, gpu_mem_max;
+        void sort_elements(std::pair<std::string, std::string> option);
         static void version();
         static void time();
         static void gpu_stats();
@@ -29,6 +33,7 @@ class HudElements{
         static void wine();
         static void frame_timing();
         static void media_player();
+        static void graphs();
 };
 
 extern HudElements HUDElements;

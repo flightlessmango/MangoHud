@@ -952,8 +952,11 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    if (!params.no_display){
       ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
       ImGui::BeginTable("hud", params.tableCols, ImGuiTableFlags_NoClipX);
-      for (auto& func : HUDElements.ordered_functions)
-         func();
+      HUDElements.place = 0;
+      for (auto& func : HUDElements.ordered_functions){
+         func.first();
+         HUDElements.place += 1;
+      }
       ImGui::EndTable();
 
       if(logger->is_active())

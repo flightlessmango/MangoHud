@@ -441,7 +441,7 @@ parse_overlay_env(struct overlay_params *params,
    char key[256], value[256];
    while ((num = parse_string(env, key, value)) != 0) {
       env += num;
-      HUDElements.sort_elements(key);
+      HUDElements.sort_elements({key, value});
       if (!strcmp("full", key)) {
          bool read_cfg = params->enabled[OVERLAY_PARAM_ENABLED_read_cfg];
 #define OVERLAY_PARAM_BOOL(name) \

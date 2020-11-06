@@ -12,6 +12,7 @@
 #include "hud_elements.h"
 #include "version.h"
 #include "gpu.h"
+#include "logging.h"
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
 extern float g_overflow;
@@ -101,6 +102,7 @@ extern int32_t deviceID;
 extern struct benchmark_stats benchmark;
 extern ImVec2 real_font_size;
 extern std::string wineVersion;
+extern std::vector<logData> graph_data;
 
 void position_layer(struct swapchain_stats& data, struct overlay_params& params, ImVec2 window_size);
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan);

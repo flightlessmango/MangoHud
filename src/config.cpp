@@ -25,7 +25,7 @@ void parseConfigLine(std::string line, std::unordered_map<std::string,std::strin
     trim(param);
     trim(value);
     if (!param.empty()){
-        HUDElements.options.push_back(param);
+        HUDElements.options.push_back({param, value});
         options[param] = value;
     }
 }
