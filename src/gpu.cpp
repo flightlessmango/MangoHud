@@ -34,6 +34,7 @@ void getNvidiaGpuInfo(){
         gpu_info.CoreClock = nvidiaCoreClock;
         gpu_info.MemClock = nvidiaMemClock;
         gpu_info.powerUsage = nvidiaPowerUsage / 1000;
+        gpu_info.memoryTotal = nvidiaMemory.total / (1024.f * 1024.f * 1024.f);
         return;
     }
 #endif
@@ -46,6 +47,7 @@ void getNvidiaGpuInfo(){
         gpu_info.CoreClock = nvctrl_info.CoreClock;
         gpu_info.MemClock = nvctrl_info.MemClock;
         gpu_info.powerUsage = 0;
+        gpu_info.memoryTotal = nvctrl_info.memoryTotal;
         return;
     }
 #endif
