@@ -374,6 +374,36 @@ void HudElements::graphs(){
         ImGui::TextColored(HUDElements.sw_stats->colors.engine, "%s", "GPU Load");
         ImGui::PopFont();
     }
+
+    if (value == "cpu_temp"){
+        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp])
+            HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp] = true;
+        for (auto& it : graph_data){
+            arr.push_back(float(it.cpu_temp));
+            arr.erase(arr.begin());
+        }
+        if (int(arr.back()) > HUDElements.cpu_temp_max)
+            HUDElements.cpu_temp_max = arr.back();
+        HUDElements.max = HUDElements.cpu_temp_max;
+        HUDElements.min = 0;
+        ImGui::PushFont(HUDElements.sw_stats->font1);
+        ImGui::TextColored(HUDElements.sw_stats->colors.engine, "%s", "CPU Temp");
+        ImGui::PopFont();
+    }
+
+    if (value == "gpu_temp"){
+        for (auto& it : graph_data){
+            arr.push_back(float(it.gpu_temp));
+            arr.erase(arr.begin());
+        }
+        if (int(arr.back()) > HUDElements.gpu_temp_max)
+            HUDElements.gpu_temp_max = arr.back();
+        HUDElements.max = HUDElements.gpu_temp_max;
+        HUDElements.min = 0;
+        ImGui::PushFont(HUDElements.sw_stats->font1);
+        ImGui::TextColored(HUDElements.sw_stats->colors.engine, "%s", "GPU Temp");
+        ImGui::PopFont();
+    }
     
     if (value == "gpu_core_clock"){
         for (auto& it : graph_data){
@@ -476,7 +506,7 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
     if (param == "graphs"){
         std::vector<std::string> permitted_params = {
             "gpu_load", "cpu_load", "gpu_core_clock", "gpu_mem_clock",
-            "vram", "ram"
+            "vram", "ram", "cpu_temp", "gpu_temp"
         };
         std::stringstream ss; ss << value;
         while (std::getline(ss, value, '+')) {

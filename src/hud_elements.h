@@ -15,7 +15,7 @@ class HudElements{
         int place;
         std::vector<std::pair<std::string, std::string>> options;
         std::vector<std::pair<void(*)(), std::string >> ordered_functions;
-        int min, max, gpu_core_max, gpu_mem_max;
+        int min, max, gpu_core_max, gpu_mem_max, cpu_temp_max, gpu_temp_max;
         void sort_elements(std::pair<std::string, std::string> option);
         static void version();
         static void time();
