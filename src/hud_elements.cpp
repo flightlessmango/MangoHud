@@ -392,6 +392,8 @@ void HudElements::graphs(){
     }
 
     if (value == "gpu_temp"){
+        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp])
+            HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp] = true;
         for (auto& it : graph_data){
             arr.push_back(float(it.gpu_temp));
             arr.erase(arr.begin());
