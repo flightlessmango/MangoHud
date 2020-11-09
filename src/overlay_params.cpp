@@ -497,6 +497,7 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_wine] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_load_change] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_cpu_load_change] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout] = true;
    params->fps_sampling_period = 500000; /* 500ms */
    params->width = 0;
    params->height = 140;
@@ -671,6 +672,11 @@ parse_overlay_config(struct overlay_params *params,
       printf("MANGOHUD: output_file is Deprecated, use output_folder instead\n");
    auto real_size = params->font_size * params->font_scale;
    real_font_size = ImVec2(real_size, real_size / 2);
-   for (auto& option : HUDElements.options)
-      HUDElements.sort_elements(option);
+   HUDElements.params = params;
+   if (params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout]){
+        HUDElements.legacy_elements();
+   } else {
+      for (auto& option : HUDElements.options)
+         HUDElements.sort_elements(option);
+   }
 }

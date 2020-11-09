@@ -5,13 +5,17 @@
 #include "mesa/util/macros.h"
 
 void HudElements::time(){
-    ImGui::TableNextRow();
-    ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.00f), "%s", HUDElements.sw_stats->time.c_str());
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_time]){
+        ImGui::TableNextRow();
+        ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.00f), "%s", HUDElements.sw_stats->time.c_str());
+    }
 }
 
 void HudElements::version(){
-    ImGui::TableNextRow();
-    ImGui::Text("%s", MANGOHUD_VERSION);
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_version]){
+        ImGui::TableNextRow();
+        ImGui::Text("%s", MANGOHUD_VERSION);
+    }
 }
 
 void HudElements::gpu_stats(){
@@ -115,6 +119,7 @@ void HudElements::cpu_stats(){
 }
 
 void HudElements::core_load(){
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_core_load]){
          int i = 0;
          for (const CPUData &cpuData : cpuStats.GetCPUData())
          {
@@ -136,6 +141,7 @@ void HudElements::core_load(){
             ImGui::PopFont();
             i++;
          }
+    }
 }
 void HudElements::io_stats(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_io_read] || HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_io_write]){
@@ -236,8 +242,8 @@ void HudElements::gpu_name(){
     }
 }
 void HudElements::engine_version(){
-    ImGui::TableNextRow();
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_engine_version]){
+        ImGui::TableNextRow();
         ImGui::PushFont(HUDElements.sw_stats->font1);
         if (HUDElements.is_vulkan) {
             if ((HUDElements.sw_stats->engineName == "DXVK" || HUDElements.sw_stats->engineName == "VKD3D")){
@@ -258,7 +264,6 @@ void HudElements::engine_version(){
             "%d.%d%s", HUDElements.sw_stats->version_gl.major, HUDElements.sw_stats->version_gl.minor,
             HUDElements.sw_stats->version_gl.is_gles ? " ES" : "");
         }
-        // ImGui::SameLine();
         ImGui::PopFont();
     }
 }
@@ -473,51 +478,52 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
     auto param = option.first;
     auto value = option.second;
 
-    if (param == "version")
-        ordered_functions.push_back({version, value});
-    if (param == "time")
-        ordered_functions.push_back({time, value});
-    if (param == "gpu_stats")
-        ordered_functions.push_back({gpu_stats, value});
-    if (param == "cpu_stats")
-        ordered_functions.push_back({cpu_stats, value});
-    if (param == "core_load")
-        ordered_functions.push_back({core_load, value});
-    if (param == "io_stats")
-        ordered_functions.push_back({io_stats, value});
-    if (param == "vram")
-        ordered_functions.push_back({vram, value});
-    if (param == "ram")
-        ordered_functions.push_back({ram, value});
-    if (param == "fps")
-        ordered_functions.push_back({fps, value});
-    if (param == "engine_version")
-        ordered_functions.push_back({engine_version, value});
-    if (param == "gpu_name")
-        ordered_functions.push_back({gpu_name, value});
-    if (param == "vulkan_driver")
-        ordered_functions.push_back({vulkan_driver, value});
-    if (param == "arch")
-        ordered_functions.push_back({arch, value});
-    if (param == "wine")
-        ordered_functions.push_back({wine, value});
-    if (param == "frame_timing")
-        ordered_functions.push_back({frame_timing, value});
-    if (param == "media_player")
-        ordered_functions.push_back({media_player, value});
+    if (param == "version")         { ordered_functions.push_back({version, value});        }
+    if (param == "time")            { ordered_functions.push_back({time, value});           }
+    if (param == "gpu_stats")       { ordered_functions.push_back({gpu_stats, value});      }
+    if (param == "cpu_stats")       { ordered_functions.push_back({cpu_stats, value});      }
+    if (param == "core_load")       { ordered_functions.push_back({core_load, value});      }
+    if (param == "io_stats")        { ordered_functions.push_back({io_stats, value});       }
+    if (param == "vram")            { ordered_functions.push_back({vram, value});           }
+    if (param == "ram")             { ordered_functions.push_back({ram, value});            }
+    if (param == "fps")             { ordered_functions.push_back({fps, value});            }
+    if (param == "engine_version")  { ordered_functions.push_back({engine_version, value}); }
+    if (param == "gpu_name")        { ordered_functions.push_back({gpu_name, value});       }
+    if (param == "vulkan_driver")   { ordered_functions.push_back({vulkan_driver, value});  }
+    if (param == "arch")            { ordered_functions.push_back({arch, value});           }    
+    if (param == "wine")            { ordered_functions.push_back({wine, value});           }
+    if (param == "frame_timing")    { ordered_functions.push_back({frame_timing, value});   }
+    if (param == "media_player")    { ordered_functions.push_back({media_player, value});   }
     if (param == "graphs"){
-        std::vector<std::string> permitted_params = {
-            "gpu_load", "cpu_load", "gpu_core_clock", "gpu_mem_clock",
-            "vram", "ram", "cpu_temp", "gpu_temp"
-        };
-        std::stringstream ss; ss << value;
-        while (std::getline(ss, value, '+')) {
-            if (std::find(permitted_params.begin(), permitted_params.end(), value) != permitted_params.end())
+    stringstream ss; ss << value;
+        while (getline(ss, value, '+')) {
+            if (find(permitted_params.begin(), permitted_params.end(), value) != permitted_params.end())
                 ordered_functions.push_back({graphs, value});
             else
                 printf("MANGOHUD: Unrecognized graph type: %s\n", value.c_str());
         }
     }
+    return;
+}
+
+void HudElements::legacy_elements(){
+    string value = "NULL";
+    ordered_functions.push_back({time,               value});
+    ordered_functions.push_back({version,            value});
+    ordered_functions.push_back({gpu_stats,          value});
+    ordered_functions.push_back({cpu_stats,          value});
+    ordered_functions.push_back({core_load,          value});
+    ordered_functions.push_back({io_stats,           value});
+    ordered_functions.push_back({vram,               value});
+    ordered_functions.push_back({ram,                value});
+    ordered_functions.push_back({fps,                value});
+    ordered_functions.push_back({engine_version,     value});
+    ordered_functions.push_back({gpu_name,           value});
+    ordered_functions.push_back({vulkan_driver,      value});
+    ordered_functions.push_back({arch,               value});
+    ordered_functions.push_back({wine,               value});
+    ordered_functions.push_back({frame_timing,       value});
+    ordered_functions.push_back({media_player,       value});
 }
 
 HudElements HUDElements;
