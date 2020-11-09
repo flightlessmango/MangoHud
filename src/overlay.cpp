@@ -14,6 +14,7 @@
 struct benchmark_stats benchmark;
 struct fps_limit fps_limit_stats {};
 ImVec2 real_font_size;
+std::vector<logData> graph_data;
 
 void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID)
 {
@@ -55,7 +56,11 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
 
    currentLogData.cpu_load = cpuStats.GetCPUDataTotal().percent;
    currentLogData.cpu_temp = cpuStats.GetCPUDataTotal().temp;
-
+   // Save data for graphs
+   if (graph_data.size() > 50)
+      graph_data.erase(graph_data.begin());
+   graph_data.push_back({0, 0, cpuStats.GetCPUDataTotal().percent, gpu_info.load, cpuStats.GetCPUDataTotal().temp,
+                        gpu_info.temp, gpu_info.CoreClock, gpu_info.MemClock, gpu_info.memoryUsed, memused});
    logger->notify_data_valid();
 }
 
@@ -63,7 +68,6 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
    if(not logger) logger = std::make_unique<Logger>(&params);
    uint32_t f_idx = sw_stats.n_frames % ARRAY_SIZE(sw_stats.frames_stats);
    uint64_t now = os_time_get(); /* us */
-
    double elapsed = (double)(now - sw_stats.last_fps_update); /* us */
    fps = 1000000.0f * sw_stats.n_frames_since_update / elapsed;
    if (logger->is_active())
@@ -76,7 +80,6 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
 
    frametime = now - sw_stats.last_present_time;
    if (elapsed >= params.fps_sampling_period) {
-
       std::thread(update_hw_info, std::ref(sw_stats), std::ref(params), vendorID).detach();
       sw_stats.fps = fps;
 

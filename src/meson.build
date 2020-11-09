@@ -27,6 +27,7 @@ foreach s : ['overlay.frag', 'overlay.vert']
 endforeach
 
 vklayer_files = files(
+  'hud_elements.cpp',
   'overlay.cpp',
   'overlay_params.cpp',
   'font.cpp',

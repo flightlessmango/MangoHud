@@ -20,6 +20,7 @@
 #include "overlay.h"
 #include "config.h"
 #include "string_utils.h"
+#include "hud_elements.h"
 
 #include "mesa/util/os_socket.h"
 
@@ -440,6 +441,7 @@ parse_overlay_env(struct overlay_params *params,
    char key[256], value[256];
    while ((num = parse_string(env, key, value)) != 0) {
       env += num;
+      HUDElements.sort_elements({key, value});
       if (!strcmp("full", key)) {
          bool read_cfg = params->enabled[OVERLAY_PARAM_ENABLED_read_cfg];
 #define OVERLAY_PARAM_BOOL(name) \
@@ -491,9 +493,11 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_io_read] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_io_write] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_io_stats] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_wine] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_load_change] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_cpu_load_change] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout] = true;
    params->fps_sampling_period = 500000; /* 500ms */
    params->width = 0;
    params->height = 140;
@@ -557,7 +561,7 @@ parse_overlay_config(struct overlay_params *params,
    #define parse_reload_cfg(x)         params->reload_cfg
 #endif
 
-
+   HUDElements.ordered_functions.clear();
    // first pass with env var
    if (env)
       parse_overlay_env(params, env);
@@ -598,8 +602,8 @@ parse_overlay_config(struct overlay_params *params,
    }
 
    // second pass, override config file settings with MANGOHUD_CONFIG
-   if (env && read_cfg)
-      parse_overlay_env(params, env);
+   // if (env && read_cfg)
+   //    parse_overlay_env(params, env);
 
    if (params->font_scale_media_player <= 0.f)
       params->font_scale_media_player = 0.55f;
@@ -668,4 +672,11 @@ parse_overlay_config(struct overlay_params *params,
       printf("MANGOHUD: output_file is Deprecated, use output_folder instead\n");
    auto real_size = params->font_size * params->font_scale;
    real_font_size = ImVec2(real_size, real_size / 2);
+   HUDElements.params = params;
+   if (params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout]){
+        HUDElements.legacy_elements();
+   } else {
+      for (auto& option : HUDElements.options)
+         HUDElements.sort_elements(option);
+   }
 }

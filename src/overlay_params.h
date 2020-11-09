@@ -39,6 +39,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(read_cfg)                      \
    OVERLAY_PARAM_BOOL(io_read)                       \
    OVERLAY_PARAM_BOOL(io_write)                      \
+   OVERLAY_PARAM_BOOL(io_stats)                      \
    OVERLAY_PARAM_BOOL(gpu_mem_clock)                 \
    OVERLAY_PARAM_BOOL(gpu_core_clock)                \
    OVERLAY_PARAM_BOOL(gpu_power)                     \
@@ -52,6 +53,8 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(wine)                          \
    OVERLAY_PARAM_BOOL(gpu_load_change)               \
    OVERLAY_PARAM_BOOL(cpu_load_change)               \
+   OVERLAY_PARAM_BOOL(graphs)                        \
+   OVERLAY_PARAM_BOOL(legacy_layout)                 \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
@@ -91,7 +94,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(background_color)            \
    OVERLAY_PARAM_CUSTOM(io_color)                    \
    OVERLAY_PARAM_CUSTOM(text_color)                  \
-   OVERLAY_PARAM_CUSTOM (wine_color)                 \
+   OVERLAY_PARAM_CUSTOM(wine_color)                  \
    OVERLAY_PARAM_CUSTOM(alpha)                       \
    OVERLAY_PARAM_CUSTOM(log_duration)                \
    OVERLAY_PARAM_CUSTOM(pci_dev)                     \
@@ -106,9 +109,8 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(help)                        \
    OVERLAY_PARAM_CUSTOM(gpu_load_value)              \
    OVERLAY_PARAM_CUSTOM(cpu_load_value)              \
-   OVERLAY_PARAM_CUSTOM(gpu_load_color)             \
-   OVERLAY_PARAM_CUSTOM(cpu_load_color)
-
+   OVERLAY_PARAM_CUSTOM(gpu_load_color)              \
+   OVERLAY_PARAM_CUSTOM(cpu_load_color)              \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -159,7 +161,7 @@ struct overlay_params {
    bool help;
    bool no_display;
    bool full;
-   bool io_read, io_write;
+   bool io_read, io_write, io_stats;
    unsigned width;
    unsigned height;
    int offset_x, offset_y;
