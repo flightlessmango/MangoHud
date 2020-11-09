@@ -204,7 +204,7 @@ bool dbus_manager::select_active_player() {
         if (m_active_player.empty()) {
             auto it = std::find_if(m_name_owners.begin(), m_name_owners.end(), [this, &meta](auto& entry){
                 auto& name = entry.first;
-                get_media_player_metadata(meta, name);
+                this->get_media_player_metadata(meta, name);
                 if(meta.playing) {
                     return true;
                 }
