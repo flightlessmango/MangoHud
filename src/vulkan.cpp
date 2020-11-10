@@ -460,7 +460,7 @@ struct overlay_draw *get_overlay_draw(struct swapchain_data *data)
 
 void init_cpu_stats(overlay_params& params)
 {
-#ifdef __gnu_linux__   
+#ifdef __gnu_linux__
    auto& enabled = params.enabled;
    enabled[OVERLAY_PARAM_ENABLED_cpu_stats] = cpuStats.Init()
                            && enabled[OVERLAY_PARAM_ENABLED_cpu_stats];
@@ -984,7 +984,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
 
    ImGui::EndFrame();
    ImGui::Render();
-   
+
 }
 
 static uint32_t vk_memory_type(struct device_data *data,
@@ -2015,7 +2015,7 @@ static struct overlay_draw *before_present(struct swapchain_data *swapchain_data
 
 void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats)
 {
-#ifdef __gnu_linux__  
+#ifdef __gnu_linux__
    string desc = pci_ids[vendorID].second[deviceID].desc;
    size_t position = desc.find("[");
    if (position != std::string::npos) {
@@ -2438,7 +2438,7 @@ static VkResult overlay_CreateInstance(
 
    if (!is_blacklisted()) {
       parse_overlay_config(&instance_data->params, getenv("MANGOHUD_CONFIG"));
-#ifdef __gnu_linux__  
+#ifdef __gnu_linux__
       instance_data->notifier.params = &instance_data->params;
       start_notifier(instance_data->notifier);
 #endif
@@ -2471,7 +2471,7 @@ static void overlay_DestroyInstance(
    instance_data_map_physical_devices(instance_data, false);
    instance_data->vtable.DestroyInstance(instance, pAllocator);
    if (!is_blacklisted())
-#ifdef __gnu_linux__  
+#ifdef __gnu_linux__
       stop_notifier(instance_data->notifier);
 #endif
    destroy_instance_data(instance_data);
