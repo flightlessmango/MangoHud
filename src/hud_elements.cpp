@@ -115,6 +115,16 @@ void HudElements::cpu_stats(){
             ImGui::SameLine(0, 1.0f);
             ImGui::Text("°C");
         }
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_mhz])
+            ImGui::TableNextRow();
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_mhz]){
+            ImGui::TableNextCell();
+            right_aligned_text(HUDElements.sw_stats->colors.text, HUDElements.ralign_width, "%i", cpuStats.GetCPUDataTotal().cpu_mhz);
+            ImGui::SameLine(0, 1.0f);
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            ImGui::Text("MHz");
+            ImGui::PopFont();
+        }
     }
 }
 

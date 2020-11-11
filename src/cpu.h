@@ -35,6 +35,7 @@ typedef struct CPUData_ {
    float percent;
    int mhz;
    int temp;
+   int cpu_mhz;
 } CPUData;
 
 class CPUStats

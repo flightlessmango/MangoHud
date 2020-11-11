@@ -220,6 +220,10 @@ bool CPUStats::UpdateCoreMhz() {
             i++;
         }
     }
+    m_cpuDataTotal.cpu_mhz = 0;
+    for (auto data : m_cpuData)
+        m_cpuDataTotal.cpu_mhz += data.mhz;
+    m_cpuDataTotal.cpu_mhz /= m_cpuData.size();
     return true;
 }
 

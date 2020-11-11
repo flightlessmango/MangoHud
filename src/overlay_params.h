@@ -55,6 +55,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(cpu_load_change)               \
    OVERLAY_PARAM_BOOL(graphs)                        \
    OVERLAY_PARAM_BOOL(legacy_layout)                 \
+   OVERLAY_PARAM_BOOL(cpu_mhz)                       \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
