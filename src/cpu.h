@@ -5,6 +5,9 @@
 #include <vector>
 #include <cstdint>
 #include <cstdio>
+#include <memory>
+
+#include "timing.hpp"
 
 typedef struct CPUData_ {
    unsigned long long int totalTime;
@@ -36,7 +39,72 @@ typedef struct CPUData_ {
    int mhz;
    int temp;
    int cpu_mhz;
+   int power;
 } CPUData;
+
+enum {
+   CPU_POWER_K10TEMP,
+   CPU_POWER_ZENPOWER,
+   CPU_POWER_RAPL
+};
+
+struct CPUPowerData {
+   int source;
+};
+
+struct CPUPowerData_k10temp : public CPUPowerData {
+   CPUPowerData_k10temp() {
+      this->source = CPU_POWER_K10TEMP;
+   };
+
+   ~CPUPowerData_k10temp() {
+      if(this->coreVoltageFile)
+         fclose(this->coreVoltageFile);
+      if(this->coreCurrentFile)
+         fclose(this->coreCurrentFile);
+      if(this->socVoltageFile)
+         fclose(this->socVoltageFile);
+      if(this->socCurrentFile)
+         fclose(this->socCurrentFile);
+   };
+
+   FILE* coreVoltageFile;
+   FILE* coreCurrentFile;
+   FILE* socVoltageFile;
+   FILE* socCurrentFile;
+};
+
+struct CPUPowerData_zenpower : public CPUPowerData {
+   CPUPowerData_zenpower() {
+      this->source = CPU_POWER_ZENPOWER;
+   };
+
+   ~CPUPowerData_zenpower() {
+      if(this->corePowerFile)
+         fclose(this->corePowerFile);
+      if(this->socPowerFile)
+         fclose(this->socPowerFile);
+   };
+
+   FILE* corePowerFile;
+   FILE* socPowerFile;
+};
+
+struct CPUPowerData_rapl : public CPUPowerData {
+   CPUPowerData_rapl() {
+      this->source = CPU_POWER_RAPL;
+      this->lastCounterValueTime = Clock::now();
+   };
+
+   ~CPUPowerData_rapl() {
+      if(this->energyCounterFile)
+         fclose(this->energyCounterFile);
+   };
+
+   FILE* energyCounterFile;
+   int lastCounterValue;
+   Clock::time_point lastCounterValueTime;
+};
 
 class CPUStats
 {
@@ -52,7 +120,9 @@ public:
    bool UpdateCPUData();
    bool UpdateCoreMhz();
    bool UpdateCpuTemp();
+   bool UpdateCpuPower();
    bool GetCpuFile();
+   bool InitCpuPowerData();
    double GetCPUPeriod() { return m_cpuPeriod; }
 
    const std::vector<CPUData>& GetCPUData() const {
@@ -70,6 +140,7 @@ private:
    bool m_updatedCPUs = false; // TODO use caching or just update?
    bool m_inited = false;
    FILE *m_cpuTempFile = nullptr;
+   std::unique_ptr<CPUPowerData> m_cpuPowerData;
 };
 
 extern CPUStats cpuStats;
