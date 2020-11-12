@@ -22,7 +22,7 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
       cpuStats.UpdateCPUData();
 #ifdef __gnu_linux__
 
-      if (params.enabled[OVERLAY_PARAM_ENABLED_core_load])
+      if (params.enabled[OVERLAY_PARAM_ENABLED_core_load] || params.enabled[OVERLAY_PARAM_ENABLED_cpu_mhz])
          cpuStats.UpdateCoreMhz();
       if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp] || logger->is_active())
          cpuStats.UpdateCpuTemp();
