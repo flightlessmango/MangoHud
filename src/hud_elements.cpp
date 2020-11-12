@@ -477,10 +477,18 @@ void HudElements::graphs(){
     }
     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
     ImGui::TableNextRow();
-    ImGui::PlotLines("", arr.data(),
-            arr.size(), 0,
-            NULL, HUDElements.min, HUDElements.max,
-            ImVec2(ImGui::GetContentRegionAvailWidth() * 2.5, 50));
+    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_histogram]){
+        ImGui::PlotLines("", arr.data(),
+                arr.size(), 0,
+                NULL, HUDElements.min, HUDElements.max,
+                ImVec2(ImGui::GetContentRegionAvailWidth() * 2.5, 50));
+    } else {
+        ImGui::PlotHistogram("", arr.data(),
+        arr.size(), 0,
+        NULL, HUDElements.min, HUDElements.max,
+        ImVec2(ImGui::GetContentRegionAvailWidth() * 2.5, 50));
+    }
+
     ImGui::PopStyleColor(1);
 }
 
