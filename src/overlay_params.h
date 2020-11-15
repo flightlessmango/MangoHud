@@ -117,6 +117,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(cpu_load_color)              \
    OVERLAY_PARAM_CUSTOM(cellpadding_y)               \
    OVERLAY_PARAM_CUSTOM(table_columns)               \
+   OVERLAY_PARAM_CUSTOM(blacklist)                   \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -197,6 +198,7 @@ struct overlay_params {
    std::string pci_dev;
    std::string media_player_name;
    std::string cpu_text, gpu_text;
+   std::string blacklist;
    unsigned log_interval;
    std::vector<media_player_order> media_player_order;
    std::vector<std::string> benchmark_percentiles;

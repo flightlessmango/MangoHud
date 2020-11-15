@@ -188,6 +188,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `cellpadding_y`                    | Set the vertical cellpadding, default is `-0.085` |
 | `frametime`                        | Display frametime next to fps text                                                    |
 | `table_columns`                    | Set the number of table columns for ImGui, defaults to 3                              |
+| `blacklist`                        | Add a program to the blacklist. e.g `blacklist=vkcube,WatchDogs2.exe`                 |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 
