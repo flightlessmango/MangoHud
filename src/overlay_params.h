@@ -113,6 +113,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(cpu_load_value)              \
    OVERLAY_PARAM_CUSTOM(gpu_load_color)              \
    OVERLAY_PARAM_CUSTOM(cpu_load_color)              \
+   OVERLAY_PARAM_CUSTOM(cellpadding_y)               \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -182,6 +183,7 @@ struct overlay_params {
    float font_size_text;
    float font_scale_media_player;
    float background_alpha, alpha;
+   float cellpadding_y;
    std::vector<KeySym> toggle_hud;
    std::vector<KeySym> toggle_fps_limit;
    std::vector<KeySym> toggle_logging;

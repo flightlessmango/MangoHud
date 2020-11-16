@@ -185,6 +185,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `cpu_load_change`                  | Changes the color of the CPU load depending on load                                   |
 | `cpu_load_color`                   | Set the colors for the gpu load change low,medium and high. e.g `cpu_load_color=0000FF,00FFFF,FF00FF`      |
 | `cpu_load_value`                   | Set the values for medium and high load e.g `cpu_load_value=50,90`                    |
+| `cellpadding_y`                    | Set the vertical cellpadding, default is `-0.085` |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 
