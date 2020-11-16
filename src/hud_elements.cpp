@@ -526,6 +526,7 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
 
 void HudElements::legacy_elements(){
     string value = "NULL";
+    ordered_functions.clear();
     ordered_functions.push_back({time,               value});
     ordered_functions.push_back({version,            value});
     ordered_functions.push_back({gpu_stats,          value});
