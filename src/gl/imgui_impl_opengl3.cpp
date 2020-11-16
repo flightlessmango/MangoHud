@@ -105,7 +105,7 @@ static void ImGui_ImplOpenGL3_DestroyFontsTexture()
     }
 }
 
-static bool ImGui_ImplOpenGL3_CreateFontsTexture()
+bool ImGui_ImplOpenGL3_CreateFontsTexture()
 {
     ImGui_ImplOpenGL3_DestroyFontsTexture();
     // Build texture atlas

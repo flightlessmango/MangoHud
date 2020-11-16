@@ -133,6 +133,7 @@ void imgui_create(void *ctx)
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &current_texture);
 
     create_fonts(params, sw_stats.font1, sw_stats.font_text);
+    sw_stats.font_params_hash = params.font_params_hash;
 
     // Restore global context or ours might clash with apps that use Dear ImGui
     ImGui::SetCurrentContext(saved_ctx);
@@ -177,6 +178,13 @@ void imgui_render(unsigned int width, unsigned int height)
     ImGui::GetIO().DisplaySize = ImVec2(width, height);
     if (HUDElements.colors.update)
         HUDElements.convert_colors(params);
+
+    if (sw_stats.font_params_hash != params.font_params_hash)
+    {
+        sw_stats.font_params_hash = params.font_params_hash;
+        create_fonts(params, sw_stats.font1, sw_stats.font_text);
+        ImGui_ImplOpenGL3_CreateFontsTexture();
+    }
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();

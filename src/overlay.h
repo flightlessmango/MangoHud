@@ -30,6 +30,7 @@ struct swapchain_stats {
 
    ImFont* font1 = nullptr;
    ImFont* font_text = nullptr;
+   size_t font_params_hash = 0;
    std::string time;
    double fps;
    struct iostats io;

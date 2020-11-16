@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cctype>
 #include <array>
+#include <functional>
 
 #include "overlay_params.h"
 #include "overlay.h"
@@ -32,6 +33,25 @@
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
 #endif
+
+// C++17 has `if constexpr` so this won't be needed then
+template<typename... Ts>
+size_t get_hash()
+{
+   return 0;
+}
+
+template<typename T, typename... Ts>
+size_t get_hash(T const& first, Ts const&... rest)
+{
+   size_t hash = std::hash<T>{}(first);
+#if __cplusplus >= 201703L
+   if constexpr (sizeof...(rest) > 0)
+#endif
+      hash ^= get_hash(rest...) << 1;
+
+   return hash;
+}
 
 static enum overlay_param_position
 parse_position(const char *str)
@@ -676,6 +696,14 @@ parse_overlay_config(struct overlay_params *params,
       if (params->no_small_font)
          params->width += 7 * params->font_size * params->font_scale;
    }
+
+   params->font_params_hash = get_hash(params->font_size,
+                                 params->font_size_text,
+                                 params->no_small_font,
+                                 params->font_file,
+                                 params->font_file_text,
+                                 params->font_glyph_ranges
+                                );
 
    // set frametime limit
    using namespace std::chrono;

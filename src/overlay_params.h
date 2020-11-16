@@ -209,6 +209,8 @@ struct overlay_params {
    std::string config_file_path;
    std::unordered_map<std::string,std::string> options;
    int permit_upload;
+
+   size_t font_params_hash;
 };
 
 const extern char *overlay_param_names[];

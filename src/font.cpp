@@ -5,6 +5,7 @@
 void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& text_font)
 {
    auto& io = ImGui::GetIO();
+   io.Fonts->Clear();
    ImGui::GetIO().FontGlobalScale = params.font_scale; // set here too so ImGui::CalcTextSize is correct
    float font_size = params.font_size;
    if (font_size < FLT_EPSILON)
@@ -40,16 +41,15 @@ void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& te
    if (params.font_glyph_ranges & FG_VIETNAMESE)
       builder.AddRanges(io.Fonts->GetGlyphRangesVietnamese());
    if (params.font_glyph_ranges & FG_LATIN_EXT_A) {
-      static const ImWchar latin_ext_a[] { 0x0100, 0x017F, 0 };
+      constexpr ImWchar latin_ext_a[] { 0x0100, 0x017F, 0 };
       builder.AddRanges(latin_ext_a);
    }
    if (params.font_glyph_ranges & FG_LATIN_EXT_B) {
-      static const ImWchar latin_ext_b[] { 0x0180, 0x024F, 0 };
+      constexpr ImWchar latin_ext_b[] { 0x0180, 0x024F, 0 };
       builder.AddRanges(latin_ext_b);
    }
    builder.BuildRanges(&glyph_ranges);
 
-   // If both font_file and text_font_file are the same then just use "default" font
    bool same_font = (params.font_file == params.font_file_text || params.font_file_text.empty());
    bool same_size = (font_size == font_size_text);
 
