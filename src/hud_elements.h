@@ -39,6 +39,29 @@ class HudElements{
         static void frame_timing();
         static void media_player();
         static void graphs();
+
+        void convert_colors(struct overlay_params& params);
+        void convert_colors(bool do_conv, struct overlay_params& params);
+        struct hud_colors {
+            bool convert, update;
+            ImVec4 cpu,
+                gpu,
+                vram,
+                ram,
+                engine,
+                io,
+                frametime,
+                background,
+                text,
+                media_player,
+                wine,
+                gpu_load_high,
+                gpu_load_med,
+                gpu_load_low,
+                cpu_load_high,
+                cpu_load_med,
+                cpu_load_low;
+        } colors {};
 };
 
 extern HudElements HUDElements;

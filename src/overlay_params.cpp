@@ -633,16 +633,15 @@ parse_overlay_config(struct overlay_params *params,
       &params->cpu_load_color[0],
       &params->cpu_load_color[1],
       &params->cpu_load_color[2],
-
    };
 
    for (auto color : colors){
-         *color =
-         IM_COL32(RGBGetRValue(*color),
+      *color =
+      IM_COL32(RGBGetRValue(*color),
                RGBGetGValue(*color),
                RGBGetBValue(*color),
                255);
-      }
+   }
 
    if (!params->table_columns)
       params->table_columns = 3;
@@ -678,8 +677,10 @@ parse_overlay_config(struct overlay_params *params,
       main_metadata.meta.valid = false;
    }
 #endif
+
    if(!params->output_file.empty())
       printf("MANGOHUD: output_file is Deprecated, use output_folder instead\n");
+
    auto real_size = params->font_size * params->font_scale;
    real_font_size = ImVec2(real_size, real_size / 2);
    HUDElements.params = params;
@@ -689,4 +690,7 @@ parse_overlay_config(struct overlay_params *params,
       for (auto& option : HUDElements.options)
          HUDElements.sort_elements(option);
    }
+
+   // Needs ImGui context but it is null here for OpenGL so just note it and update somewhere else
+   HUDElements.colors.update = true;
 }

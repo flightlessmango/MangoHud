@@ -117,7 +117,7 @@ void imgui_create(void *ctx)
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
-    convert_colors(false, sw_stats, params);
+    HUDElements.convert_colors(false, params);
 
     glGetIntegerv (GL_VIEWPORT, last_vp.v);
     glGetIntegerv (GL_SCISSOR_BOX, last_sb.v);
@@ -175,6 +175,8 @@ void imgui_render(unsigned int width, unsigned int height)
     ImGuiContext *saved_ctx = ImGui::GetCurrentContext();
     ImGui::SetCurrentContext(state.imgui_ctx);
     ImGui::GetIO().DisplaySize = ImVec2(width, height);
+    if (HUDElements.colors.update)
+        HUDElements.convert_colors(params);
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();

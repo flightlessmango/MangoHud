@@ -53,25 +53,6 @@ struct swapchain_stats {
    std::string deviceName;
    std::string gpuName;
    std::string driverName;
-   struct {
-      ImVec4 cpu,
-         gpu,
-         vram,
-         ram,
-         engine,
-         io,
-         frametime,
-         background,
-         text,
-         media_player,
-         wine,
-         gpu_load_high,
-         gpu_load_med,
-         gpu_load_low,
-         cpu_load_high,
-         cpu_load_med,
-         cpu_load_low;
-   } colors;
 };
 
 struct fps_limit {
@@ -116,9 +97,8 @@ void FpsLimiter(struct fps_limit& stats);
 void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats);
 void calculate_benchmark_data(void *params_void);
 void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& text_font);
-void convert_colors(bool do_conv, struct swapchain_stats& sw_stats, struct overlay_params& params);
 void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...);
-ImVec4 change_on_load_temp (struct LOAD_DATA& data, int current);
+ImVec4 change_on_load_temp(LOAD_DATA& data, int current);
 float get_time_stat(void *_data, int _idx);
 
 #ifdef HAVE_DBUS
