@@ -345,6 +345,7 @@ parse_font_glyph_ranges(const char *str)
 #define parse_permit_upload(s) parse_unsigned(s)
 #define parse_no_small_font(s) parse_unsigned(s) != 0
 #define parse_cellpadding_y(s) parse_float(s)
+#define parse_table_columns(s) parse_unsigned(s)
 
 #define parse_cpu_color(s) parse_color(s)
 #define parse_gpu_color(s) parse_color(s)
@@ -643,7 +644,8 @@ parse_overlay_config(struct overlay_params *params,
                255);
       }
 
-   params->tableCols = 3;
+   if (!params->table_columns)
+      params->table_columns = 3;
 
    if (!params->font_size) {
       params->font_size = 24;

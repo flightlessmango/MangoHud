@@ -187,6 +187,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `cpu_load_value`                   | Set the values for medium and high load e.g `cpu_load_value=50,90`                    |
 | `cellpadding_y`                    | Set the vertical cellpadding, default is `-0.085` |
 | `frametime`                        | Display frametime next to fps text                                                    |
+| `table_columns`                    | Set the number of table columns for ImGui, defaults to 3                              |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 

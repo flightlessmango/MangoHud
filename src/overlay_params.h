@@ -116,6 +116,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(gpu_load_color)              \
    OVERLAY_PARAM_CUSTOM(cpu_load_color)              \
    OVERLAY_PARAM_CUSTOM(cellpadding_y)               \
+   OVERLAY_PARAM_CUSTOM(table_columns)               \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -179,7 +180,7 @@ struct overlay_params {
    std::vector<unsigned> gpu_load_value;
    std::vector<unsigned> cpu_load_value;
    unsigned media_player_color;
-   unsigned tableCols;
+   unsigned table_columns;
    bool no_small_font;
    float font_size, font_scale;
    float font_size_text;
