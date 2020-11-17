@@ -171,7 +171,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `log_interval`                     | Change the default log interval, `100` is default                                     |
 | `vulkan_driver`                    | Displays used vulkan driver, radv/amdgpu-pro/amdvlk                                   |
 | `gpu_name`                         | Displays GPU name from pci.ids                                                        |
-| `gpu_power`                        | Display GPU draw in watts                                                             |
+| `cpu_power`<br>`gpu_power`         | Display CPU/GPU draw in watts                                                             |
 | `engine_version`                   | Display OpenGL or vulkan and vulkan-based render engine's version                     |
 | `permit_upload`                    | Allow uploading of logs to Flightlessmango.com                                        |
 | `upload_log`                       | Change keybind for uploading log                                                      |

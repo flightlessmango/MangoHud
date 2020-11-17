@@ -26,6 +26,8 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
          cpuStats.UpdateCoreMhz();
       if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp] || logger->is_active())
          cpuStats.UpdateCpuTemp();
+      if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_power])
+         cpuStats.UpdateCpuPower();
 #endif
    }
    if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || logger->is_active()) {

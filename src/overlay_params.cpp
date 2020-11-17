@@ -487,6 +487,7 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_frame_timing] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_core_load] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_cpu_power] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = true;
