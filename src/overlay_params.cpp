@@ -500,6 +500,7 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_load_change] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_cpu_load_change] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout] = true;
+   params->enabled[OVERLAY_PARAM_ENABLED_frametime] = true;
    params->fps_sampling_period = 500000; /* 500ms */
    params->width = 0;
    params->height = 140;

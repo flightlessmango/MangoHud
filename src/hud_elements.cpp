@@ -233,12 +233,14 @@ if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps]){
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::Text("FPS");
         ImGui::PopFont();
-        ImGui::TableNextCell();
-        right_aligned_text(HUDElements.sw_stats->colors.text, HUDElements.ralign_width, "%.1f", 1000 / HUDElements.sw_stats->fps);
-        ImGui::SameLine(0, 1.0f);
-        ImGui::PushFont(HUDElements.sw_stats->font1);
-        ImGui::Text("ms");
-        ImGui::PopFont();
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_frametime]){
+            ImGui::TableNextCell();
+            right_aligned_text(HUDElements.sw_stats->colors.text, HUDElements.ralign_width, "%.1f", 1000 / HUDElements.sw_stats->fps);
+            ImGui::SameLine(0, 1.0f);
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            ImGui::Text("ms");
+            ImGui::PopFont();
+        }
     }
 }
 
