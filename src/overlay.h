@@ -98,7 +98,7 @@ void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats&
 void calculate_benchmark_data(void *params_void);
 void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& text_font);
 void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...);
-ImVec4 change_on_load_temp(LOAD_DATA& data, int current);
+ImVec4 change_on_load_temp(LOAD_DATA& data, unsigned current);
 float get_time_stat(void *_data, int _idx);
 
 #ifdef HAVE_DBUS

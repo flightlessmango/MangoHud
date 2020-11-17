@@ -376,7 +376,7 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
    ImGui::End();
 }
 
-ImVec4 change_on_load_temp(LOAD_DATA& data, int current)
+ImVec4 change_on_load_temp(LOAD_DATA& data, unsigned current)
 {
    if (current >= data.high_load){
       return data.color_high;
