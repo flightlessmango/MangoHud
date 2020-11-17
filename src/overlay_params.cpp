@@ -124,7 +124,7 @@ parse_fps_limit(const char *str)
    std::stringstream fps_limit_strings(str);
    std::string value;
 
-   while (std::getline(fps_limit_strings, value, ',')) {
+   while (std::getline(fps_limit_strings, value, '+')) {
       trim(value);
 
       uint32_t as_int;
