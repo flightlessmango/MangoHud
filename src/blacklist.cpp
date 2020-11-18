@@ -41,6 +41,7 @@ static bool check_blacklisted() {
         "LeagueClient.exe",
         "LeagueClientUxRender.exe",
         "SocialClubHelper.exe",
+        "gamescope",
     };
 
     std::string proc_name = get_proc_name();
