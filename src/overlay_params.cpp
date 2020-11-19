@@ -190,7 +190,7 @@ parse_str_tokenize(const char *str)
    std::vector<std::string> data;
    std::stringstream ss(str);
    std::string token;
-   while (std::getline(ss, token, ',')) {
+   while (std::getline(ss, token, '+')) {
       trim(token);
       data.push_back(token);
    }
