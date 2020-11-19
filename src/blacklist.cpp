@@ -62,7 +62,13 @@ bool is_blacklisted(bool force_recheck) {
 }
 
 void add_blacklist(std::string new_item) {
+    // check if item exits in blacklist before adding new item
+    if(std::find(blacklist.begin(), blacklist.end(), new_item) != blacklist.end()) {
+        return;
+    }
+
     blacklist.push_back (new_item);
     is_blacklisted(true);
 }
+
 
