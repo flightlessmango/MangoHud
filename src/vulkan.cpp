@@ -2082,11 +2082,8 @@ static VkResult overlay_CreateInstance(
    parse_overlay_config(&instance_data->params, getenv("MANGOHUD_CONFIG"));
 
    //check for blacklist item in the config file
-   std::stringstream ss(instance_data->params.blacklist);
-   std::string token;
-   while (std::getline(ss, token, ',')) {
-      trim(token);
-      add_blacklist(token);
+   for (auto& item : instance_data->params.blacklist) {
+      add_blacklist(item);
    }
 
    if (!is_blacklisted()) {

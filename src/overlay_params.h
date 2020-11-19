@@ -198,7 +198,8 @@ struct overlay_params {
    std::string pci_dev;
    std::string media_player_name;
    std::string cpu_text, gpu_text;
-   std::string blacklist;
+   //std::string blacklist;
+   std::vector<std::string> blacklist;
    unsigned log_interval;
    std::vector<media_player_order> media_player_order;
    std::vector<std::string> benchmark_percentiles;
