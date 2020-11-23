@@ -184,6 +184,20 @@ parse_load_value(const char *str)
 }
 
 
+static std::vector<std::string>
+parse_str_tokenize(const char *str)
+{
+   std::vector<std::string> data;
+   std::stringstream ss(str);
+   std::string token;
+   while (std::getline(ss, token, '+')) {
+      trim(token);
+      data.push_back(token);
+   }
+    return data;
+}
+
+
 static unsigned
 parse_unsigned(const char *str)
 {
@@ -362,6 +376,7 @@ parse_font_glyph_ranges(const char *str)
 #define parse_cpu_load_color(s) parse_load_color(s)
 #define parse_gpu_load_value(s) parse_load_value(s)
 #define parse_cpu_load_value(s) parse_load_value(s)
+#define parse_blacklist(s) parse_str_tokenize(s)
 
 static bool
 parse_help(const char *str)
