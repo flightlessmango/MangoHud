@@ -243,7 +243,7 @@ parse_media_player_order(const char *str)
    std::vector<media_player_order> order;
    std::stringstream ss(str);
    std::string token;
-   while (std::getline(ss, token, ',')) {
+   while (std::getline(ss, token, '+')) {
       trim(token);
       std::transform(token.begin(), token.end(), token.begin(), ::tolower);
       if (token == "title")
