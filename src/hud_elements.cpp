@@ -420,12 +420,12 @@ void HudElements::frame_timing(){
             ImGui::PlotHistogram(hash, get_time_stat, HUDElements.sw_stats,
                                 ARRAY_SIZE(HUDElements.sw_stats->frames_stats), 0,
                                 NULL, min_time, max_time,
-                                ImVec2(ImGui::GetContentRegionAvailWidth() * 2.5, 50));
+                                ImVec2(ImGui::GetContentRegionAvailWidth() * HUDElements.params->table_columns, 50));
         } else {
             ImGui::PlotLines(hash, get_time_stat, HUDElements.sw_stats,
                             ARRAY_SIZE(HUDElements.sw_stats->frames_stats), 0,
                             NULL, min_time, max_time,
-                            ImVec2(ImGui::GetContentRegionAvailWidth() * 2.5, 50));
+                            ImVec2(ImGui::GetContentRegionAvailWidth() * HUDElements.params->table_columns, 50));
         }
         ImGui::PopStyleColor();
         ImGui::SameLine(0,1.0f);
@@ -582,12 +582,12 @@ void HudElements::graphs(){
         ImGui::PlotLines("", arr.data(),
                 arr.size(), 0,
                 NULL, HUDElements.min, HUDElements.max,
-                ImVec2(ImGui::GetContentRegionAvailWidth() * 2.5, 50));
+                ImVec2(ImGui::GetContentRegionAvailWidth() * HUDElements.params->table_columns, 50));
     } else {
         ImGui::PlotHistogram("", arr.data(),
         arr.size(), 0,
         NULL, HUDElements.min, HUDElements.max,
-        ImVec2(ImGui::GetContentRegionAvailWidth() * 2.5, 50));
+        ImVec2(ImGui::GetContentRegionAvailWidth() * HUDElements.params->table_columns, 50));
     }
 
     ImGui::PopStyleColor(1);
