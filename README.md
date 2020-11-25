@@ -180,11 +180,11 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `wine_color`                       | Change color of the wine/proton text                                                  |
 | `cpu_mhz`                          | Shows the CPUs current MHz                                                            |
 | `gpu_load_change`                  | Changes the color of the GPU load depending on load                                   |
-| `gpu_load_color`                   | Set the colors for the gpu load change low,medium and high. e.g `gpu_load_color=0000FF,00FFFF,FF00FF`      |
-| `gpu_load_value`                   | Set the values for medium and high load e.g `gpu_load_value=50,90`                    |
+| `gpu_load_color`                   | Set the colors for the gpu load change low,medium and high. e.g `gpu_load_color=0000FF+00FFFF+FF00FF`      |
+| `gpu_load_value`                   | Set the values for medium and high load e.g `gpu_load_value=50+90`                    |
 | `cpu_load_change`                  | Changes the color of the CPU load depending on load                                   |
-| `cpu_load_color`                   | Set the colors for the gpu load change low,medium and high. e.g `cpu_load_color=0000FF,00FFFF,FF00FF`      |
-| `cpu_load_value`                   | Set the values for medium and high load e.g `cpu_load_value=50,90`                    |
+| `cpu_load_color`                   | Set the colors for the gpu load change low,medium and high. e.g `cpu_load_color=0000FF+00FFFF+FF00FF`      |
+| `cpu_load_value`                   | Set the values for medium and high load e.g `cpu_load_value=50+90`                    |
 | `cellpadding_y`                    | Set the vertical cellpadding, default is `-0.085` |
 | `frametime`                        | Display frametime next to fps text                                                    |
 | `table_columns`                    | Set the number of table columns for ImGui, defaults to 3                              |

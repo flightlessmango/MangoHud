@@ -159,7 +159,7 @@ parse_load_color(const char *str)
    std::vector<unsigned> load_colors;
    std::stringstream ss(str);
    std::string token;
-   while (std::getline(ss, token, ',')) {
+   while (std::getline(ss, token, '+')) {
       trim(token);
       load_colors.push_back(std::stoi(token, NULL, 16));
    }
@@ -176,7 +176,7 @@ parse_load_value(const char *str)
    std::vector<unsigned> load_value;
    std::stringstream ss(str);
    std::string token;
-   while (std::getline(ss, token, ',')) {
+   while (std::getline(ss, token, '+')) {
       trim(token);
       load_value.push_back(std::stoi(token));
    }
