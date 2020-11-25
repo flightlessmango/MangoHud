@@ -158,7 +158,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `vsync`<br> `gl_vsync`             | Set vsync for OpenGL or Vulkan                                                        |
 | `media_player`                     | Show media player metadata                                                            |
 | `media_player_name`                | Force media player DBus service name without the `org.mpris.MediaPlayer2` part, like `spotify`, `vlc`, `audacious` or `cantata`. If none is set, MangoHud tries to switch between currently playing players. |
-| `media_player_order`               | Media player metadata field order. Defaults to `title,artist,album`.                  |
+| `media_player_order`               | Media player metadata field order. Defaults to `title+artist+album`.                  |
 | `font_scale_media_player`          | Change size of media player text relative to font_size                                |
 | `io_read`<br> `io_write`           | Show non-cached IO read/write, in MiB/s                                               |
 | `pci_dev`                          | Select GPU device in multi-gpu setups                                                 |
@@ -180,11 +180,11 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `wine_color`                       | Change color of the wine/proton text                                                  |
 | `cpu_mhz`                          | Shows the CPUs current MHz                                                            |
 | `gpu_load_change`                  | Changes the color of the GPU load depending on load                                   |
-| `gpu_load_color`                   | Set the colors for the gpu load change low,medium and high. e.g `gpu_load_color=0000FF,00FFFF,FF00FF`      |
-| `gpu_load_value`                   | Set the values for medium and high load e.g `gpu_load_value=50,90`                    |
+| `gpu_load_color`                   | Set the colors for the gpu load change low,medium and high. e.g `gpu_load_color=0000FF+00FFFF+FF00FF`      |
+| `gpu_load_value`                   | Set the values for medium and high load e.g `gpu_load_value=50+90`                    |
 | `cpu_load_change`                  | Changes the color of the CPU load depending on load                                   |
-| `cpu_load_color`                   | Set the colors for the gpu load change low,medium and high. e.g `cpu_load_color=0000FF,00FFFF,FF00FF`      |
-| `cpu_load_value`                   | Set the values for medium and high load e.g `cpu_load_value=50,90`                    |
+| `cpu_load_color`                   | Set the colors for the gpu load change low,medium and high. e.g `cpu_load_color=0000FF+00FFFF+FF00FF`      |
+| `cpu_load_value`                   | Set the values for medium and high load e.g `cpu_load_value=50+90`                    |
 | `cellpadding_y`                    | Set the vertical cellpadding, default is `-0.085` |
 | `frametime`                        | Display frametime next to fps text                                                    |
 | `table_columns`                    | Set the number of table columns for ImGui, defaults to 3                              |
