@@ -407,6 +407,10 @@ void HudElements::frame_timing(){
         ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TextColored(HUDElements.colors.engine, "%s", "Frametime");
+        for (size_t i = 0; i < HUDElements.params->table_columns - 1; i++)
+            ImGui::TableNextCell();        
+        ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "%.1f ms", 1000 / HUDElements.sw_stats->fps);
         ImGui::PopFont();
         ImGui::TableNextRow();
         char hash[40];
@@ -428,10 +432,7 @@ void HudElements::frame_timing(){
                             ImVec2(ImGui::GetContentRegionAvailWidth() * HUDElements.params->table_columns, 50));
         }
         ImGui::PopStyleColor();
-        ImGui::SameLine(0,1.0f);
-        ImGui::PushFont(HUDElements.sw_stats->font1);
-        ImGui::Text("%.1f ms", 1000 / HUDElements.sw_stats->fps);
-        ImGui::PopFont();
+        
     }
 }
 
