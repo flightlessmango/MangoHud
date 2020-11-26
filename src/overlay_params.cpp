@@ -543,15 +543,15 @@ parse_overlay_config(struct overlay_params *params,
    params->media_player_name = "";
    params->font_scale = 1.0f;
    params->wine_color = 0xeb5b5b;
-   params->gpu_load_color = { 0xb22222, 0xfdfd09, 0x39f900 };
-   params->cpu_load_color = { 0xb22222, 0xfdfd09, 0x39f900 };
+   params->gpu_load_color = { 0x39f900, 0xfdfd09, 0xb22222 };
+   params->cpu_load_color = { 0x39f900, 0xfdfd09, 0xb22222 };
    params->font_scale_media_player = 0.55f;
    params->log_interval = 100;
    params->media_player_order = { MP_ORDER_TITLE, MP_ORDER_ARTIST, MP_ORDER_ALBUM };
    params->permit_upload = 0;
    params->benchmark_percentiles = { "97", "AVG", "1", "0.1" };
-   params->gpu_load_value = { 90, 60 };
-   params->cpu_load_value = { 90, 60 };
+   params->gpu_load_value = { 60, 90 };
+   params->cpu_load_value = { 60, 90 };
    params->cellpadding_y = -0.085;
 
 

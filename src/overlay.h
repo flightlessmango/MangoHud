@@ -70,11 +70,11 @@ struct benchmark_stats {
 };
 
 struct LOAD_DATA {
-   ImVec4 color_high;
-   ImVec4 color_med;
    ImVec4 color_low;
-   unsigned high_load;
+   ImVec4 color_med;
+   ImVec4 color_high;
    unsigned med_load;
+   unsigned high_load;
 };
 
 extern struct fps_limit fps_limit_stats;
