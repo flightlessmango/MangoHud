@@ -55,12 +55,12 @@ class HudElements{
                 text,
                 media_player,
                 wine,
-                gpu_load_high,
-                gpu_load_med,
                 gpu_load_low,
-                cpu_load_high,
+                gpu_load_med,
+                gpu_load_high,
+                cpu_load_low,
                 cpu_load_med,
-                cpu_load_low;
+                cpu_load_high;
         } colors {};
 };
 

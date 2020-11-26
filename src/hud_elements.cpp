@@ -64,12 +64,12 @@ void HudElements::convert_colors(struct overlay_params& params)
     HUDElements.colors.text = convert(params.text_color);
     HUDElements.colors.media_player = convert(params.media_player_color);
     HUDElements.colors.wine = convert(params.wine_color);
-    HUDElements.colors.gpu_load_high = convert(params.gpu_load_color[0]);
+    HUDElements.colors.gpu_load_low = convert(params.gpu_load_color[0]);
     HUDElements.colors.gpu_load_med = convert(params.gpu_load_color[1]);
-    HUDElements.colors.gpu_load_low = convert(params.gpu_load_color[2]);
-    HUDElements.colors.cpu_load_high = convert(params.cpu_load_color[0]);
+    HUDElements.colors.gpu_load_high = convert(params.gpu_load_color[2]);
+    HUDElements.colors.cpu_load_low = convert(params.cpu_load_color[0]);
     HUDElements.colors.cpu_load_med = convert(params.cpu_load_color[1]);
-    HUDElements.colors.cpu_load_low = convert(params.cpu_load_color[2]);
+    HUDElements.colors.cpu_load_high = convert(params.cpu_load_color[2]);
 
     ImGuiStyle& style = ImGui::GetStyle();
     style.Colors[ImGuiCol_PlotLines] = convert(params.frametime_color);
@@ -112,9 +112,9 @@ void HudElements::gpu_stats(){
         auto text_color = HUDElements.colors.text;
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_load_change]){
             struct LOAD_DATA gpu_data = {
-                HUDElements.colors.gpu_load_high,
-                HUDElements.colors.gpu_load_med,
                 HUDElements.colors.gpu_load_low,
+                HUDElements.colors.gpu_load_med,
+                HUDElements.colors.gpu_load_high,
                 HUDElements.params->gpu_load_value[0],
                 HUDElements.params->gpu_load_value[1]
             };
@@ -173,9 +173,9 @@ void HudElements::cpu_stats(){
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_load_change]){
             int cpu_load_percent = int(cpuStats.GetCPUDataTotal().percent);
             struct LOAD_DATA cpu_data = {
-                HUDElements.colors.cpu_load_high,
-                HUDElements.colors.cpu_load_med,
                 HUDElements.colors.cpu_load_low,
+                HUDElements.colors.cpu_load_med,
+                HUDElements.colors.cpu_load_high,
                 HUDElements.params->cpu_load_value[0],
                 HUDElements.params->cpu_load_value[1]
             };
