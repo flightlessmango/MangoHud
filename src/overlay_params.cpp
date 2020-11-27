@@ -738,6 +738,6 @@ parse_overlay_config(struct overlay_params *params,
    HUDElements.colors.update = true;
 
    if(not logger) logger = std::make_unique<Logger>(params);
-   if(params->autostart_log)
+   if(params->autostart_log && !logger->is_active())
       std::thread(autostart_log, params->autostart_log).detach();
 }
