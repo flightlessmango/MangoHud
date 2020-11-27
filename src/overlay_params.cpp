@@ -239,22 +239,22 @@ parse_path(const char *str)
 #ifdef _XOPEN_SOURCE
    // Expand ~/ to home dir
    if (str[0] == '~') {
-      std::string s = str;
-      size_t n = 0;
+      std::stringstream s;
       wordexp_t e;
       int ret;
 
-      while ((n = s.find_first_of(" ", n)) != std::string::npos) {
-         s = s.replace(n, 1, "\\ ");
-         n += 2;
+      if (!(ret = wordexp(str, &e, 0))) {
+         for(size_t i = 0; i < e.we_wordc; i++)
+         {
+            if (i > 0)
+               s << " ";
+            s << e.we_wordv[i];
+         }
       }
-
-      if (!(ret = wordexp(s.c_str(), &e, 0)))
-         s = e.we_wordv[0];
       wordfree(&e);
 
       if (!ret)
-         return s;
+         return s.str();
    }
 #endif
    return str;
