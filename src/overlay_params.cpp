@@ -22,7 +22,6 @@
 #include "config.h"
 #include "string_utils.h"
 #include "hud_elements.h"
-
 #include "mesa/util/os_socket.h"
 
 #ifdef HAVE_X11
@@ -380,6 +379,7 @@ parse_font_glyph_ranges(const char *str)
 #define parse_no_small_font(s) parse_unsigned(s) != 0
 #define parse_cellpadding_y(s) parse_float(s)
 #define parse_table_columns(s) parse_unsigned(s)
+#define parse_autostart_log(s) parse_unsigned(s)
 
 #define parse_cpu_color(s) parse_color(s)
 #define parse_gpu_color(s) parse_color(s)
@@ -736,4 +736,8 @@ parse_overlay_config(struct overlay_params *params,
 
    // Needs ImGui context but it is null here for OpenGL so just note it and update somewhere else
    HUDElements.colors.update = true;
+
+   if(not logger) logger = std::make_unique<Logger>(params);
+   if(params->autostart_log)
+      std::thread(autostart_log, params->autostart_log).detach();
 }

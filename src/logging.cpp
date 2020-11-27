@@ -166,3 +166,8 @@ void Logger::upload_last_logs() {
   if(m_log_files.empty()) return;
   std::thread(upload_files, m_log_files).detach();
 }
+
+void autostart_log(int sleep) {
+  os_time_sleep(sleep * 1000000);
+  logger->start_logging();
+}

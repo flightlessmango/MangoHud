@@ -74,5 +74,6 @@ extern uint64_t frametime;
 extern logData currentLogData;
 
 string exec(string command);
+void autostart_log(int sleep);
 
 #endif //MANGOHUD_LOGGING_H

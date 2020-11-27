@@ -70,7 +70,6 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
 }
 
 void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
-   if(not logger) logger = std::make_unique<Logger>(&params);
    uint32_t f_idx = sw_stats.n_frames % ARRAY_SIZE(sw_stats.frames_stats);
    uint64_t now = os_time_get(); /* us */
    double elapsed = (double)(now - sw_stats.last_fps_update); /* us */
