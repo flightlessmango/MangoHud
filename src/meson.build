@@ -1,5 +1,6 @@
 glslang = find_program('glslangValidator')
 
+ld_libdir_mangohud_abs = ''
 # Needs prefix for configure_file()
 if get_option('append_libdir_mangohud')
   libdir_mangohud = join_paths(get_option('libdir'), 'mangohud')
@@ -13,6 +14,10 @@ endif
 if get_option('ld_libdir_prefix')
   # FIXME derive from libdir
   ld_libdir_mangohud = get_option('prefix') + '/lib/mangohud/\$LIB/'
+endif
+
+if get_option('ld_libdir_abs')
+  ld_libdir_mangohud_abs = ld_libdir_mangohud
 endif
 
 overlay_shaders = [
@@ -205,7 +210,8 @@ configure_file(input : 'mangohud.json.in',
 
 configure_file(input : '../bin/mangohud.in',
   output : 'mangohud',
-  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud},
+  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud,
+                   'ld_libdir_mangohud_abs': ld_libdir_mangohud_abs},
   install_dir : get_option('bindir'),
 )
 
