@@ -479,8 +479,6 @@ void HudElements::graphs(){
     }
 
     if (value == "cpu_temp"){
-        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp])
-            HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp] = true;
         for (auto& it : graph_data){
             arr.push_back(float(it.cpu_temp));
             arr.erase(arr.begin());
@@ -494,8 +492,6 @@ void HudElements::graphs(){
     }
 
     if (value == "gpu_temp"){
-        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp])
-            HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp] = true;
         for (auto& it : graph_data){
             arr.push_back(float(it.gpu_temp));
             arr.erase(arr.begin());
@@ -597,6 +593,8 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
     if (param == "frame_timing")    { ordered_functions.push_back({frame_timing, value});   }
     if (param == "media_player")    { ordered_functions.push_back({media_player, value});   }
     if (param == "graphs"){
+        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs])
+            HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs] = true;
         auto values = str_tokenize(value);
         for (auto& value : values) {
             if (find(permitted_params.begin(), permitted_params.end(), value) != permitted_params.end())
