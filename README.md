@@ -191,6 +191,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `blacklist`                        | Add a program to the blacklist. e.g `blacklist=vkcube,WatchDogs2.exe`                 |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
+Because comma is also used as option delimiter and needs to be escaped for values with a backslash, you can use `+` like `MANGOHUD_CONFIG=fps_limit=60+30+0` instead.
 
 Note: Width and Height are set automatically based on the font_size, but can be overridden.
 ## Vsync
