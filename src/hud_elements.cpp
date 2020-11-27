@@ -4,6 +4,7 @@
 #include "cpu.h"
 #include "memory.h"
 #include "mesa/util/macros.h"
+#include "string_utils.h"
 
 // Cut from https://github.com/ocornut/imgui/pull/2943
 // Probably move to ImGui
@@ -596,8 +597,8 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
     if (param == "frame_timing")    { ordered_functions.push_back({frame_timing, value});   }
     if (param == "media_player")    { ordered_functions.push_back({media_player, value});   }
     if (param == "graphs"){
-    stringstream ss; ss << value;
-        while (getline(ss, value, '+')) {
+        auto values = str_tokenize(value);
+        for (auto& value : values) {
             if (find(permitted_params.begin(), permitted_params.end(), value) != permitted_params.end())
                 ordered_functions.push_back({graphs, value});
             else

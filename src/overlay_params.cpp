@@ -100,9 +100,8 @@ parse_string_to_keysym_vec(const char *str)
    std::vector<KeySym> keys;
    if(g_x11->IsLoaded())
    {
-      std::stringstream keyStrings(str);
-      std::string ks;
-      while (std::getline(keyStrings, ks, '+')) {
+      auto keyStrings = str_tokenize(str);
+      for (auto& ks : keyStrings) {
          trim(ks);
          KeySym xk = g_x11->XStringToKeysym(ks.c_str());
          if (xk)
@@ -140,10 +139,9 @@ static std::vector<std::uint32_t>
 parse_fps_limit(const char *str)
 {
    std::vector<std::uint32_t> fps_limit;
-   std::stringstream fps_limit_strings(str);
-   std::string value;
+   auto fps_limit_strings = str_tokenize(str);
 
-   while (std::getline(fps_limit_strings, value, '+')) {
+   for (auto& value : fps_limit_strings) {
       trim(value);
 
       uint32_t as_int;
@@ -176,9 +174,9 @@ static std::vector<unsigned>
 parse_load_color(const char *str)
 {
    std::vector<unsigned> load_colors;
-   std::stringstream ss(str);
+   auto tokens = str_tokenize(str);
    std::string token;
-   while (std::getline(ss, token, '+')) {
+   for (auto& token : tokens) {
       trim(token);
       load_colors.push_back(std::stoi(token, NULL, 16));
    }
@@ -193,9 +191,9 @@ static std::vector<unsigned>
 parse_load_value(const char *str)
 {
    std::vector<unsigned> load_value;
-   std::stringstream ss(str);
+   auto tokens = str_tokenize(str);
    std::string token;
-   while (std::getline(ss, token, '+')) {
+   for (auto& token : tokens) {
       trim(token);
       load_value.push_back(std::stoi(token));
    }
@@ -207,9 +205,9 @@ static std::vector<std::string>
 parse_str_tokenize(const char *str)
 {
    std::vector<std::string> data;
-   std::stringstream ss(str);
+   auto tokens = str_tokenize(str);
    std::string token;
-   while (std::getline(ss, token, '+')) {
+   for (auto& token : tokens) {
       trim(token);
       data.push_back(token);
    }
@@ -260,9 +258,8 @@ static std::vector<media_player_order>
 parse_media_player_order(const char *str)
 {
    std::vector<media_player_order> order;
-   std::stringstream ss(str);
-   std::string token;
-   while (std::getline(ss, token, '+')) {
+   auto tokens = str_tokenize(str);
+   for (auto& token : tokens) {
       trim(token);
       std::transform(token.begin(), token.end(), token.begin(), ::tolower);
       if (token == "title")
@@ -280,10 +277,8 @@ static std::vector<std::string>
 parse_benchmark_percentiles(const char *str)
 {
    std::vector<std::string> percentiles;
-   std::stringstream percent_strings(str);
-   std::string value;
-
-   while (std::getline(percent_strings, value, '+')) {
+   auto tokens = str_tokenize(str);
+   for (auto& value : tokens) {
       trim(value);
 
       if (value == "AVG") {
@@ -321,9 +316,8 @@ static uint32_t
 parse_font_glyph_ranges(const char *str)
 {
    uint32_t fg = 0;
-   std::stringstream ss(str);
-   std::string token;
-   while (std::getline(ss, token, ',')) {
+   auto tokens = str_tokenize(str);
+   for (auto& token : tokens) {
       trim(token);
       std::transform(token.begin(), token.end(), token.begin(), ::tolower);
 
