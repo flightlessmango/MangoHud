@@ -453,25 +453,19 @@ void HudElements::media_player(){
 }
 
 void HudElements::graphs(){
-
+    ImGui::TableNextRow();
     ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
     std::string value = HUDElements.ordered_functions[HUDElements.place].second;
-    std::vector<float> arr;
+    std::vector<float> arr(50, 0);
 
-    for (size_t i = 0; i < 50; i++)
-    {
-        arr.push_back(0);
-    }
-
+    ImGui::PushFont(HUDElements.sw_stats->font1);
     if (value == "cpu_load"){
         for (auto& it : graph_data){
             arr.push_back(float(it.cpu_load));
             arr.erase(arr.begin());
         }
         HUDElements.max = 100; HUDElements.min = 0;
-        ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TextColored(HUDElements.colors.engine, "%s", "CPU Load");
-        ImGui::PopFont();
     }
 
     if (value == "gpu_load"){
@@ -480,9 +474,7 @@ void HudElements::graphs(){
             arr.erase(arr.begin());
         }
         HUDElements.max = 100; HUDElements.min = 0;
-        ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TextColored(HUDElements.colors.engine, "%s", "GPU Load");
-        ImGui::PopFont();
     }
 
     if (value == "cpu_temp"){
@@ -497,9 +489,7 @@ void HudElements::graphs(){
 
         HUDElements.max = HUDElements.cpu_temp_max;
         HUDElements.min = 0;
-        ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TextColored(HUDElements.colors.engine, "%s", "CPU Temp");
-        ImGui::PopFont();
     }
 
     if (value == "gpu_temp"){
@@ -514,9 +504,7 @@ void HudElements::graphs(){
 
         HUDElements.max = HUDElements.gpu_temp_max;
         HUDElements.min = 0;
-        ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TextColored(HUDElements.colors.engine, "%s", "GPU Temp");
-        ImGui::PopFont();
     }
 
     if (value == "gpu_core_clock"){
@@ -529,9 +517,7 @@ void HudElements::graphs(){
 
         HUDElements.max = HUDElements.gpu_core_max;
         HUDElements.min = 0;
-        ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TextColored(HUDElements.colors.engine, "%s", "GPU Core Clock");
-        ImGui::PopFont();
     }
 
     if (value == "gpu_mem_clock"){
@@ -544,9 +530,7 @@ void HudElements::graphs(){
 
         HUDElements.max = HUDElements.gpu_mem_max;
         HUDElements.min = 0;
-        ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TextColored(HUDElements.colors.engine, "%s", "GPU Mem Clock");
-        ImGui::PopFont();
     }
 
     if (value == "vram"){
@@ -557,9 +541,7 @@ void HudElements::graphs(){
 
         HUDElements.max = gpu_info.memoryTotal;
         HUDElements.min = 0;
-        ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TextColored(HUDElements.colors.engine, "%s", "VRAM");
-        ImGui::PopFont();
     }
 
     if (value == "ram"){
@@ -572,11 +554,10 @@ void HudElements::graphs(){
 
         HUDElements.max = memmax;
         HUDElements.min = 0;
-        ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TextColored(HUDElements.colors.engine, "%s", "RAM");
-        ImGui::PopFont();
     }
-
+    ImGui::PopFont();
+    ImGui::Dummy(ImVec2(0.0f,5.0f));
     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
     ImGui::TableNextRow();
     if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_histogram]){
@@ -590,7 +571,7 @@ void HudElements::graphs(){
         NULL, HUDElements.min, HUDElements.max,
         ImVec2(ImGui::GetContentRegionAvailWidth() * HUDElements.params->table_columns, 50));
     }
-
+    ImGui::Dummy(ImVec2(0.0f,5.0f));
     ImGui::PopStyleColor(1);
 }
 
