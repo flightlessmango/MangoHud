@@ -2,7 +2,7 @@ project(
   'Dear ImGui core library',
   'cpp',
   license : 'MIT',
-  version : '1.78-WIP-tables-fe3637fa607257ff83bf61092d2173f83b311527',
+  version : '1.80-WIP-tables-8bc4f9ee52ef5d1a7a80c7bc2a7bdeca5f48f49a',
 )
 
 dearimgui_inc = include_directories('.')

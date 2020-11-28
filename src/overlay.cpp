@@ -413,7 +413,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
 
    if (!params.no_display){
       ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
-      ImGui::BeginTable("hud", params.table_columns, ImGuiTableFlags_NoClipX);
+      ImGui::BeginTable("hud", params.table_columns, ImGuiTableFlags_NoClip);
       HUDElements.place = 0;
       for (auto& func : HUDElements.ordered_functions){
          func.first();
