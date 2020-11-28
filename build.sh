@@ -142,14 +142,14 @@ configure() {
     dependencies
     git submodule update --init --depth 50
     if [[ ! -f "build/meson64/build.ninja" ]]; then
-        meson build/meson64 --libdir lib/mangohud/lib --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_prefix=true $@ ${CONFIGURE_OPTS}
+        meson build/meson64 --libdir lib/mangohud/lib --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_prefix=true -Dld_libdir_abs=true $@ ${CONFIGURE_OPTS}
     fi
     if [[ ! -f "build/meson32/build.ninja" ]]; then
         export CC="gcc -m32"
         export CXX="g++ -m32"
         export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH_32}"
         export LLVM_CONFIG="/usr/bin/llvm-config32"
-        meson build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_prefix=true $@ ${CONFIGURE_OPTS}
+        meson build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_prefix=true -Dld_libdir_abs=true $@ ${CONFIGURE_OPTS}
     fi
 }
 
@@ -214,11 +214,19 @@ install() {
     /usr/bin/install -vm755  ./build/release/usr/bin/mangohud /usr/bin/mangohud
 
     # FIXME get the triplet somehow
+    mkdir -p /usr/lib/mangohud/tls
+    ln -sv ../lib /usr/lib/mangohud/tls/x86_64
+    ln -sv ../lib32 /usr/lib/mangohud/tls/i686
+    # Some distros search in $prefix/x86_64-linux-gnu/tls/x86_64 etc instead
+    ln -sv . /usr/lib/mangohud/lib/i686-linux-gnu
+    ln -sv . /usr/lib/mangohud/lib/x86_64-linux-gnu
+    # $LIB can be "lib/tls/x86_64"?
+    ln -sv ../tls /usr/lib/mangohud/lib/tls
+
     ln -sv lib /usr/lib/mangohud/lib64
     ln -sv lib /usr/lib/mangohud/x86_64
     ln -sv lib /usr/lib/mangohud/x86_64-linux-gnu
     ln -sv . /usr/lib/mangohud/lib/x86_64
-    ln -sv . /usr/lib/mangohud/lib/x86_64-linux-gnu
     ln -sv lib32 /usr/lib/mangohud/i686
     ln -sv lib32 /usr/lib/mangohud/i386-linux-gnu
     ln -sv ../lib32 /usr/lib/mangohud/lib/i386-linux-gnu

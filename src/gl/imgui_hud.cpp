@@ -67,8 +67,15 @@ void imgui_init()
 {
     if (cfg_inited)
         return;
-    is_blacklisted(true);
+
     parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
+
+   //check for blacklist item in the config file
+   for (auto& item : params.blacklist) {
+      add_blacklist(item);
+   }
+
+    is_blacklisted(true);
     notifier.params = &params;
     start_notifier(notifier);
     window_size = ImVec2(params.width, params.height);
@@ -85,11 +92,11 @@ void imgui_create(void *ctx)
 
     if (!ctx)
         return;
-    
+
     imgui_shutdown();
     imgui_init();
     inited = true;
-    
+
     gladLoadGL();
 
     GetOpenGLVersion(sw_stats.version_gl.major,
@@ -117,7 +124,7 @@ void imgui_create(void *ctx)
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
-    convert_colors(false, sw_stats, params);
+    HUDElements.convert_colors(false, params);
 
     glGetIntegerv (GL_VIEWPORT, last_vp.v);
     glGetIntegerv (GL_SCISSOR_BOX, last_sb.v);
@@ -133,6 +140,7 @@ void imgui_create(void *ctx)
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &current_texture);
 
     create_fonts(params, sw_stats.font1, sw_stats.font_text);
+    sw_stats.font_params_hash = params.font_params_hash;
 
     // Restore global context or ours might clash with apps that use Dear ImGui
     ImGui::SetCurrentContext(saved_ctx);
@@ -175,6 +183,15 @@ void imgui_render(unsigned int width, unsigned int height)
     ImGuiContext *saved_ctx = ImGui::GetCurrentContext();
     ImGui::SetCurrentContext(state.imgui_ctx);
     ImGui::GetIO().DisplaySize = ImVec2(width, height);
+    if (HUDElements.colors.update)
+        HUDElements.convert_colors(params);
+
+    if (sw_stats.font_params_hash != params.font_params_hash)
+    {
+        sw_stats.font_params_hash = params.font_params_hash;
+        create_fonts(params, sw_stats.font1, sw_stats.font_text);
+        ImGui_ImplOpenGL3_CreateFontsTexture();
+    }
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();

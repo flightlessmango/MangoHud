@@ -55,11 +55,19 @@ mangohud_install() {
     install -vm755 ./usr/bin/mangohud /usr/bin/mangohud
 
     # FIXME get the triplet somehow
+    mkdir -p /usr/lib/mangohud/tls
+    ln -sv ../lib /usr/lib/mangohud/tls/x86_64
+    ln -sv ../lib32 /usr/lib/mangohud/tls/i686
+    # Some distros search in $prefix/x86_64-linux-gnu/tls/x86_64 etc instead
+    ln -sv . /usr/lib/mangohud/lib/i686-linux-gnu
+    ln -sv . /usr/lib/mangohud/lib/x86_64-linux-gnu
+    # $LIB can be "lib/tls/x86_64"?
+    ln -sv ../tls /usr/lib/mangohud/lib/tls
+
     ln -sv lib /usr/lib/mangohud/lib64
     ln -sv lib /usr/lib/mangohud/x86_64
     ln -sv lib /usr/lib/mangohud/x86_64-linux-gnu
     ln -sv . /usr/lib/mangohud/lib/x86_64
-    ln -sv . /usr/lib/mangohud/lib/x86_64-linux-gnu
     ln -sv lib32 /usr/lib/mangohud/i686
     ln -sv lib32 /usr/lib/mangohud/i386-linux-gnu
     ln -sv ../lib32 /usr/lib/mangohud/lib/i386-linux-gnu

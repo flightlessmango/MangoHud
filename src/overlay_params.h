@@ -29,6 +29,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(frame_timing)                  \
    OVERLAY_PARAM_BOOL(core_load)                     \
    OVERLAY_PARAM_BOOL(cpu_temp)                      \
+   OVERLAY_PARAM_BOOL(cpu_power)                     \
    OVERLAY_PARAM_BOOL(gpu_temp)                      \
    OVERLAY_PARAM_BOOL(cpu_stats)                     \
    OVERLAY_PARAM_BOOL(gpu_stats)                     \
@@ -39,6 +40,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(read_cfg)                      \
    OVERLAY_PARAM_BOOL(io_read)                       \
    OVERLAY_PARAM_BOOL(io_write)                      \
+   OVERLAY_PARAM_BOOL(io_stats)                      \
    OVERLAY_PARAM_BOOL(gpu_mem_clock)                 \
    OVERLAY_PARAM_BOOL(gpu_core_clock)                \
    OVERLAY_PARAM_BOOL(gpu_power)                     \
@@ -50,12 +52,19 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(engine_version)                \
    OVERLAY_PARAM_BOOL(histogram)                     \
    OVERLAY_PARAM_BOOL(wine)                          \
+   OVERLAY_PARAM_BOOL(gpu_load_change)               \
+   OVERLAY_PARAM_BOOL(cpu_load_change)               \
+   OVERLAY_PARAM_BOOL(graphs)                        \
+   OVERLAY_PARAM_BOOL(legacy_layout)                 \
+   OVERLAY_PARAM_BOOL(cpu_mhz)                       \
+   OVERLAY_PARAM_BOOL(frametime)                     \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
    OVERLAY_PARAM_CUSTOM(font_file)                   \
    OVERLAY_PARAM_CUSTOM(font_file_text)              \
    OVERLAY_PARAM_CUSTOM(font_glyph_ranges)           \
+   OVERLAY_PARAM_CUSTOM(no_small_font)               \
    OVERLAY_PARAM_CUSTOM(font_size)                   \
    OVERLAY_PARAM_CUSTOM(font_size_text)              \
    OVERLAY_PARAM_CUSTOM(font_scale)                  \
@@ -69,6 +78,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(vsync)                       \
    OVERLAY_PARAM_CUSTOM(gl_vsync)                    \
    OVERLAY_PARAM_CUSTOM(toggle_hud)                  \
+   OVERLAY_PARAM_CUSTOM(toggle_fps_limit)            \
    OVERLAY_PARAM_CUSTOM(toggle_logging)              \
    OVERLAY_PARAM_CUSTOM(reload_cfg)                  \
    OVERLAY_PARAM_CUSTOM(upload_log)                  \
@@ -88,7 +98,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(background_color)            \
    OVERLAY_PARAM_CUSTOM(io_color)                    \
    OVERLAY_PARAM_CUSTOM(text_color)                  \
-   OVERLAY_PARAM_CUSTOM (wine_color)                 \
+   OVERLAY_PARAM_CUSTOM(wine_color)                  \
    OVERLAY_PARAM_CUSTOM(alpha)                       \
    OVERLAY_PARAM_CUSTOM(log_duration)                \
    OVERLAY_PARAM_CUSTOM(pci_dev)                     \
@@ -99,9 +109,16 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(gpu_text)                    \
    OVERLAY_PARAM_CUSTOM(log_interval)                \
    OVERLAY_PARAM_CUSTOM(permit_upload)               \
-   OVERLAY_PARAM_CUSTOM(render_mango)                \
    OVERLAY_PARAM_CUSTOM(benchmark_percentiles)       \
-   OVERLAY_PARAM_CUSTOM(help)
+   OVERLAY_PARAM_CUSTOM(help)                        \
+   OVERLAY_PARAM_CUSTOM(gpu_load_value)              \
+   OVERLAY_PARAM_CUSTOM(cpu_load_value)              \
+   OVERLAY_PARAM_CUSTOM(gpu_load_color)              \
+   OVERLAY_PARAM_CUSTOM(cpu_load_color)              \
+   OVERLAY_PARAM_CUSTOM(cellpadding_y)               \
+   OVERLAY_PARAM_CUSTOM(table_columns)               \
+   OVERLAY_PARAM_CUSTOM(blacklist)                   \
+   OVERLAY_PARAM_CUSTOM(autostart_log)               \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -148,11 +165,11 @@ struct overlay_params {
    enum overlay_param_position position;
    int control;
    uint32_t fps_sampling_period; /* us */
-   uint32_t fps_limit;
+   std::vector<std::uint32_t> fps_limit;
    bool help;
    bool no_display;
    bool full;
-   bool io_read, io_write;
+   bool io_read, io_write, io_stats;
    unsigned width;
    unsigned height;
    int offset_x, offset_y;
@@ -160,14 +177,20 @@ struct overlay_params {
    int gl_vsync;
    uint64_t log_duration;
    unsigned cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color, wine_color;
+   std::vector<unsigned> gpu_load_color;
+   std::vector<unsigned> cpu_load_color;
+   std::vector<unsigned> gpu_load_value;
+   std::vector<unsigned> cpu_load_value;
    unsigned media_player_color;
-   unsigned tableCols;
-   unsigned render_mango;
+   unsigned table_columns;
+   bool no_small_font;
    float font_size, font_scale;
    float font_size_text;
    float font_scale_media_player;
    float background_alpha, alpha;
+   float cellpadding_y;
    std::vector<KeySym> toggle_hud;
+   std::vector<KeySym> toggle_fps_limit;
    std::vector<KeySym> toggle_logging;
    std::vector<KeySym> reload_cfg;
    std::vector<KeySym> upload_log;
@@ -176,16 +199,19 @@ struct overlay_params {
    std::string pci_dev;
    std::string media_player_name;
    std::string cpu_text, gpu_text;
-   unsigned log_interval;
+   //std::string blacklist;
+   std::vector<std::string> blacklist;
+   unsigned log_interval, autostart_log;
    std::vector<media_player_order> media_player_order;
    std::vector<std::string> benchmark_percentiles;
-
    std::string font_file, font_file_text;
    uint32_t font_glyph_ranges;
 
    std::string config_file_path;
    std::unordered_map<std::string,std::string> options;
    int permit_upload;
+
+   size_t font_params_hash;
 };
 
 const extern char *overlay_param_names[];

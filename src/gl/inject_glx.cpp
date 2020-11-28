@@ -4,6 +4,7 @@
 #include <thread>
 #include <vector>
 #include <algorithm>
+#include <atomic>
 #include <cstring>
 #include "real_dlsym.h"
 #include "loaders/loader_glx.h"
@@ -31,7 +32,7 @@ EXPORT_C_(void *) glXGetProcAddressARB(const unsigned char* procName);
 
 static glx_loader glx;
 
-static std::vector<std::thread::id> gl_threads;
+static std::atomic<int> refcnt (0);
 
 void* get_glx_proc_address(const char* name) {
     glx.Load();
@@ -57,10 +58,48 @@ EXPORT_C_(void *) glXCreateContext(void *dpy, void *vis, void *shareList, int di
 {
     glx.Load();
     void *ctx = glx.CreateContext(dpy, vis, shareList, direct);
+    if (ctx)
+        refcnt++;
 #ifndef NDEBUG
     std::cerr << __func__ << ":" << ctx << std::endl;
 #endif
     return ctx;
+}
+
+EXPORT_C_(void *) glXCreateContextAttribs(void *dpy, void *config,void *share_context, int direct, const int *attrib_list)
+{
+    glx.Load();
+    void *ctx = glx.CreateContextAttribs(dpy, config, share_context, direct, attrib_list);
+    if (ctx)
+        refcnt++;
+#ifndef NDEBUG
+    std::cerr << __func__ << ":" << ctx << std::endl;
+#endif
+    return ctx;
+}
+
+EXPORT_C_(void *) glXCreateContextAttribsARB(void *dpy, void *config,void *share_context, int direct, const int *attrib_list)
+{
+    glx.Load();
+    void *ctx = glx.CreateContextAttribsARB(dpy, config, share_context, direct, attrib_list);
+    if (ctx)
+        refcnt++;
+#ifndef NDEBUG
+    std::cerr << __func__ << ":" << ctx << std::endl;
+#endif
+    return ctx;
+}
+
+EXPORT_C_(void) glXDestroyContext(void *dpy, void *ctx)
+{
+    glx.Load();
+    glx.DestroyContext(dpy, ctx);
+    refcnt--;
+    if (refcnt <= 0)
+        imgui_shutdown();
+#ifndef NDEBUG
+    std::cerr << __func__ << ":" << ctx << std::endl;
+#endif
 }
 
 EXPORT_C_(int) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
@@ -73,21 +112,10 @@ EXPORT_C_(int) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
 
     if (!is_blacklisted()) {
         if (ret) {
-            //TODO might as well just ignore everything here as long as VBOs get recreated anyway
-            auto it = std::find(gl_threads.begin(), gl_threads.end(), std::this_thread::get_id());
-            if (!ctx) {
-                if (it != gl_threads.end())
-                    gl_threads.erase(it);
-                if (!gl_threads.size())
-                    imgui_set_context(nullptr);
-            } else {
-                if (it == gl_threads.end())
-                    gl_threads.push_back(std::this_thread::get_id());
-                imgui_set_context(ctx);
+            imgui_set_context(ctx);
 #ifndef NDEBUG
-                std::cerr << "MANGOHUD: GL thread count: " << gl_threads.size() << "\n";
+            std::cerr << "MANGOHUD: GL ref count: " << refcnt << "\n";
 #endif
-            }
         }
 
         if (params.gl_vsync >= -1) {
@@ -214,11 +242,14 @@ struct func_ptr {
    void *ptr;
 };
 
-static std::array<const func_ptr, 10> name_to_funcptr_map = {{
+static std::array<const func_ptr, 13> name_to_funcptr_map = {{
 #define ADD_HOOK(fn) { #fn, (void *) fn }
    ADD_HOOK(glXGetProcAddress),
    ADD_HOOK(glXGetProcAddressARB),
+   ADD_HOOK(glXCreateContextAttribs),
+   ADD_HOOK(glXCreateContextAttribsARB),
    ADD_HOOK(glXCreateContext),
+   ADD_HOOK(glXDestroyContext),
    ADD_HOOK(glXMakeCurrent),
    ADD_HOOK(glXSwapBuffers),
    ADD_HOOK(glXSwapBuffersMscOML),

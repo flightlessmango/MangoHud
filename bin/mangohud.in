@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 if [ "$#" -eq 0 ]; then
 	programname=`basename "$0"`
@@ -13,10 +13,10 @@ if [ "$1" = "--dlsym" ]; then
 	shift
 fi
 
-MANGOHUD_LIB_NAME="libMangoHud.so"
+MANGOHUD_LIB_NAME="@ld_libdir_mangohud_abs@libMangoHud.so"
 
 if [ "$MANGOHUD_DLSYM" = "1" ]; then
-	MANGOHUD_LIB_NAME="libMangoHud_dlsym.so:${MANGOHUD_LIB_NAME}"
+	MANGOHUD_LIB_NAME="@ld_libdir_mangohud_abs@libMangoHud_dlsym.so:${MANGOHUD_LIB_NAME}"
 fi
 
 # Preload using the plain filesnames of the libs, the dynamic linker will

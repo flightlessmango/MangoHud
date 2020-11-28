@@ -6,7 +6,7 @@
 #include "config.h"
 #include "file_utils.h"
 #include "string_utils.h"
-
+#include "hud_elements.h"
 std::string program_name;
 
 void parseConfigLine(std::string line, std::unordered_map<std::string,std::string>& options) {
@@ -24,8 +24,10 @@ void parseConfigLine(std::string line, std::unordered_map<std::string,std::strin
     param = line.substr(0, equal);
     trim(param);
     trim(value);
-    if (!param.empty())
+    if (!param.empty()){
+        HUDElements.options.push_back({param, value});
         options[param] = value;
+    }
 }
 
 void enumerate_config_files(std::vector<std::string>& paths)
@@ -37,7 +39,9 @@ void enumerate_config_files(std::vector<std::string>& paths)
 
     if (!env_config.empty())
         paths.push_back(env_config + mangohud_dir + "MangoHud.conf");
-
+#ifdef _WIN32
+    paths.push_back("C:\\MangoHud.conf");
+#endif
     std::string exe_path = get_exe_path();
     auto n = exe_path.find_last_of('/');
     if (!exe_path.empty() && n != std::string::npos && n < exe_path.size() - 1) {
@@ -65,6 +69,7 @@ void enumerate_config_files(std::vector<std::string>& paths)
 }
 
 void parseConfigFile(overlay_params& params) {
+    HUDElements.options.clear();
     params.options.clear();
     std::vector<std::string> paths;
     const char *cfg_file = getenv("MANGOHUD_CONFIGFILE");

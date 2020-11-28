@@ -16,6 +16,9 @@ trim_trailing_whitespace = true
 [src/overlay*{cpp,h}]
 indent_size = 3
 
+[src/{keybinds,vulkan}.{cpp,h}]
+indent_size = 3
+
 [src/mesa/**]
 indent_size = 3
 

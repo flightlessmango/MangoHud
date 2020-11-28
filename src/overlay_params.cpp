@@ -1,21 +1,27 @@
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <sys/sysinfo.h>
+#ifdef __gnu_linux__
 #include <wordexp.h>
+#endif
 #include "imgui.h"
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <algorithm>
 #include <cctype>
+#include <array>
+#include <functional>
 
 #include "overlay_params.h"
 #include "overlay.h"
 #include "config.h"
 #include "string_utils.h"
-
+#include "hud_elements.h"
 #include "mesa/util/os_socket.h"
 
 #ifdef HAVE_X11
@@ -26,6 +32,25 @@
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
 #endif
+
+// C++17 has `if constexpr` so this won't be needed then
+template<typename... Ts>
+size_t get_hash()
+{
+   return 0;
+}
+
+template<typename T, typename... Ts>
+size_t get_hash(T const& first, Ts const&... rest)
+{
+   size_t hash = std::hash<T>{}(first);
+#if __cplusplus >= 201703L
+   if constexpr (sizeof...(rest) > 0)
+#endif
+      hash ^= get_hash(rest...) << 1;
+
+   return hash;
+}
 
 static enum overlay_param_position
 parse_position(const char *str)
@@ -75,9 +100,8 @@ parse_string_to_keysym_vec(const char *str)
    std::vector<KeySym> keys;
    if(g_x11->IsLoaded())
    {
-      std::stringstream keyStrings(str);
-      std::string ks;
-      while (std::getline(keyStrings, ks, '+')) {
+      auto keyStrings = str_tokenize(str);
+      for (auto& ks : keyStrings) {
          trim(ks);
          KeySym xk = g_x11->XStringToKeysym(ks.c_str());
          if (xk)
@@ -89,35 +113,12 @@ parse_string_to_keysym_vec(const char *str)
    return keys;
 }
 
-static std::vector<KeySym>
-parse_toggle_hud(const char *str)
-{
-   return parse_string_to_keysym_vec(str);
-}
-
-static std::vector<KeySym>
-parse_toggle_logging(const char *str)
-{
-   return parse_string_to_keysym_vec(str);
-}
-
-static std::vector<KeySym>
-parse_reload_cfg(const char *str)
-{
-   return parse_string_to_keysym_vec(str);
-}
-
-static std::vector<KeySym>
-parse_upload_log(const char *str)
-{
-   return parse_string_to_keysym_vec(str);
-}
-
-static std::vector<KeySym>
-parse_upload_logs(const char *str)
-{
-   return parse_string_to_keysym_vec(str);
-}
+#define parse_toggle_hud         parse_string_to_keysym_vec
+#define parse_toggle_logging     parse_string_to_keysym_vec
+#define parse_reload_cfg         parse_string_to_keysym_vec
+#define parse_upload_log         parse_string_to_keysym_vec
+#define parse_upload_logs        parse_string_to_keysym_vec
+#define parse_toggle_fps_limit   parse_string_to_keysym_vec
 
 #else
 #define parse_toggle_hud(x)      {}
@@ -125,6 +126,7 @@ parse_upload_logs(const char *str)
 #define parse_reload_cfg(x)      {}
 #define parse_upload_log(x)      {}
 #define parse_upload_logs(x)     {}
+#define parse_toggle_fps_limit(x)    {}
 #endif
 
 static uint32_t
@@ -133,10 +135,27 @@ parse_fps_sampling_period(const char *str)
    return strtol(str, NULL, 0) * 1000;
 }
 
-static uint32_t
+static std::vector<std::uint32_t>
 parse_fps_limit(const char *str)
 {
-   return strtol(str, NULL, 0);
+   std::vector<std::uint32_t> fps_limit;
+   auto fps_limit_strings = str_tokenize(str);
+
+   for (auto& value : fps_limit_strings) {
+      trim(value);
+
+      uint32_t as_int;
+      try {
+         as_int = static_cast<uint32_t>(std::stoul(value));
+      } catch (const std::invalid_argument&) {
+         std::cerr << "MANGOHUD: invalid fps_limit value: '" << value << "'\n";
+         continue;
+      }
+
+      fps_limit.push_back(as_int);
+   }
+
+   return fps_limit;
 }
 
 static bool
@@ -150,6 +169,51 @@ parse_color(const char *str)
 {
    return strtol(str, NULL, 16);
 }
+
+static std::vector<unsigned>
+parse_load_color(const char *str)
+{
+   std::vector<unsigned> load_colors;
+   auto tokens = str_tokenize(str);
+   std::string token;
+   for (auto& token : tokens) {
+      trim(token);
+      load_colors.push_back(std::stoi(token, NULL, 16));
+   }
+   while (load_colors.size() != 3) {
+      load_colors.push_back(std::stoi("FFFFFF" , NULL, 16));
+   }
+
+    return load_colors;
+}
+
+static std::vector<unsigned>
+parse_load_value(const char *str)
+{
+   std::vector<unsigned> load_value;
+   auto tokens = str_tokenize(str);
+   std::string token;
+   for (auto& token : tokens) {
+      trim(token);
+      load_value.push_back(std::stoi(token));
+   }
+    return load_value;
+}
+
+
+static std::vector<std::string>
+parse_str_tokenize(const char *str)
+{
+   std::vector<std::string> data;
+   auto tokens = str_tokenize(str);
+   std::string token;
+   for (auto& token : tokens) {
+      trim(token);
+      data.push_back(token);
+   }
+    return data;
+}
+
 
 static unsigned
 parse_unsigned(const char *str)
@@ -175,16 +239,22 @@ parse_path(const char *str)
 #ifdef _XOPEN_SOURCE
    // Expand ~/ to home dir
    if (str[0] == '~') {
-      std::string s;
+      std::stringstream s;
       wordexp_t e;
       int ret;
 
-      if (!(ret = wordexp(str, &e, 0)))
-         s = e.we_wordv[0];
+      if (!(ret = wordexp(str, &e, 0))) {
+         for(size_t i = 0; i < e.we_wordc; i++)
+         {
+            if (i > 0)
+               s << " ";
+            s << e.we_wordv[i];
+         }
+      }
       wordfree(&e);
 
       if (!ret)
-         return s;
+         return s.str();
    }
 #endif
    return str;
@@ -194,9 +264,8 @@ static std::vector<media_player_order>
 parse_media_player_order(const char *str)
 {
    std::vector<media_player_order> order;
-   std::stringstream ss(str);
-   std::string token;
-   while (std::getline(ss, token, ',')) {
+   auto tokens = str_tokenize(str);
+   for (auto& token : tokens) {
       trim(token);
       std::transform(token.begin(), token.end(), token.begin(), ::tolower);
       if (token == "title")
@@ -214,10 +283,8 @@ static std::vector<std::string>
 parse_benchmark_percentiles(const char *str)
 {
    std::vector<std::string> percentiles;
-   std::stringstream percent_strings(str);
-   std::string value;
-
-   while (std::getline(percent_strings, value, '+')) {
+   auto tokens = str_tokenize(str);
+   for (auto& value : tokens) {
       trim(value);
 
       if (value == "AVG") {
@@ -255,9 +322,8 @@ static uint32_t
 parse_font_glyph_ranges(const char *str)
 {
    uint32_t fg = 0;
-   std::stringstream ss(str);
-   std::string token;
-   while (std::getline(ss, token, ',')) {
+   auto tokens = str_tokenize(str);
+   for (auto& token : tokens) {
       trim(token);
       std::transform(token.begin(), token.end(), token.begin(), ::tolower);
 
@@ -310,7 +376,10 @@ parse_font_glyph_ranges(const char *str)
 #define parse_background_alpha(s) parse_float(s)
 #define parse_alpha(s) parse_float(s)
 #define parse_permit_upload(s) parse_unsigned(s)
-#define parse_render_mango(s) parse_unsigned(s)
+#define parse_no_small_font(s) parse_unsigned(s) != 0
+#define parse_cellpadding_y(s) parse_float(s)
+#define parse_table_columns(s) parse_unsigned(s)
+#define parse_autostart_log(s) parse_unsigned(s)
 
 #define parse_cpu_color(s) parse_color(s)
 #define parse_gpu_color(s) parse_color(s)
@@ -323,6 +392,11 @@ parse_font_glyph_ranges(const char *str)
 #define parse_text_color(s) parse_color(s)
 #define parse_media_player_color(s) parse_color(s)
 #define parse_wine_color(s) parse_color(s)
+#define parse_gpu_load_color(s) parse_load_color(s)
+#define parse_cpu_load_color(s) parse_load_color(s)
+#define parse_gpu_load_value(s) parse_load_value(s)
+#define parse_cpu_load_value(s) parse_load_value(s)
+#define parse_blacklist(s) parse_str_tokenize(s)
 
 static bool
 parse_help(const char *str)
@@ -405,6 +479,7 @@ parse_overlay_env(struct overlay_params *params,
    char key[256], value[256];
    while ((num = parse_string(env, key, value)) != 0) {
       env += num;
+      HUDElements.sort_elements({key, value});
       if (!strcmp("full", key)) {
          bool read_cfg = params->enabled[OVERLAY_PARAM_ENABLED_read_cfg];
 #define OVERLAY_PARAM_BOOL(name) \
@@ -414,6 +489,8 @@ parse_overlay_env(struct overlay_params *params,
 #undef OVERLAY_PARAM_BOOL
 #undef OVERLAY_PARAM_CUSTOM
          params->enabled[OVERLAY_PARAM_ENABLED_histogram] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_gpu_load_change] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_cpu_load_change] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = read_cfg;
       }
 #define OVERLAY_PARAM_BOOL(name)                                       \
@@ -446,6 +523,7 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_frame_timing] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_core_load] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_cpu_power] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = true;
@@ -454,12 +532,17 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_io_read] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_io_write] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_io_stats] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_wine] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_gpu_load_change] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_cpu_load_change] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout] = true;
+   params->enabled[OVERLAY_PARAM_ENABLED_frametime] = true;
    params->fps_sampling_period = 500000; /* 500ms */
    params->width = 0;
    params->height = 140;
    params->control = -1;
-   params->fps_limit = 0;
+   params->fps_limit = { 0 };
    params->vsync = -1;
    params->gl_vsync = -2;
    params->offset_x = 0;
@@ -480,21 +563,46 @@ parse_overlay_config(struct overlay_params *params,
    params->media_player_name = "";
    params->font_scale = 1.0f;
    params->wine_color = 0xeb5b5b;
+   params->gpu_load_color = { 0x39f900, 0xfdfd09, 0xb22222 };
+   params->cpu_load_color = { 0x39f900, 0xfdfd09, 0xb22222 };
    params->font_scale_media_player = 0.55f;
    params->log_interval = 100;
    params->media_player_order = { MP_ORDER_TITLE, MP_ORDER_ARTIST, MP_ORDER_ALBUM };
    params->permit_upload = 0;
-   params->render_mango = 0;
    params->benchmark_percentiles = { "97", "AVG", "1", "0.1" };
+   params->gpu_load_value = { 60, 90 };
+   params->cpu_load_value = { 60, 90 };
+   params->cellpadding_y = -0.085;
+
+
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_Shift_R, XK_F12 };
+   params->toggle_fps_limit = { XK_Shift_L, XK_F1 };
    params->toggle_logging = { XK_Shift_L, XK_F2 };
    params->reload_cfg = { XK_Shift_L, XK_F4 };
    params->upload_log = { XK_Shift_L, XK_F3 };
    params->upload_logs = { XK_Control_L, XK_F3 };
 #endif
 
+#ifdef _WIN32
+   params->toggle_hud = { VK_F12 };
+   params->toggle_fps_limit = { VK_F3 };
+   params->toggle_logging = { VK_F2 };
+   params->reload_cfg = { VK_F4 };
+
+   #undef parse_toggle_hud
+   #undef parse_toggle_fps_limit
+   #undef parse_toggle_logging
+   #undef parse_reload_cfg
+
+   #define parse_toggle_hud(x)         params->toggle_hud
+   #define parse_toggle_fps_limit(x)   params->toggle_fps_limit
+   #define parse_toggle_logging(x)     params->toggle_logging
+   #define parse_reload_cfg(x)         params->reload_cfg
+#endif
+
+   HUDElements.ordered_functions.clear();
    // first pass with env var
    if (env)
       parse_overlay_env(params, env);
@@ -535,14 +643,14 @@ parse_overlay_config(struct overlay_params *params,
    }
 
    // second pass, override config file settings with MANGOHUD_CONFIG
-   if (env && read_cfg)
-      parse_overlay_env(params, env);
+   // if (env && read_cfg)
+   //    parse_overlay_env(params, env);
 
    if (params->font_scale_media_player <= 0.f)
       params->font_scale_media_player = 0.55f;
 
    // Convert from 0xRRGGBB to ImGui's format
-   std::array<unsigned *, 11> colors = {
+   std::array<unsigned *, 17> colors = {
       &params->cpu_color,
       &params->gpu_color,
       &params->vram_color,
@@ -554,17 +662,24 @@ parse_overlay_config(struct overlay_params *params,
       &params->text_color,
       &params->media_player_color,
       &params->wine_color,
+      &params->gpu_load_color[0],
+      &params->gpu_load_color[1],
+      &params->gpu_load_color[2],
+      &params->cpu_load_color[0],
+      &params->cpu_load_color[1],
+      &params->cpu_load_color[2],
    };
 
    for (auto color : colors){
-         *color =
-         IM_COL32(RGBGetRValue(*color),
+      *color =
+      IM_COL32(RGBGetRValue(*color),
                RGBGetGValue(*color),
                RGBGetBValue(*color),
                255);
-      }
+   }
 
-   params->tableCols = 3;
+   if (!params->table_columns)
+      params->table_columns = 3;
 
    if (!params->font_size) {
       params->font_size = 24;
@@ -577,12 +692,23 @@ parse_overlay_config(struct overlay_params *params,
       } else {
          params->width = params->font_size * params->font_scale * 11.7;
       }
+      // Treat it like hud would need to be ~7 characters wider with default font.
+      if (params->no_small_font)
+         params->width += 7 * params->font_size * params->font_scale;
    }
+
+   params->font_params_hash = get_hash(params->font_size,
+                                 params->font_size_text,
+                                 params->no_small_font,
+                                 params->font_file,
+                                 params->font_file_text,
+                                 params->font_glyph_ranges
+                                );
 
    // set frametime limit
    using namespace std::chrono;
-   if (params->fps_limit > 0)
-      fps_limit_stats.targetFrameTime = duration_cast<Clock::duration>(duration<double>(1) / params->fps_limit);
+   if (params->fps_limit.size() > 0 && params->fps_limit[0] > 0)
+      fps_limit_stats.targetFrameTime = duration_cast<Clock::duration>(duration<double>(1) / params->fps_limit[0]);
    else
       fps_limit_stats.targetFrameTime = {};
 
@@ -594,7 +720,24 @@ parse_overlay_config(struct overlay_params *params,
       main_metadata.meta.valid = false;
    }
 #endif
+
    if(!params->output_file.empty())
       printf("MANGOHUD: output_file is Deprecated, use output_folder instead\n");
 
+   auto real_size = params->font_size * params->font_scale;
+   real_font_size = ImVec2(real_size, real_size / 2);
+   HUDElements.params = params;
+   if (params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout]){
+        HUDElements.legacy_elements();
+   } else {
+      for (auto& option : HUDElements.options)
+         HUDElements.sort_elements(option);
+   }
+
+   // Needs ImGui context but it is null here for OpenGL so just note it and update somewhere else
+   HUDElements.colors.update = true;
+
+   if(not logger) logger = std::make_unique<Logger>(params);
+   if(params->autostart_log && !logger->is_active())
+      std::thread(autostart_log, params->autostart_log).detach();
 }

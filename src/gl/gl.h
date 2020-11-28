@@ -15,6 +15,7 @@ int glXSwapIntervalMESA(unsigned int);
 int glXGetSwapIntervalMESA(void);
 int glXMakeCurrent(void*, void*, void*);
 void* glXGetCurrentContext();
+void *glXCreateContextAttribsARB(void *dpy, void *config,void *share_context, int direct, const int *attrib_list);
 
 void* glXGetProcAddress(const unsigned char*);
 void* glXGetProcAddressARB(const unsigned char*);

@@ -137,6 +137,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `font_file`                        | Change default font (set location to .TTF/.OTF file )                                 |
 | `font_file_text`                   | Change text font. Otherwise `font_file` is used                                       |
 | `font_glyph_ranges`                | Specify extra font glyph ranges, comma separated: `korean`, `chinese`, `chinese_simplified`, `japanese`, `cyrillic`, `thai`, `vietnamese`, `latin_ext_a`, `latin_ext_b`. If you experience crashes or text is just squares, reduce font size or glyph ranges. |
+| `no_small_font`                    | Use primary font size for smaller text like units                                     |
 | `width=`<br>`height=`              | Customizeable hud dimensions (in pixels)                                              |
 | `position=`                        | Location of the hud: `top-left` (default), `top-right`, `bottom-left`, `bottom-right`, `top-center` |
 | `offset_x` `offset_y`              | Hud position offsets                                                                  |
@@ -158,21 +159,35 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `io_read`<br> `io_write`           | Show non-cached IO read/write, in MiB/s                                               |
 | `pci_dev`                          | Select GPU device in multi-gpu setups                                                 |
 | `version`                          | Shows current mangohud version                                                        |
-| `fps_limit`                        | Limit the apps framerate                                                              |
+| `fps_limit`                        | Limit the apps framerate. Comma-separated list of one or more FPS values. `0` means unlimited. |
+| `toggle_fps_limit`                 | Cycle between FPS limits. Defaults to `Shift_L+F1`.                                   |
 | `arch`                             | Show if the application is 32 or 64 bit                                               |
 | `histogram`                        | Change fps graph to histogram                                                         |
 | `cpu_text`<br>`gpu_text`           | Override CPU and GPU text                                                             |
 | `log_interval`                     | Change the default log interval, `100` is default                                     |
 | `vulkan_driver`                    | Displays used vulkan driver, radv/amdgpu-pro/amdvlk                                   |
 | `gpu_name`                         | Displays GPU name from pci.ids                                                        |
-| `gpu_power`                        | Display GPU draw in watts                                                             |
+| `cpu_power`<br>`gpu_power`         | Display CPU/GPU draw in watts                                                             |
 | `engine_version`                   | Display OpenGL or vulkan and vulkan-based render engine's version                     |
 | `permit_upload`                    | Allow uploading of logs to Flightlessmango.com                                        |
 | `upload_log`                       | Change keybind for uploading log                                                      |
-| `benchmark_percentiles`            | Configure which framerate percentiles are shown in the logging summary. Default is `97+AVG+1+0.1` |
+| `benchmark_percentiles`            | Configure which framerate percentiles are shown in the logging summary. Default is `97,AVG,1,0.1` |
 | `wine`                             | Shows current Wine or Proton version in use                                           |
 | `wine_color`                       | Change color of the wine/proton text                                                  |
+| `cpu_mhz`                          | Shows the CPUs current MHz                                                            |
+| `gpu_load_change`                  | Changes the color of the GPU load depending on load                                   |
+| `gpu_load_color`                   | Set the colors for the gpu load change low,medium and high. e.g `gpu_load_color=0000FF,00FFFF,FF00FF`      |
+| `gpu_load_value`                   | Set the values for medium and high load e.g `gpu_load_value=50,90`                    |
+| `cpu_load_change`                  | Changes the color of the CPU load depending on load                                   |
+| `cpu_load_color`                   | Set the colors for the gpu load change low,medium and high. e.g `cpu_load_color=0000FF,00FFFF,FF00FF`      |
+| `cpu_load_value`                   | Set the values for medium and high load e.g `cpu_load_value=50,90`                    |
+| `cellpadding_y`                    | Set the vertical cellpadding, default is `-0.085` |
+| `frametime`                        | Display frametime next to fps text                                                    |
+| `table_columns`                    | Set the number of table columns for ImGui, defaults to 3                              |
+| `blacklist`                        | Add a program to the blacklist. e.g `blacklist=vkcube,WatchDogs2.exe`                 |
+
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
+Because comma is also used as option delimiter and needs to be escaped for values with a backslash, you can use `+` like `MANGOHUD_CONFIG=fps_limit=60+30+0` instead.
 
 Note: Width and Height are set automatically based on the font_size, but can be overridden.
 ## Vsync

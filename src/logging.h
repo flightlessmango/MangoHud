@@ -16,7 +16,8 @@
 using namespace std;
 struct logData{
   double fps;
-  int cpu_load;
+  uint64_t frametime;
+  float cpu_load;
   int gpu_load;
   int cpu_temp;
   int gpu_temp;
@@ -69,8 +70,10 @@ extern std::unique_ptr<Logger> logger;
 extern string os, cpu, gpu, ram, kernel, driver;
 extern bool sysInfoFetched;
 extern double fps;
+extern uint64_t frametime;
 extern logData currentLogData;
 
 string exec(string command);
+void autostart_log(int sleep);
 
 #endif //MANGOHUD_LOGGING_H

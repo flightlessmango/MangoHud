@@ -1,5 +1,6 @@
 glslang = find_program('glslangValidator')
 
+ld_libdir_mangohud_abs = ''
 # Needs prefix for configure_file()
 if get_option('append_libdir_mangohud')
   libdir_mangohud = join_paths(get_option('libdir'), 'mangohud')
@@ -15,6 +16,10 @@ if get_option('ld_libdir_prefix')
   ld_libdir_mangohud = get_option('prefix') + '/lib/mangohud/\$LIB/'
 endif
 
+if get_option('ld_libdir_abs')
+  ld_libdir_mangohud_abs = ld_libdir_mangohud
+endif
+
 overlay_shaders = [
   'overlay.frag',
   'overlay.vert',
@@ -27,89 +32,112 @@ foreach s : ['overlay.frag', 'overlay.vert']
 endforeach
 
 vklayer_files = files(
+  'hud_elements.cpp',
   'overlay.cpp',
   'overlay_params.cpp',
+  'font.cpp',
+  'keybinds.cpp',
   'font_unispace.c',
-  'blacklist.cpp',
-  'cpu.cpp',
-  'file_utils.cpp',
-  'memory.cpp',
-  'config.cpp',
-  'iostats.cpp',
-  'gpu.cpp',
-  'notify.cpp',
-  'elfhacks.cpp',
-  'real_dlsym.cpp',
-  'pci_ids.cpp',
   'logging.cpp',
+  'config.cpp',
+  'gpu.cpp',
+  'vulkan.cpp',
+  'blacklist.cpp',
 )
-
-opengl_files = files(
-  'gl/glad.c',
-  'gl/imgui_impl_opengl3.cpp',
-  'gl/imgui_hud.cpp',
-  'gl/inject_egl.cpp',
-)
-
-if get_option('with_dlsym').enabled()
-    pre_args += '-DHOOK_DLSYM'
-endif
-
-nvml_h_found = get_option('with_nvml') == 'enabled'
-if get_option('with_nvml') == 'system'
-  nvml_h_found = cc.has_header('nvml.h')
-  if not nvml_h_found
-    error('nvml.h was not found. Disable with \'-Dwith_nvml=disabled\' if gpu stats by NVML is not needed.')
-  endif
-  pre_args += '-DUSE_SYSTEM_NVML'
-endif
-
-if nvml_h_found
-  pre_args += '-DHAVE_NVML'
+opengl_files  = []
+if ['windows', 'mingw'].contains(host_machine.system())
   vklayer_files += files(
-    'nvml.cpp',
-    'loaders/loader_nvml.cpp',
+    'file_utils_win32.cpp',
+    'cpu_win32.cpp',
+    'nvapi.cpp',
+    'win/dxgi.cpp',
+    'win/main.cpp',
+    'win/kiero.cpp',
+    'win/d3d12_hook.cpp',
+    'win/d3d11_hook.cpp',
+    'win/d3d_shared.cpp',
   )
 endif
 
-if get_option('with_xnvctrl').enabled()
+if is_unixy
+  vklayer_files += files(
+    'cpu.cpp',
+    'file_utils.cpp',
+    'memory.cpp',
+    'iostats.cpp',
+    'notify.cpp',
+    'elfhacks.cpp',
+    'real_dlsym.cpp',
+    'pci_ids.cpp',
+  )
 
-  if not get_option('with_x11').enabled()
-    error('XNVCtrl also needs \'with_x11\'')
-  endif
+  opengl_files = files(
+    'gl/glad.c',
+    'gl/imgui_impl_opengl3.cpp',
+    'gl/imgui_hud.cpp',
+    'gl/inject_egl.cpp',
+  )
 
-  xnvctrl_h_found = cc.has_header('NVCtrl/NVCtrl.h')
-  if not xnvctrl_h_found
-    error('NVCtrl.h was not found. Disable with \'-Dwith_xnvctrl=disabled\' if gpu stats by XNVCtrl is not needed.')
+  if get_option('with_dlsym').enabled()
+      pre_args += '-DHOOK_DLSYM'
   endif
 
-  pre_args += '-DHAVE_XNVCTRL'
-  vklayer_files += files(
-    'loaders/loader_nvctrl.cpp',
-    'nvctrl.cpp',
-  )
-endif
+  nvml_h_found = get_option('with_nvml') == 'enabled'
+  if get_option('with_nvml') == 'system'
+    nvml_h_found = cc.has_header('nvml.h')
+    if not nvml_h_found
+      error('nvml.h was not found. Disable with \'-Dwith_nvml=disabled\' if gpu stats by NVML is not needed.')
+    endif
+    pre_args += '-DUSE_SYSTEM_NVML'
+  endif
 
-if get_option('with_x11').enabled()
-  pre_args += '-DHAVE_X11'
+  if nvml_h_found
+    pre_args += '-DHAVE_NVML'
+    vklayer_files += files(
+      'nvml.cpp',
+      'loaders/loader_nvml.cpp',
+    )
+  endif
 
-  vklayer_files += files(
-    'loaders/loader_x11.cpp',
-    'shared_x11.cpp',
-  )
+  if get_option('with_xnvctrl').enabled()
 
-  opengl_files += files(
-    'loaders/loader_glx.cpp',
-    'gl/inject_glx.cpp',
-  )
-endif
+    if not get_option('with_x11').enabled()
+      error('XNVCtrl also needs \'with_x11\'')
+    endif
 
-if dbus_dep.found() and get_option('with_dbus').enabled()
-  pre_args += '-DHAVE_DBUS'
-  vklayer_files += files(
-    'dbus.cpp',
-    'loaders/loader_dbus.cpp',
-  )
+    xnvctrl_h_found = cc.has_header('NVCtrl/NVCtrl.h')
+    if not xnvctrl_h_found
+      error('NVCtrl.h was not found. Disable with \'-Dwith_xnvctrl=disabled\' if gpu stats by XNVCtrl is not needed.')
+    endif
+
+    pre_args += '-DHAVE_XNVCTRL'
+    vklayer_files += files(
+      'loaders/loader_nvctrl.cpp',
+      'nvctrl.cpp',
+    )
+  endif
+
+  if get_option('with_x11').enabled()
+    pre_args += '-DHAVE_X11'
+
+    vklayer_files += files(
+      'loaders/loader_x11.cpp',
+      'shared_x11.cpp',
+    )
+
+    opengl_files += files(
+      'loaders/loader_glx.cpp',
+      'gl/inject_glx.cpp',
+    )
+  endif
+
+  if dbus_dep.found() and get_option('with_dbus').enabled()
+    pre_args += '-DHAVE_DBUS'
+    vklayer_files += files(
+      'dbus.cpp',
+      'loaders/loader_dbus.cpp',
+    )
+  endif
 endif
 
 link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL'])
@@ -141,34 +169,36 @@ vklayer_mesa_overlay = shared_library(
     dep_dl,
     dep_rt,
     dep_pthread,
-    dep_vulkan],
+    dep_vulkan,
+    windows_deps],
   include_directories : [inc_common],
   link_args : link_args,
   install_dir : libdir_mangohud,
   install : true
 )
-
-mangohud_dlsym = shared_library(
-  'MangoHud_dlsym',
-  files(
-    'elfhacks.cpp',
-    'real_dlsym.cpp',
-    'hook_dlsym.cpp',
-  ),
-  c_args : [
-    pre_args,
-    no_override_init_args,
-    ],
-  cpp_args : [
-    pre_args,
-    ],
-  gnu_symbol_visibility : 'hidden',
-  dependencies : [dep_dl],
-  include_directories : [inc_common],
-  link_args : link_args,
-  install_dir : libdir_mangohud,
-  install : true
-)
+if is_unixy
+  mangohud_dlsym = shared_library(
+    'MangoHud_dlsym',
+    files(
+      'elfhacks.cpp',
+      'real_dlsym.cpp',
+      'hook_dlsym.cpp',
+    ),
+    c_args : [
+      pre_args,
+      no_override_init_args,
+      ],
+    cpp_args : [
+      pre_args,
+      ],
+    gnu_symbol_visibility : 'hidden',
+    dependencies : [dep_dl],
+    include_directories : [inc_common],
+    link_args : link_args,
+    install_dir : libdir_mangohud,
+    install : true
+  )
+endif
 
 configure_file(input : 'mangohud.json.in',
   output : '@0@.json'.format(meson.project_name()),
@@ -180,7 +210,8 @@ configure_file(input : 'mangohud.json.in',
 
 configure_file(input : '../bin/mangohud.in',
   output : 'mangohud',
-  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud},
+  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud,
+                   'ld_libdir_mangohud_abs': ld_libdir_mangohud_abs},
   install_dir : get_option('bindir'),
 )
 

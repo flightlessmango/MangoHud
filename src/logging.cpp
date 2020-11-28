@@ -7,6 +7,7 @@
 string os, cpu, gpu, ram, kernel, driver;
 bool sysInfoFetched = false;
 double fps;
+uint64_t frametime;
 logData currentLogData = {};
 
 std::unique_ptr<Logger> logger;
@@ -60,10 +61,11 @@ void writeFile(string filename){
   std::ofstream out(filename, ios::out | ios::app);
   out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver" << endl;
   out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << endl;
-  out << "fps," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "ram_used," << "elapsed" << endl;
+  out << "fps," << "frametime," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "ram_used," << "elapsed" << endl;
 
   for (size_t i = 0; i < logArray.size(); i++){
     out << logArray[i].fps << ",";
+    out << logArray[i].frametime << ",";
     out << logArray[i].cpu_load << ",";
     out << logArray[i].gpu_load << ",";
     out << logArray[i].cpu_temp << ",";
@@ -72,7 +74,7 @@ void writeFile(string filename){
     out << logArray[i].gpu_mem_clock << ",";
     out << logArray[i].gpu_vram_used << ",";
     out << logArray[i].ram_used << ",";
-    out << std::chrono::duration_cast<std::chrono::microseconds>(logArray[i].previous).count() << "\n";
+    out << std::chrono::duration_cast<std::chrono::nanoseconds>(logArray[i].previous).count() << "\n";
   }
   logger->clear_log_data();
 }
@@ -136,6 +138,7 @@ void Logger::try_log() {
 
   currentLogData.previous = elapsedLog;
   currentLogData.fps = fps;
+  currentLogData.frametime = frametime;
   m_log_array.push_back(currentLogData);
 
   if(m_params->log_duration and (elapsedLog >= std::chrono::seconds(m_params->log_duration))){
@@ -162,4 +165,9 @@ void Logger::upload_last_log() {
 void Logger::upload_last_logs() {
   if(m_log_files.empty()) return;
   std::thread(upload_files, m_log_files).detach();
+}
+
+void autostart_log(int sleep) {
+  os_time_sleep(sleep * 1000000);
+  logger->start_logging();
 }

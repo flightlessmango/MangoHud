@@ -3,6 +3,7 @@
 #define MANGOHUD_STRING_UTILS_H
 
 #include <string>
+#include <vector>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -107,6 +108,23 @@ static float parse_float(const std::string& s, std::size_t* float_len = nullptr)
         else *float_len = pos;
     }
     return ret;
+}
+
+static std::vector<std::string> str_tokenize(const std::string& s, const std::string&& delims = ",:+")
+{
+   std::vector<std::string> v;
+   size_t old_n = 0, new_n = 0;
+
+   while (old_n < s.size()){
+      new_n = s.find_first_of(delims, old_n);
+      auto c = s.substr(old_n, new_n - old_n);
+      if (old_n != new_n)
+         v.push_back(c);
+      if (new_n == std::string::npos)
+          break;
+      old_n = new_n + 1;
+   }
+   return v;
 }
 
 #pragma GCC diagnostic pop

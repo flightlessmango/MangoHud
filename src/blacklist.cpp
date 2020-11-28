@@ -22,27 +22,28 @@ static std::string get_proc_name() {
     return proc_name;
 }
 
-static bool check_blacklisted() {
-    static const std::vector<std::string> blacklist {
-        "Battle.net.exe",
-        "BethesdaNetLauncher.exe",
-        "EpicGamesLauncher.exe",
-        "IGOProxy.exe",
-        "IGOProxy64.exe",
-        "Origin.exe",
-        "OriginThinSetupInternal.exe",
-        "steam",
-        "steamwebhelper",
-        "gldriverquery",
-        "vulkandriverquery",
-        "Steam.exe",
-        "ffxivlauncher.exe",
-        "ffxivlauncher64.exe",
-        "LeagueClient.exe",
-        "LeagueClientUxRender.exe",
-        "SocialClubHelper.exe",
-    };
+static  std::vector<std::string> blacklist {
+    "Battle.net.exe",
+    "BethesdaNetLauncher.exe",
+    "EpicGamesLauncher.exe",
+    "IGOProxy.exe",
+    "IGOProxy64.exe",
+    "Origin.exe",
+    "OriginThinSetupInternal.exe",
+    "steam",
+    "steamwebhelper",
+    "gldriverquery",
+    "vulkandriverquery",
+    "Steam.exe",
+    "ffxivlauncher.exe",
+    "ffxivlauncher64.exe",
+    "LeagueClient.exe",
+    "LeagueClientUxRender.exe",
+    "SocialClubHelper.exe",
+};
 
+
+static bool check_blacklisted() {
     std::string proc_name = get_proc_name();
     bool blacklisted = std::find(blacklist.begin(), blacklist.end(), proc_name) != blacklist.end();
 
@@ -59,3 +60,15 @@ bool is_blacklisted(bool force_recheck) {
         blacklisted = check_blacklisted();
     return blacklisted;
 }
+
+void add_blacklist(std::string new_item) {
+    // check if item exits in blacklist before adding new item
+    if(std::find(blacklist.begin(), blacklist.end(), new_item) != blacklist.end()) {
+        return;
+    }
+
+    blacklist.push_back (new_item);
+    is_blacklisted(true);
+}
+
+
