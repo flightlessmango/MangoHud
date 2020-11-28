@@ -68,10 +68,10 @@ struct CPUPowerData_k10temp : public CPUPowerData {
          fclose(this->socCurrentFile);
    };
 
-   FILE* coreVoltageFile;
-   FILE* coreCurrentFile;
-   FILE* socVoltageFile;
-   FILE* socCurrentFile;
+   FILE* coreVoltageFile {nullptr};
+   FILE* coreCurrentFile {nullptr};
+   FILE* socVoltageFile {nullptr};
+   FILE* socCurrentFile {nullptr};
 };
 
 struct CPUPowerData_zenpower : public CPUPowerData {
@@ -86,8 +86,8 @@ struct CPUPowerData_zenpower : public CPUPowerData {
          fclose(this->socPowerFile);
    };
 
-   FILE* corePowerFile;
-   FILE* socPowerFile;
+   FILE* corePowerFile {nullptr};
+   FILE* socPowerFile {nullptr};
 };
 
 struct CPUPowerData_rapl : public CPUPowerData {
@@ -101,7 +101,7 @@ struct CPUPowerData_rapl : public CPUPowerData {
          fclose(this->energyCounterFile);
    };
 
-   FILE* energyCounterFile;
+   FILE* energyCounterFile {nullptr};
    int lastCounterValue;
    Clock::time_point lastCounterValueTime;
 };
