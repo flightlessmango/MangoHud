@@ -1,4 +1,5 @@
 #include "cpu.h"
+#include <memory>
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -492,15 +493,15 @@ static bool find_power_input(const std::string path, std::string& input, const s
 }
 
 CPUPowerData_k10temp* init_cpu_power_data_k10temp(const std::string path) {
-    CPUPowerData_k10temp* powerData = new CPUPowerData_k10temp();
+    auto powerData = std::make_unique<CPUPowerData_k10temp>();
 
     std::string coreVoltageInput, coreCurrentInput;
     std::string socVoltageInput, socCurrentInput;
 
-    if(!find_voltage_input(path, coreVoltageInput, "Vcore")) goto error;
-    if(!find_current_input(path, coreCurrentInput, "Icore")) goto error;
-    if(!find_voltage_input(path, socVoltageInput, "Vsoc")) goto error;
-    if(!find_current_input(path, socCurrentInput, "Isoc")) goto error;
+    if(!find_voltage_input(path, coreVoltageInput, "Vcore")) return nullptr;
+    if(!find_current_input(path, coreCurrentInput, "Icore")) return nullptr;
+    if(!find_voltage_input(path, socVoltageInput, "Vsoc")) return nullptr;
+    if(!find_current_input(path, socCurrentInput, "Isoc")) return nullptr;
 
 #ifndef NDEBUG
     std::cerr << "hwmon: using input: " << coreVoltageInput << std::endl;
@@ -513,23 +514,17 @@ CPUPowerData_k10temp* init_cpu_power_data_k10temp(const std::string path) {
     powerData->coreCurrentFile = fopen(coreCurrentInput.c_str(), "r");
     powerData->socVoltageFile = fopen(socVoltageInput.c_str(), "r");
     powerData->socCurrentFile = fopen(socCurrentInput.c_str(), "r");
-    goto success;
 
-error:
-    delete powerData;
-    return nullptr;
-
-success:
-    return powerData;
+    return powerData.release();
 }
 
 CPUPowerData_zenpower* init_cpu_power_data_zenpower(const std::string path) {
-    CPUPowerData_zenpower* powerData = new CPUPowerData_zenpower();
+    auto powerData = std::make_unique<CPUPowerData_zenpower>();
 
     std::string corePowerInput, socPowerInput;
 
-    if(!find_power_input(path, corePowerInput, "SVI2_P_Core")) goto error;
-    if(!find_power_input(path, socPowerInput, "SVI2_P_SoC")) goto error;
+    if(!find_power_input(path, corePowerInput, "SVI2_P_Core")) return nullptr;
+    if(!find_power_input(path, socPowerInput, "SVI2_P_SoC")) return nullptr;
 
 #ifndef NDEBUG
     std::cerr << "hwmon: using input: " << corePowerInput << std::endl;
@@ -538,31 +533,19 @@ CPUPowerData_zenpower* init_cpu_power_data_zenpower(const std::string path) {
 
     powerData->corePowerFile = fopen(corePowerInput.c_str(), "r");
     powerData->socPowerFile = fopen(socPowerInput.c_str(), "r");
-    goto success;
 
-error:
-    delete powerData;
-    return nullptr;
-
-success:
-    return powerData;
+    return powerData.release();
 }
 
 CPUPowerData_rapl* init_cpu_power_data_rapl(const std::string path) {
-    CPUPowerData_rapl* powerData = new CPUPowerData_rapl();
+    auto powerData = std::make_unique<CPUPowerData_rapl>();
 
     std::string energyCounterPath = path + "/energy_uj";
-    if (!file_exists(energyCounterPath)) goto error;
+    if (!file_exists(energyCounterPath)) return nullptr;
 
     powerData->energyCounterFile = fopen(energyCounterPath.c_str(), "r");
-    goto success;
 
-error:
-    delete powerData;
-    return nullptr;
-
-success:
-    return powerData;
+    return powerData.release();
 }
 
 bool CPUStats::InitCpuPowerData() {
