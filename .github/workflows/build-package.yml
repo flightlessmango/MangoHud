@@ -10,7 +10,8 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    #runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
 
     steps:
       - uses: actions/checkout@v2
@@ -34,13 +35,13 @@ jobs:
           echo "##[set-output name=artifact-metadata;]${ARTIFACT_NAME}"
         id: git-vars
       - name: Build release package
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ./build-source.sh
           ./build.sh build package release
-      - if: github.event_name == 'release' && github.event.action == 'created'
-        name: Upload release
+      - name: Upload release
+        if: ${{ github.event_name == 'release' && github.event.action == 'created' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           assets=()
           for asset in ./MangoHud-*-Source*.tar.gz; do
@@ -50,7 +51,8 @@ jobs:
             assets+=("-a" "$asset")
           done
           tag_name="${GITHUB_REF##*/}"
-          hub release create "${assets[@]}" -m "$tag_name" "$tag_name"
+          hub release edit "${assets[@]}" -m "" "$tag_name"
+          #hub release create "${assets[@]}" -m "$tag_name" "$tag_name"
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         continue-on-error: true
