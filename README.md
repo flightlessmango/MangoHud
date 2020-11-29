@@ -198,6 +198,8 @@ Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_s
 Because comma is also used as option delimiter and needs to be escaped for values with a backslash, you can use `+` like `MANGOHUD_CONFIG=fps_limit=60+30+0` instead.
 
 Note: Width and Height are set automatically based on the font_size, but can be overridden.
+
+Note: RAPL is currently used for Intel CPUs to show power draw with `cpu_power` which may be unreadable for non-root users due to [vulnerability](https://platypusattack.com/). The corresponding `energy_uj` file has to be readable by corrensponding user, e.g. by running `/sys/class/powercap/intel-rapl\:0/energy_uj` as root, else the power shown will be *0 W*, though having the file readable may potentially be a security vulnerability persisting until system reboots.
 ## Vsync
 ### OpenGL Vsync
 - `-1` = Adaptive sync
