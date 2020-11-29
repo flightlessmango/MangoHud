@@ -14,6 +14,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+      - name: Install build tools
+        run: |
+          sudo apt update
+          sudo apt install gcc-multilib g++-multilib ninja-build python3-setuptools python3-wheel mesa-common-dev libxnvctrl-dev libdbus-1-dev
       - name: Build release package
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
