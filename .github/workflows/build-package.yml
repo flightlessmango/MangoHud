@@ -39,7 +39,7 @@ jobs:
         run: |
           ./build-source.sh
           ./build.sh build package release
-      - if: github.event_name == 'release'
+      - if: github.event_name == 'release' && github.event.action == 'created'
         name: Upload release
         run: |
           assets=()
