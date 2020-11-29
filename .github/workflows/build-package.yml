@@ -1,0 +1,41 @@
+name: Build release package
+on:
+  release:
+    types: ["created"]
+  push:
+    tags: ["v*"]
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build release package
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ./build-source.sh
+          ./build.sh build package release
+      - if: github.event_name == 'release'
+        name: Upload release
+        run: |
+          assets=()
+          for asset in ./MangoHud-*-Source*.tar.gz; do
+            assets+=("-a" "$asset")
+          done
+          for asset in ./build/MangoHud-*.tar.gz; do
+            assets+=("-a" "$asset")
+          done
+          tag_name="${GITHUB_REF##*/}"
+          hub release create "${assets[@]}" -m "$tag_name" "$tag_name"
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        continue-on-error: true
+        with:
+          name: MangoHud-${{github.ref}}-${{github.sha}}
+          path: ${{runner.workspace}}/build/MangoHud-*tar.gz
+          retention-days: 30
