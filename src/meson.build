@@ -165,6 +165,7 @@ vklayer_mesa_overlay = shared_library(
   dependencies : [
     vulkan_wsi_deps,
     dearimgui_dep,
+    implot_dep,
     dbus_dep,
     dep_dl,
     dep_rt,

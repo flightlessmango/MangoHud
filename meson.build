@@ -218,6 +218,8 @@ endif
 
 dearimgui_sp = subproject('dearimgui')
 dearimgui_dep = dearimgui_sp.get_variable('dearimgui_dep')
+implot_sp = subproject('implot')
+implot_dep = implot_sp.get_variable('implot_dep')
 
 if ['windows', 'mingw'].contains(host_machine.system())
   subdir('modules/minhook')
