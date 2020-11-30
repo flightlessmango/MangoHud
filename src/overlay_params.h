@@ -54,6 +54,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(wine)                          \
    OVERLAY_PARAM_BOOL(gpu_load_change)               \
    OVERLAY_PARAM_BOOL(cpu_load_change)               \
+   OVERLAY_PARAM_BOOL(core_load_change)              \
    OVERLAY_PARAM_BOOL(graphs)                        \
    OVERLAY_PARAM_BOOL(legacy_layout)                 \
    OVERLAY_PARAM_BOOL(cpu_mhz)                       \

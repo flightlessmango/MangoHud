@@ -231,10 +231,28 @@ void HudElements::core_load(){
             ImGui::TextColored(HUDElements.colors.cpu,"%i", i);
             ImGui::PopFont();
             ImGui::TableNextCell();
-            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", int(cpuData.percent));
-            ImGui::SameLine(0, 1.0f);
-            ImGui::Text("%%");
-            ImGui::TableNextCell();
+            auto text_color = HUDElements.colors.text;
+            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_core_load_change]){
+                int cpu_load_percent = int(cpuData.percent);
+                struct LOAD_DATA cpu_data = {
+                    HUDElements.colors.cpu_load_low,
+                    HUDElements.colors.cpu_load_med,
+                    HUDElements.colors.cpu_load_high,
+                    HUDElements.params->cpu_load_value[0],
+                    HUDElements.params->cpu_load_value[1]
+                };
+                auto load_color = change_on_load_temp(cpu_data, cpu_load_percent);
+                right_aligned_text(load_color, HUDElements.ralign_width, "%d", cpu_load_percent);
+                ImGui::SameLine(0, 1.0f);
+                ImGui::TextColored(load_color, "%%");
+                ImGui::TableNextCell();
+            }
+            else {
+                right_aligned_text(text_color, HUDElements.ralign_width, "%i", int(cpuData.percent));
+                ImGui::SameLine(0, 1.0f);
+                ImGui::Text("%%");
+                ImGui::TableNextCell();
+            }
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", cpuData.mhz);
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(HUDElements.sw_stats->font1);
