@@ -11,6 +11,7 @@ class HudElements{
         struct overlay_params *params;
         float ralign_width;
         float old_scale;
+        float res_width, res_height;
         bool is_vulkan;
         int place;
         std::vector<std::pair<std::string, std::string>> options;
@@ -38,6 +39,7 @@ class HudElements{
         static void wine();
         static void frame_timing();
         static void media_player();
+        static void resolution();
         static void graphs();
 
         void convert_colors(struct overlay_params& params);

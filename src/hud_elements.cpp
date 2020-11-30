@@ -471,6 +471,17 @@ void HudElements::media_player(){
 #endif
 }
 
+void HudElements::resolution(){
+    ImGui::TableNextRow();
+    unsigned res_width  = ImGui::GetIO().DisplaySize.x;
+    unsigned res_height = ImGui::GetIO().DisplaySize.y;
+    ImGui::PushFont(HUDElements.sw_stats->font1);
+    ImGui::TextColored(HUDElements.colors.engine, "Resolution");
+    ImGui::TableNextCell();
+    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "%ix%i", res_width, res_height);
+    ImGui::PopFont();
+}
+
 void HudElements::graphs(){
     ImGui::TableNextRow();
     ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
@@ -610,6 +621,7 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
     if (param == "wine")            { ordered_functions.push_back({wine, value});           }
     if (param == "frame_timing")    { ordered_functions.push_back({frame_timing, value});   }
     if (param == "media_player")    { ordered_functions.push_back({media_player, value});   }
+    if (param == "resolution")      { ordered_functions.push_back({resolution, value});   }
     if (param == "graphs"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs])
             HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs] = true;
