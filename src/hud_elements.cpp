@@ -482,6 +482,20 @@ void HudElements::resolution(){
     ImGui::PopFont();
 }
 
+void HudElements::show_fps_limit(){
+    int fps = 0;
+    double frame_time = (double)fps_limit_stats.targetFrameTime.count()/1000000;
+    if (frame_time > 0.0){
+        fps = (1 / frame_time) *1000;
+    }
+    ImGui::TableNextRow();
+    ImGui::PushFont(HUDElements.sw_stats->font1);
+    ImGui::TextColored(HUDElements.colors.engine, "%s","FPS limit");
+    ImGui::TableNextCell();
+    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", fps);
+    ImGui::PopFont();
+}
+
 void HudElements::graphs(){
     ImGui::TableNextRow();
     ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
@@ -621,7 +635,8 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
     if (param == "wine")            { ordered_functions.push_back({wine, value});           }
     if (param == "frame_timing")    { ordered_functions.push_back({frame_timing, value});   }
     if (param == "media_player")    { ordered_functions.push_back({media_player, value});   }
-    if (param == "resolution")      { ordered_functions.push_back({resolution, value});   }
+    if (param == "resolution")      { ordered_functions.push_back({resolution, value});     }
+    if (param == "show_fps_limit")  { ordered_functions.push_back({show_fps_limit, value}); }
     if (param == "graphs"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs])
             HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs] = true;

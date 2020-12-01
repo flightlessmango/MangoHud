@@ -60,6 +60,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(cpu_mhz)                       \
    OVERLAY_PARAM_BOOL(frametime)                     \
    OVERLAY_PARAM_BOOL(resolution)                    \
+   OVERLAY_PARAM_BOOL(show_fps_limit)                \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \

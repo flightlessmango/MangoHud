@@ -195,6 +195,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `table_columns`                    | Set the number of table columns for ImGui, defaults to 3                              |
 | `blacklist`                        | Add a program to the blacklist. e.g `blacklist=vkcube,WatchDogs2.exe`                 |
 | `resolution`                       | Display the current resolution                                                        |
+| `show_fps_limit`                   | Display the current fps limit                                                         |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 Because comma is also used as option delimiter and needs to be escaped for values with a backslash, you can use `+` like `MANGOHUD_CONFIG=fps_limit=60+30+0` instead.

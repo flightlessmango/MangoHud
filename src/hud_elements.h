@@ -40,6 +40,7 @@ class HudElements{
         static void frame_timing();
         static void media_player();
         static void resolution();
+        static void show_fps_limit();
         static void graphs();
 
         void convert_colors(struct overlay_params& params);
