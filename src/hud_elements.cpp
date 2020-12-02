@@ -485,9 +485,10 @@ void HudElements::resolution(){
 void HudElements::show_fps_limit(){
     int fps = 0;
     double frame_time = (double)fps_limit_stats.targetFrameTime.count()/1000000;
-    if (frame_time > 0.0){
-        fps = (1 / frame_time) *1000;
+    if (frame_time == 0.0){
+        return;
     }
+    fps = (1 / frame_time) *1000;
     ImGui::TableNextRow();
     ImGui::PushFont(HUDElements.sw_stats->font1);
     ImGui::TextColored(HUDElements.colors.engine, "%s","FPS limit");
