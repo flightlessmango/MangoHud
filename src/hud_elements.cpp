@@ -584,7 +584,7 @@ void HudElements::graphs(){
         HUDElements.min = 0;
         ImGui::TextColored(HUDElements.colors.engine, "%s", "VRAM");
     }
-
+#ifdef __gnu_linux__
     if (value == "ram"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram])
             HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram] = true;
@@ -597,6 +597,7 @@ void HudElements::graphs(){
         HUDElements.min = 0;
         ImGui::TextColored(HUDElements.colors.engine, "%s", "RAM");
     }
+#endif
     ImGui::PopFont();
     ImGui::Dummy(ImVec2(0.0f,5.0f));
     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
