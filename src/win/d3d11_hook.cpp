@@ -5,6 +5,7 @@
 #include "d3d11_hook.h"
 #include <d3d11.h>
 #include <assert.h>
+#include <intrin.h>
 
 #include "d3d_shared.h"
 
