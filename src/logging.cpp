@@ -15,7 +15,7 @@ std::unique_ptr<Logger> logger;
 string exec(string command) {
    char buffer[128];
    string result = "";
-#ifdef __GNU_LINUX__
+#ifdef __gnu_linux__
 
    // Open pipe to file
    FILE* pipe = popen(command.c_str(), "r");
@@ -100,8 +100,8 @@ void logging(void *params_void){
 }
 
 Logger::Logger(overlay_params* in_params)
-  : m_logging_on(false), 
-    m_values_valid(false), 
+  : m_logging_on(false),
+    m_values_valid(false),
     m_params(in_params)
 {
 #ifndef NDEBUG
