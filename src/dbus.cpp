@@ -3,7 +3,7 @@
 #include <iostream>
 #include <sstream>
 
-#include "dbus_helpers.hpp"
+#include "dbus_helpers.h"
 #include "dbus_info.h"
 #include "string_utils.h"
 
@@ -86,7 +86,7 @@ static void parse_mpris_properties(libdbus_loader& dbus, DBusMessage* msg,
     if (source != "org.mpris.MediaPlayer2.Player") return;
 
     iter.next();
-    if (not iter.is_array()) return;
+    if (!iter.is_array()) return;
 
     iter.string_map_for_each([&meta](std::string& key, DBusMessageIter_wrap it) {
         if (key == "Metadata") {
@@ -107,10 +107,10 @@ bool dbus_get_name_owner(dbusmgr::dbus_manager& dbus_mgr,
             "org.freedesktop.DBus", "GetNameOwner", &dbus_mgr.dbus())
             .argument(name)
             .send_with_reply_and_block(dbus_mgr.get_conn(), DBUS_TIMEOUT);
-    if (not reply) return false;
+    if (!reply) return false;
 
     auto iter = reply.iter();
-    if (not iter.is_string()) return false;
+    if (!iter.is_string()) return false;
     name_owner = iter.get_primitive<std::string>();
     return true;
 }
@@ -125,7 +125,7 @@ bool dbus_get_player_property(dbusmgr::dbus_manager& dbus_mgr, metadata& meta,
             .argument(prop)
             .send_with_reply_and_block(dbus_mgr.get_conn(), DBUS_TIMEOUT);
 
-    if (not reply) return false;
+    if (!reply) return false;
 
     auto iter = reply.iter();
 
@@ -153,7 +153,7 @@ bool dbus_manager::get_media_player_metadata(metadata& meta, std::string name) {
 bool dbus_manager::init(const std::string& requested_player) {
     if (m_inited) return true;
 
-    if (not requested_player.empty()) {
+    if (!requested_player.empty()) {
         m_requested_player = "org.mpris.MediaPlayer2." + requested_player;
     }
 
@@ -189,7 +189,7 @@ bool dbus_manager::select_active_player() {
     auto old_active_player = m_active_player;
     m_active_player = "";
     metadata meta {};
-    if (not m_requested_player.empty()) {
+    if (!m_requested_player.empty()) {
         // If the requested player is available, use it
         if (m_name_owners.count(m_requested_player) > 0) {
             m_active_player = m_requested_player;
@@ -223,14 +223,14 @@ bool dbus_manager::select_active_player() {
         }
     }
 
-    if (not m_active_player.empty()) {
+    if (!m_active_player.empty()) {
         onNewPlayer(meta);
         return true;
     } else {
 #ifndef NDEBUG
         std::cerr << "No active players\n";
 #endif
-        if (not old_active_player.empty()) {
+        if (!old_active_player.empty()) {
             onNoPlayer();
         }
         return false;
@@ -285,8 +285,8 @@ bool dbus_manager::handle_properties_changed(DBusMessage* msg,
 #endif
     if (source != "org.mpris.MediaPlayer2.Player") return false;
 
-    if (m_active_player == "" or
-        (m_requested_player.empty() and not main_metadata.meta.playing)) {
+    if (m_active_player == "" ||
+        (m_requested_player.empty() && !main_metadata.meta.playing)) {
         select_active_player();
     }
     else if (m_name_owners[m_active_player] == sender) {
@@ -362,11 +362,11 @@ bool dbus_manager::dbus_list_name_to_owner() {
             "org.freedesktop.DBus", "/org/freedesktop/DBus",
             "org.freedesktop.DBus", "ListNames", &dbus_mgr.dbus())
             .send_with_reply_and_block(dbus_mgr.get_conn(), DBUS_TIMEOUT);
-    if (not reply) return false;
+    if (!reply) return false;
 
     auto iter = reply.iter();
 
-    if (not iter.is_array()) {
+    if (!iter.is_array()) {
         return false;
     }
     iter.array_for_each_value<std::string>([&](std::string name) {

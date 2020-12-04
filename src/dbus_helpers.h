@@ -195,7 +195,7 @@ auto DBusMessageIter_wrap::get_stringified() -> std::string {
 }
 
 auto DBusMessageIter_wrap::get_array_iter() -> DBusMessageIter_wrap {
-    if (not is_array()) {
+    if (!is_array()) {
         std::cerr << "Not an array; " << (char)type() << "\n";
         return DBusMessageIter_wrap(DBusMessageIter{}, m_DBus);
     }
@@ -265,7 +265,7 @@ void DBusMessageIter_wrap::string_multimap_for_each_stringify(T action) {
 }
 
 auto DBusMessageIter_wrap::next() -> DBusMessageIter_wrap& {
-    if (not *this) return *this;
+    if (!*this) return *this;
     m_DBus->message_iter_next(&m_Iter);
     // Resolve any variants
     m_resolved_iter = resolve_variants();
@@ -310,8 +310,8 @@ class DBusMessage_wrap {
 
 template <class T>
 DBusMessage_wrap& DBusMessage_wrap::argument(T arg) {
-    if (not m_msg) return *this;
-    if (not m_DBus->message_append_args(m_msg, detail::dbus_type_identifier<T>,
+    if (!m_msg) return *this;
+    if (!m_DBus->message_append_args(m_msg, detail::dbus_type_identifier<T>,
                                         &arg, DBUS_TYPE_INVALID)) {
         free_if_owning();
     }
@@ -326,7 +326,7 @@ DBusMessage_wrap& DBusMessage_wrap::argument<const std::string&>(
 
 DBusMessage_wrap DBusMessage_wrap::send_with_reply_and_block(
     DBusConnection* conn, int timeout) {
-    if (not m_msg) {
+    if (!m_msg) {
         return DBusMessage_wrap(nullptr, m_DBus);
     }
     DBusError err;
