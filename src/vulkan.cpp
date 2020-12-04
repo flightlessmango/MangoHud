@@ -33,7 +33,7 @@
 #include <vector>
 #include <list>
 #include <array>
-#ifdef __GNU_LINUX__
+#ifdef __gnu_linux__
 #include <libgen.h>
 #endif
 
