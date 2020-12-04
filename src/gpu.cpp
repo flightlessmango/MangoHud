@@ -57,23 +57,25 @@ nvapi_util();
 }
 
 void getAmdGpuInfo(){
-    int64_t value = 0;
-
     if (amdgpu.busy) {
         rewind(amdgpu.busy);
         fflush(amdgpu.busy);
-        if (fscanf(amdgpu.busy, "%d", &gpu_info.load) != 1)
-            gpu_info.load = 0;
-        gpu_info.load = gpu_info.load;
+        int value = 0;
+        if (fscanf(amdgpu.busy, "%d", &value) != 1)
+            value = 0;
+        gpu_info.load = value;
     }
 
     if (amdgpu.temp) {
         rewind(amdgpu.temp);
         fflush(amdgpu.temp);
-        if (fscanf(amdgpu.temp, "%d", &gpu_info.temp) != 1)
-            gpu_info.temp = 0;
-        gpu_info.temp /= 1000;
+        int value = 0;
+        if (fscanf(amdgpu.temp, "%d", &value) != 1)
+            value = 0;
+        gpu_info.temp = value / 1000;
     }
+
+    int64_t value = 0;
 
     if (amdgpu.vram_total) {
         rewind(amdgpu.vram_total);
