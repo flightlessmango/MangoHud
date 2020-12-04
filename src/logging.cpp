@@ -15,6 +15,7 @@ std::unique_ptr<Logger> logger;
 string exec(string command) {
    char buffer[128];
    string result = "";
+#ifdef __GNU_LINUX__
 
    // Open pipe to file
    FILE* pipe = popen(command.c_str(), "r");
@@ -31,6 +32,7 @@ string exec(string command) {
    }
 
    pclose(pipe);
+#endif
    return result;
 }
 
