@@ -6,6 +6,7 @@ ImVec2 window_size;
 overlay_params params {};
 struct swapchain_stats sw_stats {};
 uint32_t vendorID;
+kiero::RenderType::Enum dx_version;
 
 void init_d3d_shared(){
     if (!logger) logger = std::make_unique<Logger>(&params);
