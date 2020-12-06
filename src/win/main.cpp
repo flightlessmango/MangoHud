@@ -50,10 +50,6 @@ void renderTypes() {
     {
         render_types.push_back(kiero::RenderType::OpenGL);
     }
-    if (::GetModuleHandle(KIERO_TEXT("vulkan-1.dll")) != NULL)
-    {
-        render_types.push_back(kiero::RenderType::Vulkan);
-    }
     for (auto& _type : render_types)
         kiero::init(_type);
 }
