@@ -40,7 +40,7 @@ void enumerate_config_files(std::vector<std::string>& paths)
     if (!env_config.empty())
         paths.push_back(env_config + mangohud_dir + "MangoHud.conf");
 #ifdef _WIN32
-    paths.push_back("C:\\MangoHud.conf");
+    paths.push_back("C:\\mangohud\\MangoHud.conf");
 #endif
     std::string exe_path = get_exe_path();
     auto n = exe_path.find_last_of('/');
