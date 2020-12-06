@@ -427,7 +427,7 @@ void HudElements::frame_timing(){
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TextColored(HUDElements.colors.engine, "%s", "Frametime");
         for (size_t i = 0; i < HUDElements.params->table_columns - 1; i++)
-            ImGui::TableNextCell();        
+            ImGui::TableNextCell();
         ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "%.1f ms", 1000 / HUDElements.sw_stats->fps);
         ImGui::PopFont();
@@ -451,7 +451,7 @@ void HudElements::frame_timing(){
                             ImVec2(ImGui::GetContentRegionAvailWidth() * HUDElements.params->table_columns, 50));
         }
         ImGui::PopStyleColor();
-        
+
     }
 }
 
@@ -495,6 +495,17 @@ void HudElements::show_fps_limit(){
     ImGui::TableNextCell();
     right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", fps);
     ImGui::PopFont();
+}
+
+void HudElements::custom_header(){
+    ImGui::TableAutoHeaders();
+    ImGui::TableNextRow();
+    std::string text = HUDElements.params->custom_header;
+    center_text(text);
+    ImGui::PushFont(HUDElements.sw_stats->font1);
+    ImGui::TextColored(HUDElements.colors.text, "%s",text.c_str());
+    ImGui::PopFont();
+    ImGui::NewLine();
 }
 
 void HudElements::graphs(){
@@ -639,6 +650,7 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
     if (param == "media_player")    { ordered_functions.push_back({media_player, value});   }
     if (param == "resolution")      { ordered_functions.push_back({resolution, value});     }
     if (param == "show_fps_limit")  { ordered_functions.push_back({show_fps_limit, value}); }
+    if (param == "custom_header")    { ordered_functions.push_back({custom_header, value}); }
     if (param == "graphs"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs])
             HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs] = true;

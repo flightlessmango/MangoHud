@@ -122,6 +122,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(table_columns)               \
    OVERLAY_PARAM_CUSTOM(blacklist)                   \
    OVERLAY_PARAM_CUSTOM(autostart_log)               \
+   OVERLAY_PARAM_CUSTOM(custom_header)                 \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -210,6 +211,7 @@ struct overlay_params {
    std::string font_file, font_file_text;
    uint32_t font_glyph_ranges;
 
+   std::string custom_header;
    std::string config_file_path;
    std::unordered_map<std::string,std::string> options;
    int permit_upload;

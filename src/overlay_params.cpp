@@ -397,6 +397,8 @@ parse_font_glyph_ranges(const char *str)
 #define parse_gpu_load_value(s) parse_load_value(s)
 #define parse_cpu_load_value(s) parse_load_value(s)
 #define parse_blacklist(s) parse_str_tokenize(s)
+#define parse_custom_header(s) parse_str(s)
+
 
 static bool
 parse_help(const char *str)
