@@ -21,7 +21,7 @@ for os_release in ${OS_RELEASE_FILES[@]} ; do
     if [[ ! -e "${os_release}" ]]; then
         continue
     fi
-    DISTRO=$(sed -rn 's/^NAME=(.+)/\1/p' ${os_release} | sed 's/"//g')
+    DISTRO=$(sed -rn 's/^ID(_LIKE)*=(.+)/\2/p' ${os_release} | sed 's/"//g')
 done
 
 dependencies() {
@@ -50,16 +50,18 @@ dependencies() {
             fi
             set -e
         }
-        echo "# Checking Dependencies"
 
-        case $DISTRO in
-            "Arch Linux"|"Manjaro Linux")
+        for i in $DISTRO; do
+        echo "# Checking dependencies for \"$i\""
+        case $i in
+            *arch*|*manjaro*)
                 MANAGER_QUERY="pacman -Q"
                 MANAGER_INSTALL="pacman -S"
                 DEPS="{gcc,meson,pkgconf,python-mako,glslang,libglvnd,lib32-libglvnd,libxnvctrl,libdrm}"
                 dep_install
+                break
             ;;
-            "Fedora")
+            *fedora*)
                 MANAGER_QUERY="dnf list installed"
                 MANAGER_INSTALL="dnf install"
                 DEPS="{meson,gcc,gcc-c++,libX11-devel,glslang,python3-mako,mesa-libGL-devel,libXNVCtrl-devel,dbus-devel}"
@@ -68,8 +70,10 @@ dependencies() {
                 unset INSTALL
                 DEPS="{glibc-devel.i686,libstdc++-devel.i686,libX11-devel.i686}"
                 dep_install
+                break
             ;;
-            *"buntu"|"Linux Mint"|"Debian GNU/Linux"|"Zorin OS"|"Pop!_OS"|"elementary OS"|"KDE neon"|"Deepin")
+
+            *debian*|*ubuntu*)
                 MANAGER_QUERY="dpkg-query -s"
                 MANAGER_INSTALL="apt install"
                 DEPS="{gcc,g++,gcc-multilib,g++-multilib,ninja-build,python3-pip,python3-setuptools,python3-wheel,pkg-config,mesa-common-dev,libx11-dev,libxnvctrl-dev,libdbus-1-dev}"
@@ -84,20 +88,14 @@ dependencies() {
                     $SU_CMD /usr/bin/install -m755 bin/glslangValidator /usr/local/bin/
                     rm bin/glslangValidator glslang-master-linux-Release.zip
                 fi
+                break
             ;;
-            "openSUSE Leap"|"openSUSE Tumbleweed")
+            *suse*)
 
                 PACKMAN_PKGS="libXNVCtrl-devel"
-                case $DISTRO in
-                    "openSUSE Leap")
-                        echo "You may have to enable packman repository for some extra packages: ${PACKMAN_PKGS}"
-                        echo "zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Leap_15.1/ packman"
-                    ;;
-                    "openSUSE Tumbleweed")
-                        echo "You may have to enable packman repository for some extra packages: ${PACKMAN_PKGS}"
-                        echo "zypper ar -cfp 90 http://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/ packman"
-                    ;;
-                esac
+                echo "You may have to enable packman repository for some extra packages: ${PACKMAN_PKGS}"
+                echo "Leap:       zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Leap_15.1/ packman"
+                echo "Tumbleweed: zypper ar -cfp 90 http://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/ packman"
 
                 MANAGER_QUERY="rpm -q"
                 MANAGER_INSTALL="zypper install"
@@ -107,8 +105,9 @@ dependencies() {
                 if [[ $(pip3 show meson; echo $?) == 1 ]]; then
                     $SU_CMD pip3 install 'meson>=0.54'
                 fi
+                break
             ;;
-            "Solus")
+            *solus*)
                 unset MANAGER_QUERY
                 unset DEPS
                 MANAGER_INSTALL="eopkg it"
@@ -130,11 +129,13 @@ dependencies() {
                     INSTALL="${INSTALL}""-c system.devel "
                 fi
                 dep_install
+                break
                 ;;
             *)
                 echo "# Unable to find distro information!"
                 echo "# Attempting to build regardless"
         esac
+        done
     fi
 }
 
