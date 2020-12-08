@@ -500,11 +500,10 @@ void HudElements::show_fps_limit(){
 void HudElements::custom_header(){
     ImGui::TableNextRow();
     ImGui::PushFont(HUDElements.sw_stats->font1);
-    ImGui::TableAutoHeaders();
     std::string text = HUDElements.params->custom_header;
     center_text(text);
     ImGui::TextColored(HUDElements.colors.text, "%s",text.c_str());
-    //ImGui::Text("\n");
+    ImGui::NewLine();
     ImGui::PopFont();
 }
 
