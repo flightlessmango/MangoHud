@@ -504,7 +504,7 @@ void HudElements::custom_header(){
     std::string text = HUDElements.params->custom_header;
     center_text(text);
     ImGui::TextColored(HUDElements.colors.text, "%s",text.c_str());
-    ImGui::Text("\n");
+    //ImGui::Text("\n");
     ImGui::PopFont();
 }
 
@@ -632,6 +632,9 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
     auto param = option.first;
     auto value = option.second;
 
+    if (param == "custom_header"){
+        ordered_functions.insert(ordered_functions.begin(),std::make_pair(custom_header,value));
+    }
     if (param == "version")         { ordered_functions.push_back({version, value});        }
     if (param == "time")            { ordered_functions.push_back({time, value});           }
     if (param == "gpu_stats")       { ordered_functions.push_back({gpu_stats, value});      }
@@ -650,7 +653,6 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
     if (param == "media_player")    { ordered_functions.push_back({media_player, value});   }
     if (param == "resolution")      { ordered_functions.push_back({resolution, value});     }
     if (param == "show_fps_limit")  { ordered_functions.push_back({show_fps_limit, value}); }
-    if (param == "custom_header")    { ordered_functions.push_back({custom_header, value}); }
     if (param == "graphs"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs])
             HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs] = true;
@@ -668,6 +670,7 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
 void HudElements::legacy_elements(){
     string value = "NULL";
     ordered_functions.clear();
+    ordered_functions.push_back({custom_header,      value});
     ordered_functions.push_back({time,               value});
     ordered_functions.push_back({version,            value});
     ordered_functions.push_back({gpu_stats,          value});
