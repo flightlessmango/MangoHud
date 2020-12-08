@@ -220,9 +220,7 @@ void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...)
 
 void center_text(std::string& text)
 {
-   float font_size = ImGui::GetFontSize() * text.size() / 2;
-   ImGui::SameLine(ImGui::GetWindowSize().x / 2 -font_size + (font_size /1.4));
-
+   ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2 )- (ImGui::CalcTextSize(text.c_str()).x / 2));
 }
 
 float get_ticker_limited_pos(float pos, float tw, float& left_limit, float& right_limit)
