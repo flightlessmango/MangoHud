@@ -122,7 +122,8 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(table_columns)               \
    OVERLAY_PARAM_CUSTOM(blacklist)                   \
    OVERLAY_PARAM_CUSTOM(autostart_log)               \
-   OVERLAY_PARAM_CUSTOM(custom_header)                 \
+   OVERLAY_PARAM_CUSTOM(custom_text_center)          \
+   OVERLAY_PARAM_CUSTOM(custom_text)                 \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -203,15 +204,14 @@ struct overlay_params {
    std::string pci_dev;
    std::string media_player_name;
    std::string cpu_text, gpu_text;
-   //std::string blacklist;
    std::vector<std::string> blacklist;
    unsigned log_interval, autostart_log;
    std::vector<media_player_order> media_player_order;
    std::vector<std::string> benchmark_percentiles;
    std::string font_file, font_file_text;
    uint32_t font_glyph_ranges;
-
-   std::string custom_header;
+   std::string custom_text_center;
+   std::string custom_text;
    std::string config_file_path;
    std::unordered_map<std::string,std::string> options;
    int permit_upload;

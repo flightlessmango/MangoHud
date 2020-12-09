@@ -196,7 +196,8 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `blacklist`                        | Add a program to the blacklist. e.g `blacklist=vkcube,WatchDogs2.exe`                 |
 | `resolution`                       | Display the current resolution                                                        |
 | `show_fps_limit`                   | Display the current fps limit                                                         |
-| `custom_header`                    | Display a custom header. e.g `custom_header=FlightLessMango Benchmarks`               |
+| `custom_text_center`               | Display a custom text centered useful for a header e.g `custom_text_center=FlightLessMango Benchmarks`     |
+| `custom_text`                      | Display a custom text e.g `custom_text=Fsync enabled`                                 |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 Because comma is also used as option delimiter and needs to be escaped for values with a backslash, you can use `+` like `MANGOHUD_CONFIG=fps_limit=60+30+0` instead.
