@@ -65,7 +65,10 @@ class HudElements{
                 gpu_load_high,
                 cpu_load_low,
                 cpu_load_med,
-                cpu_load_high;
+                cpu_load_high,
+                fps_value_low,
+                fps_value_med,
+                fps_value_high;
         } colors {};
 };
 

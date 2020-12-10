@@ -399,6 +399,8 @@ parse_font_glyph_ranges(const char *str)
 #define parse_blacklist(s) parse_str_tokenize(s)
 #define parse_custom_text_center(s) parse_str(s)
 #define parse_custom_text(s) parse_str(s)
+#define parse_fps_value(s) parse_load_value(s)
+#define parse_fps_color(s) parse_load_color(s)
 
 
 static bool
@@ -577,6 +579,8 @@ parse_overlay_config(struct overlay_params *params,
    params->gpu_load_value = { 60, 90 };
    params->cpu_load_value = { 60, 90 };
    params->cellpadding_y = -0.085;
+   params->fps_color = { 0xb22222, 0xfdfd09, 0x39f900 };
+   params->fps_value = { 30, 60 };
 
 
 
@@ -654,7 +658,7 @@ parse_overlay_config(struct overlay_params *params,
       params->font_scale_media_player = 0.55f;
 
    // Convert from 0xRRGGBB to ImGui's format
-   std::array<unsigned *, 17> colors = {
+   std::array<unsigned *, 20> colors = {
       &params->cpu_color,
       &params->gpu_color,
       &params->vram_color,
@@ -672,6 +676,9 @@ parse_overlay_config(struct overlay_params *params,
       &params->cpu_load_color[0],
       &params->cpu_load_color[1],
       &params->cpu_load_color[2],
+      &params->fps_color[0],
+      &params->fps_color[1],
+      &params->fps_color[2],
    };
 
    for (auto color : colors){

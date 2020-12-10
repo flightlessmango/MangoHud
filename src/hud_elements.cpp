@@ -71,6 +71,9 @@ void HudElements::convert_colors(struct overlay_params& params)
     HUDElements.colors.cpu_load_low = convert(params.cpu_load_color[0]);
     HUDElements.colors.cpu_load_med = convert(params.cpu_load_color[1]);
     HUDElements.colors.cpu_load_high = convert(params.cpu_load_color[2]);
+    HUDElements.colors.fps_value_low = convert(params.fps_color[0]);
+    HUDElements.colors.fps_value_med = convert(params.fps_color[1]);
+    HUDElements.colors.fps_value_high = convert(params.fps_color[2]);
 
     ImGuiStyle& style = ImGui::GetStyle();
     style.Colors[ImGuiCol_PlotLines] = convert(params.frametime_color);
@@ -337,7 +340,22 @@ if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps]){
         }
         ImGui::TextColored(HUDElements.colors.engine, "%s", HUDElements.is_vulkan ? HUDElements.sw_stats->engineName.c_str() : "OpenGL");
         ImGui::TableNextCell();
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", HUDElements.sw_stats->fps);
+        auto text_color = HUDElements.colors.text;
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_color_change]){
+            int fps = int(HUDElements.sw_stats->fps);
+            struct LOAD_DATA fps_data = {
+            HUDElements.colors.fps_value_low,
+            HUDElements.colors.fps_value_med,
+            HUDElements.colors.fps_value_high,
+            HUDElements.params->fps_value[0],
+            HUDElements.params->fps_value[1]
+            };
+            auto load_color = change_on_load_temp(fps_data, fps);
+            right_aligned_text(load_color, HUDElements.ralign_width, "%.0f", HUDElements.sw_stats->fps);
+        }
+        else {
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", HUDElements.sw_stats->fps);
+        }
         ImGui::SameLine(0, 1.0f);
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::Text("FPS");

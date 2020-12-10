@@ -61,6 +61,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(frametime)                     \
    OVERLAY_PARAM_BOOL(resolution)                    \
    OVERLAY_PARAM_BOOL(show_fps_limit)                \
+   OVERLAY_PARAM_BOOL(fps_color_change)              \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
@@ -118,6 +119,8 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(cpu_load_value)              \
    OVERLAY_PARAM_CUSTOM(gpu_load_color)              \
    OVERLAY_PARAM_CUSTOM(cpu_load_color)              \
+   OVERLAY_PARAM_CUSTOM(fps_value)                   \
+   OVERLAY_PARAM_CUSTOM(fps_color)                   \
    OVERLAY_PARAM_CUSTOM(cellpadding_y)               \
    OVERLAY_PARAM_CUSTOM(table_columns)               \
    OVERLAY_PARAM_CUSTOM(blacklist)                   \
@@ -186,6 +189,8 @@ struct overlay_params {
    std::vector<unsigned> cpu_load_color;
    std::vector<unsigned> gpu_load_value;
    std::vector<unsigned> cpu_load_value;
+   std::vector<unsigned> fps_color;
+   std::vector<unsigned> fps_value;
    unsigned media_player_color;
    unsigned table_columns;
    bool no_small_font;
