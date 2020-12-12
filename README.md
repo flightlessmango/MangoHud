@@ -73,6 +73,16 @@ If you are using Solus, to install [MangoHud](https://dev.getsol.us/source/mango
 sudo eopkg it mangohud
 ```
 
+#### Ubuntu
+
+User of Ubuntu 20.04 or newer can install a NVML enabled version of MangoHud from the [MangoHud PPA](https://launchpad.net/~flexiondotorg/+archive/ubuntu/mangohud) maintained by [Martin Wimpress](https://github.com/flexiondotorg/mangohud-nvml-debian):
+
+````
+sudo add-apt-repository ppa:flexiondotorg/mangohud
+sudo apt update
+sudo apt install mangohud
+````
+
 #### Flatpak
 
 If you are using Flatpaks, you will have to add the [Flathub repository](https://flatpak.org/setup/) for your specific distribution, and then, to install it, execute:
