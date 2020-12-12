@@ -14,8 +14,9 @@ void parseConfigLine(std::string line, std::unordered_map<std::string,std::strin
 
     if (line.find("#") != std::string::npos)
         line = line.erase(line.find("#"), std::string::npos);
-
-    size_t equal = line.find("=");
+    
+    trim(line);
+    size_t equal = line.find_first_of("= ");
     if (equal == std::string::npos)
         value = "1";
     else
