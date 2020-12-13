@@ -33,7 +33,9 @@
 #include <vector>
 #include <list>
 #include <array>
+#ifdef __gnu_linux__
 #include <libgen.h>
+#endif
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_layer.h>

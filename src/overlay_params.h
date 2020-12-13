@@ -54,10 +54,14 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(wine)                          \
    OVERLAY_PARAM_BOOL(gpu_load_change)               \
    OVERLAY_PARAM_BOOL(cpu_load_change)               \
+   OVERLAY_PARAM_BOOL(core_load_change)              \
    OVERLAY_PARAM_BOOL(graphs)                        \
    OVERLAY_PARAM_BOOL(legacy_layout)                 \
    OVERLAY_PARAM_BOOL(cpu_mhz)                       \
    OVERLAY_PARAM_BOOL(frametime)                     \
+   OVERLAY_PARAM_BOOL(resolution)                    \
+   OVERLAY_PARAM_BOOL(show_fps_limit)                \
+   OVERLAY_PARAM_BOOL(fps_color_change)              \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
@@ -115,10 +119,14 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(cpu_load_value)              \
    OVERLAY_PARAM_CUSTOM(gpu_load_color)              \
    OVERLAY_PARAM_CUSTOM(cpu_load_color)              \
+   OVERLAY_PARAM_CUSTOM(fps_value)                   \
+   OVERLAY_PARAM_CUSTOM(fps_color)                   \
    OVERLAY_PARAM_CUSTOM(cellpadding_y)               \
    OVERLAY_PARAM_CUSTOM(table_columns)               \
    OVERLAY_PARAM_CUSTOM(blacklist)                   \
    OVERLAY_PARAM_CUSTOM(autostart_log)               \
+   OVERLAY_PARAM_CUSTOM(custom_text_center)          \
+   OVERLAY_PARAM_CUSTOM(custom_text)                 \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -181,6 +189,8 @@ struct overlay_params {
    std::vector<unsigned> cpu_load_color;
    std::vector<unsigned> gpu_load_value;
    std::vector<unsigned> cpu_load_value;
+   std::vector<unsigned> fps_color;
+   std::vector<unsigned> fps_value;
    unsigned media_player_color;
    unsigned table_columns;
    bool no_small_font;
@@ -199,14 +209,14 @@ struct overlay_params {
    std::string pci_dev;
    std::string media_player_name;
    std::string cpu_text, gpu_text;
-   //std::string blacklist;
    std::vector<std::string> blacklist;
    unsigned log_interval, autostart_log;
    std::vector<media_player_order> media_player_order;
    std::vector<std::string> benchmark_percentiles;
    std::string font_file, font_file_text;
    uint32_t font_glyph_ranges;
-
+   std::string custom_text_center;
+   std::string custom_text;
    std::string config_file_path;
    std::unordered_map<std::string,std::string> options;
    int permit_upload;

@@ -64,6 +64,9 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
    // Save data for graphs
    if (graph_data.size() > 50)
       graph_data.erase(graph_data.begin());
+#ifdef _WIN32
+   float memused = 0;
+#endif
    graph_data.push_back({0, 0, cpuStats.GetCPUDataTotal().percent, gpu_info.load, cpuStats.GetCPUDataTotal().temp,
                         gpu_info.temp, gpu_info.CoreClock, gpu_info.MemClock, gpu_info.memoryUsed, memused});
    logger->notify_data_valid();
@@ -213,6 +216,11 @@ void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...)
    ImGui::SetCursorPosX(pos.x + off_x - sz.x);
    //ImGui::Text("%s", buffer);
    ImGui::TextColored(col,"%s",buffer);
+}
+
+void center_text(std::string& text)
+{
+   ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2 )- (ImGui::CalcTextSize(text.c_str()).x / 2));
 }
 
 float get_ticker_limited_pos(float pos, float tw, float& left_limit, float& right_limit)
@@ -400,7 +408,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    HUDElements.sw_stats = &data; HUDElements.params = &params;
    HUDElements.is_vulkan = is_vulkan;
    ImGui::GetIO().FontGlobalScale = params.font_scale;
-   if(not logger) logger = std::make_unique<Logger>(&params);
+   if(!logger) logger = std::make_unique<Logger>(&params);
    static float ralign_width = 0, old_scale = 0;
    window_size = ImVec2(params.width, params.height);
    unsigned height = ImGui::GetIO().DisplaySize.y;

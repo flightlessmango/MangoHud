@@ -15,6 +15,7 @@ std::unique_ptr<Logger> logger;
 string exec(string command) {
    char buffer[128];
    string result = "";
+#ifdef __gnu_linux__
 
    // Open pipe to file
    FILE* pipe = popen(command.c_str(), "r");
@@ -31,6 +32,7 @@ string exec(string command) {
    }
 
    pclose(pipe);
+#endif
    return result;
 }
 
@@ -98,8 +100,8 @@ void logging(void *params_void){
 }
 
 Logger::Logger(overlay_params* in_params)
-  : m_logging_on(false), 
-    m_values_valid(false), 
+  : m_logging_on(false),
+    m_values_valid(false),
     m_params(in_params)
 {
 #ifndef NDEBUG
@@ -112,27 +114,27 @@ void Logger::start_logging() {
   m_values_valid = false;
   m_logging_on = true;
   m_log_start = Clock::now();
-  if((not m_params->output_folder.empty()) and (m_params->log_interval != 0)){
+  if((!m_params->output_folder.empty()) && (m_params->log_interval != 0)){
     std::thread(logging, m_params).detach();
   }
 }
 
 void Logger::stop_logging() {
-  if(not m_logging_on) return;
+  if(!m_logging_on) return;
   m_logging_on = false;
   m_log_end = Clock::now();
 
   std::thread(calculate_benchmark_data, m_params).detach();
 
-  if(not m_params->output_folder.empty()) {
+  if(!m_params->output_folder.empty()) {
     m_log_files.emplace_back(m_params->output_folder + "/" + get_program_name() + "_" + get_log_suffix());
     std::thread(writeFile, m_log_files.back()).detach();
   }
 }
 
 void Logger::try_log() {
-  if(not is_active()) return;
-  if(not m_values_valid) return;
+  if(!is_active()) return;
+  if(!m_values_valid) return;
   auto now = Clock::now();
   auto elapsedLog = now - m_log_start;
 
@@ -141,7 +143,7 @@ void Logger::try_log() {
   currentLogData.frametime = frametime;
   m_log_array.push_back(currentLogData);
 
-  if(m_params->log_duration and (elapsedLog >= std::chrono::seconds(m_params->log_duration))){
+  if(m_params->log_duration && (elapsedLog >= std::chrono::seconds(m_params->log_duration))){
     stop_logging();
   }
 }

@@ -76,6 +76,8 @@ mangohud_install() {
     #ln -sv lib /usr/lib/mangohud/aarch64-linux-gnu
     #ln -sv lib /usr/lib/mangohud/arm-linux-gnueabihf
 
+    rm -rf ./usr
+
     echo "MangoHud Installed"
 }
 

@@ -5,6 +5,7 @@
 #include "d3d11_hook.h"
 #include <d3d11.h>
 #include <assert.h>
+#include <intrin.h>
 
 #include "d3d_shared.h"
 
@@ -13,6 +14,7 @@ static Present oPresent = NULL;
 
 long __stdcall hkPresent11(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags)
 {
+    dx_version = kiero::RenderType::D3D11;
 #ifdef _MSC_VER
     static auto addr = _ReturnAddress();
     if(addr == _ReturnAddress()){

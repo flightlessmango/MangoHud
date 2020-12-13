@@ -65,6 +65,14 @@ If you are using Fedora, to install the [MangoHud](https://src.fedoraproject.org
 sudo dnf install mangohud
 ```
 
+#### Solus
+
+If you are using Solus, to install [MangoHud](https://dev.getsol.us/source/mangohud/) simply execute:
+
+```
+sudo eopkg it mangohud
+```
+
 #### Flatpak
 
 If you are using Flatpaks, you will have to add the [Flathub repository](https://flatpak.org/setup/) for your specific distribution, and then, to install it, execute:
@@ -80,13 +88,9 @@ flatpak override --user --env=MANGOHUD=1 com.valvesoftware.Steam
 
 # Normal usage
 
-To enable the MangoHud overlay layer for 64bit Vulkan and OpenGL, run :
+To enable the MangoHud overlay layer for Vulkan and OpenGL, run :
 
 `mangohud /path/to/app`
-
-Or
-
-`mangohud.x86 /path/to/app` for 32bit OpenGL
 
 For Lutris games, go to the System options in Lutris (make sure that advanced options are enabled) and add this to the `Command prefix` setting:
 
@@ -185,10 +189,15 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `cpu_load_change`                  | Changes the color of the CPU load depending on load                                   |
 | `cpu_load_color`                   | Set the colors for the gpu load change low,medium and high. e.g `cpu_load_color=0000FF,00FFFF,FF00FF`      |
 | `cpu_load_value`                   | Set the values for medium and high load e.g `cpu_load_value=50,90`                    |
+| `core_load_change`                 | Changes the colors of cpu core loads, uses the same data from `cpu_load_value` and `cpu_load_change`       |
 | `cellpadding_y`                    | Set the vertical cellpadding, default is `-0.085` |
 | `frametime`                        | Display frametime next to fps text                                                    |
 | `table_columns`                    | Set the number of table columns for ImGui, defaults to 3                              |
 | `blacklist`                        | Add a program to the blacklist. e.g `blacklist=vkcube,WatchDogs2.exe`                 |
+| `resolution`                       | Display the current resolution                                                        |
+| `show_fps_limit`                   | Display the current fps limit                                                         |
+| `custom_text_center`               | Display a custom text centered useful for a header e.g `custom_text_center=FlightLessMango Benchmarks`     |
+| `custom_text`                      | Display a custom text e.g `custom_text=Fsync enabled`                                 |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 Because comma is also used as option delimiter and needs to be escaped for values with a backslash, you can use `+` like `MANGOHUD_CONFIG=fps_limit=60+30+0` instead.
@@ -217,10 +226,13 @@ All vulkan vsync options might not be supported on your device, you can check wh
 
 ## MangoHud FPS logging
 
-When you toggle logging (using the keybind `Shift_L+F2`), a file is created with your chosen name (using `output_file`) plus a date & timestamp.
+You must set a valid path for `output_folder` in your configuration to store logs in.
 
-This file can be uploaded to [Flightlessmango.com](https://flightlessmango.com/games/user_benchmarks) to create graphs automatically.
-you can share the created page with others, just link it.
+When you toggle logging (using the keybind `Shift_L+F2`), a file is created with the game name plus a date & timestamp in your `output_folder`.
+
+Log files can be uploaded to [Flightlessmango.com](https://flightlessmango.com/games/user_benchmarks) to create graphs automatically.
+
+You can share the created page with others, just link it.
 
 #### Multiple log files
 

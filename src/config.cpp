@@ -77,7 +77,7 @@ static void enumerate_config_files(std::vector<std::string>& paths)
     paths.push_back(config_dir + mangohud_dir + "MangoHud.conf");
 
 #ifdef _WIN32
-    paths.push_back("C:\\MangoHud.conf");
+    paths.push_back("C:\\mangohud\\MangoHud.conf");
 #endif
 
     if (!program_name.empty()) {

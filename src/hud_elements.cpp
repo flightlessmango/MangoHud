@@ -71,6 +71,9 @@ void HudElements::convert_colors(struct overlay_params& params)
     HUDElements.colors.cpu_load_low = convert(params.cpu_load_color[0]);
     HUDElements.colors.cpu_load_med = convert(params.cpu_load_color[1]);
     HUDElements.colors.cpu_load_high = convert(params.cpu_load_color[2]);
+    HUDElements.colors.fps_value_low = convert(params.fps_color[0]);
+    HUDElements.colors.fps_value_med = convert(params.fps_color[1]);
+    HUDElements.colors.fps_value_high = convert(params.fps_color[2]);
 
     ImGuiStyle& style = ImGui::GetStyle();
     style.Colors[ImGuiCol_PlotLines] = convert(params.frametime_color);
@@ -231,10 +234,28 @@ void HudElements::core_load(){
             ImGui::TextColored(HUDElements.colors.cpu,"%i", i);
             ImGui::PopFont();
             ImGui::TableNextCell();
-            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", int(cpuData.percent));
-            ImGui::SameLine(0, 1.0f);
-            ImGui::Text("%%");
-            ImGui::TableNextCell();
+            auto text_color = HUDElements.colors.text;
+            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_core_load_change]){
+                int cpu_load_percent = int(cpuData.percent);
+                struct LOAD_DATA cpu_data = {
+                    HUDElements.colors.cpu_load_low,
+                    HUDElements.colors.cpu_load_med,
+                    HUDElements.colors.cpu_load_high,
+                    HUDElements.params->cpu_load_value[0],
+                    HUDElements.params->cpu_load_value[1]
+                };
+                auto load_color = change_on_load_temp(cpu_data, cpu_load_percent);
+                right_aligned_text(load_color, HUDElements.ralign_width, "%d", cpu_load_percent);
+                ImGui::SameLine(0, 1.0f);
+                ImGui::TextColored(load_color, "%%");
+                ImGui::TableNextCell();
+            }
+            else {
+                right_aligned_text(text_color, HUDElements.ralign_width, "%i", int(cpuData.percent));
+                ImGui::SameLine(0, 1.0f);
+                ImGui::Text("%%");
+                ImGui::TableNextCell();
+            }
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", cpuData.mhz);
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(HUDElements.sw_stats->font1);
@@ -319,7 +340,22 @@ if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps]){
         }
         ImGui::TextColored(HUDElements.colors.engine, "%s", HUDElements.is_vulkan ? HUDElements.sw_stats->engineName.c_str() : "OpenGL");
         ImGui::TableNextCell();
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", HUDElements.sw_stats->fps);
+        auto text_color = HUDElements.colors.text;
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_color_change]){
+            int fps = int(HUDElements.sw_stats->fps);
+            struct LOAD_DATA fps_data = {
+            HUDElements.colors.fps_value_low,
+            HUDElements.colors.fps_value_med,
+            HUDElements.colors.fps_value_high,
+            HUDElements.params->fps_value[0],
+            HUDElements.params->fps_value[1]
+            };
+            auto load_color = change_on_load_temp(fps_data, fps);
+            right_aligned_text(load_color, HUDElements.ralign_width, "%.0f", HUDElements.sw_stats->fps);
+        }
+        else {
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", HUDElements.sw_stats->fps);
+        }
         ImGui::SameLine(0, 1.0f);
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::Text("FPS");
@@ -409,7 +445,7 @@ void HudElements::frame_timing(){
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TextColored(HUDElements.colors.engine, "%s", "Frametime");
         for (size_t i = 0; i < HUDElements.params->table_columns - 1; i++)
-            ImGui::TableNextCell();        
+            ImGui::TableNextCell();
         ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "%.1f ms", 1000 / HUDElements.sw_stats->fps);
         ImGui::PopFont();
@@ -433,7 +469,7 @@ void HudElements::frame_timing(){
                             ImVec2(ImGui::GetContentRegionAvailWidth() * HUDElements.params->table_columns, 50));
         }
         ImGui::PopStyleColor();
-        
+
     }
 }
 
@@ -451,6 +487,49 @@ void HudElements::media_player(){
     }
     ImGui::PopFont();
 #endif
+}
+
+void HudElements::resolution(){
+    ImGui::TableNextRow();
+    unsigned res_width  = ImGui::GetIO().DisplaySize.x;
+    unsigned res_height = ImGui::GetIO().DisplaySize.y;
+    ImGui::PushFont(HUDElements.sw_stats->font1);
+    ImGui::TextColored(HUDElements.colors.engine, "Resolution");
+    ImGui::TableNextCell();
+    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "%ix%i", res_width, res_height);
+    ImGui::PopFont();
+}
+
+void HudElements::show_fps_limit(){
+    int fps = 0;
+    double frame_time = (double)fps_limit_stats.targetFrameTime.count()/1000000;
+    if (frame_time == 0.0){
+        return;
+    }
+    fps = (1 / frame_time) *1000;
+    ImGui::TableNextRow();
+    ImGui::PushFont(HUDElements.sw_stats->font1);
+    ImGui::TextColored(HUDElements.colors.engine, "%s","FPS limit");
+    ImGui::TableNextCell();
+    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", fps);
+    ImGui::PopFont();
+}
+
+void HudElements::custom_text_center(){
+    ImGui::TableNextRow();
+    ImGui::PushFont(HUDElements.sw_stats->font1);
+    std::string text = HUDElements.params->custom_text_center;
+    center_text(text);
+    ImGui::TextColored(HUDElements.colors.text, "%s",text.c_str());
+    ImGui::NewLine();
+    ImGui::PopFont();
+}
+
+void HudElements::custom_text(){
+    ImGui::TableNextRow();
+    ImGui::PushFont(HUDElements.sw_stats->font1);
+    ImGui::TextColored(HUDElements.colors.text, "%s",HUDElements.params->custom_text.c_str());
+    ImGui::PopFont();
 }
 
 void HudElements::graphs(){
@@ -540,7 +619,7 @@ void HudElements::graphs(){
         HUDElements.min = 0;
         ImGui::TextColored(HUDElements.colors.engine, "%s", "VRAM");
     }
-
+#ifdef __gnu_linux__
     if (value == "ram"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram])
             HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram] = true;
@@ -553,6 +632,7 @@ void HudElements::graphs(){
         HUDElements.min = 0;
         ImGui::TextColored(HUDElements.colors.engine, "%s", "RAM");
     }
+#endif
     ImGui::PopFont();
     ImGui::Dummy(ImVec2(0.0f,5.0f));
     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
@@ -576,22 +656,29 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
     auto param = option.first;
     auto value = option.second;
 
-    if (param == "version")         { ordered_functions.push_back({version, value});        }
-    if (param == "time")            { ordered_functions.push_back({time, value});           }
-    if (param == "gpu_stats")       { ordered_functions.push_back({gpu_stats, value});      }
-    if (param == "cpu_stats")       { ordered_functions.push_back({cpu_stats, value});      }
-    if (param == "core_load")       { ordered_functions.push_back({core_load, value});      }
-    if (param == "io_stats")        { ordered_functions.push_back({io_stats, value});       }
-    if (param == "vram")            { ordered_functions.push_back({vram, value});           }
-    if (param == "ram")             { ordered_functions.push_back({ram, value});            }
-    if (param == "fps")             { ordered_functions.push_back({fps, value});            }
-    if (param == "engine_version")  { ordered_functions.push_back({engine_version, value}); }
-    if (param == "gpu_name")        { ordered_functions.push_back({gpu_name, value});       }
-    if (param == "vulkan_driver")   { ordered_functions.push_back({vulkan_driver, value});  }
-    if (param == "arch")            { ordered_functions.push_back({arch, value});           }
-    if (param == "wine")            { ordered_functions.push_back({wine, value});           }
-    if (param == "frame_timing")    { ordered_functions.push_back({frame_timing, value});   }
-    if (param == "media_player")    { ordered_functions.push_back({media_player, value});   }
+    // Use this to always add to front of vector
+    //ordered_functions.insert(ordered_functions.begin(),std::make_pair(param,value));
+
+    if (param == "version")         { ordered_functions.push_back({version, value});                }
+    if (param == "time")            { ordered_functions.push_back({time, value});                   }
+    if (param == "gpu_stats")       { ordered_functions.push_back({gpu_stats, value});              }
+    if (param == "cpu_stats")       { ordered_functions.push_back({cpu_stats, value});              }
+    if (param == "core_load")       { ordered_functions.push_back({core_load, value});              }
+    if (param == "io_stats")        { ordered_functions.push_back({io_stats, value});               }
+    if (param == "vram")            { ordered_functions.push_back({vram, value});                   }
+    if (param == "ram")             { ordered_functions.push_back({ram, value});                    }
+    if (param == "fps")             { ordered_functions.push_back({fps, value});                    }
+    if (param == "engine_version")  { ordered_functions.push_back({engine_version, value});         }
+    if (param == "gpu_name")        { ordered_functions.push_back({gpu_name, value});               }
+    if (param == "vulkan_driver")   { ordered_functions.push_back({vulkan_driver, value});          }
+    if (param == "arch")            { ordered_functions.push_back({arch, value});                   }
+    if (param == "wine")            { ordered_functions.push_back({wine, value});                   }
+    if (param == "frame_timing")    { ordered_functions.push_back({frame_timing, value});           }
+    if (param == "media_player")    { ordered_functions.push_back({media_player, value});           }
+    if (param == "resolution")      { ordered_functions.push_back({resolution, value});             }
+    if (param == "show_fps_limit")  { ordered_functions.push_back({show_fps_limit, value});         }
+    if (param == "custom_text")     { ordered_functions.push_back({custom_text, value});            }
+    if (param == "custom_text_center")  { ordered_functions.push_back({custom_text_center, value}); }
     if (param == "graphs"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs])
             HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs] = true;
@@ -609,6 +696,7 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
 void HudElements::legacy_elements(){
     string value = "NULL";
     ordered_functions.clear();
+    ordered_functions.push_back({custom_text_center, value});
     ordered_functions.push_back({time,               value});
     ordered_functions.push_back({version,            value});
     ordered_functions.push_back({gpu_stats,          value});

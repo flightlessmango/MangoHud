@@ -1,0 +1,62 @@
+name: Build release package
+on:
+  release:
+    types: ["created"]
+  push:
+    tags: ["v*"]
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    #runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install build tools
+        run: |
+          sudo apt update
+          sudo apt install gcc-multilib g++-multilib ninja-build python3-setuptools python3-wheel mesa-common-dev libxnvctrl-dev libdbus-1-dev
+      - name: Prepare Artifact Git Info
+        shell: bash
+        run: |
+          echo "##[set-output name=branch;]${GITHUB_REF#refs/heads/}"
+          ARTIFACT_NAME="commit-$(git rev-parse --short "$GITHUB_SHA")"
+          if [ ${{ github.event_name == 'pull_request' }} ]; then
+            echo "##[set-output name=short-sha;]$(git rev-parse --short "${{ github.event.pull_request.head.sha }}")"
+            if [ ! -z "${{ github.event.pull_request.number }}" ]; then
+              ARTIFACT_NAME="pr-${{ github.event.pull_request.number }}-commit-$(git rev-parse --short "${{ github.event.pull_request.head.sha }}")"
+            fi
+          else
+            echo "##[set-output name=short-sha;]$(git rev-parse --short "$GITHUB_SHA")"
+          fi
+          echo "##[set-output name=artifact-metadata;]${ARTIFACT_NAME}"
+        id: git-vars
+      - name: Build release package
+        run: |
+          ./build-source.sh
+          ./build.sh build package release
+      - name: Upload release
+        if: ${{ github.event_name == 'release' && github.event.action == 'created' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          assets=()
+          for asset in ./MangoHud-*-Source*.tar.gz; do
+            assets+=("-a" "$asset")
+          done
+          for asset in ./build/MangoHud-*.tar.gz; do
+            assets+=("-a" "$asset")
+          done
+          tag_name="${GITHUB_REF##*/}"
+          hub release edit "${assets[@]}" -m "" "$tag_name"
+          #hub release create "${assets[@]}" -m "$tag_name" "$tag_name"
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        continue-on-error: true
+        with:
+          name: MangoHud-${{steps.git-vars.outputs.artifact-metadata}}
+          path: ${{runner.workspace}}/MangoHud/build/MangoHud-*tar.gz
+          retention-days: 30

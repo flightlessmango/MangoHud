@@ -9,6 +9,7 @@ typedef long(__fastcall* PresentD3D12) (IDXGISwapChain* pSwapChain, UINT SyncInt
 PresentD3D12 oPresentD3D12;
 
 long __fastcall hkPresent12(IDXGISwapChain3* pSwapChain, UINT SyncInterval, UINT Flags){
+    dx_version = kiero::RenderType::D3D12;
     d3d_run();
     return oPresentD3D12(pSwapChain, SyncInterval, Flags);
 }
