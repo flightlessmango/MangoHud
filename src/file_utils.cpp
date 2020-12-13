@@ -5,9 +5,9 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <limits.h>
-#include <iostream>
 #include <fstream>
 #include <cstring>
+#include <string>
 
 std::string read_line(const std::string& filename)
 {
@@ -112,13 +112,18 @@ std::string get_exe_path()
     return read_symlink("/proc/self/exe");
 }
 
-bool get_wine_exe_name(std::string& name, bool keep_ext)
+std::string get_wine_exe_name(bool keep_ext)
 {
+    const std::string exe_path = get_exe_path();
+    if (!ends_with(exe_path, "wine-preloader") && !ends_with(exe_path, "wine64-preloader")) {
+        return std::string();
+    }
+
     std::string line;
     std::ifstream cmdline("/proc/self/cmdline");
-    auto n = std::string::npos;
-    while (std::getline(cmdline, line, '\0'))
-    {
+    // Iterate over arguments (separated by NUL byte).
+    while (std::getline(cmdline, line, '\0')) {
+        auto n = std::string::npos;
         if (!line.empty()
             && ((n = line.find_last_of("/\\")) != std::string::npos)
             && n < line.size() - 1) // have at least one character
@@ -126,17 +131,15 @@ bool get_wine_exe_name(std::string& name, bool keep_ext)
             auto dot = keep_ext ? std::string::npos : line.find_last_of('.');
             if (dot < n)
                 dot = line.size();
-            name = line.substr(n + 1, dot - n - 1);
-            return true;
+            return line.substr(n + 1, dot - n - 1);
         }
         else if (ends_with(line, ".exe", true))
         {
             auto dot = keep_ext ? std::string::npos : line.find_last_of('.');
-            name =  line.substr(0, dot);
-            return true;
+            return line.substr(0, dot);
         }
     }
-    return false;
+    return std::string();
 }
 
 std::string get_home_dir()
