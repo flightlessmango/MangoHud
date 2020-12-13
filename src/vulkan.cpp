@@ -608,7 +608,7 @@ void init_system_info(){
       trim(os);
       gpu = exec("lspci | grep VGA | head -n1 | awk -vRS=']' -vFS='[' '{print $2}' | sed '/^$/d' | tail -n1");
       trim(gpu);
-      driver = exec("glxinfo | grep 'OpenGL version' | sed 's/^.*: //' | tr -s ' ' '\n' | grep -v '(' | grep -v ')' | tr '\n' ' ' | cut -c 1-");
+      driver = exec ("glxinfo | grep 'OpenGL version' |sed 's/^.*: //' | sed 's/([^()]*)//g' | tr -s ' '");
       trim(driver);
 
 // Get WINE version
