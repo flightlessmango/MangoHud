@@ -6,7 +6,7 @@
 #include <thread>
 
 struct memory_information mem_info;
-float memused, memmax;
+float memused, memmax, swapused, swapmax;
 
 FILE *open_file(const char *file, int *reported) {
   FILE *fp = nullptr;
@@ -94,6 +94,9 @@ void update_meminfo(void) {
 
   memused = (float(mem_info.memmax) - float(mem_info.memeasyfree)) / (1024 * 1024);
   memmax = float(mem_info.memmax) / (1024 * 1024);
+
+  swapused = (float(mem_info.swapmax) - float(mem_info.swapfree)) / (1024 * 1024);
+  swapmax = float(mem_info.swapmax) / (1024 * 1024);
 
   fclose(meminfo_fp);
 }

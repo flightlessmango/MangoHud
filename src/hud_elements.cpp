@@ -329,6 +329,15 @@ void HudElements::ram(){
          ImGui::Text("GiB");
          ImGui::PopFont();
       }
+
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram] && HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_swap]){
+        ImGui::TableNextCell();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", swapused);
+        ImGui::SameLine(0,1.0f);
+        ImGui::PushFont(HUDElements.sw_stats->font1);
+        ImGui::Text("GiB");
+        ImGui::PopFont();
+    }
 #endif
 }
 

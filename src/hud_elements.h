@@ -53,6 +53,7 @@ class HudElements{
                 gpu,
                 vram,
                 ram,
+                swap,
                 engine,
                 io,
                 frametime,
