@@ -1,8 +1,7 @@
 #include "file_utils.h"
 #include "string_utils.h"
-#include <iostream>
 #include <fstream>
-#include <cstring>
+#include <string>
 
 std::string read_line(const std::string& filename)
 {
@@ -43,9 +42,9 @@ std::string get_exe_path()
     return std::string();
 }
 
-bool get_wine_exe_name(std::string& name, bool keep_ext)
+std::string get_wine_exe_name(bool keep_ext)
 {
-    return false;
+    return std::string();
 }
 
 std::string get_home_dir()

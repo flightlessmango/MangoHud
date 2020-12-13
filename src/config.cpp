@@ -3,13 +3,14 @@
 #include <iostream>
 #include <string.h>
 #include <thread>
+#include <map>
+#include <string>
 #include "config.h"
 #include "file_utils.h"
 #include "string_utils.h"
 #include "hud_elements.h"
-std::string program_name;
 
-void parseConfigLine(std::string line, std::unordered_map<std::string,std::string>& options) {
+static void parseConfigLine(std::string line, std::unordered_map<std::string,std::string>& options) {
     std::string param, value;
 
     if (line.find("#") != std::string::npos)
@@ -30,42 +31,70 @@ void parseConfigLine(std::string line, std::unordered_map<std::string,std::strin
     }
 }
 
-void enumerate_config_files(std::vector<std::string>& paths)
+static std::string get_program_dir() {
+    const std::string exe_path = get_exe_path();
+    if (exe_path.empty()) {
+        return std::string();
+    }
+    const auto n = exe_path.find_last_of('/');
+    if (n != std::string::npos) {
+        return exe_path.substr(0, n);
+    }
+    return std::string();
+}
+
+std::string get_program_name() {
+    const std::string exe_path = get_exe_path();
+    std::string basename = "unknown";
+    if (exe_path.empty()) {
+        return basename;
+    }
+    const auto n = exe_path.find_last_of('/');
+    if (n == std::string::npos) {
+        return basename;
+    }
+    if (n < exe_path.size() - 1) {
+        // An executable's name.
+        basename = exe_path.substr(n + 1);
+    }
+    return basename;
+}
+
+static void enumerate_config_files(std::vector<std::string>& paths)
 {
     static const char *mangohud_dir = "/MangoHud/";
 
-    std::string env_data = get_data_dir();
-    std::string env_config = get_config_dir();
+    const std::string data_dir = get_data_dir();
+    const std::string config_dir = get_config_dir();
 
-    if (!env_config.empty())
-        paths.push_back(env_config + mangohud_dir + "MangoHud.conf");
+    const std::string program_name = get_program_name();
+
+    if (config_dir.empty()) {
+        // If we can't find 'HOME' just abandon hope.
+        return;
+    }
+
+    paths.push_back(config_dir + mangohud_dir + "MangoHud.conf");
+
 #ifdef _WIN32
     paths.push_back("C:\\MangoHud.conf");
 #endif
-    std::string exe_path = get_exe_path();
-    auto n = exe_path.find_last_of('/');
-    if (!exe_path.empty() && n != std::string::npos && n < exe_path.size() - 1) {
-        // as executable's name
-        std::string basename = exe_path.substr(n + 1);
-        program_name = basename;
-        if (!env_config.empty())
-            paths.push_back(env_config + mangohud_dir + basename + ".conf");
 
-        // in executable's folder though not much sense in /usr/bin/
-        paths.push_back(exe_path.substr(0, n) + "/MangoHud.conf");
+    if (!program_name.empty()) {
+        paths.push_back(config_dir + mangohud_dir + program_name + ".conf");
+    }
 
-        // find executable's path when run in Wine
-        if (!env_config.empty() && (basename == "wine-preloader" || basename == "wine64-preloader")) {
-            
-            std::string name;
-            if (get_wine_exe_name(name)) {
-                paths.push_back(env_config + mangohud_dir + "wine-" + name + ".conf");
-            }
-            program_name = name;
+    const std::string program_dir = get_program_dir();
+    if (!program_dir.empty()) {
+        paths.push_back(program_dir + "/MangoHud.conf");
+    }
+
+    if (program_name == "wine64-preloader" || program_name == "wine-preloader") {
+        const std::string wine_program_name = get_wine_exe_name();
+        if (!wine_program_name.empty()) {
+            paths.push_back(config_dir + mangohud_dir + "wine-" + wine_program_name + ".conf");
         }
     }
-    if (program_name.empty())
-        program_name = "Unknown";
 }
 
 void parseConfigFile(overlay_params& params) {
