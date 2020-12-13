@@ -164,7 +164,7 @@ struct overlay_params {
    bool enabled[OVERLAY_PARAM_ENABLED_MAX];
    enum overlay_param_position position;
    int control;
-   uint32_t fps_sampling_period; /* us */
+   uint32_t fps_sampling_period; /* ns */
    std::vector<std::uint32_t> fps_limit;
    bool help;
    bool no_display;

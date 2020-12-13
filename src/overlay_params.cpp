@@ -132,7 +132,7 @@ parse_string_to_keysym_vec(const char *str)
 static uint32_t
 parse_fps_sampling_period(const char *str)
 {
-   return strtol(str, NULL, 0) * 1000;
+   return strtol(str, NULL, 0) * 1000000; /* ms to ns */
 }
 
 static std::vector<std::uint32_t>
@@ -538,7 +538,7 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_cpu_load_change] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_frametime] = true;
-   params->fps_sampling_period = 500000; /* 500ms */
+   params->fps_sampling_period = 500000000; /* 500ms */
    params->width = 0;
    params->height = 140;
    params->control = -1;

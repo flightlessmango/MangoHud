@@ -53,16 +53,6 @@ os_time_get_nano(void);
 
 
 /*
- * Get the current time in microseconds from an unknown base.
- */
-static inline int64_t
-os_time_get(void)
-{
-   return os_time_get_nano() / 1000;
-}
-
-
-/*
  * Sleep.
  */
 void
