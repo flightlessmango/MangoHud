@@ -340,7 +340,6 @@ if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps]){
         }
         ImGui::TextColored(HUDElements.colors.engine, "%s", HUDElements.is_vulkan ? HUDElements.sw_stats->engineName.c_str() : "OpenGL");
         ImGui::TableNextCell();
-        auto text_color = HUDElements.colors.text;
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_color_change]){
             int fps = int(HUDElements.sw_stats->fps);
             struct LOAD_DATA fps_data = {
@@ -516,13 +515,13 @@ void HudElements::show_fps_limit(){
 }
 
 void HudElements::custom_text_center(){
-        ImGui::TableNextRow();
-        ImGui::PushFont(HUDElements.sw_stats->font1);
-        std::string value = HUDElements.ordered_functions[HUDElements.place].second;
-        center_text(value);
-        ImGui::TextColored(HUDElements.colors.text, "%s",value.c_str());
-        ImGui::NewLine();
-        ImGui::PopFont();
+    ImGui::TableNextRow();
+    ImGui::PushFont(HUDElements.sw_stats->font1);
+    std::string value = HUDElements.ordered_functions[HUDElements.place].second;
+    center_text(value);
+    ImGui::TextColored(HUDElements.colors.text, "%s",value.c_str());
+    ImGui::NewLine();
+    ImGui::PopFont();
 }
 
 void HudElements::custom_text(){
@@ -691,7 +690,7 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
     if (param == "show_fps_limit")  { ordered_functions.push_back({show_fps_limit, value});         }
     if (param == "custom_text")     { ordered_functions.push_back({custom_text, value});            }
     if (param == "custom_text_center")  { ordered_functions.push_back({custom_text_center, value}); }
-    if (param == "exec")            { ordered_functions.push_back({_exec, value});                  
+    if (param == "exec")            { ordered_functions.push_back({_exec, value});
                                       exec_list.push_back({ordered_functions.size() - 1, value});       }
     if (param == "graphs"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs])
