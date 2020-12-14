@@ -543,6 +543,28 @@ void HudElements::_exec(){
     ImGui::PopFont();
 }
 
+void HudElements::gamemode(){
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gamemode]){
+        ImGui::TableNextRow();
+        ImGui::PushFont(HUDElements.sw_stats->font1);
+        ImGui::TextColored(HUDElements.colors.engine, "%s", "GAMEMODE");
+        ImGui::TableNextCell();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", HUDElements.gamemode_bol ? "ON" : "OFF");
+        ImGui::PopFont();
+    }
+}
+
+void HudElements::vkbasalt(){
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_vkbasalt]){
+        ImGui::TableNextRow();
+        ImGui::PushFont(HUDElements.sw_stats->font1);
+        ImGui::TextColored(HUDElements.colors.engine, "%s", "VKBASALT");
+        ImGui::TableNextCell();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", HUDElements.vkbasalt_bol ? "ON" : "OFF");
+        ImGui::PopFont();
+    }
+}
+
 void HudElements::graphs(){
     ImGui::TableNextRow();
     ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
@@ -690,6 +712,8 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
     if (param == "show_fps_limit")  { ordered_functions.push_back({show_fps_limit, value});         }
     if (param == "custom_text")     { ordered_functions.push_back({custom_text, value});            }
     if (param == "custom_text_center")  { ordered_functions.push_back({custom_text_center, value}); }
+    if (param == "gamemode")        { ordered_functions.push_back({gamemode, value});               }  
+    if (param == "vkbasalt")        { ordered_functions.push_back({vkbasalt, value});               }  
     if (param == "exec")            { ordered_functions.push_back({_exec, value});
                                       exec_list.push_back({ordered_functions.size() - 1, value});       }
     if (param == "graphs"){
@@ -726,6 +750,8 @@ void HudElements::legacy_elements(){
     ordered_functions.push_back({wine,               value});
     ordered_functions.push_back({frame_timing,       value});
     ordered_functions.push_back({media_player,       value});
+    ordered_functions.push_back({gamemode,           value});
+    ordered_functions.push_back({vkbasalt,           value});
 }
 
 void HudElements::update_exec(){

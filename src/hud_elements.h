@@ -18,7 +18,7 @@ class HudElements{
         float ralign_width;
         float old_scale;
         float res_width, res_height;
-        bool is_vulkan;
+        bool is_vulkan, gamemode_bol = false, vkbasalt_bol = false;
         int place;
         Clock::time_point last_exec;
         std::vector<std::pair<std::string, std::string>> options;
@@ -52,6 +52,8 @@ class HudElements{
         static void show_fps_limit();
         static void custom_text_center();
         static void custom_text();
+        static void vkbasalt();
+        static void gamemode();
         static void graphs();
         static void _exec();
 
