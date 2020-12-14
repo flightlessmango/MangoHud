@@ -62,6 +62,8 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(resolution)                    \
    OVERLAY_PARAM_BOOL(show_fps_limit)                \
    OVERLAY_PARAM_BOOL(fps_color_change)              \
+   OVERLAY_PARAM_BOOL(custom_text_center)            \
+   OVERLAY_PARAM_BOOL(custom_text)                   \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
@@ -125,8 +127,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(table_columns)               \
    OVERLAY_PARAM_CUSTOM(blacklist)                   \
    OVERLAY_PARAM_CUSTOM(autostart_log)               \
-   OVERLAY_PARAM_CUSTOM(custom_text_center)          \
-   OVERLAY_PARAM_CUSTOM(custom_text)                 \
+
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,

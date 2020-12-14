@@ -516,21 +516,20 @@ void HudElements::show_fps_limit(){
 }
 
 void HudElements::custom_text_center(){
-    if (!HUDElements.params->custom_text_center.empty()){
         ImGui::TableNextRow();
         ImGui::PushFont(HUDElements.sw_stats->font1);
-        std::string text = HUDElements.params->custom_text_center;
-        center_text(text);
-        ImGui::TextColored(HUDElements.colors.text, "%s",text.c_str());
+        std::string value = HUDElements.ordered_functions[HUDElements.place].second;
+        center_text(value);
+        ImGui::TextColored(HUDElements.colors.text, "%s",value.c_str());
         ImGui::NewLine();
         ImGui::PopFont();
-    }
 }
 
 void HudElements::custom_text(){
     ImGui::TableNextRow();
     ImGui::PushFont(HUDElements.sw_stats->font1);
-    ImGui::TextColored(HUDElements.colors.text, "%s",HUDElements.params->custom_text.c_str());
+    std::string value = HUDElements.ordered_functions[HUDElements.place].second;
+    ImGui::TextColored(HUDElements.colors.text, "%s",value.c_str());
     ImGui::PopFont();
 }
 
