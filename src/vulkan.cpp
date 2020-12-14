@@ -659,11 +659,11 @@ void init_system_info(){
       }
       // check for gamemode and vkbasalt
       auto pid = getpid();
-      string command = "lsof -p " + to_string(pid) + " | grep gamemode";
+      string command = "lsof -lnPX -L -p " + to_string(pid) + " | grep gamemode";
       string ret = exec(command);
       if (!ret.empty())
          HUDElements.gamemode_bol = true;
-      command = "lsof -p " + to_string(pid) + " | grep vkbasalt";
+      command = "lsof -lnPX -L -p " + to_string(pid) + " | grep vkbasalt";
       ret = exec(command);
       if (!ret.empty())
          HUDElements.vkbasalt_bol = true;
