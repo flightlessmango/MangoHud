@@ -658,15 +658,19 @@ void init_system_info(){
            wineVersion = "";
       }
       // check for gamemode and vkbasalt
-      auto pid = getpid();
-      string command = "lsof -lnPX -L -p " + to_string(pid) + " | grep gamemode";
-      string ret = exec(command);
-      if (!ret.empty())
-         HUDElements.gamemode_bol = true;
-      command = "lsof -lnPX -L -p " + to_string(pid) + " | grep vkbasalt";
-      ret = exec(command);
-      if (!ret.empty())
-         HUDElements.vkbasalt_bol = true;
+      if (system("which lsof > /dev/null 2>&1")) {
+         printf("MANGOHUD: lsof is missing, can't check for gamemode and vkbasalt");
+      } else {
+         auto pid = getpid();
+         string command = "lsof -lnPX -L -p " + to_string(pid) + " | grep gamemode";
+         string ret = exec(command);
+         if (!ret.empty())
+            HUDElements.gamemode_bol = true;
+         command = "lsof -lnPX -L -p " + to_string(pid) + " | grep vkbasalt";
+         ret = exec(command);
+         if (!ret.empty())
+            HUDElements.vkbasalt_bol = true;
+      }
       //driver = itox(device_data->properties.driverVersion);
 
       if (ld_preload)
