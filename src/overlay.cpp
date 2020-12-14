@@ -70,6 +70,8 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
    graph_data.push_back({0, 0, cpuStats.GetCPUDataTotal().percent, gpu_info.load, cpuStats.GetCPUDataTotal().temp,
                         gpu_info.temp, gpu_info.CoreClock, gpu_info.MemClock, gpu_info.memoryUsed, memused});
    logger->notify_data_valid();
+   if (params.enabled[OVERLAY_PARAM_ENABLED_exec])
+      HUDElements.update_exec();
 }
 
 void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
@@ -87,7 +89,6 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
 
    frametime = now - sw_stats.last_present_time;
    if (elapsed >= params.fps_sampling_period) {
-      HUDElements.update_exec();
       std::thread(update_hw_info, std::ref(sw_stats), std::ref(params), vendorID).detach();
       sw_stats.fps = fps;
 
