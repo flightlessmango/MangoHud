@@ -533,6 +533,17 @@ void HudElements::custom_text(){
     ImGui::PopFont();
 }
 
+void HudElements::_exec(){
+    std::string value = HUDElements.ordered_functions[HUDElements.place].second;
+    ImGui::PushFont(HUDElements.sw_stats->font1);
+    ImGui::TableNextCell();
+    for (auto& item : HUDElements.exec_list){
+        if (item.pos == HUDElements.place)
+            ImGui::Text("%s", item.ret.c_str());
+    }
+    ImGui::PopFont();
+}
+
 void HudElements::graphs(){
     ImGui::TableNextRow();
     ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
@@ -680,6 +691,8 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
     if (param == "show_fps_limit")  { ordered_functions.push_back({show_fps_limit, value});         }
     if (param == "custom_text")     { ordered_functions.push_back({custom_text, value});            }
     if (param == "custom_text_center")  { ordered_functions.push_back({custom_text_center, value}); }
+    if (param == "exec")            { ordered_functions.push_back({_exec, value});                  
+                                      exec_list.push_back({ordered_functions.size() - 1, value});       }
     if (param == "graphs"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs])
             HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs] = true;
@@ -714,6 +727,11 @@ void HudElements::legacy_elements(){
     ordered_functions.push_back({wine,               value});
     ordered_functions.push_back({frame_timing,       value});
     ordered_functions.push_back({media_player,       value});
+}
+
+void HudElements::update_exec(){
+    for(auto& item : exec_list)
+        item.ret = exec(item.value);
 }
 
 HudElements HUDElements;

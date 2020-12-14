@@ -4,16 +4,23 @@
 #include <functional>
 #include <map>
 #include <sstream>
+#include <logging.h>
 
 class HudElements{
     public:
         struct swapchain_stats *sw_stats;
         struct overlay_params *params;
+        struct exec_list {
+            int             pos;
+            std::string     value;
+            std::string     ret;
+        };
         float ralign_width;
         float old_scale;
         float res_width, res_height;
         bool is_vulkan;
         int place;
+        Clock::time_point last_exec;
         std::vector<std::pair<std::string, std::string>> options;
         std::vector<std::pair<void(*)(), std::string >> ordered_functions;
         int min, max, gpu_core_max, gpu_mem_max, cpu_temp_max, gpu_temp_max;
@@ -21,8 +28,10 @@ class HudElements{
             "gpu_load", "cpu_load", "gpu_core_clock", "gpu_mem_clock",
             "vram", "ram", "cpu_temp", "gpu_temp"
         };
+        std::vector<exec_list> exec_list;
         void sort_elements(std::pair<std::string, std::string> option);
         void legacy_elements();
+        void update_exec();
         static void version();
         static void time();
         static void gpu_stats();
@@ -44,6 +53,7 @@ class HudElements{
         static void custom_text_center();
         static void custom_text();
         static void graphs();
+        static void _exec();
 
         void convert_colors(struct overlay_params& params);
         void convert_colors(bool do_conv, struct overlay_params& params);
@@ -70,6 +80,7 @@ class HudElements{
                 fps_value_med,
                 fps_value_high;
         } colors {};
+        
 };
 
 extern HudElements HUDElements;

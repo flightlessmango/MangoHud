@@ -64,6 +64,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(fps_color_change)              \
    OVERLAY_PARAM_BOOL(custom_text_center)            \
    OVERLAY_PARAM_BOOL(custom_text)                   \
+   OVERLAY_PARAM_BOOL(exec)                          \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
