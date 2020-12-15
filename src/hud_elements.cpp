@@ -712,8 +712,8 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
     if (param == "show_fps_limit")  { ordered_functions.push_back({show_fps_limit, value});         }
     if (param == "custom_text")     { ordered_functions.push_back({custom_text, value});            }
     if (param == "custom_text_center")  { ordered_functions.push_back({custom_text_center, value}); }
-    if (param == "gamemode")        { ordered_functions.push_back({gamemode, value});               }  
-    if (param == "vkbasalt")        { ordered_functions.push_back({vkbasalt, value});               }  
+    if (param == "gamemode")        { ordered_functions.push_back({gamemode, value});               }
+    if (param == "vkbasalt")        { ordered_functions.push_back({vkbasalt, value});               }
     if (param == "exec")            { ordered_functions.push_back({_exec, value});
                                       exec_list.push_back({ordered_functions.size() - 1, value});       }
     if (param == "graphs"){
@@ -733,7 +733,6 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
 void HudElements::legacy_elements(){
     string value = "NULL";
     ordered_functions.clear();
-    ordered_functions.push_back({custom_text_center, value});
     ordered_functions.push_back({time,               value});
     ordered_functions.push_back({version,            value});
     ordered_functions.push_back({gpu_stats,          value});
