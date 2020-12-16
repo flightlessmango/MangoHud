@@ -13,10 +13,14 @@
 #include "version.h"
 #include "gpu.h"
 #include "logging.h"
+
+#include "server/common.h"
+
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
 extern float g_overflow;
 #endif
+
 struct frame_stat {
    uint64_t stats[OVERLAY_PLOTS_MAX];
 };
@@ -54,6 +58,20 @@ struct swapchain_stats {
    std::string deviceName;
    std::string gpuName;
    std::string driverName;
+
+   bool client_state_initialized;
+   struct ClientState client_state;
+
+   // This is required because, swapchains in Vulkan will be
+   // destroyed and created on window resize.
+   // We could maybe do some indirection to keep the client_state,
+   // on swapchain recreation.
+   ~swapchain_stats() {
+      if (client_state_initialized) {
+         client_state_cleanup(&client_state);
+      }
+      client_state_initialized = false;
+   }
 };
 
 struct fps_limit {

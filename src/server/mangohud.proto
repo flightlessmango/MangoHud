@@ -1,0 +1,275 @@
+syntax = "proto3";
+
+// Message types used by the mangohud server, and client library (i.e. overlay running in the game),
+// and with reporting clients ("GUI").
+//
+// Some messages are sent only one way, some other can be send in both ways.
+//
+// I.e. GPU_INFO can be send from server to overlay, but also from server to GUI.
+//
+// APP_CPU_INFO can be sent from overlay to server, but also from server to GUI.
+
+enum ClientType {
+  APP = 0;
+  SERVER = 1;
+  GUI = 2;
+}
+
+// All fields are optional.
+//
+// Main message used for communication in both ways.
+//
+// Usually only one field will be set in the message.
+message Message {
+  // Reserved for future uses.
+  uint32 protocol_version = 1;
+  ClientType client_type = 100;
+
+  // Dummy payload for TCP purposes.
+  Alive alive = 2;
+
+  // To send OS, kernel, and architecture (i.e. i386, amd64, aarch64), distro info.
+  Architecture architecture = 3;
+  // Used to advertise the name of the program. i.e. "heaven_x64", "Doom.exe"
+  // When streaming multiple games to GUI, also used to indicate which one the rest of the data corresponds to.
+  // When GUI asking to do state changes (I.e. enable frametime streaming, or toggle vsync, hud), to which app to route it too.
+  string machine_name = 4;
+  uint64 pid = 5;
+  uint64 uid = 6;
+  string username = 7;
+  string program_name = 8;
+  // Used to send info about Vulkan, OpenGL, non-GPU, driver version, engine name and version, etc.
+  RenderInfo render_info = 9;
+  // A request or response with blacklist.
+  BlackListInfo blacklist = 10;
+  // Used on startup to retrive any app-specific config.
+  ConfigRequest config_request = 11;
+  // Used to update config of running client, i.e. fonts, colors, order of HUD elements, size, position, etc. Can also be used to send config info to remote GUI.
+  Config config_data = 12;
+  // Used to ask client to reload files from disk. Can optionally contain path to new config.
+  ConfigReload config_reload = 13;
+
+  // Using clock MONOTONIC usually, or such.
+  Timestamp timestamp = 20;
+  uint64 app_uptime_msec = 21;  // Uptime of the app in msec from startup.
+
+  // Last reported FPS figures by the app. These are usually averages of some kind.
+  float fps = 30;
+
+  // Individual frame timeings. One message can contain information about multiple frames.
+  repeated FrameTime frametimes = 31;
+
+  // FRAMETIME_PERCENTILE_REPORTS = 32,
+  // HISTOGRAM_SETUP = 33,  // Clear, stop, setup bins.
+  // HISTOGRAM = 34,  // Retrive histogram.
+
+  bool stream_frametimes = 40;
+
+  bool show_hud = 41;
+
+  repeated float frame_limits = 42;  // Can be a list of frame limits a user can toggle between, or empty to disable.
+  bool vsync = 43;
+
+  string media_player_string = 50;  // Used to send new media player metadata.
+
+  // Used to send new extra string to the overlay. User defined.
+  // Usually string1 at the top, string2 at the bottom.
+  string extra_string1 = 51;
+  string extra_string2 = 52;
+
+  // Per machine info.
+  repeated GpuInfo gpu_info = 60;  // GPU clocks and temp.
+  CpuInfo cpu_info = 61;  // CPU temperature, clocks, average loads, maximum load, etc.
+  CpuInfo cpu_info_details = 62;  // Per-core stats.
+  MemInfo mem_info = 63;  // System memory usage, swap, etc.
+
+  // Per app info.
+  repeated GpuInfoApp app_gpu_info = 70;  // I.e. VRAM use by app, number of active pipelines, etc.
+  CpuInfoApp app_cpu_info = 71;  // I.e. CPU usage and number of threads by app.
+  MemInfoApp app_mem_info = 73;  // I.e. MEM, stack, swap used by app.
+
+  // Note.
+};
+
+message Alive {
+  uint32 dummy = 1;
+}
+
+message Architecture {
+  string os = 1;
+  string kernel_version = 2;
+  string architecture = 3;
+  string mangohud_library_version = 4;
+  string mangohud_server_verion = 5;
+  string mangohud_gui_version = 6;
+}
+
+message RenderInfo {
+  bool opengl = 1;
+  bool vulkan = 2;
+
+  string opengl_version = 10;
+  string opengl_device_name = 11;
+
+  string vulkan_driver_name = 20;
+  string engine_name = 21;
+}
+
+message BlackListInfo {
+  bool blacklisted = 1;
+  repeated string blacklist_names = 2;
+}
+
+message ConfigRequest {
+  string machine_name = 1;
+  string program_name = 2;
+  bool wine = 3;
+}
+
+message ConfigReload {
+  string config_path = 1;
+}
+
+message Config {
+  uint32 fps_sampling_interval_msec = 1; // [default = 500];
+  bool show_hud = 2; // [default = true];
+
+  message HudGeometry {
+    uint32 width = 1;
+    uint32 height = 2;
+    uint32 offset_x = 3;
+    uint32 offset_y = 4;
+  }
+  HudGeometry hud_geometry = 3;
+
+  message Element {
+    string name = 1;  // "gpu_temp"
+    string font = 2;
+    string color = 3;
+    string text = 4;  // Override label string, i.e. "CPU" -> "Processor"
+    string value = 5;  // Override value string.
+    string suffix = 6;  // Suffix after the value.
+  }
+  repeated Element elements = 4;
+
+  message Key {
+    string keybinding = 1;
+  }
+  Key toggle_logging = 5;
+  Key toggle_hud = 6;
+  Key reload_cfg = 7;
+}
+
+message Timestamp {
+  string clock_source = 1;
+  uint64 timestamp = 2;
+}
+
+message FrameTime {
+  uint64 timestamp = 1;  // Absolute timestamp. Monotonic.
+  uint64 index = 2;  // Counter of frames. Monotonic.
+  uint32 time = 3;  // The actual frametime.
+}
+
+// Can be repeated if multiple GPUs.
+message GpuInfo {
+  int32 bus = 1;
+  string pci_dev_info = 2;
+  string gpu_name = 3;  // from lspci
+
+  int32 core_temp_C = 10;
+  int32 mem_temp_C = 11;
+  int32 fan_speed_RPM = 12;
+
+  int32 core_clock_kHz = 20;
+  int32 core_clock_kHz_max = 21;
+  int32 mem_clock_kHz = 22;
+  int32 mem_clock_max_kHz = 23;
+
+  float gpu_load = 30;
+
+  float power_W = 31;
+
+
+  // AMD Radeon extensions.
+  float event_engine = 51;
+  float tesselator = 52;  // Vertex Grouper + Tesselator
+  float texture_addresser = 53;
+  float shader_export = 54;
+  float sequencer_instruction_cache = 55;
+  float shader_interpolator = 56;
+  float scan_converter = 57;
+  float primitive_assembly = 58;
+  float depth_block = 59;
+  float color_block = 60;
+  uint64 gtt = 61;
+  uint64 gtt_max = 62;
+}
+
+message CpuInfo {
+  string name = 1;
+  repeated string isa_extensions = 2;  // "avx2"
+  string cpufreq_governor = 3;
+
+  repeated int32 core_clock_kHz = 4;
+  repeated int32 core_temp_C = 5;
+
+  repeated float load = 6;  // Core loads.
+
+  float load_user = 7;
+  float load_sys = 8;
+  float load_nice = 9;
+  float load_idle = 10;
+  float load_wait = 11;
+  // hi, si, st
+
+  uint32 tasks = 20;
+  uint32 tasks_runnable = 21;
+  uint32 tasks_running = 22;
+  uint32 tasks_stopped = 23;
+  uint32 tasks_zombie = 24;
+
+  uint64 uptime_msec = 30;
+
+  repeated float load_average = 40;
+}
+
+message MemInfo {
+  // All values in KiB (not pages).
+  uint64 total = 1;
+  uint64 free = 2;
+  uint64 used = 3;
+  uint64 buffers = 4;
+  uint64 cache = 5;
+  uint64 available = 6;
+  uint64 swap_total = 10;
+  uint64 swap_free = 11;
+  uint64 swap_used = 12;
+}
+
+message GpuInfoApp {
+  // In KiB
+  uint64 vram_used = 1;
+  uint64 pipelines = 2;
+}
+
+message CpuInfoApp {
+  uint64 cpu_usage_total_usec = 1;  // Total CPU usage since the start in CPU microseconds.
+  uint64 wall_clock_total_usec = 2;  // Total uptime of the app in wall clock time.
+  uint32 thread_count = 3;
+}
+
+message MemInfoApp {
+  // All in KiB.
+  // These are cummulative for the whole process.
+  uint64 rss = 1;
+  uint64 text = 2;
+  uint64 swap = 3;
+  uint64 code = 4;
+  uint64 cached = 5;
+  uint64 locked = 6;
+  uint64 sahred = 7;
+
+  uint64 maj_fault = 10;
+  uint64 min_fault = 11;
+}

@@ -9,6 +9,14 @@
 #include "timing.hpp"
 #include "mesa/util/macros.h"
 #include "string_utils.h"
+
+#include "server/common.h"
+
+// getpid, getuid
+#include <sys/types.h>
+#include <unistd.h>
+
+
 #ifdef HAVE_DBUS
 float g_overflow = 50.f /* 3333ms * 0.5 / 16.6667 / 2 (to edge and back) */;
 #endif
@@ -18,6 +26,84 @@ struct benchmark_stats benchmark;
 struct fps_limit fps_limit_stats {};
 ImVec2 real_font_size;
 std::vector<logData> graph_data;
+
+extern std::string program_name;
+
+static int mango_message_generator(Message* message, void* my_state) {
+   assert(message != NULL);
+   assert(my_state != NULL);
+
+   struct swapchain_stats *const sw_stats = (struct swapchain_stats *)my_state;
+
+   MALLOC_SET(message->protocol_version, 1);
+   MALLOC_SET(message->pid, getpid());
+   MALLOC_SET(message->uid, getuid());
+   MALLOC_SET(message->fps, fps);
+   if (program_name.size()) {
+       message->program_name = strndup(program_name.data(), program_name.length());
+   }
+   MALLOC_SET(message->render_info, RenderInfo_init_zero);
+   if (sw_stats->version_gl.major && sw_stats->version_gl.minor) {
+     MALLOC_SET(message->render_info->opengl, true);
+   }
+   if (sw_stats->version_vk.major && sw_stats->version_vk.minor) {
+     MALLOC_SET(message->render_info->vulkan, true);
+   }
+   RenderInfo *const render_info = message->render_info;
+   render_info->engine_name = strndup(sw_stats->engineName.data(), sw_stats->engineName.length());
+   render_info->vulkan_driver_name = strndup(sw_stats->driverName.data(), sw_stats->driverName.length());
+
+
+// More stuff to copy from sw_stats
+/*
+   std::string engineName;
+   std::string engineVersion;
+   std::string deviceName;
+   std::string gpuName;
+   std::string driverName;
+
+   uint64_t n_frames;
+   enum overlay_plots stat_selector;
+   double time_dividor;
+   struct frame_stat stats_min, stats_max;
+   struct frame_stat frames_stats[200];
+
+
+   std::string time;
+   double fps;
+   struct iostats io;
+   uint64_t last_present_time;
+   unsigned n_frames_since_update;
+   uint64_t last_fps_update;
+   ImVec2 main_window_pos;
+
+
+   struct {
+      int32_t major;
+      int32_t minor;
+      bool is_gles;
+   } version_gl;
+   struct {
+      int32_t major;
+      int32_t minor;
+      int32_t patch;
+   } version_vk;
+*/
+
+   return 0;
+}
+
+static int mango_message_handler(const Message* const message, void* my_state) {
+   assert(message != NULL);
+   assert(my_state != NULL);
+
+   // DEBUG(fprintf(stderr, "client_request_handler called\n"));
+
+   struct swapchain_stats *const sw_stats = (struct swapchain_stats *)my_state;
+
+   return 0;
+}
+
 
 void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID)
 {
@@ -110,6 +196,20 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
    sw_stats.last_present_time = now;
    sw_stats.n_frames++;
    sw_stats.n_frames_since_update++;
+
+   struct ClientState *const client_state = &(sw_stats.client_state);
+
+   if (!sw_stats.client_state_initialized) {
+       if (client_connect(client_state) == 0) {
+          client_state->connected = 1;
+       }
+       // Even if we fail to connect. Still mark as initialized.
+       sw_stats.client_state_initialized = 1;
+   }
+
+   client_maybe_communicate(client_state,
+                            &mango_message_generator, (void*)(&sw_stats),
+                            &mango_message_handler, (void*)(&sw_stats));
 }
 
 void calculate_benchmark_data(void *params_void){

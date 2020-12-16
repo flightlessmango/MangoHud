@@ -69,6 +69,8 @@ if is_unixy
     'elfhacks.cpp',
     'real_dlsym.cpp',
     'pci_ids.cpp',
+    'server/common.c',
+    'server/mangohud.pb.c',
   )
 
   opengl_files = files(
@@ -172,7 +174,7 @@ vklayer_mesa_overlay = shared_library(
     dep_vulkan,
     windows_deps],
   include_directories : [inc_common],
-  link_args : link_args,
+  link_args : link_args + ['-lprotobuf-nanopb'],
   install_dir : libdir_mangohud,
   install : true
 )
