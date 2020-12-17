@@ -48,22 +48,29 @@ extern "C" {
 // annotations).
 //
 // This restriction might be lifted in the future.
+//
+// Note, do not call MALLOC_SET (and other) on the same field twice,
+// it overwrites the target pointer immedietly without freeing anything,
+// so calling it multiple times will leak memory.
 
 //#define MALLOC_SET(field, value) do { (field) = (__typeof__(field))malloc(sizeof(field)); *(field) = (value); } while (0)
 #define MALLOC_SET(field, value) do { (field) = (__typeof__(field))malloc(sizeof(*(field))); *(field) = value; } while (0)
 #define MALLOC_ARRAY(field, count) do { const size_t __cc = (count); (field) = (__typeof__(field))calloc((__cc), sizeof(*(field))); field ## _count = (__cc); } while (0)
-
-// Note: On Linux, the length must be less than 108 bytes
-// (including a NULL terminator).
-// Some implementations have it as short as 92 bytes.
-//
-// TODO(baryluk): Use dynamic name with uid / user.
-#define SOCKET_NAME "/tmp/mangohud_server.socket"
+#define MALLOC_SET_STR(field, value) do { (field) = strdup(value); } while (0)
 
 #define MUST_USE_RESULT __attribute__ ((warn_unused_result))
 #define COLD __attribute__ ((cold))
 #define NOTNULL __attribute__ ((nonnull))
 #define NOTHROW __attribute__ ((nothrow))
+
+// This is ugly as hell, but hopefully works.
+// If it fails with linking, remove or move to common.c file.
+extern struct sockaddr_un _sockaddr_un_sizecheck;
+// The UNIX_PATH_MAX is kind of defined in <linux/un.h> directly,
+// but lets not do that.
+#ifndef UNIX_PATH_MAX
+#define UNIX_PATH_MAX sizeof(_sockaddr_un_sizecheck.sun_path)
+#endif
 
 // Client state. It is used by both server and 'client', for tracking various
 // things.

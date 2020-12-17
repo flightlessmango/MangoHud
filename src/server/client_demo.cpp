@@ -33,6 +33,7 @@
 #include <signal.h>
 #include <cassert>
 #include <arpa/inet.h>
+#include <time.h>
 
 #define PB_ENABLE_MALLOC
 #include <pb.h>
@@ -86,7 +87,10 @@ retry:
             MALLOC_SET(request->protocol_version, 1);
             MALLOC_SET(request->pid, getpid());
             MALLOC_SET(request->uid, getuid());
-            MALLOC_SET(request->fps, 4.123);
+            MALLOC_SET(request->fps, 50.0f + 20.0f*drand48());
+            fprintf(stderr, "fps: %f\n", *(request->fps));
+
+            MALLOC_SET_STR(request->program_name, "client_demo");
 
             int frametimes_count = 100;
             MALLOC_ARRAY(request->frametimes, 100);
@@ -112,11 +116,17 @@ retry:
         }
 
         loops++;
-        if (loops > 10) {
+        if (loops > 200) {
             break;
         }
 
-        sleep(1);
+        {
+        struct timespec req;
+        req.tv_sec = 0;
+        req.tv_nsec = 100000000l;  // 100ms
+        nanosleep(&req, /*rem=*/NULL);
+        }
+
 
     }  // for (;;)
 

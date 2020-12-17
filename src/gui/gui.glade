@@ -100,7 +100,7 @@
                   <object class="GtkLabel" id="api">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Vulkan</property>
+                    <property name="label" translatable="yes">API</property>
                     <style>
                       <class name="bigone"/>
                     </style>

@@ -194,29 +194,71 @@ retry_unix_socket:
         return errno;  // socket
     }
 
+    // Construct dynamically the path to socket with user id.
+    char socket_name[UNIX_PATH_MAX];  // 108 bytes on Linux. 92 on some weird systems.
+    socket_name[0] = '\0';
+
     {
-    struct sockaddr_un name;
-    memset(&name, 0, sizeof(name));
-
-    // Bind socket to socket name.
-
-    name.sun_family = AF_UNIX;
-    strncpy(name.sun_path, SOCKET_NAME, sizeof(name.sun_path) - 1);
-
-    int retry = 1;
-retry_unix_bind:
-    if (bind(connection_unix_socket, (const struct sockaddr *)&name,
-             sizeof(name)) != 0) {
-        if (errno == EADDRINUSE && retry > 0) {
-            retry = 0;
-            //if (connect(data_socket, (const struct sockaddr *) &addr,
-            //            sizeof(addr));
-
-            unlink(SOCKET_NAME);
-            goto retry_unix_bind;
+        {
+        // I don't know better way of setting the format specifier to be more
+        // portable than this. Some old glibc / Linux combos, and other OSes,
+        // might have getuid() return uid_t that is only 16-bit.
+        // Event casting to intmax_t (and using PRIdMAX ("%jd")), would ignore
+        // sign-ness.
+        //
+        // See https://pubs.opengroup.org/onlinepubs/009695399/basedefs/sys/types.h.html for details.
+        //
+        // It usually is unsigned so lets do that. And usually 32-bit.
+        // But, on mingw64 is is signed 64-bit, and on Solaris it was signed
+        // 32-bit in the past. Unless you use gnulib, then it is 32-bit even
+        // on mingw64.
+        int ret = snprintf(socket_name, sizeof(socket_name), "/tmp/mangohud_server-%lu.sock", (unsigned long int)(getuid()));
+        // None, of these should EVER happen. Ever.
+        // But I like paranoia.
+        if (ret < 0) {
+            return 1;
         }
-        return errno;  // bind
-    }
+        if (ret <= 0) {
+            return 1;
+        }
+        if (ret > 0 && (size_t)(ret) < strlen("/tmp/mangohud_server-1.sock")) {
+            return 1;
+        }
+        if (ret > 0 && (size_t)(ret) >= UNIX_PATH_MAX - 1) {
+            return 1;
+        }
+        }
+
+
+        {
+        struct sockaddr_un addr;
+        memset(&addr, 0, sizeof(addr));
+
+        // Bind socket to socket name.
+
+        addr.sun_family = AF_UNIX;
+        assert(strlen(socket_name) >= 1);
+        assert(strlen(socket_name) < sizeof(addr.sun_path) - 1);
+        strncpy(addr.sun_path, socket_name, sizeof(addr.sun_path) - 1);
+        // Force terminate, just in case there was truncation.
+        addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
+        assert(strlen(addr.sun_path) == strlen(socket_name));
+
+        int retry = 1;
+retry_unix_bind:
+        if (bind(connection_unix_socket, (const struct sockaddr *)&addr,
+                 sizeof(addr)) != 0) {
+            if (errno == EADDRINUSE && retry > 0) {
+                retry = 0;
+                //if (connect(data_socket, (const struct sockaddr *) &addr,
+                //            sizeof(addr));
+
+                unlink(socket_name);
+                goto retry_unix_bind;
+            }
+            return errno;  // bind
+        }
+        }
     }
 
 retry_tcp_socket:
@@ -264,7 +306,7 @@ retry_tcp_bind:
         return errno;  // listen
     }
 
-    fprintf(stderr, "Listening on UNIX socket %s\n", SOCKET_NAME);
+    fprintf(stderr, "Listening on UNIX socket %s\n", socket_name);
 
 
     if (listen(connection_tcp_socket, 20) != 0) {
@@ -556,8 +598,11 @@ close_unix_socket:
         perror("close: connection_unix_socket");
     }
 
-    if (unlink(SOCKET_NAME) != 0) {
-        perror("unlink: unix_socket file");
+    if (strlen(socket_name) > 0) {
+        fprintf(stderr, "Removing socket file %s\n", socket_name);
+        if (unlink(socket_name) != 0) {
+            perror("unlink: unix_socket file");
+        }
     }
 
     return 0;

@@ -7,31 +7,16 @@ import gi
 
 import protos.mangohud_pb2 as pb
 
-msg = pb.Message()
-msg.protocol_version = 1
-print(msg)
-print(msg.SerializeToString())
-
-data = bytes()
-
-msg_in = pb.Message()
-msg_in.ParseFromString(data)
-
-
-
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib, Gdk, Gio, GObject
-
-GObject.threads_init()
 
 screen = Gdk.Screen.get_default()
 gtk_provider = Gtk.CssProvider()
 
 gtk_context = Gtk.StyleContext
 #gtk_context.add_provider_for_screen(screen, gtk_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-
 #css = b""".bigone { font-size: 32px; font-weight: bold; }"""
-#gtk_provider.load_from_data(css)
+#gtk_provider.load_from_data(css)  # For some reasons, it doesn't work.
 css_file = Gio.File.new_for_path("gui.css")
 gtk_provider.load_from_file(css_file)
 
@@ -50,8 +35,21 @@ fps_label = builder.get_object("fps")
 app_name_label = builder.get_object("app_name")
 api_label = builder.get_object("api")
 
-SOCKET_NAME = "/tmp/mangohud_server.socket"
 ADDRESS = ("localhost", 9869)
+
+# The length verification to system limits, will be checked by Python wrapper
+# in `sock.connect`.
+if os.getuid:
+    SOCKET_NAME = f"/tmp/mangohud_server-{os.getuid()}.socket"
+else:
+    # For Windows.
+    SOCKET_NAME = f"/tmp/mangohud_server.socket"
+
+if "MANGOHUD_SERVER" in os.environ:
+    SOCKET_NAME = os.environ["MANGOHUD_SERVER"]
+
+# TODO(baryluk): Automatically determine type of server (UNIX vs TCP),
+# from MANGOHUD_SERVER variable.
 
 import socket
 
@@ -90,7 +88,6 @@ def thread_loop(sock):
         GLib.idle_add(api_label.set_text, f"")
 
         time.sleep(0.05)
-
 
 def connection_thread():
     global thread
