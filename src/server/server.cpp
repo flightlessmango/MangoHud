@@ -133,42 +133,58 @@ static int server_request_handler(const Message* const request, void* my_state) 
         Message* response = (Message*)calloc(1, sizeof(Message));
         client_state->response = response;
 
-        response->protocol_version = a<uint32_t>(112128371 + rand());
+        response->protocol_version = a<uint32_t>(1);
 
         if (PB_IF(request->client_type, ClientType_GUI)) {
-           char hostname[HOST_NAME_MAX + 1];
-           hostname[0] = '\0';
-           if (gethostname(hostname, sizeof(hostname)) < 0) {
-               perror("gethostname");
-               hostname[HOST_NAME_MAX] = '\0'; // Just for a good measure.
-           } else {
-               PB_MALLOC_SET_STR(response->nodename, hostname);
-           }
-           if (strlen(hostname) == 0) {
-               struct utsname utsname_buf;
-               if (uname(&utsname_buf) < 0) {
-                   perror("uname");
-                   // What next?
-               } else {
-                   PB_MALLOC_SET_STR(response->nodename, utsname_buf.nodename);
-               }
-           }
+            char hostname[HOST_NAME_MAX + 1];
+            hostname[0] = '\0';
+            if (gethostname(hostname, sizeof(hostname)) < 0) {
+                perror("gethostname");
+                hostname[HOST_NAME_MAX] = '\0'; // Just for a good measure.
+            } else {
+                PB_MALLOC_SET_STR(response->nodename, hostname);
+            }
+            if (strlen(hostname) == 0) {
+                struct utsname utsname_buf;
+                if (uname(&utsname_buf) < 0) {
+                    perror("uname");
+                    // What next?
+                } else {
+                    PB_MALLOC_SET_STR(response->nodename, utsname_buf.nodename);
+                }
+            }
 
-           for (auto& other_server_state : *(context->all_server_states)) {
-               if (server_state->server_states_index == other_server_state->server_states_index) {
-                   continue;
-               }
-               if (PB_IF(other_server_state->recent_state.client_type, ClientType_GUI)) {
-                   continue;
-               }
+            std::vector<Message> sub_responses;
 
-               PB_MAYBE_UPDATE(response->uid, other_server_state->recent_state.uid);
-               PB_MAYBE_UPDATE(response->pid, other_server_state->recent_state.pid);
-               PB_MAYBE_UPDATE_STR(response->program_name, other_server_state->recent_state.program_name);
-               PB_MAYBE_UPDATE(response->fps, other_server_state->recent_state.fps);
+            for (auto& other_server_state : *(context->all_server_states)) {
+                if (server_state->server_states_index == other_server_state->server_states_index) {
+                    continue;
+                }
+                if (PB_IF(other_server_state->recent_state.client_type, ClientType_GUI)) {
+                    continue;
+                }
 
-               break;
-           }
+                //Message& sub_response = sub_responses.emplace_back();  // C++17
+                sub_responses.emplace_back();
+                Message& sub_response = sub_responses.back();
+
+                // Populate nodename from the server (all reporting clients are
+                // connected to server on local machine only).
+                PB_MALLOC_SET_STR(sub_response.nodename, response->nodename);
+
+
+                // Populate most recent stats for each client.
+                PB_MAYBE_UPDATE(sub_response.uid, other_server_state->recent_state.uid);
+                PB_MAYBE_UPDATE(sub_response.pid, other_server_state->recent_state.pid);
+                PB_MAYBE_UPDATE_STR(sub_response.program_name, other_server_state->recent_state.program_name);
+                PB_MAYBE_UPDATE(sub_response.fps, other_server_state->recent_state.fps);
+            }
+
+            // Is calloc safe to call with size 0? Probably not.
+            PB_MALLOC_ARRAY(response->clients, sub_responses.size());
+            for (int i = 0; i < sub_responses.size(); i++) {
+                 response->clients[i] = std::move(sub_responses[i]);
+            }
         }
     } else {
         fprintf(stderr, "Can not respond, some response is already set!\n");

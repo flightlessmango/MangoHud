@@ -31,10 +31,6 @@ builder.add_from_file("gui.glade")
 import threading
 import time
 
-fps_label = builder.get_object("fps")
-app_name_label = builder.get_object("app_name")
-api_label = builder.get_object("api")
-
 connect_button = builder.get_object("connect_button")
 
 ADDRESS = ("localhost", 9869)
@@ -58,13 +54,12 @@ import socket
 def send(sock, msg):
     serialized = msg.SerializeToString()
     serialized_size = len(serialized)
-    sock.send(serialized_size.to_bytes(4, 'big'))
+    sock.send(serialized_size.to_bytes(4, 'big'))  # Convert to network order.
     sock.send(serialized)
 
 def recv(sock):
     header = sock.recv(4)
-    size = int.from_bytes(header, 'big')
-    # size = socket.ntohl(header)
+    size = int.from_bytes(header, 'big')  # or use socket.ntohl ?
     data = sock.recv(size)
     msg = pb.Message()
     msg.ParseFromString(data)
@@ -75,7 +70,34 @@ stop = False
 
 stop_ev = threading.Event()
 
+
+@Gtk.Template(filename='client_template.glade')
+class ClientWidget(Gtk.Grid):
+    __gtype_name__ = 'ClientWidget'
+
+    #def __init__(self, **kwargs):
+    #    super().__init__(**kwargs)
+
+    #@Gtk.Template.Callback('clicked')
+    #def on_button_clicked(self, widget):
+    #     pass
+
+    fps = Gtk.Template.Child('fps')
+    app_name = Gtk.Template.Child('app_name')
+    api = Gtk.Template.Child('api')
+
+# The key is (nodename, pid) => (ClientWidget, client last Message) with instanciated template.
+known_clients = {}
+
+clients_container = builder.get_object('clients_container')
+
+last_row = None
+last_row_count = 0
+
+
 def thread_loop(sock):
+    global known_clients
+    global last_row, last_row_count
     while not stop and not stop_ev.is_set():
         msg = pb.Message(protocol_version=1, client_type=pb.ClientType.GUI)
         send(sock, msg)
@@ -83,11 +105,36 @@ def thread_loop(sock):
         msg = recv(sock)
         print(msg)
 
-        fps = msg.fps
-        GLib.idle_add(fps_label.set_text, f"{fps:.3f}")
-        program_name = msg.program_name
-        GLib.idle_add(app_name_label.set_text, f"{program_name}")
-        GLib.idle_add(api_label.set_text, f"")
+        if msg.clients:
+            new_clients = False
+            for client in msg.clients:
+                key = (client.nodename, client.pid)
+                if key not in known_clients:
+                    client_widget = ClientWidget()
+
+                    #if last_row:
+                    if True:
+                        # This probably is not safe to do from this thread
+                        # clients_container.insert_next_to(last_row, Gtk.PositionType.BOTTOM)
+                        clients_container.attach(client_widget, left=0, top=last_row_count+1, width=1, height=1)
+
+                        last_row = client_widget
+                        last_row_count += 1
+                        known_clients[key] = [client_widget, client]
+                        new_clients = True
+                else:
+                    known_clients[key][1] = client
+            if new_clients:
+                clients_container.show_all()
+            # TODO(baryluk): Remove stale clients or once we know for
+            # sure are down.
+
+            for key, (client_widget, client) in known_clients.items():
+                GLib.idle_add(client_widget.fps.set_text, f"{client.fps:.3f}")
+                GLib.idle_add(client_widget.app_name.set_text, f"{client.program_name}")
+                GLib.idle_add(client_widget.api.set_text, f"pid {client.pid}")
+                # TODO(baryluk): Garbage collect old clients.
+
 
         time.sleep(0.05)
 
@@ -149,7 +196,8 @@ def connect_clicked(button):
 
     if thread:
         print("Already connected or connect in progress")
-        # TODO: If explicitly clicked while we are in "Reconnecting in {...}" phase. Force reconnect.
+        # TODO: If explicitly clicked while we are in "Reconnecting in {...}"
+        # phase. Force reconnect.
         return
 
     print("Connecting...")
@@ -171,7 +219,8 @@ window.connect("destroy", Gtk.main_quit)
 
 window.show_all()
 
-
+# Auto connect on startup.
+connect_clicked(connect_button)
 
 Gtk.main()
 stop = True
