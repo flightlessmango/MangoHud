@@ -175,7 +175,7 @@ typedef struct _Message {
     uint32_t *protocol_version;
     struct _Alive *alive;
     struct _Architecture *architecture;
-    char *machine_name;
+    char *nodename;
     uint64_t *pid;
     uint64_t *uid;
     char *username;
@@ -380,7 +380,7 @@ extern "C" {
 #define Message_protocol_version_tag             1
 #define Message_alive_tag                        2
 #define Message_architecture_tag                 3
-#define Message_machine_name_tag                 4
+#define Message_nodename_tag                     4
 #define Message_pid_tag                          5
 #define Message_uid_tag                          6
 #define Message_username_tag                     7
@@ -424,7 +424,7 @@ extern "C" {
 X(a, POINTER,  SINGULAR, UINT32,   protocol_version,   1) \
 X(a, POINTER,  OPTIONAL, MESSAGE,  alive,             2) \
 X(a, POINTER,  OPTIONAL, MESSAGE,  architecture,      3) \
-X(a, POINTER,  SINGULAR, STRING,   machine_name,      4) \
+X(a, POINTER,  SINGULAR, STRING,   nodename,          4) \
 X(a, POINTER,  SINGULAR, UINT64,   pid,               5) \
 X(a, POINTER,  SINGULAR, UINT64,   uid,               6) \
 X(a, POINTER,  SINGULAR, STRING,   username,          7) \

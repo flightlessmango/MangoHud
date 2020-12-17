@@ -17,6 +17,7 @@
 #include <cinttypes>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <sys/utsname.h>  // for uname
 
 #ifndef PB_ENABLE_MALLOC
 #define PB_ENABLE_MALLOC
@@ -63,7 +64,7 @@ struct RequestContext {
   std::vector<ServerState*> *all_server_states;
 };
 
-#define UPDATE(to, from) do { \
+#define PB_MAYBE_UPDATE(to, from) do { \
   if (from) { \
      if (!(to)) { \
          (to) = (__typeof__(to))malloc(sizeof(*(to))); \
@@ -72,7 +73,7 @@ struct RequestContext {
   } \
 } while (0)
 
-#define UPDATE_STR(to, from) do { \
+#define PB_MAYBE_UPDATE_STR(to, from) do { \
   if (from) { \
      if (to) { \
          free(to); \
@@ -81,7 +82,7 @@ struct RequestContext {
   } \
 } while (0)
 
-#define IF(field, value) ((field) && *(field) == (value))
+#define PB_IF(field, value) ((field) && *(field) == (value))
 
 static int server_request_handler(const Message* const request, void* my_state) {
     // This is a bit circular, and not nice design, but should work.
@@ -124,11 +125,13 @@ static int server_request_handler(const Message* const request, void* my_state) 
         
         fprintf(stderr, "pid %9ld   fps: %.3f  name=%s  type=%s engine=%s driver=%s\n", pid, *request->fps, request->program_name, type, engine_name, driver_name);
 
-        UPDATE_STR(server_state->recent_state.program_name, request->program_name);
-        UPDATE(server_state->recent_state.fps, request->fps);
+        PB_MAYBE_UPDATE_STR(server_state->recent_state.program_name, request->program_name);
+        PB_MAYBE_UPDATE(server_state->recent_state.fps, request->fps);
     }
 
-    UPDATE(server_state->recent_state.client_type, request->client_type);
+    PB_MAYBE_UPDATE(server_state->recent_state.client_type, request->client_type);
+    PB_MAYBE_UPDATE(server_state->recent_state.uid, request->uid);
+    PB_MAYBE_UPDATE(server_state->recent_state.pid, request->pid);
 
     std::vector<uint32_t> frametimes;
     if (request->frametimes) {
@@ -152,17 +155,37 @@ static int server_request_handler(const Message* const request, void* my_state) 
 
         response->protocol_version = a<uint32_t>(112128371 + rand());
 
-        if (IF(request->client_type, ClientType_GUI)) {
+        if (PB_IF(request->client_type, ClientType_GUI)) {
+           char hostname[HOST_NAME_MAX + 1];
+           hostname[0] = '\0';
+           if (gethostname(hostname, sizeof(hostname)) < 0) {
+               perror("gethostname");
+               hostname[HOST_NAME_MAX] = '\0'; // Just for a good measure.
+           } else {
+               MALLOC_SET_STR(response->nodename, hostname);
+           }
+           if (strlen(hostname) == 0) {
+               struct utsname utsname_buf;
+               if (uname(&utsname_buf) < 0) {
+                   perror("uname");
+                   // What next?
+               } else {
+                   MALLOC_SET_STR(response->nodename, utsname_buf.nodename);
+               }
+           }
+
            for (auto& other_server_state : *(context->all_server_states)) {
                if (server_state->server_states_index == other_server_state->server_states_index) {
                    continue;
                }
-               if (IF(other_server_state->recent_state.client_type, ClientType_GUI)) {
+               if (PB_IF(other_server_state->recent_state.client_type, ClientType_GUI)) {
                    continue;
                }
 
-               UPDATE_STR(response->program_name, other_server_state->recent_state.program_name);
-               UPDATE(response->fps, other_server_state->recent_state.fps);
+               PB_MAYBE_UPDATE(response->uid, other_server_state->recent_state.uid);
+               PB_MAYBE_UPDATE(response->pid, other_server_state->recent_state.pid);
+               PB_MAYBE_UPDATE_STR(response->program_name, other_server_state->recent_state.program_name);
+               PB_MAYBE_UPDATE(response->fps, other_server_state->recent_state.fps);
 
                break;
            }

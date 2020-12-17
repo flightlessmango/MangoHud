@@ -33,7 +33,7 @@ message Message {
   // Used to advertise the name of the program. i.e. "heaven_x64", "Doom.exe"
   // When streaming multiple games to GUI, also used to indicate which one the rest of the data corresponds to.
   // When GUI asking to do state changes (I.e. enable frametime streaming, or toggle vsync, hud), to which app to route it too.
-  string machine_name = 4;
+  string nodename = 4;
   uint64 pid = 5;
   uint64 uid = 6;
   string username = 7;

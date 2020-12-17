@@ -7,6 +7,7 @@
     <property name="visible">True</property>
     <property name="can_focus">False</property>
     <property name="valign">start</property>
+    <property name="default_width">400</property>
     <property name="decorated">False</property>
     <property name="gravity">north</property>
     <property name="show_menubar">False</property>
@@ -23,7 +24,7 @@
             <property name="subtitle" translatable="yes">Overlay monitoring</property>
             <property name="show_close_button">True</property>
             <child>
-              <object class="GtkButton">
+              <object class="GtkButton" id="connect_button">
                 <property name="label">gtk-connect</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>

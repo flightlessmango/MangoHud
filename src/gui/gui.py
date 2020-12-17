@@ -35,6 +35,8 @@ fps_label = builder.get_object("fps")
 app_name_label = builder.get_object("app_name")
 api_label = builder.get_object("api")
 
+connect_button = builder.get_object("connect_button")
+
 ADDRESS = ("localhost", 9869)
 
 # The length verification to system limits, will be checked by Python wrapper
@@ -91,39 +93,59 @@ def thread_loop(sock):
 
 def connection_thread():
     global thread
-    if True:
-        addresses = socket.getaddrinfo(ADDRESS[0], ADDRESS[1], proto=socket.IPPROTO_TCP)
-        assert addresses
-        address = addresses[0]  # (family, type, proto, canonname, sockaddr)
-        family, type_, proto, canonname, sockaddr = address
-        assert type_ == socket.SOCK_STREAM
-        print(f"Connecting to {address}")
-        with socket.socket(family=family, type=socket.SOCK_STREAM | socket.SOCK_CLOEXEC, proto=proto) as sock:
-            sock.connect(sockaddr)
-            thread_loop(sock)
-        sock.close()
-    else:
-        print(f"Connecting to {SOCKET_NAME}")
-        with socket.socket(family=socket.AF_UNIX, type=socket.SOCK_STREAM | socket.SOCK_CLOEXEC) as sock:
-            sock.connect(SOCKET_NAME)
-            thread_loop(sock)
-        sock.close()
-    print("Disconnected")
-    thread = None
+    status = "Connecting"
+    try:
+        if True:
+            addresses = socket.getaddrinfo(ADDRESS[0], ADDRESS[1], proto=socket.IPPROTO_TCP)
+            assert addresses
+            address = addresses[0]  # (family, type, proto, canonname, sockaddr)
+            family, type_, proto, canonname, sockaddr = address
+            assert type_ == socket.SOCK_STREAM
+            print(f"Connecting to {address}")
+            with socket.socket(family=family, type=socket.SOCK_STREAM | socket.SOCK_CLOEXEC, proto=proto) as sock:
+                sock.connect(sockaddr)
+                GLib.idle_add(connect_button.set_label, "Disconnect")
+                thread_loop(sock)
+            sock.close()
+        else:
+            print(f"Connecting to {SOCKET_NAME}")
+            with socket.socket(family=socket.AF_UNIX, type=socket.SOCK_STREAM | socket.SOCK_CLOEXEC) as sock:
+                sock.connect(SOCKET_NAME)
+                GLib.idle_add(connect_button.set_label, "Disconnect")
+                thread_loop(sock)
+            sock.close()
+        status = ""
+    except BrokenPipeError as e:
+        status = "Broken pipe to server"
+    except ConnectionRefusedError as e:
+        status = "Connection refused to server (is it down?)"
+    finally:
+        GLib.idle_add(connect_button.set_label, "Reconnect")
+        print(f"Disconnected: status = {status}")
+        thread = None
+        stop = False
+        stop_ev.clear()
 
-def connect(button):
+def connect_clicked(button):
     global thread
-    if thread:
-        print("Already connected")
+    if connect_button.get_label() == "Disconnect":
+        stop = True
+        stop_ev.set()
         return
+
+    if thread:
+        print("Already connected or connect in progress")
+        return
+
     print("Connecting...")
     # button.label.set_text("Connecting...")
+    GLib.idle_add(connect_button.set_label, "Connecting...")
     thread = threading.Thread(target=connection_thread)
     # thread.daemon = True  # This means to not wait for the thread on exit. Just kill it.
     thread.start()
 
 handlers = {
-  "connect_clicked": connect,
+  "connect_clicked": connect_clicked,
 }
 
 builder.connect_signals(handlers)

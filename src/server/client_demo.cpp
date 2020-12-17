@@ -111,7 +111,7 @@ retry:
         }
 
         if (ret) {
-            fprintf(stderr, "Non zero return from use_fd");
+            fprintf(stderr, "Non zero return from use_fd: %d\n", ret);
             break;
         }
 
