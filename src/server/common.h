@@ -56,7 +56,9 @@ extern "C" {
 // Note: On Linux, the length must be less than 108 bytes
 // (including a NULL terminator).
 // Some implementations have it as short as 92 bytes.
-#define SOCKET_NAME "/tmp/9Lq7BNBnBycd6nxy.socket"
+//
+// TODO(baryluk): Use dynamic name with uid / user.
+#define SOCKET_NAME "/tmp/mangohud_server.socket"
 
 #define MUST_USE_RESULT __attribute__ ((warn_unused_result))
 #define COLD __attribute__ ((cold))

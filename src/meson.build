@@ -59,6 +59,7 @@ if ['windows', 'mingw'].contains(host_machine.system())
   )
 endif
 
+
 if is_unixy
   vklayer_files += files(
     'cpu.cpp',
@@ -69,8 +70,6 @@ if is_unixy
     'elfhacks.cpp',
     'real_dlsym.cpp',
     'pci_ids.cpp',
-    'server/common.c',
-    'server/mangohud.pb.c',
   )
 
   opengl_files = files(
@@ -142,6 +141,8 @@ if is_unixy
   endif
 endif
 
+subdir('server')
+
 link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL'])
 # meson fails to check version-script so just force add
 link_args += '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version'))
@@ -173,8 +174,9 @@ vklayer_mesa_overlay = shared_library(
     dep_pthread,
     dep_vulkan,
     windows_deps],
-  include_directories : [inc_common],
-  link_args : link_args + ['-lprotobuf-nanopb'],
+  include_directories : [inc_common, 'server'],
+  link_with : [rpc_common],
+  link_args : link_args,
   install_dir : libdir_mangohud,
   install : true
 )

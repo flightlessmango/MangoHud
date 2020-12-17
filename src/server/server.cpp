@@ -11,12 +11,16 @@
 #include <fcntl.h>
 #include <vector>
 #include <signal.h>
+#ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
+#endif
 #include <cinttypes>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 
-
+#ifndef PB_ENABLE_MALLOC
 #define PB_ENABLE_MALLOC
+#endif
 #include <pb.h>
 #include <pb_encode.h>
 #include <pb_decode.h>
@@ -180,12 +184,17 @@ static void sigint_handler(int sig, siginfo_t *info, void *ucontext) {
 static int loop() {
     // Create local socket.
 
+retry_unix_socket:
     // int connection_socket = socket(AF_UNIX, SOCK_SEQPACKET, 0);
-    int connection_socket = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
-    if (connection_socket == -1) {
+    int connection_unix_socket = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    if (connection_unix_socket == -1) {
+        if (errno == EINTR) {
+            goto retry_unix_socket;
+        }
         return errno;  // socket
     }
 
+    {
     struct sockaddr_un name;
     memset(&name, 0, sizeof(name));
 
@@ -195,8 +204,8 @@ static int loop() {
     strncpy(name.sun_path, SOCKET_NAME, sizeof(name.sun_path) - 1);
 
     int retry = 1;
-retry_bind:
-    if (bind(connection_socket, (const struct sockaddr *)&name,
+retry_unix_bind:
+    if (bind(connection_unix_socket, (const struct sockaddr *)&name,
              sizeof(name)) != 0) {
         if (errno == EADDRINUSE && retry > 0) {
             retry = 0;
@@ -204,13 +213,82 @@ retry_bind:
             //            sizeof(addr));
 
             unlink(SOCKET_NAME);
-            goto retry_bind;
+            goto retry_unix_bind;
         }
         return errno;  // bind
     }
+    }
 
-    if (listen(connection_socket, 20) != 0) {
+// AF_INET6 or PF_INET6?
+    int connection_tcp_socket = socket(AF_INET6, SOCK_STREAM, 0);
+    if (connection_tcp_socket == -1) {
+        if (errno == EINTR) {
+            goto retry_unix_socket;
+        }
+        return errno;  // socket
+    }
+
+    {
+    struct sockaddr_in6 addr;
+    memset(&addr, 0, sizeof(sockaddr));
+    addr.sin6_family = AF_INET6;
+    addr.sin6_port = htons(9869);
+    //addr.sin6_addr = IN6ADDR_ANY_INIT;
+    addr.sin6_addr = in6addr_any;
+
+    int retry = 1;
+retry_tcp_bind:
+    if (bind(connection_tcp_socket, (const struct sockaddr *)&addr,
+             sizeof(addr)) != 0) {
+        if (errno == EADDRINUSE && retry > 0) {
+            retry = 0;
+            //if (connect(data_socket, (const struct sockaddr *) &addr,
+            //            sizeof(addr));
+
+            goto retry_tcp_bind;
+        }
+        return errno;  // bind
+    }
+    }
+
+    {
+    int reuse = 1;
+    setsockopt(connection_tcp_socket, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+    }
+
+    //{
+    //int timestamp = 1;
+    //setsockopt(connection_tcp_socket, SOL_SOCKET, SO_TIMESTAMP, &timestampe, sizeof(timestamp));
+    //}
+
+
+    if (listen(connection_unix_socket, 20) != 0) {
         return errno;  // listen
+    }
+
+    fprintf(stderr, "Listening on UNIX socket %s\n", SOCKET_NAME);
+
+
+    if (listen(connection_tcp_socket, 20) != 0) {
+        return errno;  // listen
+    }
+
+    {
+        struct sockaddr_in6 addr;
+        memset(&addr, 0, sizeof(sockaddr));
+        socklen_t addr_len = sizeof(addr);
+        if (getsockname(connection_tcp_socket, (sockaddr*)&addr, &addr_len) == -1) {
+            perror("getsockname");
+        }
+        assert(addr_len <= sizeof(addr));
+
+        char addr_str[INET6_ADDRSTRLEN];
+        addr_str[0] = '\0';
+        if (inet_ntop(AF_INET6, &addr.sin6_addr, addr_str, sizeof(addr_str))) {
+            fprintf(stderr, "Listening on TCP socket %s port %d\n", addr_str, ntohs(addr.sin6_port));
+        } else {
+            perror("inet_ntop");
+        }
     }
 
     int epollfd = epoll_create1(EPOLL_CLOEXEC);
@@ -219,13 +297,24 @@ retry_bind:
         exit(EXIT_FAILURE);
     }
 
-    int dummy_ptr = 0;
+    int unix_socket_dummy_ptr = 0;
+    int tcp_socket_dummy_ptr = 0;
 
     {
     struct epoll_event ev;
     ev.events = EPOLLIN;
-    ev.data.ptr = (void*)&dummy_ptr;
-    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, connection_socket, &ev) == -1) {
+    ev.data.ptr = (void*)&unix_socket_dummy_ptr;
+    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, connection_unix_socket, &ev) == -1) {
+        perror("epoll_ctl: connection_socket");
+        exit(EXIT_FAILURE);
+    }
+    }
+
+    {
+    struct epoll_event ev;
+    ev.events = EPOLLIN;
+    ev.data.ptr = (void*)&tcp_socket_dummy_ptr;
+    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, connection_tcp_socket, &ev) == -1) {
         perror("epoll_ctl: connection_socket");
         exit(EXIT_FAILURE);
     }
@@ -247,14 +336,97 @@ retry_bind:
         }
 
         for (int n = 0; n < nfds; n++) {
-            if (events[n].data.ptr == &dummy_ptr) {
-                int data_socket = accept(connection_socket, NULL, NULL);
+            if (events[n].data.ptr == &unix_socket_dummy_ptr ||
+                events[n].data.ptr == &tcp_socket_dummy_ptr) {
+
+                struct sockaddr_in6 addr;
+                memset(&addr, 0, sizeof(sockaddr));
+                socklen_t addr_size = sizeof(addr);
+
+                int data_socket =
+                     events[n].data.ptr == &unix_socket_dummy_ptr
+                     ? accept(connection_unix_socket, NULL, NULL)
+                     : accept4(connection_tcp_socket, (sockaddr*)&addr, &addr_size, SOCK_CLOEXEC);
+
+// accept4(connection_tcp_socket, NULL, NULL, SOCK_NONBLOCK | SOCK_CLOEXEC);
+
                 if (data_socket == -1) {
+                    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                        continue;
+                    }
+                    if (events[n].data.ptr == &tcp_socket_dummy_ptr) {
+                        if (errno == ENETDOWN || errno == EPROTO ||
+                            errno == ENOPROTOOPT || errno == EHOSTDOWN ||
+                            errno == ENONET || errno == EHOSTUNREACH ||
+                            errno == EOPNOTSUPP || errno == ENETUNREACH) {
+                            continue;
+                        }
+                    }
+// EPERM Firewall rules forbid connection. (Linux)
+
                     perror("accept");
                     return errno;  // accept
                 }
 
                 fprintf(stderr, "Client connect started\n");
+
+/*
+       accept4() is a nonstandard Linux extension.
+
+       On Linux, the new socket returned by accept() does not inherit file
+       status flags such as O_NONBLOCK and O_ASYNC from the listening
+       socket.  This behavior differs from the canonical BSD sockets
+       implementation.  Portable programs should not rely on inheritance or
+       noninheritance of file status flags and always explicitly set all
+       required flags on the socket returned from accept().
+
+*/
+                if (events[n].data.ptr == &tcp_socket_dummy_ptr) {
+                    char addr_str[INET6_ADDRSTRLEN];
+                    addr_str[0] = '\0';
+                    if (inet_ntop(AF_INET6, &addr.sin6_addr, addr_str, sizeof(addr_str))) {
+                        fprintf(stderr, "TCP connection from %s port %d\n", addr_str, ntohs(addr.sin6_port));
+                    } else {
+                        perror("inet_ntop");
+                    }
+                }
+
+                if (events[n].data.ptr == &tcp_socket_dummy_ptr) {
+                    {
+                    int keepalive = 1;
+                    setsockopt(data_socket, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive));
+                    }
+
+                    {
+                    struct linger no_linger;
+                    no_linger.l_onoff = 0;
+                    no_linger.l_linger = 0;  // seconds
+                    setsockopt(data_socket, SOL_SOCKET, SO_LINGER, &no_linger, sizeof(no_linger));
+                    }
+
+                    {
+                    struct sockaddr_in6 addr;
+                    memset(&addr, 0, sizeof(addr));
+                    socklen_t addr_len = sizeof(addr);
+                    if (getpeername(data_socket, (sockaddr*)&addr, &addr_len) == -1) {
+                        perror("getpeername");
+                        exit(EXIT_FAILURE);
+                    }
+                    assert(addr_len == sizeof(struct sockaddr_in6));
+
+                    char addr_str[INET6_ADDRSTRLEN];
+                    addr_str[0] = '\0';
+                    if (inet_ntop(AF_INET6, &addr.sin6_addr, addr_str, sizeof(addr_str))) {
+                        fprintf(stderr, "TCP connection from %s port %d\n", addr_str, ntohs(addr.sin6_port));
+                    } else {
+                        perror("inet_ntop");
+                    }
+                    }
+                }
+
+// IP_TOS   , IPTOS_LOWDELAY
+
+
 
                 if (set_nonblocking(data_socket)) {
                     goto error_1;
@@ -375,12 +547,18 @@ error_1:
     }
     server_states.clear();
 
-    if (close(connection_socket) != 0) {
-        perror("close: connection_socket");
+close_tcp_socket:
+    if (close(connection_tcp_socket) != 0) {
+        perror("close: connection_tcp_socket");
+    }
+
+close_unix_socket:
+    if (close(connection_unix_socket) != 0) {
+        perror("close: connection_unix_socket");
     }
 
     if (unlink(SOCKET_NAME) != 0) {
-        perror("unlink: socket file");
+        perror("unlink: unix_socket file");
     }
 
     return 0;

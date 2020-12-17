@@ -20,7 +20,9 @@ msg_in.ParseFromString(data)
 
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib, Gdk, Gio
+from gi.repository import Gtk, GLib, Gdk, Gio, GObject
+
+GObject.threads_init()
 
 screen = Gdk.Screen.get_default()
 gtk_provider = Gtk.CssProvider()
@@ -48,7 +50,8 @@ fps_label = builder.get_object("fps")
 app_name_label = builder.get_object("app_name")
 api_label = builder.get_object("api")
 
-SOCKET_NAME = "/tmp/9Lq7BNBnBycd6nxy.socket"
+SOCKET_NAME = "/tmp/mangohud_server.socket"
+ADDRESS = ("localhost", 9869)
 
 import socket
 
@@ -68,26 +71,45 @@ def recv(sock):
     return msg
 
 thread = None
+stop = False
+
+stop_ev = threading.Event()
+
+def thread_loop(sock):
+    while not stop and not stop_ev.is_set():
+        msg = pb.Message(protocol_version=1, client_type=pb.ClientType.GUI)
+        send(sock, msg)
+
+        msg = recv(sock)
+        print(msg)
+
+        fps = msg.fps
+        GLib.idle_add(fps_label.set_text, f"{fps:.3f}")
+        program_name = msg.program_name
+        GLib.idle_add(app_name_label.set_text, f"{program_name}")
+        GLib.idle_add(api_label.set_text, f"")
+
+        time.sleep(0.05)
+
 
 def connection_thread():
     global thread
-    with socket.socket(family=socket.AF_UNIX, type=socket.SOCK_STREAM | socket.SOCK_CLOEXEC) as sock:
-        sock.connect(SOCKET_NAME)
-
-        while True:
-            msg = pb.Message(protocol_version=1, client_type=pb.ClientType.GUI)
-            send(sock, msg)
-
-            msg = recv(sock)
-            print(msg)
-
-            fps = msg.fps
-            GLib.idle_add(fps_label.set_text, f"{fps:.3f}")
-            program_name = msg.program_name
-            GLib.idle_add(app_name_label.set_text, f"{program_name}")
-            GLib.idle_add(api_label.set_text, f"")
-
-            time.sleep(0.05)
+    if True:
+        addresses = socket.getaddrinfo(ADDRESS[0], ADDRESS[1], proto=socket.IPPROTO_TCP)
+        assert addresses
+        address = addresses[0]  # (family, type, proto, canonname, sockaddr)
+        family, type_, proto, canonname, sockaddr = address
+        assert type_ == socket.SOCK_STREAM
+        print(f"Connecting to {address}")
+        with socket.socket(family=family, type=socket.SOCK_STREAM | socket.SOCK_CLOEXEC, proto=proto) as sock:
+            sock.connect(sockaddr)
+            thread_loop(sock)
+        sock.close()
+    else:
+        print(f"Connecting to {SOCKET_NAME}")
+        with socket.socket(family=socket.AF_UNIX, type=socket.SOCK_STREAM | socket.SOCK_CLOEXEC) as sock:
+            sock.connect(SOCKET_NAME)
+            thread_loop(sock)
         sock.close()
     print("Disconnected")
     thread = None
@@ -100,7 +122,7 @@ def connect(button):
     print("Connecting...")
     # button.label.set_text("Connecting...")
     thread = threading.Thread(target=connection_thread)
-    thread.daemon = True
+    # thread.daemon = True  # This means to not wait for the thread on exit. Just kill it.
     thread.start()
 
 handlers = {
@@ -110,9 +132,13 @@ handlers = {
 builder.connect_signals(handlers)
 
 window = builder.get_object("window_main")
+
+window.connect("destroy", Gtk.main_quit)
+
 window.show_all()
 
 
 
-
 Gtk.main()
+stop = True
+stop_ev.set()

@@ -88,6 +88,11 @@ message Message {
   CpuInfoApp app_cpu_info = 71;  // I.e. CPU usage and number of threads by app.
   MemInfoApp app_mem_info = 73;  // I.e. MEM, stack, swap used by app.
 
+
+  // This is sent to GUI client when they ask for info about all
+  // connected clients.
+  repeated Message clients = 200;
+
   // Note.
 };
 

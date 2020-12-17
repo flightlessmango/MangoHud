@@ -208,6 +208,8 @@ typedef struct _Message {
     struct _CpuInfoApp *app_cpu_info;
     struct _MemInfoApp *app_mem_info;
     ClientType *client_type;
+    pb_size_t clients_count;
+    struct _Message *clients;
 } Message;
 
 typedef struct _RenderInfo {
@@ -236,7 +238,7 @@ extern "C" {
 #endif
 
 /* Initializer values for message structs */
-#define Message_init_default                     {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL}
+#define Message_init_default                     {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, NULL}
 #define Alive_init_default                       {NULL}
 #define Architecture_init_default                {NULL, NULL, NULL, NULL, NULL, NULL}
 #define RenderInfo_init_default                  {NULL, NULL, NULL, NULL, NULL, NULL}
@@ -255,7 +257,7 @@ extern "C" {
 #define GpuInfoApp_init_default                  {NULL, NULL}
 #define CpuInfoApp_init_default                  {NULL, NULL, NULL}
 #define MemInfoApp_init_default                  {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL}
-#define Message_init_zero                        {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL}
+#define Message_init_zero                        {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, NULL}
 #define Alive_init_zero                          {NULL}
 #define Architecture_init_zero                   {NULL, NULL, NULL, NULL, NULL, NULL}
 #define RenderInfo_init_zero                     {NULL, NULL, NULL, NULL, NULL, NULL}
@@ -407,6 +409,7 @@ extern "C" {
 #define Message_app_cpu_info_tag                 71
 #define Message_app_mem_info_tag                 73
 #define Message_client_type_tag                  100
+#define Message_clients_tag                      200
 #define RenderInfo_opengl_tag                    1
 #define RenderInfo_vulkan_tag                    2
 #define RenderInfo_opengl_version_tag            10
@@ -449,7 +452,8 @@ X(a, POINTER,  OPTIONAL, MESSAGE,  mem_info,         63) \
 X(a, POINTER,  REPEATED, MESSAGE,  app_gpu_info,     70) \
 X(a, POINTER,  OPTIONAL, MESSAGE,  app_cpu_info,     71) \
 X(a, POINTER,  OPTIONAL, MESSAGE,  app_mem_info,     73) \
-X(a, POINTER,  SINGULAR, UENUM,    client_type,     100)
+X(a, POINTER,  SINGULAR, UENUM,    client_type,     100) \
+X(a, POINTER,  REPEATED, MESSAGE,  clients,         200)
 #define Message_CALLBACK NULL
 #define Message_DEFAULT NULL
 #define Message_alive_MSGTYPE Alive
@@ -468,6 +472,7 @@ X(a, POINTER,  SINGULAR, UENUM,    client_type,     100)
 #define Message_app_gpu_info_MSGTYPE GpuInfoApp
 #define Message_app_cpu_info_MSGTYPE CpuInfoApp
 #define Message_app_mem_info_MSGTYPE MemInfoApp
+#define Message_clients_MSGTYPE Message
 
 #define Alive_FIELDLIST(X, a) \
 X(a, POINTER,  SINGULAR, UINT32,   dummy,             1)

@@ -33,7 +33,7 @@
 #define NOTNULL __attribute__ ((nonnull))
 #define NOTHROW __attribute__ ((nothrow))
 
-// TODO(baryluk_: Set __attribute((visibility("hidden")) on some?
+// TODO(baryluk): Set __attribute((visibility("hidden")) on some?
 
 // static
 int set_nonblocking(int fd) {
@@ -64,9 +64,14 @@ int client_connect(struct ClientState* client_state) {
     if (client_state->fd == 0) {
         // Create local socket.
         //int data_socket = socket(AF_UNIX, SOCK_SEQPACKET, 0);
+retry_socket:
         data_socket = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0); // | SOCK_NONBLOCK, 0);
         // Note: For TCP sockets (AF_INET, AF_INET6 + SOCK_STREAM) we might want SOCK_KEEPALIVE.
         if (data_socket == -1) {
+            if (errno == EINTR) {
+                goto retry_socket;
+            }
+
             perror("socket");
             return errno;  // socket
         }
@@ -94,11 +99,17 @@ int client_connect(struct ClientState* client_state) {
         assert(strlen(SOCKET_NAME) < sizeof(addr.sun_path));
         strncpy(addr.sun_path, SOCKET_NAME, sizeof(addr.sun_path) - 1);
 
+retry_connect:
         if (connect(data_socket, (const struct sockaddr *)&addr,
                     sizeof(addr)) != 0) {
-            perror("connect");
-            DEBUG(fprintf(stderr, "The server is down?\n"));
-            goto error_2;
+            if (errno != EINPROGRESS) {
+                if (errno == EINTR) {
+                    goto retry_connect;
+                }
+                perror("connect");
+                DEBUG(fprintf(stderr, "The server is down?\n"));
+                goto error_2;
+            }
         }
 
         if (set_nonblocking(data_socket)) {
