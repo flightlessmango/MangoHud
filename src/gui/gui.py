@@ -33,6 +33,8 @@ import time
 
 connect_button = builder.get_object("connect_button")
 
+SUPPORTED_PROTOCOL_VERSION = 1
+
 ADDRESS = ("localhost", 9869)
 
 # The length verification to system limits, will be checked by Python wrapper
@@ -94,49 +96,67 @@ clients_container = builder.get_object('clients_container')
 last_row = None
 last_row_count = 0
 
-
-def thread_loop(sock):
+def handle_message(msg):
     global known_clients
     global last_row, last_row_count
+
+    if msg.clients:
+        new_clients = False
+        for client in msg.clients:
+            key = (client.nodename, client.pid)
+            if key not in known_clients:
+                client_widget = ClientWidget()
+
+                #if last_row:
+                if True:
+                    # This probably is not safe to do from this thread
+                    # clients_container.insert_next_to(last_row, Gtk.PositionType.BOTTOM)
+                    clients_container.attach(client_widget, left=0, top=last_row_count+1, width=1, height=1)
+
+                    last_row = client_widget
+                    last_row_count += 1
+                    known_clients[key] = [client_widget, client]
+                    new_clients = True
+            else:
+                known_clients[key][1] = client
+        if new_clients:
+            clients_container.show_all()
+
+        # TODO(baryluk): Remove stale clients or once we know for
+        # sure are down.
+
+        for key, (client_widget, client) in known_clients.items():
+            GLib.idle_add(client_widget.fps.set_text, f"{client.fps:.3f}")
+            GLib.idle_add(client_widget.app_name.set_text, f"{client.program_name}")
+            GLib.idle_add(client_widget.api.set_text, f"pid {client.pid}")
+            # TODO(baryluk): Garbage collect old clients.
+
+
+def thread_loop(sock):
+    protocol_version_warning_shown = False
     while not stop and not stop_ev.is_set():
         msg = pb.Message(protocol_version=1, client_type=pb.ClientType.GUI)
         send(sock, msg)
 
         msg = recv(sock)
-        print(msg)
+        #print(msg)
 
-        if msg.clients:
-            new_clients = False
-            for client in msg.clients:
-                key = (client.nodename, client.pid)
-                if key not in known_clients:
-                    client_widget = ClientWidget()
+        if (msg.protocol_version and msg.protocol_version > SUPPORTED_PROTOCOL_VERSION):
+            if not protocol_version_warnings_shown:
+                print(f"Warning: Server speaks newer protocol_version {msg.protocol_version}, than supported by this app ({SUPPORTED_PROTOCOL_VERSION}).\nCrashes or missing functionality expected!\nPlease upgrade!");
+                protocol_version_warnings_shown = True
 
-                    #if last_row:
-                    if True:
-                        # This probably is not safe to do from this thread
-                        # clients_container.insert_next_to(last_row, Gtk.PositionType.BOTTOM)
-                        clients_container.attach(client_widget, left=0, top=last_row_count+1, width=1, height=1)
+        handle_message(msg)
 
-                        last_row = client_widget
-                        last_row_count += 1
-                        known_clients[key] = [client_widget, client]
-                        new_clients = True
-                else:
-                    known_clients[key][1] = client
-            if new_clients:
-                clients_container.show_all()
-            # TODO(baryluk): Remove stale clients or once we know for
-            # sure are down.
-
-            for key, (client_widget, client) in known_clients.items():
-                GLib.idle_add(client_widget.fps.set_text, f"{client.fps:.3f}")
-                GLib.idle_add(client_widget.app_name.set_text, f"{client.program_name}")
-                GLib.idle_add(client_widget.api.set_text, f"pid {client.pid}")
-                # TODO(baryluk): Garbage collect old clients.
-
-
+        # Sleep less if 50ms laready passed from previous contact.
+        # Sleep more if there are no clients, to conserve CPU / battery.
         time.sleep(0.05)
+
+def thread_loop_start(sock):
+    print("Connected")
+    # TODO(baryluk): Show "Connected" first, then after few seconds fade to "Disconnect".
+    GLib.idle_add(connect_button.set_label, "Disconnect")
+    thread_loop(sock)
 
 def connection_thread():
     global thread, stop, stop_ev
@@ -154,23 +174,35 @@ def connection_thread():
                 print(f"Connecting to {address}")
                 with socket.socket(family=family, type=socket.SOCK_STREAM | socket.SOCK_CLOEXEC, proto=proto) as sock:
                     sock.connect(sockaddr)
-                    GLib.idle_add(connect_button.set_label, "Disconnect")
+                    # TODO(baryluk): This is too simplistic. It is still
+                    # possible to connect, yet be disconnected after parsing the
+                    # first message, and do reconnecting in fast loop.
+                    # Improve fallback, i.e. only reset it to initial value,
+                    # if few second passed and at least few messages were
+                    # exchanged.
                     reconnect_delay = 1.0
-                    thread_loop(sock)
+                    thread_loop_start(sock)
                 sock.close()
             else:
                 print(f"Connecting to {SOCKET_NAME}")
                 with socket.socket(family=socket.AF_UNIX, type=socket.SOCK_STREAM | socket.SOCK_CLOEXEC) as sock:
                     sock.connect(SOCKET_NAME)
-                    GLib.idle_add(connect_button.set_label, "Disconnect")
-                    reconnect_delay = 1.0
-                    thread_loop(sock)
+                    reconnect_delay = 1.0  # See comment above for TCP.
+                    thread_loop_start(sock)
                 sock.close()
             status = ""
         except BrokenPipeError as e:
             status = "Broken pipe to server"
         except ConnectionRefusedError as e:
             status = "Connection refused to server (is it down?)"
+        except NameError as e:
+            print("Internal error")
+            status = "Error"
+            stop = True
+            stop_ev.set()
+            # raise e  # Some code bug.
+            GLib.idle_add(connect_button.set_label, "Error")
+            raise e
         finally:
             print(f"Disconnected: status = {status}")
             if not stop and not stop_ev.is_set():
@@ -182,7 +214,11 @@ def connection_thread():
                 reconnect_delay = min(30.0, reconnect_delay * 1.4)
                 GLib.idle_add(connect_button.set_label, "Reconnecting...")
             else:
-                GLib.idle_add(connect_button.set_label, "Connect")
+                if status == "Error":
+                    GLib.idle_add(connect_button.set_label, "Error!")
+                    # raise NameError()
+                else:
+                    GLib.idle_add(connect_button.set_label, "Connect")
     thread = None
     stop = False
     stop_ev.clear()
@@ -217,11 +253,13 @@ window = builder.get_object("window_main")
 
 window.connect("destroy", Gtk.main_quit)
 
-window.show_all()
+try:
+  window.show_all()
 
-# Auto connect on startup.
-connect_clicked(connect_button)
+  # Auto connect on startup.
+  connect_clicked(connect_button)
 
-Gtk.main()
-stop = True
-stop_ev.set()
+  Gtk.main()
+finally:
+  stop = True
+  stop_ev.set()
