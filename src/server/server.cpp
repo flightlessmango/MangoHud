@@ -180,7 +180,7 @@ static int server_request_handler(const Message* const request, void* my_state) 
                 PB_MAYBE_UPDATE(sub_response.fps, other_server_state->recent_state.fps);
             }
 
-            // Is calloc safe to call with size 0? Probably not.
+            // Note: It is actually safe to pass 0 to 'calloc'.
             PB_MALLOC_ARRAY(response->clients, sub_responses.size());
             for (int i = 0; i < sub_responses.size(); i++) {
                  response->clients[i] = std::move(sub_responses[i]);
