@@ -219,11 +219,12 @@ retry_unix_bind:
     }
     }
 
-// AF_INET6 or PF_INET6?
+retry_tcp_socket:
+    // Should this be AF_INET6 or PF_INET6?
     int connection_tcp_socket = socket(AF_INET6, SOCK_STREAM, 0);
     if (connection_tcp_socket == -1) {
         if (errno == EINTR) {
-            goto retry_unix_socket;
+            goto retry_tcp_socket;
         }
         return errno;  // socket
     }
@@ -242,9 +243,6 @@ retry_tcp_bind:
              sizeof(addr)) != 0) {
         if (errno == EADDRINUSE && retry > 0) {
             retry = 0;
-            //if (connect(data_socket, (const struct sockaddr *) &addr,
-            //            sizeof(addr));
-
             goto retry_tcp_bind;
         }
         return errno;  // bind
@@ -291,14 +289,14 @@ retry_tcp_bind:
         }
     }
 
-    int epollfd = epoll_create1(EPOLL_CLOEXEC);
+    const int epollfd = epoll_create1(EPOLL_CLOEXEC);
     if (epollfd < 0) {
         perror("epoll_create1");
         exit(EXIT_FAILURE);
     }
 
-    int unix_socket_dummy_ptr = 0;
-    int tcp_socket_dummy_ptr = 0;
+    const int unix_socket_dummy_ptr = 0;
+    const int tcp_socket_dummy_ptr = 0;
 
     {
     struct epoll_event ev;
@@ -325,7 +323,7 @@ retry_tcp_bind:
     while (!server_shutdown) {
         struct epoll_event events[MAX_EVENTS];
 
-        int nfds = epoll_pwait(epollfd, events, MAX_EVENTS, /*(int)timeout_ms=*/-1, /*sigmask*/NULL);
+        const int nfds = epoll_pwait(epollfd, events, MAX_EVENTS, /*(int)timeout_ms=*/-1, /*sigmask*/NULL);
         if (nfds < 0 && errno == EINTR) {
             // Retry or exit if in shutdown.
             continue;
@@ -494,7 +492,8 @@ error_1:
                 // use_fd is fine to be called even if we got EPOLLERR or EPOLLHUP,
                 // as use_fd is smart to handle properly read and write errors,
                 // including returning 0, or other errors.
-                if ((events[n].events & EPOLLERR) || (events[n].events & EPOLLHUP) || use_fd(client_state, server_request_handler, (void*)(&request_context))) {
+                if ((events[n].events & EPOLLERR) || (events[n].events & EPOLLHUP) ||
+                    use_fd(client_state, server_request_handler, (void*)(&request_context))) {
                     fprintf(stderr, "Fatal error during handling client. Disconnecting.\n");
                     struct epoll_event dummy_event = {0};
                     if (epoll_ctl(epollfd, EPOLL_CTL_DEL, client_state->fd, &dummy_event) == -1) {
