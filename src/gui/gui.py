@@ -92,39 +92,53 @@ def thread_loop(sock):
         time.sleep(0.05)
 
 def connection_thread():
-    global thread
+    global thread, stop, stop_ev
     status = "Connecting"
-    try:
-        if True:
-            addresses = socket.getaddrinfo(ADDRESS[0], ADDRESS[1], proto=socket.IPPROTO_TCP)
-            assert addresses
-            address = addresses[0]  # (family, type, proto, canonname, sockaddr)
-            family, type_, proto, canonname, sockaddr = address
-            assert type_ == socket.SOCK_STREAM
-            print(f"Connecting to {address}")
-            with socket.socket(family=family, type=socket.SOCK_STREAM | socket.SOCK_CLOEXEC, proto=proto) as sock:
-                sock.connect(sockaddr)
-                GLib.idle_add(connect_button.set_label, "Disconnect")
-                thread_loop(sock)
-            sock.close()
-        else:
-            print(f"Connecting to {SOCKET_NAME}")
-            with socket.socket(family=socket.AF_UNIX, type=socket.SOCK_STREAM | socket.SOCK_CLOEXEC) as sock:
-                sock.connect(SOCKET_NAME)
-                GLib.idle_add(connect_button.set_label, "Disconnect")
-                thread_loop(sock)
-            sock.close()
-        status = ""
-    except BrokenPipeError as e:
-        status = "Broken pipe to server"
-    except ConnectionRefusedError as e:
-        status = "Connection refused to server (is it down?)"
-    finally:
-        GLib.idle_add(connect_button.set_label, "Reconnect")
-        print(f"Disconnected: status = {status}")
-        thread = None
-        stop = False
-        stop_ev.clear()
+    reconnect = True
+    reconnect_delay = 1.0
+    while reconnect and not stop and not stop_ev.is_set():
+        try:
+            if True:
+                addresses = socket.getaddrinfo(ADDRESS[0], ADDRESS[1], proto=socket.IPPROTO_TCP)
+                assert addresses
+                address = addresses[0]  # (family, type, proto, canonname, sockaddr)
+                family, type_, proto, canonname, sockaddr = address
+                assert type_ == socket.SOCK_STREAM
+                print(f"Connecting to {address}")
+                with socket.socket(family=family, type=socket.SOCK_STREAM | socket.SOCK_CLOEXEC, proto=proto) as sock:
+                    sock.connect(sockaddr)
+                    GLib.idle_add(connect_button.set_label, "Disconnect")
+                    reconnect_delay = 1.0
+                    thread_loop(sock)
+                sock.close()
+            else:
+                print(f"Connecting to {SOCKET_NAME}")
+                with socket.socket(family=socket.AF_UNIX, type=socket.SOCK_STREAM | socket.SOCK_CLOEXEC) as sock:
+                    sock.connect(SOCKET_NAME)
+                    GLib.idle_add(connect_button.set_label, "Disconnect")
+                    reconnect_delay = 1.0
+                    thread_loop(sock)
+                sock.close()
+            status = ""
+        except BrokenPipeError as e:
+            status = "Broken pipe to server"
+        except ConnectionRefusedError as e:
+            status = "Connection refused to server (is it down?)"
+        finally:
+            print(f"Disconnected: status = {status}")
+            if not stop and not stop_ev.is_set():
+                reconnect_time = time.time() + reconnect_delay
+                while time.time() < reconnect_time:
+                    reconnect_togo = max(0.0, reconnect_time - time.time())
+                    GLib.idle_add(connect_button.set_label, f"Reconnecting in {reconnect_togo:.1f}s")
+                    time.sleep(0.1)
+                reconnect_delay = min(30.0, reconnect_delay * 1.4)
+                GLib.idle_add(connect_button.set_label, "Reconnecting...")
+            else:
+                GLib.idle_add(connect_button.set_label, "Connect")
+    thread = None
+    stop = False
+    stop_ev.clear()
 
 def connect_clicked(button):
     global thread
@@ -135,6 +149,7 @@ def connect_clicked(button):
 
     if thread:
         print("Already connected or connect in progress")
+        # TODO: If explicitly clicked while we are in "Reconnecting in {...}" phase. Force reconnect.
         return
 
     print("Connecting...")
