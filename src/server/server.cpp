@@ -39,30 +39,86 @@
 
 template<typename T>
 inline T* a(const T&& value) {
-  T* ptr = (T*)malloc(sizeof(T));
-  *ptr = value;
-  return ptr;
+    T* ptr = (T*)malloc(sizeof(T));
+    *ptr = value;
+    return ptr;
 }
 
 // This is per client.
 struct ServerState {
-   int server_states_index;  // Index in `server_states` vector.
+    int server_states_index;  // Index in `server_states` vector.
 
-   struct ClientState client_state;
+    struct ClientState client_state;
 
-   Message recent_state;
+    Message recent_state;
 };
 
 struct RequestContext {
-  // Server state assosciated with particular client.
-  struct ServerState *server_state;
+    // Server state assosciated with particular client.
+    struct ServerState *server_state;
 
-  // All server states.
-  //
-  // We want to be able to access all the other clients easily
-  // to server GUI type client.
-  std::vector<ServerState*> *all_server_states;
+    // All server states.
+    //
+    // We want to be able to access all the other clients easily
+    // to server GUI type client.
+    std::vector<ServerState*> *all_server_states;
 };
+
+static int prepare_gui_response(Message* response, struct RequestContext *const context) {
+    assert(PB_IF(context->server_state->recent_state.client_type, ClientType_GUI));
+
+    char hostname[HOST_NAME_MAX + 1];
+    hostname[0] = '\0';
+    if (gethostname(hostname, sizeof(hostname)) < 0) {
+        perror("gethostname");
+        hostname[HOST_NAME_MAX] = '\0'; // Just for a good measure.
+    } else {
+        PB_MALLOC_SET_STR(response->nodename, hostname);
+    }
+    if (strlen(hostname) == 0) {
+        struct utsname utsname_buf;
+        if (uname(&utsname_buf) < 0) {
+            perror("uname");
+            // What next?
+        } else {
+            PB_MALLOC_SET_STR(response->nodename, utsname_buf.nodename);
+        }
+    }
+
+    std::vector<Message> sub_responses;
+
+    for (const auto& other_server_state : *(context->all_server_states)) {
+        if (context->server_state->server_states_index == other_server_state->server_states_index) {
+            continue;
+        }
+        if (PB_IF(other_server_state->recent_state.client_type, ClientType_GUI)) {
+            continue;
+        }
+
+        //Message& sub_response = sub_responses.emplace_back();  // C++17
+        sub_responses.emplace_back();
+        Message& sub_response = sub_responses.back();
+
+        // Populate nodename from the server (all reporting clients are
+        // connected to server on local machine only).
+        PB_MALLOC_SET_STR(sub_response.nodename, response->nodename);
+
+
+        // Populate most recent stats for each client.
+        PB_MAYBE_UPDATE(sub_response.uid, other_server_state->recent_state.uid);
+        PB_MAYBE_UPDATE(sub_response.pid, other_server_state->recent_state.pid);
+        PB_MAYBE_UPDATE_STR(sub_response.program_name, other_server_state->recent_state.program_name);
+        PB_MAYBE_UPDATE(sub_response.fps, other_server_state->recent_state.fps);
+    }
+
+    // Note: It is actually safe to pass 0 to 'calloc', it will return NULL.
+    PB_MALLOC_ARRAY(response->clients, sub_responses.size());
+    for (int i = 0; i < sub_responses.size(); i++) {
+         response->clients[i] = std::move(sub_responses[i]);
+    }
+
+    return 0;
+}
 
 static int server_request_handler(const Message* const request, void* my_state) {
     // This is a bit circular, and not nice design, but should work.
@@ -136,55 +192,7 @@ static int server_request_handler(const Message* const request, void* my_state) 
         response->protocol_version = a<uint32_t>(1);
 
         if (PB_IF(request->client_type, ClientType_GUI)) {
-            char hostname[HOST_NAME_MAX + 1];
-            hostname[0] = '\0';
-            if (gethostname(hostname, sizeof(hostname)) < 0) {
-                perror("gethostname");
-                hostname[HOST_NAME_MAX] = '\0'; // Just for a good measure.
-            } else {
-                PB_MALLOC_SET_STR(response->nodename, hostname);
-            }
-            if (strlen(hostname) == 0) {
-                struct utsname utsname_buf;
-                if (uname(&utsname_buf) < 0) {
-                    perror("uname");
-                    // What next?
-                } else {
-                    PB_MALLOC_SET_STR(response->nodename, utsname_buf.nodename);
-                }
-            }
-
-            std::vector<Message> sub_responses;
-
-            for (auto& other_server_state : *(context->all_server_states)) {
-                if (server_state->server_states_index == other_server_state->server_states_index) {
-                    continue;
-                }
-                if (PB_IF(other_server_state->recent_state.client_type, ClientType_GUI)) {
-                    continue;
-                }
-
-                //Message& sub_response = sub_responses.emplace_back();  // C++17
-                sub_responses.emplace_back();
-                Message& sub_response = sub_responses.back();
-
-                // Populate nodename from the server (all reporting clients are
-                // connected to server on local machine only).
-                PB_MALLOC_SET_STR(sub_response.nodename, response->nodename);
-
-
-                // Populate most recent stats for each client.
-                PB_MAYBE_UPDATE(sub_response.uid, other_server_state->recent_state.uid);
-                PB_MAYBE_UPDATE(sub_response.pid, other_server_state->recent_state.pid);
-                PB_MAYBE_UPDATE_STR(sub_response.program_name, other_server_state->recent_state.program_name);
-                PB_MAYBE_UPDATE(sub_response.fps, other_server_state->recent_state.fps);
-            }
-
-            // Note: It is actually safe to pass 0 to 'calloc'.
-            PB_MALLOC_ARRAY(response->clients, sub_responses.size());
-            for (int i = 0; i < sub_responses.size(); i++) {
-                 response->clients[i] = std::move(sub_responses[i]);
-            }
+            prepare_gui_response(response, context);
         }
     } else {
         fprintf(stderr, "Can not respond, some response is already set!\n");
