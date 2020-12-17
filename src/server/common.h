@@ -28,19 +28,19 @@ extern "C" {
 //
 // Examples:
 //            Message request = {0};
-//            MALLOC_SET(request.protocol_version, 1);
-//            MALLOC_SET(request.pid, getpid());
-//            MALLOC_SET(request.uid, getuid());
-//            MALLOC_SET(request.fps, 54.123);
+//            PB_MALLOC_SET(request.protocol_version, 1);
+//            PB_MALLOC_SET(request.pid, getpid());
+//            PB_MALLOC_SET(request.uid, getuid());
+//            PB_MALLOC_SET(request.fps, 54.123);
 //
 //            int frametimes_count = 100;
-//            MALLOC_ARRAY(request.frametimes, 100);
+//            PB_MALLOC_ARRAY(request.frametimes, 100);
 //            for (int i = 0; i < frametimes_count; i++) {
-//                 MALLOC_SET(request.frametimes[i].time, abs(rand()));
+//                 PB_MALLOC_SET(request.frametimes[i].time, abs(rand()));
 //            }
 //
-//            MALLOC_SET(request.rander_info, RenderInfo_init_zero);
-//            MALLOC_SET(request.rander_info->vulkan, true);
+//            PB_MALLOC_SET(request.rander_info, RenderInfo_init_zero);
+//            PB_MALLOC_SET(request.rander_info->vulkan, true);
 //
 //            pb_release(&Message_fields, &request);
 //
@@ -49,14 +49,37 @@ extern "C" {
 //
 // This restriction might be lifted in the future.
 //
-// Note, do not call MALLOC_SET (and other) on the same field twice,
+// Note, do not call PB_MALLOC_SET (and other) on the same field twice,
 // it overwrites the target pointer immedietly without freeing anything,
 // so calling it multiple times will leak memory.
+//
+// Also do not put any expressions with side effect in the first argument!
 
-//#define MALLOC_SET(field, value) do { (field) = (__typeof__(field))malloc(sizeof(field)); *(field) = (value); } while (0)
-#define MALLOC_SET(field, value) do { (field) = (__typeof__(field))malloc(sizeof(*(field))); *(field) = value; } while (0)
-#define MALLOC_ARRAY(field, count) do { const size_t __cc = (count); (field) = (__typeof__(field))calloc((__cc), sizeof(*(field))); field ## _count = (__cc); } while (0)
-#define MALLOC_SET_STR(field, value) do { (field) = strdup(value); } while (0)
+//#define PB_MALLOC_SET(field, value) do { (field) = (__typeof__(field))malloc(sizeof(field)); *(field) = (value); } while (0)
+#define PB_MALLOC_SET(field, value) do { (field) = (__typeof__(field))malloc(sizeof(*(field))); *(field) = value; } while (0)
+#define PB_MALLOC_ARRAY(field, count) do { const size_t __cc = (count); (field) = (__typeof__(field))calloc((__cc), sizeof(*(field))); field ## _count = (__cc); } while (0)
+#define PB_MALLOC_SET_STR(field, value) do { (field) = strdup(value); } while (0)
+
+#define PB_MAYBE_UPDATE(to, from) do { \
+  if (from) { \
+     if (!(to)) { \
+         (to) = (__typeof__(to))malloc(sizeof(*(to))); \
+     } \
+     *(to) = *(from); \
+  } \
+} while (0)
+
+#define PB_MAYBE_UPDATE_STR(to, from) do { \
+  if (from) { \
+     if (to) { \
+         free(to); \
+     } \
+     to = strdup(from); \
+  } \
+} while (0)
+
+#define PB_IF(field, value) ((field) && *(field) == (value))
+
 
 #define MUST_USE_RESULT __attribute__ ((warn_unused_result))
 #define COLD __attribute__ ((cold))

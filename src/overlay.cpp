@@ -35,24 +35,23 @@ static int mango_message_generator(Message* message, void* my_state) {
 
    struct swapchain_stats *const sw_stats = (struct swapchain_stats *)my_state;
 
-   MALLOC_SET(message->protocol_version, 1);
-   MALLOC_SET(message->pid, getpid());
-   MALLOC_SET(message->uid, getuid());
-   MALLOC_SET(message->fps, fps);
+   PB_MALLOC_SET(message->protocol_version, 1);
+   PB_MALLOC_SET(message->pid, getpid());
+   PB_MALLOC_SET(message->uid, getuid());
+   PB_MALLOC_SET(message->fps, fps);
    if (program_name.size()) {
        message->program_name = strndup(program_name.data(), program_name.length());
    }
-   MALLOC_SET(message->render_info, RenderInfo_init_zero);
+   PB_MALLOC_SET(message->render_info, RenderInfo_init_zero);
    if (sw_stats->version_gl.major && sw_stats->version_gl.minor) {
-     MALLOC_SET(message->render_info->opengl, true);
+     PB_MALLOC_SET(message->render_info->opengl, true);
    }
    if (sw_stats->version_vk.major && sw_stats->version_vk.minor) {
-     MALLOC_SET(message->render_info->vulkan, true);
+     PB_MALLOC_SET(message->render_info->vulkan, true);
    }
    RenderInfo *const render_info = message->render_info;
    render_info->engine_name = strndup(sw_stats->engineName.data(), sw_stats->engineName.length());
    render_info->vulkan_driver_name = strndup(sw_stats->driverName.data(), sw_stats->driverName.length());
-
 
 // More stuff to copy from sw_stats
 /*

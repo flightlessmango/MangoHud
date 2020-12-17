@@ -64,26 +64,6 @@ struct RequestContext {
   std::vector<ServerState*> *all_server_states;
 };
 
-#define PB_MAYBE_UPDATE(to, from) do { \
-  if (from) { \
-     if (!(to)) { \
-         (to) = (__typeof__(to))malloc(sizeof(*(to))); \
-     } \
-     *(to) = *(from); \
-  } \
-} while (0)
-
-#define PB_MAYBE_UPDATE_STR(to, from) do { \
-  if (from) { \
-     if (to) { \
-         free(to); \
-     } \
-     to = strdup(from); \
-  } \
-} while (0)
-
-#define PB_IF(field, value) ((field) && *(field) == (value))
-
 static int server_request_handler(const Message* const request, void* my_state) {
     // This is a bit circular, and not nice design, but should work.
     struct RequestContext *const context = (struct RequestContext*)my_state;
@@ -162,7 +142,7 @@ static int server_request_handler(const Message* const request, void* my_state) 
                perror("gethostname");
                hostname[HOST_NAME_MAX] = '\0'; // Just for a good measure.
            } else {
-               MALLOC_SET_STR(response->nodename, hostname);
+               PB_MALLOC_SET_STR(response->nodename, hostname);
            }
            if (strlen(hostname) == 0) {
                struct utsname utsname_buf;
@@ -170,7 +150,7 @@ static int server_request_handler(const Message* const request, void* my_state) 
                    perror("uname");
                    // What next?
                } else {
-                   MALLOC_SET_STR(response->nodename, utsname_buf.nodename);
+                   PB_MALLOC_SET_STR(response->nodename, utsname_buf.nodename);
                }
            }
 
@@ -516,6 +496,9 @@ retry_tcp_bind:
                 client_state->fsocket = fsocket;
                 client_state->connected = 1;
 
+
+                server_state->recent_state = Message_init_zero;
+
                 server_state->server_states_index = server_states.size();
                 server_states.push_back(server_state);
 
@@ -586,6 +569,8 @@ error_1:
                     client_state_cleanup(client_state);
                     client_state->connected = 0;
 
+                    pb_release(Message_fields, &(server_state->recent_state));
+
                     // free(server_state->client_state);
                     free(server_state);
                 }
@@ -606,6 +591,9 @@ error_1:
     for (size_t i = 0; i < server_states.size(); i++) {
         printf("Closing %ld\n", i);
         client_state_cleanup(&(server_states[i]->client_state));
+
+        pb_release(Message_fields, &(server_states[i]->recent_state));
+
         // free(server_states[i]->client_state);
         free(server_states[i]);
     }

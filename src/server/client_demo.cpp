@@ -84,18 +84,18 @@ retry:
     for (;;) {
         if (client_state->response == NULL) {
             Message *request = (Message*)calloc(1, sizeof(Message));
-            MALLOC_SET(request->protocol_version, 1);
-            MALLOC_SET(request->pid, getpid());
-            MALLOC_SET(request->uid, getuid());
-            MALLOC_SET(request->fps, 50.0f + 20.0f*drand48());
+            PB_MALLOC_SET(request->protocol_version, 1);
+            PB_MALLOC_SET(request->pid, getpid());
+            PB_MALLOC_SET(request->uid, getuid());
+            PB_MALLOC_SET(request->fps, 50.0f + 20.0f*drand48());
             fprintf(stderr, "fps: %f\n", *(request->fps));
 
-            MALLOC_SET_STR(request->program_name, "client_demo");
+            PB_MALLOC_SET_STR(request->program_name, "client_demo");
 
             int frametimes_count = 100;
-            MALLOC_ARRAY(request->frametimes, 100);
+            PB_MALLOC_ARRAY(request->frametimes, 100);
             for (int i = 0; i < frametimes_count; i++) {
-                 MALLOC_SET(request->frametimes[i].time, abs(rand()));
+                 PB_MALLOC_SET(request->frametimes[i].time, abs(rand()));
             }
 
             client_state->response = request;
