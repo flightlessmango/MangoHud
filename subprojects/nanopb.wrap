@@ -1,4 +1,9 @@
-[wrap-git]
-directory = nanopb
-url = https://github.com/nanopb/nanopb
+[wrap-file]
+directory = nanopb-0.4.4
+source_url = https://github.com/nanopb/nanopb/archive/0.4.4.tar.gz
+source_filename = 0.4.4.tar.gz
+source_hash = 66621e896c1e357d21b4e5bcc87584afd95abe18ea7a3314ce2696048ab340db
 revision = 0.4.4
+patch_url = https://flightlessmango.com/wraps/nanopb.zip
+patch_filename = nanopb.zip
+patch_hash = 88a0006fdce7cf452e395c0f246e6cbfda497d62cd65eeaa3d90b2243e43be02

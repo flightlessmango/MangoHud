@@ -39,6 +39,7 @@ lib32-mangohud*.tar.*
 # subprojects
 subprojects/packagecache/
 subprojects/Vulkan-Headers-*/
+subprojects/nanopb-*/
 
 #GNU Global Metadata
 **/GPATH
