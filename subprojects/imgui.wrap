@@ -1,0 +1,7 @@
+[wrap-git]
+directory = imgui
+url = https://github.com/ocornut/imgui.git
+revision = 22ace4438c86b3137567c69346a3836d26ebf95c
+patch_url = https://flightlessmango.com/wraps/imgui.zip
+patch_filename = imgui.zip
+patch_hash = 55e9f31b3edfe725e7271bd0dd06434ba2a3b6fdce476314947907a43e36b641

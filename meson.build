@@ -216,7 +216,7 @@ elif sizeof_ptr == 4
   pre_args += '-DMANGOHUD_ARCH="32bit"'
 endif
 
-dearimgui_sp = subproject('dearimgui')
+dearimgui_sp = subproject('imgui')
 dearimgui_dep = dearimgui_sp.get_variable('dearimgui_dep')
 
 if ['windows', 'mingw'].contains(host_machine.system())
