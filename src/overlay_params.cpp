@@ -22,6 +22,7 @@
 #include "config.h"
 #include "string_utils.h"
 #include "hud_elements.h"
+#include "blacklist.h"
 #include "mesa/util/os_socket.h"
 
 #ifdef HAVE_X11
@@ -654,6 +655,9 @@ parse_overlay_config(struct overlay_params *params,
    // second pass, override config file settings with MANGOHUD_CONFIG
    // if (env && read_cfg)
    //    parse_overlay_env(params, env);
+
+   if (is_blacklisted())
+      return;
 
    if (params->font_scale_media_player <= 0.f)
       params->font_scale_media_player = 0.55f;
