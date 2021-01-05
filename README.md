@@ -138,6 +138,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `core_load`                        | Displays load & frequency per core                                                    |
 | `gpu_core_clock`<br>`gpu_mem_clock`| Displays GPU core/memory frequency                                                    |
 | `ram`<br>`vram`                    | Displays system RAM/VRAM usage                                                        |
+| `swap`                             | Displays swap space usage next to system RAM usage                                    |
 | `full`                             | Enables most of the toggleable parameters (currently excludes `histogram`)            |
 | `font_size=`                       | Customizeable font size (default=24)                                                  |
 | `font_size_text=`                  | Customizeable font size for other text like media metadata (default=24)               |

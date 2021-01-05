@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <thread>
 
-extern float memused, memmax;
+extern float memused, memmax, swapused, swapmax;
 
 struct memory_information {
   /* memory information in kilobytes */

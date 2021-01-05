@@ -44,7 +44,7 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
    // get ram usage/max
 
 #ifdef __gnu_linux__
-   if (params.enabled[OVERLAY_PARAM_ENABLED_ram] || logger->is_active())
+   if (params.enabled[OVERLAY_PARAM_ENABLED_ram] || params.enabled[OVERLAY_PARAM_ENABLED_swap] || logger->is_active())
       update_meminfo();
    if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])
       getIoStats(&sw_stats.io);
