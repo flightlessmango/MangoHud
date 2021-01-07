@@ -141,8 +141,9 @@ void HudElements::gpu_stats(){
             ImGui::SameLine(0, 1.0f);
             ImGui::Text("°C");
         }
-        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock] || HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power])
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock] || HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power]){
             ImGui::TableNextRow(); ImGui::TableNextColumn();
+        }
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]){
             ImGui::TableNextColumn();
             right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.CoreClock);
@@ -201,8 +202,9 @@ void HudElements::cpu_stats(){
             ImGui::SameLine(0, 1.0f);
             ImGui::Text("°C");
         }
-        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_mhz] || HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_power])
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_mhz] || HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_power]){
             ImGui::TableNextRow(); ImGui::TableNextColumn();
+        }
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_mhz]){
             ImGui::TableNextColumn();
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", cpuStats.GetCPUDataTotal().cpu_mhz);
@@ -724,7 +726,7 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
     if (param == "gamemode")        { ordered_functions.push_back({gamemode, value});               }
     if (param == "vkbasalt")        { ordered_functions.push_back({vkbasalt, value});               }
     if (param == "exec")            { ordered_functions.push_back({_exec, value});
-                                      exec_list.push_back({ordered_functions.size() - 1, value});       }
+                                      exec_list.push_back({int(ordered_functions.size() - 1), value});       }
     if (param == "graphs"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs])
             HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs] = true;
