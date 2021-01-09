@@ -151,10 +151,15 @@ bool dbus_manager::get_media_player_metadata(metadata& meta, std::string name) {
 }
 
 bool dbus_manager::init(const std::string& requested_player) {
-    if (m_inited) return true;
 
     if (!requested_player.empty()) {
         m_requested_player = "org.mpris.MediaPlayer2." + requested_player;
+    } else
+        m_requested_player.clear();
+
+    if (m_inited) {
+        select_active_player();
+        return true;
     }
 
     if (!m_dbus_ldr.IsLoaded() && !m_dbus_ldr.Load("libdbus-1.so.3")) {
