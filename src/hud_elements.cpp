@@ -551,15 +551,17 @@ void HudElements::wine(){
 void HudElements::frame_timing(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
         ImGui::TableNextRow(); ImGui::TableNextColumn();
-        ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
-        ImGui::PushFont(HUDElements.sw_stats->font1);
-        ImGui::TextColored(HUDElements.colors.engine, "%s", "Frametime");
-        for (size_t i = 0; i < HUDElements.params->table_columns - 1; i++)
-            ImGui::TableNextColumn();
-        ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "%.1f ms", 1000 / HUDElements.sw_stats->fps);
-        ImGui::PopFont();
-        ImGui::TableNextRow(); ImGui::TableNextColumn();
+        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_frametime]) {
+            ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            ImGui::TextColored(HUDElements.colors.engine, "%s", "Frametime");
+            for (size_t i = 0; i < HUDElements.params->table_columns - 1; i++)
+                ImGui::TableNextColumn();
+            ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "%.1f ms", 1000 / HUDElements.sw_stats->fps);
+            ImGui::PopFont();
+            ImGui::TableNextRow(); ImGui::TableNextColumn();
+        }
         char hash[40];
         snprintf(hash, sizeof(hash), "##%s", overlay_param_names[OVERLAY_PARAM_ENABLED_frame_timing]);
         HUDElements.sw_stats->stat_selector = OVERLAY_PLOTS_frame_timing;
