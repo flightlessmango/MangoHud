@@ -127,7 +127,7 @@ void Logger::stop_logging() {
   std::thread(calculate_benchmark_data, m_params).detach();
 
   if(!m_params->output_folder.empty()) {
-    m_log_files.emplace_back(m_params->output_folder + "/" + program_name + "_" + get_log_suffix());
+    m_log_files.emplace_back(m_params->output_folder + "/" + get_program_name() + "_" + get_log_suffix());
     std::thread(writeFile, m_log_files.back()).detach();
   }
 }
