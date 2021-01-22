@@ -3,21 +3,27 @@
 #include <iostream>
 #include <string.h>
 #include <thread>
-#include <unordered_map>
 #include <string>
 #include "config.h"
 #include "file_utils.h"
 #include "string_utils.h"
 #include "hud_elements.h"
 
-static void parseConfigLine(std::string line, std::unordered_map<std::string, std::string>& options) {
+std::vector<std::string> used_configs;
+static const char *mangohud_dir = "/MangoHud/";
+
+void enumerate_config_files(std::vector<std::string>& paths, std::string configName, bool subconfig);
+bool parseConfigFile(overlay_params& params, std::string path);
+
+static void parseConfigLine(std::string line, overlay_params& params) {
     std::string param, value;
 
     if (line.find("#") != std::string::npos)
         line = line.erase(line.find("#"), std::string::npos);
 
     size_t equal = line.find("=");
-    if (equal == std::string::npos)
+    bool no_value = equal == std::string::npos;
+    if (no_value)
         value = "1";
     else
         value = line.substr(equal+1);
@@ -26,8 +32,29 @@ static void parseConfigLine(std::string line, std::unordered_map<std::string, st
     trim(param);
     trim(value);
     if (!param.empty()){
+        if (param == "include_cfg") {
+            if (value.empty() || no_value) { // No config specified - try to include MangoHud.conf
+                if (parseConfigFile(params, get_config_dir() + mangohud_dir + "MangoHud.conf")) {
+                    return;
+                }
+            } else {
+                if (value.at(0) == '/') { // example: /home/user/MangoHud.conf
+                    if (parseConfigFile(params, value)) {
+                        return;
+                    }
+                } else { // example: MangoHud.conf
+                    if (parseConfigFile(params, get_config_dir() + mangohud_dir + value)) {
+                        return;
+                    }
+                }
+            }
+
+            std::cerr << "MANGOHUD: Failed to find a config to include: " << value << std::endl;
+            return;
+        }
+
         HUDElements.options.push_back({param, value});
-        options[param] = value;
+        params.options[param] = value;
     }
 }
 
@@ -94,9 +121,40 @@ static void enumerate_config_files(std::vector<std::string>& paths) {
      }
 }
 
-void parseConfigFile(overlay_params& params) {
+bool parseConfigFile(overlay_params& params, std::string path) {
+    for (std::string used_config : used_configs) {
+        if (path == used_config) {
+            std::cerr << "config already used: " << path << std::endl;
+            return false;
+        }
+    };
+
+    std::string line;
+
+    std::ifstream stream(path);
+    if (!stream.good()) {
+        // printing just so user has an idea of possible configs
+        std::cerr << "skipping config: " << path << " [ not found ]" << std::endl;
+        return false;
+    }
+    used_configs.push_back(path);
+    
+    stream.imbue(std::locale::classic());
+    std::cerr << "parsing config: " << path << std::endl;
+    while (std::getline(stream, line))
+    {
+        parseConfigLine(line, params);
+    }
+    std::cerr << "parsed config: " << path << " [ ok ]" << std::endl;
+    return true;
+}
+
+
+void parseConfigFiles(overlay_params& params) {
     HUDElements.options.clear();
     params.options.clear();
+    used_configs.clear();
+
     std::vector<std::string> paths;
     const char *cfg_file = getenv("MANGOHUD_CONFIGFILE");
 
@@ -107,21 +165,9 @@ void parseConfigFile(overlay_params& params) {
 
     std::string line;
     for (auto p = paths.rbegin(); p != paths.rend(); p++) {
-        std::ifstream stream(*p);
-        if (!stream.good()) {
-            // printing just so user has an idea of possible configs
-            std::cerr << "skipping config: " << *p << " [ not found ]" << std::endl;
-            continue;
+        if (parseConfigFile(params, *p)) {
+            params.config_file_path = *p;
+            return;
         }
-
-        stream.imbue(std::locale::classic());
-        std::cerr << "parsing config: " << *p;
-        while (std::getline(stream, line))
-        {
-            parseConfigLine(line, params.options);
-        }
-        std::cerr << " [ ok ]" << std::endl;
-        params.config_file_path = *p;
-        return;
     }
 }

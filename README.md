@@ -157,6 +157,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `gpu_color`<br>`gpu_color`<br>`vram_color`<br>`ram_color`<br>`io_color`<br>`engine_color`<br>`frametime_color`<br>`background_color`<br>`text_color`<br>`media_player_color`         | Change default colors: `gpu_color=RRGGBB`|
 | `alpha`                            | Set the opacity of all text and frametime graph `0.0-1.0`                             |
 | `background_alpha`                 | Set the opacity of the background `0.0-1.0`                                           |
+| `include_cfg`                      | Includes another config file, overrides params defined before it. `include_cfg` without value will include `MangoHud.conf`.<br>For example `include_cfg=maxinfo.conf` will include `maxinfo.conf` from `/home/user/.config/MangoHud` and `include_cfg=/home/user/mangohud-maxinfo.conf` will include `/home/user/mangohud-maxinfo.conf` |
 | `read_cfg`                         | Add to MANGOHUD_CONFIG as first parameter to also load config file. Otherwise only MANGOHUD_CONFIG parameters are used. |
 | `output_folder`                    | Set location of the output files (Required for logging)                               |
 | `log_duration`                     | Set amount of time the logging will run for (in seconds)                              |

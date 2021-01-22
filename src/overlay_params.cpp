@@ -622,7 +622,7 @@ parse_overlay_config(struct overlay_params *params,
    if (!env || read_cfg) {
 
       // Get config options
-      parseConfigFile(*params);
+      parseConfigFiles(*params);
       if (params->options.find("full") != params->options.end() && params->options.find("full")->second != "0") {
 #define OVERLAY_PARAM_BOOL(name) \
             params->enabled[OVERLAY_PARAM_ENABLED_##name] = 1;
