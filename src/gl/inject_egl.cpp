@@ -20,8 +20,14 @@ void* get_egl_proc_address(const char* name) {
 
     void *func = nullptr;
     static void *(*pfn_eglGetProcAddress)(const char*) = nullptr;
-    if (!pfn_eglGetProcAddress)
-        pfn_eglGetProcAddress = reinterpret_cast<decltype(pfn_eglGetProcAddress)>(get_proc_address("eglGetProcAddress"));
+    if (!pfn_eglGetProcAddress) {
+        void *handle = real_dlopen("libEGL.so.1", RTLD_LAZY|RTLD_LOCAL);
+        if (!handle) {
+            std::cerr << "MANGOHUD: Failed to open " << "" MANGOHUD_ARCH << " libEGL.so.1: " << dlerror() << std::endl;
+        } else {
+            pfn_eglGetProcAddress = reinterpret_cast<decltype(pfn_eglGetProcAddress)>(real_dlsym(handle, "eglGetProcAddress"));
+        }
+    }
 
     if (pfn_eglGetProcAddress)
         func = pfn_eglGetProcAddress(name);
@@ -50,12 +56,12 @@ EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf)
 {
     static int (*pfn_eglSwapBuffers)(void*, void*) = nullptr;
     if (!pfn_eglSwapBuffers)
-        pfn_eglSwapBuffers = reinterpret_cast<decltype(pfn_eglSwapBuffers)>(get_proc_address("eglSwapBuffers"));
+        pfn_eglSwapBuffers = reinterpret_cast<decltype(pfn_eglSwapBuffers)>(get_egl_proc_address("eglSwapBuffers"));
 
     if (!is_blacklisted()) {
         static int (*pfn_eglQuerySurface)(void* dpy, void* surface, int attribute, int *value) = nullptr;
         if (!pfn_eglQuerySurface)
-            pfn_eglQuerySurface = reinterpret_cast<decltype(pfn_eglQuerySurface)>(get_proc_address("eglQuerySurface"));
+            pfn_eglQuerySurface = reinterpret_cast<decltype(pfn_eglQuerySurface)>(get_egl_proc_address("eglQuerySurface"));
 
 
         //std::cerr << __func__ << "\n";
