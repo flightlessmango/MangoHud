@@ -429,51 +429,9 @@ bool CPUStats::GetCpuFile() {
     return true;
 }
 
-static bool find_voltage_input(const std::string path, std::string& input, const std::string& name)
+static bool find_input(const std::string& path, const char* input_prefix, std::string& input, const std::string& name)
 {
-    auto files = ls(path.c_str(), "in", LS_FILES);
-    for (auto& file : files) {
-        if (!ends_with(file, "_label"))
-            continue;
-
-        auto label = read_line(path + "/" + file);
-        if (label != name)
-            continue;
-
-        auto uscore = file.find_first_of("_");
-        if (uscore != std::string::npos) {
-            file.erase(uscore, std::string::npos);
-            input = path + "/" + file + "_input";
-            return true;
-        }
-    }
-    return false;
-}
-
-static bool find_current_input(const std::string path, std::string& input, const std::string& name)
-{
-    auto files = ls(path.c_str(), "curr", LS_FILES);
-    for (auto& file : files) {
-        if (!ends_with(file, "_label"))
-            continue;
-
-        auto label = read_line(path + "/" + file);
-        if (label != name)
-            continue;
-
-        auto uscore = file.find_first_of("_");
-        if (uscore != std::string::npos) {
-            file.erase(uscore, std::string::npos);
-            input = path + "/" + file + "_input";
-            return true;
-        }
-    }
-    return false;
-}
-
-static bool find_power_input(const std::string path, std::string& input, const std::string& name)
-{
-    auto files = ls(path.c_str(), "power", LS_FILES);
+    auto files = ls(path.c_str(), input_prefix, LS_FILES);
     for (auto& file : files) {
         if (!ends_with(file, "_label"))
             continue;
@@ -498,10 +456,10 @@ CPUPowerData_k10temp* init_cpu_power_data_k10temp(const std::string path) {
     std::string coreVoltageInput, coreCurrentInput;
     std::string socVoltageInput, socCurrentInput;
 
-    if(!find_voltage_input(path, coreVoltageInput, "Vcore")) return nullptr;
-    if(!find_current_input(path, coreCurrentInput, "Icore")) return nullptr;
-    if(!find_voltage_input(path, socVoltageInput, "Vsoc")) return nullptr;
-    if(!find_current_input(path, socCurrentInput, "Isoc")) return nullptr;
+    if(!find_input(path, "in", coreVoltageInput, "Vcore")) return nullptr;
+    if(!find_input(path, "curr", coreCurrentInput, "Icore")) return nullptr;
+    if(!find_input(path, "in", socVoltageInput, "Vsoc")) return nullptr;
+    if(!find_input(path, "curr", socCurrentInput, "Isoc")) return nullptr;
 
 #ifndef NDEBUG
     std::cerr << "hwmon: using input: " << coreVoltageInput << std::endl;
@@ -523,8 +481,8 @@ CPUPowerData_zenpower* init_cpu_power_data_zenpower(const std::string path) {
 
     std::string corePowerInput, socPowerInput;
 
-    if(!find_power_input(path, corePowerInput, "SVI2_P_Core")) return nullptr;
-    if(!find_power_input(path, socPowerInput, "SVI2_P_SoC")) return nullptr;
+    if(!find_input(path, "power", corePowerInput, "SVI2_P_Core")) return nullptr;
+    if(!find_input(path, "power", socPowerInput, "SVI2_P_SoC")) return nullptr;
 
 #ifndef NDEBUG
     std::cerr << "hwmon: using input: " << corePowerInput << std::endl;
