@@ -112,6 +112,7 @@ public:
    CPUStats();
    ~CPUStats();
    bool Init();
+   bool Reinit();
    bool Updated()
    {
       return m_updatedCPUs;

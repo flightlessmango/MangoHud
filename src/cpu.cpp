@@ -152,12 +152,19 @@ bool CPUStats::Init()
     return UpdateCPUData();
 }
 
+bool CPUStats::Reinit()
+{
+    m_inited = false;
+    return Init();
+}
+
 //TODO take sampling interval into account?
 bool CPUStats::UpdateCPUData()
 {
     unsigned long long int usertime, nicetime, systemtime, idletime;
     unsigned long long int ioWait, irq, softIrq, steal, guest, guestnice;
     int cpuid = -1;
+    size_t cpu_count = 0;
 
     if (!m_inited)
         return false;
@@ -189,19 +196,28 @@ bool CPUStats::UpdateCPUData()
                 return false;
             }
 
-            if (cpuid < 0 /* can it? */ || (size_t)cpuid > m_cpuData.size()) {
+            if (cpuid < 0 /* can it? */) {
                 std::cerr << "Cpu id '" << cpuid << "' is out of bounds" << std::endl;
                 return false;
+            }
+
+            if ((size_t)cpuid >= m_cpuData.size()) {
+                std::cerr << "Cpu id '" << cpuid << "' is out of bounds, reiniting" << std::endl;
+                return Reinit();
             }
 
             CPUData& cpuData = m_cpuData[cpuid];
             calculateCPUData(cpuData, usertime, nicetime, systemtime, idletime, ioWait, irq, softIrq, steal, guest, guestnice);
             cpuid = -1;
+            cpu_count++;
 
         } else {
             break;
         }
     } while(true);
+
+    if (cpu_count < m_cpuData.size())
+        m_cpuData.resize(cpu_count);
 
     m_cpuPeriod = (double)m_cpuData[0].totalPeriod / m_cpuData.size();
     m_updatedCPUs = true;
