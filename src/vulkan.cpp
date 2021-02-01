@@ -2126,7 +2126,7 @@ static VkResult overlay_CreateInstance(
          engineVersion = to_string(VK_VERSION_MAJOR(engineVer)) + "." + to_string(VK_VERSION_MINOR(engineVer)) + "." + to_string(VK_VERSION_PATCH(engineVer));
       }
 
-      if (engineName != "DXVK" && engineName != "vkd3d" && engineName != "Feral3D")
+      if (engineName != "DXVK" && engineName != "vkd3d" && engineName != "Feral3D" && engineName != "Damavand")
          engineName = "VULKAN";
 
       if (engineName == "vkd3d")
