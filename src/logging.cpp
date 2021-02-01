@@ -61,6 +61,7 @@ void writeFile(string filename){
   std::cerr << "Writing log file [" << filename << "], " << logArray.size() << " entries\n";
 #endif
   std::ofstream out(filename, ios::out | ios::app);
+  if (out){
   out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver" << endl;
   out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << endl;
   out << "fps," << "frametime," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "ram_used," << "elapsed" << endl;
@@ -79,6 +80,9 @@ void writeFile(string filename){
     out << std::chrono::duration_cast<std::chrono::nanoseconds>(logArray[i].previous).count() << "\n";
   }
   logger->clear_log_data();
+  } else {
+    printf("MANGOHUD: Failed to write log file\n");
+  }
 }
 
 string get_log_suffix(){
