@@ -347,9 +347,9 @@ void HudElements::fps(){
 if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps]){
         ImGui::TableNextRow(); ImGui::TableNextColumn();
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps] && HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_engine_version]){
-            ImGui::TextColored(HUDElements.colors.engine, "%s", HUDElements.is_vulkan ? HUDElements.sw_stats->engineName.c_str() : "OpenGL");
+            ImGui::TextColored(HUDElements.colors.engine, "%s", HUDElements.sw_stats->engineName.c_str());
         }
-        ImGui::TextColored(HUDElements.colors.engine, "%s", HUDElements.is_vulkan ? HUDElements.sw_stats->engineName.c_str() : "OpenGL");
+        ImGui::TextColored(HUDElements.colors.engine, "%s", HUDElements.sw_stats->engineName.c_str());
         ImGui::TableNextColumn();
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_color_change]){
             int fps = int(HUDElements.sw_stats->fps);

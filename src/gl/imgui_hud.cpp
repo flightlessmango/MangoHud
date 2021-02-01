@@ -4,6 +4,7 @@
 #include <string>
 #include <iostream>
 #include <memory>
+#include <unistd.h>
 #include <imgui.h>
 #include "font_default.h"
 #include "cpu.h"
@@ -74,7 +75,10 @@ void imgui_init()
    for (auto& item : params.blacklist) {
       add_blacklist(item);
    }
-
+    auto pid = getpid();
+    string command = "lsof -w -lnPX -L -p " + to_string(pid) + " | grep wined3d";
+    string ret = exec(command);
+    ret.empty() ? sw_stats.engineName = "OpenGL" : sw_stats.engineName = "WineD3D";
     is_blacklisted(true);
     notifier.params = &params;
     start_notifier(notifier);
