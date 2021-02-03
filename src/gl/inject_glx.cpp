@@ -118,9 +118,12 @@ EXPORT_C_(int) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
 #endif
         }
 
+        // Afaik -1 only works with EXT version if it has GLX_EXT_swap_control_tear, maybe EGL_MESA_swap_control_tear someday
         if (params.gl_vsync >= -1) {
             if (glx.SwapIntervalEXT)
                 glx.SwapIntervalEXT(dpy, drawable, params.gl_vsync);
+        }
+        if (params.gl_vsync >= 0) {
             if (glx.SwapIntervalSGI)
                 glx.SwapIntervalSGI(params.gl_vsync);
             if (glx.SwapIntervalMESA)
@@ -166,6 +169,8 @@ EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
 EXPORT_C_(int64_t) glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t target_msc, int64_t divisor, int64_t remainder)
 {
     glx.Load();
+    if (!glx.SwapBuffersMscOML)
+        return 0;
 
     do_imgui_swap(dpy, drawable);
     int64_t ret = glx.SwapBuffersMscOML(dpy, drawable, target_msc, divisor, remainder);
@@ -184,6 +189,8 @@ EXPORT_C_(void) glXSwapIntervalEXT(void *dpy, void *draw, int interval) {
     std::cerr << __func__ << ": " << interval << std::endl;
 #endif
     glx.Load();
+    if (!glx.SwapIntervalEXT)
+        return;
 
     if (!is_blacklisted() && params.gl_vsync >= 0)
         interval = params.gl_vsync;
@@ -196,6 +203,8 @@ EXPORT_C_(int) glXSwapIntervalSGI(int interval) {
     std::cerr << __func__ << ": " << interval << std::endl;
 #endif
     glx.Load();
+    if (!glx.SwapIntervalSGI)
+        return -1;
 
     if (!is_blacklisted() && params.gl_vsync >= 0)
         interval = params.gl_vsync;
@@ -208,6 +217,8 @@ EXPORT_C_(int) glXSwapIntervalMESA(unsigned int interval) {
     std::cerr << __func__ << ": " << interval << std::endl;
 #endif
     glx.Load();
+    if (!glx.SwapIntervalMESA)
+        return -1;
 
     if (!is_blacklisted() && params.gl_vsync >= 0)
         interval = (unsigned int)params.gl_vsync;
@@ -217,6 +228,9 @@ EXPORT_C_(int) glXSwapIntervalMESA(unsigned int interval) {
 
 EXPORT_C_(int) glXGetSwapIntervalMESA() {
     glx.Load();
+    if (!glx.GetSwapIntervalMESA)
+        return 0;
+
     int interval = glx.GetSwapIntervalMESA();
 
     if (!is_blacklisted()) {
@@ -277,19 +291,21 @@ EXPORT_C_(void *) mangohud_find_glx_ptr(const char *name)
 EXPORT_C_(void *) glXGetProcAddress(const unsigned char* procName) {
     //std::cerr << __func__ << ":" << procName << std::endl;
 
-    void* func = mangohud_find_glx_ptr( (const char*)procName );
-    if (func)
+    void *real_func = get_glx_proc_address((const char*)procName);
+    void *func = mangohud_find_glx_ptr( (const char*)procName );
+    if (func && real_func)
         return func;
 
-    return get_glx_proc_address((const char*)procName);
+    return real_func;
 }
 
 EXPORT_C_(void *) glXGetProcAddressARB(const unsigned char* procName) {
     //std::cerr << __func__ << ":" << procName << std::endl;
 
-    void* func = mangohud_find_glx_ptr( (const char*)procName );
-    if (func)
+    void *real_func = get_glx_proc_address((const char*)procName);
+    void *func = mangohud_find_glx_ptr( (const char*)procName );
+    if (func && real_func)
         return func;
 
-    return get_glx_proc_address((const char*)procName);
+    return real_func;
 }
