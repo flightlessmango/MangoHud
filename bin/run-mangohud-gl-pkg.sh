@@ -14,7 +14,7 @@ if [ "$#" -eq 0 ]; then
 fi
 
 # Execute the program under a clean environment
-# pass through the overriden LD_PRELOAD environment variables
+# pass through the overridden LD_PRELOAD environment variables
 LD_PRELOAD="${LD_PRELOAD}:${MANGOHUD_LIB_NAME}"
 
 exec env MANGOHUD=1 LD_PRELOAD="${LD_PRELOAD}" "$@"
