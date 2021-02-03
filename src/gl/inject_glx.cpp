@@ -170,7 +170,7 @@ EXPORT_C_(int64_t) glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t targe
 {
     glx.Load();
     if (!glx.SwapBuffersMscOML)
-        return 0;
+        return -1;
 
     do_imgui_swap(dpy, drawable);
     int64_t ret = glx.SwapBuffersMscOML(dpy, drawable, target_msc, divisor, remainder);
