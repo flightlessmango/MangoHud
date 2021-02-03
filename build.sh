@@ -78,7 +78,7 @@ dependencies() {
                 if [[ $(pip3 show meson; echo $?) == 1 || $(pip3 show mako; echo $?) == 1 ]]; then
                     $SU_CMD pip3 install 'meson>=0.54' mako
                 fi
-                if ! which glslangValidator >/dev/null; then
+                if [[ ! -f /usr/local/bin/glslangValidator ]]; then
                     wget https://github.com/KhronosGroup/glslang/releases/download/SDK-candidate-26-Jul-2020/glslang-master-linux-Release.zip
                     unzip glslang-master-linux-Release.zip bin/glslangValidator
                     $SU_CMD install -m755 bin/glslangValidator /usr/local/bin/
@@ -246,6 +246,7 @@ reinstall() {
 
 clean() {
     rm -rf "build"
+    rm -rf subprojects/*/
 }
 
 usage() {
