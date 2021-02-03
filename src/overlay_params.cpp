@@ -407,7 +407,7 @@ parse_font_glyph_ranges(const char *str)
 static bool
 parse_help(const char *str)
 {
-   fprintf(stderr, "Layer params using VK_LAYER_MESA_OVERLAY_CONFIG=\n");
+   fprintf(stderr, "Layer params using MANGOHUD_CONFIG=\n");
 #define OVERLAY_PARAM_BOOL(name)                \
    fprintf(stderr, "\t%s=0|1\n", #name);
 #define OVERLAY_PARAM_CUSTOM(name)
@@ -461,7 +461,7 @@ parse_string(const char *s, char *out_param, char *out_value)
    }
 
    if (*s && !i) {
-      fprintf(stderr, "mesa-overlay: syntax error: unexpected '%c' (%i) while "
+      fprintf(stderr, "MANGOHUD: syntax error: unexpected '%c' (%i) while "
               "parsing a string\n", *s, *s);
       fflush(stderr);
    }

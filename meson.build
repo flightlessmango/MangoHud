@@ -7,7 +7,7 @@ project('MangoHud',
 
 cc = meson.get_compiler('c')
 cpp = meson.get_compiler('cpp')
-prog_python = import('python').find_installation('python3')
+prog_python = import('python').find_installation('python3', modules: ['mako'])
 null_dep = dependency('', required : false)
 
 mangohud_version = vcs_tag(

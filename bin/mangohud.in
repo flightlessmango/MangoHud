@@ -19,7 +19,7 @@ if [ "$MANGOHUD_DLSYM" = "1" ]; then
 	MANGOHUD_LIB_NAME="@ld_libdir_mangohud_abs@libMangoHud_dlsym.so:${MANGOHUD_LIB_NAME}"
 fi
 
-# Preload using the plain filesnames of the libs, the dynamic linker will
+# Preload using the plain filenames of the libs, the dynamic linker will
 # figure out whether the 32 or 64 bit version should be used, and will search
 # for it in the correct directory
 LD_PRELOAD="${LD_PRELOAD}:${MANGOHUD_LIB_NAME}"
