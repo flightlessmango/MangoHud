@@ -2,7 +2,7 @@ build
 builddir
 __pycache__
 .vscode
-MangoHud*.tar.gz
+MangoHud*.tar.*
 pkg
 mangohud*.tar.*
 lib32-mangohud*.tar.*

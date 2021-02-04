@@ -1,7 +1,11 @@
-[wrap-git]
-directory = imgui
-url = https://github.com/ocornut/imgui.git
-revision = 22ace4438c86b3137567c69346a3836d26ebf95c
-patch_url = https://flightlessmango.com/wraps/imgui.zip
-patch_filename = imgui.zip
-patch_hash = 55e9f31b3edfe725e7271bd0dd06434ba2a3b6fdce476314947907a43e36b641
+[wrap-file]
+directory = imgui-1.80
+source_url = https://github.com/ocornut/imgui/archive/v1.80.tar.gz
+source_filename = imgui-1.80.tar.gz
+source_hash = d7e4e1c7233409018437a646680316040e6977b9a635c02da93d172baad94ce9
+patch_url = https://wrapdb.mesonbuild.com/v1/projects/imgui/1.80/1/get_zip
+patch_filename = imgui-1.80-1-wrap.zip
+patch_hash = 9b86a584968d3c4b0b0c0cd648013eb5b81aeb6789babe3c1097727a134efc7f
+
+[provide]
+imgui = imgui_dep
