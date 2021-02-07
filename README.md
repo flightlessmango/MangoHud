@@ -153,7 +153,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `toggle_hud=`<br>`toggle_logging=` | Modifiable toggle hotkeys. Default are `Shift_R+F12` and `Shift_L+F2`, respectively.      |
 | `reload_cfg=`                      | Change keybind for reloading the config. Default = `Shift_L+F4`                       |
 | `time`<br>`time_format=%T`         | Displays local time. See [std::put_time](https://en.cppreference.com/w/cpp/io/manip/put_time) for formatting help. NOTE: Sometimes apps (or AMDVLK (should be fixed in latest)) may set `TZ` (timezone) environment variable to UTC/GMT |
-| `gpu_color`<br>`gpu_color`<br>`vram_color`<br>`ram_color`<br>`io_color`<br>`engine_color`<br>`frametime_color`<br>`background_color`<br>`text_color`<br>`media_player_color`         | Change default colors: `gpu_color=RRGGBB`|
+| `gpu_color`<br>`cpu_color`<br>`vram_color`<br>`ram_color`<br>`io_color`<br>`engine_color`<br>`frametime_color`<br>`background_color`<br>`text_color`<br>`media_player_color`         | Change default colors: `gpu_color=RRGGBB`|
 | `alpha`                            | Set the opacity of all text and frametime graph `0.0-1.0`                             |
 | `background_alpha`                 | Set the opacity of the background `0.0-1.0`                                           |
 | `read_cfg`                         | Add to MANGOHUD_CONFIG as first parameter to also load config file. Otherwise only MANGOHUD_CONFIG parameters are used. |
