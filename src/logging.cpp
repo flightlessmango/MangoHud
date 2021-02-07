@@ -64,7 +64,7 @@ void writeFile(string filename){
   if (out){
   out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver" << endl;
   out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << endl;
-  out << "fps," << "frametime," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "ram_used," << "elapsed" << endl;
+  out << "fps," << "frametime," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "gpu_power," << "ram_used," << "elapsed" << endl;
 
   for (size_t i = 0; i < logArray.size(); i++){
     out << logArray[i].fps << ",";
@@ -76,6 +76,7 @@ void writeFile(string filename){
     out << logArray[i].gpu_core_clock << ",";
     out << logArray[i].gpu_mem_clock << ",";
     out << logArray[i].gpu_vram_used << ",";
+    out << logArray[i].gpu_power << ",";
     out << logArray[i].ram_used << ",";
     out << std::chrono::duration_cast<std::chrono::nanoseconds>(logArray[i].previous).count() << "\n";
   }
