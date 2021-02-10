@@ -611,8 +611,7 @@ void init_system_info(){
       trim(os);
       gpu = exec("lspci | grep VGA | head -n1 | awk -vRS=']' -vFS='[' '{print $2}' | sed '/^$/d' | tail -n1");
       trim(gpu);
-      cpusched = exec ("cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
-      trim (cpusched);
+      cpusched = read_line("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
 
       const char* mangohud_recursion = getenv("MANGOHUD_RECURSION");
       if (!mangohud_recursion) {
