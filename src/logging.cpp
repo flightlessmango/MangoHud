@@ -4,7 +4,7 @@
 #include <sstream>
 #include <iomanip>
 
-string os, cpu, gpu, ram, kernel, driver;
+string os, cpu, gpu, ram, kernel, driver, cpusched;
 bool sysInfoFetched = false;
 double fps;
 uint64_t frametime;
@@ -62,8 +62,8 @@ void writeFile(string filename){
 #endif
   std::ofstream out(filename, ios::out | ios::app);
   if (out){
-  out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver" << endl;
-  out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << endl;
+  out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver," << "cpuscheduler" << endl;
+  out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << "," << cpusched << endl;
   out << "fps," << "frametime," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "gpu_power," << "ram_used," << "elapsed" << endl;
 
   for (size_t i = 0; i < logArray.size(); i++){

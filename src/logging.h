@@ -68,7 +68,7 @@ private:
 
 extern std::unique_ptr<Logger> logger;
 
-extern string os, cpu, gpu, ram, kernel, driver;
+extern string os, cpu, gpu, ram, kernel, driver, cpusched;
 extern bool sysInfoFetched;
 extern double fps;
 extern uint64_t frametime;
