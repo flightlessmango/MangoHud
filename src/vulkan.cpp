@@ -609,8 +609,6 @@ void init_system_info(){
       os = exec("cat /etc/*-release | grep 'PRETTY_NAME' | cut -d '=' -f 2-");
       os.erase(remove(os.begin(), os.end(), '\"' ), os.end());
       trim(os);
-      gpu = exec("lspci | grep VGA | head -n1 | awk -vRS=']' -vFS='[' '{print $2}' | sed '/^$/d' | tail -n1");
-      trim(gpu);
       cpusched = read_line("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
 
       const char* mangohud_recursion = getenv("MANGOHUD_RECURSION");
@@ -1745,8 +1743,8 @@ void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats&
       for (char c: chars)
          desc.erase(remove(desc.begin(), desc.end(), c), desc.end());
    }
-   sw_stats.gpuName = desc;
-   trim(sw_stats.gpuName);
+   gpu = sw_stats.gpuName = desc;
+   trim(sw_stats.gpuName); trim(gpu);
 #endif
 }
 
