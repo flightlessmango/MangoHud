@@ -691,7 +691,6 @@ void init_system_info(){
                 << "Driver:" << driver << "\n"
                 << "CPU Scheduler:" << cpusched << std::endl;
 #endif
-      parse_pciids();
 #endif
 }
 
@@ -1796,7 +1795,12 @@ static VkResult overlay_CreateSwapchainKHR(
    std::string driverVersion = ss.str();
 
    std::string deviceName = prop.deviceName;
-   get_device_name(prop.vendorID, prop.deviceID, swapchain_data->sw_stats);
+   if (!is_blacklisted()) {
+      parse_pciids();
+      get_device_name(prop.vendorID, prop.deviceID, swapchain_data->sw_stats);
+      init_gpu_stats(device_data->properties.vendorID, device_data->instance->params);
+      init_system_info();
+   }
    if(driverProps.driverID == VK_DRIVER_ID_NVIDIA_PROPRIETARY){
       swapchain_data->sw_stats.driverName = "NVIDIA";
    }
@@ -2087,9 +2091,6 @@ static VkResult overlay_CreateDevice(
 
    if (!is_blacklisted()) {
       device_map_queues(device_data, pCreateInfo);
-
-      init_gpu_stats(device_data->properties.vendorID, instance_data->params);
-      init_system_info();
    }
 
    return result;
