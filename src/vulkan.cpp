@@ -1837,6 +1837,12 @@ static void overlay_DestroySwapchainKHR(
     VkSwapchainKHR                              swapchain,
     const VkAllocationCallbacks*                pAllocator)
 {
+   if (swapchain == VK_NULL_HANDLE) {
+      struct device_data *device_data = FIND(struct device_data, device);
+      device_data->vtable.DestroySwapchainKHR(device, swapchain, pAllocator);
+      return;
+   }
+
    struct swapchain_data *swapchain_data =
       FIND(struct swapchain_data, swapchain);
 
