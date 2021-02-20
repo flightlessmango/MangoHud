@@ -68,8 +68,7 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
 #ifdef _WIN32
    float memused = 0;
 #endif
-   graph_data.push_back({0, 0, cpuStats.GetCPUDataTotal().percent, gpu_info.load, cpuStats.GetCPUDataTotal().temp,
-                        gpu_info.temp, gpu_info.CoreClock, gpu_info.MemClock, gpu_info.memoryUsed, memused});
+   graph_data.push_back(currentLogData);
    logger->notify_data_valid();
    HUDElements.update_exec();
 }

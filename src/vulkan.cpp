@@ -1804,10 +1804,12 @@ static VkResult overlay_CreateSwapchainKHR(
 
    std::string deviceName = prop.deviceName;
    if (!is_blacklisted()) {
+#ifdef __gnu_linux__
       parse_pciids();
       get_device_name(prop.vendorID, prop.deviceID, swapchain_data->sw_stats);
-      init_gpu_stats(device_data->properties.vendorID, device_data->instance->params);
       init_system_info();
+#endif
+      init_gpu_stats(device_data->properties.vendorID, device_data->instance->params);
    }
    if(driverProps.driverID == VK_DRIVER_ID_NVIDIA_PROPRIETARY){
       swapchain_data->sw_stats.driverName = "NVIDIA";
