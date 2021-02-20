@@ -1,6 +1,7 @@
 #include <iostream>
 #include <array>
 #include <cstring>
+#include <dlfcn.h>
 #include "real_dlsym.h"
 #include "mesa/util/macros.h"
 #include "mesa/util/os_time.h"
