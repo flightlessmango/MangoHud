@@ -85,9 +85,10 @@ struct func_ptr {
    void *ptr;
 };
 
-static std::array<const func_ptr, 1> name_to_funcptr_map = {{
+static std::array<const func_ptr, 2> name_to_funcptr_map = {{
 #define ADD_HOOK(fn) { #fn, (void *) fn }
    ADD_HOOK(eglGetProcAddress),
+   ADD_HOOK(eglSwapBuffers),
 #undef ADD_HOOK
 }};
 
@@ -107,9 +108,10 @@ EXPORT_C_(void *) mangohud_find_egl_ptr(const char *name)
 EXPORT_C_(void *) eglGetProcAddress(const char* procName) {
     //std::cerr << __func__ << ": " << procName << std::endl;
 
+    void* real_func = get_egl_proc_address(procName);
     void* func = mangohud_find_egl_ptr(procName);
-    if (func)
+    if (func && real_func)
         return func;
 
-    return get_egl_proc_address(procName);
+    return real_func;
 }
