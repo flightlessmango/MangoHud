@@ -191,19 +191,19 @@ thread_local ImGuiContext* __MesaImGui;
 
 static void *find_object_data(uint64_t obj)
 {
-   scoped_lock lk(global_lock);
+   ::scoped_lock lk(global_lock);
    return vk_object_to_data[obj];
 }
 
 static void map_object(uint64_t obj, void *data)
 {
-   scoped_lock lk(global_lock);
+   ::scoped_lock lk(global_lock);
    vk_object_to_data[obj] = data;
 }
 
 static void unmap_object(uint64_t obj)
 {
-   scoped_lock lk(global_lock);
+   ::scoped_lock lk(global_lock);
    vk_object_to_data.erase(obj);
 }
 
@@ -721,7 +721,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
 
    ImGui::NewFrame();
    {
-      scoped_lock lk(instance_data->notifier.mutex);
+      ::scoped_lock lk(instance_data->notifier.mutex);
       position_layer(data->sw_stats, instance_data->params, data->window_size);
       render_imgui(data->sw_stats, instance_data->params, data->window_size, true);
    }

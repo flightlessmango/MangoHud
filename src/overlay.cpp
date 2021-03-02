@@ -65,9 +65,6 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
    // Save data for graphs
    if (graph_data.size() > 50)
       graph_data.erase(graph_data.begin());
-#ifdef _WIN32
-   float memused = 0;
-#endif
    graph_data.push_back(currentLogData);
    logger->notify_data_valid();
    HUDElements.update_exec();

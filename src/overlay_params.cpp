@@ -34,6 +34,18 @@
 #include "dbus_info.h"
 #endif
 
+#if __cplusplus >= 201703L
+
+template<typename... Ts>
+size_t get_hash(Ts const&... args)
+{
+   size_t hash = 0;
+   ( (hash ^= std::hash<Ts>{}(args) << 1), ...);
+   return hash;
+}
+
+#else
+
 // C++17 has `if constexpr` so this won't be needed then
 template<typename... Ts>
 size_t get_hash()
@@ -52,6 +64,8 @@ size_t get_hash(T const& first, Ts const&... rest)
 
    return hash;
 }
+
+#endif
 
 static enum overlay_param_position
 parse_position(const char *str)
