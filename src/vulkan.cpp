@@ -1011,6 +1011,12 @@ static void CreateOrResizeBuffer(struct device_data *data,
     if (*buffer_memory)
         data->vtable.FreeMemory(data->device, *buffer_memory, NULL);
 
+    if (data->properties.limits.nonCoherentAtomSize > 0)
+    {
+      VkDeviceSize atom_size = data->properties.limits.nonCoherentAtomSize - 1;
+      new_size = (new_size + atom_size) & ~atom_size;
+    }
+
     VkBufferCreateInfo buffer_info = {};
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buffer_info.size = new_size;
