@@ -511,9 +511,14 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
     glDisable(GL_FRAMEBUFFER_SRGB);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
-    //#ifdef GL_POLYGON_MODE
-    if (!g_IsGLES && g_GlVersion >= 200)
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    if (!g_IsGLES)
+    {
+        //#ifdef GL_POLYGON_MODE
+        if (g_GlVersion >= 200)
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        if (g_GlVersion >= 310)
+            glDisable(GL_PRIMITIVE_RESTART);
+    }
 
     bool clip_origin_lower_left = true;
     GLenum last_clip_origin = 0;
@@ -609,6 +614,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     GLboolean last_enable_scissor_test = glIsEnabled(GL_SCISSOR_TEST);
     // Disable and store SRGB state.
     GLboolean last_srgb_enabled = glIsEnabled(GL_FRAMEBUFFER_SRGB);
+    GLboolean last_enable_primitive_restart = (!g_IsGLES && g_GlVersion >= 310) ? glIsEnabled(GL_PRIMITIVE_RESTART) : GL_FALSE;
 
     // Setup desired GL state
     // Recreate the VAO every time (this is to easily allow multiple GL contexts to be rendered to. VAO are not shared among GL contexts)
@@ -694,6 +700,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     if (last_enable_depth_test) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
     if (last_enable_stencil_test) glEnable(GL_STENCIL_TEST); else glDisable(GL_STENCIL_TEST);
     if (last_enable_scissor_test) glEnable(GL_SCISSOR_TEST); else glDisable(GL_SCISSOR_TEST);
+    if (!g_IsGLES && g_GlVersion >= 310) { if (last_enable_primitive_restart) glEnable(GL_PRIMITIVE_RESTART); }
 
     if (!g_IsGLES && g_GlVersion >= 200)
         glPolygonMode(GL_FRONT_AND_BACK, (GLenum)last_polygon_mode[0]);
