@@ -969,7 +969,7 @@ static void check_fonts(struct swapchain_data* data)
       else
          desc_set = create_image_with_desc(data, width, height, VK_FORMAT_R8_UNORM, data->font_image, data->font_mem, data->font_image_view);
 
-      io.Fonts->TexID = (ImTextureID) desc_set;
+      io.Fonts->SetTexID((ImTextureID)desc_set);
 
       data->font_uploaded = false;
       data->sw_stats.font_params_hash = params.font_params_hash;
