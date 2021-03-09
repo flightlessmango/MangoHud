@@ -250,7 +250,7 @@ clean() {
 
 usage() {
     if test -z $1; then
-        echo "Unrecognized command argument: $a"
+        echo "Unrecognized command argument: $arg"
     else
         echo "$0 requires one argument"
     fi
