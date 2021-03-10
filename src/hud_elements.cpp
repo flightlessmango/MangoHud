@@ -269,7 +269,6 @@ void HudElements::core_load(){
 }
 void HudElements::io_stats(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_io_read] || HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_io_write]){
-        auto sampling = HUDElements.params->fps_sampling_period;
         ImGui::TableNextRow(); ImGui::TableNextColumn();
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_io_read] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_io_write])
             ImGui::TextColored(HUDElements.colors.io, "IO RD");
@@ -280,7 +279,7 @@ void HudElements::io_stats(){
 
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_io_read]){
             ImGui::TableNextColumn();
-            float val = HUDElements.sw_stats->io.diff.read * 1000000 / sampling;
+            float val = HUDElements.sw_stats->io.per_second.read;
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, val < 100 ? "%.1f" : "%.f", val);
             ImGui::SameLine(0,1.0f);
             ImGui::PushFont(HUDElements.sw_stats->font1);
@@ -289,7 +288,7 @@ void HudElements::io_stats(){
         }
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_io_write]){
             ImGui::TableNextColumn();
-            float val = HUDElements.sw_stats->io.diff.write * 1000000 / sampling;
+            float val = HUDElements.sw_stats->io.per_second.write;
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, val < 100 ? "%.1f" : "%.f", val);
             ImGui::SameLine(0,1.0f);
             ImGui::PushFont(HUDElements.sw_stats->font1);

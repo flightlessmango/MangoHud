@@ -17,6 +17,10 @@ struct iostats {
       float read;
       float write;
     } diff;
+    struct {
+      float read;
+      float write;
+    } per_second;
 };
 
 void getIoStats(void *args);
