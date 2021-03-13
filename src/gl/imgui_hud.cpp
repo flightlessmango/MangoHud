@@ -93,6 +93,9 @@ void imgui_init()
             if (sym.find("wined3d") != std::string::npos) {
                 sw_stats.engine = WINED3D;
                 break;
+            } else if (sym.find("libtogl.so") != std::string::npos || sym.find("libtogl_client.so") != std::string::npos) {
+                sw_stats.engine = TOGL;
+                break;
             }
         }
     }
