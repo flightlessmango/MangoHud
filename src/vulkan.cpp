@@ -609,7 +609,7 @@ void init_system_info(){
       os = exec("cat /etc/*-release | grep 'PRETTY_NAME' | cut -d '=' -f 2-");
       os.erase(remove(os.begin(), os.end(), '\"' ), os.end());
       trim(os);
-      cpusched = read_line("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
+      cpu_governor = read_line("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
 
       const char* mangohud_recursion = getenv("MANGOHUD_RECURSION");
       if (!mangohud_recursion) {
@@ -726,6 +726,7 @@ void init_system_info(){
                 << "Os:" << os << "\n"
                 << "Gpu:" << gpu << "\n"
                 << "Driver:" << driver << "\n"
+                << "CPU Governor:" << cpu_governor << "\n"
                 << "Sync:" << HUDElements.sync << std::endl;
 #endif
 #endif
