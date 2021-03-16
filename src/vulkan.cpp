@@ -681,7 +681,42 @@ void init_system_info(){
          if (HUDElements.gamemode_bol && HUDElements.vkbasalt_bol)
             break;
       }
+      // check for esync/fsync/futex2
+      path = "/proc/" + to_string(pid) + "/fd/";
+      files = exec("ls " + path);
+      ss.clear(); ss << files;
+      string futex2_path;
 
+      while(std::getline(ss, line, '\n')){
+         auto file = path + line;
+         auto sym = read_symlink(file.c_str());
+         if (sym.find("esync") != std::string::npos){
+            HUDElements.sync = "ESYNC";
+            break;
+            }
+         if (sym.find("fsync") != std::string::npos){
+            if (getenv("WINEFSYNC_FUTEX2")){
+               if (atoi(getenv("WINEFSYNC_FUTEX2")) == 1 && find_folder("/sys/kernel/", "futex2", futex2_path) && wineVersion.find("experimental") != std::string::npos){
+                  HUDElements.sync = "FUTEX2";
+                  break;
+               } else {
+                  HUDElements.sync = "FSYNC";
+                  break;
+               }
+            } else {
+               if (find_folder("/sys/kernel/", "futex2", futex2_path) && wineVersion.find("experimental") != std::string::npos){
+                  HUDElements.sync = "FUTEX2";
+                  break;
+               } else {
+                  HUDElements.sync = "FSYNC";
+                  break;
+               }
+            }
+         }
+      }
+
+      if (HUDElements.sync.empty())
+         HUDElements.sync = "NONE";
       if (ld_preload)
          setenv("LD_PRELOAD", ld_preload, 1);
 #ifndef NDEBUG
@@ -691,7 +726,7 @@ void init_system_info(){
                 << "Os:" << os << "\n"
                 << "Gpu:" << gpu << "\n"
                 << "Driver:" << driver << "\n"
-                << "CPU Scheduler:" << cpusched << std::endl;
+                << "Sync:" << HUDElements.sync << std::endl;
 #endif
 #endif
 }

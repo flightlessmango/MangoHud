@@ -696,6 +696,17 @@ void HudElements::graphs(){
     ImGui::PopStyleColor(1);
 }
 
+void HudElements::_sync(){
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_sync]){
+        ImGui::TableNextRow(); ImGui::TableNextColumn();
+        ImGui::PushFont(HUDElements.sw_stats->font1);
+        ImGui::TextColored(HUDElements.colors.engine, "%s", "SYNC");
+        ImGui::TableNextColumn();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, HUDElements.sync.c_str());
+        ImGui::PopFont();
+    }
+}
+
 void HudElements::sort_elements(std::pair<std::string, std::string> option){
     auto param = option.first;
     auto value = option.second;
@@ -725,6 +736,7 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
     if (param == "custom_text_center")  { ordered_functions.push_back({custom_text_center, value}); }
     if (param == "gamemode")        { ordered_functions.push_back({gamemode, value});               }
     if (param == "vkbasalt")        { ordered_functions.push_back({vkbasalt, value});               }
+    if (param == "sync")            { ordered_functions.push_back({_sync, value});                  }
     if (param == "exec")            { ordered_functions.push_back({_exec, value});
                                       exec_list.push_back({int(ordered_functions.size() - 1), value});       }
     if (param == "graphs"){

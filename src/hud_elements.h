@@ -29,6 +29,7 @@ class HudElements{
             "vram", "ram", "cpu_temp", "gpu_temp"
         };
         std::vector<exec_list> exec_list;
+        std::string sync, cpu_sched;
         void sort_elements(std::pair<std::string, std::string> option);
         void legacy_elements();
         void update_exec();
@@ -56,6 +57,7 @@ class HudElements{
         static void gamemode();
         static void graphs();
         static void _exec();
+        static void _sync();
 
         void convert_colors(struct overlay_params& params);
         void convert_colors(bool do_conv, struct overlay_params& params);
