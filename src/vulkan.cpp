@@ -1860,6 +1860,9 @@ static VkResult overlay_CreateSwapchainKHR(
       get_device_name(prop.vendorID, prop.deviceID, swapchain_data->sw_stats);
       init_gpu_stats(device_data->properties.vendorID, device_data->instance->params);
       init_system_info();
+      HUDElements.sw_stats = &swapchain_data->sw_stats;
+      if(device_data->instance->params.autostart_log && !logger->is_active())
+         logger->start_logging();
    }
    if(driverProps.driverID == VK_DRIVER_ID_NVIDIA_PROPRIETARY){
       swapchain_data->sw_stats.driverName = "NVIDIA";
