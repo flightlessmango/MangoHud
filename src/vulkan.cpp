@@ -662,7 +662,7 @@ void init_system_info(){
          }
       }
       else {
-           wineVersion = "";
+           wineVersion = "Native";
       }
       // check for gamemode and vkbasalt
       stringstream ss;
