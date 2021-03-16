@@ -9,6 +9,7 @@
 #include "timing.hpp"
 #include "mesa/util/macros.h"
 #include "string_utils.h"
+#include "battery.h"
 #ifdef HAVE_DBUS
 float g_overflow = 50.f /* 3333ms * 0.5 / 16.6667 / 2 (to edge and back) */;
 #endif
@@ -21,6 +22,7 @@ std::vector<logData> graph_data;
 
 void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID)
 {
+   Battery_Stats.update();
    if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
       cpuStats.UpdateCPUData();
 #ifdef __gnu_linux__

@@ -69,6 +69,7 @@ if is_unixy
     'elfhacks.cpp',
     'real_dlsym.cpp',
     'pci_ids.cpp',
+    'battery.cpp',
   )
 
   opengl_files = files(
