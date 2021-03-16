@@ -1856,7 +1856,9 @@ static VkResult overlay_CreateSwapchainKHR(
 
    std::string deviceName = prop.deviceName;
    if (!is_blacklisted()) {
+#ifdef __gnu_linux__
       parse_pciids();
+#endif
       get_device_name(prop.vendorID, prop.deviceID, swapchain_data->sw_stats);
       init_gpu_stats(device_data->properties.vendorID, device_data->instance->params);
       init_system_info();

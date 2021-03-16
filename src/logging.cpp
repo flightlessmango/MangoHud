@@ -196,7 +196,9 @@ void Logger::try_log() {
   currentLogData.previous = elapsedLog;
   currentLogData.fps = fps;
   currentLogData.frametime = frametime;
+#ifdef __gnu_linux__
   currentLogData.current_watt = Battery_Stats.current_watt;
+#endif
   m_log_array.push_back(currentLogData);
   if (m_params->autostart_log)
     writeFileContinuous(currentLogFile);
