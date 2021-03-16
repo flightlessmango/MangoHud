@@ -67,14 +67,15 @@ static void enumerate_config_files(std::vector<std::string>& paths) {
     const std::string config_dir = get_config_dir();
 
     const std::string program_name = get_program_name();
-
+#ifdef __gnu_linux__
     if (config_dir.empty()) {
         // If we can't find 'HOME' just abandon hope.
         return;
     }
+#endif
 
     paths.push_back(config_dir + mangohud_dir + "MangoHud.conf");
-
+    
 #ifdef _WIN32
     paths.push_back("C:\\mangohud\\MangoHud.conf");
 #endif
