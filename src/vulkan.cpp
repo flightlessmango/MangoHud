@@ -715,6 +715,21 @@ void init_system_info(){
          }
       }
 
+      if (!kernel.empty()){
+         if (kernel.find("bmq") != std::string::npos)
+            HUDElements.cpu_sched = "BMQ";
+         if (kernel.find("upds") != std::string::npos)
+            HUDElements.cpu_sched = "Undead PDS";
+         if (kernel.find("pds") != std::string::npos)
+            HUDElements.cpu_sched = "PDS";
+         if (kernel.find("muqss") != std::string::npos)
+            HUDElements.cpu_sched = "MuQSS";
+         if (kernel.find("cfs") != std::string::npos)
+            HUDElements.cpu_sched = "CFS";
+      }
+      if (HUDElements.cpu_sched.empty())
+         HUDElements.cpu_sched = "Unknown cpu scheduler";
+
       if (HUDElements.sync.empty())
          HUDElements.sync = "NONE";
       if (ld_preload)
@@ -726,6 +741,7 @@ void init_system_info(){
                 << "Os:" << os << "\n"
                 << "Gpu:" << gpu << "\n"
                 << "Driver:" << driver << "\n"
+                << "CPU Scheduler:" << HUDElements.cpu_sched << "\n"
                 << "CPU Governor:" << cpu_governor << "\n"
                 << "Sync:" << HUDElements.sync << std::endl;
 #endif
