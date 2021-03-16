@@ -1,15 +1,16 @@
 #include "logging.h"
 #include "overlay.h"
 #include "config.h"
+#include "battery.h"
 #include <sstream>
 #include <iomanip>
 
-string os, cpu, gpu, ram, kernel, driver, cpusched;
+string os, cpu, gpu, ram, kernel, driver, cpu_governor;
 bool sysInfoFetched = false;
 double fps;
 uint64_t frametime;
 logData currentLogData = {};
-
+ofstream currentLogFile;
 std::unique_ptr<Logger> logger;
 
 string exec(string command) {
@@ -62,25 +63,54 @@ void writeFile(string filename){
 #endif
   std::ofstream out(filename, ios::out | ios::app);
   if (out){
-  out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver," << "cpuscheduler" << endl;
-  out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << "," << cpusched << endl;
-  out << "fps," << "frametime," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "gpu_power," << "ram_used," << "elapsed" << endl;
-
-  for (size_t i = 0; i < logArray.size(); i++){
-    out << logArray[i].fps << ",";
-    out << logArray[i].frametime << ",";
-    out << logArray[i].cpu_load << ",";
-    out << logArray[i].gpu_load << ",";
-    out << logArray[i].cpu_temp << ",";
-    out << logArray[i].gpu_temp << ",";
-    out << logArray[i].gpu_core_clock << ",";
-    out << logArray[i].gpu_mem_clock << ",";
-    out << logArray[i].gpu_vram_used << ",";
-    out << logArray[i].gpu_power << ",";
-    out << logArray[i].ram_used << ",";
-    out << std::chrono::duration_cast<std::chrono::nanoseconds>(logArray[i].previous).count() << "\n";
-  }
+    out << "v1" << endl;
+    out << MANGOHUD_VERSION << endl;
+    out << "---------------------SYSTEM INFO---------------------" << endl;
+    out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver," << "cpu_governor," << "Wine/Proton," << "sync," << "renderer," << "cpu_scheduler" << endl;
+    out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << "," << cpu_governor << "," << wineVersion << "," << HUDElements.sync << "," << HUDElements.sw_stats->engineName << HUDElements.cpu_sched << endl;
+    out << "--------------------FRAME METRICS--------------------" << endl;
+    out << "fps," << "frametime," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "gpu_power," << "ram_used," << "current_watt,";
+    out << "elapsed" << endl;
+    for (size_t i = 0; i < logArray.size(); i++){
+      out << logArray[i].fps << ",";
+      out << logArray[i].frametime / 1000.f << ",";
+      out << logArray[i].cpu_load << ",";
+      out << logArray[i].gpu_load << ",";
+      out << logArray[i].cpu_temp << ",";
+      out << logArray[i].gpu_temp << ",";
+      out << logArray[i].gpu_core_clock << ",";
+      out << logArray[i].gpu_mem_clock << ",";
+      out << logArray[i].gpu_vram_used << ",";
+      out << logArray[i].gpu_power << ",";
+      out << logArray[i].ram_used << ",";
+      out << logArray[i].current_watt << ",";
+      out << std::chrono::duration_cast<std::chrono::nanoseconds>(logArray[i].previous).count() << "\n";
+    }
   logger->clear_log_data();
+  } else {
+    printf("MANGOHUD: Failed to write log file\n");
+  }
+}
+
+void writeFileContinuous(ofstream& out){
+  auto& logArray = logger->get_log_data();
+  if (out && !logArray.empty()){
+    out << logArray.back().fps << ",";
+    out << logArray.back().frametime / 1000.f << ",";
+    out << logArray.back().cpu_load << ",";
+    out << logArray.back().gpu_load << ",";
+    out << logArray.back().cpu_temp << ",";
+    out << logArray.back().gpu_temp << ",";
+    out << logArray.back().gpu_core_clock << ",";
+    out << logArray.back().gpu_mem_clock << ",";
+    out << logArray.back().gpu_vram_used << ",";
+    out << logArray.back().gpu_power << ",";
+    out << logArray.back().ram_used << ",";
+    out << logArray.back().current_watt << ",";
+    for (const CPUData &cpuData : cpuStats.GetCPUData()){
+      out << cpuData.percent << ",";
+    }
+    out << std::chrono::duration_cast<std::chrono::nanoseconds>(logArray.back().previous).count() << "\n";
   } else {
     printf("MANGOHUD: Failed to write log file\n");
   }
@@ -119,6 +149,26 @@ void Logger::start_logging() {
   m_values_valid = false;
   m_logging_on = true;
   m_log_start = Clock::now();
+  m_log_files.emplace_back(m_params->output_folder + "/" + get_program_name() + "_" + get_log_suffix());
+  if (m_params->autostart_log){
+    printf("Named log file: %s\n", m_log_files.back().c_str());
+    currentLogFile.open(m_log_files.back(), ios::out | ios::app);
+    printf("Opened log file\n");
+    if (currentLogFile){
+      currentLogFile << "v1" << endl;
+      currentLogFile << MANGOHUD_VERSION << endl;
+      currentLogFile << "---------------------SYSTEM INFO---------------------" << endl;
+      currentLogFile << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver," << "cpu_governor," << "Wine/Proton," << "sync," << "renderer," << "cpu_scheduler" << endl;
+      currentLogFile << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << "," << cpu_governor << "," << wineVersion << "," << HUDElements.sync << "," << HUDElements.sw_stats->engineName << HUDElements.cpu_sched << endl;
+      currentLogFile << "--------------------FRAME METRICS--------------------" << endl;
+      currentLogFile << "fps," << "frametime," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "gpu_power," << "ram_used," << "current_watt,";
+      for (size_t i = 0; i < cpuStats.GetCPUData().size(); i++){
+        currentLogFile << "cpu" + to_string(i) + ",";
+      }
+      currentLogFile << "elapsed" << endl;
+    }
+    printf("Wrote info to log file\n");
+  }
   if((!m_params->output_folder.empty()) && (m_params->log_interval != 0)){
     std::thread(logging, m_params).detach();
   }
@@ -131,7 +181,7 @@ void Logger::stop_logging() {
 
   std::thread(calculate_benchmark_data, m_params).detach();
 
-  if(!m_params->output_folder.empty()) {
+  if(!m_params->output_folder.empty() && !m_params->autostart_log) {
     m_log_files.emplace_back(m_params->output_folder + "/" + get_program_name() + "_" + get_log_suffix());
     std::thread(writeFile, m_log_files.back()).detach();
   }
@@ -146,8 +196,10 @@ void Logger::try_log() {
   currentLogData.previous = elapsedLog;
   currentLogData.fps = fps;
   currentLogData.frametime = frametime;
+  currentLogData.current_watt = Battery_Stats.current_watt;
   m_log_array.push_back(currentLogData);
-
+  if (m_params->autostart_log)
+    writeFileContinuous(currentLogFile);
   if(m_params->log_duration && (elapsedLog >= std::chrono::seconds(m_params->log_duration))){
     stop_logging();
   }

@@ -8,6 +8,7 @@
 #include <chrono>
 #include <thread>
 #include <condition_variable>
+#include "cpu.h"
 
 #include "timing.hpp"
 
@@ -26,6 +27,7 @@ struct logData{
   int gpu_power;
   float gpu_vram_used;
   float ram_used;
+  float current_watt;
 
   Clock::duration previous;
 };
@@ -64,11 +66,12 @@ private:
   bool m_values_valid;
 
   overlay_params* m_params;
+  std::ofstream currentLogFile;
 };
 
 extern std::unique_ptr<Logger> logger;
 
-extern string os, cpu, gpu, ram, kernel, driver, cpusched;
+extern string os, cpu, gpu, ram, kernel, driver, cpu_governor;
 extern bool sysInfoFetched;
 extern double fps;
 extern uint64_t frametime;
