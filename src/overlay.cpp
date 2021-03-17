@@ -20,10 +20,15 @@ struct fps_limit fps_limit_stats {};
 ImVec2 real_font_size;
 std::vector<logData> graph_data;
 std::ifstream data_file;
-string data_location = getenv("MANGOHUD_CUSTOM_DATA");
+string data_location;
 vector<pair<string,string>> custom_data;
 void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID)
 {
+   if(getenv("MANGOHUD_CUSTOM_DATA")){
+      data_location = getenv("MANGOHUD_CUSTOM_DATA");
+   }else{
+   }
+   
    data_file.open(data_location);
    string line, first, second;
    size_t pos;
