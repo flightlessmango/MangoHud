@@ -67,7 +67,7 @@ void writeFile(string filename){
     out << MANGOHUD_VERSION << endl;
     out << "---------------------SYSTEM INFO---------------------" << endl;
     out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver," << "cpu_governor," << "Wine/Proton," << "sync," << "renderer," << "cpu_scheduler" << endl;
-    out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << "," << cpu_governor << "," << wineVersion << "," << HUDElements.sync << "," << HUDElements.sw_stats->engineName << HUDElements.cpu_sched << endl;
+    out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << "," << cpu_governor << "," << wineVersion << "," << HUDElements.sync << "," << HUDElements.sw_stats->engineName<< "," << HUDElements.cpu_sched << endl;
     out << "--------------------FRAME METRICS--------------------" << endl;
     out << "fps," << "frametime," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "gpu_power," << "ram_used," << "current_watt,";
     out << "elapsed" << endl;
