@@ -70,6 +70,9 @@ void writeFile(string filename){
     out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << "," << cpu_governor << "," << wineVersion << "," << HUDElements.sync << "," << HUDElements.sw_stats->engineName<< "," << HUDElements.cpu_sched << endl;
     out << "--------------------FRAME METRICS--------------------" << endl;
     out << "fps," << "frametime," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "gpu_power," << "ram_used," << "current_watt,";
+    for (auto &item : logArray.back().custom_data){
+      out << item.first << ",";
+    }
     out << "elapsed" << endl;
     for (size_t i = 0; i < logArray.size(); i++){
       out << logArray[i].fps << ",";
@@ -84,6 +87,9 @@ void writeFile(string filename){
       out << logArray[i].gpu_power << ",";
       out << logArray[i].ram_used << ",";
       out << logArray[i].current_watt << ",";
+      for (auto &item : logArray[i].custom_data) {
+        out << item.second << ",";
+      }
       out << std::chrono::duration_cast<std::chrono::nanoseconds>(logArray[i].previous).count() << "\n";
     }
   logger->clear_log_data();

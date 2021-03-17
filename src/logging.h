@@ -28,7 +28,7 @@ struct logData{
   float gpu_vram_used;
   float ram_used;
   float current_watt;
-
+  vector<pair<string,string>> custom_data;
   Clock::duration previous;
 };
 

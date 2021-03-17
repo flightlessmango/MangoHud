@@ -19,12 +19,28 @@ struct benchmark_stats benchmark;
 struct fps_limit fps_limit_stats {};
 ImVec2 real_font_size;
 std::vector<logData> graph_data;
-
+std::ifstream data_file;
+string data_location = getenv("MANGOHUD_CUSTOM_DATA");
+vector<pair<string,string>> custom_data;
 void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID)
 {
+   data_file.open(data_location);
+   string line, first, second;
+   size_t pos;
+   custom_data.clear();
+   if (data_file.is_open()){
+      while(std::getline(data_file, line)){
+         pos = line.find("=");
+         first  = line.substr(0, pos);
+         second = line.substr(pos + 1, line.size());
+         custom_data.push_back({first,second});
+         currentLogData.custom_data = custom_data;
+      }
+      data_file.close();
+  }
 #ifdef __gnu_linux__
    Battery_Stats.update();
-#endif   
+#endif
    if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
       cpuStats.UpdateCPUData();
 #ifdef __gnu_linux__
