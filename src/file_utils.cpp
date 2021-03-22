@@ -121,7 +121,10 @@ std::string get_wine_exe_name(bool keep_ext)
 
     std::string line = read_line("/proc/self/comm"); // max 16 characters though
     if (ends_with(line, ".exe", true))
-        return line;
+    {
+        auto dot = keep_ext ? std::string::npos : line.find_last_of('.');
+        return line.substr(0, dot);
+    }
 
     std::ifstream cmdline("/proc/self/cmdline");
     // Iterate over arguments (separated by NUL byte).
