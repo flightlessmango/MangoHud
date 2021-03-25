@@ -57,6 +57,14 @@ If you do not wish to compile anything, simply download the file under [Releases
 
 If you are using an Arch-based distribution, install [`mangohud`](https://aur.archlinux.org/packages/mangohud/) and [`lib32-mangohud`](https://aur.archlinux.org/packages/lib32-mangohud/) with your favourite AUR helper. [`mangohud-git`](https://aur.archlinux.org/packages/mangohud-git/) and [`lib32-mangohud-git`](https://aur.archlinux.org/packages/lib32-mangohud-git/) are also available on the AUR if you want the up-to-date version of MangoHud.
 
+#### Debian 11 (Bullseye)
+
+If you are using Debian 11 or later, to install the [MangoHud](https://tracker.debian.org/pkg/mangohud) package, execute:
+
+```
+sudo apt install mangohud
+```
+
 #### Fedora
 
 If you are using Fedora, to install the [MangoHud](https://src.fedoraproject.org/rpms/mangohud) package, execute:
