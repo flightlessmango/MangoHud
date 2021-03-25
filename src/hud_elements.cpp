@@ -65,6 +65,7 @@ void HudElements::convert_colors(struct overlay_params& params)
     HUDElements.colors.text = convert(params.text_color);
     HUDElements.colors.media_player = convert(params.media_player_color);
     HUDElements.colors.wine = convert(params.wine_color);
+    HUDElements.colors.battery = convert(params.battery_color);
     HUDElements.colors.gpu_load_low = convert(params.gpu_load_color[0]);
     HUDElements.colors.gpu_load_med = convert(params.gpu_load_color[1]);
     HUDElements.colors.gpu_load_high = convert(params.gpu_load_color[2]);
@@ -576,6 +577,41 @@ void HudElements::vkbasalt(){
     }
 }
 
+void HudElements::battery_percent(){
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_percent]){
+        ImGui::TableNextRow(); ImGui::TableNextColumn();
+        ImGui::TextColored(HUDElements.colors.battery, "BATT");
+        ImGui::TableNextColumn();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", Battery_Stats.current_percent);
+        ImGui::SameLine(0,1.0f);
+        ImGui::Text("%%");
+
+      }
+
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_percent] && HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_power]){
+        ImGui::TableNextColumn();
+        if (Battery_Stats.isCharging() && !Battery_Stats.fullCharge()) {
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            ImGui::Text("Plugged in");
+            ImGui::PopFont();
+        }
+
+        else if(int(Battery_Stats.current_percent) == 100 || Battery_Stats.fullCharge()) {
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            ImGui::Text("Full Charge");
+            ImGui::PopFont();
+        }
+        else {
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", Battery_Stats.current_watt);
+            ImGui::SameLine(0,1.0f);
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            ImGui::Text("W");
+            ImGui::PopFont();
+        }
+    }
+}
+
+
 void HudElements::graphs(){
     ImGui::TableNextRow(); ImGui::TableNextColumn();
     ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
@@ -727,6 +763,7 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
     if (param == "vkbasalt")        { ordered_functions.push_back({vkbasalt, value});               }
     if (param == "exec")            { ordered_functions.push_back({_exec, value});
                                       exec_list.push_back({int(ordered_functions.size() - 1), value});       }
+    if (param == "battery_percent")   {ordered_functions.push_back({battery_percent, value});           }
     if (param == "graphs"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs])
             HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs] = true;
