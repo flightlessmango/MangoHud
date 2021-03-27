@@ -34,4 +34,11 @@ void getAmdGpuInfo(void);
 bool checkNvidia(const char *pci_dev);
 extern void nvapi_util();
 extern bool checkNVAPI();
+
+// Amd windows
+int query_adl(void);
+wint_t adl_vendorid(void);
+int initializeADL(void);
+extern bool init_adl;
+
 #endif //MANGOHUD_GPU_H

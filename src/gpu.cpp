@@ -18,6 +18,7 @@ bool checkNvidia(const char *pci_dev){
         nvSuccess = checkXNVCtrl();
 #endif
 #ifdef _WIN32
+    init_adl = initializeADL();
     if (!nvSuccess)
         nvSuccess = checkNVAPI();
 #endif
@@ -119,4 +120,7 @@ void getAmdGpuInfo(){
 
         gpu_info.powerUsage = value / 1000000;
     }
+#ifdef _WIN32
+    query_adl();
+#endif
 }

@@ -50,6 +50,7 @@ if ['windows', 'mingw'].contains(host_machine.system())
     'file_utils_win32.cpp',
     'cpu_win32.cpp',
     'nvapi.cpp',
+    'adl.cpp',
     'win/dxgi.cpp',
     'win/main.cpp',
     'win/kiero.cpp',
