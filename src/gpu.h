@@ -3,7 +3,7 @@
 #define MANGOHUD_GPU_H
 
 #include <stdio.h>
-
+#include <cstdint>
 struct amdgpu_files
 {
     FILE *busy;
@@ -37,7 +37,7 @@ extern bool checkNVAPI();
 
 // Amd windows
 int query_adl(void);
-wint_t adl_vendorid(void);
+uint32_t adl_vendorid(void);
 int initializeADL(void);
 extern bool init_adl;
 

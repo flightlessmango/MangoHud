@@ -223,6 +223,6 @@ int query_adl()
     return 0;
 }
 
-wint_t adl_vendorid(){
+uint32_t adl_vendorid(){
     return lpAdapterInfo[0].iVendorID;
 }
