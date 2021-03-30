@@ -16,18 +16,17 @@
 #include <chrono>
 #include <iomanip>
 
+#include <glad/glad.h>
 #include "imgui_hud.h"
 
 using namespace MangoHud::GL;
-
-#define EXPORT_C_(type) extern "C" __attribute__((__visibility__("default"))) type
 
 EXPORT_C_(void *) glXGetProcAddress(const unsigned char* procName);
 EXPORT_C_(void *) glXGetProcAddressARB(const unsigned char* procName);
 
 #ifndef GLX_WIDTH
 #define GLX_WIDTH   0x801D
-#define GLX_HEIGTH  0x801E
+#define GLX_HEIGHT  0x801E
 #endif
 
 static glx_loader glx;
@@ -136,17 +135,29 @@ EXPORT_C_(int) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
 
 static void do_imgui_swap(void *dpy, void *drawable)
 {
+    GLint vp[4];
     if (!is_blacklisted()) {
         imgui_create(glx.GetCurrentContext());
 
         unsigned int width = -1, height = -1;
 
-        glx.QueryDrawable(dpy, drawable, GLX_WIDTH, &width);
-        glx.QueryDrawable(dpy, drawable, GLX_HEIGTH, &height);
-
-        /*GLint vp[4]; glGetIntegerv (GL_VIEWPORT, vp);
-        width = vp[2];
-        height = vp[3];*/
+        switch (params.gl_size_query)
+        {
+            case GL_SIZE_VIEWPORT:
+                glGetIntegerv (GL_VIEWPORT, vp);
+                width = vp[2];
+                height = vp[3];
+                break;
+            case GL_SIZE_SCISSORBOX:
+                glGetIntegerv (GL_SCISSOR_BOX, vp);
+                width = vp[2];
+                height = vp[3];
+                break;
+            default:
+                glx.QueryDrawable(dpy, drawable, GLX_WIDTH, &width);
+                glx.QueryDrawable(dpy, drawable, GLX_HEIGHT, &height);
+                break;
+        }
 
         imgui_render(width, height);
     }

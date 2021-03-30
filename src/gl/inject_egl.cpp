@@ -14,7 +14,6 @@
 
 using namespace MangoHud::GL;
 
-#define EXPORT_C_(type) extern "C" __attribute__((__visibility__("default"))) type
 EXPORT_C_(void *) eglGetProcAddress(const char* procName);
 
 void* get_egl_proc_address(const char* name) {

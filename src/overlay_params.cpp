@@ -362,7 +362,19 @@ parse_font_glyph_ranges(const char *str)
          fg |= FG_LATIN_EXT_B;
    }
    return fg;
+}
 
+static gl_size_query
+parse_gl_size_query(const char *str)
+{
+   std::string value(str);
+   trim(value);
+   std::transform(value.begin(), value.end(), value.begin(), ::tolower);
+   if (value == "viewport")
+      return GL_SIZE_VIEWPORT;
+   if (value == "scissorbox")
+      return GL_SIZE_SCISSORBOX;
+   return GL_SIZE_DRAWABLE;
 }
 
 #define parse_width(s) parse_unsigned(s)
@@ -395,6 +407,8 @@ parse_font_glyph_ranges(const char *str)
 #define parse_cellpadding_y(s) parse_float(s)
 #define parse_table_columns(s) parse_unsigned(s)
 #define parse_autostart_log(s) parse_unsigned(s)
+#define parse_gl_bind_framebuffer(s) parse_unsigned(s)
+#define parse_gl_dont_flip(s) parse_unsigned(s) != 0
 
 #define parse_cpu_color(s) parse_color(s)
 #define parse_gpu_color(s) parse_color(s)

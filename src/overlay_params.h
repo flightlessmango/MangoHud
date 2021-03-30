@@ -87,6 +87,9 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(fps_limit)                   \
    OVERLAY_PARAM_CUSTOM(vsync)                       \
    OVERLAY_PARAM_CUSTOM(gl_vsync)                    \
+   OVERLAY_PARAM_CUSTOM(gl_size_query)               \
+   OVERLAY_PARAM_CUSTOM(gl_bind_framebuffer)         \
+   OVERLAY_PARAM_CUSTOM(gl_dont_flip)                \
    OVERLAY_PARAM_CUSTOM(toggle_hud)                  \
    OVERLAY_PARAM_CUSTOM(toggle_fps_limit)            \
    OVERLAY_PARAM_CUSTOM(toggle_logging)              \
@@ -164,6 +167,12 @@ enum font_glyph_ranges {
    FG_LATIN_EXT_B             = (1u << 8),
 };
 
+enum gl_size_query {
+   GL_SIZE_DRAWABLE,
+   GL_SIZE_VIEWPORT,
+   GL_SIZE_SCISSORBOX, // needed?
+};
+
 enum overlay_param_enabled {
 #define OVERLAY_PARAM_BOOL(name) OVERLAY_PARAM_ENABLED_##name,
 #define OVERLAY_PARAM_CUSTOM(name)
@@ -188,6 +197,9 @@ struct overlay_params {
    int offset_x, offset_y;
    unsigned vsync;
    int gl_vsync;
+   int gl_bind_framebuffer {-1};
+   enum gl_size_query gl_size_query {GL_SIZE_DRAWABLE};
+   bool gl_dont_flip {false};
    uint64_t log_duration;
    unsigned cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color, wine_color;
    std::vector<unsigned> gpu_load_color;
