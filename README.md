@@ -227,6 +227,14 @@ All vulkan vsync options might not be supported on your device, you can check wh
 - `Shift_L+F4` : Reload Config
 - `Shift_R+F12`: Toggle Hud
 
+## Workarounds
+
+Options starting with "gl_*" are for OpenGL.
+
+- `gl_size_query = viewport` : Specify what to use for getting display size. Options are "viewport", "scissorbox" or disabled. Defaults to using glXQueryDrawable.
+- `gl_bind_framebuffer = 0..N` : (Re)bind given framebuffer before MangoHud gets drawn. Helps with Crusader Kings III.
+- `gl_dont_flip = 1` : Don't swap origin if using GL_UPPER_LEFT. Helps with Ryujinx.
+
 ## MangoHud FPS logging
 
 You must set a valid path for `output_folder` in your configuration to store logs in.
