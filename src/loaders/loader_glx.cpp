@@ -15,7 +15,14 @@ bool glx_loader::Load() {
   }
 
   // Force load libGL
-  void *handle = real_dlopen("libGL.so.1", RTLD_LAZY);
+  void *handle = nullptr;
+#ifndef NDEBUG
+  // Use apitrace's glxtrace.so for debugging
+  // Assumes glxtrace.so lives outside of usual library paths and is only preloaded
+  handle = real_dlopen("glxtrace.so", RTLD_LAZY);
+#endif
+  if (!handle)
+    handle = real_dlopen("libGL.so.1", RTLD_LAZY);
   if (!handle) {
     std::cerr << "MANGOHUD: Failed to open " << "" MANGOHUD_ARCH << " libGL.so.1: " << dlerror() << std::endl;
     return false;
