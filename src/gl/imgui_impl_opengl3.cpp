@@ -582,6 +582,9 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
         return;
 
     // Backup GL state
+    GLint last_fb = -1;
+    if (params.gl_bind_framebuffer >= 0 && (g_IsGLES || g_GlVersion >= 300))
+        glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &last_fb);
     GLenum last_active_texture; glGetIntegerv(GL_ACTIVE_TEXTURE, (GLint*)&last_active_texture);
     glActiveTexture(GL_TEXTURE0);
     GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
@@ -717,6 +720,8 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
 
     if (last_srgb_enabled)
         glEnable(GL_FRAMEBUFFER_SRGB);
+    if (last_fb >= 0)
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, last_fb);
 }
 
 }} // namespace
