@@ -1117,9 +1117,9 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
    ImDrawVert* vtx_dst = NULL;
    ImDrawIdx* idx_dst = NULL;
    VK_CHECK(device_data->vtable.MapMemory(device_data->device, draw->vertex_buffer_mem,
-                                          0, vertex_size, 0, (void**)(&vtx_dst)));
+                                          0, draw->vertex_buffer_size, 0, (void**)(&vtx_dst)));
    VK_CHECK(device_data->vtable.MapMemory(device_data->device, draw->index_buffer_mem,
-                                          0, index_size, 0, (void**)(&idx_dst)));
+                                          0, draw->index_buffer_size, 0, (void**)(&idx_dst)));
    for (int n = 0; n < draw_data->CmdListsCount; n++)
       {
          const ImDrawList* cmd_list = draw_data->CmdLists[n];
