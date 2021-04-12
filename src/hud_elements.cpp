@@ -343,11 +343,8 @@ void HudElements::ram(){
 }
 
 void HudElements::fps(){
-if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps]){
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps]){
         ImGui::TableNextRow(); ImGui::TableNextColumn();
-        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps] && HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_engine_version]){
-            ImGui::TextColored(HUDElements.colors.engine, "%s", HUDElements.sw_stats->engineName.c_str());
-        }
         ImGui::TextColored(HUDElements.colors.engine, "%s", HUDElements.sw_stats->engineName.c_str());
         ImGui::TableNextColumn();
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_color_change]){
@@ -377,6 +374,9 @@ if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps]){
             ImGui::Text("ms");
             ImGui::PopFont();
         }
+    } else if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_engine_version]){
+        ImGui::TableNextRow(); ImGui::TableNextColumn();
+        ImGui::TextColored(HUDElements.colors.engine, "%s", HUDElements.sw_stats->engineName.c_str());
     }
 }
 
