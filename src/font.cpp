@@ -61,7 +61,7 @@ void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& te
       config.MergeMode = true;
       config.GlyphMinAdvanceX = 13.0f;
       static const ImWchar icon_ranges[] = { ICON_MIN_FK, ICON_MAX_FK, 0 };
-      io.Fonts->AddFontFromFileTTF("icons/forkawesome-webfont.ttf", 13.0f, &config, icon_ranges);
+      io.Fonts->AddFontFromFileTTF("/usr/share/MangoHud/icons/forkawesome-webfont.ttf", 13.0f, &config, icon_ranges);
 
       if (params.no_small_font)
          small_font = io.Fonts->Fonts[0];
@@ -75,7 +75,7 @@ void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& te
       config.MergeMode = true;
       config.GlyphMinAdvanceX = 13.0f;
       static const ImWchar icon_ranges[] = { ICON_MIN_FK, ICON_MAX_FK, 0 };
-      io.Fonts->AddFontFromFileTTF("icons/forkawesome-webfont.ttf", 13.0f, &config, icon_ranges);
+      io.Fonts->AddFontFromFileTTF("/usr/share/MangoHud/icons/forkawesome-webfont.ttf", 13.0f, &config, icon_ranges);
 
       if (params.no_small_font)
          small_font = io.Fonts->Fonts[0];

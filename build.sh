@@ -211,6 +211,7 @@ install() {
     /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.json /usr/share/vulkan/implicit_layer.d/MangoHud.json
     /usr/bin/install -Dvm644 ./build/release/usr/share/man/man1/mangohud.1 /usr/share/man/man1/mangohud.1
     /usr/bin/install -Dvm644 ./build/release/usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
+    /usr/bin/install -Dvm644 ./build/release/usr/share/MangoHud/icons/forkawesome-webfont.ttf /usr/share/MangoHud/icons/forkawesome-webfont.ttf
     /usr/bin/install -vm755  ./build/release/usr/bin/mangohud /usr/bin/mangohud
 
     # FIXME get the triplet somehow
