@@ -224,9 +224,7 @@ configure_file(input : '../bin/mangohud.in',
   configuration : conf_data,
   install_dir : get_option('bindir'),
 )
-install_data(['../data/forkawesome-webfont.ttf'],
-             install_dir : join_paths(get_option('datadir'), 'MangoHud', 'icons'),
-)
+
 if get_option('include_doc')
   install_data(
     files('../bin/MangoHud.conf'),

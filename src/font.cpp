@@ -2,6 +2,7 @@
 #include "file_utils.h"
 #include "font_default.h"
 #include "IconsForkAwesome.h"
+#include "forkawesome.h"
 void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& text_font)
 {
    auto& io = ImGui::GetIO();
@@ -60,7 +61,7 @@ void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& te
    // ImGui takes ownership of the data, no need to free it
    if (!params.font_file.empty() && file_exists(params.font_file)) {
       io.Fonts->AddFontFromFileTTF(params.font_file.c_str(), font_size, nullptr, same_font && same_size ? glyph_ranges.Data : default_range);
-      io.Fonts->AddFontFromFileTTF("/usr/share/MangoHud/icons/forkawesome-webfont.ttf", font_size, &config, icon_ranges);
+      io.Fonts->AddFontFromMemoryCompressedBase85TTF(forkawesome_compressed_data_base85, font_size, &config, icon_ranges);
       if (params.no_small_font)
          small_font = io.Fonts->Fonts[0];
       else
@@ -68,7 +69,7 @@ void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& te
    } else {
       const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
       io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size, nullptr, default_range);
-      io.Fonts->AddFontFromFileTTF("/usr/share/MangoHud/icons/forkawesome-webfont.ttf", font_size, &config, icon_ranges);
+      io.Fonts->AddFontFromMemoryCompressedBase85TTF(forkawesome_compressed_data_base85, font_size, &config, icon_ranges);
       if (params.no_small_font)
          small_font = io.Fonts->Fonts[0];
       else
