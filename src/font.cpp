@@ -22,6 +22,10 @@ void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& te
       //0x2109, 0x2109, // Degree Fahrenheit
       0,
    };
+   // Load Icon file and merge to exisitng font
+    ImFontConfig config;
+    config.MergeMode = true;
+    static const ImWchar icon_ranges[] = { ICON_MIN_FK, ICON_MAX_FK, 0 };
 
    ImVector<ImWchar> glyph_ranges;
    ImFontGlyphRangesBuilder builder;
@@ -56,13 +60,7 @@ void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& te
    // ImGui takes ownership of the data, no need to free it
    if (!params.font_file.empty() && file_exists(params.font_file)) {
       io.Fonts->AddFontFromFileTTF(params.font_file.c_str(), font_size, nullptr, same_font && same_size ? glyph_ranges.Data : default_range);
-
-      ImFontConfig config;
-      config.MergeMode = true;
-      config.GlyphMinAdvanceX = 13.0f;
-      static const ImWchar icon_ranges[] = { ICON_MIN_FK, ICON_MAX_FK, 0 };
-      io.Fonts->AddFontFromFileTTF("/usr/share/MangoHud/icons/forkawesome-webfont.ttf", 13.0f, &config, icon_ranges);
-
+      io.Fonts->AddFontFromFileTTF("/usr/share/MangoHud/icons/forkawesome-webfont.ttf", font_size, &config, icon_ranges);
       if (params.no_small_font)
          small_font = io.Fonts->Fonts[0];
       else
@@ -70,13 +68,7 @@ void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& te
    } else {
       const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
       io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size, nullptr, default_range);
-
-      ImFontConfig config;
-      config.MergeMode = true;
-      config.GlyphMinAdvanceX = 13.0f;
-      static const ImWchar icon_ranges[] = { ICON_MIN_FK, ICON_MAX_FK, 0 };
-      io.Fonts->AddFontFromFileTTF("/usr/share/MangoHud/icons/forkawesome-webfont.ttf", 13.0f, &config, icon_ranges);
-
+      io.Fonts->AddFontFromFileTTF("/usr/share/MangoHud/icons/forkawesome-webfont.ttf", font_size, &config, icon_ranges);
       if (params.no_small_font)
          small_font = io.Fonts->Fonts[0];
       else
