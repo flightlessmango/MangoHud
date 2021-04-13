@@ -5,6 +5,7 @@
 #include "memory.h"
 #include "mesa/util/macros.h"
 #include "string_utils.h"
+#include <IconsForkAwesome.h>
 
 // Cut from https://github.com/ocornut/imgui/pull/2943
 // Probably move to ImGui
