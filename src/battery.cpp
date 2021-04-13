@@ -151,26 +151,28 @@ float BatteryStats::getPower(int batt_num) {
 }
 
 bool BatteryStats::isCharging() {
-    for(int i =0; i < 2; i++) {
-        string syspath = battPath[i];
-        string status = syspath + "/status";
-        std::ifstream input(status);
-        std::string line;
+    if (numBattery() > 0) {
+        for(int i =0; i < 2; i++) {
+            string syspath = battPath[i];
+            string status = syspath + "/status";
+            std::ifstream input(status);
+            std::string line;
 
-        if(std::getline(input,line)) {
-            current_status= line;
-            state[i]=current_status;
+            if(std::getline(input,line)) {
+                current_status= line;
+                state[i]=current_status;
+            }
         }
-    }
-    for(int i =0; i < 2; i++) {
-        if (state[i] == "Charging") {
+        for(int i =0; i < 2; i++) {
+            if (state[i] == "Charging") {
             return true;
+            }
         }
     }
 
     return false;
-
 }
+
 
 bool BatteryStats::fullCharge(){
     //check if both batteries are fully charged
