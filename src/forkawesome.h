@@ -1,5 +1,7 @@
 // File: 'forkawesome-webfont.ttf' (218132 bytes)
 // Exported using binary_to_compressed_c.cpp
+#pragma once
+
 static const char forkawesome_compressed_data_base85[214910+1] =
     "7])#######91@P)'/###[),##0rC$#Q6>##T@;*>[VPlmI$g]=5g>11gZn42d%&XpG,>>#I&g<6aNV=BmXpxb-OJM'^5YY#D2XGH-VSA$NiFJ(LjK8/d_(*Hlme+M:6h]=3YN$5#-0%J"
     "a+msP.*8>,rM/m&0.d<BHk.w%%s.>-Q@pV-TT$=(^K-G&WbDE-FqEn/<_[FHv'=gu;?^01=<jl&83JuBQ:8>G#cDE-BqEn/DJ[^I&IP+%u3S>-kfWX%34^=BUkAr'X>wu#jx###^bCiF"
