@@ -76,9 +76,17 @@ void imgui_init()
       add_blacklist(item);
    }
     auto pid = getpid();
-    string command = "lsof -w -lnPX -L -p " + to_string(pid) + " | grep wined3d";
-    string ret = exec(command);
-    ret.empty() ? sw_stats.engineName = "OpenGL" : sw_stats.engineName = "WineD3D";
+    string find_wined3d = "lsof -w -lnPX -L -p " + to_string(pid) + " | grep -oh wined3d";
+    string find_zink= "lsof -w -lnPX -L -p " + to_string(pid) + " | grep -oh zink";
+    string ret_wined3d = exec(find_wined3d);
+    string ret_zink = exec(find_zink);
+    if (ret_wined3d == "wined3d\n" )
+        sw_stats.engineName = "WineD3D";
+    else if (ret_zink == "zink\n")
+        sw_stats.engineName = "ZINK";
+    else
+        sw_stats.engineName = "OpenGL";
+
     is_blacklisted(true);
     notifier.params = &params;
     start_notifier(notifier);
