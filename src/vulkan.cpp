@@ -2247,6 +2247,13 @@ static void overlay_DestroyInstance(
    destroy_instance_data(instance_data);
 }
 
+static VkResult overlay_CreateWaylandSurfaceKHR( VkInstance instance, const VkWaylandSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface )
+{
+   struct instance_data *instance_data = FIND(struct instance_data, instance);
+   std::cerr << __func__ << std::endl;
+   return instance_data->vtable.CreateWaylandSurfaceKHR( instance, pCreateInfo, pAllocator, pSurface );
+}
+
 extern "C" VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetDeviceProcAddr(VkDevice dev,
                                                                              const char *funcName);
 static const struct {
@@ -2268,6 +2275,8 @@ static const struct {
    ADD_HOOK(DestroySwapchainKHR),
 
    ADD_HOOK(QueueSubmit),
+
+   ADD_HOOK(CreateWaylandSurfaceKHR),
 
    ADD_HOOK(CreateDevice),
    ADD_HOOK(DestroyDevice),

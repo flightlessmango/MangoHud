@@ -12,6 +12,8 @@
 
 #include "imgui_hud.h"
 
+extern void* g_wl_display;
+
 using namespace MangoHud::GL;
 
 EXPORT_C_(void *) eglGetProcAddress(const char* procName);
@@ -85,15 +87,27 @@ EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf)
     return pfn_eglSwapBuffers(dpy, surf);
 }
 
+EXPORT_C_(void*) wl_display_connect(const char* dsp)
+{
+    static decltype(&wl_display_connect) pfn_wl_display_connect = nullptr;
+    if (!pfn_wl_display_connect)
+        pfn_wl_display_connect = reinterpret_cast<decltype(&wl_display_connect)> (real_dlsym(real_dlopen("libwayland-client.so.0", RTLD_LAZY | RTLD_NOW), "wl_display_connect"));
+
+    g_wl_display = pfn_wl_display_connect(dsp);
+    std::cerr << __func__ << ": " << g_wl_display << std::endl;
+    return g_wl_display;
+}
+
 struct func_ptr {
    const char *name;
    void *ptr;
 };
 
-static std::array<const func_ptr, 2> name_to_funcptr_map = {{
+static std::array<const func_ptr, 3> name_to_funcptr_map = {{
 #define ADD_HOOK(fn) { #fn, (void *) fn }
    ADD_HOOK(eglGetProcAddress),
    ADD_HOOK(eglSwapBuffers),
+   ADD_HOOK(wl_display_connect),
 #undef ADD_HOOK
 }};
 

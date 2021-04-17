@@ -12,9 +12,13 @@
 #include <errno.h>
 #include <libudev.h>
 #include <libinput.h>
+#include <cstring>
 #include <linux/input-event-codes.h>
+#include <wayland-client.h>
 
 #include "keybinds_libinput.h"
+#include "real_dlsym.h"
+#include <dlfcn.h>
 
 struct key_state {
     uint32_t key;
@@ -26,7 +30,6 @@ struct key_state {
 //F4 = 62
 //F12 = 88
 static std::mutex input_mutex;
-static std::vector<std::vector<key_state>> key_states;
 
 static int open_restricted(const char *path, int flags, void *user_data)
 {
@@ -42,19 +45,43 @@ static int open_restricted(const char *path, int flags, void *user_data)
     return fd;
 }
 
+    wl_display *display = nullptr;
+    wl_compositor *compositor = nullptr;
+    wl_shell *shell = nullptr;
+    wl_seat *seat = nullptr;
+
 static void close_restricted(int fd, void *user_data)
 {
     close(fd);
 }
 
+static void registry_add_object (void *data, struct wl_registry *registry, uint32_t name, const char *interface, uint32_t version);static void registry_remove_object (void *data, struct wl_registry *registry, uint32_t name);
+static struct wl_registry_listener registry_listener = {&registry_add_object, &registry_remove_object};
+void *g_wl_display = nullptr;
+
 struct input_reader {
     bool quit = false;
     std::thread thread;
     bool thread_started = false;
-    input_reader()
+    std::vector<std::vector<key_state>> key_states;
+
+    wl_display *display = nullptr;
+    wl_compositor *compositor = nullptr;
+    wl_shell *shell = nullptr;
+    wl_seat *seat = nullptr;
+
+    input_reader(const std::vector<std::vector<key_state>>& key_states_)
+    : key_states(key_states_)
     {
+        std::cerr << __func__ << "  " << g_wl_display << "\n";
+        if (!g_wl_display) return;
+        display = (wl_display*) g_wl_display;
         thread_started = true;
-        thread = std::thread(&input_reader::event_thread, this);
+        //display = wl_display_connect (nullptr);
+        struct wl_registry *registry = wl_display_get_registry (display);
+        wl_registry_add_listener (registry, &registry_listener, nullptr);
+        wl_display_roundtrip (display);
+        //thread = std::thread(&input_reader::event_thread, this);
     }
 
     ~input_reader()
@@ -62,14 +89,14 @@ struct input_reader {
         quit = true;
         if (thread.joinable())
             thread.join();
-
-        // Clear keybinds so we don't falsely assume that their states are legit
-        std::lock_guard<std::mutex> lk(input_mutex);
-        key_states.clear();
     }
 
     void event_thread()
     {
+        //while (!quit) {
+        //    wl_display_dispatch_pending (display);
+        //}
+        return;
         static struct libinput_interface interface;
         interface.open_restricted = open_restricted;
         interface.close_restricted = close_restricted;
@@ -136,6 +163,65 @@ struct input_reader {
 };
 
 static std::unique_ptr<input_reader> libinput_thread;
+
+
+static void keyboard_keymap (void *data, struct wl_keyboard *keyboard, uint32_t format, int32_t fd, uint32_t size) {
+    std::cerr << __func__ << "\n";
+}
+
+static void keyboard_enter (void *data, struct wl_keyboard *keyboard, uint32_t serial, struct wl_surface *surface, struct wl_array *keys) {
+    std::cerr << __func__ << "\n";
+}
+
+static void keyboard_leave (void *data, struct wl_keyboard *keyboard, uint32_t serial, struct wl_surface *surface) {
+    std::cerr << __func__ << "\n";
+}
+
+static void keyboard_key (void *data, struct wl_keyboard *keyboard, uint32_t serial, uint32_t time, uint32_t key, uint32_t state) {
+    std::cerr << "Key pressed " << key <<"\n";
+    std::lock_guard<std::mutex> lk(input_mutex);
+    if (libinput_thread){
+        for (auto& ks : libinput_thread->key_states)
+        {
+            for (auto& k : ks) {
+                if (k.key == key)
+                {
+                    k.pressed = (state == WL_KEYBOARD_KEY_STATE_PRESSED);
+                }
+            }
+        }
+    }
+}
+
+static void keyboard_modifiers (void *data, struct wl_keyboard *keyboard, uint32_t serial, uint32_t mods_depressed, uint32_t mods_latched, uint32_t mods_locked, uint32_t group) {
+    std::cerr << __func__ << "\n";
+}
+
+static struct wl_keyboard_listener keyboard_listener = {&keyboard_keymap, &keyboard_enter, &keyboard_leave, &keyboard_key, &keyboard_modifiers};
+
+static void seat_capabilities (void *data, struct wl_seat *seat, uint32_t capabilities) {
+    std::cerr << __func__ << "\n";
+    if (capabilities & WL_SEAT_CAPABILITY_KEYBOARD) {
+        std::cerr << "SEAT\n";
+        struct wl_keyboard *keyboard = wl_seat_get_keyboard (seat);
+        wl_keyboard_add_listener (keyboard, &keyboard_listener, NULL);
+    }
+}
+static struct wl_seat_listener seat_listener = {&seat_capabilities};
+
+static void registry_add_object (void *data, struct wl_registry *registry, uint32_t name, const char *interface, uint32_t version) {
+    std::cerr << __func__ << ": interface: " << interface << "\n";
+    if (!strcmp(interface,"wl_seat")) {
+        //input_reader* ir = wl_registry_get_user_data(registry);
+        seat = (wl_seat*)wl_registry_bind (registry, name, &wl_seat_interface, 1);
+
+        std::cerr << "\t wl_seat_add_listener " <<  wl_proxy_get_listener((wl_proxy*)seat)  <<"\n";
+        wl_seat_add_listener (seat, &seat_listener, NULL);
+    }
+}
+static void registry_remove_object (void *data, struct wl_registry *registry, uint32_t name) {
+
+}
 
 const std::map<uint16_t, uint8_t> input_map_x11_to_linux = {
     {0x20, 0x39}, /* x11:32 (XK_space) -> linux:57 (KEY_SPACE) */
@@ -320,7 +406,7 @@ void start_input(const overlay_params& params)
         return;
 
     std::lock_guard<std::mutex> lk(input_mutex);
-    key_states.clear();
+    std::vector<std::vector<key_state>> key_states;
     key_states.push_back(get_linux_key(params.toggle_hud));
     key_states.push_back(get_linux_key(params.toggle_logging));
     key_states.push_back(get_linux_key(params.reload_cfg));
@@ -328,7 +414,7 @@ void start_input(const overlay_params& params)
     key_states.push_back(get_linux_key(params.upload_logs));
     key_states.push_back(get_linux_key(params.toggle_fps_limit));
 
-    libinput_thread = std::make_unique<input_reader>();
+    libinput_thread = std::make_unique<input_reader>(key_states);
 }
 
 bool libinput_key_is_pressed(std::vector<KeySym> x11_keybinds)
@@ -341,7 +427,7 @@ bool libinput_key_is_pressed(std::vector<KeySym> x11_keybinds)
     if (keybinds.empty())
         return false;
 
-    for (const auto& ks : key_states)
+    for (const auto& ks : libinput_thread->key_states)
     {
         if (ks.size() != keybinds.size())
             continue;

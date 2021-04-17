@@ -158,6 +158,7 @@ build() {
         configure $@
     fi
     DESTDIR="$PWD/build/release" ninja -C build/meson64 install
+	set +e
     DESTDIR="$PWD/build/release" ninja -C build/meson32 install
 }
 

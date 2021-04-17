@@ -89,9 +89,9 @@ vulkan_wsi_deps = []
 if is_unixy
   dep_x11 = dependency('x11', required: get_option('with_x11'))
   # Not needed right now
-  #dep_wayland_client = dependency('wayland-client',
-  #    required: get_option('with_wayland'), version : '>=1.11')
-  dep_wayland_client = null_dep
+  dep_wayland_client = dependency('wayland-client',
+      required: get_option('with_wayland'), version : '>=1.11')
+  #dep_wayland_client = null_dep
   dbus_dep = dependency('dbus-1', required: get_option('with_dbus')).partial_dependency(compile_args : true, includes : true)
   # Support 32bit only if library is found
   cc_input_dep = cc.find_library('libinput', required: false)
