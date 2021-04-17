@@ -65,6 +65,12 @@ If you are using Debian 11 or later, to install the [MangoHud](https://tracker.d
 sudo apt install mangohud
 ```
 
+Optionally, if you also need MangoHud for 32-bit applications, execute:
+
+```
+sudo apt install mangohud:i386
+```
+
 #### Fedora
 
 If you are using Fedora, to install the [MangoHud](https://src.fedoraproject.org/rpms/mangohud) package, execute:
