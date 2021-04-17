@@ -2269,6 +2269,31 @@ static void overlay_DestroyInstance(
    destroy_instance_data(instance_data);
 }
 
+static VkResult overlay_CreateSampler(
+	VkDevice                     device,
+	const VkSamplerCreateInfo*   pCreateInfo,
+	const VkAllocationCallbacks* pAllocator,
+	VkSampler*                   pSampler)
+{
+	VkSamplerCreateInfo* newPCreateInfo = (VkSamplerCreateInfo*)pCreateInfo;
+   struct device_data *device_data = FIND(struct device_data, device);
+   if (getenv("MANGOHUD_SAMPLER")){
+      printf("mangohud modified vulkan sampler\n");
+      newPCreateInfo->mipLodBias = 1000.0f;
+      newPCreateInfo->maxAnisotropy = 1.0f;
+      newPCreateInfo->anisotropyEnable = VK_FALSE;
+      // newPCreateInfo->magFilter = VK_FILTER_NEAREST;
+      // newPCreateInfo->minFilter = VK_FILTER_NEAREST;
+      // newPCreateInfo->mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+   }
+	VkResult result = device_data->vtable.CreateSampler(device, newPCreateInfo, pAllocator, pSampler);
+
+	if (result != VK_SUCCESS) {
+		return result;
+	}
+	return result;
+}
+
 extern "C" VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetDeviceProcAddr(VkDevice dev,
                                                                              const char *funcName);
 static const struct {
@@ -2284,7 +2309,8 @@ static const struct {
    ADD_HOOK(BeginCommandBuffer),
    ADD_HOOK(EndCommandBuffer),
    ADD_HOOK(CmdExecuteCommands),
-
+   ADD_HOOK(CreateSampler),
+   
    ADD_HOOK(CreateSwapchainKHR),
    ADD_HOOK(QueuePresentKHR),
    ADD_HOOK(DestroySwapchainKHR),
