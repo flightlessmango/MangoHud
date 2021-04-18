@@ -25,6 +25,11 @@ else
   conf_data.set('ld_libdir_mangohud', ld_libdir_mangohud)
 endif
 
+ld_libdir_mangohud_vk = ''
+if get_option('prepend_libdir_vk')
+  ld_libdir_mangohud_vk = ld_libdir_mangohud
+endif
+
 overlay_shaders = [
   'overlay.frag',
   'overlay.vert',
@@ -207,7 +212,7 @@ endif
 
 configure_file(input : 'mangohud.json.in',
   output : '@0@.json'.format(meson.project_name()),
-  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud,
+  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud_vk,
                   'PROJECT_NAME' : meson.project_name().to_upper()},
   install : true,
   install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
