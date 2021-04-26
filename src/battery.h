@@ -12,7 +12,7 @@ class BatteryStats{
         void findFiles();
         void update();
         float getPower(int num);
-        float getPercent(int num);
+        float getPercent();
         bool isCharging();
         bool fullCharge();
         std::vector<std::string> battPath;
