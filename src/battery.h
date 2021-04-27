@@ -19,6 +19,7 @@ class BatteryStats{
         float current_percent = 0;
         string current_status="";
         string state [2];
+        int batt_count=0;
 
 };
 

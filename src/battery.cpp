@@ -13,22 +13,24 @@ int BatteryStats::numBattery() {
     for (auto& p : fs::directory_iterator(path)) {
         string fileName = p.path().filename();
         if (fileName.find("BAT") != std::string::npos) {
-            battPath[batteryCount]=p.path();
+            battPath[batteryCount] = p.path();
             batteryCount += 1;
         }
     }
+    batt_count = batteryCount;
     return batteryCount;
 }
 
 
 void BatteryStats::update() {
-    current_watt = getPower();
-    current_percent = getPercent();
+    if (numBattery() > 0 ) {
+        current_watt = getPower();
+        current_percent = getPercent();
+    }
 }
 
 float BatteryStats::getPercent()
 {
-    int batt_count = numBattery();
     float charge_n = 0;
     float charge_f = 0;
     for(int i =0; i < batt_count; i++) {
@@ -80,7 +82,6 @@ float BatteryStats::getPercent()
 }
 
 float BatteryStats::getPower() {
-    int batt_count = numBattery();
     float current = 0;
     float voltage = 0;
     for(int i =0; i < batt_count; i++) {
@@ -117,7 +118,6 @@ float BatteryStats::getPower() {
 }
 
 bool BatteryStats::isCharging() {
-    int batt_count = numBattery();
     if (batt_count > 0) {
         for(int i =0; i < batt_count; i++) {
             string syspath = battPath[i];
@@ -142,7 +142,6 @@ bool BatteryStats::isCharging() {
 
 bool BatteryStats::fullCharge(){
     //check if both batteries are fully charged
-    int batt_count = numBattery();
     int charged =0;
     for(int i =0; i < batt_count; i++) {
         if (state[i] == "Full") {
