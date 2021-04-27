@@ -151,7 +151,11 @@ bool BatteryStats::fullCharge(){
             charged +=1;
         }
     }
-    if (charged == 2) {
+    if (charged == 1 && batt_count == 1) {
+        return true;
+    }
+
+    else if (charged == 2 && batt_count == 2) {
         return true;
     }
 
