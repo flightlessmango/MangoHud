@@ -13,8 +13,8 @@ int BatteryStats::numBattery() {
     for (auto& p : fs::directory_iterator(path)) {
         string fileName = p.path().filename();
         if (fileName.find("BAT") != std::string::npos) {
+            battPath[batteryCount]=p.path();
             batteryCount += 1;
-            battPath.push_back(p.path());
         }
     }
     return batteryCount;
@@ -22,10 +22,8 @@ int BatteryStats::numBattery() {
 
 
 void BatteryStats::update() {
-    if (numBattery() > 0) {
-        current_watt = getPower();
-        current_percent = getPercent();
-    }
+    current_watt = getPower();
+    current_percent = getPercent();
 }
 
 float BatteryStats::getPercent()
@@ -86,7 +84,7 @@ float BatteryStats::getPower() {
     float current = 0;
     float voltage = 0;
     for(int i =0; i < batt_count; i++) {
-        string syspath = battPath[batt_count];
+        string syspath = battPath[i];
         string current_power = syspath + "/current_now";
         string current_voltage = syspath + "/voltage_now";
         string power_now = syspath + "/power_now";

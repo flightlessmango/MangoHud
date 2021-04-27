@@ -14,7 +14,7 @@ class BatteryStats{
         float getPercent();
         bool isCharging();
         bool fullCharge();
-        std::vector<std::string> battPath;
+        string battPath[2];
         float current_watt = 0;
         float current_percent = 0;
         string current_status="";
