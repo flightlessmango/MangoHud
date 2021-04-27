@@ -9,16 +9,14 @@
 class BatteryStats{
     public:
         int numBattery();
-        void findFiles();
         void update();
-        float getPower(int num);
+        float getPower();
         float getPercent();
         bool isCharging();
         bool fullCharge();
         std::vector<std::string> battPath;
         float current_watt = 0;
         float current_percent = 0;
-        float bat_percent [2][2];
         string current_status="";
         string state [2];
 

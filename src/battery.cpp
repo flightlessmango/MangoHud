@@ -23,17 +23,8 @@ int BatteryStats::numBattery() {
 
 void BatteryStats::update() {
     if (numBattery() > 0) {
-        if (numBattery() == 1) {
-            current_watt = getPower(0);
-            current_percent = getPercent();
-        }
-
-        else if (numBattery() == 2) {
-            float bat1_power = getPower(0);
-            float bat2_power = getPower(1);
-            current_watt = (bat1_power + bat2_power);
-            current_percent = getPercent();
-        }
+        current_watt = getPower();
+        current_percent = getPercent();
     }
 }
 
@@ -51,13 +42,11 @@ float BatteryStats::getPercent()
         string capacity = syspath + "/capacity";
 
         if (fs::exists(charge_now)) {
-
             std::ifstream input(charge_now);
             std::string line;
             if(std::getline(input, line)) {
                 charge_n += (stof(line) / 1000000);
             }
-
             std::ifstream input2(charge_full);
             if(std::getline(input2, line)) {
                 charge_f += (stof(line) / 1000000);
@@ -71,7 +60,6 @@ float BatteryStats::getPercent()
             if(std::getline(input, line)) {
                 charge_n += (stof(line) / 1000000);
             }
-
             std::ifstream input2(energy_full);
             if(std::getline(input2, line)) {
                 charge_f += (stof(line) / 1000000);
@@ -86,69 +74,64 @@ float BatteryStats::getPercent()
             std::string line;
             if(std::getline(input, line)) {
                 charge_n += stof(line) / 100;
-                charge_f =1;
+                charge_f = batt_count;
             }
-
         }
     }
     return (charge_n / charge_f) * 100;
 }
 
-float BatteryStats::getPower(int batt_num) {
-    string syspath = battPath[batt_num];
-    string current_power = syspath + "/current_now";
-    string current_voltage = syspath + "/voltage_now";
-    string power_now = syspath + "/power_now";
+float BatteryStats::getPower() {
+    int batt_count = numBattery();
+    float current = 0;
+    float voltage = 0;
+    for(int i =0; i < batt_count; i++) {
+        string syspath = battPath[batt_count];
+        string current_power = syspath + "/current_now";
+        string current_voltage = syspath + "/voltage_now";
+        string power_now = syspath + "/power_now";
 
-    if (isCharging()) {
-        return 0;
-    }
-
-    else if (fs::exists(current_power)) {
-        float current = 0;
-        float voltage = 0;
-
-        std::ifstream input(current_power);
-        std::string line;
-
-        if(std::getline(input,line)) {
-            current = (stof(line) / 1000000);
-        }
-        std::ifstream input2(current_voltage);
-        if(std::getline(input2, line)) {
-            voltage = (stof(line) / 1000000);
+        if (isCharging()) {
+            return 0;
         }
 
-        return current * voltage;
-    }
-    else  {
-        float power = 0;
-        std::ifstream input(power_now);
-        std::string line;
-        if(std::getline(input,line)) {
-            power = (stof(line) / 1000000);
+        else if (fs::exists(current_power)) {
+            std::ifstream input(current_power);
+            std::string line;
+            if(std::getline(input,line)) {
+                current += (stof(line) / 1000000);
+            }
+            std::ifstream input2(current_voltage);
+            if(std::getline(input2, line)) {
+                voltage += (stof(line) / 1000000);
+            }
         }
-
-        return power;
-
+        else  {
+            std::ifstream input(power_now);
+            std::string line;
+            if(std::getline(input,line)) {
+                current += (stof(line) / 1000000);
+                voltage = 1;
+            }
+        }
     }
-
+    return current * voltage;
 }
 
 bool BatteryStats::isCharging() {
-    if (numBattery() > 0) {
-        for(int i =0; i < 2; i++) {
+    int batt_count = numBattery();
+    if (batt_count > 0) {
+        for(int i =0; i < batt_count; i++) {
             string syspath = battPath[i];
             string status = syspath + "/status";
             std::ifstream input(status);
             std::string line;
-
             if(std::getline(input,line)) {
                 current_status= line;
                 state[i]=current_status;
             }
         }
-        for(int i =0; i < 2; i++) {
+        for(int i =0; i < batt_count; i++) {
             if (state[i] == "Charging") {
             return true;
             }
@@ -161,8 +144,9 @@ bool BatteryStats::isCharging() {
 
 bool BatteryStats::fullCharge(){
     //check if both batteries are fully charged
+    int batt_count = numBattery();
     int charged =0;
-    for(int i =0; i < 2; i++) {
+    for(int i =0; i < batt_count; i++) {
         if (state[i] == "Full") {
             charged +=1;
         }
