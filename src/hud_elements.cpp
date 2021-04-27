@@ -579,41 +579,42 @@ void HudElements::vkbasalt(){
 }
 
 void HudElements::battery_percent(){
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_percent]){
-        ImGui::TableNextRow(); ImGui::TableNextColumn();
-        ImGui::TextColored(HUDElements.colors.battery, "BATT");
-        ImGui::TableNextColumn();
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", Battery_Stats.current_percent);
-        ImGui::SameLine(0,1.0f);
-        ImGui::Text("%%");
-
-      }
-
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_percent] && HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_power]){
-        ImGui::TableNextColumn();
-        if (Battery_Stats.isCharging()) {
-            switch(int(Battery_Stats.current_percent)){
-                case 0 ... 33:
-                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_QUARTER);
-                    break;
-                case 34 ... 66:
-                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_HALF);
-                    break;
-                case 67 ... 99:
-                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_THREE_QUARTERS);
-                    break;
-            }
-        }
-
-        else if(Battery_Stats.fullCharge() && !Battery_Stats.isCharging()) {
-           right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_FULL);
-        }
-        else {
-            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", Battery_Stats.current_watt);
+    if (Battery_Stats.batt_count > 0) {
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_percent]){
+            ImGui::TableNextRow(); ImGui::TableNextColumn();
+            ImGui::TextColored(HUDElements.colors.battery, "BATT");
+            ImGui::TableNextColumn();
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", Battery_Stats.current_percent);
             ImGui::SameLine(0,1.0f);
-            ImGui::PushFont(HUDElements.sw_stats->font1);
-            ImGui::Text("W");
-            ImGui::PopFont();
+            ImGui::Text("%%");
+        }
+
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_percent] && HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_power]){
+            ImGui::TableNextColumn();
+            if (Battery_Stats.isCharging()) {
+                switch(int(Battery_Stats.current_percent)){
+                    case 0 ... 33:
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_QUARTER);
+                        break;
+                    case 34 ... 66:
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_HALF);
+                        break;
+                    case 67 ... 99:
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_THREE_QUARTERS);
+                        break;
+                }
+            }
+
+            else if(Battery_Stats.fullCharge() && !Battery_Stats.isCharging()) {
+               right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_FULL);
+            }
+            else {
+                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", Battery_Stats.current_watt);
+                ImGui::SameLine(0,1.0f);
+                ImGui::PushFont(HUDElements.sw_stats->font1);
+                ImGui::Text("W");
+                ImGui::PopFont();
+            }
         }
     }
 }
