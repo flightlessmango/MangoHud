@@ -613,12 +613,9 @@ parse_overlay_config(struct overlay_params *params,
    params->cellpadding_y = -0.085;
    params->fps_color = { 0xb22222, 0xfdfd09, 0x39f900 };
    params->fps_value = { 30, 60 };
-<<<<<<< HEAD
    params->round_corners = 0;
-=======
    params->battery_color =0xff9078;
 
->>>>>>> b46f261 (Add param to check battery power and percent)
 
 
 #ifdef HAVE_X11

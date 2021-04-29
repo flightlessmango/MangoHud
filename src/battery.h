@@ -8,7 +8,7 @@
 
 class BatteryStats{
     public:
-        int numBattery();
+        void numBattery();
         void update();
         float getPower();
         float getPercent();
@@ -20,6 +20,7 @@ class BatteryStats{
         string current_status="";
         string state [2];
         int batt_count=0;
+        bool batt_check = false;
 
 };
 

@@ -4,10 +4,10 @@
 
 namespace fs = ghc::filesystem;
 
-int BatteryStats::numBattery() {
+void BatteryStats::numBattery() {
     int batteryCount = 0;
     if (!fs::exists("/sys/class/power_supply/")) {
-        return batteryCount = 0;
+         batteryCount = 0;
     }
     fs::path path("/sys/class/power_supply/");
     for (auto& p : fs::directory_iterator(path)) {
@@ -18,15 +18,22 @@ int BatteryStats::numBattery() {
         }
     }
     batt_count = batteryCount;
-    return batteryCount;
+    batt_check = true;
 }
 
 
 void BatteryStats::update() {
-    if (numBattery() > 0 ) {
-        current_watt = getPower();
-        current_percent = getPercent();
+    if (!batt_check) {
+        numBattery();
+        if (batt_count == 0) {
+            std::cerr<<"MANGOHUD: No battery found\n";
+        }
     }
+
+     if (batt_count > 0) {
+            current_watt = getPower();
+            current_percent = getPercent();
+        }
 }
 
 float BatteryStats::getPercent()
