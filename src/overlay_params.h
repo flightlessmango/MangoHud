@@ -134,6 +134,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(table_columns)               \
    OVERLAY_PARAM_CUSTOM(blacklist)                   \
    OVERLAY_PARAM_CUSTOM(autostart_log)               \
+   OVERLAY_PARAM_CUSTOM(round_corners)               \
 
 
 enum overlay_param_position {
@@ -195,6 +196,7 @@ struct overlay_params {
    unsigned width;
    unsigned height;
    int offset_x, offset_y;
+   float round_corners;
    unsigned vsync;
    int gl_vsync;
    int gl_bind_framebuffer {-1};

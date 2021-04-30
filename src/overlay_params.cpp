@@ -409,6 +409,7 @@ parse_gl_size_query(const char *str)
 #define parse_autostart_log(s) parse_unsigned(s)
 #define parse_gl_bind_framebuffer(s) parse_unsigned(s)
 #define parse_gl_dont_flip(s) parse_unsigned(s) != 0
+#define parse_round_corners(s) parse_unsigned(s)
 
 #define parse_cpu_color(s) parse_color(s)
 #define parse_gpu_color(s) parse_color(s)
@@ -611,7 +612,7 @@ parse_overlay_config(struct overlay_params *params,
    params->cellpadding_y = -0.085;
    params->fps_color = { 0xb22222, 0xfdfd09, 0x39f900 };
    params->fps_value = { 30, 60 };
-
+   params->round_corners = 0;
 
 
 #ifdef HAVE_X11

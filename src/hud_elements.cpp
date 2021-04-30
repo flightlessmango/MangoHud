@@ -81,6 +81,7 @@ void HudElements::convert_colors(struct overlay_params& params)
     style.Colors[ImGuiCol_WindowBg]  = convert(params.background_color);
     style.Colors[ImGuiCol_Text] = convert(params.text_color);
     style.CellPadding.y = params.cellpadding_y * real_font_size.y;
+    style.WindowRounding = params.round_corners;
 }
 
 void HudElements::convert_colors(bool do_conv, struct overlay_params& params)
