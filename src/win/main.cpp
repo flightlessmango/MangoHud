@@ -59,6 +59,7 @@ int MainThread()
     ConsoleSetup();
     printf("MangoHud Attached!\n");
     renderTypes();
+    init_ogl();
     if (!render_types.empty()){
         impl::d3d11::init();
         impl::d3d12::init();

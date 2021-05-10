@@ -9,7 +9,7 @@
 #define KIERO_INCLUDE_D3D10  0 // 1 if you need D3D10 hook
 #define KIERO_INCLUDE_D3D11  1 // 1 if you need D3D11 hook
 #define KIERO_INCLUDE_D3D12  1 // 1 if you need D3D12 hook
-#define KIERO_INCLUDE_OPENGL 0 // 1 if you need OpenGL hook
+#define KIERO_INCLUDE_OPENGL 1 // 1 if you need OpenGL hook
 #define KIERO_INCLUDE_VULKAN 1 // 1 if you need Vulkan hook
 #define KIERO_USE_MINHOOK    1 // 1 if you will use kiero::bind function
 
@@ -76,3 +76,5 @@ namespace kiero
 }
 
 #endif // __KIERO_H__
+
+extern void init_ogl();

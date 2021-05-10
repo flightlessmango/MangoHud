@@ -57,6 +57,7 @@ if ['windows', 'mingw'].contains(host_machine.system())
     'win/d3d12_hook.cpp',
     'win/d3d11_hook.cpp',
     'win/d3d_shared.cpp',
+    'win/ogl_hook.cpp',
   )
 endif
 
