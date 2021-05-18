@@ -257,39 +257,6 @@ bool CPUStats::UpdateCpuTemp() {
     return ret;
 }
 
-static bool get_cpu_power_k10temp(CPUPowerData* cpuPowerData, int& power) {
-    CPUPowerData_k10temp* powerData_k10temp = (CPUPowerData_k10temp*)cpuPowerData;
-
-    if (!powerData_k10temp->coreVoltageFile || !powerData_k10temp->coreCurrentFile || !powerData_k10temp->socVoltageFile || !powerData_k10temp->socCurrentFile)
-        return false;
-
-    rewind(powerData_k10temp->coreVoltageFile);
-    rewind(powerData_k10temp->coreCurrentFile);
-    rewind(powerData_k10temp->socVoltageFile);
-    rewind(powerData_k10temp->socCurrentFile);
-
-    fflush(powerData_k10temp->coreVoltageFile);
-    fflush(powerData_k10temp->coreCurrentFile);
-    fflush(powerData_k10temp->socVoltageFile);
-    fflush(powerData_k10temp->socCurrentFile);
-
-    int coreVoltage, coreCurrent;
-    int socVoltage, socCurrent;
-
-    if (fscanf(powerData_k10temp->coreVoltageFile, "%d", &coreVoltage) != 1)
-        return false;
-    if (fscanf(powerData_k10temp->coreCurrentFile, "%d", &coreCurrent) != 1)
-        return false;
-    if (fscanf(powerData_k10temp->socVoltageFile, "%d", &socVoltage) != 1)
-        return false;
-    if (fscanf(powerData_k10temp->socCurrentFile, "%d", &socCurrent) != 1)
-        return false;
-
-    power = (coreVoltage * coreCurrent + socVoltage * socCurrent) / 1000000;
-
-    return true;
-}
-
 static bool get_cpu_power_zenpower(CPUPowerData* cpuPowerData, int& power) {
     CPUPowerData_zenpower* powerData_zenpower = (CPUPowerData_zenpower*)cpuPowerData;
 
@@ -346,9 +313,6 @@ bool CPUStats::UpdateCpuPower() {
     int power = 0;
 
     switch(m_cpuPowerData->source) {
-        case CPU_POWER_K10TEMP:
-            if (!get_cpu_power_k10temp(m_cpuPowerData.get(), power)) return false;
-            break;
         case CPU_POWER_ZENPOWER:
             if (!get_cpu_power_zenpower(m_cpuPowerData.get(), power)) return false;
             break;
@@ -466,32 +430,6 @@ static bool find_input(const std::string& path, const char* input_prefix, std::s
     return false;
 }
 
-CPUPowerData_k10temp* init_cpu_power_data_k10temp(const std::string path) {
-    auto powerData = std::make_unique<CPUPowerData_k10temp>();
-
-    std::string coreVoltageInput, coreCurrentInput;
-    std::string socVoltageInput, socCurrentInput;
-
-    if(!find_input(path, "in", coreVoltageInput, "Vcore")) return nullptr;
-    if(!find_input(path, "curr", coreCurrentInput, "Icore")) return nullptr;
-    if(!find_input(path, "in", socVoltageInput, "Vsoc")) return nullptr;
-    if(!find_input(path, "curr", socCurrentInput, "Isoc")) return nullptr;
-
-#ifndef NDEBUG
-    std::cerr << "hwmon: using input: " << coreVoltageInput << std::endl;
-    std::cerr << "hwmon: using input: " << coreCurrentInput << std::endl;
-    std::cerr << "hwmon: using input: " << socVoltageInput << std::endl;
-    std::cerr << "hwmon: using input: " << socCurrentInput << std::endl;
-#endif
-
-    powerData->coreVoltageFile = fopen(coreVoltageInput.c_str(), "r");
-    powerData->coreCurrentFile = fopen(coreCurrentInput.c_str(), "r");
-    powerData->socVoltageFile = fopen(socVoltageInput.c_str(), "r");
-    powerData->socCurrentFile = fopen(socCurrentInput.c_str(), "r");
-
-    return powerData.release();
-}
-
 CPUPowerData_zenpower* init_cpu_power_data_zenpower(const std::string path) {
     auto powerData = std::make_unique<CPUPowerData_zenpower>();
 
@@ -538,10 +476,7 @@ bool CPUStats::InitCpuPowerData() {
 #ifndef NDEBUG
         std::cerr << "hwmon: sensor name: " << name << std::endl;
 #endif
-        if (name == "k10temp") {
-            cpuPowerData = (CPUPowerData*)init_cpu_power_data_k10temp(path);
-            break;
-        } else if (name == "zenpower") {
+        if (name == "zenpower") {
             cpuPowerData = (CPUPowerData*)init_cpu_power_data_zenpower(path);
             break;
         }

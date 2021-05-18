@@ -43,35 +43,12 @@ typedef struct CPUData_ {
 } CPUData;
 
 enum {
-   CPU_POWER_K10TEMP,
    CPU_POWER_ZENPOWER,
    CPU_POWER_RAPL
 };
 
 struct CPUPowerData {
    int source;
-};
-
-struct CPUPowerData_k10temp : public CPUPowerData {
-   CPUPowerData_k10temp() {
-      this->source = CPU_POWER_K10TEMP;
-   };
-
-   ~CPUPowerData_k10temp() {
-      if(this->coreVoltageFile)
-         fclose(this->coreVoltageFile);
-      if(this->coreCurrentFile)
-         fclose(this->coreCurrentFile);
-      if(this->socVoltageFile)
-         fclose(this->socVoltageFile);
-      if(this->socCurrentFile)
-         fclose(this->socCurrentFile);
-   };
-
-   FILE* coreVoltageFile {nullptr};
-   FILE* coreCurrentFile {nullptr};
-   FILE* socVoltageFile {nullptr};
-   FILE* socCurrentFile {nullptr};
 };
 
 struct CPUPowerData_zenpower : public CPUPowerData {
