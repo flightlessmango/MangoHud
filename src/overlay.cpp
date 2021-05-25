@@ -19,7 +19,7 @@ struct fps_limit fps_limit_stats {};
 ImVec2 real_font_size;
 std::vector<logData> graph_data;
 
-void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID)
+void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID,int32_t deviceID)
 {
    if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
       cpuStats.UpdateCPUData();
@@ -35,10 +35,10 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
    }
    if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || logger->is_active()) {
       if (vendorID == 0x1002)
-         getAmdGpuInfo();
+         getAmdGpuInfo(deviceID);
 
       if (vendorID == 0x10de)
-         getNvidiaGpuInfo();
+         getNvidiaGpuInfo(deviceID);
    }
 
    // get ram usage/max
@@ -50,11 +50,11 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
       getIoStats(&sw_stats.io);
 #endif
 
-   currentLogData.gpu_load = gpu_info.load;
-   currentLogData.gpu_temp = gpu_info.temp;
-   currentLogData.gpu_core_clock = gpu_info.CoreClock;
-   currentLogData.gpu_mem_clock = gpu_info.MemClock;
-   currentLogData.gpu_vram_used = gpu_info.memoryUsed;
+  currentLogData.gpu_load = gpu_info[deviceID].load;
+   currentLogData.gpu_temp = gpu_info[deviceID].temp;
+   currentLogData.gpu_core_clock = gpu_info[deviceID].CoreClock;
+   currentLogData.gpu_mem_clock = gpu_info[deviceID].MemClock;
+   currentLogData.gpu_vram_used = gpu_info[deviceID].memoryUsed;
 #ifdef __gnu_linux__
    currentLogData.ram_used = memused;
 #endif
@@ -64,12 +64,12 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
    // Save data for graphs
    if (graph_data.size() > 50)
       graph_data.erase(graph_data.begin());
-   graph_data.push_back({0, 0, cpuStats.GetCPUDataTotal().percent, gpu_info.load, cpuStats.GetCPUDataTotal().temp,
-                        gpu_info.temp, gpu_info.CoreClock, gpu_info.MemClock, gpu_info.memoryUsed, memused});
+   graph_data.push_back({0, 0, cpuStats.GetCPUDataTotal().percent, gpu_info[deviceID].load, cpuStats.GetCPUDataTotal().temp,
+                        gpu_info[deviceID].temp, gpu_info[deviceID].CoreClock, gpu_info[deviceID].MemClock, gpu_info[deviceID].memoryUsed, memused});
    logger->notify_data_valid();
 }
 
-void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
+void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID,int32_t deviceID){
    uint32_t f_idx = sw_stats.n_frames % ARRAY_SIZE(sw_stats.frames_stats);
    uint64_t now = os_time_get(); /* us */
    double elapsed = (double)(now - sw_stats.last_fps_update); /* us */
@@ -84,7 +84,7 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
 
    frametime = now - sw_stats.last_present_time;
    if (elapsed >= params.fps_sampling_period) {
-      std::thread(update_hw_info, std::ref(sw_stats), std::ref(params), vendorID).detach();
+      std::thread(update_hw_info, std::ref(sw_stats), std::ref(params), vendorID,deviceID).detach();
       sw_stats.fps = fps;
 
       if (params.enabled[OVERLAY_PARAM_ENABLED_time]) {
