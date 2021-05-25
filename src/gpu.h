@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <unordered_map>
 #include <cstdint>
+#include <string>
 
 struct amdgpu_files
 {
@@ -20,7 +21,7 @@ struct amdgpu_files
 extern std::unordered_map<int32_t, amdgpu_files> amdgpu;
 
 struct gpuInfo{
-    int32_t deviceID;
+    std::string deviceName;
     int load;
     int temp;
     float memoryUsed;

@@ -104,12 +104,14 @@ void HudElements::gpu_stats(){
     for(auto per_gpu_info: gpu_info){
          if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
         ImGui::TableNextRow();
-        const char* gpu_text;
+        
+        std::string gpu_text;
         if (HUDElements.params->gpu_text.empty())
-            gpu_text = "GPU";
+            gpu_text = "GPU " + per_gpu_info.second.deviceName;
         else
             gpu_text = HUDElements.params->gpu_text.c_str();
-        ImGui::TextColored(HUDElements.colors.gpu, "%s", gpu_text);
+        ImGui::TextColored(HUDElements.colors.gpu, "%s", gpu_text.c_str());
+        ImGui::TableNextRow();
         ImGui::TableNextCell();
         auto text_color = HUDElements.colors.text;
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_load_change]){
@@ -285,7 +287,8 @@ void HudElements::vram(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_vram]){
         for(auto per_gpu_info : gpu_info){
             ImGui::TableNextRow();
-        ImGui::TextColored(HUDElements.colors.vram, "VRAM" );
+        ImGui::TextColored(HUDElements.colors.vram, "VRAM %s",per_gpu_info.second.deviceName.c_str() );
+        ImGui::TableNextRow();
         ImGui::TableNextCell();
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", per_gpu_info.second.memoryUsed);
         ImGui::SameLine(0,1.0f);

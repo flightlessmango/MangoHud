@@ -1754,6 +1754,7 @@ void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats&
       for (char c: chars)
          desc.erase(remove(desc.begin(), desc.end(), c), desc.end());
    }
+   gpu_info[deviceID].deviceName = desc;
    sw_stats.gpuName = desc;
    trim(sw_stats.gpuName);
 #endif
