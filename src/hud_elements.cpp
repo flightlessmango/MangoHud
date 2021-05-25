@@ -548,9 +548,11 @@ void HudElements::graphs(){
             arr.erase(arr.begin());
         }
 
-        HUDElements.max = gpu_info[0].memoryTotal;
+        for(auto per_gpu_info: gpu_info){
+            HUDElements.max = per_gpu_info.second.memoryTotal;
         HUDElements.min = 0;
         ImGui::TextColored(HUDElements.colors.engine, "%s", "VRAM");
+        }
     }
 
     if (value == "ram"){
