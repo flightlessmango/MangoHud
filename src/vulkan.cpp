@@ -1786,6 +1786,7 @@ void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats&
          desc.erase(remove(desc.begin(), desc.end(), c), desc.end());
    }
    gpu_info[deviceID].deviceName = desc;
+   std::cerr << "DEVICE NAME" << desc << std::endl;
    sw_stats.gpuName = desc;
    trim(sw_stats.gpuName);
    trim(gpu);
@@ -1823,6 +1824,7 @@ static VkResult overlay_CreateSwapchainKHR(
    std::stringstream ss;
 
    if(device_data->deviceCount > 1){
+      parse_pciids();
       const std::vector<VkPhysicalDeviceProperties> props = device_data->propertiesForAllDevices;
       for(uint32_t i = 0; i < device_data->deviceCount;i++){
 
