@@ -3,6 +3,9 @@
 #define MANGOHUD_GPU_H
 
 #include <stdio.h>
+#include <unordered_map>
+#include <cstdint>
+#include <string>
 
 struct amdgpu_files
 {
@@ -15,9 +18,10 @@ struct amdgpu_files
     FILE *power_usage;
 };
 
-extern amdgpu_files amdgpu;
+extern std::unordered_map<int32_t, amdgpu_files> amdgpu;
 
 struct gpuInfo{
+    std::string deviceName;
     int load;
     int temp;
     float memoryUsed;
@@ -27,10 +31,10 @@ struct gpuInfo{
     int powerUsage;
 };
 
-extern struct gpuInfo gpu_info;
+extern std::unordered_map<int32_t, struct gpuInfo> gpu_info;
 
-void getNvidiaGpuInfo(void);
-void getAmdGpuInfo(void);
+void getNvidiaGpuInfo(int32_t deviceID);
+void getAmdGpuInfo(int32_t deviceID);
 bool checkNvidia(const char *pci_dev);
 extern void nvapi_util();
 extern bool checkNVAPI();

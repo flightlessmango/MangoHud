@@ -105,14 +105,17 @@ void HudElements::version(){
 }
 
 void HudElements::gpu_stats(){
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
+    for(auto per_gpu_info: gpu_info){
+         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
         ImGui::TableNextRow(); ImGui::TableNextColumn();
-        const char* gpu_text;
+
+        std::string gpu_text;
         if (HUDElements.params->gpu_text.empty())
-            gpu_text = "GPU";
+            gpu_text = "GPU " + per_gpu_info.second.deviceName;
         else
             gpu_text = HUDElements.params->gpu_text.c_str();
-        ImGui::TextColored(HUDElements.colors.gpu, "%s", gpu_text);
+        ImGui::TextColored(HUDElements.colors.gpu, "%s", gpu_text.c_str());
+        ImGui::TableNextRow();
         ImGui::TableNextColumn();
         auto text_color = HUDElements.colors.text;
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_load_change]){
@@ -124,13 +127,14 @@ void HudElements::gpu_stats(){
                 HUDElements.params->gpu_load_value[1]
             };
 
-            auto load_color = change_on_load_temp(gpu_data, gpu_info.load);
-            right_aligned_text(load_color, HUDElements.ralign_width, "%i", gpu_info.load);
+
+            auto load_color = change_on_load_temp(gpu_data, per_gpu_info.second.load);
+            right_aligned_text(load_color, HUDElements.ralign_width, "%i", per_gpu_info.second.load);
             ImGui::SameLine(0, 1.0f);
             ImGui::TextColored(load_color,"%%");
         }
         else {
-            right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.load);
+            right_aligned_text(text_color, HUDElements.ralign_width, "%i", per_gpu_info.second.load);
             ImGui::SameLine(0, 1.0f);
             ImGui::TextColored(text_color,"%%");
             // ImGui::SameLine(150);
@@ -138,7 +142,7 @@ void HudElements::gpu_stats(){
         }
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp]){
             ImGui::TableNextColumn();
-            right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.temp);
+            right_aligned_text(text_color, HUDElements.ralign_width, "%i", per_gpu_info.second.temp);
             ImGui::SameLine(0, 1.0f);
             ImGui::Text("°C");
         }
@@ -147,7 +151,7 @@ void HudElements::gpu_stats(){
         }
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]){
             ImGui::TableNextColumn();
-            right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.CoreClock);
+            right_aligned_text(text_color, HUDElements.ralign_width, "%i", per_gpu_info.second.CoreClock);
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(HUDElements.sw_stats->font1);
             ImGui::Text("MHz");
@@ -155,12 +159,15 @@ void HudElements::gpu_stats(){
         }
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power]) {
             ImGui::TableNextColumn();
-            right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.powerUsage);
+            right_aligned_text(text_color, HUDElements.ralign_width, "%i", per_gpu_info.second.powerUsage);
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(HUDElements.sw_stats->font1);
             ImGui::Text("W");
             ImGui::PopFont();
         }
+
+
+    }
     }
 }
 
@@ -301,22 +308,27 @@ void HudElements::io_stats(){
 
 void HudElements::vram(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_vram]){
-        ImGui::TableNextRow(); ImGui::TableNextColumn();
-        ImGui::TextColored(HUDElements.colors.vram, "VRAM");
+        for(auto per_gpu_info : gpu_info){
+            ImGui::TableNextRow();
+        ImGui::TextColored(HUDElements.colors.vram, "VRAM %s",per_gpu_info.second.deviceName.c_str() );
+        ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", gpu_info.memoryUsed);
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", per_gpu_info.second.memoryUsed);
         ImGui::SameLine(0,1.0f);
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::Text("GiB");
         ImGui::PopFont();
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_mem_clock]){
             ImGui::TableNextColumn();
-            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", gpu_info.MemClock);
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", per_gpu_info.second.MemClock);
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(HUDElements.sw_stats->font1);
             ImGui::Text("MHz");
             ImGui::PopFont();
         }
+
+        }
+
     }
 }
 void HudElements::ram(){
@@ -659,9 +671,11 @@ void HudElements::graphs(){
             arr.erase(arr.begin());
         }
 
-        HUDElements.max = gpu_info.memoryTotal;
+        for(auto per_gpu_info: gpu_info){
+            HUDElements.max = per_gpu_info.second.memoryTotal;
         HUDElements.min = 0;
         ImGui::TextColored(HUDElements.colors.engine, "%s", "VRAM");
+        }
     }
 #ifdef __gnu_linux__
     if (value == "ram"){
