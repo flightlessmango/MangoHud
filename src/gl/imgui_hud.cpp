@@ -82,7 +82,7 @@ void imgui_init()
     string ret_zink = exec(find_zink);
     if (ret_wined3d == "wined3d\n" )
         sw_stats.engineName = "WineD3D";
-    else if (ret_zink == "zink\n")
+    else if (ret_zink.find("zink") != std::string::npos)
         sw_stats.engineName = "ZINK";
     else
         sw_stats.engineName = "OpenGL";
