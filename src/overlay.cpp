@@ -13,7 +13,7 @@
 float g_overflow = 50.f /* 3333ms * 0.5 / 16.6667 / 2 (to edge and back) */;
 #endif
 
-bool open = false;
+bool gui_open = false;
 struct benchmark_stats benchmark;
 struct fps_limit fps_limit_stats {};
 ImVec2 real_font_size;
@@ -352,7 +352,7 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
          ImGui::SetNextWindowBgAlpha(params.background_alpha);
       }
    }
-   ImGui::Begin("Benchmark", &open, ImGuiWindowFlags_NoDecoration);
+   ImGui::Begin("Benchmark", &gui_open, ImGuiWindowFlags_NoDecoration);
    static const char* finished = "Logging Finished";
    ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2 )- (ImGui::CalcTextSize(finished).x / 2));
    ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), "%s", finished);
@@ -418,7 +418,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    }
 
    if (!params.no_display){
-      ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
+      ImGui::Begin("Main", &gui_open, ImGuiWindowFlags_NoDecoration);
       ImGui::BeginTable("hud", params.table_columns, ImGuiTableFlags_NoClip);
       HUDElements.place = 0;
       for (auto& func : HUDElements.ordered_functions){
