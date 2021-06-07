@@ -2279,7 +2279,7 @@ static VkResult overlay_CreateSampler(
    struct device_data *device_data = FIND(struct device_data, device);
    if (getenv("MANGOHUD_SAMPLER")){
       printf("mangohud modified vulkan sampler\n");
-      newPCreateInfo->mipLodBias = 1000.0f;
+      newPCreateInfo->mipLodBias = stof((getenv("MANGOHUD_SAMPLER")));
       newPCreateInfo->maxAnisotropy = 1.0f;
       newPCreateInfo->anisotropyEnable = VK_FALSE;
       // newPCreateInfo->magFilter = VK_FILTER_NEAREST;
