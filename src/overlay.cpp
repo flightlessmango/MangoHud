@@ -22,7 +22,7 @@ std::vector<logData> graph_data;
 
 void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID)
 {
-    if (params.enabled[OVERLAY_PARAM_ENABLED_battery_percent]) {
+    if (params.enabled[OVERLAY_PARAM_ENABLED_battery]) {
        Battery_Stats.update();
     }
    if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
