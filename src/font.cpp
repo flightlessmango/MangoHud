@@ -1,7 +1,8 @@
 #include "overlay.h"
 #include "file_utils.h"
 #include "font_default.h"
-
+#include "IconsForkAwesome.h"
+#include "forkawesome.h"
 void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& text_font)
 {
    auto& io = ImGui::GetIO();
@@ -22,6 +23,10 @@ void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& te
       //0x2109, 0x2109, // Degree Fahrenheit
       0,
    };
+   // Load Icon file and merge to exisitng font
+    ImFontConfig config;
+    config.MergeMode = true;
+    static const ImWchar icon_ranges[] = { ICON_MIN_FK, ICON_MAX_FK, 0 };
 
    ImVector<ImWchar> glyph_ranges;
    ImFontGlyphRangesBuilder builder;
@@ -56,17 +61,23 @@ void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& te
    // ImGui takes ownership of the data, no need to free it
    if (!params.font_file.empty() && file_exists(params.font_file)) {
       io.Fonts->AddFontFromFileTTF(params.font_file.c_str(), font_size, nullptr, same_font && same_size ? glyph_ranges.Data : default_range);
+      io.Fonts->AddFontFromMemoryCompressedBase85TTF(forkawesome_compressed_data_base85, font_size, &config, icon_ranges);
       if (params.no_small_font)
          small_font = io.Fonts->Fonts[0];
-      else
+      else {
          small_font = io.Fonts->AddFontFromFileTTF(params.font_file.c_str(), font_size * 0.55f, nullptr, default_range);
+         io.Fonts->AddFontFromMemoryCompressedBase85TTF(forkawesome_compressed_data_base85, font_size * 0.55f, &config, icon_ranges);
+      }
    } else {
       const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
       io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size, nullptr, default_range);
+      io.Fonts->AddFontFromMemoryCompressedBase85TTF(forkawesome_compressed_data_base85, font_size, &config, icon_ranges);
       if (params.no_small_font)
          small_font = io.Fonts->Fonts[0];
-      else
+      else {
          small_font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size * 0.55f, nullptr, default_range);
+         io.Fonts->AddFontFromMemoryCompressedBase85TTF(forkawesome_compressed_data_base85, font_size * 0.55f, &config, icon_ranges);
+      }
    }
 
    auto font_file_text = params.font_file_text;

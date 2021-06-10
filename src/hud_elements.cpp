@@ -5,6 +5,7 @@
 #include "memory.h"
 #include "mesa/util/macros.h"
 #include "string_utils.h"
+#include <IconsForkAwesome.h>
 
 // Cut from https://github.com/ocornut/imgui/pull/2943
 // Probably move to ImGui
@@ -65,6 +66,7 @@ void HudElements::convert_colors(struct overlay_params& params)
     HUDElements.colors.text = convert(params.text_color);
     HUDElements.colors.media_player = convert(params.media_player_color);
     HUDElements.colors.wine = convert(params.wine_color);
+    HUDElements.colors.battery = convert(params.battery_color);
     HUDElements.colors.gpu_load_low = convert(params.gpu_load_color[0]);
     HUDElements.colors.gpu_load_med = convert(params.gpu_load_color[1]);
     HUDElements.colors.gpu_load_high = convert(params.gpu_load_color[2]);
@@ -576,6 +578,46 @@ void HudElements::vkbasalt(){
     }
 }
 
+void HudElements::battery(){
+    if (Battery_Stats.batt_count > 0) {
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery]) {
+            ImGui::TableNextRow(); ImGui::TableNextColumn();
+            ImGui::TextColored(HUDElements.colors.battery, "BATT");
+            ImGui::TableNextColumn();
+            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_icon]) {
+                switch(int(Battery_Stats.current_percent)){
+                    case 0 ... 33:
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_QUARTER);
+                        break;
+                    case 34 ... 66:
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_HALF);
+                        break;
+                    case 67 ... 97:
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_THREE_QUARTERS);
+                        break;
+                    case 98 ... 100:
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_FULL);
+                        break;
+                }
+            }
+            else {
+                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", Battery_Stats.current_percent);
+                ImGui::SameLine(0,1.0f);
+                ImGui::Text("%%");
+            }
+            if (!Battery_Stats.isCharging()) {
+                ImGui::TableNextColumn();
+                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", Battery_Stats.current_watt);
+                ImGui::SameLine(0,1.0f);
+                ImGui::PushFont(HUDElements.sw_stats->font1);
+                ImGui::Text("W");
+                ImGui::PopFont();
+            }
+        }
+    }
+}
+
+
 void HudElements::graphs(){
     ImGui::TableNextRow(); ImGui::TableNextColumn();
     ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
@@ -727,6 +769,7 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
     if (param == "vkbasalt")        { ordered_functions.push_back({vkbasalt, value});               }
     if (param == "exec")            { ordered_functions.push_back({_exec, value});
                                       exec_list.push_back({int(ordered_functions.size() - 1), value});       }
+    if (param == "battery")         { ordered_functions.push_back({battery, value});                }
     if (param == "graphs"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs])
             HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs] = true;

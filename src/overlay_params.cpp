@@ -431,6 +431,7 @@ parse_gl_size_query(const char *str)
 #define parse_custom_text(s) parse_str(s)
 #define parse_fps_value(s) parse_load_value(s)
 #define parse_fps_color(s) parse_load_color(s)
+#define parse_battery_color(s) parse_color(s)
 
 
 static bool
@@ -613,6 +614,8 @@ parse_overlay_config(struct overlay_params *params,
    params->fps_color = { 0xb22222, 0xfdfd09, 0x39f900 };
    params->fps_value = { 30, 60 };
    params->round_corners = 0;
+   params->battery_color =0xff9078;
+
 
 
 #ifdef HAVE_X11
@@ -697,7 +700,7 @@ parse_overlay_config(struct overlay_params *params,
       params->font_scale_media_player = 0.55f;
 
    // Convert from 0xRRGGBB to ImGui's format
-   std::array<unsigned *, 20> colors = {
+   std::array<unsigned *, 21> colors = {
       &params->cpu_color,
       &params->gpu_color,
       &params->vram_color,
@@ -709,6 +712,7 @@ parse_overlay_config(struct overlay_params *params,
       &params->text_color,
       &params->media_player_color,
       &params->wine_color,
+      &params->battery_color,
       &params->gpu_load_color[0],
       &params->gpu_load_color[1],
       &params->gpu_load_color[2],
