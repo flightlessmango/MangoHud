@@ -15,7 +15,7 @@ void init_d3d_shared(){
         return;
      parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
      cfg_inited = true;
-    //  init_cpu_stats(params);
+     init_cpu_stats(params);
 }
 
 void d3d_run(){

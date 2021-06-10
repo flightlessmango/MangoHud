@@ -63,11 +63,12 @@ void writeFile(string filename){
 #endif
   std::ofstream out(filename, ios::out | ios::app);
   if (out){
+    printf("creating log file\n");
     out << "v1" << endl;
     out << MANGOHUD_VERSION << endl;
     out << "---------------------SYSTEM INFO---------------------" << endl;
     out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver," << "cpu_governor," << "Wine/Proton," << "sync," << "renderer," << "cpu_scheduler" << endl;
-    out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << "," << cpu_governor << "," << wineVersion << "," << HUDElements.sync << "," << HUDElements.sw_stats->engineName<< "," << HUDElements.cpu_sched << endl;
+    // out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << "," << cpu_governor << "," << wineVersion << "," << HUDElements.sync << "," << HUDElements.sw_stats->engineName << "," << HUDElements.cpu_sched << endl;
     out << "--------------------FRAME METRICS--------------------" << endl;
     out << "fps," << "frametime," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "gpu_power," << "ram_used," << "current_watt,";
     for (auto &item : logArray.back().custom_data){
@@ -152,6 +153,7 @@ Logger::Logger(overlay_params* in_params)
 
 void Logger::start_logging() {
   if(m_logging_on) return;
+  printf("started logging\n");
   m_values_valid = false;
   m_logging_on = true;
   m_log_start = Clock::now();
@@ -168,9 +170,9 @@ void Logger::start_logging() {
       currentLogFile << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << "," << cpu_governor << "," << wineVersion << "," << HUDElements.sync << "," << HUDElements.sw_stats->engineName << HUDElements.cpu_sched << endl;
       currentLogFile << "--------------------FRAME METRICS--------------------" << endl;
       currentLogFile << "fps," << "frametime," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "gpu_power," << "ram_used," << "current_watt,";
-      for (size_t i = 0; i < cpuStats.GetCPUData().size(); i++){
-        currentLogFile << "cpu" + to_string(i) + ",";
-      }
+      // for (size_t i = 0; i < cpuStats.GetCPUData().size(); i++){
+      //   currentLogFile << "cpu" + to_string(i) + ",";
+      // }
       currentLogFile << "elapsed" << endl;
     }
     printf("Wrote info to log file\n");
@@ -184,6 +186,7 @@ void Logger::stop_logging() {
   if(!m_logging_on) return;
   m_logging_on = false;
   m_log_end = Clock::now();
+  printf("stopped logging\n");
 
   std::thread(calculate_benchmark_data, m_params).detach();
 

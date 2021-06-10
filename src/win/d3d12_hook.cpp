@@ -18,6 +18,8 @@ void impl::d3d12::init()
 {
     printf("init d3d12\n");
     auto ret = kiero::bind(140, (void**)&oPresentD3D12, reinterpret_cast<void*>(hkPresent12));
-    assert(ret == kiero::Status::Success);
-	init_d3d_shared();
+	if(ret != kiero::Status::Success)
+        printf("not dx12\n");
+    else
+        init_d3d_shared();
 }

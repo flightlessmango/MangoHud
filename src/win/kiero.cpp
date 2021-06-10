@@ -16,6 +16,7 @@
 #if KIERO_INCLUDE_D3D11
 # include <dxgi.h>
 # include <d3d11.h>
+# include "d3d11_hook.h"
 #endif
 
 #if KIERO_INCLUDE_D3D12
@@ -25,6 +26,7 @@
 #else
     #include "/usr/include/wine/windows/d3d12.h"
 #endif
+# include "d3d12_hook.h"
 #endif
 
 #if KIERO_INCLUDE_OPENGL
@@ -363,7 +365,8 @@ kiero::Status::Enum kiero::init(RenderType::Enum _renderType)
 				::UnregisterClass(windowClass.lpszClassName, windowClass.hInstance);
 
 				g_renderType = RenderType::D3D11;
-
+				
+				impl::d3d11::init();
 				return Status::Success;
 #endif
 			}
@@ -513,6 +516,7 @@ kiero::Status::Enum kiero::init(RenderType::Enum _renderType)
 				::UnregisterClass(windowClass.lpszClassName, windowClass.hInstance);
 
 				g_renderType = RenderType::D3D12;
+				impl::d3d12::init();
 				return Status::Success;
 #endif
 			}

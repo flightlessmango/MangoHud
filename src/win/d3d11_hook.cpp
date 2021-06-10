@@ -31,8 +31,10 @@ void impl::d3d11::init()
 {
     printf("init d3d11\n");
 	auto ret = kiero::bind(8, (void**)&oPresent, reinterpret_cast<void *>(hkPresent11));
-	assert(ret == kiero::Status::Success);
-    init_d3d_shared();
+	if(ret != kiero::Status::Success)
+        printf("not dx11\n");
+    else
+        init_d3d_shared();
 }
 
 #endif // KIERO_INCLUDE_D3D11

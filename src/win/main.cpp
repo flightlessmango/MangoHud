@@ -42,13 +42,14 @@ void renderTypes() {
     {
         render_types.push_back(kiero::RenderType::D3D11);
     }
-    if (::GetModuleHandle(KIERO_TEXT("d3d12.dll")) != NULL)
+    if (::GetModuleHandle(KIERO_TEXT("D3D12.dll")) != NULL)
     {
         render_types.push_back(kiero::RenderType::D3D12);
     }
     if (::GetModuleHandle(KIERO_TEXT("opengl32.dll")) != NULL)
     {
         render_types.push_back(kiero::RenderType::OpenGL);
+
     }
     for (auto& _type : render_types)
         kiero::init(_type);
@@ -59,12 +60,9 @@ int MainThread()
     ConsoleSetup();
     printf("MangoHud Attached!\n");
     renderTypes();
-    init_ogl();
-    if (!render_types.empty()){
-        impl::d3d11::init();
-        impl::d3d12::init();
+    if (!render_types.empty())
         return 1;
-    }
+
     return 0;
 }
 
