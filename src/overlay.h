@@ -85,6 +85,7 @@ extern struct benchmark_stats benchmark;
 extern ImVec2 real_font_size;
 extern std::string wineVersion;
 extern std::vector<logData> graph_data;
+extern string engineName;
 
 void position_layer(struct swapchain_stats& data, struct overlay_params& params, ImVec2 window_size);
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan);

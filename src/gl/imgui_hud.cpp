@@ -12,6 +12,7 @@
 #include "imgui_hud.h"
 #include "notify.h"
 #include "blacklist.h"
+#include "overlay.h"
 
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
@@ -77,16 +78,13 @@ void imgui_init()
    }
     auto pid = getpid();
     string find_wined3d = "lsof -w -lnPX -L -p " + to_string(pid) + " | grep -oh wined3d";
-    string find_zink= "lsof -w -lnPX -L -p " + to_string(pid) + " | grep -oh zink";
     string ret_wined3d = exec(find_wined3d);
-    string ret_zink = exec(find_zink);
     if (ret_wined3d == "wined3d\n" )
         sw_stats.engineName = "WineD3D";
-    else if (ret_zink.find("zink") != std::string::npos)
-        sw_stats.engineName = "ZINK";
     else
         sw_stats.engineName = "OpenGL";
-
+    if (engineName == "ZINK")
+        sw_stats.engineName = engineName;
     is_blacklisted(true);
     notifier.params = &params;
     start_notifier(notifier);

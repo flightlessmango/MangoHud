@@ -66,7 +66,7 @@
 #include "pci_ids.h"
 #include "timing.hpp"
 
-string gpuString,wineVersion,wineProcess;
+string gpuString,wineVersion,wineProcess,engineName;
 float offset_x, offset_y, hudSpacing;
 int hudFirstRow, hudSecondRow;
 VkPhysicalDeviceDriverProperties driverProps = {};
@@ -2137,7 +2137,7 @@ static VkResult overlay_CreateInstance(
    VkLayerInstanceCreateInfo *chain_info =
       get_instance_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
-   std::string engineName, engineVersion;
+   std::string engineVersion;
    if (!is_blacklisted(true)) {
       const char* pEngineName = nullptr;
       if (pCreateInfo->pApplicationInfo)
@@ -2148,12 +2148,15 @@ static VkResult overlay_CreateInstance(
          int engineVer = pCreateInfo->pApplicationInfo->engineVersion;
          engineVersion = to_string(VK_VERSION_MAJOR(engineVer)) + "." + to_string(VK_VERSION_MINOR(engineVer)) + "." + to_string(VK_VERSION_PATCH(engineVer));
       }
-
-      if (engineName != "DXVK" && engineName != "vkd3d" && engineName != "Feral3D" && engineName != "Damavand")
+      
+      if (engineName != "DXVK" && engineName != "vkd3d" && engineName != "Feral3D" && engineName != "Damavand" && engineName != "mesa zink")
          engineName = "VULKAN";
 
       if (engineName == "vkd3d")
          engineName = "VKD3D";
+      
+      if (engineName == "mesa zink")
+         engineName = "ZINK";
    }
 
    assert(chain_info->u.pLayerInfo);
