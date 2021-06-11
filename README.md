@@ -214,6 +214,11 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `custom_text_center`               | Display a custom text centered useful for a header e.g `custom_text_center=FlightLessMango Benchmarks`     |
 | `custom_text`                      | Display a custom text e.g `custom_text=Fsync enabled`                                 |
 | `round_corners`                    | Change the amount of roundness of the corners have e.g `round_corners=10.0`           |
+| `vkbasalt`                         | Shows if vkbasalt is on                                                               |
+| `gamemode`                         | Shows if gamemode is on                                                               |
+| `battery`                          | Display current battery percent and energy consumption                                |
+| `battery_icon`                     | Display battery icon instead of percent                                               |
+| `battery_color`                    | Change the BATT text color                                                            |
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 Because comma is also used as option delimiter and needs to be escaped for values with a backslash, you can use `+` like `MANGOHUD_CONFIG=fps_limit=60+30+0` instead.
 
