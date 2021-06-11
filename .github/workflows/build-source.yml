@@ -15,7 +15,7 @@ jobs:
           set -x
           ./build-source.sh
           assets=()
-          for asset in ./MangoHud-*-Source*.tar.gz; do
+          for asset in ./MangoHud-*-Source*.tar.*; do
             assets+=("-a" "$asset")
           done
           tag_name="${GITHUB_REF##*/}"
