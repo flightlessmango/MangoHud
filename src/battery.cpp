@@ -137,8 +137,8 @@ bool BatteryStats::isCharging() {
             }
         }
         for(int i =0; i < batt_count; i++) {
-            if (state[i] == "Charging") {
-            return true;
+            if (state[i] == "Charging" ||  state[i] == "Unknown") {
+                return true;
             }
         }
     }
