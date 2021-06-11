@@ -502,29 +502,33 @@ void HudElements::media_player(){
 }
 
 void HudElements::resolution(){
-    ImGui::TableNextRow(); ImGui::TableNextColumn();
-    unsigned res_width  = ImGui::GetIO().DisplaySize.x;
-    unsigned res_height = ImGui::GetIO().DisplaySize.y;
-    ImGui::PushFont(HUDElements.sw_stats->font1);
-    ImGui::TextColored(HUDElements.colors.engine, "Resolution");
-    ImGui::TableNextColumn();
-    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "%ix%i", res_width, res_height);
-    ImGui::PopFont();
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_resolution]){
+        ImGui::TableNextRow(); ImGui::TableNextColumn();
+        unsigned res_width  = ImGui::GetIO().DisplaySize.x;
+        unsigned res_height = ImGui::GetIO().DisplaySize.y;
+        ImGui::PushFont(HUDElements.sw_stats->font1);
+        ImGui::TextColored(HUDElements.colors.engine, "Resolution");
+        ImGui::TableNextColumn();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "%ix%i", res_width, res_height);
+        ImGui::PopFont();
+    }
 }
 
 void HudElements::show_fps_limit(){
-    int fps = 0;
-    double frame_time = (double)fps_limit_stats.targetFrameTime.count()/1000000;
-    if (frame_time == 0.0){
-        return;
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_show_fps_limit]){
+        int fps = 0;
+        double frame_time = (double)fps_limit_stats.targetFrameTime.count()/1000000;
+        fps = (1 / frame_time) *1000;
+        if (frame_time == 0.0){
+            fps = 0;
+        }
+        ImGui::TableNextRow(); ImGui::TableNextColumn();
+        ImGui::PushFont(HUDElements.sw_stats->font1);
+        ImGui::TextColored(HUDElements.colors.engine, "%s","FPS limit");
+        ImGui::TableNextColumn();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", fps);
+        ImGui::PopFont();
     }
-    fps = (1 / frame_time) *1000;
-    ImGui::TableNextRow(); ImGui::TableNextColumn();
-    ImGui::PushFont(HUDElements.sw_stats->font1);
-    ImGui::TextColored(HUDElements.colors.engine, "%s","FPS limit");
-    ImGui::TableNextColumn();
-    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", fps);
-    ImGui::PopFont();
 }
 
 void HudElements::custom_text_center(){
@@ -795,6 +799,7 @@ void HudElements::legacy_elements(){
     ordered_functions.push_back({io_stats,           value});
     ordered_functions.push_back({vram,               value});
     ordered_functions.push_back({ram,                value});
+    ordered_functions.push_back({battery,            value});
     ordered_functions.push_back({fps,                value});
     ordered_functions.push_back({engine_version,     value});
     ordered_functions.push_back({gpu_name,           value});
@@ -802,9 +807,11 @@ void HudElements::legacy_elements(){
     ordered_functions.push_back({arch,               value});
     ordered_functions.push_back({wine,               value});
     ordered_functions.push_back({frame_timing,       value});
-    ordered_functions.push_back({media_player,       value});
     ordered_functions.push_back({gamemode,           value});
     ordered_functions.push_back({vkbasalt,           value});
+    ordered_functions.push_back({show_fps_limit,     value});
+    ordered_functions.push_back({resolution,         value});
+    ordered_functions.push_back({media_player,       value});
 }
 
 void HudElements::update_exec(){
