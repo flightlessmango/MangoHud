@@ -18,6 +18,7 @@ void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& te
    static const ImWchar default_range[] =
    {
       0x0020, 0x00FF, // Basic Latin + Latin Supplement
+      0x2019, 0x2019, // RIGHT SINGLE QUOTATION MARK
       //0x0100, 0x017F, // Latin Extended-A
       //0x2103, 0x2103, // Degree Celsius
       //0x2109, 0x2109, // Degree Fahrenheit
