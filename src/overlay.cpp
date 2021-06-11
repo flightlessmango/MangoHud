@@ -277,7 +277,7 @@ void render_mpris_metadata(struct overlay_params& params, mutexed_metadata& meta
          meta.ticker.pos = (right_limit + g_overflow) - 1.f /* random */;
       }
 
-      meta.ticker.pos -= .5f * (frame_timing / 16666.7f) * meta.ticker.dir;
+      meta.ticker.pos -= .5f * (frame_timing / 16666666.7f /* ns */) * meta.ticker.dir;
 
       for (auto order : params.media_player_order) {
          switch (order) {
