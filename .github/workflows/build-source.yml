@@ -1,7 +1,7 @@
 name: Build source tars
 on:
-  push:
-    tags: ["v*"]
+  release:
+    types: ["created"]
   workflow_dispatch:
 
 jobs:
@@ -22,7 +22,8 @@ jobs:
             assets+=("-a" "$asset")
           done
           tag_name="${GITHUB_REF##*/}"
-          hub release create "${assets[@]}" -m "$tag_name" "$tag_name"
+          hub release edit "${assets[@]}" -m "" "$tag_name"
+          #hub release create "${assets[@]}" -m "$tag_name" "$tag_name"
 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
