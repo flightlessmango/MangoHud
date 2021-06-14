@@ -65,43 +65,14 @@
 #include "blacklist.h"
 #include "pci_ids.h"
 #include "timing.hpp"
-
+#include "vulkan.h"
+#include "control.h"
 string gpuString,wineVersion,wineProcess,engineName;
 float offset_x, offset_y, hudSpacing;
 int hudFirstRow, hudSecondRow;
 VkPhysicalDeviceDriverProperties driverProps = {};
 int32_t deviceID;
 
-/* Mapped from VkInstace/VkPhysicalDevice */
-struct instance_data {
-   struct vk_instance_dispatch_table vtable;
-   VkInstance instance;
-   struct overlay_params params;
-   uint32_t api_version;
-   string engineName, engineVersion;
-   notify_thread notifier;
-};
-
-/* Mapped from VkDevice */
-struct queue_data;
-struct device_data {
-   struct instance_data *instance;
-
-   PFN_vkSetDeviceLoaderData set_device_loader_data;
-
-   struct vk_device_dispatch_table vtable;
-   VkPhysicalDevice physical_device;
-   VkDevice device;
-
-   VkPhysicalDeviceProperties properties;
-
-   struct queue_data *graphic_queue;
-
-   std::vector<struct queue_data *> queues;
-};
-
-/* Mapped from VkCommandBuffer */
-struct queue_data;
 struct command_buffer_data {
    struct device_data *device;
 
@@ -400,6 +371,7 @@ static struct swapchain_data *new_swapchain_data(VkSwapchainKHR swapchain,
    data->swapchain = swapchain;
    data->window_size = ImVec2(instance_data->params.width, instance_data->params.height);
    map_object(HKEY(data->swapchain), data);
+   params_ptr = &instance_data->params;
    return data;
 }
 
@@ -704,10 +676,10 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
    check_keybinds(data->sw_stats, instance_data->params, device_data->properties.vendorID);
 
    // not currently used
-   // if (instance_data->params.control >= 0) {
-   //    control_client_check(device_data);
-   //    process_control_socket(instance_data);
-   // }
+   if (instance_data->params.control >= 0) {
+      control_client_check(device_data);
+      process_control_socket(instance_data);
+   }
 }
 
 static void compute_swapchain_display(struct swapchain_data *data)
@@ -729,7 +701,6 @@ static void compute_swapchain_display(struct swapchain_data *data)
 
    ImGui::EndFrame();
    ImGui::Render();
-
 }
 
 static uint32_t vk_memory_type(struct device_data *data,

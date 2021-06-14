@@ -80,6 +80,7 @@ if is_unixy
     'real_dlsym.cpp',
     'pci_ids.cpp',
     'battery.cpp',
+    'control.cpp',
   )
 
   opengl_files = files(
