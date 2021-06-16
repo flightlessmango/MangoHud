@@ -78,6 +78,23 @@ struct LOAD_DATA {
    unsigned high_load;
 };
 
+enum EngineTypes
+{
+   OpenGL,
+   Vulkan,
+
+   DXVK,
+   VKD3D,
+   DAMAVAND,
+   ZINK,
+
+   WINED3D,
+   Feral3D
+};
+
+extern const char* engines[];
+extern int engine;
+
 extern struct fps_limit fps_limit_stats;
 extern int32_t deviceID;
 
@@ -85,7 +102,6 @@ extern struct benchmark_stats benchmark;
 extern ImVec2 real_font_size;
 extern std::string wineVersion;
 extern std::vector<logData> graph_data;
-extern string engineName;
 
 void position_layer(struct swapchain_stats& data, struct overlay_params& params, ImVec2 window_size);
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan);
