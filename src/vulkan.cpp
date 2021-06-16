@@ -2282,9 +2282,9 @@ static VkResult overlay_CreateSampler(
       newPCreateInfo->mipLodBias = stof((getenv("MANGOHUD_SAMPLER")));
       newPCreateInfo->maxAnisotropy = 1.0f;
       newPCreateInfo->anisotropyEnable = VK_FALSE;
-      // newPCreateInfo->magFilter = VK_FILTER_NEAREST;
-      // newPCreateInfo->minFilter = VK_FILTER_NEAREST;
-      // newPCreateInfo->mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+      newPCreateInfo->magFilter = VK_FILTER_NEAREST;
+      newPCreateInfo->minFilter = VK_FILTER_NEAREST;
+      newPCreateInfo->mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
    }
 	VkResult result = device_data->vtable.CreateSampler(device, newPCreateInfo, pAllocator, pSampler);
 
