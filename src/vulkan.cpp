@@ -628,7 +628,7 @@ void init_system_info(){
       string preloader = wineProcess.substr(n + 1);
       if (preloader == "wine-preloader" || preloader == "wine64-preloader") {
          // Check if using Proton
-         if (wineProcess.find("/dist/bin/wine") != std::string::npos || wineProcess.find("/files/bin/wine") != std::string::npos) {
+         if (wineProcess.find("/dist/bin/wine") != std::string::npos || wineProcess.find("/files/bin/wine") != std::string::npos){
             stringstream ss;
             ss << dirname((char*)wineProcess.c_str()) << "/../../version";
             string protonVersion = ss.str();
