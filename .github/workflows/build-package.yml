@@ -18,7 +18,11 @@ jobs:
       - name: Install build tools
         run: |
           sudo apt update
-          sudo apt install gcc-multilib g++-multilib ninja-build python3-setuptools python3-wheel mesa-common-dev libxnvctrl-dev libdbus-1-dev
+          sudo apt install gcc-multilib g++-multilib ninja-build python3-setuptools python3-wheel mesa-common-dev libxnvctrl-dev libdbus-1-dev unzip
+          sudo pip3 install 'meson>=0.54' mako
+          wget https://github.com/KhronosGroup/glslang/releases/download/SDK-candidate-26-Jul-2020/glslang-master-linux-Release.zip
+          unzip glslang-master-linux-Release.zip bin/glslangValidator
+          sudo install -m755 bin/glslangValidator /usr/local/bin/
       - name: Prepare Artifact Git Info
         shell: bash
         run: |
@@ -44,10 +48,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           assets=()
-          for asset in ./MangoHud-*-Source*.tar.gz; do
+          for asset in ./MangoHud-*-Source*.tar.*; do
             assets+=("-a" "$asset")
           done
-          for asset in ./build/MangoHud-*.tar.gz; do
+          for asset in ./build/MangoHud-*.tar.*; do
             assets+=("-a" "$asset")
           done
           tag_name="${GITHUB_REF##*/}"

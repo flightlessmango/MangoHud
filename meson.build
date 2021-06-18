@@ -1,6 +1,6 @@
 project('MangoHud',
   ['c', 'cpp'],
-  version : 'v0.6.2',
+  version : 'v0.6.3',
   license : 'MIT',
   default_options : ['buildtype=release', 'c_std=c99', 'cpp_std=c++14']
 )
@@ -183,7 +183,10 @@ else
 endif
 
 if dep_vulkan.found()
-  datadir = get_option('datadir')
+  datadir = get_option('vulkan_datadir')
+  if datadir == ''
+    datadir = get_option('datadir')
+  endif
   if not datadir.startswith('/')
     datadir = get_option('prefix') / datadir
   endif

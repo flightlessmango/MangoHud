@@ -1,6 +1,5 @@
 glslang = find_program('glslangValidator')
 
-ld_libdir_mangohud_abs = ''
 # Needs prefix for configure_file()
 if get_option('append_libdir_mangohud')
   libdir_mangohud = join_paths(get_option('libdir'), 'mangohud')
@@ -16,8 +15,19 @@ if get_option('ld_libdir_prefix')
   ld_libdir_mangohud = get_option('prefix') + '/lib/mangohud/\$LIB/'
 endif
 
+conf_data = configuration_data()
+
 if get_option('ld_libdir_abs')
-  ld_libdir_mangohud_abs = ld_libdir_mangohud
+  conf_data.set('ld_libdir_mangohud_abs', ld_libdir_mangohud)
+  conf_data.set('ld_libdir_mangohud', '')
+else
+  conf_data.set('ld_libdir_mangohud_abs', '')
+  conf_data.set('ld_libdir_mangohud', ld_libdir_mangohud)
+endif
+
+ld_libdir_mangohud_vk = ''
+if get_option('prepend_libdir_vk')
+  ld_libdir_mangohud_vk = ld_libdir_mangohud
 endif
 
 overlay_shaders = [
@@ -204,7 +214,7 @@ endif
 
 configure_file(input : 'mangohud.json.in',
   output : '@0@.json'.format(meson.project_name()),
-  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud,
+  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud_vk,
                   'PROJECT_NAME' : meson.project_name().to_upper()},
   install : true,
   install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
@@ -212,8 +222,7 @@ configure_file(input : 'mangohud.json.in',
 
 configure_file(input : '../bin/mangohud.in',
   output : 'mangohud',
-  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud,
-                   'ld_libdir_mangohud_abs': ld_libdir_mangohud_abs},
+  configuration : conf_data,
   install_dir : get_option('bindir'),
 )
 

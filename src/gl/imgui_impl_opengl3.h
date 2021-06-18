@@ -25,7 +25,7 @@
 #ifndef MANGOHUD_IMGUI_IMPL_OPENGL3_H
 #define MANGOHUD_IMGUI_IMPL_OPENGL3_H
 
-namespace MangoHud {
+namespace MangoHud { namespace GL {
 
 void GetOpenGLVersion(int& major, int& minor, bool& isGLES);
 
@@ -42,6 +42,6 @@ IMGUI_IMPL_API bool     ImGui_ImplOpenGL3_CreateFontsTexture();
 //IMGUI_IMPL_API bool     ImGui_ImplOpenGL3_CreateDeviceObjects();
 //IMGUI_IMPL_API void     ImGui_ImplOpenGL3_DestroyDeviceObjects();
 
-}
+}}
 
 #endif //MANGOHUD_IMGUI_IMPL_OPENGL3_H

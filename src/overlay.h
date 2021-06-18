@@ -78,6 +78,23 @@ struct LOAD_DATA {
    unsigned high_load;
 };
 
+enum EngineTypes
+{
+   OpenGL,
+   Vulkan,
+
+   DXVK,
+   VKD3D,
+   DAMAVAND,
+   ZINK,
+
+   WINED3D,
+   Feral3D
+};
+
+extern const char* engines[];
+extern int engine;
+
 extern struct fps_limit fps_limit_stats;
 extern int32_t deviceID;
 

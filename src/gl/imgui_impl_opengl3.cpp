@@ -74,7 +74,9 @@
 
 #include "overlay.h"
 
-namespace MangoHud {
+namespace MangoHud { namespace GL {
+
+extern overlay_params params;
 
 // Desktop GL 3.2+ has glDrawElementsBaseVertex() which GL ES and WebGL don't have.
 #if defined(IMGUI_IMPL_OPENGL_ES2) || defined(IMGUI_IMPL_OPENGL_ES3) || !defined(GL_VERSION_3_2)
@@ -100,7 +102,7 @@ static void ImGui_ImplOpenGL3_DestroyFontsTexture()
     {
         ImGuiIO& io = ImGui::GetIO();
         glDeleteTextures(1, &g_FontTexture);
-        io.Fonts->TexID = 0;
+        io.Fonts->SetTexID(0);
         g_FontTexture = 0;
     }
 }
@@ -128,7 +130,7 @@ bool ImGui_ImplOpenGL3_CreateFontsTexture()
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, pixels);
 
     // Store our identifier
-    io.Fonts->TexID = (ImTextureID)(intptr_t)g_FontTexture;
+    io.Fonts->SetTexID((ImTextureID)(intptr_t)g_FontTexture);
 
     // Restore state
     glBindTexture(GL_TEXTURE_2D, last_texture);
@@ -501,18 +503,34 @@ void    ImGui_ImplOpenGL3_NewFrame()
 static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_width, int fb_height, GLuint vertex_array_object)
 {
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, polygon fill
+    if (params.gl_bind_framebuffer >= 0 && (g_IsGLES || g_GlVersion >= 300))
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, params.gl_bind_framebuffer);
     glEnable(GL_BLEND);
     glBlendEquation(GL_FUNC_ADD);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
+    glDisable(GL_STENCIL_TEST);
     glEnable(GL_SCISSOR_TEST);
     glDisable(GL_FRAMEBUFFER_SRGB);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
-    //#ifdef GL_POLYGON_MODE
-    if (!g_IsGLES && g_GlVersion >= 200)
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    if (!g_IsGLES)
+    {
+        //#ifdef GL_POLYGON_MODE
+        if (g_GlVersion >= 200)
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        if (g_GlVersion >= 310)
+            glDisable(GL_PRIMITIVE_RESTART);
+    }
+
+    bool clip_origin_lower_left = true;
+    GLenum last_clip_origin = 0;
+    if (!g_IsGLES && /*g_GlVersion >= 450*/ (glad_glClipControl || glad_glClipControlEXT)) {
+        glGetIntegerv(GL_CLIP_ORIGIN, (GLint*)&last_clip_origin); // Support for GL 4.5's glClipControl(GL_UPPER_LEFT)
+        if (last_clip_origin == GL_UPPER_LEFT)
+            clip_origin_lower_left = false;
+    }
 
     // Setup viewport, orthographic projection matrix
     // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
@@ -521,6 +539,7 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
     float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
     float T = draw_data->DisplayPos.y;
     float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
+    if (!params.gl_dont_flip && !clip_origin_lower_left) { float tmp = T; T = B; B = tmp; } // Swap top and bottom if origin is upper left
     const float ortho_projection[4][4] =
     {
         { 2.0f/(R-L),   0.0f,         0.0f,   0.0f },
@@ -563,6 +582,9 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
         return;
 
     // Backup GL state
+    GLint last_fb = -1;
+    if (params.gl_bind_framebuffer >= 0 && (g_IsGLES || g_GlVersion >= 300))
+        glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &last_fb);
     GLenum last_active_texture; glGetIntegerv(GL_ACTIVE_TEXTURE, (GLint*)&last_active_texture);
     glActiveTexture(GL_TEXTURE0);
     GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
@@ -595,21 +617,12 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     GLboolean last_enable_blend = glIsEnabled(GL_BLEND);
     GLboolean last_enable_cull_face = glIsEnabled(GL_CULL_FACE);
     GLboolean last_enable_depth_test = glIsEnabled(GL_DEPTH_TEST);
+    GLboolean last_enable_stencil_test = glIsEnabled(GL_STENCIL_TEST);
     GLboolean last_enable_scissor_test = glIsEnabled(GL_SCISSOR_TEST);
     // Disable and store SRGB state.
     GLboolean last_srgb_enabled = glIsEnabled(GL_FRAMEBUFFER_SRGB);
-    bool clip_origin_lower_left = true;
+    GLboolean last_enable_primitive_restart = (!g_IsGLES && g_GlVersion >= 310) ? glIsEnabled(GL_PRIMITIVE_RESTART) : GL_FALSE;
 
-    GLenum last_clip_origin = 0;
-    GLenum last_clip_depth_mode = 0;
-    if (!g_IsGLES && /*g_GlVersion >= 450*/ (glad_glClipControl || glad_glClipControlEXT)) {
-        glGetIntegerv(GL_CLIP_ORIGIN, (GLint*)&last_clip_origin); // Support for GL 4.5's glClipControl(GL_UPPER_LEFT)
-        glGetIntegerv(GL_CLIP_DEPTH_MODE, (GLint*)&last_clip_depth_mode);
-        if (last_clip_origin == GL_UPPER_LEFT) {
-            clip_origin_lower_left = false;
-            glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
-        }
-    }
     // Setup desired GL state
     // Recreate the VAO every time (this is to easily allow multiple GL contexts to be rendered to. VAO are not shared among GL contexts)
     // The renderer would actually work without any VAO bound, but then our VertexAttrib calls would overwrite the default one currently bound.
@@ -656,10 +669,10 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
                 if (clip_rect.x < fb_width && clip_rect.y < fb_height && clip_rect.z >= 0.0f && clip_rect.w >= 0.0f)
                 {
                     // Apply scissor/clipping rectangle
-                    //if (clip_origin_lower_left)
+                    if (!params.gl_dont_flip)
                         glScissor((int)clip_rect.x, (int)(fb_height - clip_rect.w), (int)(clip_rect.z - clip_rect.x), (int)(clip_rect.w - clip_rect.y));
-                    //else
-                    //    glScissor((int)clip_rect.x, (int)clip_rect.y, (int)clip_rect.z, (int)clip_rect.w); // Support for GL 4.5 rarely used glClipControl(GL_UPPER_LEFT)
+                    else
+                        glScissor((int)clip_rect.x, (int)clip_rect.y, (int)clip_rect.z, (int)clip_rect.w);
 
                     // Bind texture, Draw
                     glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
@@ -695,7 +708,9 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     if (last_enable_blend) glEnable(GL_BLEND); else glDisable(GL_BLEND);
     if (last_enable_cull_face) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
     if (last_enable_depth_test) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
+    if (last_enable_stencil_test) glEnable(GL_STENCIL_TEST); else glDisable(GL_STENCIL_TEST);
     if (last_enable_scissor_test) glEnable(GL_SCISSOR_TEST); else glDisable(GL_SCISSOR_TEST);
+    if (!g_IsGLES && g_GlVersion >= 310) { if (last_enable_primitive_restart) glEnable(GL_PRIMITIVE_RESTART); }
 
     if (!g_IsGLES && g_GlVersion >= 200)
         glPolygonMode(GL_FRONT_AND_BACK, (GLenum)last_polygon_mode[0]);
@@ -705,10 +720,8 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
 
     if (last_srgb_enabled)
         glEnable(GL_FRAMEBUFFER_SRGB);
-
-    if (!g_IsGLES && /*g_GlVersion >= 450*/ glad_glClipControl)
-        if (!clip_origin_lower_left)
-            glClipControl(last_clip_origin, last_clip_depth_mode);
+    if (last_fb >= 0)
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, last_fb);
 }
 
-}
+}} // namespace

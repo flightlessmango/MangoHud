@@ -69,6 +69,8 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(vkbasalt)                      \
    OVERLAY_PARAM_BOOL(gamemode)                      \
    OVERLAY_PARAM_BOOL(sync)                          \
+   OVERLAY_PARAM_BOOL(battery)                       \
+   OVERLAY_PARAM_BOOL(battery_icon)                  \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
@@ -88,6 +90,9 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(fps_limit)                   \
    OVERLAY_PARAM_CUSTOM(vsync)                       \
    OVERLAY_PARAM_CUSTOM(gl_vsync)                    \
+   OVERLAY_PARAM_CUSTOM(gl_size_query)               \
+   OVERLAY_PARAM_CUSTOM(gl_bind_framebuffer)         \
+   OVERLAY_PARAM_CUSTOM(gl_dont_flip)                \
    OVERLAY_PARAM_CUSTOM(toggle_hud)                  \
    OVERLAY_PARAM_CUSTOM(toggle_fps_limit)            \
    OVERLAY_PARAM_CUSTOM(toggle_logging)              \
@@ -110,6 +115,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(io_color)                    \
    OVERLAY_PARAM_CUSTOM(text_color)                  \
    OVERLAY_PARAM_CUSTOM(wine_color)                  \
+   OVERLAY_PARAM_CUSTOM(battery_color)               \
    OVERLAY_PARAM_CUSTOM(alpha)                       \
    OVERLAY_PARAM_CUSTOM(log_duration)                \
    OVERLAY_PARAM_CUSTOM(pci_dev)                     \
@@ -132,6 +138,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(table_columns)               \
    OVERLAY_PARAM_CUSTOM(blacklist)                   \
    OVERLAY_PARAM_CUSTOM(autostart_log)               \
+   OVERLAY_PARAM_CUSTOM(round_corners)               \
 
 
 enum overlay_param_position {
@@ -165,6 +172,12 @@ enum font_glyph_ranges {
    FG_LATIN_EXT_B             = (1u << 8),
 };
 
+enum gl_size_query {
+   GL_SIZE_DRAWABLE,
+   GL_SIZE_VIEWPORT,
+   GL_SIZE_SCISSORBOX, // needed?
+};
+
 enum overlay_param_enabled {
 #define OVERLAY_PARAM_BOOL(name) OVERLAY_PARAM_ENABLED_##name,
 #define OVERLAY_PARAM_CUSTOM(name)
@@ -178,7 +191,7 @@ struct overlay_params {
    bool enabled[OVERLAY_PARAM_ENABLED_MAX];
    enum overlay_param_position position;
    int control;
-   uint32_t fps_sampling_period; /* us */
+   uint32_t fps_sampling_period; /* ns */
    std::vector<std::uint32_t> fps_limit;
    bool help;
    bool no_display;
@@ -187,10 +200,14 @@ struct overlay_params {
    unsigned width;
    unsigned height;
    int offset_x, offset_y;
+   float round_corners;
    unsigned vsync;
    int gl_vsync;
+   int gl_bind_framebuffer {-1};
+   enum gl_size_query gl_size_query {GL_SIZE_DRAWABLE};
+   bool gl_dont_flip {false};
    uint64_t log_duration;
-   unsigned cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color, wine_color;
+   unsigned cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color, wine_color, battery_color;
    std::vector<unsigned> gpu_load_color;
    std::vector<unsigned> cpu_load_color;
    std::vector<unsigned> gpu_load_value;

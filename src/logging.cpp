@@ -1,9 +1,12 @@
+#include <sstream>
+#include <iomanip>
 #include "logging.h"
 #include "overlay.h"
 #include "config.h"
 #include "battery.h"
 #include <sstream>
 #include <iomanip>
+#include "file_utils.h"
 
 string os, cpu, gpu, ram, kernel, driver, cpu_governor;
 bool sysInfoFetched = false;
@@ -188,7 +191,10 @@ void Logger::stop_logging() {
   std::thread(calculate_benchmark_data, m_params).detach();
 
   if(!m_params->output_folder.empty() && !m_params->autostart_log) {
-    m_log_files.emplace_back(m_params->output_folder + "/" + get_program_name() + "_" + get_log_suffix());
+    std::string program = get_wine_exe_name();
+    if (program.empty())
+        program = get_program_name();
+    m_log_files.emplace_back(m_params->output_folder + "/" + program + "_" + get_log_suffix());
     std::thread(writeFile, m_log_files.back()).detach();
   }
 }

@@ -34,6 +34,18 @@
 #include "dbus_info.h"
 #endif
 
+#if __cplusplus >= 201703L
+
+template<typename... Ts>
+size_t get_hash(Ts const&... args)
+{
+   size_t hash = 0;
+   ( (hash ^= std::hash<Ts>{}(args) << 1), ...);
+   return hash;
+}
+
+#else
+
 // C++17 has `if constexpr` so this won't be needed then
 template<typename... Ts>
 size_t get_hash()
@@ -52,6 +64,8 @@ size_t get_hash(T const& first, Ts const&... rest)
 
    return hash;
 }
+
+#endif
 
 static enum overlay_param_position
 parse_position(const char *str)
@@ -133,7 +147,7 @@ parse_string_to_keysym_vec(const char *str)
 static uint32_t
 parse_fps_sampling_period(const char *str)
 {
-   return strtol(str, NULL, 0) * 1000;
+   return strtol(str, NULL, 0) * 1000000; /* ms to ns */
 }
 
 static std::vector<std::uint32_t>
@@ -348,7 +362,19 @@ parse_font_glyph_ranges(const char *str)
          fg |= FG_LATIN_EXT_B;
    }
    return fg;
+}
 
+static gl_size_query
+parse_gl_size_query(const char *str)
+{
+   std::string value(str);
+   trim(value);
+   std::transform(value.begin(), value.end(), value.begin(), ::tolower);
+   if (value == "viewport")
+      return GL_SIZE_VIEWPORT;
+   if (value == "scissorbox")
+      return GL_SIZE_SCISSORBOX;
+   return GL_SIZE_DRAWABLE;
 }
 
 #define parse_width(s) parse_unsigned(s)
@@ -381,6 +407,9 @@ parse_font_glyph_ranges(const char *str)
 #define parse_cellpadding_y(s) parse_float(s)
 #define parse_table_columns(s) parse_unsigned(s)
 #define parse_autostart_log(s) parse_unsigned(s)
+#define parse_gl_bind_framebuffer(s) parse_unsigned(s)
+#define parse_gl_dont_flip(s) parse_unsigned(s) != 0
+#define parse_round_corners(s) parse_unsigned(s)
 
 #define parse_cpu_color(s) parse_color(s)
 #define parse_gpu_color(s) parse_color(s)
@@ -402,6 +431,7 @@ parse_font_glyph_ranges(const char *str)
 #define parse_custom_text(s) parse_str(s)
 #define parse_fps_value(s) parse_load_value(s)
 #define parse_fps_color(s) parse_load_color(s)
+#define parse_battery_color(s) parse_color(s)
 
 
 static bool
@@ -546,7 +576,7 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_core_load_change] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_frametime] = true;
-   params->fps_sampling_period = 500000; /* 500ms */
+   params->fps_sampling_period = 500000000; /* 500ms */
    params->width = 0;
    params->height = 140;
    params->control = -1;
@@ -583,6 +613,8 @@ parse_overlay_config(struct overlay_params *params,
    params->cellpadding_y = -0.085;
    params->fps_color = { 0xb22222, 0xfdfd09, 0x39f900 };
    params->fps_value = { 30, 60 };
+   params->round_corners = 0;
+   params->battery_color =0xff9078;
 
 
 
@@ -653,9 +685,13 @@ parse_overlay_config(struct overlay_params *params,
 
    }
 
+   // TODO decide what to do for legacy_layout=0
    // second pass, override config file settings with MANGOHUD_CONFIG
-   // if (env && read_cfg)
-   //    parse_overlay_env(params, env);
+   if (params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout] && env && read_cfg) {
+      // If passing legacy_layout=0 to MANGOHUD_CONFIG anyway then clear first pass' results
+      HUDElements.ordered_functions.clear();
+      parse_overlay_env(params, env);
+   }
 
    if (is_blacklisted())
       return;
@@ -664,7 +700,7 @@ parse_overlay_config(struct overlay_params *params,
       params->font_scale_media_player = 0.55f;
 
    // Convert from 0xRRGGBB to ImGui's format
-   std::array<unsigned *, 20> colors = {
+   std::array<unsigned *, 21> colors = {
       &params->cpu_color,
       &params->gpu_color,
       &params->vram_color,
@@ -676,6 +712,7 @@ parse_overlay_config(struct overlay_params *params,
       &params->text_color,
       &params->media_player_color,
       &params->wine_color,
+      &params->battery_color,
       &params->gpu_load_color[0],
       &params->gpu_load_color[1],
       &params->gpu_load_color[2],

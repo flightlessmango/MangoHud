@@ -1,6 +1,7 @@
 #include <iostream>
 #include <array>
 #include <cstring>
+#include <dlfcn.h>
 #include "real_dlsym.h"
 #include "mesa/util/macros.h"
 #include "mesa/util/os_time.h"
@@ -13,7 +14,6 @@
 
 using namespace MangoHud::GL;
 
-#define EXPORT_C_(type) extern "C" __attribute__((__visibility__("default"))) type
 EXPORT_C_(void *) eglGetProcAddress(const char* procName);
 
 void* get_egl_proc_address(const char* name) {
@@ -74,6 +74,12 @@ EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf)
             imgui_render(width, height);
 
         //std::cerr << "\t" << width << " x " << height << "\n";
+        using namespace std::chrono_literals;
+        if (fps_limit_stats.targetFrameTime > 0s){
+            fps_limit_stats.frameStart = Clock::now();
+            FpsLimiter(fps_limit_stats);
+            fps_limit_stats.frameEnd = Clock::now();
+        }
     }
 
     return pfn_eglSwapBuffers(dpy, surf);
@@ -84,9 +90,10 @@ struct func_ptr {
    void *ptr;
 };
 
-static std::array<const func_ptr, 1> name_to_funcptr_map = {{
+static std::array<const func_ptr, 2> name_to_funcptr_map = {{
 #define ADD_HOOK(fn) { #fn, (void *) fn }
    ADD_HOOK(eglGetProcAddress),
+   ADD_HOOK(eglSwapBuffers),
 #undef ADD_HOOK
 }};
 
@@ -106,9 +113,10 @@ EXPORT_C_(void *) mangohud_find_egl_ptr(const char *name)
 EXPORT_C_(void *) eglGetProcAddress(const char* procName) {
     //std::cerr << __func__ << ": " << procName << std::endl;
 
+    void* real_func = get_egl_proc_address(procName);
     void* func = mangohud_find_egl_ptr(procName);
-    if (func)
+    if (func && real_func)
         return func;
 
-    return get_egl_proc_address(procName);
+    return real_func;
 }

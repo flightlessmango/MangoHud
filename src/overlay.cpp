@@ -14,11 +14,13 @@
 float g_overflow = 50.f /* 3333ms * 0.5 / 16.6667 / 2 (to edge and back) */;
 #endif
 
-bool open = false;
+bool gui_open = false;
 struct benchmark_stats benchmark;
 struct fps_limit fps_limit_stats {};
 ImVec2 real_font_size;
 std::vector<logData> graph_data;
+const char* engines[] = {"OpenGL", "VULKAN", "DXVK", "VKD3D", "DAMAVAND", "ZINK", "WINED3D", "Feral3D"};
+int engine;
 std::ifstream data_file;
 string data_location;
 vector<pair<string,string>> custom_data;
@@ -44,7 +46,9 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
       data_file.close();
   }
 #ifdef __gnu_linux__
-   Battery_Stats.update();
+    if (params.enabled[OVERLAY_PARAM_ENABLED_battery]) {
+       Battery_Stats.update();
+    }
 #endif
    if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
       cpuStats.UpdateCPUData();
@@ -90,20 +94,16 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
    // Save data for graphs
    if (graph_data.size() > 50)
       graph_data.erase(graph_data.begin());
-#ifdef _WIN32
-   float memused = 0;
-#endif
-   graph_data.push_back({0, 0, cpuStats.GetCPUDataTotal().percent, gpu_info.load, cpuStats.GetCPUDataTotal().temp,
-                        gpu_info.temp, gpu_info.CoreClock, gpu_info.MemClock, gpu_info.memoryUsed, memused});
+   graph_data.push_back(currentLogData);
    logger->notify_data_valid();
    HUDElements.update_exec();
 }
 
 void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
    uint32_t f_idx = sw_stats.n_frames % ARRAY_SIZE(sw_stats.frames_stats);
-   uint64_t now = os_time_get(); /* us */
-   double elapsed = (double)(now - sw_stats.last_fps_update); /* us */
-   fps = 1000000.0f * sw_stats.n_frames_since_update / elapsed;
+   uint64_t now = os_time_get_nano(); /* ns */
+   double elapsed = (double)(now - sw_stats.last_fps_update); /* ns */
+   fps = 1000000000.0 * sw_stats.n_frames_since_update / elapsed;
    if (logger->is_active())
       benchmark.fps_data.push_back(fps);
 
@@ -111,8 +111,8 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
         sw_stats.frames_stats[f_idx].stats[OVERLAY_PLOTS_frame_timing] =
             now - sw_stats.last_present_time;
    }
-
-   frametime = now - sw_stats.last_present_time;
+   
+   frametime = (now - sw_stats.last_present_time) / 1000;
    if (elapsed >= params.fps_sampling_period) {
       std::thread(update_hw_info, std::ref(sw_stats), std::ref(params), vendorID).detach();
       sw_stats.fps = fps;
@@ -302,7 +302,7 @@ void render_mpris_metadata(struct overlay_params& params, mutexed_metadata& meta
          meta.ticker.pos = (right_limit + g_overflow) - 1.f /* random */;
       }
 
-      meta.ticker.pos -= .5f * (frame_timing / 16666.7f) * meta.ticker.dir;
+      meta.ticker.pos -= .5f * (frame_timing / 16666666.7f /* ns */) * meta.ticker.dir;
 
       for (auto order : params.media_player_order) {
          switch (order) {
@@ -381,7 +381,7 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
          ImGui::SetNextWindowBgAlpha(params.background_alpha);
       }
    }
-   ImGui::Begin("Benchmark", &open, ImGuiWindowFlags_NoDecoration);
+   ImGui::Begin("Benchmark", &gui_open, ImGuiWindowFlags_NoDecoration);
    static const char* finished = "Logging Finished";
    ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2 )- (ImGui::CalcTextSize(finished).x / 2));
    ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), "%s", finished);
@@ -447,7 +447,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    }
 
    if (!params.no_display){
-      ImGui::Begin("Main", &open, ImGuiWindowFlags_NoDecoration);
+      ImGui::Begin("Main", &gui_open, ImGuiWindowFlags_NoDecoration);
       ImGui::BeginTable("hud", params.table_columns, ImGuiTableFlags_NoClip);
       HUDElements.place = 0;
       for (auto& func : HUDElements.ordered_functions){

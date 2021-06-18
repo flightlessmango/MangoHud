@@ -5,6 +5,7 @@
 #include "memory.h"
 #include "mesa/util/macros.h"
 #include "string_utils.h"
+#include <IconsForkAwesome.h>
 
 // Cut from https://github.com/ocornut/imgui/pull/2943
 // Probably move to ImGui
@@ -65,6 +66,7 @@ void HudElements::convert_colors(struct overlay_params& params)
     HUDElements.colors.text = convert(params.text_color);
     HUDElements.colors.media_player = convert(params.media_player_color);
     HUDElements.colors.wine = convert(params.wine_color);
+    HUDElements.colors.battery = convert(params.battery_color);
     HUDElements.colors.gpu_load_low = convert(params.gpu_load_color[0]);
     HUDElements.colors.gpu_load_med = convert(params.gpu_load_color[1]);
     HUDElements.colors.gpu_load_high = convert(params.gpu_load_color[2]);
@@ -81,6 +83,7 @@ void HudElements::convert_colors(struct overlay_params& params)
     style.Colors[ImGuiCol_WindowBg]  = convert(params.background_color);
     style.Colors[ImGuiCol_Text] = convert(params.text_color);
     style.CellPadding.y = params.cellpadding_y * real_font_size.y;
+    style.WindowRounding = params.round_corners;
 }
 
 void HudElements::convert_colors(bool do_conv, struct overlay_params& params)
@@ -269,7 +272,6 @@ void HudElements::core_load(){
 }
 void HudElements::io_stats(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_io_read] || HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_io_write]){
-        auto sampling = HUDElements.params->fps_sampling_period;
         ImGui::TableNextRow(); ImGui::TableNextColumn();
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_io_read] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_io_write])
             ImGui::TextColored(HUDElements.colors.io, "IO RD");
@@ -280,7 +282,7 @@ void HudElements::io_stats(){
 
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_io_read]){
             ImGui::TableNextColumn();
-            float val = HUDElements.sw_stats->io.diff.read * 1000000 / sampling;
+            float val = HUDElements.sw_stats->io.per_second.read;
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, val < 100 ? "%.1f" : "%.f", val);
             ImGui::SameLine(0,1.0f);
             ImGui::PushFont(HUDElements.sw_stats->font1);
@@ -289,7 +291,7 @@ void HudElements::io_stats(){
         }
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_io_write]){
             ImGui::TableNextColumn();
-            float val = HUDElements.sw_stats->io.diff.write * 1000000 / sampling;
+            float val = HUDElements.sw_stats->io.per_second.write;
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, val < 100 ? "%.1f" : "%.f", val);
             ImGui::SameLine(0,1.0f);
             ImGui::PushFont(HUDElements.sw_stats->font1);
@@ -344,12 +346,9 @@ void HudElements::ram(){
 }
 
 void HudElements::fps(){
-if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps]){
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps]){
         ImGui::TableNextRow(); ImGui::TableNextColumn();
-        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps] && HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_engine_version]){
-            ImGui::TextColored(HUDElements.colors.engine, "%s", HUDElements.sw_stats->engineName.c_str());
-        }
-        ImGui::TextColored(HUDElements.colors.engine, "%s", HUDElements.sw_stats->engineName.c_str());
+        ImGui::TextColored(HUDElements.colors.engine, "%s", engines[engine]);
         ImGui::TableNextColumn();
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_color_change]){
             int fps = int(HUDElements.sw_stats->fps);
@@ -378,6 +377,9 @@ if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps]){
             ImGui::Text("ms");
             ImGui::PopFont();
         }
+    } else if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_engine_version]){
+        ImGui::TableNextRow(); ImGui::TableNextColumn();
+        ImGui::TextColored(HUDElements.colors.engine, "%s", HUDElements.sw_stats->engineName.c_str());
     }
 }
 
@@ -463,7 +465,7 @@ void HudElements::frame_timing(){
         char hash[40];
         snprintf(hash, sizeof(hash), "##%s", overlay_param_names[OVERLAY_PARAM_ENABLED_frame_timing]);
         HUDElements.sw_stats->stat_selector = OVERLAY_PLOTS_frame_timing;
-        HUDElements.sw_stats->time_dividor = 1000.0f;
+        HUDElements.sw_stats->time_dividor = 1000000.0f; /* ns -> ms */
         ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
         double min_time = 0.0f;
         double max_time = 50.0f;
@@ -500,29 +502,33 @@ void HudElements::media_player(){
 }
 
 void HudElements::resolution(){
-    ImGui::TableNextRow(); ImGui::TableNextColumn();
-    unsigned res_width  = ImGui::GetIO().DisplaySize.x;
-    unsigned res_height = ImGui::GetIO().DisplaySize.y;
-    ImGui::PushFont(HUDElements.sw_stats->font1);
-    ImGui::TextColored(HUDElements.colors.engine, "Resolution");
-    ImGui::TableNextColumn();
-    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "%ix%i", res_width, res_height);
-    ImGui::PopFont();
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_resolution]){
+        ImGui::TableNextRow(); ImGui::TableNextColumn();
+        unsigned res_width  = ImGui::GetIO().DisplaySize.x;
+        unsigned res_height = ImGui::GetIO().DisplaySize.y;
+        ImGui::PushFont(HUDElements.sw_stats->font1);
+        ImGui::TextColored(HUDElements.colors.engine, "Resolution");
+        ImGui::TableNextColumn();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "%ix%i", res_width, res_height);
+        ImGui::PopFont();
+    }
 }
 
 void HudElements::show_fps_limit(){
-    int fps = 0;
-    double frame_time = (double)fps_limit_stats.targetFrameTime.count()/1000000;
-    if (frame_time == 0.0){
-        return;
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_show_fps_limit]){
+        int fps = 0;
+        double frame_time = (double)fps_limit_stats.targetFrameTime.count()/1000000;
+        fps = (1 / frame_time) *1000;
+        if (frame_time == 0.0){
+            fps = 0;
+        }
+        ImGui::TableNextRow(); ImGui::TableNextColumn();
+        ImGui::PushFont(HUDElements.sw_stats->font1);
+        ImGui::TextColored(HUDElements.colors.engine, "%s","FPS limit");
+        ImGui::TableNextColumn();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", fps);
+        ImGui::PopFont();
     }
-    fps = (1 / frame_time) *1000;
-    ImGui::TableNextRow(); ImGui::TableNextColumn();
-    ImGui::PushFont(HUDElements.sw_stats->font1);
-    ImGui::TextColored(HUDElements.colors.engine, "%s","FPS limit");
-    ImGui::TableNextColumn();
-    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", fps);
-    ImGui::PopFont();
 }
 
 void HudElements::custom_text_center(){
@@ -575,6 +581,46 @@ void HudElements::vkbasalt(){
         ImGui::PopFont();
     }
 }
+
+void HudElements::battery(){
+    if (Battery_Stats.batt_count > 0) {
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery]) {
+            ImGui::TableNextRow(); ImGui::TableNextColumn();
+            ImGui::TextColored(HUDElements.colors.battery, "BATT");
+            ImGui::TableNextColumn();
+            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_icon]) {
+                switch(int(Battery_Stats.current_percent)){
+                    case 0 ... 33:
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_QUARTER);
+                        break;
+                    case 34 ... 66:
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_HALF);
+                        break;
+                    case 67 ... 97:
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_THREE_QUARTERS);
+                        break;
+                    case 98 ... 100:
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_FULL);
+                        break;
+                }
+            }
+            else {
+                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", Battery_Stats.current_percent);
+                ImGui::SameLine(0,1.0f);
+                ImGui::Text("%%");
+            }
+            if (!Battery_Stats.isCharging()) {
+                ImGui::TableNextColumn();
+                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", Battery_Stats.current_watt);
+                ImGui::SameLine(0,1.0f);
+                ImGui::PushFont(HUDElements.sw_stats->font1);
+                ImGui::Text("W");
+                ImGui::PopFont();
+            }
+        }
+    }
+}
+
 
 void HudElements::graphs(){
     ImGui::TableNextRow(); ImGui::TableNextColumn();
@@ -739,6 +785,7 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
     if (param == "sync")            { ordered_functions.push_back({_sync, value});                  }
     if (param == "exec")            { ordered_functions.push_back({_exec, value});
                                       exec_list.push_back({int(ordered_functions.size() - 1), value});       }
+    if (param == "battery")         { ordered_functions.push_back({battery, value});                }
     if (param == "graphs"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs])
             HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs] = true;
@@ -764,6 +811,7 @@ void HudElements::legacy_elements(){
     ordered_functions.push_back({io_stats,           value});
     ordered_functions.push_back({vram,               value});
     ordered_functions.push_back({ram,                value});
+    ordered_functions.push_back({battery,            value});
     ordered_functions.push_back({fps,                value});
     ordered_functions.push_back({engine_version,     value});
     ordered_functions.push_back({gpu_name,           value});
@@ -771,9 +819,11 @@ void HudElements::legacy_elements(){
     ordered_functions.push_back({arch,               value});
     ordered_functions.push_back({wine,               value});
     ordered_functions.push_back({frame_timing,       value});
-    ordered_functions.push_back({media_player,       value});
     ordered_functions.push_back({gamemode,           value});
     ordered_functions.push_back({vkbasalt,           value});
+    ordered_functions.push_back({show_fps_limit,     value});
+    ordered_functions.push_back({resolution,         value});
+    ordered_functions.push_back({media_player,       value});
 }
 
 void HudElements::update_exec(){

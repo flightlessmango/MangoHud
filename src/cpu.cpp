@@ -8,6 +8,7 @@
 #include <string.h>
 #include <algorithm>
 #include <regex>
+#include <inttypes.h>
 #include "string_utils.h"
 
 #ifndef PROCDIR
@@ -323,15 +324,17 @@ static bool get_cpu_power_rapl(CPUPowerData* cpuPowerData, int& power) {
     rewind(powerData_rapl->energyCounterFile);
     fflush(powerData_rapl->energyCounterFile);
 
-    int energyCounterValue = 0;
-    if (fscanf(powerData_rapl->energyCounterFile, "%d", &energyCounterValue) != 1)
+    uint64_t energyCounterValue = 0;
+    if (fscanf(powerData_rapl->energyCounterFile, "%" SCNu64, &energyCounterValue) != 1)
         return false;
 
     Clock::time_point now = Clock::now();
     Clock::duration timeDiff = now - powerData_rapl->lastCounterValueTime;
-    int energyCounterDiff = energyCounterValue - powerData_rapl->lastCounterValue;
+    int64_t timeDiffMicro = std::chrono::duration_cast<std::chrono::microseconds>(timeDiff).count();
+    uint64_t energyCounterDiff = energyCounterValue - powerData_rapl->lastCounterValue;
 
-    power = (int)((float)energyCounterDiff / (float)timeDiff.count() * 1000);
+    if (powerData_rapl->lastCounterValue > 0 && energyCounterValue > powerData_rapl->lastCounterValue)
+        power = energyCounterDiff / timeDiffMicro;
 
     powerData_rapl->lastCounterValue = energyCounterValue;
     powerData_rapl->lastCounterValueTime = now;

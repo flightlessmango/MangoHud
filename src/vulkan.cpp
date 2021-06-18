@@ -191,19 +191,19 @@ thread_local ImGuiContext* __MesaImGui;
 
 static void *find_object_data(uint64_t obj)
 {
-   scoped_lock lk(global_lock);
+   ::scoped_lock lk(global_lock);
    return vk_object_to_data[obj];
 }
 
 static void map_object(uint64_t obj, void *data)
 {
-   scoped_lock lk(global_lock);
+   ::scoped_lock lk(global_lock);
    vk_object_to_data[obj] = data;
 }
 
 static void unmap_object(uint64_t obj)
 {
-   scoped_lock lk(global_lock);
+   ::scoped_lock lk(global_lock);
    vk_object_to_data.erase(obj);
 }
 
@@ -628,7 +628,7 @@ void init_system_info(){
       string preloader = wineProcess.substr(n + 1);
       if (preloader == "wine-preloader" || preloader == "wine64-preloader") {
          // Check if using Proton
-         if (wineProcess.find("/dist/bin/wine") != std::string::npos) {
+         if (wineProcess.find("/dist/bin/wine") != std::string::npos || wineProcess.find("/files/bin/wine") != std::string::npos){
             stringstream ss;
             ss << dirname((char*)wineProcess.c_str()) << "/../../version";
             string protonVersion = ss.str();
@@ -774,7 +774,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
 
    ImGui::NewFrame();
    {
-      scoped_lock lk(instance_data->notifier.mutex);
+      ::scoped_lock lk(instance_data->notifier.mutex);
       position_layer(data->sw_stats, instance_data->params, data->window_size);
       render_imgui(data->sw_stats, instance_data->params, data->window_size, true);
    }
@@ -1022,7 +1022,7 @@ static void check_fonts(struct swapchain_data* data)
       else
          desc_set = create_image_with_desc(data, width, height, VK_FORMAT_R8_UNORM, data->font_image, data->font_mem, data->font_image_view);
 
-      io.Fonts->TexID = (ImTextureID) desc_set;
+      io.Fonts->SetTexID((ImTextureID)desc_set);
 
       data->font_uploaded = false;
       data->sw_stats.font_params_hash = params.font_params_hash;
@@ -1063,6 +1063,12 @@ static void CreateOrResizeBuffer(struct device_data *data,
         data->vtable.DestroyBuffer(data->device, *buffer, NULL);
     if (*buffer_memory)
         data->vtable.FreeMemory(data->device, *buffer_memory, NULL);
+
+    if (data->properties.limits.nonCoherentAtomSize > 0)
+    {
+      VkDeviceSize atom_size = data->properties.limits.nonCoherentAtomSize - 1;
+      new_size = (new_size + atom_size) & ~atom_size;
+    }
 
     VkBufferCreateInfo buffer_info = {};
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -1164,9 +1170,9 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
    ImDrawVert* vtx_dst = NULL;
    ImDrawIdx* idx_dst = NULL;
    VK_CHECK(device_data->vtable.MapMemory(device_data->device, draw->vertex_buffer_mem,
-                                          0, vertex_size, 0, (void**)(&vtx_dst)));
+                                          0, draw->vertex_buffer_size, 0, (void**)(&vtx_dst)));
    VK_CHECK(device_data->vtable.MapMemory(device_data->device, draw->index_buffer_mem,
-                                          0, index_size, 0, (void**)(&idx_dst)));
+                                          0, draw->index_buffer_size, 0, (void**)(&idx_dst)));
    for (int n = 0; n < draw_data->CmdListsCount; n++)
       {
          const ImDrawList* cmd_list = draw_data->CmdLists[n];
@@ -1502,8 +1508,8 @@ static void setup_swapchain_data_pipeline(struct swapchain_data *data)
    color_attachment[0].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
    color_attachment[0].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
    color_attachment[0].colorBlendOp = VK_BLEND_OP_ADD;
-   color_attachment[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-   color_attachment[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+   color_attachment[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+   color_attachment[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
    color_attachment[0].alphaBlendOp = VK_BLEND_OP_ADD;
    color_attachment[0].colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
       VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
@@ -1859,13 +1865,13 @@ static VkResult overlay_CreateSwapchainKHR(
    if (!is_blacklisted()) {
 #ifdef __gnu_linux__
       parse_pciids();
-#endif
       get_device_name(prop.vendorID, prop.deviceID, swapchain_data->sw_stats);
-      init_gpu_stats(device_data->properties.vendorID, device_data->instance->params);
       init_system_info();
       HUDElements.sw_stats = &swapchain_data->sw_stats;
       if(device_data->instance->params.autostart_log && !logger->is_active())
          logger->start_logging();
+#endif
+      init_gpu_stats(device_data->properties.vendorID, device_data->instance->params);
    }
    if(driverProps.driverID == VK_DRIVER_ID_NVIDIA_PROPRIETARY){
       swapchain_data->sw_stats.driverName = "NVIDIA";
@@ -1895,6 +1901,12 @@ static void overlay_DestroySwapchainKHR(
     VkSwapchainKHR                              swapchain,
     const VkAllocationCallbacks*                pAllocator)
 {
+   if (swapchain == VK_NULL_HANDLE) {
+      struct device_data *device_data = FIND(struct device_data, device);
+      device_data->vtable.DestroySwapchainKHR(device, swapchain, pAllocator);
+      return;
+   }
+
    struct swapchain_data *swapchain_data =
       FIND(struct swapchain_data, swapchain);
 
@@ -2181,7 +2193,7 @@ static VkResult overlay_CreateInstance(
    VkLayerInstanceCreateInfo *chain_info =
       get_instance_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
-   std::string engineName, engineVersion;
+   std::string engineVersion,engineName;
    if (!is_blacklisted(true)) {
       const char* pEngineName = nullptr;
       if (pCreateInfo->pApplicationInfo)
@@ -2192,12 +2204,25 @@ static VkResult overlay_CreateInstance(
          int engineVer = pCreateInfo->pApplicationInfo->engineVersion;
          engineVersion = to_string(VK_VERSION_MAJOR(engineVer)) + "." + to_string(VK_VERSION_MINOR(engineVer)) + "." + to_string(VK_VERSION_PATCH(engineVer));
       }
+      
+      if (engineName != "DXVK" && engineName != "vkd3d" && engineName != "Feral3D" && engineName != "Damavand" && engineName != "mesa zink")
+         engine = EngineTypes::Vulkan;
 
-      if (engineName != "DXVK" && engineName != "vkd3d" && engineName != "Feral3D" && engineName != "Damavand")
-         engineName = "VULKAN";
+      if (engineName == "DXVK")
+         engine = EngineTypes::DXVK;
 
       if (engineName == "vkd3d")
-         engineName = "VKD3D";
+         engine = EngineTypes::VKD3D;
+      
+      if (engineName == "mesa zink")
+         engine = EngineTypes::ZINK;
+
+      if (engineName == "Damavand")
+         engine = EngineTypes::DAMAVAND;
+      
+      if (engineName == "Feral3D")
+         engine = EngineTypes::Feral3D;
+         
    }
 
    assert(chain_info->u.pLayerInfo);

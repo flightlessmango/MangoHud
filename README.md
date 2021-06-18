@@ -57,6 +57,20 @@ If you do not wish to compile anything, simply download the file under [Releases
 
 If you are using an Arch-based distribution, install [`mangohud`](https://aur.archlinux.org/packages/mangohud/) and [`lib32-mangohud`](https://aur.archlinux.org/packages/lib32-mangohud/) with your favourite AUR helper. [`mangohud-git`](https://aur.archlinux.org/packages/mangohud-git/) and [`lib32-mangohud-git`](https://aur.archlinux.org/packages/lib32-mangohud-git/) are also available on the AUR if you want the up-to-date version of MangoHud.
 
+#### Debian 11 (Bullseye)
+
+If you are using Debian 11 or later, to install the [MangoHud](https://tracker.debian.org/pkg/mangohud) package, execute:
+
+```
+sudo apt install mangohud
+```
+
+Optionally, if you also need MangoHud for 32-bit applications, execute:
+
+```
+sudo apt install mangohud:i386
+```
+
 #### Fedora
 
 If you are using Fedora, to install the [MangoHud](https://src.fedoraproject.org/rpms/mangohud) package, execute:
@@ -154,7 +168,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `toggle_hud=`<br>`toggle_logging=` | Modifiable toggle hotkeys. Default are `Shift_R+F12` and `Shift_L+F2`, respectively.      |
 | `reload_cfg=`                      | Change keybind for reloading the config. Default = `Shift_L+F4`                       |
 | `time`<br>`time_format=%T`         | Displays local time. See [std::put_time](https://en.cppreference.com/w/cpp/io/manip/put_time) for formatting help. NOTE: Sometimes apps (or AMDVLK (should be fixed in latest)) may set `TZ` (timezone) environment variable to UTC/GMT |
-| `gpu_color`<br>`gpu_color`<br>`vram_color`<br>`ram_color`<br>`io_color`<br>`engine_color`<br>`frametime_color`<br>`background_color`<br>`text_color`<br>`media_player_color`         | Change default colors: `gpu_color=RRGGBB`|
+| `gpu_color`<br>`cpu_color`<br>`vram_color`<br>`ram_color`<br>`io_color`<br>`engine_color`<br>`frametime_color`<br>`background_color`<br>`text_color`<br>`media_player_color`         | Change default colors: `gpu_color=RRGGBB`|
 | `alpha`                            | Set the opacity of all text and frametime graph `0.0-1.0`                             |
 | `background_alpha`                 | Set the opacity of the background `0.0-1.0`                                           |
 | `read_cfg`                         | Add to MANGOHUD_CONFIG as first parameter to also load config file. Otherwise only MANGOHUD_CONFIG parameters are used. |
@@ -199,7 +213,12 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `show_fps_limit`                   | Display the current fps limit                                                         |
 | `custom_text_center`               | Display a custom text centered useful for a header e.g `custom_text_center=FlightLessMango Benchmarks`     |
 | `custom_text`                      | Display a custom text e.g `custom_text=Fsync enabled`                                 |
-
+| `round_corners`                    | Change the amount of roundness of the corners have e.g `round_corners=10.0`           |
+| `vkbasalt`                         | Shows if vkbasalt is on                                                               |
+| `gamemode`                         | Shows if gamemode is on                                                               |
+| `battery`                          | Display current battery percent and energy consumption                                |
+| `battery_icon`                     | Display battery icon instead of percent                                               |
+| `battery_color`                    | Change the BATT text color                                                            |
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 Because comma is also used as option delimiter and needs to be escaped for values with a backslash, you can use `+` like `MANGOHUD_CONFIG=fps_limit=60+30+0` instead.
 
@@ -226,6 +245,14 @@ All vulkan vsync options might not be supported on your device, you can check wh
 - `Shift_L+F2` : Toggle Logging
 - `Shift_L+F4` : Reload Config
 - `Shift_R+F12`: Toggle Hud
+
+## Workarounds
+
+Options starting with "gl_*" are for OpenGL.
+
+- `gl_size_query = viewport` : Specify what to use for getting display size. Options are "viewport", "scissorbox" or disabled. Defaults to using glXQueryDrawable.
+- `gl_bind_framebuffer = 0..N` : (Re)bind given framebuffer before MangoHud gets drawn. Helps with Crusader Kings III.
+- `gl_dont_flip = 1` : Don't swap origin if using GL_UPPER_LEFT. Helps with Ryujinx.
 
 ## MangoHud FPS logging
 
