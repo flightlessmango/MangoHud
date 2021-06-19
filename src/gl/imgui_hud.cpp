@@ -76,14 +76,15 @@ void imgui_init()
    for (auto& item : params.blacklist) {
       add_blacklist(item);
    }
+
     if (engine != EngineTypes::ZINK){
         auto pid = getpid();
         string find_wined3d = "lsof -w -lnPX -L -p " + to_string(pid) + " | grep -oh wined3d";
         string ret_wined3d = exec(find_wined3d);
         if (ret_wined3d == "wined3d\n" )
-            engine = EngineTypes::WINED3D;
+            engine = WINED3D;
         else
-            engine = EngineTypes::OpenGL;
+            engine = OpenGL;
     }
     is_blacklisted(true);
     notifier.params = &params;

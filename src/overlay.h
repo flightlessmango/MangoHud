@@ -93,7 +93,7 @@ enum EngineTypes
 };
 
 extern const char* engines[];
-extern int engine;
+extern enum EngineTypes engine;
 
 extern struct fps_limit fps_limit_stats;
 extern int32_t deviceID;

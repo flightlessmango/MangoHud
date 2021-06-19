@@ -2148,25 +2148,24 @@ static VkResult overlay_CreateInstance(
          int engineVer = pCreateInfo->pApplicationInfo->engineVersion;
          engineVersion = to_string(VK_VERSION_MAJOR(engineVer)) + "." + to_string(VK_VERSION_MINOR(engineVer)) + "." + to_string(VK_VERSION_PATCH(engineVer));
       }
-      
-      if (engineName != "DXVK" && engineName != "vkd3d" && engineName != "Feral3D" && engineName != "Damavand" && engineName != "mesa zink")
-         engine = EngineTypes::Vulkan;
 
       if (engineName == "DXVK")
-         engine = EngineTypes::DXVK;
+         engine = DXVK;
 
-      if (engineName == "vkd3d")
-         engine = EngineTypes::VKD3D;
-      
-      if (engineName == "mesa zink")
-         engine = EngineTypes::ZINK;
+      else if (engineName == "vkd3d")
+         engine = VKD3D;
 
-      if (engineName == "Damavand")
-         engine = EngineTypes::DAMAVAND;
-      
-      if (engineName == "Feral3D")
-         engine = EngineTypes::Feral3D;
-         
+      else if(engineName == "mesa zink")
+         engine = ZINK;
+
+      else if (engineName == "Damavand")
+         engine = DAMAVAND;
+
+      else if (engineName == "Feral3D")
+         engine = Feral3D;
+
+      else
+         engine = Vulkan;
    }
 
    assert(chain_info->u.pLayerInfo);
