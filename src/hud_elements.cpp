@@ -609,7 +609,7 @@ void HudElements::battery(){
                 ImGui::SameLine(0,1.0f);
                 ImGui::Text("%%");
             }
-            if (!Battery_Stats.isCharging()) {
+            if (Battery_Stats.current_watt != 0) {
                 ImGui::TableNextColumn();
                 right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", Battery_Stats.current_watt);
                 ImGui::SameLine(0,1.0f);

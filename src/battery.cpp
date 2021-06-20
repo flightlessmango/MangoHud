@@ -96,12 +96,20 @@ float BatteryStats::getPower() {
         string current_power = syspath + "/current_now";
         string current_voltage = syspath + "/voltage_now";
         string power_now = syspath + "/power_now";
+        string status = syspath + "/status";
 
-        if (isCharging()) {
-            return 0;
+        std::ifstream input(status);
+        std::string line;
+        if(std::getline(input,line)) {
+            current_status= line;
+            state[i]=current_status;
         }
 
-        else if (fs::exists(current_power)) {
+        if (state[i] == "Charging" ||  state[i] == "Unknown") {
+                return 0;
+        }
+
+        if (fs::exists(current_power)) {
             std::ifstream input(current_power);
             std::string line;
             if(std::getline(input,line)) {
@@ -112,7 +120,7 @@ float BatteryStats::getPower() {
                 voltage += (stof(line) / 1000000);
             }
         }
-        else  {
+        else {
             std::ifstream input(power_now);
             std::string line;
             if(std::getline(input,line)) {
@@ -122,50 +130,6 @@ float BatteryStats::getPower() {
         }
     }
     return current * voltage;
-}
-
-bool BatteryStats::isCharging() {
-    if (batt_count > 0) {
-        for(int i =0; i < batt_count; i++) {
-            string syspath = battPath[i];
-            string status = syspath + "/status";
-            std::ifstream input(status);
-            std::string line;
-            if(std::getline(input,line)) {
-                current_status= line;
-                state[i]=current_status;
-            }
-        }
-        for(int i =0; i < batt_count; i++) {
-            if (state[i] == "Charging" ||  state[i] == "Unknown") {
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
-
-bool BatteryStats::fullCharge(){
-    //check if both batteries are fully charged
-    int charged =0;
-    for(int i =0; i < batt_count; i++) {
-        if (state[i] == "Full") {
-            charged +=1;
-        }
-    }
-    if (charged == 1 && batt_count == 1) {
-        return true;
-    }
-
-    else if (charged == 2 && batt_count == 2) {
-        return true;
-    }
-
-    else {
-        return false;
-    }
 }
 
 BatteryStats Battery_Stats;

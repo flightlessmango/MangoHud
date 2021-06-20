@@ -12,8 +12,6 @@ class BatteryStats{
         void update();
         float getPower();
         float getPercent();
-        bool isCharging();
-        bool fullCharge();
         string battPath[2];
         float current_watt = 0;
         float current_percent = 0;
