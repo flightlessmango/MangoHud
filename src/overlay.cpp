@@ -13,6 +13,8 @@
 #ifdef HAVE_DBUS
 float g_overflow = 50.f /* 3333ms * 0.5 / 16.6667 / 2 (to edge and back) */;
 #endif
+#define GPUVIS_TRACE_IMPLEMENTATION
+#include "gpuvis_trace_utils.h"
 
 bool gui_open = false;
 struct benchmark_stats benchmark;
@@ -136,6 +138,12 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
    sw_stats.last_present_time = now;
    sw_stats.n_frames++;
    sw_stats.n_frames_since_update++;
+   gpuvis_trace_printf("[MH] frametime: %lu", frametime );
+   gpuvis_trace_printf("[MH] fps: %d", fps );
+   gpuvis_trace_printf("[MH] gpu_load: %i", gpu_info.load);
+   gpuvis_trace_printf("[MH] gpu_vram_used: %d", gpu_info.memoryUsed);
+   gpuvis_trace_printf("[MH] cpu_load: %d", cpuStats.GetCPUDataTotal().percent);
+   gpuvis_trace_printf("[MH] ram_used: %d", memused);
 }
 
 void calculate_benchmark_data(void *params_void){
