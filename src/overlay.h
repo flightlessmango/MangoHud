@@ -80,6 +80,8 @@ struct LOAD_DATA {
 
 enum EngineTypes
 {
+   Unknown,
+   
    OpenGL,
    Vulkan,
 
