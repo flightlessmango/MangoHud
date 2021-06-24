@@ -2149,7 +2149,7 @@ static VkResult overlay_CreateInstance(
          engineVersion = to_string(VK_VERSION_MAJOR(engineVer)) + "." + to_string(VK_VERSION_MINOR(engineVer)) + "." + to_string(VK_VERSION_PATCH(engineVer));
       }
 
-      if (engine < 1){
+      if (engine < 2){
          if (engineName == "DXVK")
             engine = DXVK;
 
