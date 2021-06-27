@@ -78,14 +78,28 @@ void imgui_init()
    }
 
     if (sw_stats.engine != EngineTypes::ZINK){
+        sw_stats.engine = OPENGL;
+
+        stringstream ss;
+        string line;
         auto pid = getpid();
-        string find_wined3d = "lsof -w -lnPX -L -p " + to_string(pid) + " | grep -oh wined3d";
-        string ret_wined3d = exec(find_wined3d);
-        if (ret_wined3d == "wined3d\n" )
-            sw_stats.engine = WINED3D;
-        else
-            sw_stats.engine = OPENGL;
+        string path = "/proc/" + to_string(pid) + "/map_files/";
+        auto files = exec("ls " + path);
+        ss << files;
+
+        while(std::getline(ss, line, '\n')){
+            auto file = path + line;
+            auto sym = read_symlink(file.c_str());
+            if (sym.find("wined3d") != std::string::npos) {
+                sw_stats.engine = WINED3D;
+                break;
+            } else if (sym.find("libtogl.so") != std::string::npos || sym.find("libtogl_client.so") != std::string::npos) {
+                sw_stats.engine = TOGL;
+                break;
+            }
+        }
     }
+
     is_blacklisted(true);
     notifier.params = &params;
     start_notifier(notifier);
