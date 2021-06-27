@@ -50,7 +50,7 @@ struct state {
 };
 
 static GLVec last_vp {}, last_sb {};
-static swapchain_stats sw_stats {};
+swapchain_stats sw_stats {};
 static state state;
 static uint32_t vendorID;
 static std::string deviceName;
@@ -77,14 +77,14 @@ void imgui_init()
       add_blacklist(item);
    }
 
-    if (engine != EngineTypes::ZINK){
+    if (sw_stats.engine != EngineTypes::ZINK){
         auto pid = getpid();
         string find_wined3d = "lsof -w -lnPX -L -p " + to_string(pid) + " | grep -oh wined3d";
         string ret_wined3d = exec(find_wined3d);
         if (ret_wined3d == "wined3d\n" )
-            engine = WINED3D;
+            sw_stats.engine = WINED3D;
         else
-            engine = OpenGL;
+            sw_stats.engine = OPENGL;
     }
     is_blacklisted(true);
     notifier.params = &params;

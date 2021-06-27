@@ -21,6 +21,24 @@ struct frame_stat {
    uint64_t stats[OVERLAY_PLOTS_MAX];
 };
 
+enum EngineTypes
+{
+   UNKNOWN,
+
+   OPENGL,
+   VULKAN,
+
+   DXVK,
+   VKD3D,
+   DAMAVAND,
+   ZINK,
+
+   WINED3D,
+   FERAL3D,
+};
+
+extern const char* engines[];
+
 struct swapchain_stats {
    uint64_t n_frames;
    enum overlay_plots stat_selector;
@@ -54,6 +72,7 @@ struct swapchain_stats {
    std::string deviceName;
    std::string gpuName;
    std::string driverName;
+   enum EngineTypes engine;
 };
 
 struct fps_limit {
@@ -77,25 +96,6 @@ struct LOAD_DATA {
    unsigned med_load;
    unsigned high_load;
 };
-
-enum EngineTypes
-{
-   Unknown,
-   
-   OpenGL,
-   Vulkan,
-
-   DXVK,
-   VKD3D,
-   DAMAVAND,
-   ZINK,
-
-   WINED3D,
-   Feral3D
-};
-
-extern const char* engines[];
-extern enum EngineTypes engine;
 
 extern struct fps_limit fps_limit_stats;
 extern int32_t deviceID;

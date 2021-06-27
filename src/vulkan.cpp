@@ -72,6 +72,10 @@ int hudFirstRow, hudSecondRow;
 VkPhysicalDeviceDriverProperties driverProps = {};
 int32_t deviceID;
 
+namespace MangoHud { namespace GL {
+   extern swapchain_stats sw_stats;
+}}
+
 /* Mapped from VkInstace/VkPhysicalDevice */
 struct instance_data {
    struct vk_instance_dispatch_table vtable;
@@ -79,6 +83,7 @@ struct instance_data {
    struct overlay_params params;
    uint32_t api_version;
    string engineName, engineVersion;
+   enum EngineTypes engine;
    notify_thread notifier;
 };
 
@@ -1781,6 +1786,7 @@ static VkResult overlay_CreateSwapchainKHR(
    swapchain_data->sw_stats.version_vk.patch = VK_VERSION_PATCH(prop.apiVersion);
    swapchain_data->sw_stats.engineName    = device_data->instance->engineName;
    swapchain_data->sw_stats.engineVersion = device_data->instance->engineVersion;
+   swapchain_data->sw_stats.engine        = device_data->instance->engine;
 
    std::stringstream ss;
 //   ss << prop.deviceName;
@@ -2138,6 +2144,7 @@ static VkResult overlay_CreateInstance(
       get_instance_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
    std::string engineVersion,engineName;
+   enum EngineTypes engine = EngineTypes::UNKNOWN;
    if (!is_blacklisted(true)) {
       const char* pEngineName = nullptr;
       if (pCreateInfo->pApplicationInfo)
@@ -2149,25 +2156,25 @@ static VkResult overlay_CreateInstance(
          engineVersion = to_string(VK_VERSION_MAJOR(engineVer)) + "." + to_string(VK_VERSION_MINOR(engineVer)) + "." + to_string(VK_VERSION_PATCH(engineVer));
       }
 
-      if (engine < 2){
-         if (engineName == "DXVK")
-            engine = DXVK;
+      if (engineName == "DXVK")
+         engine = DXVK;
 
-         else if (engineName == "vkd3d")
-            engine = VKD3D;
+      else if (engineName == "vkd3d")
+         engine = VKD3D;
 
-         else if(engineName == "mesa zink")
-            engine = ZINK;
-
-         else if (engineName == "Damavand")
-            engine = DAMAVAND;
-
-         else if (engineName == "Feral3D")
-            engine = Feral3D;
-
-         else
-            engine = Vulkan;
+      else if(engineName == "mesa zink") {
+         engine = ZINK;
+         MangoHud::GL::sw_stats.engine = ZINK;
       }
+
+      else if (engineName == "Damavand")
+         engine = DAMAVAND;
+
+      else if (engineName == "Feral3D")
+         engine = FERAL3D;
+
+      else
+         engine = VULKAN;
    }
 
    assert(chain_info->u.pLayerInfo);
@@ -2216,6 +2223,7 @@ static VkResult overlay_CreateInstance(
          }
       }
 
+      instance_data->engine = engine;
       instance_data->engineName = engineName;
       instance_data->engineVersion = engineVersion;
    }

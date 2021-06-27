@@ -348,7 +348,7 @@ void HudElements::ram(){
 void HudElements::fps(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps]){
         ImGui::TableNextRow(); ImGui::TableNextColumn();
-        ImGui::TextColored(HUDElements.colors.engine, "%s", engines[engine]);
+        ImGui::TextColored(HUDElements.colors.engine, "%s", engines[HUDElements.sw_stats->engine]);
         ImGui::TableNextColumn();
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_color_change]){
             int fps = int(HUDElements.sw_stats->fps);
