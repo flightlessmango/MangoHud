@@ -78,13 +78,6 @@ namespace MangoHud { namespace GL {
 
 extern overlay_params params;
 
-// Desktop GL 3.2+ has glDrawElementsBaseVertex() which GL ES and WebGL don't have.
-#if defined(IMGUI_IMPL_OPENGL_ES2) || defined(IMGUI_IMPL_OPENGL_ES3) || !defined(GL_VERSION_3_2)
-#define IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET   0
-#else
-#define IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET   1
-#endif
-
 // OpenGL Data
 static GLuint       g_GlVersion = 0;                // Extracted at runtime using GL_MAJOR_VERSION, GL_MINOR_VERSION queries.
 static char         g_GlslVersionString[32] = "";   // Specified by user or detected based on compile time GL settings.
@@ -400,8 +393,8 @@ void GetOpenGLVersion(int& major, int& minor, bool& isGLES)
     if (!version)
         return;
 
-    //if (glGetError() == 0x500) {
-
+    //if (glGetError() == 0x500)
+    {
         for (int i = 0;  prefixes[i];  i++) {
             const size_t length = strlen(prefixes[i]);
             if (strncmp(version, prefixes[i], length) == 0) {
@@ -412,7 +405,7 @@ void GetOpenGLVersion(int& major, int& minor, bool& isGLES)
         }
 
         sscanf(version, "%d.%d", &major, &minor);
-    //}
+    }
 }
 
 bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
@@ -454,7 +447,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_opengl3";
     //#if IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
-    if ((!g_IsGLES && g_GlVersion >= 320) || (g_IsGLES && g_GlVersion >= 320))
+    if (g_GlVersion >= 320) // GL/GLES 3.2+
         io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
     // Store GLSL version string so we can refer to it later in case we recreate shaders.

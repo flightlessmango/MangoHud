@@ -158,11 +158,6 @@ void imgui_create(void *ctx)
     ImGui::GetIO().DisplaySize = ImVec2(last_vp[2], last_vp[3]);
 
     ImGui_ImplOpenGL3_Init();
-    // Make a dummy GL call (we don't actually need the result)
-    // IF YOU GET A CRASH HERE: it probably means that you haven't initialized the OpenGL function loader used by this code.
-    // Desktop OpenGL 3/4 need a function loader. See the IMGUI_IMPL_OPENGL_LOADER_xxx explanation above.
-    GLint current_texture;
-    glGetIntegerv(GL_TEXTURE_BINDING_2D, &current_texture);
 
     create_fonts(params, sw_stats.font1, sw_stats.font_text);
     sw_stats.font_params_hash = params.font_params_hash;
