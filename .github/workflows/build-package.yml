@@ -1,11 +1,11 @@
 name: Build release package
 on:
   release:
-    types: ["created"]
-  push:
-    tags: ["v*"]
-    branches:
-      - main
+    types: [published]
+#  push:
+#    tags: ["v*"]
+#    branches:
+#      - main
   workflow_dispatch:
 
 jobs:
@@ -43,7 +43,7 @@ jobs:
           ./build-source.sh
           ./build.sh build package release
       - name: Upload release
-        if: ${{ github.event_name == 'release' && github.event.action == 'created' }}
+        if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
