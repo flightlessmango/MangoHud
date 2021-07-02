@@ -43,12 +43,9 @@ dependencies() {
 
         if [[ ! -f ./bin/get-pip.py ]]; then
             curl https://bootstrap.pypa.io/get-pip.py -o bin/get-pip.py
+            python3 ./bin/get-pip.py
         fi
-        python3 ./bin/get-pip.py
-
-        if [[ $(pip3 show meson >/dev/null; echo $?) == 1 || $(pip3 show mako >/dev/null; echo $?) == 1 ]]; then
-            pip3 install meson mako
-        fi
+        pip3 install 'meson>=0.54' mako
 
         if [[ ! -f /usr/include/NVCtrl/NVCtrl.h ]]; then
             curl -LO http://mirrors.kernel.org/ubuntu/pool/main/n/nvidia-settings/libxnvctrl0_440.64-0ubuntu1_amd64.deb
