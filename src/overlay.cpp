@@ -190,6 +190,14 @@ void position_layer(struct swapchain_stats& data, struct overlay_params& params,
       data.main_window_pos = ImVec2(width - window_size.x - margin + params.offset_x, margin + params.offset_y);
       ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
       break;
+   case LAYER_POSITION_MIDDLE_LEFT:
+      data.main_window_pos = ImVec2(margin + params.offset_x, height / 2 - window_size.y / 2 - margin + params.offset_y);
+      ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
+      break;
+   case LAYER_POSITION_MIDDLE_RIGHT:
+      data.main_window_pos = ImVec2(width - window_size.x - margin + params.offset_x, height / 2 - window_size.y / 2 - margin + params.offset_y);
+      ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
+      break;
    case LAYER_POSITION_BOTTOM_LEFT:
       data.main_window_pos = ImVec2(margin + params.offset_x, height - window_size.y - margin + params.offset_y);
       ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
