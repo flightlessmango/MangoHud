@@ -9,8 +9,8 @@ fi
 
 SRCDIR=$PWD
 BRANCH="${1:-master}"
-# soldier 0.20201022.1 or newer
-# scout 0.20201104.0 or newer
+# soldier 0.20210618.0 or newer
+# scout 0.20210630.0 or newer
 RUNTIME="${2:-soldier}"
 VERSION="${3:-0.20210618.0}"
 IMAGE="steamrt_${RUNTIME}_${VERSION}_amd64:mango-${RUNTIME}"

@@ -10,7 +10,7 @@ LAYER="build/release/usr/share/vulkan/implicit_layer.d/mangohud.json"
 INSTALL_DIR="build/package/"
 IMPLICIT_LAYER_DIR="$XDG_DATA_HOME/vulkan/implicit_layer.d"
 VERSION=$(git describe --long --tags --always | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/^v//')
-SU_CMD=$(command -v sudo || command -v doas)
+SU_CMD=$(command -v sudo || command -v doas || echo)
 
 # doas requires a double dash if the command it runs will include any dashes,
 # so append a double dash to the command
@@ -56,7 +56,7 @@ dependencies() {
             "Arch Linux"|"Manjaro Linux")
                 MANAGER_QUERY="pacman -Q"
                 MANAGER_INSTALL="pacman -S"
-                DEPS="{gcc,meson,pkgconf,python-mako,glslang,libglvnd,lib32-libglvnd,libxnvctrl}"
+                DEPS="{gcc,meson,pkgconf,python-mako,glslang,libglvnd,lib32-libglvnd,libxnvctrl,libdrm}"
                 dep_install
             ;;
             "Fedora")
@@ -81,7 +81,7 @@ dependencies() {
                 if [[ ! -f /usr/local/bin/glslangValidator ]]; then
                     wget https://github.com/KhronosGroup/glslang/releases/download/SDK-candidate-26-Jul-2020/glslang-master-linux-Release.zip
                     unzip glslang-master-linux-Release.zip bin/glslangValidator
-                    $SU_CMD install -m755 bin/glslangValidator /usr/local/bin/
+                    $SU_CMD /usr/bin/install -m755 bin/glslangValidator /usr/local/bin/
                     rm bin/glslangValidator glslang-master-linux-Release.zip
                 fi
             ;;
@@ -101,7 +101,7 @@ dependencies() {
 
                 MANAGER_QUERY="rpm -q"
                 MANAGER_INSTALL="zypper install"
-                DEPS="{gcc-c++,gcc-c++-32bit,libpkgconf-devel,ninja,python3-pip,python3-Mako,libX11-devel,glslang-devel,glibc-devel,glibc-devel-32bit,libstdc++-devel,libstdc++-devel-32bit,Mesa-libGL-devel,dbus-1-devel,${PACKMAN_PKGS}}"
+                DEPS="{gcc-c++,gcc-c++-32bit,libpkgconf-devel,ninja,python3-pip,python3-Mako,libX11-devel,glslang-devel,glibc-devel,glibc-devel-32bit,libstdc++-devel,libstdc++-devel-32bit,Mesa-libGL-devel,dbus-1-devel,libdrm-devel,${PACKMAN_PKGS}}"
                 dep_install
 
                 if [[ $(pip3 show meson; echo $?) == 1 ]]; then
@@ -294,6 +294,7 @@ while [ $# -gt 0 ]; do
         "pull") git pull ${OPTS[@]};;
         "configure") configure ${OPTS[@]};;
         "build") build ${OPTS[@]};;
+        "build_dbg") build --buildtype=debug -Dglibcxx_asserts=true ${OPTS[@]};;
         "package") package;;
         "install") install;;
         "reinstall") reinstall;;
