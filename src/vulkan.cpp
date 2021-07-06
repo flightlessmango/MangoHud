@@ -1807,8 +1807,8 @@ static VkResult overlay_CreateSwapchainKHR(
          ss << "." << VK_VERSION_MINOR(prop.driverVersion) + 1;
          ss << "." << "0";
       }  else {
-         ss << "."  << VK_VERSION_MINOR(prop.driverVersion);
-         ss << "."  << VK_VERSION_PATCH(prop.driverVersion) + 1;
+         ss << "." << VK_VERSION_MINOR(prop.driverVersion);
+         ss << "." << VK_VERSION_PATCH(prop.driverVersion);
       }
 
    }
