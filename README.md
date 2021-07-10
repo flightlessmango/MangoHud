@@ -16,20 +16,50 @@ git clone --recurse-submodules https://github.com/flightlessmango/MangoHud.git
 cd MangoHud
 ```
 
-To build it, execute:
+Using `meson` to install "manually":
 
 ```
-./build.sh build
-./build.sh package
+meson build
+ninja -C build install
 ```
 
-**NOTE: If you are running an Ubuntu-based, Arch-based, Fedora-based, or openSUSE-based distro, the build script will automatically detect and prompt you to install missing build dependencies. If you run into any issues with this please report them!**
+By default, meson should install MangoHud to `/usr/local`. Specify install prefix with `--prefix=/usr` if desired.
 
-Once done, proceed to the [installation](#source).
+To install 32-bit build on 64-bit distro, specify proper `libdir` and you may have to change `PKG_CONFIG_PATH` to point to correct folders for your distro:
 
-## Install
+```
+CC="gcc -m32" \
+CXX="g++ -m32" \
+PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig" \
+meson build32 --libdir lib32 # or lib/i386-linux-gnu on Debian etc
+ninja -C build32 install
+```
 
-### Source
+### Dependencies
+
+Install necessary development packages. Usually only headers are used for building so you don't have to install 32-bit versions.
+
+- gcc, g++
+- or gcc-multilib, g++-multilib for 32-bit support
+- meson
+- ninja (ninja-build)
+- glslang
+- vulkan headers if using `-Duse_system_vulkan=enabled` option with `meson`
+- libGL/libEGL (libglvnd, mesa-common-dev, mesa-libGL-devel etc)
+- X11 (libx11-dev)
+- XNVCtrl (libxnvctrl-dev), optional, use `-Dwith_xnvctrl=disabled` option with `meson` to disable
+- D-Bus (libdbus-1-dev), optional, use `-Dwith_dbus=disabled` option with `meson` to disable
+
+Python 3 libraries:
+
+- Mako (python3-mako or install with `pip`)
+
+
+If distro's packaged `meson` is too old and gives build errors, install newer version with `pip` (`python3-pip`).
+
+### Building with build script
+
+You can also use `build.sh` script to do some things automatically like install dependencies, if distro is supported.
 
 If you have compiled MangoHud from source, to install it, execute:
 
@@ -42,6 +72,37 @@ You can then subsequently uninstall MangoHud via the following command
 ```
 ./build.sh uninstall
 ```
+
+To just build it, execute:
+
+```
+./build.sh build
+```
+
+Resulting files will be install to `./build/release` folder.
+
+To tar up the resulting binaries into a package, execute:
+
+```
+./build.sh package
+```
+
+or combine the commands though `package` should also call `build` if it doesn't find the built libs:
+
+```
+./build.sh build package
+```
+
+If you have built MangoHud before and suddenly it fails, you can try cleaning the `build` folder, execute:
+
+```
+./build.sh clean
+```
+
+Currently it just does `rm -fr build`.
+
+**NOTE: If you are running an Ubuntu-based, Arch-based, Fedora-based, or openSUSE-based distro, the build script will automatically detect and prompt you to install missing build dependencies. If you run into any issues with this please report them!**
+
 
 ### Pre-packaged binaries
 
