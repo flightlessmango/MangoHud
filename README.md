@@ -87,6 +87,16 @@ If you are using Solus, to install [MangoHud](https://dev.getsol.us/source/mango
 sudo eopkg it mangohud
 ```
 
+#### openSUSE
+
+If you run openSUSE Leap or Tumbleweed you can get Mangohud from the official repositories.
+There are two packages, [mangohud](https://software.opensuse.org/package/mangohud) for 64bit and [mangohud-32bit](https://software.opensuse.org/package/mangohud-32bit) for 32bit application support.
+To have Mangohud working for both 32bit and 64bit applications you need to install both packages even on a 64bit operating system.
+
+```
+sudo zypper in mangohud mangohud-32bit
+```
+
 #### Flatpak
 
 If you are using Flatpaks, you will have to add the [Flathub repository](https://flatpak.org/setup/) for your specific distribution, and then, to install it, execute:
