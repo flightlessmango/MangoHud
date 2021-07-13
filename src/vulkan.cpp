@@ -33,10 +33,7 @@
 #include <vector>
 #include <list>
 #include <array>
-#ifdef __gnu_linux__
-#include <libgen.h>
-#include <unistd.h>
-#endif
+#include <iomanip>
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_layer.h>
@@ -44,7 +41,6 @@
 #include "imgui.h"
 
 #include "overlay.h"
-#include "font_default.h"
 
 // #include "util/debug.h"
 #include <inttypes.h>
@@ -55,26 +51,19 @@
 #include "vk_enum_to_str.h"
 #include <vulkan/vk_util.h>
 
-#include "string_utils.h"
-#include "file_utils.h"
-#include "gpu.h"
-#include "logging.h"
-#include "cpu.h"
-#include "memory.h"
 #include "notify.h"
 #include "blacklist.h"
 #include "pci_ids.h"
-#include "timing.hpp"
 
-string gpuString,wineVersion,wineProcess;
 float offset_x, offset_y, hudSpacing;
 int hudFirstRow, hudSecondRow;
 VkPhysicalDeviceDriverProperties driverProps = {};
-int32_t deviceID;
 
+#if !defined(_WIN32)
 namespace MangoHud { namespace GL {
    extern swapchain_stats sw_stats;
 }}
+#endif
 
 /* Mapped from VkInstace/VkPhysicalDevice */
 struct instance_data {
@@ -460,245 +449,6 @@ struct overlay_draw *get_overlay_draw(struct swapchain_data *data)
    data->draws.push_back(draw);
 
    return draw;
-}
-
-void init_cpu_stats(overlay_params& params)
-{
-#ifdef __gnu_linux__
-   auto& enabled = params.enabled;
-   enabled[OVERLAY_PARAM_ENABLED_cpu_stats] = cpuStats.Init()
-                           && enabled[OVERLAY_PARAM_ENABLED_cpu_stats];
-   enabled[OVERLAY_PARAM_ENABLED_cpu_temp] = cpuStats.GetCpuFile()
-                           && enabled[OVERLAY_PARAM_ENABLED_cpu_temp];
-   enabled[OVERLAY_PARAM_ENABLED_cpu_power] = cpuStats.InitCpuPowerData()
-                           && enabled[OVERLAY_PARAM_ENABLED_cpu_power];
-#endif
-}
-
-struct PCI_BUS {
-   int domain;
-   int bus;
-   int slot;
-   int func;
-};
-
-void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
-{
-   //if (!params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
-   //   return;
-
-   PCI_BUS pci;
-   bool pci_bus_parsed = false;
-   const char *pci_dev = nullptr;
-   if (!params.pci_dev.empty())
-      pci_dev = params.pci_dev.c_str();
-
-   // for now just checks if pci bus parses correctly, if at all necessary
-   if (pci_dev) {
-      if (sscanf(pci_dev, "%04x:%02x:%02x.%x",
-               &pci.domain, &pci.bus,
-               &pci.slot, &pci.func) == 4) {
-         pci_bus_parsed = true;
-         // reformat back to sysfs file name's and nvml's expected format
-         // so config file param's value format doesn't have to be as strict
-         std::stringstream ss;
-         ss << std::hex
-            << std::setw(4) << std::setfill('0') << pci.domain << ":"
-            << std::setw(2) << pci.bus << ":"
-            << std::setw(2) << pci.slot << "."
-            << std::setw(1) << pci.func;
-         params.pci_dev = ss.str();
-         pci_dev = params.pci_dev.c_str();
-#ifndef NDEBUG
-         std::cerr << "MANGOHUD: PCI device ID: '" << pci_dev << "'\n";
-#endif
-      } else {
-         std::cerr << "MANGOHUD: Failed to parse PCI device ID: '" << pci_dev << "'\n";
-         std::cerr << "MANGOHUD: Specify it as 'domain:bus:slot.func'\n";
-      }
-   }
-
-   // NVIDIA or Intel but maybe has Optimus
-   if (vendorID == 0x8086
-      || vendorID == 0x10de) {
-
-      if(checkNvidia(pci_dev))
-         vendorID = 0x10de;
-      else
-         params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
-   }
-
-#ifdef __gnu_linux__
-   if (vendorID == 0x8086 || vendorID == 0x1002
-       || gpu.find("Radeon") != std::string::npos
-       || gpu.find("AMD") != std::string::npos) {
-      string path;
-      string drm = "/sys/class/drm/";
-
-      auto dirs = ls(drm.c_str(), "card");
-      for (auto& dir : dirs) {
-         path = drm + dir;
-
-#ifndef NDEBUG
-         std::cerr << "amdgpu path check: " << path << "/device/vendor" << std::endl;
-#endif
-         string device = read_line(path + "/device/device");
-         deviceID = strtol(device.c_str(), NULL, 16);
-         string line = read_line(path + "/device/vendor");
-         trim(line);
-         if (line != "0x1002" || !file_exists(path + "/device/gpu_busy_percent"))
-            continue;
-
-         path += "/device";
-         if (pci_bus_parsed && pci_dev) {
-            string pci_device = read_symlink(path.c_str());
-#ifndef NDEBUG
-            std::cerr << "PCI device symlink: " << pci_device << "\n";
-#endif
-            if (!ends_with(pci_device, pci_dev)) {
-               std::cerr << "MANGOHUD: skipping GPU, no PCI ID match\n";
-               continue;
-            }
-         }
-
-#ifndef NDEBUG
-           std::cerr << "using amdgpu path: " << path << std::endl;
-#endif
-
-         if (!amdgpu.busy)
-            amdgpu.busy = fopen((path + "/gpu_busy_percent").c_str(), "r");
-         if (!amdgpu.vram_total)
-            amdgpu.vram_total = fopen((path + "/mem_info_vram_total").c_str(), "r");
-         if (!amdgpu.vram_used)
-            amdgpu.vram_used = fopen((path + "/mem_info_vram_used").c_str(), "r");
-
-         path += "/hwmon/";
-         string tempFolder;
-         if (find_folder(path, "hwmon", tempFolder)) {
-            if (!amdgpu.core_clock)
-               amdgpu.core_clock = fopen((path + tempFolder + "/freq1_input").c_str(), "r");
-            if (!amdgpu.memory_clock)
-               amdgpu.memory_clock = fopen((path + tempFolder + "/freq2_input").c_str(), "r");
-            if (!amdgpu.temp)
-               amdgpu.temp = fopen((path + tempFolder + "/temp1_input").c_str(), "r");
-            if (!amdgpu.power_usage)
-               amdgpu.power_usage = fopen((path + tempFolder + "/power1_average").c_str(), "r");
-
-            vendorID = 0x1002;
-            break;
-         }
-      }
-
-      // don't bother then
-      if (!amdgpu.busy && !amdgpu.temp && !amdgpu.vram_total && !amdgpu.vram_used) {
-         params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
-      }
-   }
-#endif
-   if (!params.permit_upload)
-      printf("MANGOHUD: Uploading is disabled (permit_upload = 0)\n");
-}
-
-void init_system_info(){
-   #ifdef __gnu_linux__
-      const char* ld_preload = getenv("LD_PRELOAD");
-      if (ld_preload)
-         unsetenv("LD_PRELOAD");
-
-      ram =  exec("cat /proc/meminfo | grep 'MemTotal' | awk '{print $2}'");
-      trim(ram);
-      cpu =  exec("cat /proc/cpuinfo | grep 'model name' | tail -n1 | sed 's/^.*: //' | sed 's/([^)]*)/()/g' | tr -d '(/)'");
-      trim(cpu);
-      kernel = exec("uname -r");
-      trim(kernel);
-      os = exec("cat /etc/*-release | grep 'PRETTY_NAME' | cut -d '=' -f 2-");
-      os.erase(remove(os.begin(), os.end(), '\"' ), os.end());
-      trim(os);
-      cpusched = read_line("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
-
-      const char* mangohud_recursion = getenv("MANGOHUD_RECURSION");
-      if (!mangohud_recursion) {
-         setenv("MANGOHUD_RECURSION", "1", 1);
-         driver = exec("glxinfo -B | grep 'OpenGL version' | sed 's/^.*: //' | sed 's/([^()]*)//g' | tr -s ' '");
-         trim(driver);
-         unsetenv("MANGOHUD_RECURSION");
-      } else {
-         driver = "MangoHud glxinfo recursion detected";
-      }
-
-// Get WINE version
-
-      wineProcess = get_exe_path();
-      auto n = wineProcess.find_last_of('/');
-      string preloader = wineProcess.substr(n + 1);
-      if (preloader == "wine-preloader" || preloader == "wine64-preloader") {
-         // Check if using Proton
-         if (wineProcess.find("/dist/bin/wine") != std::string::npos || wineProcess.find("/files/bin/wine") != std::string::npos) {
-            stringstream ss;
-            ss << dirname((char*)wineProcess.c_str()) << "/../../version";
-            string protonVersion = ss.str();
-            ss.str(""); ss.clear();
-            ss << read_line(protonVersion);
-            std::getline(ss, wineVersion, ' '); // skip first number string
-            std::getline(ss, wineVersion, ' ');
-            trim(wineVersion);
-            string toReplace = "proton-";
-            size_t pos = wineVersion.find(toReplace);
-            if (pos != std::string::npos) {
-               // If found replace
-               wineVersion.replace(pos, toReplace.length(), "Proton ");
-            }
-            else {
-               // If not found insert for non official proton builds
-               wineVersion.insert(0, "Proton ");
-            }
-         }
-         else {
-            char *dir = dirname((char*)wineProcess.c_str());
-            stringstream findVersion;
-            findVersion << "\"" << dir << "/wine\" --version";
-            const char *wine_env = getenv("WINELOADERNOEXEC");
-            if (wine_env)
-               unsetenv("WINELOADERNOEXEC");
-            wineVersion = exec(findVersion.str());
-            std::cout << "WINE VERSION = " << wineVersion << "\n";
-            if (wine_env)
-               setenv("WINELOADERNOEXEC", wine_env, 1);
-         }
-      }
-      else {
-           wineVersion = "";
-      }
-      // check for gamemode and vkbasalt
-      stringstream ss;
-      string line;
-      auto pid = getpid();
-      string path = "/proc/" + to_string(pid) + "/map_files/";
-      auto files = exec("ls " + path);
-      ss << files;
-      while(std::getline(ss, line, '\n')){
-         auto file = path + line;
-         auto sym = read_symlink(file.c_str());
-         if (sym.find("gamemode") != std::string::npos)
-            HUDElements.gamemode_bol = true;
-         if (sym.find("vkbasalt") != std::string::npos)
-            HUDElements.vkbasalt_bol = true;
-         if (HUDElements.gamemode_bol && HUDElements.vkbasalt_bol)
-            break;
-      }
-
-      if (ld_preload)
-         setenv("LD_PRELOAD", ld_preload, 1);
-#ifndef NDEBUG
-      std::cout << "Ram:" << ram << "\n"
-                << "Cpu:" << cpu << "\n"
-                << "Kernel:" << kernel << "\n"
-                << "Os:" << os << "\n"
-                << "Gpu:" << gpu << "\n"
-                << "Driver:" << driver << "\n"
-                << "CPU Scheduler:" << cpusched << std::endl;
-#endif
-#endif
 }
 
 static void snapshot_swapchain_frame(struct swapchain_data *data)
@@ -1744,22 +1494,6 @@ static struct overlay_draw *before_present(struct swapchain_data *swapchain_data
    return draw;
 }
 
-void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats)
-{
-#ifdef __gnu_linux__
-   string desc = pci_ids[vendorID].second[deviceID].desc;
-   size_t position = desc.find("[");
-   if (position != std::string::npos) {
-      desc = desc.substr(position);
-      string chars = "[]";
-      for (char c: chars)
-         desc.erase(remove(desc.begin(), desc.end(), c), desc.end());
-   }
-   gpu = sw_stats.gpuName = desc;
-   trim(sw_stats.gpuName); trim(gpu);
-#endif
-}
-
 static VkResult overlay_CreateSwapchainKHR(
     VkDevice                                    device,
     const VkSwapchainCreateInfoKHR*             pCreateInfo,
@@ -2164,7 +1898,9 @@ static VkResult overlay_CreateInstance(
 
       else if(engineName == "mesa zink") {
          engine = ZINK;
+#if !defined(_WIN32)
          MangoHud::GL::sw_stats.engine = ZINK;
+#endif
       }
 
       else if (engineName == "Damavand")

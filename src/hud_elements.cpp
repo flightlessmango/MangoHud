@@ -495,7 +495,7 @@ void HudElements::media_player(){
     ImGui::PushFont(&scaled_font);
     {
         std::lock_guard<std::mutex> lck(main_metadata.mtx);
-        render_mpris_metadata(*HUDElements.params, main_metadata, frame_timing, true);
+        render_mpris_metadata(*HUDElements.params, main_metadata, frame_timing);
     }
     ImGui::PopFont();
 #endif
@@ -583,6 +583,7 @@ void HudElements::vkbasalt(){
 }
 
 void HudElements::battery(){
+#ifdef __gnu_linux__
     if (Battery_Stats.batt_count > 0) {
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery]) {
             ImGui::TableNextRow(); ImGui::TableNextColumn();
@@ -619,6 +620,7 @@ void HudElements::battery(){
             }
         }
     }
+#endif
 }
 
 

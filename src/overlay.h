@@ -124,7 +124,7 @@ ImVec4 change_on_load_temp(LOAD_DATA& data, unsigned current);
 float get_time_stat(void *_data, int _idx);
 
 #ifdef HAVE_DBUS
-void render_mpris_metadata(struct overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing, bool is_main);
+void render_mpris_metadata(overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing);
 #endif
 
 #endif //MANGOHUD_OVERLAY_H
