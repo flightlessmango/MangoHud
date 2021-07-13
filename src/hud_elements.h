@@ -27,7 +27,7 @@ class HudElements{
         int min, max, gpu_core_max, gpu_mem_max, cpu_temp_max, gpu_temp_max;
         std::vector<std::string> permitted_params = {
             "gpu_load", "cpu_load", "gpu_core_clock", "gpu_mem_clock",
-            "vram", "ram", "cpu_temp", "gpu_temp"
+            "vram", "ram", "cpu_temp", "gpu_temp", "gpu_fan"
         };
         std::vector<exec_list> exec_list;
         void sort_elements(std::pair<std::string, std::string> option);
