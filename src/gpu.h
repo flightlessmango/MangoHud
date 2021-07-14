@@ -13,6 +13,7 @@ struct amdgpu_files
     FILE *core_clock;
     FILE *memory_clock;
     FILE *power_usage;
+    FILE *fan;
 };
 
 extern amdgpu_files amdgpu;
@@ -25,6 +26,7 @@ struct gpuInfo{
     int MemClock;
     int CoreClock;
     int powerUsage;
+    int fan;
 };
 
 extern struct gpuInfo gpu_info;

@@ -583,6 +583,9 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
                amdgpu.temp = fopen((path + tempFolder + "/temp1_input").c_str(), "r");
             if (!amdgpu.power_usage)
                amdgpu.power_usage = fopen((path + tempFolder + "/power1_average").c_str(), "r");
+            // check for more fan inputs?
+            if (!amdgpu.fan)
+               amdgpu.fan = fopen((path + tempFolder + "/fan1_input").c_str(), "r");
 
             vendorID = 0x1002;
             break;

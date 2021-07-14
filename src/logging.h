@@ -24,6 +24,7 @@ struct logData{
   int gpu_core_clock;
   int gpu_mem_clock;
   int gpu_power;
+  int gpu_fan;
   float gpu_vram_used;
   float ram_used;
 

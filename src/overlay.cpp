@@ -61,6 +61,7 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
    currentLogData.gpu_mem_clock = gpu_info.MemClock;
    currentLogData.gpu_vram_used = gpu_info.memoryUsed;
    currentLogData.gpu_power = gpu_info.powerUsage;
+   currentLogData.gpu_fan = gpu_info.fan;
 #ifdef __gnu_linux__
    currentLogData.ram_used = memused;
 #endif

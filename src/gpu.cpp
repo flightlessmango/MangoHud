@@ -66,6 +66,15 @@ void getAmdGpuInfo(){
         gpu_info.load = value;
     }
 
+    if (amdgpu.fan) {
+        rewind(amdgpu.fan);
+        fflush(amdgpu.fan);
+        int value = 0;
+        if (fscanf(amdgpu.fan, "%d" PRId64, &value) != 1)
+            value = 0;
+        gpu_info.fan = value;
+    }
+
     if (amdgpu.temp) {
         rewind(amdgpu.temp);
         fflush(amdgpu.temp);
