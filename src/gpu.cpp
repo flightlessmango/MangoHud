@@ -160,7 +160,7 @@ struct amdgpu_handles
     amdgpu_device_handle dev;
     int fd;
     uint32_t version_major, version_minor, gui_percent {0};
-    const uint32_t ticks = 120;
+    uint32_t ticks = 60, ticks_per_sec = 120;
     std::chrono::nanoseconds sleep_interval {};
 
     bool quit = false;
@@ -187,7 +187,11 @@ struct amdgpu_handles
 
     void set_sampling_period(uint32_t period)
     {
+        if (period < 10000000)
+            period = 10000000; /* 10ms */
+        ticks = ticks_per_sec * std::chrono::nanoseconds(period) / 1s;
         sleep_interval = std::chrono::nanoseconds(period) / ticks;
+        spdlog::debug("ticks: {}, {}ns", ticks, sleep_interval.count());
     }
 
     void amdgpu_poll()
