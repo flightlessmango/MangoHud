@@ -16,6 +16,9 @@
 #include <cctype>
 #include <array>
 #include <functional>
+#include <spdlog/spdlog.h>
+#include <spdlog/cfg/env.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 #include "overlay_params.h"
 #include "overlay.h"
@@ -92,8 +95,8 @@ parse_control(const char *str)
 {
    int ret = os_socket_listen_abstract(str, 1);
    if (ret < 0) {
-      fprintf(stderr, "ERROR: Couldn't create socket pipe at '%s'\n", str);
-      fprintf(stderr, "ERROR: '%s'\n", strerror(errno));
+      spdlog::error("Couldn't create socket pipe at '{}'\n", str);
+      spdlog::error("ERROR: '{}'", strerror(errno));
       return ret;
    }
 
@@ -126,7 +129,7 @@ parse_string_to_keysym_vec(const char *str)
          if (xk)
             keys.push_back(xk);
          else
-            std::cerr << "MANGOHUD: Unrecognized key: '" << ks << "'\n";
+            spdlog::error("Unrecognized key: '{}'", ks);
       }
    }
    return keys;
@@ -167,7 +170,7 @@ parse_fps_limit(const char *str)
       try {
          as_int = static_cast<uint32_t>(std::stoul(value));
       } catch (const std::invalid_argument&) {
-         std::cerr << "MANGOHUD: invalid fps_limit value: '" << value << "'\n";
+         spdlog::error("invalid fps_limit value: '{}'", value);
          continue;
       }
 
@@ -317,17 +320,17 @@ parse_benchmark_percentiles(const char *str)
       try {
          as_float = parse_float(value, &float_len);
       } catch (const std::invalid_argument&) {
-         std::cerr << "MANGOHUD: invalid benchmark percentile: '" << value << "'\n";
+         spdlog::error("invalid benchmark percentile: '{}'", value);
          continue;
       }
 
       if (float_len != value.length()) {
-         std::cerr << "MANGOHUD: invalid benchmark percentile: '" << value << "'\n";
+         spdlog::error("invalid benchmark percentile: '{}'", value);
          continue;
       }
 
       if (as_float > 100 || as_float < 0) {
-         std::cerr << "MANGOHUD: benchmark percentile is not between 0 and 100 (" << value << ")\n";
+         spdlog::error("benchmark percentile is not between 0 and 100 ({})", value);
          continue;
       }
 
@@ -495,9 +498,8 @@ parse_string(const char *s, char *out_param, char *out_value)
    }
 
    if (*s && !i) {
-      fprintf(stderr, "MANGOHUD: syntax error: unexpected '%c' (%i) while "
-              "parsing a string\n", *s, *s);
-      fflush(stderr);
+      spdlog::error("syntax error: unexpected '{0:c}' ({0:d}) while "
+              "parsing a string", *s);
    }
 
    return i;
@@ -547,7 +549,7 @@ parse_overlay_env(struct overlay_params *params,
       OVERLAY_PARAMS
 #undef OVERLAY_PARAM_BOOL
 #undef OVERLAY_PARAM_CUSTOM
-      fprintf(stderr, "Unknown option '%s'\n", key);
+      spdlog::error("Unknown option '{}'", key);
    }
 }
 
@@ -555,6 +557,9 @@ void
 parse_overlay_config(struct overlay_params *params,
                   const char *env)
 {
+   if (!spdlog::get("MANGOHUD"))
+      spdlog::set_default_logger(spdlog::stderr_color_mt("MANGOHUD")); // Just to get the name in log
+   spdlog::cfg::load_env_levels();
 
    *params = {};
 
@@ -684,7 +689,7 @@ parse_overlay_config(struct overlay_params *params,
          OVERLAY_PARAMS
 #undef OVERLAY_PARAM_BOOL
 #undef OVERLAY_PARAM_CUSTOM
-         fprintf(stderr, "Unknown option '%s'\n", it.first.c_str());
+         spdlog::error("Unknown option '{}'", it.first.c_str());
       }
 
    }

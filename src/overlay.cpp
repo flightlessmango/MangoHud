@@ -1,6 +1,7 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include <spdlog/spdlog.h>
 #include "overlay.h"
 #include "logging.h"
 #include "cpu.h"
@@ -517,12 +518,10 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
             << std::setw(1) << pci.func;
          params.pci_dev = ss.str();
          pci_dev = params.pci_dev.c_str();
-#ifndef NDEBUG
-         std::cerr << "MANGOHUD: PCI device ID: '" << pci_dev << "'\n";
-#endif
+         spdlog::debug("PCI device ID: '{}'", pci_dev);
       } else {
-         std::cerr << "MANGOHUD: Failed to parse PCI device ID: '" << pci_dev << "'\n";
-         std::cerr << "MANGOHUD: Specify it as 'domain:bus:slot.func'\n";
+         spdlog::error("Failed to parse PCI device ID: '{}'", pci_dev);
+         spdlog::error("Specify it as 'domain:bus:slot.func'");
       }
    }
 
@@ -549,9 +548,8 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
       for (auto& dir : dirs) {
          path = drm + dir;
 
-#ifndef NDEBUG
-         std::cerr << "amdgpu path check: " << path << "/device/vendor" << std::endl;
-#endif
+         spdlog::debug("amdgpu path check: {}/device/vendor", path);
+
          string device = read_line(path + "/device/device");
          deviceID = strtol(device.c_str(), NULL, 16);
          string line = read_line(path + "/device/vendor");
@@ -561,18 +559,14 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
 
          if (pci_bus_parsed && pci_dev) {
             string pci_device = read_symlink((path + "/device").c_str());
-#ifndef NDEBUG
-            std::cerr << "PCI device symlink: " << pci_device << "\n";
-#endif
+            spdlog::debug("PCI device symlink: '{}'", pci_device);
             if (!ends_with(pci_device, pci_dev)) {
-               std::cerr << "MANGOHUD: skipping GPU, no PCI ID match\n";
+               spdlog::debug("skipping GPU, no PCI ID match");
                continue;
             }
          }
 
-#ifndef NDEBUG
-         std::cerr << "using amdgpu path: " << path << std::endl;
-#endif
+         spdlog::debug("using amdgpu path: {}", path);
 
 #ifdef HAVE_LIBDRM_AMDGPU
          int idx = -1;
@@ -585,12 +579,12 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
             using_libdrm = true;
             getAmdGpuInfo_actual = getAmdGpuInfo_libdrm;
             amdgpu_set_sampling_period(params.fps_sampling_period);
-#ifndef NDEBUG
-            std::cerr << "MANGOHUD: using libdrm\n";
-#endif
+
+            spdlog::debug("Using libdrm");
+
             // fall through and open sysfs handles for fallback or check DRM version beforehand
          } else if (!params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon]) {
-            std::cerr << "MANGOHUD: Failed to open device '/dev/dri/card" << idx << "' with libdrm, falling back to using hwmon sysfs.\n";
+            spdlog::error("Failed to open device '/dev/dri/card{}' with libdrm, falling back to using hwmon sysfs.", idx);
          }
 #endif
 
@@ -626,7 +620,7 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
    }
 #endif
    if (!params.permit_upload)
-      printf("MANGOHUD: Uploading is disabled (permit_upload = 0)\n");
+      spdlog::info("Uploading is disabled (permit_upload = 0)");
 }
 
 void init_system_info(){
@@ -719,15 +713,14 @@ void init_system_info(){
 
       if (ld_preload)
          setenv("LD_PRELOAD", ld_preload, 1);
-#ifndef NDEBUG
-      std::cout << "Ram:" << ram << "\n"
-                << "Cpu:" << cpu << "\n"
-                << "Kernel:" << kernel << "\n"
-                << "Os:" << os << "\n"
-                << "Gpu:" << gpu << "\n"
-                << "Driver:" << driver << "\n"
-                << "CPU Scheduler:" << cpusched << std::endl;
-#endif
+
+      spdlog::debug("Ram:{}", ram);
+      spdlog::debug("Cpu:{}", cpu);
+      spdlog::debug("Kernel:{}", kernel);
+      spdlog::debug("Os:{}", os);
+      spdlog::debug("Gpu:{}", gpu);
+      spdlog::debug("Driver:{}", driver);
+      spdlog::debug("CPU Scheduler:{}", cpusched);
 #endif
 }
 

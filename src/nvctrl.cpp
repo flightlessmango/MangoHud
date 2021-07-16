@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <memory>
 #include <functional>
+#include <spdlog/spdlog.h>
 #include "nvctrl.h"
 #include "loaders/loader_nvctrl.h"
 #include "loaders/loader_x11.h"
@@ -25,7 +26,7 @@ static bool find_nv_x11(libnvctrl_loader& nvctrl, Display*& dpy)
         if (d) {
             if (nvctrl.XNVCTRLIsNvScreen(d, 0)) {
                 dpy = d;
-                std::cerr << "MANGOHUD: XNVCtrl is using display " << buf << std::endl;
+                spdlog::debug("XNVCtrl is using display {}", buf);
                 return true;
             }
             g_x11->XCloseDisplay(d);
@@ -36,14 +37,12 @@ static bool find_nv_x11(libnvctrl_loader& nvctrl, Display*& dpy)
 
 bool checkXNVCtrl()
 {
-    if (!g_x11->IsLoaded()) {
-        std::cerr << "MANGOHUD: XNVCtrl: X11 loader failed to load\n";
+    if (!g_x11->IsLoaded())
         return false;
-    }
 
     auto& nvctrl = get_libnvctrl_loader();
     if (!nvctrl.IsLoaded()) {
-        std::cerr << "MANGOHUD: XNVCtrl loader failed to load\n";
+        spdlog::error("XNVCtrl loader failed to load");
         return false;
     }
 
@@ -51,7 +50,7 @@ bool checkXNVCtrl()
     nvctrlSuccess = find_nv_x11(nvctrl, dpy);
 
     if (!nvctrlSuccess) {
-        std::cerr << "MANGOHUD: XNVCtrl didn't find the correct display" << std::endl;
+        spdlog::error("XNVCtrl didn't find the correct display");
         return false;
     }
 
@@ -86,7 +85,6 @@ static void parse_token(std::string token, string_map& options) {
     param = token.substr(0, equal);
     trim(param);
     trim(value);
-    //std::cerr << __func__ << ": " << param << "=" << value << std::endl;
     if (!param.empty())
         options[param] = value;
 }
@@ -94,7 +92,7 @@ static void parse_token(std::string token, string_map& options) {
 char* get_attr_target_string(libnvctrl_loader& nvctrl, int attr, int target_type, int target_id) {
     char* c = nullptr;
     if (!nvctrl.XNVCTRLQueryTargetStringAttribute(display.get(), target_type, target_id, 0, attr, &c)) {
-        std::cerr << "Failed to query attribute '" << attr << "'.\n";
+        spdlog::error("Failed to query attribute '{}'", attr);
     }
     return c;
 }

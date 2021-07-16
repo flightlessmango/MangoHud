@@ -1,6 +1,7 @@
 
 #include "loaders/loader_libdrm.h"
 #include <iostream>
+#include <spdlog/spdlog.h>
 
 // Put these sanity checks here so that they fire at most once
 // (to avoid cluttering the build output).
@@ -27,13 +28,13 @@ bool libdrm_loader::Load() {
 #if defined(LIBRARY_LOADER_LIBDRM_H_DLOPEN)
   library_drm = dlopen("libdrm.so.2", RTLD_LAZY);
   if (!library_drm) {
-    std::cerr << "MANGOHUD: Failed to open " << "" MANGOHUD_ARCH << " libdrm.so.2: " << dlerror() << std::endl;
+    spdlog::error("Failed to open " MANGOHUD_ARCH " libdrm.so.2: {}", dlerror());
     return false;
   }
 
   library_amdgpu = dlopen("libdrm_amdgpu.so.1", RTLD_LAZY);
   if (!library_amdgpu) {
-    std::cerr << "MANGOHUD: Failed to open " << "" MANGOHUD_ARCH << " libdrm_amdgpu.so.1: " << dlerror() << std::endl;
+    spdlog::error("Failed to open " MANGOHUD_ARCH " libdrm_amdgpu.so.1: {}", dlerror());
     CleanUp(true);
     return false;
   }

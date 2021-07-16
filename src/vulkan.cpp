@@ -34,6 +34,7 @@
 #include <list>
 #include <array>
 #include <iomanip>
+#include <spdlog/spdlog.h>
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_layer.h>
@@ -207,7 +208,7 @@ static void unmap_object(uint64_t obj)
    do { \
       VkResult __result = (expr); \
       if (__result != VK_SUCCESS) { \
-         fprintf(stderr, "'%s' line %i failed with %s\n", \
+         spdlog::error("'{}' line {} failed with {}", \
                  #expr, __LINE__, vk_Result_to_str(__result)); \
       } \
    } while (0)
@@ -708,7 +709,7 @@ static void check_fonts(struct swapchain_data* data)
 
    if (params.font_params_hash != data->sw_stats.font_params_hash)
    {
-      std::cerr << "MANGOHUD: recreating font image\n";
+      spdlog::debug("Recreating font image");
       VkDescriptorSet desc_set = (VkDescriptorSet)io.Fonts->TexID;
       create_fonts(instance_data->params, data->sw_stats.font1, data->sw_stats.font_text);
       unsigned char* pixels;
@@ -725,14 +726,9 @@ static void check_fonts(struct swapchain_data* data)
          desc_set = create_image_with_desc(data, width, height, VK_FORMAT_R8_UNORM, data->font_image, data->font_mem, data->font_image_view);
 
       io.Fonts->SetTexID((ImTextureID)desc_set);
-
       data->font_uploaded = false;
       data->sw_stats.font_params_hash = params.font_params_hash;
-
-#ifndef NDEBUG
-      std::cerr << "MANGOHUD: Default font tex size: " << width << "x" << height << "px (" << (width*height*1) << " bytes)" << "\n";
-#endif
-
+      spdlog::debug("Default font tex size: {}x{}px", width, height);
    }
 }
 

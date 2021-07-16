@@ -168,10 +168,6 @@ void imgui_create(void *ctx)
 
 void imgui_shutdown()
 {
-#ifndef NDEBUG
-    std::cerr << __func__ << std::endl;
-#endif
-
     if (state.imgui_ctx) {
         ImGui::SetCurrentContext(state.imgui_ctx);
         ImGui_ImplOpenGL3_Shutdown();
@@ -185,10 +181,6 @@ void imgui_set_context(void *ctx)
 {
     if (!ctx)
         return;
-
-#ifndef NDEBUG
-    std::cerr << __func__ << ": " << ctx << std::endl;
-#endif
     imgui_create(ctx);
 }
 

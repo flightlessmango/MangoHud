@@ -242,6 +242,16 @@ dearimgui_sp = subproject('imgui', default_options: [
 ])
 dearimgui_dep = dearimgui_sp.get_variable('imgui_dep')
 
+spdlog_dep = cpp.find_library('spdlog', required: get_option('use_system_spdlog'))
+if not spdlog_dep.found()
+  spdlog_sp = subproject('spdlog', default_options: [
+    'default_library=static',
+  ])
+  spdlog_dep = spdlog_sp.get_variable('spdlog_dep')
+else
+  spdlog_dep = dependency('spdlog', required: true)
+endif
+
 if ['windows', 'mingw'].contains(host_machine.system())
   subdir('modules/minhook')
   inc_common += ( include_directories('modules/minhook/include'))

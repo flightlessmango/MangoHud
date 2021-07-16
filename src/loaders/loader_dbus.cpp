@@ -1,6 +1,7 @@
 
 #include "loaders/loader_dbus.h"
 #include <iostream>
+#include <spdlog/spdlog.h>
 
 // Put these sanity checks here so that they fire at most once
 // (to avoid cluttering the build output).
@@ -26,7 +27,7 @@ bool libdbus_loader::Load(const std::string& library_name) {
 #if defined(LIBRARY_LOADER_DBUS_H_DLOPEN)
   library_ = dlopen(library_name.c_str(), RTLD_LAZY);
   if (!library_) {
-    std::cerr << "MANGOHUD: Failed to open " << "" MANGOHUD_ARCH << " " << library_name << ": " << dlerror() << std::endl;
+    spdlog::error("Failed to open " MANGOHUD_ARCH " {}: {}", library_name, dlerror());
     return false;
   }
 

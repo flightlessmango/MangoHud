@@ -8,6 +8,7 @@
 #include <fstream>
 #include <cstring>
 #include <string>
+#include <spdlog/spdlog.h>
 
 std::string read_line(const std::string& filename)
 {
@@ -22,8 +23,7 @@ bool find_folder(const char* root, const char* prefix, std::string& dest)
     struct dirent* dp;
     DIR* dirp = opendir(root);
     if (!dirp) {
-        std::cerr << "Error opening directory '" << root << "': ";
-        perror("");
+        spdlog::error("Error opening directory '{}': {}", root, strerror(errno));
         return false;
     }
 
@@ -52,8 +52,7 @@ std::vector<std::string> ls(const char* root, const char* prefix, LS_FLAGS flags
 
     DIR* dirp = opendir(root);
     if (!dirp) {
-        std::cerr << "Error opening directory '" << root << "': ";
-        perror("");
+        spdlog::error("Error opening directory '{}': {}", root, strerror(errno));
         return list;
     }
 

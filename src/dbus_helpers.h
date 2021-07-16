@@ -3,6 +3,7 @@
 #define MANGOHUD_DBUS_HELPERS
 
 #include <vector>
+#include <spdlog/spdlog.h>
 
 #include "loaders/loader_dbus.h"
 
@@ -136,8 +137,8 @@ template <class T>
 auto DBusMessageIter_wrap::get_primitive() -> T {
     auto requested_type = detail::dbus_type_identifier<T>;
     if (requested_type != type()) {
-        std::cerr << "Type mismatch: '" << ((char)requested_type) << "' vs '"
-                  << (char)type() << "'\n";
+        spdlog::error("Type mismatch: '{}' vs '{}'",
+                  ((char)requested_type), (char)type());
 #ifndef NDEBUG
         exit(-1);
 #else
@@ -190,13 +191,13 @@ auto DBusMessageIter_wrap::get_stringified() -> std::string {
     if (is_unsigned()) return std::to_string(get_unsigned());
     if (is_signed()) return std::to_string(get_signed());
     if (is_double()) return std::to_string(get_primitive<double>());
-    std::cerr << "stringify failed\n";
+    spdlog::error("stringify failed");
     return std::string();
 }
 
 auto DBusMessageIter_wrap::get_array_iter() -> DBusMessageIter_wrap {
     if (!is_array()) {
-        std::cerr << "Not an array; " << (char)type() << "\n";
+        spdlog::error("Not an array; {}", (char)type());
         return DBusMessageIter_wrap(DBusMessageIter{}, m_DBus);
     }
 
@@ -207,7 +208,7 @@ auto DBusMessageIter_wrap::get_array_iter() -> DBusMessageIter_wrap {
 
 auto DBusMessageIter_wrap::get_dict_entry_iter() -> DBusMessageIter_wrap {
     if (type() != DBUS_TYPE_DICT_ENTRY) {
-        std::cerr << "Not a dict entry" << (char)type() << "\n";
+        spdlog::error("Not a dict entry {}", (char)type());
         return DBusMessageIter_wrap(DBusMessageIter{}, m_DBus);
     }
 
@@ -334,7 +335,7 @@ DBusMessage_wrap DBusMessage_wrap::send_with_reply_and_block(
     auto reply = m_DBus->connection_send_with_reply_and_block(conn, m_msg,
                                                               timeout, &err);
     if (reply == nullptr) {
-        std::cerr << "MangoHud[" << __func__ << "]: " << err.message << "\n";
+        spdlog::error("[{}]: {}", __func__, err.message);
         free_if_owning();
         m_DBus->error_free(&err);
     }

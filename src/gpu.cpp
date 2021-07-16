@@ -4,6 +4,7 @@
 #include <functional>
 #include <thread>
 #include <cstring>
+#include <spdlog/spdlog.h>
 #include "nvctrl.h"
 #include "timing.hpp"
 #ifdef HAVE_NVML
@@ -229,20 +230,20 @@ bool amdgpu_open(const char *path) {
     int fd = open(path, O_RDWR | O_CLOEXEC);
 
     if (fd < 0) {
-        perror("MANGOHUD: Failed to open DRM device: "); // Gives sensible perror message?
+        spdlog::error("Failed to open DRM device: {}", strerror(errno));
         return false;
     }
 
     drmVersionPtr ver = libdrm_ptr->drmGetVersion(fd);
 
     if (!ver) {
-        perror("MANGOHUD: Failed to query driver version: ");
+        spdlog::error("Failed to query driver version: {}", strerror(errno));
         close(fd);
         return false;
     }
 
     if (strcmp(ver->name, "amdgpu") || !DRM_ATLEAST_VERSION(ver, 3, 11)) {
-        fprintf(stderr, "MANGOHUD: Unsupported driver/version: %s %d.%d.%d\n", ver->name, ver->version_major, ver->version_minor, ver->version_patchlevel);
+        spdlog::error("Unsupported driver/version: {} {}.{}.{}", ver->name, ver->version_major, ver->version_minor, ver->version_patchlevel);
         close(fd);
         libdrm_ptr->drmFreeVersion(ver);
         return false;
@@ -259,7 +260,7 @@ bool amdgpu_open(const char *path) {
     uint32_t drm_major, drm_minor;
     amdgpu_device_handle dev;
     if (libdrm_ptr->amdgpu_device_initialize(fd, &drm_major, &drm_minor, &dev)){
-        perror("MANGOHUD: Failed to initialize amdgpu device");
+        spdlog::error("Failed to initialize amdgpu device: {}", strerror(errno));
         close(fd);
         return false;
     }

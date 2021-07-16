@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "battery.h"
 #include <filesystem.h>
+#include <spdlog/spdlog.h>
 
 namespace fs = ghc::filesystem;
 
@@ -26,7 +27,7 @@ void BatteryStats::update() {
     if (!batt_check) {
         numBattery();
         if (batt_count == 0) {
-            std::cerr<<"MANGOHUD: No battery found\n";
+            spdlog::error("No battery found");
         }
     }
 

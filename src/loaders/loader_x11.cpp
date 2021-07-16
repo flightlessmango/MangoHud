@@ -1,5 +1,6 @@
 #include "loader_x11.h"
 #include <iostream>
+#include <spdlog/spdlog.h>
 
 libx11_loader::libx11_loader() : loaded_(false) {
 }
@@ -15,7 +16,7 @@ bool libx11_loader::Load(const std::string& library_name) {
 
   library_ = dlopen(library_name.c_str(), RTLD_LAZY);
   if (!library_) {
-    std::cerr << "MANGOHUD: Failed to open " << "" MANGOHUD_ARCH << " " << library_name << ": " << dlerror() << std::endl;
+    spdlog::error("Failed to open " MANGOHUD_ARCH " {}: {}", library_name, dlerror());
     return false;
   }
 
