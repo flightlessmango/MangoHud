@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component>
+  <id>io.github.flightlessmango.mangohud</id>
+
+  <name>MangoHud</name>
+  <summary>Vulkan/OpenGL overlay for monitoring FPS, temperatures, CPU/GPU load and more</summary>
+  <developer_name>FlightlessMango</developer_name>
+  <icon type="stock">io.github.flightlessmango.mangohud</icon>
+
+  <metadata_license>FSFAP</metadata_license>
+  <project_license>MIT</project_license>
+
+  <description>
+    <p>A modification of the Mesa Vulkan overlay, including GUI improvements with HUD configuration, temperature reporting, and logging capabilities. Includes a script (mangohud) to start it on any OpenGL or Vulkan application.</p>
+  </description>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Example</caption>
+      <image>https://github.com/flightlessmango/MangoHud/blob/master/assets/overlay_example.gif</image>
+    </screenshot>
+    <screenshot>
+      <caption>Log uploading walkthrough</caption>
+      <image>https://github.com/flightlessmango/MangoHud/blob/master/assets/log_upload_example.gif</image>
+    </screenshot>
+  </screenshots>
+
+  <url type="homepage">https://github.com/flightlessmango/MangoHud</url>
+  <url type="bugtracker">https://github.com/flightlessmango/MangoHud/issues</url>
+  <url type="donation">https://www.paypal.me/flightlessmango</url>
+
+  <content_rating type="oars-1.1" />
+  <categories>
+    <category>Utility</category>
+    <category>Game</category>
+  </categories>
+</component>
