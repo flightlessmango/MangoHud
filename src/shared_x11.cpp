@@ -17,7 +17,7 @@ bool init_x11() {
         return true;
 
     if (!g_x11->IsLoaded()) {
-        spdlog::error("X11 loader failed to load");
+        SPDLOG_ERROR("X11 loader failed to load");
         failed = true;
         return false;
     }
@@ -35,7 +35,7 @@ bool init_x11() {
 
     failed = !display;
     if (failed)
-        spdlog::error("XOpenDisplay failed to open display '{}'", displayid);
+        SPDLOG_ERROR("XOpenDisplay failed to open display '{}'", displayid);
 
     return !!display;
 }

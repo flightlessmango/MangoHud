@@ -137,7 +137,7 @@ template <class T>
 auto DBusMessageIter_wrap::get_primitive() -> T {
     auto requested_type = detail::dbus_type_identifier<T>;
     if (requested_type != type()) {
-        spdlog::error("Type mismatch: '{}' vs '{}'",
+        SPDLOG_ERROR("Type mismatch: '{}' vs '{}'",
                   ((char)requested_type), (char)type());
 #ifndef NDEBUG
         exit(-1);
@@ -191,13 +191,13 @@ auto DBusMessageIter_wrap::get_stringified() -> std::string {
     if (is_unsigned()) return std::to_string(get_unsigned());
     if (is_signed()) return std::to_string(get_signed());
     if (is_double()) return std::to_string(get_primitive<double>());
-    spdlog::error("stringify failed");
+    SPDLOG_ERROR("stringify failed");
     return std::string();
 }
 
 auto DBusMessageIter_wrap::get_array_iter() -> DBusMessageIter_wrap {
     if (!is_array()) {
-        spdlog::error("Not an array; {}", (char)type());
+        SPDLOG_ERROR("Not an array; {}", (char)type());
         return DBusMessageIter_wrap(DBusMessageIter{}, m_DBus);
     }
 
@@ -208,7 +208,7 @@ auto DBusMessageIter_wrap::get_array_iter() -> DBusMessageIter_wrap {
 
 auto DBusMessageIter_wrap::get_dict_entry_iter() -> DBusMessageIter_wrap {
     if (type() != DBUS_TYPE_DICT_ENTRY) {
-        spdlog::error("Not a dict entry {}", (char)type());
+        SPDLOG_ERROR("Not a dict entry {}", (char)type());
         return DBusMessageIter_wrap(DBusMessageIter{}, m_DBus);
     }
 
@@ -335,7 +335,7 @@ DBusMessage_wrap DBusMessage_wrap::send_with_reply_and_block(
     auto reply = m_DBus->connection_send_with_reply_and_block(conn, m_msg,
                                                               timeout, &err);
     if (reply == nullptr) {
-        spdlog::error("[{}]: {}", __func__, err.message);
+        SPDLOG_ERROR("[{}]: {}", __func__, err.message);
         free_if_owning();
         m_DBus->error_free(&err);
     }

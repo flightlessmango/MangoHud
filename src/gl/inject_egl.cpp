@@ -22,7 +22,7 @@ void* get_egl_proc_address(const char* name) {
     if (!pfn_eglGetProcAddress) {
         void *handle = real_dlopen("libEGL.so.1", RTLD_LAZY|RTLD_LOCAL);
         if (!handle) {
-            spdlog::error("Failed to open " MANGOHUD_ARCH " libEGL.so.1: {}", dlerror());
+            SPDLOG_ERROR("Failed to open " MANGOHUD_ARCH " libEGL.so.1: {}", dlerror());
         } else {
             pfn_eglGetProcAddress = reinterpret_cast<decltype(pfn_eglGetProcAddress)>(real_dlsym(handle, "eglGetProcAddress"));
         }
@@ -35,7 +35,7 @@ void* get_egl_proc_address(const char* name) {
         func = get_proc_address( name );
 
     if (!func) {
-        spdlog::debug("Failed to get function '{}'", name);
+        SPDLOG_DEBUG("Failed to get function '{}'", name);
     }
 
     return func;
@@ -43,7 +43,7 @@ void* get_egl_proc_address(const char* name) {
 
 //EGLBoolean eglMakeCurrent(EGLDisplay dpy, EGLSurface draw, EGLSurface read, EGLContext ctx);
 EXPORT_C_(int) eglMakeCurrent_OFF(void *dpy, void *draw, void *read,void *ctx) {
-    spdlog::trace("{}: draw: {}, ctx: {}", __func__, draw, ctx);
+    SPDLOG_TRACE("{}: draw: {}, ctx: {}", __func__, draw, ctx);
     int ret = 0;
     return ret;
 }
@@ -105,7 +105,7 @@ EXPORT_C_(void *) mangohud_find_egl_ptr(const char *name)
 EXPORT_C_(void *) eglGetProcAddress(const char* procName) {
     void* real_func = get_egl_proc_address(procName);
     void* func = mangohud_find_egl_ptr(procName);
-    spdlog::trace("{}: proc: {}, real: {}, fun: {}", __func__, procName, real_func, func);
+    SPDLOG_TRACE("{}: proc: {}, real: {}, fun: {}", __func__, procName, real_func, func);
     if (func && real_func)
         return func;
 

@@ -25,8 +25,10 @@ pre_args = [
 # Define DEBUG for debug builds only (debugoptimized is not included on this one)
 if get_option('buildtype') == 'debug'
   pre_args += '-DDEBUG'
+  pre_args += '-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE'
 else
   pre_args += '-DNDEBUG'
+  pre_args += '-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_' + get_option('loglevel').to_upper()
 endif
 
 # TODO: this is very incomplete

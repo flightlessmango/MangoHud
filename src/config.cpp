@@ -111,12 +111,12 @@ void parseConfigFile(overlay_params& params) {
         std::ifstream stream(*p);
         if (!stream.good()) {
             // printing just so user has an idea of possible configs
-            spdlog::info("skipping config: '{}' [ not found ]", *p);
+            SPDLOG_INFO("skipping config: '{}' [ not found ]", *p);
             continue;
         }
 
         stream.imbue(std::locale::classic());
-        spdlog::info("parsing config: '{}'", *p);
+        SPDLOG_INFO("parsing config: '{}'", *p);
         while (std::getline(stream, line))
         {
             parseConfigLine(line, params.options);

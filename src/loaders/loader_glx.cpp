@@ -25,7 +25,7 @@ bool glx_loader::Load() {
   if (!handle)
     handle = real_dlopen("libGL.so.1", RTLD_LAZY);
   if (!handle) {
-    spdlog::error("Failed to open " MANGOHUD_ARCH " libGL.so.1: {}", dlerror());
+    SPDLOG_ERROR("Failed to open " MANGOHUD_ARCH " libGL.so.1: {}", dlerror());
     return false;
   }
 

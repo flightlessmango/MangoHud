@@ -26,7 +26,7 @@ static bool find_nv_x11(libnvctrl_loader& nvctrl, Display*& dpy)
         if (d) {
             if (nvctrl.XNVCTRLIsNvScreen(d, 0)) {
                 dpy = d;
-                spdlog::debug("XNVCtrl is using display {}", buf);
+                SPDLOG_DEBUG("XNVCtrl is using display {}", buf);
                 return true;
             }
             g_x11->XCloseDisplay(d);
@@ -42,7 +42,7 @@ bool checkXNVCtrl()
 
     auto& nvctrl = get_libnvctrl_loader();
     if (!nvctrl.IsLoaded()) {
-        spdlog::error("XNVCtrl loader failed to load");
+        SPDLOG_ERROR("XNVCtrl loader failed to load");
         return false;
     }
 
@@ -50,7 +50,7 @@ bool checkXNVCtrl()
     nvctrlSuccess = find_nv_x11(nvctrl, dpy);
 
     if (!nvctrlSuccess) {
-        spdlog::error("XNVCtrl didn't find the correct display");
+        SPDLOG_ERROR("XNVCtrl didn't find the correct display");
         return false;
     }
 
@@ -92,7 +92,7 @@ static void parse_token(std::string token, string_map& options) {
 char* get_attr_target_string(libnvctrl_loader& nvctrl, int attr, int target_type, int target_id) {
     char* c = nullptr;
     if (!nvctrl.XNVCTRLQueryTargetStringAttribute(display.get(), target_type, target_id, 0, attr, &c)) {
-        spdlog::error("Failed to query attribute '{}'", attr);
+        SPDLOG_ERROR("Failed to query attribute '{}'", attr);
     }
     return c;
 }

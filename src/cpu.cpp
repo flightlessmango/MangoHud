@@ -117,13 +117,13 @@ bool CPUStats::Init()
     m_cpuData.clear();
 
     if (!file.is_open()) {
-        spdlog::error("Failed to opening " PROCSTATFILE);
+        SPDLOG_ERROR("Failed to opening " PROCSTATFILE);
         return false;
     }
 
     do {
         if (!std::getline(file, line)) {
-            spdlog::debug("Failed to read all of " PROCSTATFILE);
+            SPDLOG_DEBUG("Failed to read all of " PROCSTATFILE);
             return false;
         } else if (starts_with(line, "cpu")) {
             if (first) {
@@ -176,7 +176,7 @@ bool CPUStats::UpdateCPUData()
     bool ret = false;
 
     if (!file.is_open()) {
-        spdlog::error("Failed to opening " PROCSTATFILE);
+        SPDLOG_ERROR("Failed to opening " PROCSTATFILE);
         return false;
     }
 
@@ -190,20 +190,20 @@ bool CPUStats::UpdateCPUData()
         } else if (sscanf(line.c_str(), "cpu%4d %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu",
             &cpuid, &usertime, &nicetime, &systemtime, &idletime, &ioWait, &irq, &softIrq, &steal, &guest, &guestnice) == 11) {
 
-            //spdlog::debug("Parsing 'cpu{}' line:{}", cpuid, line);
+            //SPDLOG_DEBUG("Parsing 'cpu{}' line:{}", cpuid, line);
 
             if (!ret) {
-                spdlog::debug("Failed to parse 'cpu' line:{}", line);
+                SPDLOG_DEBUG("Failed to parse 'cpu' line:{}", line);
                 return false;
             }
 
             if (cpuid < 0 /* can it? */) {
-                spdlog::debug("Cpu id '{}' is out of bounds", cpuid);
+                SPDLOG_DEBUG("Cpu id '{}' is out of bounds", cpuid);
                 return false;
             }
 
             if ((size_t)cpuid >= m_cpuData.size()) {
-                spdlog::debug("Cpu id '{}' is out of bounds, reiniting", cpuid);
+                SPDLOG_DEBUG("Cpu id '{}' is out of bounds, reiniting", cpuid);
                 return Reinit();
             }
 
@@ -399,7 +399,7 @@ static bool find_fallback_temp_input(const std::string path, std::string& input)
         if (!ends_with(file, "_input"))
             continue;
         input = path + "/" + file;
-        spdlog::debug("fallback cpu temp input: {}", input);
+        SPDLOG_DEBUG("fallback cpu temp input: {}", input);
         return true;
     }
     return false;
@@ -416,7 +416,7 @@ bool CPUStats::GetCpuFile() {
     for (auto& dir : dirs) {
         path = hwmon + dir;
         name = read_line(path + "/name");
-        spdlog::debug("hwmon: sensor name: {}", name);
+        SPDLOG_DEBUG("hwmon: sensor name: {}", name);
 
         if (name == "coretemp") {
             find_temp_input(path, input, "Package id 0");
@@ -434,11 +434,11 @@ bool CPUStats::GetCpuFile() {
     }
 
     if (path.empty() || (!file_exists(input) && !find_fallback_temp_input(path, input))) {
-        spdlog::error("Could not find cpu temp sensor location");
+        SPDLOG_ERROR("Could not find cpu temp sensor location");
         return false;
     } else {
 
-        spdlog::debug("hwmon: using input: {}", input);
+        SPDLOG_DEBUG("hwmon: using input: {}", input);
         m_cpuTempFile = fopen(input.c_str(), "r");
     }
     return true;
@@ -476,10 +476,10 @@ CPUPowerData_k10temp* init_cpu_power_data_k10temp(const std::string path) {
     if(!find_input(path, "in", socVoltageInput, "Vsoc")) return nullptr;
     if(!find_input(path, "curr", socCurrentInput, "Isoc")) return nullptr;
 
-    spdlog::debug("hwmon: using input: {}", coreVoltageInput);
-    spdlog::debug("hwmon: using input: {}", coreCurrentInput);
-    spdlog::debug("hwmon: using input: {}", socVoltageInput);
-    spdlog::debug("hwmon: using input: {}", socCurrentInput);
+    SPDLOG_DEBUG("hwmon: using input: {}", coreVoltageInput);
+    SPDLOG_DEBUG("hwmon: using input: {}", coreCurrentInput);
+    SPDLOG_DEBUG("hwmon: using input: {}", socVoltageInput);
+    SPDLOG_DEBUG("hwmon: using input: {}", socCurrentInput);
 
     powerData->coreVoltageFile = fopen(coreVoltageInput.c_str(), "r");
     powerData->coreCurrentFile = fopen(coreCurrentInput.c_str(), "r");
@@ -497,8 +497,8 @@ CPUPowerData_zenpower* init_cpu_power_data_zenpower(const std::string path) {
     if(!find_input(path, "power", corePowerInput, "SVI2_P_Core")) return nullptr;
     if(!find_input(path, "power", socPowerInput, "SVI2_P_SoC")) return nullptr;
 
-    spdlog::debug("hwmon: using input: {}", corePowerInput);
-    spdlog::debug("hwmon: using input: {}", socPowerInput);
+    SPDLOG_DEBUG("hwmon: using input: {}", corePowerInput);
+    SPDLOG_DEBUG("hwmon: using input: {}", socPowerInput);
 
     powerData->corePowerFile = fopen(corePowerInput.c_str(), "r");
     powerData->socPowerFile = fopen(socPowerInput.c_str(), "r");
@@ -530,7 +530,7 @@ bool CPUStats::InitCpuPowerData() {
     for (auto& dir : dirs) {
         path = hwmon + dir;
         name = read_line(path + "/name");
-        spdlog::debug("hwmon: sensor name: {}", name);
+        SPDLOG_DEBUG("hwmon: sensor name: {}", name);
 
         if (name == "k10temp") {
             cpuPowerData = (CPUPowerData*)init_cpu_power_data_k10temp(path);
@@ -547,7 +547,7 @@ bool CPUStats::InitCpuPowerData() {
         for (auto& dir : powercap_dirs) {
             path = powercap + dir;
             name = read_line(path + "/name");
-            spdlog::debug("powercap: name: {}", name);
+            SPDLOG_DEBUG("powercap: name: {}", name);
             if (name == "package-0") {
                 cpuPowerData = (CPUPowerData*)init_cpu_power_data_rapl(path);
                 break;
@@ -556,7 +556,7 @@ bool CPUStats::InitCpuPowerData() {
     }
 
     if(cpuPowerData == nullptr) {
-        spdlog::error("Failed to initialize CPU power data");
+        SPDLOG_ERROR("Failed to initialize CPU power data");
         return false;
     }
 

@@ -23,7 +23,7 @@ bool find_folder(const char* root, const char* prefix, std::string& dest)
     struct dirent* dp;
     DIR* dirp = opendir(root);
     if (!dirp) {
-        spdlog::error("Error opening directory '{}': {}", root, strerror(errno));
+        SPDLOG_ERROR("Error opening directory '{}': {}", root, strerror(errno));
         return false;
     }
 
@@ -52,7 +52,7 @@ std::vector<std::string> ls(const char* root, const char* prefix, LS_FLAGS flags
 
     DIR* dirp = opendir(root);
     if (!dirp) {
-        spdlog::error("Error opening directory '{}': {}", root, strerror(errno));
+        SPDLOG_ERROR("Error opening directory '{}': {}", root, strerror(errno));
         return list;
     }
 

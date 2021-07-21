@@ -95,8 +95,8 @@ parse_control(const char *str)
 {
    int ret = os_socket_listen_abstract(str, 1);
    if (ret < 0) {
-      spdlog::error("Couldn't create socket pipe at '{}'\n", str);
-      spdlog::error("ERROR: '{}'", strerror(errno));
+      SPDLOG_ERROR("Couldn't create socket pipe at '{}'\n", str);
+      SPDLOG_ERROR("ERROR: '{}'", strerror(errno));
       return ret;
    }
 
@@ -129,7 +129,7 @@ parse_string_to_keysym_vec(const char *str)
          if (xk)
             keys.push_back(xk);
          else
-            spdlog::error("Unrecognized key: '{}'", ks);
+            SPDLOG_ERROR("Unrecognized key: '{}'", ks);
       }
    }
    return keys;
@@ -170,7 +170,7 @@ parse_fps_limit(const char *str)
       try {
          as_int = static_cast<uint32_t>(std::stoul(value));
       } catch (const std::invalid_argument&) {
-         spdlog::error("invalid fps_limit value: '{}'", value);
+         SPDLOG_ERROR("invalid fps_limit value: '{}'", value);
          continue;
       }
 
@@ -320,17 +320,17 @@ parse_benchmark_percentiles(const char *str)
       try {
          as_float = parse_float(value, &float_len);
       } catch (const std::invalid_argument&) {
-         spdlog::error("invalid benchmark percentile: '{}'", value);
+         SPDLOG_ERROR("invalid benchmark percentile: '{}'", value);
          continue;
       }
 
       if (float_len != value.length()) {
-         spdlog::error("invalid benchmark percentile: '{}'", value);
+         SPDLOG_ERROR("invalid benchmark percentile: '{}'", value);
          continue;
       }
 
       if (as_float > 100 || as_float < 0) {
-         spdlog::error("benchmark percentile is not between 0 and 100 ({})", value);
+         SPDLOG_ERROR("benchmark percentile is not between 0 and 100 ({})", value);
          continue;
       }
 
@@ -498,7 +498,7 @@ parse_string(const char *s, char *out_param, char *out_value)
    }
 
    if (*s && !i) {
-      spdlog::error("syntax error: unexpected '{0:c}' ({0:d}) while "
+      SPDLOG_ERROR("syntax error: unexpected '{0:c}' ({0:d}) while "
               "parsing a string", *s);
    }
 
@@ -549,7 +549,7 @@ parse_overlay_env(struct overlay_params *params,
       OVERLAY_PARAMS
 #undef OVERLAY_PARAM_BOOL
 #undef OVERLAY_PARAM_CUSTOM
-      spdlog::error("Unknown option '{}'", key);
+      SPDLOG_ERROR("Unknown option '{}'", key);
    }
 }
 
@@ -689,7 +689,7 @@ parse_overlay_config(struct overlay_params *params,
          OVERLAY_PARAMS
 #undef OVERLAY_PARAM_BOOL
 #undef OVERLAY_PARAM_CUSTOM
-         spdlog::error("Unknown option '{}'", it.first.c_str());
+         SPDLOG_ERROR("Unknown option '{}'", it.first.c_str());
       }
 
    }

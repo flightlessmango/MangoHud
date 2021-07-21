@@ -163,7 +163,7 @@ bool dbus_manager::init(const std::string& requested_player) {
     }
 
     if (!m_dbus_ldr.IsLoaded() && !m_dbus_ldr.Load("libdbus-1.so.3")) {
-        spdlog::error("Could not load libdbus-1.so.3");
+        SPDLOG_ERROR("Could not load libdbus-1.so.3");
         return false;
     }
 
@@ -173,12 +173,12 @@ bool dbus_manager::init(const std::string& requested_player) {
 
     if (nullptr ==
         (m_dbus_conn = m_dbus_ldr.bus_get(DBUS_BUS_SESSION, &m_error))) {
-        spdlog::error("{}", m_error.message);
+        SPDLOG_ERROR("{}", m_error.message);
         m_dbus_ldr.error_free(&m_error);
         return false;
     }
 
-    spdlog::debug("Connected to D-Bus as \"{}\"",
+    SPDLOG_DEBUG("Connected to D-Bus as \"{}\"",
               m_dbus_ldr.bus_get_unique_name(m_dbus_conn));
 
     dbus_list_name_to_owner();
@@ -197,7 +197,7 @@ bool dbus_manager::select_active_player() {
         // If the requested player is available, use it
         if (m_name_owners.count(m_requested_player) > 0) {
             m_active_player = m_requested_player;
-            spdlog::debug("Selecting requested player: {}", m_requested_player);
+            SPDLOG_DEBUG("Selecting requested player: {}", m_requested_player);
             get_media_player_metadata(meta, m_active_player);
         }
     } else {
@@ -217,7 +217,7 @@ bool dbus_manager::select_active_player() {
 
             if(it != m_name_owners.end()){
                 m_active_player = it->first;
-                spdlog::debug("Selecting fallback player: {}", m_active_player);
+                SPDLOG_DEBUG("Selecting fallback player: {}", m_active_player);
             }
         }
     }
@@ -226,7 +226,7 @@ bool dbus_manager::select_active_player() {
         onNewPlayer(meta);
         return true;
     } else {
-        spdlog::debug("No active players");
+        SPDLOG_DEBUG("No active players");
         if (!old_active_player.empty()) {
             onNoPlayer();
         }
@@ -325,7 +325,7 @@ void dbus_manager::connect_to_signals() {
         auto signal = format_signal(kv);
         m_dbus_ldr.bus_add_match(m_dbus_conn, signal.c_str(), &m_error);
         if (m_dbus_ldr.error_is_set(&m_error)) {
-            spdlog::error("{}: {}", m_error.name, m_error.message);
+            SPDLOG_ERROR("{}: {}", m_error.name, m_error.message);
             m_dbus_ldr.error_free(&m_error);
             // return;
         }
@@ -343,7 +343,7 @@ void dbus_manager::disconnect_from_signals() {
         auto signal = format_signal(kv);
         m_dbus_ldr.bus_remove_match(m_dbus_conn, signal.c_str(), &m_error);
         if (m_dbus_ldr.error_is_set(&m_error)) {
-            spdlog::error("{}: {}", m_error.name, m_error.message);
+            SPDLOG_ERROR("{}: {}", m_error.name, m_error.message);
             m_dbus_ldr.error_free(&m_error);
         }
     }

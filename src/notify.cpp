@@ -28,7 +28,7 @@ static void fileChanged(void *params_void) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 parse_overlay_config(&local_params, getenv("MANGOHUD_CONFIG"));
                 if ((event->mask & IN_DELETE_SELF) || (nt->params->config_file_path != local_params.config_file_path)) {
-                    spdlog::debug("Watching config file: {}", local_params.config_file_path.c_str());
+                    SPDLOG_DEBUG("Watching config file: {}", local_params.config_file_path.c_str());
                     inotify_rm_watch(nt->fd, nt->wd);
                     nt->wd = inotify_add_watch(nt->fd, local_params.config_file_path.c_str(), IN_MODIFY | IN_DELETE_SELF);
                 }
@@ -45,7 +45,7 @@ bool start_notifier(notify_thread& nt)
 {
     nt.fd = inotify_init1(IN_NONBLOCK);
     if (nt.fd < 0) {
-        spdlog::error("inotify_init1 failed: {}", strerror(errno));
+        SPDLOG_ERROR("inotify_init1 failed: {}", strerror(errno));
         return false;
     }
 

@@ -59,7 +59,7 @@ void upload_files(const std::vector<std::string>& logFiles){
 
 void writeFile(string filename){
   auto& logArray = logger->get_log_data();
-  spdlog::debug("Writing log file [{}], {} entries", filename, logArray.size());
+  SPDLOG_DEBUG("Writing log file [{}], {} entries", filename, logArray.size());
   std::ofstream out(filename, ios::out | ios::app);
   if (out){
   out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver," << "cpuscheduler" << endl;
@@ -109,7 +109,7 @@ Logger::Logger(overlay_params* in_params)
     m_values_valid(false),
     m_params(in_params)
 {
-  spdlog::debug("Logger constructed!");
+  SPDLOG_DEBUG("Logger constructed!");
 }
 
 void Logger::start_logging() {

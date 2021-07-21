@@ -48,7 +48,7 @@ void* get_glx_proc_address(const char* name) {
         func = get_proc_address( name );
 
     if (!func) {
-        spdlog::error("Failed to get function '{}'", name);
+        SPDLOG_ERROR("Failed to get function '{}'", name);
     }
 
     return func;
@@ -60,7 +60,7 @@ EXPORT_C_(void *) glXCreateContext(void *dpy, void *vis, void *shareList, int di
     void *ctx = glx.CreateContext(dpy, vis, shareList, direct);
     if (ctx)
         refcnt++;
-    spdlog::debug("{}: {}", __func__,  ctx);
+    SPDLOG_DEBUG("{}: {}", __func__,  ctx);
     return ctx;
 }
 
@@ -70,7 +70,7 @@ EXPORT_C_(void *) glXCreateContextAttribs(void *dpy, void *config,void *share_co
     void *ctx = glx.CreateContextAttribs(dpy, config, share_context, direct, attrib_list);
     if (ctx)
         refcnt++;
-    spdlog::debug("{}: {}", __func__,  ctx);
+    SPDLOG_DEBUG("{}: {}", __func__,  ctx);
     return ctx;
 }
 
@@ -80,7 +80,7 @@ EXPORT_C_(void *) glXCreateContextAttribsARB(void *dpy, void *config,void *share
     void *ctx = glx.CreateContextAttribsARB(dpy, config, share_context, direct, attrib_list);
     if (ctx)
         refcnt++;
-    spdlog::debug("{}: {}", __func__,  ctx);
+    SPDLOG_DEBUG("{}: {}", __func__,  ctx);
     return ctx;
 }
 
@@ -91,18 +91,18 @@ EXPORT_C_(void) glXDestroyContext(void *dpy, void *ctx)
     refcnt--;
     if (refcnt <= 0)
         imgui_shutdown();
-    spdlog::debug("{}: {}", __func__,  ctx);
+    SPDLOG_DEBUG("{}: {}", __func__,  ctx);
 }
 
 EXPORT_C_(int) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
     glx.Load();
-    spdlog::debug("{}: {}, {}", __func__, drawable, ctx);
+    SPDLOG_DEBUG("{}: {}, {}", __func__, drawable, ctx);
     int ret = glx.MakeCurrent(dpy, drawable, ctx);
 
     if (!is_blacklisted()) {
         if (ret) {
             imgui_set_context(ctx);
-            spdlog::debug("GL ref count: {}", refcnt);
+            SPDLOG_DEBUG("GL ref count: {}", refcnt);
         }
 
         // Afaik -1 only works with EXT version if it has GLX_EXT_swap_control_tear, maybe EGL_MESA_swap_control_tear someday
@@ -147,7 +147,7 @@ static void do_imgui_swap(void *dpy, void *drawable)
                 break;
         }
 
-        spdlog::trace("swap buffers: {}x{}", width, height);
+        SPDLOG_TRACE("swap buffers: {}x{}", width, height);
         imgui_render(width, height);
     }
 }
@@ -185,7 +185,7 @@ EXPORT_C_(int64_t) glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t targe
 }
 
 EXPORT_C_(void) glXSwapIntervalEXT(void *dpy, void *draw, int interval) {
-    spdlog::debug("{}: {}", __func__, interval);
+    SPDLOG_DEBUG("{}: {}", __func__, interval);
     glx.Load();
     if (!glx.SwapIntervalEXT)
         return;
@@ -197,7 +197,7 @@ EXPORT_C_(void) glXSwapIntervalEXT(void *dpy, void *draw, int interval) {
 }
 
 EXPORT_C_(int) glXSwapIntervalSGI(int interval) {
-    spdlog::debug("{}: {}", __func__, interval);
+    SPDLOG_DEBUG("{}: {}", __func__, interval);
     glx.Load();
     if (!glx.SwapIntervalSGI)
         return -1;
@@ -209,7 +209,7 @@ EXPORT_C_(int) glXSwapIntervalSGI(int interval) {
 }
 
 EXPORT_C_(int) glXSwapIntervalMESA(unsigned int interval) {
-    spdlog::debug("{}: {}", __func__, interval);
+    SPDLOG_DEBUG("{}: {}", __func__, interval);
     glx.Load();
     if (!glx.SwapIntervalMESA)
         return -1;
@@ -239,7 +239,7 @@ EXPORT_C_(int) glXGetSwapIntervalMESA() {
         }
     }
 
-    spdlog::debug("{}: {}", __func__, interval);
+    SPDLOG_DEBUG("{}: {}", __func__, interval);
     return interval;
 }
 
@@ -283,7 +283,7 @@ EXPORT_C_(void *) mangohud_find_glx_ptr(const char *name)
 EXPORT_C_(void *) glXGetProcAddress(const unsigned char* procName) {
     void *real_func = get_glx_proc_address((const char*)procName);
     void *func = mangohud_find_glx_ptr( (const char*)procName );
-    spdlog::trace("{}: '{}', real: {}, fun: {}", __func__, procName, real_func, func);
+    SPDLOG_TRACE("{}: '{}', real: {}, fun: {}", __func__, procName, real_func, func);
 
     if (func && real_func)
         return func;
@@ -294,7 +294,7 @@ EXPORT_C_(void *) glXGetProcAddress(const unsigned char* procName) {
 EXPORT_C_(void *) glXGetProcAddressARB(const unsigned char* procName) {
     void *real_func = get_glx_proc_address((const char*)procName);
     void *func = mangohud_find_glx_ptr( (const char*)procName );
-    spdlog::trace("{}: '{}', real: {}, fun: {}", __func__, procName, real_func, func);
+    SPDLOG_TRACE("{}: '{}', real: {}, fun: {}", __func__, procName, real_func, func);
     if (func && real_func)
         return func;
 

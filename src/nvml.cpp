@@ -17,19 +17,19 @@ bool checkNVML(const char* pciBusId){
     if (nvml.IsLoaded()){
         result = nvml.nvmlInit();
         if (NVML_SUCCESS != result) {
-            spdlog::error("Nvidia module not loaded");
+            SPDLOG_ERROR("Nvidia module not loaded");
         } else {
             nvmlReturn_t ret = NVML_ERROR_UNKNOWN;
             if (pciBusId && ((ret = nvml.nvmlDeviceGetHandleByPciBusId(pciBusId, &nvidiaDevice)) != NVML_SUCCESS)) {
-                spdlog::error("Getting device handle by PCI bus ID failed: {}", nvml.nvmlErrorString(ret));
-                spdlog::error("Using index 0.");
+                SPDLOG_ERROR("Getting device handle by PCI bus ID failed: {}", nvml.nvmlErrorString(ret));
+                SPDLOG_ERROR("Using index 0.");
             }
 
             if (ret != NVML_SUCCESS)
                 ret = nvml.nvmlDeviceGetHandleByIndex(0, &nvidiaDevice);
 
             if (ret != NVML_SUCCESS)
-                spdlog::error("Getting device handle failed: {}", nvml.nvmlErrorString(ret));
+                SPDLOG_ERROR("Getting device handle failed: {}", nvml.nvmlErrorString(ret));
 
             nvmlSuccess = (ret == NVML_SUCCESS);
             if (ret == NVML_SUCCESS)
@@ -38,7 +38,7 @@ bool checkNVML(const char* pciBusId){
             return nvmlSuccess;
         }
     } else {
-        spdlog::error("Failed to load NVML");
+        SPDLOG_ERROR("Failed to load NVML");
     }
 
     return false;

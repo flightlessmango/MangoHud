@@ -139,13 +139,13 @@ static bool CheckShader(GLuint handle, const char* desc)
     glGetShaderiv(handle, GL_COMPILE_STATUS, &status);
     glGetShaderiv(handle, GL_INFO_LOG_LENGTH, &log_length);
     if ((GLboolean)status == GL_FALSE)
-        spdlog::error("ImGui_ImplOpenGL3_CreateDeviceObjects: failed to compile {}!", desc);
+        SPDLOG_ERROR("ImGui_ImplOpenGL3_CreateDeviceObjects: failed to compile {}!", desc);
     if (log_length > 1)
     {
         ImVector<char> buf;
         buf.resize((int)(log_length + 1));
         glGetShaderInfoLog(handle, log_length, NULL, (GLchar*)buf.begin());
-        spdlog::error("{}", buf.begin());
+        SPDLOG_ERROR("{}", buf.begin());
     }
     return (GLboolean)status == GL_TRUE;
 }
@@ -157,13 +157,13 @@ static bool CheckProgram(GLuint handle, const char* desc)
     glGetProgramiv(handle, GL_LINK_STATUS, &status);
     glGetProgramiv(handle, GL_INFO_LOG_LENGTH, &log_length);
     if ((GLboolean)status == GL_FALSE)
-        spdlog::error("ImGui_ImplOpenGL3_CreateDeviceObjects: failed to link {}! (with GLSL '{}')", desc, g_GlslVersionString);
+        SPDLOG_ERROR("ImGui_ImplOpenGL3_CreateDeviceObjects: failed to link {}! (with GLSL '{}')", desc, g_GlslVersionString);
     if (log_length > 1)
     {
         ImVector<char> buf;
         buf.resize((int)(log_length + 1));
         glGetProgramInfoLog(handle, log_length, NULL, (GLchar*)buf.begin());
-        spdlog::error("{}", buf.begin());
+        SPDLOG_ERROR("{}", buf.begin());
     }
     return (GLboolean)status == GL_TRUE;
 }
@@ -479,12 +479,12 @@ void    ImGui_ImplOpenGL3_NewFrame()
     if (!g_ShaderHandle)
         ImGui_ImplOpenGL3_CreateDeviceObjects();
     else if (!glIsProgram(g_ShaderHandle)) { // TODO Got created in a now dead context?
-        spdlog::debug("Recreating lost objects");
+        SPDLOG_DEBUG("Recreating lost objects");
         ImGui_ImplOpenGL3_CreateDeviceObjects();
     }
 
     if (!glIsTexture(g_FontTexture)) {
-        spdlog::debug("GL Texture lost? Regenerating.");
+        SPDLOG_DEBUG("GL Texture lost? Regenerating.");
         g_FontTexture = 0;
         ImGui_ImplOpenGL3_CreateFontsTexture();
     }

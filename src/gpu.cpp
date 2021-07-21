@@ -191,7 +191,7 @@ struct amdgpu_handles
             period = 10000000; /* 10ms */
         ticks = ticks_per_sec * std::chrono::nanoseconds(period) / 1s;
         sleep_interval = std::chrono::nanoseconds(period) / ticks;
-        spdlog::debug("ticks: {}, {}ns", ticks, sleep_interval.count());
+        SPDLOG_DEBUG("ticks: {}, {}ns", ticks, sleep_interval.count());
     }
 
     void amdgpu_poll()
@@ -234,20 +234,20 @@ bool amdgpu_open(const char *path) {
     int fd = open(path, O_RDWR | O_CLOEXEC);
 
     if (fd < 0) {
-        spdlog::error("Failed to open DRM device: {}", strerror(errno));
+        SPDLOG_ERROR("Failed to open DRM device: {}", strerror(errno));
         return false;
     }
 
     drmVersionPtr ver = libdrm_ptr->drmGetVersion(fd);
 
     if (!ver) {
-        spdlog::error("Failed to query driver version: {}", strerror(errno));
+        SPDLOG_ERROR("Failed to query driver version: {}", strerror(errno));
         close(fd);
         return false;
     }
 
     if (strcmp(ver->name, "amdgpu") || !DRM_ATLEAST_VERSION(ver, 3, 11)) {
-        spdlog::error("Unsupported driver/version: {} {}.{}.{}", ver->name, ver->version_major, ver->version_minor, ver->version_patchlevel);
+        SPDLOG_ERROR("Unsupported driver/version: {} {}.{}.{}", ver->name, ver->version_major, ver->version_minor, ver->version_patchlevel);
         close(fd);
         libdrm_ptr->drmFreeVersion(ver);
         return false;
@@ -264,7 +264,7 @@ bool amdgpu_open(const char *path) {
     uint32_t drm_major, drm_minor;
     amdgpu_device_handle dev;
     if (libdrm_ptr->amdgpu_device_initialize(fd, &drm_major, &drm_minor, &dev)){
-        spdlog::error("Failed to initialize amdgpu device: {}", strerror(errno));
+        SPDLOG_ERROR("Failed to initialize amdgpu device: {}", strerror(errno));
         close(fd);
         return false;
     }

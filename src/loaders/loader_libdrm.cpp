@@ -28,13 +28,13 @@ bool libdrm_loader::Load() {
 #if defined(LIBRARY_LOADER_LIBDRM_H_DLOPEN)
   library_drm = dlopen("libdrm.so.2", RTLD_LAZY);
   if (!library_drm) {
-    spdlog::error("Failed to open " MANGOHUD_ARCH " libdrm.so.2: {}", dlerror());
+    SPDLOG_ERROR("Failed to open " MANGOHUD_ARCH " libdrm.so.2: {}", dlerror());
     return false;
   }
 
   library_amdgpu = dlopen("libdrm_amdgpu.so.1", RTLD_LAZY);
   if (!library_amdgpu) {
-    spdlog::error("Failed to open " MANGOHUD_ARCH " libdrm_amdgpu.so.1: {}", dlerror());
+    SPDLOG_ERROR("Failed to open " MANGOHUD_ARCH " libdrm_amdgpu.so.1: {}", dlerror());
     CleanUp(true);
     return false;
   }

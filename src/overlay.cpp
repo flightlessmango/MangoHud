@@ -518,10 +518,10 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
             << std::setw(1) << pci.func;
          params.pci_dev = ss.str();
          pci_dev = params.pci_dev.c_str();
-         spdlog::debug("PCI device ID: '{}'", pci_dev);
+         SPDLOG_DEBUG("PCI device ID: '{}'", pci_dev);
       } else {
-         spdlog::error("Failed to parse PCI device ID: '{}'", pci_dev);
-         spdlog::error("Specify it as 'domain:bus:slot.func'");
+         SPDLOG_ERROR("Failed to parse PCI device ID: '{}'", pci_dev);
+         SPDLOG_ERROR("Specify it as 'domain:bus:slot.func'");
       }
    }
 
@@ -548,7 +548,7 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
       for (auto& dir : dirs) {
          path = drm + dir;
 
-         spdlog::debug("amdgpu path check: {}/device/vendor", path);
+         SPDLOG_DEBUG("amdgpu path check: {}/device/vendor", path);
 
          string device = read_line(path + "/device/device");
          deviceID = strtol(device.c_str(), NULL, 16);
@@ -559,14 +559,14 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
 
          if (pci_bus_parsed && pci_dev) {
             string pci_device = read_symlink((path + "/device").c_str());
-            spdlog::debug("PCI device symlink: '{}'", pci_device);
+            SPDLOG_DEBUG("PCI device symlink: '{}'", pci_device);
             if (!ends_with(pci_device, pci_dev)) {
-               spdlog::debug("skipping GPU, no PCI ID match");
+               SPDLOG_DEBUG("skipping GPU, no PCI ID match");
                continue;
             }
          }
 
-         spdlog::debug("using amdgpu path: {}", path);
+         SPDLOG_DEBUG("using amdgpu path: {}", path);
 
 #ifdef HAVE_LIBDRM_AMDGPU
          int idx = -1;
@@ -580,11 +580,11 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
             getAmdGpuInfo_actual = getAmdGpuInfo_libdrm;
             amdgpu_set_sampling_period(params.fps_sampling_period);
 
-            spdlog::debug("Using libdrm");
+            SPDLOG_DEBUG("Using libdrm");
 
             // fall through and open sysfs handles for fallback or check DRM version beforehand
          } else if (!params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon]) {
-            spdlog::error("Failed to open device '/dev/dri/card{}' with libdrm, falling back to using hwmon sysfs.", idx);
+            SPDLOG_ERROR("Failed to open device '/dev/dri/card{}' with libdrm, falling back to using hwmon sysfs.", idx);
          }
 #endif
 
@@ -620,7 +620,7 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
    }
 #endif
    if (!params.permit_upload)
-      spdlog::info("Uploading is disabled (permit_upload = 0)");
+      SPDLOG_INFO("Uploading is disabled (permit_upload = 0)");
 }
 
 void init_system_info(){
@@ -714,13 +714,13 @@ void init_system_info(){
       if (ld_preload)
          setenv("LD_PRELOAD", ld_preload, 1);
 
-      spdlog::debug("Ram:{}", ram);
-      spdlog::debug("Cpu:{}", cpu);
-      spdlog::debug("Kernel:{}", kernel);
-      spdlog::debug("Os:{}", os);
-      spdlog::debug("Gpu:{}", gpu);
-      spdlog::debug("Driver:{}", driver);
-      spdlog::debug("CPU Scheduler:{}", cpusched);
+      SPDLOG_DEBUG("Ram:{}", ram);
+      SPDLOG_DEBUG("Cpu:{}", cpu);
+      SPDLOG_DEBUG("Kernel:{}", kernel);
+      SPDLOG_DEBUG("Os:{}", os);
+      SPDLOG_DEBUG("Gpu:{}", gpu);
+      SPDLOG_DEBUG("Driver:{}", driver);
+      SPDLOG_DEBUG("CPU Scheduler:{}", cpusched);
 #endif
 }
 
