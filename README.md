@@ -87,6 +87,16 @@ If you are using Solus, to install [MangoHud](https://dev.getsol.us/source/mango
 sudo eopkg it mangohud
 ```
 
+#### Ubuntu
+
+To install mangohud in Ubuntu (20.04 and up) and derivatives use the PPA from Martin Wimpress. Run the following commands:
+
+```bash
+sudo add-apt-repository ppa:flexiondotorg/mangohud
+sudo apt-get update
+sudo apt-get install mangohud
+```
+
 #### Flatpak
 
 If you are using Flatpaks, you will have to add the [Flathub repository](https://flatpak.org/setup/) for your specific distribution, and then, to install it, execute:
