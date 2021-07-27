@@ -398,7 +398,7 @@ void HudElements::engine_version(){
         ImGui::TableNextRow(); ImGui::TableNextColumn();
         ImGui::PushFont(HUDElements.sw_stats->font1);
         if (HUDElements.is_vulkan) {
-            if ((HUDElements.sw_stats->engineName == "DXVK" || HUDElements.sw_stats->engineName == "VKD3D")){
+            if ((HUDElements.sw_stats->engine == EngineTypes::DXVK || HUDElements.sw_stats->engine == EngineTypes::VKD3D)){
                 ImGui::TextColored(HUDElements.colors.engine,
                     "%s/%d.%d.%d", HUDElements.sw_stats->engineVersion.c_str(),
                     HUDElements.sw_stats->version_vk.major,
