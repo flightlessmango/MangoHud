@@ -468,6 +468,9 @@ static void compute_swapchain_display(struct swapchain_data *data)
    struct device_data *device_data = data->device;
    struct instance_data *instance_data = device_data->instance;
 
+   if (instance_data->params.no_display)
+      return;
+
    ImGui::SetCurrentContext(data->imgui_context);
    if (HUDElements.colors.update)
       HUDElements.convert_colors(instance_data->params);
@@ -792,10 +795,11 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
                                                      unsigned image_index)
 {
    ImDrawData* draw_data = ImGui::GetDrawData();
-   if (draw_data->TotalVtxCount == 0)
-      return NULL;
-
    struct device_data *device_data = data->device;
+
+   if (!draw_data || draw_data->TotalVtxCount == 0 || device_data->instance->params.no_display)
+      return nullptr;
+
    struct overlay_draw *draw = get_overlay_draw(data);
 
    device_data->vtable.ResetCommandBuffer(draw->command_buffer, 0);
