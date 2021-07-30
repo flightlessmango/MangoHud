@@ -13,7 +13,12 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
    auto elapsedReloadCfg = now - reload_cfg_press;
    auto elapsedUpload = now - last_upload_press;
 
-   auto keyPressDelay = 500ms;
+   static Clock::time_point last_check;
+   if (now - last_check < 100ms)
+      return;
+   last_check = now;
+
+   auto keyPressDelay = 400ms;
 
   if (elapsedF2 >= keyPressDelay){
 #if defined(HAVE_X11) || defined(_WIN32)
