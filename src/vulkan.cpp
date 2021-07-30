@@ -215,9 +215,6 @@ static void unmap_object(uint64_t obj)
 
 /**/
 
-#define CHAR_CELSIUS    "\xe2\x84\x83"
-#define CHAR_FAHRENHEIT "\xe2\x84\x89"
-
 static void shutdown_swapchain_font(struct swapchain_data*);
 
 static VkLayerInstanceCreateInfo *get_instance_chain_info(const VkInstanceCreateInfo *pCreateInfo,

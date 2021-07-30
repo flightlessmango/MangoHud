@@ -27,7 +27,7 @@ template <class T>
 const int dbus_type_identifier = dbus_type_traits<T>().value;
 
 template <class T>
-const bool is_fixed = dbus_type_traits<T>().is_fiexd;
+const bool is_fixed = dbus_type_traits<T>().is_fixed;
 }  // namespace detail
 
 class DBusMessageIter_wrap {

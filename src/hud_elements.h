@@ -25,12 +25,12 @@ class HudElements{
         std::vector<std::pair<std::string, std::string>> options;
         std::vector<std::pair<void(*)(), std::string >> ordered_functions;
         int min, max, gpu_core_max, gpu_mem_max, cpu_temp_max, gpu_temp_max;
-        std::vector<std::string> permitted_params = {
+        const std::vector<std::string> permitted_params = {
             "gpu_load", "cpu_load", "gpu_core_clock", "gpu_mem_clock",
             "vram", "ram", "cpu_temp", "gpu_temp"
         };
         std::vector<exec_list> exec_list;
-        void sort_elements(std::pair<std::string, std::string> option);
+        void sort_elements(const std::pair<std::string, std::string>& option);
         void legacy_elements();
         void update_exec();
         static void version();

@@ -365,7 +365,7 @@ bool dbus_manager::dbus_list_name_to_owner() {
         return false;
     }
     iter.array_for_each_value<std::string>([&](std::string name) {
-        if (!starts_with(name.c_str(), "org.mpris.MediaPlayer2.")) return;
+        if (!starts_with(name, "org.mpris.MediaPlayer2.")) return;
         std::string owner;
         if (dbus_get_name_owner(dbus_mgr, owner, name.c_str())) {
             m_name_owners[name] = owner;

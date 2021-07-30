@@ -7,6 +7,9 @@
 #include "string_utils.h"
 #include <IconsForkAwesome.h>
 
+#define CHAR_CELSIUS    "\xe2\x84\x83"
+#define CHAR_FAHRENHEIT "\xe2\x84\x89"
+
 // Cut from https://github.com/ocornut/imgui/pull/2943
 // Probably move to ImGui
 float SRGBToLinear(float in)
@@ -487,6 +490,9 @@ void HudElements::frame_timing(){
 
 void HudElements::media_player(){
 #ifdef HAVE_DBUS
+    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_media_player])
+        return;
+
     ImGui::TableNextRow(); ImGui::TableNextColumn();
     uint32_t f_idx = (HUDElements.sw_stats->n_frames - 1) % ARRAY_SIZE(HUDElements.sw_stats->frames_stats);
     uint64_t frame_timing = HUDElements.sw_stats->frames_stats[f_idx].stats[OVERLAY_PLOTS_frame_timing];
@@ -744,9 +750,9 @@ void HudElements::graphs(){
     ImGui::PopStyleColor(1);
 }
 
-void HudElements::sort_elements(std::pair<std::string, std::string> option){
-    auto param = option.first;
-    auto value = option.second;
+void HudElements::sort_elements(const std::pair<std::string, std::string>& option){
+    const auto& param = option.first;
+    const auto& value = option.second;
 
     // Use this to always add to front of vector
     //ordered_functions.insert(ordered_functions.begin(),std::make_pair(param,value));
