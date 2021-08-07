@@ -70,6 +70,8 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
 #ifdef __gnu_linux__
    if (params.enabled[OVERLAY_PARAM_ENABLED_ram] || params.enabled[OVERLAY_PARAM_ENABLED_swap] || logger->is_active())
       update_meminfo();
+   if (params.enabled[OVERLAY_PARAM_ENABLED_procmem])
+      update_procmem();
    if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])
       getIoStats(&sw_stats.io);
 #endif
@@ -248,7 +250,7 @@ void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...)
    ImGui::TextColored(col,"%s",buffer);
 }
 
-void center_text(std::string& text)
+void center_text(const std::string& text)
 {
    ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2 )- (ImGui::CalcTextSize(text.c_str()).x / 2));
 }

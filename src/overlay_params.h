@@ -36,6 +36,9 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(ram)                           \
    OVERLAY_PARAM_BOOL(swap)                          \
    OVERLAY_PARAM_BOOL(vram)                          \
+   OVERLAY_PARAM_BOOL(procmem)                       \
+   OVERLAY_PARAM_BOOL(procmem_shared)                \
+   OVERLAY_PARAM_BOOL(procmem_virt)                  \
    OVERLAY_PARAM_BOOL(time)                          \
    OVERLAY_PARAM_BOOL(full)                          \
    OVERLAY_PARAM_BOOL(read_cfg)                      \

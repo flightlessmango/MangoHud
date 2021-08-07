@@ -559,6 +559,9 @@ parse_overlay_config(struct overlay_params *params,
 {
    if (!spdlog::get("MANGOHUD"))
       spdlog::set_default_logger(spdlog::stderr_color_mt("MANGOHUD")); // Just to get the name in log
+#ifndef NDEBUG
+   spdlog::set_level(spdlog::level::level_enum::debug);
+#endif
    spdlog::cfg::load_env_levels();
 
    *params = {};
@@ -784,8 +787,9 @@ parse_overlay_config(struct overlay_params *params,
    }
 #endif
 
-   if(!params->output_file.empty())
-      printf("MANGOHUD: output_file is Deprecated, use output_folder instead\n");
+   if(!params->output_file.empty()) {
+      SPDLOG_INFO("output_file is deprecated, use output_folder instead");
+   }
 
    auto real_size = params->font_size * params->font_scale;
    real_font_size = ImVec2(real_size, real_size / 2);

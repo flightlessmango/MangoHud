@@ -153,6 +153,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `gpu_core_clock`<br>`gpu_mem_clock`| Displays GPU core/memory frequency                                                    |
 | `ram`<br>`vram`                    | Displays system RAM/VRAM usage                                                        |
 | `swap`                             | Displays swap space usage next to system RAM usage                                    |
+| `procmem`<br>`procmem_shared`, `procmem_virt`| Displays process' memory usage: resident, shared and/or virtual. `procmem` (resident) also toggles others off if disabled. |
 | `full`                             | Enables most of the toggleable parameters (currently excludes `histogram`)            |
 | `font_size=`                       | Customizeable font size (default=24)                                                  |
 | `font_size_text=`                  | Customizeable font size for other text like media metadata (default=24)               |

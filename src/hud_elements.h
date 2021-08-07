@@ -1,17 +1,16 @@
 #pragma once
-#include "overlay.h"
-#include "overlay_params.h"
-#include <functional>
-#include <map>
-#include <sstream>
-#include <logging.h>
-#include <battery.h>
+#include <vector>
+#include <string>
+#include <utility>
+#include <imgui.h>
+#include "timing.hpp"
 
+struct overlay_params;
 class HudElements{
     public:
         struct swapchain_stats *sw_stats;
         struct overlay_params *params;
-        struct exec_list {
+        struct exec_entry {
             int             pos;
             std::string     value;
             std::string     ret;
@@ -29,7 +28,7 @@ class HudElements{
             "gpu_load", "cpu_load", "gpu_core_clock", "gpu_mem_clock",
             "vram", "ram", "cpu_temp", "gpu_temp"
         };
-        std::vector<exec_list> exec_list;
+        std::vector<exec_entry> exec_list;
         void sort_elements(const std::pair<std::string, std::string>& option);
         void legacy_elements();
         void update_exec();
@@ -41,6 +40,7 @@ class HudElements{
         static void io_stats();
         static void vram();
         static void ram();
+        static void procmem();
         static void fps();
         static void engine_version();
         static void gpu_name();

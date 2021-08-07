@@ -3,6 +3,7 @@
 #include <thread>
 #include <string>
 #include <iostream>
+#include <sstream>
 #include <memory>
 #include <unistd.h>
 #include <imgui.h>
