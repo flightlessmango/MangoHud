@@ -26,7 +26,7 @@ void BatteryStats::update() {
     if (!batt_check) {
         numBattery();
         if (batt_count == 0) {
-            SPDLOG_INFO("No battery found");
+            SPDLOG_ERROR("No battery found");
         }
     }
 
