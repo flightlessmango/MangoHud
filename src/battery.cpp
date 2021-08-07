@@ -1,9 +1,9 @@
-#include <stdio.h>
-#include "battery.h"
-#include <filesystem.h>
 #include <spdlog/spdlog.h>
+#include <filesystem.h>
+#include "battery.h"
 
 namespace fs = ghc::filesystem;
+using namespace std;
 
 void BatteryStats::numBattery() {
     int batteryCount = 0;
@@ -22,19 +22,18 @@ void BatteryStats::numBattery() {
     batt_check = true;
 }
 
-
 void BatteryStats::update() {
     if (!batt_check) {
         numBattery();
         if (batt_count == 0) {
-            SPDLOG_ERROR("No battery found");
+            SPDLOG_INFO("No battery found");
         }
     }
 
      if (batt_count > 0) {
-            current_watt = getPower();
-            current_percent = getPercent();
-        }
+        current_watt = getPower();
+        current_percent = getPercent();
+    }
 }
 
 float BatteryStats::getPercent()
@@ -59,7 +58,6 @@ float BatteryStats::getPercent()
             if(std::getline(input2, line)) {
                 charge_f += (stof(line) / 1000000);
             }
-
         }
 
         else if (fs::exists(energy_now)) {
@@ -72,7 +70,6 @@ float BatteryStats::getPercent()
             if(std::getline(input2, line)) {
                 charge_f += (stof(line) / 1000000);
             }
-
         }
 
         else {
@@ -107,7 +104,7 @@ float BatteryStats::getPower() {
         }
 
         if (state[i] == "Charging" ||  state[i] == "Unknown") {
-                return 0;
+            return 0;
         }
 
         if (fs::exists(current_power)) {
