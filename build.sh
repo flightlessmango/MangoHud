@@ -22,7 +22,7 @@ for os_release in ${OS_RELEASE_FILES[@]} ; do
     if [[ ! -e "${os_release}" ]]; then
         continue
     fi
-    DISTRO=$(sed -rn 's/^ID(_LIKE)*=(.+)/\2/p' ${os_release} | sed 's/"//g')
+    DISTRO=$(sed -rn 's/^ID(_LIKE)*=(.+)/\L\2/p' ${os_release} | sed 's/"//g')
 done
 
 dependencies() {
@@ -74,7 +74,7 @@ dependencies() {
                 break
             ;;
 
-            *debian*|*ubuntu*)
+            *debian*|*ubuntu*|*deepin*)
                 MANAGER_QUERY="dpkg-query -s"
                 MANAGER_INSTALL="apt install"
                 DEPS="{gcc,g++,gcc-multilib,g++-multilib,ninja-build,python3-pip,python3-setuptools,python3-wheel,pkg-config,mesa-common-dev,libx11-dev,libxnvctrl-dev,libdbus-1-dev}"
@@ -84,7 +84,7 @@ dependencies() {
                     $SU_CMD pip3 install 'meson>=0.54' mako
                 fi
                 if [[ ! -f /usr/local/bin/glslangValidator ]]; then
-                    wget https://github.com/KhronosGroup/glslang/releases/download/SDK-candidate-26-Jul-2020/glslang-master-linux-Release.zip
+                    wget https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip
                     unzip glslang-master-linux-Release.zip bin/glslangValidator
                     $SU_CMD /usr/bin/install -m755 bin/glslangValidator /usr/local/bin/
                     rm bin/glslangValidator glslang-master-linux-Release.zip
