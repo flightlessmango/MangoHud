@@ -218,7 +218,7 @@ install() {
         esac
     done
 
-    if [ "$MACHINE" != "x86_64" ]]; then
+    if [ "$MACHINE" != "x86_64" ]; then
         # Native libs
         DEFAULTLIB=lib64
     fi
