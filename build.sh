@@ -11,6 +11,7 @@ INSTALL_DIR="build/package/"
 IMPLICIT_LAYER_DIR="$XDG_DATA_HOME/vulkan/implicit_layer.d"
 VERSION=$(git describe --long --tags --always | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/^v//')
 SU_CMD=$(command -v sudo || command -v doas || echo)
+MACHINE=$(uname -m || echo)
 
 # doas requires a double dash if the command it runs will include any dashes,
 # so append a double dash to the command
@@ -143,9 +144,9 @@ configure() {
     dependencies
     git submodule update --init --depth 50
     if [[ ! -f "build/meson64/build.ninja" ]]; then
-        meson build/meson64 --libdir lib/mangohud/lib --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_prefix=true -Dld_libdir_abs=true $@ ${CONFIGURE_OPTS}
+        meson build/meson64 --libdir lib/mangohud/lib64 --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_prefix=true -Dld_libdir_abs=true $@ ${CONFIGURE_OPTS}
     fi
-    if [[ ! -f "build/meson32/build.ninja" ]]; then
+    if [[ ! -f "build/meson32/build.ninja" && "$MACHINE" = "x86_64" ]]; then
         export CC="gcc -m32"
         export CXX="g++ -m32"
         export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH_32}"
@@ -158,12 +159,15 @@ build() {
     if [[ ! -f "build/meson64/build.ninja" ]]; then
         configure $@
     fi
-    DESTDIR="$PWD/build/release" ninja -C build/meson32 install
     DESTDIR="$PWD/build/release" ninja -C build/meson64 install
+
+    if [ "$MACHINE" = "x86_64" ]; then
+        DESTDIR="$PWD/build/release" ninja -C build/meson32 install
+    fi
 }
 
 package() {
-    LIB="build/release/usr/lib/mangohud/lib/libMangoHud.so"
+    LIB="build/release/usr/lib/mangohud/lib64/libMangoHud.so"
     LIB32="build/release/usr/lib/mangohud/lib32/libMangoHud.so"
     if [[ ! -f "$LIB" || "$LIB" -ot "build/meson64/src/libMangoHud.so" ]]; then
         build
@@ -204,37 +208,67 @@ install() {
     [ "$UID" -eq 0 ] || exec $SU_CMD bash "$0" install
 
     uninstall
-    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud.so /usr/lib/mangohud/lib32/libMangoHud.so
-    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib/libMangoHud.so /usr/lib/mangohud/lib/libMangoHud.so
-    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud_dlsym.so /usr/lib/mangohud/lib32/libMangoHud_dlsym.so
-    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib/libMangoHud_dlsym.so /usr/lib/mangohud/lib/libMangoHud_dlsym.so
+
+    DEFAULTLIB=lib32
+    for i in $DISTRO; do
+        case $i in
+            *arch*)
+            DEFAULTLIB=lib64
+            ;;
+        esac
+    done
+
+    if [ "$MACHINE" != "x86_64" ]]; then
+        # Native libs
+        DEFAULTLIB=lib64
+    fi
+
+    echo DEFAULTLIB: $DEFAULTLIB
+    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud.so /usr/lib/mangohud/lib64/libMangoHud.so
+    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud_dlsym.so /usr/lib/mangohud/lib64/libMangoHud_dlsym.so
+    if [ "$MACHINE" = "x86_64" ]; then
+      /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud.so /usr/lib/mangohud/lib32/libMangoHud.so
+      /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud_dlsym.so /usr/lib/mangohud/lib32/libMangoHud_dlsym.so
+    fi
+
     /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.json /usr/share/vulkan/implicit_layer.d/MangoHud.json
     /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.json /usr/share/vulkan/implicit_layer.d/MangoHud.json
     /usr/bin/install -Dvm644 ./build/release/usr/share/man/man1/mangohud.1 /usr/share/man/man1/mangohud.1
     /usr/bin/install -Dvm644 ./build/release/usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
     /usr/bin/install -vm755  ./build/release/usr/bin/mangohud /usr/bin/mangohud
 
+    ln -sv $DEFAULTLIB /usr/lib/mangohud/lib
+
     # FIXME get the triplet somehow
+    ln -sv lib64 /usr/lib/mangohud/x86_64
+    ln -sv lib64 /usr/lib/mangohud/x86_64-linux-gnu
+    ln -sv . /usr/lib/mangohud/lib64/x86_64
+    ln -sv . /usr/lib/mangohud/lib64/x86_64-linux-gnu
+
+    ln -sv lib32 /usr/lib/mangohud/i686
+    ln -sv lib32 /usr/lib/mangohud/i386-linux-gnu
+    ln -sv lib32 /usr/lib/mangohud/i686-linux-gnu
+
     mkdir -p /usr/lib/mangohud/tls
-    ln -sv ../lib /usr/lib/mangohud/tls/x86_64
+    ln -sv ../lib64 /usr/lib/mangohud/tls/x86_64
     ln -sv ../lib32 /usr/lib/mangohud/tls/i686
+
     # Some distros search in $prefix/x86_64-linux-gnu/tls/x86_64 etc instead
-    ln -sv . /usr/lib/mangohud/lib/i686-linux-gnu
-    ln -sv . /usr/lib/mangohud/lib/x86_64-linux-gnu
+    if [ ! -e /usr/lib/mangohud/lib/i386-linux-gnu ]; then
+        ln -sv ../lib32 /usr/lib/mangohud/lib/i386-linux-gnu
+    fi
+    if [ ! -e /usr/lib/mangohud/lib/i686-linux-gnu ]; then
+        ln -sv ../lib32 /usr/lib/mangohud/lib/i686-linux-gnu
+    fi
+    if [ ! -e /usr/lib/mangohud/lib/x86_64-linux-gnu ]; then
+        ln -sv ../lib64 /usr/lib/mangohud/lib/x86_64-linux-gnu
+    fi
+
     # $LIB can be "lib/tls/x86_64"?
     ln -sv ../tls /usr/lib/mangohud/lib/tls
 
-    ln -sv lib /usr/lib/mangohud/lib64
-    ln -sv lib /usr/lib/mangohud/x86_64
-    ln -sv lib /usr/lib/mangohud/x86_64-linux-gnu
-    ln -sv . /usr/lib/mangohud/lib/x86_64
-    ln -sv lib32 /usr/lib/mangohud/i686
-    ln -sv lib32 /usr/lib/mangohud/i386-linux-gnu
-    ln -sv ../lib32 /usr/lib/mangohud/lib/i386-linux-gnu
-    ln -sv lib32 /usr/lib/mangohud/i686-linux-gnu
-    ln -sv ../lib32 /usr/lib/mangohud/lib/i686-linux-gnu
-    #ln -sv lib /usr/lib/mangohud/aarch64-linux-gnu
-    #ln -sv lib /usr/lib/mangohud/arm-linux-gnueabihf
+    #ln -sv lib64 /usr/lib/mangohud/aarch64-linux-gnu
+    #ln -sv lib64 /usr/lib/mangohud/arm-linux-gnueabihf
 
     echo "MangoHud Installed"
 }
