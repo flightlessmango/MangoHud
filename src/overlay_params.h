@@ -139,6 +139,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(blacklist)                   \
    OVERLAY_PARAM_CUSTOM(autostart_log)               \
    OVERLAY_PARAM_CUSTOM(round_corners)               \
+   OVERLAY_PARAM_CUSTOM(log_name)                    \
 
 
 enum overlay_param_position {
@@ -241,6 +242,7 @@ struct overlay_params {
    std::string custom_text_center;
    std::string custom_text;
    std::string config_file_path;
+   std::string log_name;
    std::unordered_map<std::string,std::string> options;
    int permit_upload;
 

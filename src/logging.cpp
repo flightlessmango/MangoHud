@@ -158,7 +158,12 @@ void Logger::start_logging() {
   m_values_valid = false;
   m_logging_on = true;
   m_log_start = Clock::now();
-  m_log_files.emplace_back(m_params->output_folder + "/" + get_program_name() + "_" + get_log_suffix());
+  
+  if (m_params->log_name.empty())
+    m_log_files.emplace_back(m_params->output_folder + "/" + get_program_name() + "_" + get_log_suffix());
+  else
+    m_log_files.emplace_back(m_params->output_folder + "/" + m_params->log_name + ".csv");
+
   if (m_params->autostart_log){
     printf("Named log file: %s\n", m_log_files.back().c_str());
     currentLogFile.open(m_log_files.back(), ios::out | ios::app);
@@ -194,7 +199,12 @@ void Logger::stop_logging() {
     std::string program = get_wine_exe_name();
     if (program.empty())
         program = get_program_name();
-    m_log_files.emplace_back(m_params->output_folder + "/" + program + "_" + get_log_suffix());
+
+    if (m_params->log_name.empty())
+      m_log_files.emplace_back(m_params->output_folder + "/" + program + "_" + get_log_suffix());
+    else
+      m_log_files.emplace_back(m_params->output_folder + "/" + m_params->log_name + ".csv");
+
     std::thread(writeFile, m_log_files.back()).detach();
   }
 }

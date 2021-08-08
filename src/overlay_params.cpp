@@ -432,6 +432,7 @@ parse_gl_size_query(const char *str)
 #define parse_fps_value(s) parse_load_value(s)
 #define parse_fps_color(s) parse_load_color(s)
 #define parse_battery_color(s) parse_color(s)
+#define parse_log_name(s) parse_str(s)
 
 
 static bool
