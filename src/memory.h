@@ -17,8 +17,8 @@ struct memory_information {
 
 struct process_mem
 {
-    float virt, resident, shared;
-    long int text, data, dirty;
+    int64_t virt, resident, shared;
+    int64_t text, data, dirty;
 };
 extern process_mem proc_mem;
 

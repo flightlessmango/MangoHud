@@ -114,8 +114,8 @@ void update_procmem()
     static auto pageSize = sysconf(_SC_PAGESIZE);
     if (pageSize < 0) pageSize = 4096;
 
-    long int temp[7];
-    if (fscanf(statm, "%ld %ld %ld %ld %ld %ld %ld",
+    long long int temp[7];
+    if (fscanf(statm, "%lld %lld %lld %lld %lld %lld %lld",
         &temp[0], &temp[1], &temp[2], &temp[3],
         &temp[4], /* unused since Linux 2.6; always 0 */
         &temp[5], &temp[6]) == 7)
