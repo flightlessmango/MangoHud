@@ -64,6 +64,7 @@
 //  ES 3.0    300       "#version 300 es"   = WebGL 2.0
 //----------------------------------------
 
+#include <spdlog/spdlog.h>
 #include <imgui.h>
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
@@ -285,7 +286,7 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "}\n";
 
 #ifndef NDEBUG
-    printf("glsl_version: %d\n", glsl_version);
+    fprintf(stderr, "glsl_version: %d\n", glsl_version);
 #endif
     // Select shaders matching our GLSL versions
     const GLchar* vertex_shader = NULL;
@@ -364,7 +365,7 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
 static void    ImGui_ImplOpenGL3_DestroyDeviceObjects()
 {
 #ifndef NDEBUG
-    printf("%s\n", __func__);
+    fprintf(stderr, "%s\n", __func__);
 #endif
     if (g_VboHandle)        { glDeleteBuffers(1, &g_VboHandle); g_VboHandle = 0; }
     if (g_ElementsHandle)   { glDeleteBuffers(1, &g_ElementsHandle); g_ElementsHandle = 0; }
@@ -414,7 +415,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     GLint major = 0, minor = 0;
     GetOpenGLVersion(major, minor, g_IsGLES);
 
-    printf("Version: %d.%d %s\n", major, minor, g_IsGLES ? "ES" : "");
+    SPDLOG_INFO("GL version: {}.{} {}", major, minor, g_IsGLES ? "ES" : "");
 
     if (!g_IsGLES) {
         // Not GL ES
