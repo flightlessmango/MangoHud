@@ -21,6 +21,7 @@ pre_args = [
   '-D__STDC_FORMAT_MACROS',
   '-D__STDC_LIMIT_MACROS',
   '-DPACKAGE_VERSION="@0@"'.format(meson.project_version()),
+  '-DSPDLOG_COMPILED_LIB'
 ]
 
 # Define DEBUG for debug builds only (debugoptimized is not included on this one)
@@ -249,6 +250,7 @@ spdlog_dep = cpp.find_library('spdlog', required: get_option('use_system_spdlog'
 if not spdlog_dep.found()
   spdlog_sp = subproject('spdlog', default_options: [
     'default_library=static',
+    'compile_library=true',
   ])
   spdlog_dep = spdlog_sp.get_variable('spdlog_dep')
 else
