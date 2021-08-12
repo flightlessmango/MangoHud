@@ -373,6 +373,7 @@ void HudElements::ram(){
 
 void HudElements::procmem()
 {
+#ifdef __gnu_linux__
     const char* unit = nullptr;
     if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_procmem])
         return;
@@ -408,6 +409,7 @@ void HudElements::procmem()
         ImGui::Text("%s", unit);
         ImGui::PopFont();
     }
+#endif
 }
 
 void HudElements::fps(){

@@ -18,6 +18,19 @@ std::string read_line(const std::string& filename)
     return line;
 }
 
+std::string get_basename(const std::string&& path)
+{
+    auto npos = path.find_last_of("/\\");
+    if (npos == std::string::npos)
+        return path;
+
+    if (npos < path.size() - 1)
+        return path.substr(npos + 1);
+    return path;
+}
+
+#ifdef __gnu_linux__
+
 bool find_folder(const char* root, const char* prefix, std::string& dest)
 {
     struct dirent* dp;
@@ -106,6 +119,11 @@ std::string read_symlink(const char * link)
     return std::string(result, (count > 0) ? count : 0);
 }
 
+std::string read_symlink(const std::string&& link)
+{
+    return read_symlink(link.c_str());
+}
+
 std::string get_exe_path()
 {
     return read_symlink("/proc/self/exe");
@@ -180,3 +198,5 @@ std::string get_config_dir()
         path += "/.config";
     return path;
 }
+
+#endif // __gnu_linux__
