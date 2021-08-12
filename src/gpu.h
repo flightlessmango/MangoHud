@@ -5,6 +5,10 @@
 #include <cstdio>
 #include <cstdint>
 
+enum {
+    GRBM_STATUS = 0x8010,
+};
+
 struct amdgpu_files
 {
     FILE *busy;
@@ -32,6 +36,11 @@ extern struct gpuInfo gpu_info;
 
 void getNvidiaGpuInfo(void);
 void getAmdGpuInfo(void);
+#ifdef HAVE_LIBDRM
+void getRadeonInfo_libdrm();
+bool radeon_open(const char *path);
+void radeon_set_sampling_period(uint32_t period);
+#endif
 #ifdef HAVE_LIBDRM_AMDGPU
 void getAmdGpuInfo_libdrm();
 bool amdgpu_open(const char *path);

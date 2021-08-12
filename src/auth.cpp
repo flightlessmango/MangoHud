@@ -1,6 +1,7 @@
 /*
     Inspired by radeontop
 */
+#include <spdlog/spdlog.h>
 #include "auth.h"
 #include <xcb/xcb.h>
 #include <xcb/dri2.h>
@@ -46,7 +47,7 @@ bool authenticate_drm(int fd) {
     /* Try self-authenticate (if we are somehow the master). */
     if (drmAuthMagic(fd, magic) == 0) {
         if (drmDropMaster(fd)) {
-            perror("MANGOHUD: Failed to drop DRM master");
+            SPDLOG_ERROR("MANGOHUD: Failed to drop DRM master: {}", strerror(errno));
             fprintf(stderr, "\n\tWARNING: other DRM clients will crash on VT switch\n");
         }
         return true;

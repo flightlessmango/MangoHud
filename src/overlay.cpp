@@ -550,45 +550,74 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t target_device_id, overlay_param
       for (auto& dir : dirs) {
          path = drm + dir;
 
-         SPDLOG_DEBUG("amdgpu path check: {}/device/vendor", path);
+         SPDLOG_DEBUG("device path check: {}/device/vendor", path);
 
          string device = read_line(path + "/device/device");
-         deviceID = strtol(device.c_str(), NULL, 16);
-         string line = read_line(path + "/device/vendor");
-         trim(line);
-         if (line != "0x1002" || !file_exists(path + "/device/gpu_busy_percent"))
+         deviceID = strtol(device.c_str(), NULL, 16); // OGL might fail so read from sysfs
+
+         string vendor = read_line(path + "/device/vendor");
+         trim(vendor);
+         if (vendor != "0x1002")
             continue;
 
          if (pci_bus_parsed && pci_dev) {
             string pci_device = read_symlink((path + "/device").c_str());
             SPDLOG_DEBUG("PCI device symlink: '{}'", pci_device);
             if (!ends_with(pci_device, pci_dev)) {
-               SPDLOG_DEBUG("skipping GPU, no PCI ID match");
+               SPDLOG_WARN("skipping GPU, PCI ID doesn't match: {}", pci_device);
                continue;
             }
          }
+         // Don't skip if intel, maybe there's a dgpu
+         else if (vendorID != 0x8086 && target_device_id && target_device_id != deviceID)
+         {
+            SPDLOG_WARN("expected device id {:04X}, got {:04X}, skipping", target_device_id, deviceID);
+            continue;
+         }
 
-         SPDLOG_DEBUG("using amdgpu path: {}", path);
+         string module = get_basename(read_symlink(path + "/device/driver/module"));
+         SPDLOG_DEBUG("using device path: '{}', module: '{}'", path, module);
 
-#ifdef HAVE_LIBDRM_AMDGPU
          int idx = -1;
          //TODO make neater
-         int res = sscanf(path.c_str(), "/sys/class/drm/card%d", &idx);
+         int res = sscanf(path.c_str(), "%*[^0-9]%d", &idx);
+         (void)res;
          std::string dri_path = "/dev/dri/card" + std::to_string(idx);
 
-         if (!params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon] && res == 1 && amdgpu_open(dri_path.c_str())) {
-            vendorID = 0x1002;
-            using_libdrm = true;
-            getAmdGpuInfo_actual = getAmdGpuInfo_libdrm;
-            amdgpu_set_sampling_period(params.fps_sampling_period);
+         if (module == "amdgpu")
+         {
+#ifdef HAVE_LIBDRM_AMDGPU
+            if (!params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon] && res == 1 && amdgpu_open(dri_path.c_str())) {
+               vendorID = 0x1002;
+               using_libdrm = true;
+               getAmdGpuInfo_actual = getAmdGpuInfo_libdrm;
+               amdgpu_set_sampling_period(params.fps_sampling_period);
 
-            SPDLOG_DEBUG("Using libdrm");
-
-            // fall through and open sysfs handles for fallback or check DRM version beforehand
-         } else if (!params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon]) {
-            SPDLOG_ERROR("Failed to open device '/dev/dri/card{}' with libdrm, falling back to using hwmon sysfs.", idx);
+               SPDLOG_DEBUG("Using libdrm");
+               // fall through and open sysfs handles for fallback or check DRM version beforehand
+            } else if (!params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon]) {
+               SPDLOG_WARN("Failed to open device '/dev/dri/card{}' with libdrm, falling back to using hwmon sysfs.", idx);
+            }
+#endif
+         }
+#ifdef HAVE_LIBDRM
+         else if (module == "radeon")
+         {
+            if (res == 1 && radeon_open(dri_path.c_str())) {
+               vendorID = 0x1002;
+               using_libdrm = true;
+               getAmdGpuInfo_actual = getRadeonInfo_libdrm;
+               radeon_set_sampling_period(params.fps_sampling_period);
+            } else {
+               SPDLOG_WARN("Failed to open device '/dev/dri/card{}' with libdrm.", idx);
+               params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
+               break;
+            }
          }
 #endif
+
+         if (!file_exists(path + "/device/gpu_busy_percent"))
+            continue;
 
          path += "/device";
          if (!amdgpu.busy)
