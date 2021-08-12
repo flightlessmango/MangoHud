@@ -1939,7 +1939,6 @@ static VkResult overlay_CreateInstance(
 
    if (!is_blacklisted()) {
 #ifdef __gnu_linux__
-      parse_pciids();
       init_system_info();
       instance_data->notifier.params = &instance_data->params;
       start_notifier(instance_data->notifier);

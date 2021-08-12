@@ -729,6 +729,9 @@ void init_system_info(){
 void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats)
 {
 #ifdef __gnu_linux__
+   if (pci_ids.find(vendorID) == pci_ids.end())
+      parse_pciids();
+
    string desc = pci_ids[vendorID].second[deviceID].desc;
    size_t position = desc.find("[");
    if (position != std::string::npos) {
