@@ -24,6 +24,14 @@
 
 namespace fs = ghc::filesystem;
 
+#ifndef PFNGLXQUERYCURRENTRENDERERINTEGERMESAPROC
+typedef int ( *PFNGLXQUERYCURRENTRENDERERINTEGERMESAPROC) (int attribute, unsigned int *value);
+#define GLX_RENDERER_VENDOR_ID_MESA                      0x8183
+#define GLX_RENDERER_DEVICE_ID_MESA                      0x8184
+#endif
+
+extern void* get_glx_proc_address(const char* name);
+
 namespace MangoHud { namespace GL {
 
 struct GLVec
@@ -69,6 +77,16 @@ overlay_params params {};
 static std::unique_ptr<notify_thread, std::function<void(notify_thread *)>>
     stop_it(&notifier, [](notify_thread *n){ stop_notifier(*n); });
 
+static bool mesa_queryInteger(int attrib, unsigned int *value)
+{
+    static PFNGLXQUERYCURRENTRENDERERINTEGERMESAPROC queryInteger =
+        reinterpret_cast<decltype(queryInteger)>(get_glx_proc_address(
+                    "glXQueryCurrentRendererIntegerMESA"));
+    if (queryInteger)
+        return !!queryInteger(attrib, value);
+    return false;
+}
+
 void imgui_init()
 {
     if (cfg_inited)
@@ -109,7 +127,7 @@ void imgui_init()
 }
 
 //static
-void imgui_create(void *ctx)
+void imgui_create(void* ctx, const gl_platform plat)
 {
     if (inited)
         return;
@@ -135,7 +153,12 @@ void imgui_create(void *ctx)
     } else {
         vendorID = 0x10de;
     }
-    init_gpu_stats(vendorID, params);
+
+    uint32_t device_id = 0;
+    if (plat == gl_platform::GLX)
+        mesa_queryInteger(GLX_RENDERER_DEVICE_ID_MESA, &device_id);
+
+    init_gpu_stats(vendorID, device_id, params);
     get_device_name(vendorID, deviceID, sw_stats);
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -174,13 +197,6 @@ void imgui_shutdown()
         state.imgui_ctx = nullptr;
     }
     inited = false;
-}
-
-void imgui_set_context(void *ctx)
-{
-    if (!ctx)
-        return;
-    imgui_create(ctx);
 }
 
 void imgui_render(unsigned int width, unsigned int height)
