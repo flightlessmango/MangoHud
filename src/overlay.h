@@ -99,7 +99,7 @@ struct LOAD_DATA {
 };
 
 extern struct fps_limit fps_limit_stats;
-extern int32_t deviceID;
+extern uint32_t deviceID;
 
 extern struct benchmark_stats benchmark;
 extern ImVec2 real_font_size;
@@ -110,7 +110,7 @@ void position_layer(struct swapchain_stats& data, struct overlay_params& params,
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan);
 void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID);
 void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID);
-void init_gpu_stats(uint32_t& vendorID, overlay_params& params);
+void init_gpu_stats(uint32_t& vendorID, uint32_t target_device_id, overlay_params& params);
 void init_cpu_stats(overlay_params& params);
 void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID);
 void init_system_info(void);

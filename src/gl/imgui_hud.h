@@ -7,11 +7,16 @@
 
 namespace MangoHud { namespace GL {
 
+enum gl_platform
+{
+    GLX,
+    EGL,
+};
+
 extern overlay_params params;
 void imgui_init();
-void imgui_create(void *ctx);
+void imgui_create(void* ctx, const gl_platform plat);
 void imgui_shutdown();
-void imgui_set_context(void *ctx);
 void imgui_render(unsigned int width, unsigned int height);
 
 }} // namespace

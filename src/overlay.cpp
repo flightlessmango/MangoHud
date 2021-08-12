@@ -30,7 +30,7 @@ float g_overflow = 50.f /* 3333ms * 0.5 / 16.6667 / 2 (to edge and back) */;
 #endif
 
 string gpuString,wineVersion,wineProcess;
-int32_t deviceID;
+uint32_t deviceID;
 bool gui_open = false;
 struct benchmark_stats benchmark;
 struct fps_limit fps_limit_stats {};
@@ -493,7 +493,7 @@ struct pci_bus {
    int func;
 };
 
-void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
+void init_gpu_stats(uint32_t& vendorID, uint32_t target_device_id, overlay_params& params)
 {
    //if (!params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
    //   return;

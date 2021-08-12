@@ -1847,7 +1847,7 @@ static VkResult overlay_CreateDevice(
 
    if (!is_blacklisted()) {
       device_map_queues(device_data, pCreateInfo);
-      init_gpu_stats(device_data->properties.vendorID, device_data->instance->params);
+      init_gpu_stats(device_data->properties.vendorID, device_data->properties.deviceID, device_data->instance->params);
    }
 
    return result;
