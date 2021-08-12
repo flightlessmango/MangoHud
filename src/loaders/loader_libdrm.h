@@ -33,6 +33,29 @@ class libdrm_loader {
 
   decltype(&::drmGetVersion) drmGetVersion;
   decltype(&::drmFreeVersion) drmFreeVersion;
+  decltype(&::drmCommandWriteRead) drmCommandWriteRead;
+
+ private:
+  void CleanUp(bool unload);
+
+#if defined(LIBRARY_LOADER_LIBDRM_H_DLOPEN)
+  void* library;
+#endif
+
+  bool loaded_;
+
+  // Disallow copy constructor and assignment operator.
+  libdrm_loader(const libdrm_loader&);
+  void operator=(const libdrm_loader&);
+};
+
+class libdrm_amdgpu_loader {
+ public:
+  libdrm_amdgpu_loader();
+  ~libdrm_amdgpu_loader();
+
+  bool Load();
+  bool IsLoaded() { return loaded_; }
 
   decltype(&::amdgpu_device_initialize) amdgpu_device_initialize;
   decltype(&::amdgpu_device_deinitialize) amdgpu_device_deinitialize;
@@ -44,15 +67,16 @@ class libdrm_loader {
   void CleanUp(bool unload);
 
 #if defined(LIBRARY_LOADER_LIBDRM_H_DLOPEN)
-  void* library_drm;
-  void* library_amdgpu;
+  void* library;
 #endif
 
   bool loaded_;
 
   // Disallow copy constructor and assignment operator.
-  libdrm_loader(const libdrm_loader&);
-  void operator=(const libdrm_loader&);
+  libdrm_amdgpu_loader(const libdrm_amdgpu_loader&);
+  void operator=(const libdrm_amdgpu_loader&);
 };
+
+extern libdrm_loader g_libdrm;
 
 #endif  // LIBRARY_LOADER_LIBDRM_H

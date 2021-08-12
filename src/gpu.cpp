@@ -148,10 +148,10 @@ enum {
     GRBM_STATUS = 0x8010,
 };
 
-static std::unique_ptr<libdrm_loader> libdrm_ptr;
+static std::unique_ptr<libdrm_amdgpu_loader> libdrm_amdgpu_ptr;
 
 static int getgrbm_amdgpu(amdgpu_device_handle dev, uint32_t *out) {
-    return libdrm_ptr->amdgpu_read_mm_registers(dev, GRBM_STATUS / 4, 1,
+    return libdrm_amdgpu_ptr->amdgpu_read_mm_registers(dev, GRBM_STATUS / 4, 1,
                                     0xffffffff, 0, out);
 }
 
@@ -181,7 +181,7 @@ struct amdgpu_handles
         quit = true;
         if (collector.joinable())
             collector.join();
-        libdrm_ptr->amdgpu_device_deinitialize(dev);
+        libdrm_amdgpu_ptr->amdgpu_device_deinitialize(dev);
         close(fd);
     }
 
@@ -225,10 +225,13 @@ void amdgpu_set_sampling_period(uint32_t period)
 }
 
 bool amdgpu_open(const char *path) {
-    if (!libdrm_ptr)
-        libdrm_ptr = std::make_unique<libdrm_loader>();
+    if (!g_libdrm.IsLoaded())
+        return false;
 
-    if (!libdrm_ptr->IsLoaded())
+    if (!libdrm_amdgpu_ptr)
+        libdrm_amdgpu_ptr = std::make_unique<libdrm_amdgpu_loader>();
+
+    if (!libdrm_amdgpu_ptr->IsLoaded())
         return false;
 
     int fd = open(path, O_RDWR | O_CLOEXEC);
@@ -238,7 +241,7 @@ bool amdgpu_open(const char *path) {
         return false;
     }
 
-    drmVersionPtr ver = libdrm_ptr->drmGetVersion(fd);
+    drmVersionPtr ver = g_libdrm.drmGetVersion(fd);
 
     if (!ver) {
         SPDLOG_ERROR("Failed to query driver version: {}", strerror(errno));
@@ -249,10 +252,10 @@ bool amdgpu_open(const char *path) {
     if (strcmp(ver->name, "amdgpu") || !DRM_ATLEAST_VERSION(ver, 3, 11)) {
         SPDLOG_ERROR("Unsupported driver/version: {} {}.{}.{}", ver->name, ver->version_major, ver->version_minor, ver->version_patchlevel);
         close(fd);
-        libdrm_ptr->drmFreeVersion(ver);
+        g_libdrm.drmFreeVersion(ver);
         return false;
     }
-    libdrm_ptr->drmFreeVersion(ver);
+    g_libdrm.drmFreeVersion(ver);
 
 /*
     if (!authenticate_drm(fd)) {
@@ -263,7 +266,7 @@ bool amdgpu_open(const char *path) {
 
     uint32_t drm_major, drm_minor;
     amdgpu_device_handle dev;
-    if (libdrm_ptr->amdgpu_device_initialize(fd, &drm_major, &drm_minor, &dev)){
+    if (libdrm_amdgpu_ptr->amdgpu_device_initialize(fd, &drm_major, &drm_minor, &dev)){
         SPDLOG_ERROR("Failed to initialize amdgpu device: {}", strerror(errno));
         close(fd);
         return false;
@@ -278,37 +281,34 @@ void getAmdGpuInfo_libdrm()
     uint64_t value = 0;
     uint32_t value32 = 0;
 
-    if (!DRM_ATLEAST_VERSION(amdgpu_dev, 3, 11))
+    if (!amdgpu_dev || !DRM_ATLEAST_VERSION(amdgpu_dev, 3, 11))
     {
         getAmdGpuInfo();
         getAmdGpuInfo_actual = getAmdGpuInfo;
         return;
     }
 
-    if (!libdrm_ptr || !libdrm_ptr->IsLoaded())
-        return;
-
-    if (!libdrm_ptr->amdgpu_query_info(amdgpu_dev->dev, AMDGPU_INFO_VRAM_USAGE, sizeof(uint64_t), &value))
+    if (!libdrm_amdgpu_ptr->amdgpu_query_info(amdgpu_dev->dev, AMDGPU_INFO_VRAM_USAGE, sizeof(uint64_t), &value))
         gpu_info.memoryUsed = float(value) / (1024 * 1024 * 1024);
 
     // FIXME probably not correct sensor
-    if (!libdrm_ptr->amdgpu_query_info(amdgpu_dev->dev, AMDGPU_INFO_MEMORY, sizeof(uint64_t), &value))
+    if (!libdrm_amdgpu_ptr->amdgpu_query_info(amdgpu_dev->dev, AMDGPU_INFO_MEMORY, sizeof(uint64_t), &value))
         gpu_info.memoryTotal = float(value) / (1024 * 1024 * 1024);
 
-    if (!libdrm_ptr->amdgpu_query_sensor_info(amdgpu_dev->dev, AMDGPU_INFO_SENSOR_GFX_SCLK, sizeof(uint32_t), &value32))
+    if (!libdrm_amdgpu_ptr->amdgpu_query_sensor_info(amdgpu_dev->dev, AMDGPU_INFO_SENSOR_GFX_SCLK, sizeof(uint32_t), &value32))
         gpu_info.CoreClock = value32;
 
-    if (!libdrm_ptr->amdgpu_query_sensor_info(amdgpu_dev->dev, AMDGPU_INFO_SENSOR_GFX_MCLK, sizeof(uint32_t), &value32)) // XXX Doesn't work on APUs
+    if (!libdrm_amdgpu_ptr->amdgpu_query_sensor_info(amdgpu_dev->dev, AMDGPU_INFO_SENSOR_GFX_MCLK, sizeof(uint32_t), &value32)) // XXX Doesn't work on APUs
         gpu_info.MemClock = value32;
 
-    //if (!libdrm_ptr->amdgpu_query_sensor_info(amdgpu_dev->dev, AMDGPU_INFO_SENSOR_GPU_LOAD, sizeof(uint32_t), &value32))
+    //if (!libdrm_amdgpu_ptr->amdgpu_query_sensor_info(amdgpu_dev->dev, AMDGPU_INFO_SENSOR_GPU_LOAD, sizeof(uint32_t), &value32))
     //    gpu_info.load = value32;
     gpu_info.load = amdgpu_dev->gui_percent;
 
-    if (!libdrm_ptr->amdgpu_query_sensor_info(amdgpu_dev->dev, AMDGPU_INFO_SENSOR_GPU_TEMP, sizeof(uint32_t), &value32))
+    if (!libdrm_amdgpu_ptr->amdgpu_query_sensor_info(amdgpu_dev->dev, AMDGPU_INFO_SENSOR_GPU_TEMP, sizeof(uint32_t), &value32))
         gpu_info.temp = value32 / 1000;
 
-    if (!libdrm_ptr->amdgpu_query_sensor_info(amdgpu_dev->dev, AMDGPU_INFO_SENSOR_GPU_AVG_POWER, sizeof(uint32_t), &value32))
+    if (!libdrm_amdgpu_ptr->amdgpu_query_sensor_info(amdgpu_dev->dev, AMDGPU_INFO_SENSOR_GPU_AVG_POWER, sizeof(uint32_t), &value32))
         gpu_info.powerUsage = value32;
 }
 #endif
