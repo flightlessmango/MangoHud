@@ -150,14 +150,17 @@ if is_unixy
     )
   endif
 
-#  if get_option('with_libdrm_amdgpu').enabled() and dep_libdrm.found() and dep_libdrm_amdgpu.found()
-  if get_option('with_libdrm_amdgpu').enabled() and dep_libdrm.found()
-    pre_args += '-DHAVE_LIBDRM_AMDGPU'
-    #if dep_xcb.found() and dep_xcb_dri2.found()
-      vklayer_files += files(
-        'loaders/loader_libdrm.cpp',
-      )
-    #endif
+  if dep_libdrm.found() and get_option('with_libdrm').enabled()
+    pre_args += '-DHAVE_LIBDRM'
+    vklayer_files += files(
+      'gpu_radeon.cpp',
+      'auth.cpp',
+    )
+    if get_option('with_libdrm_amdgpu').enabled()
+      #if dep_xcb.found() and dep_xcb_dri2.found()
+        pre_args += '-DHAVE_LIBDRM_AMDGPU'
+      #endif
+    endif
   endif
 endif
 
@@ -188,7 +191,9 @@ vklayer_mesa_overlay = shared_library(
     dearimgui_dep,
     spdlog_dep,
     dep_libdrm,
-    #dep_libdrm_amdgpu,
+    dep_libdrm_amdgpu,
+    dep_xcb,
+    dep_xcb_dri2,
     dbus_dep,
     dep_dl,
     dep_rt,
