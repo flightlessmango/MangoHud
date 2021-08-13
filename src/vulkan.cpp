@@ -1610,6 +1610,7 @@ static VkResult overlay_QueuePresentKHR(
     const VkPresentInfoKHR*                     pPresentInfo)
 {
    struct queue_data *queue_data = FIND(struct queue_data, queue);
+   const auto& params = queue_data->device->instance->params;
 
    /* Otherwise we need to add our overlay drawing semaphore to the list of
     * semaphores to wait on. If we don't do that the presented picture might
@@ -1644,21 +1645,24 @@ static VkResult overlay_QueuePresentKHR(
          present_info.waitSemaphoreCount = 1;
       }
 
-      swappy::SwappyVk& swappy = swappy::SwappyVk::getInstance();
-      VkResult chain_result = swappy.QueuePresent(queue, &present_info);
-//       VkResult chain_result = queue_data->device->vtable.QueuePresentKHR(queue, &present_info);
+      VkResult chain_result = VK_SUCCESS;
+      if (params.enabled[OVERLAY_PARAM_ENABLED_swappy])
+      {
+         swappy::SwappyVk& swappy = swappy::SwappyVk::getInstance();
+         chain_result = swappy.QueuePresent(queue, &present_info);
+      }
+      else
+         chain_result = queue_data->device->vtable.QueuePresentKHR(queue, &present_info);
       if (pPresentInfo->pResults)
          pPresentInfo->pResults[i] = chain_result;
       if (chain_result != VK_SUCCESS && result == VK_SUCCESS)
          result = chain_result;
    }
 
-#if 0
    using namespace std::chrono_literals;
-   if (fps_limit_stats.targetFrameTime > 0s){
+   if (!params.enabled[OVERLAY_PARAM_ENABLED_swappy] && fps_limit_stats.targetFrameTime > 0s){
       FpsLimiter(fps_limit_stats);
    }
-#endif
    return result;
 }
 

@@ -42,6 +42,9 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
 
   if (elapsedFpsLimitToggle >= keyPressDelay){
 #if defined(HAVE_X11) || defined(_WIN32)
+      if (keys_are_pressed(params.toggle_swappy))
+         params.enabled[OVERLAY_PARAM_ENABLED_swappy] = !params.enabled[OVERLAY_PARAM_ENABLED_swappy];
+
       pressed = keys_are_pressed(params.toggle_fps_limit);
 #else
       pressed = false;

@@ -444,6 +444,12 @@ void HudElements::fps(){
             ImGui::Text("ms");
             ImGui::PopFont();
         }
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_swappy]){
+            ImGui::TableNextRow(); ImGui::TableNextColumn();
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            ImGui::TextColored(HUDElements.colors.engine, "Swappified");
+            ImGui::PopFont();
+        }
     } else if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_engine_version]){
         ImGui::TableNextRow(); ImGui::TableNextColumn();
         ImGui::TextColored(HUDElements.colors.engine, "%s", HUDElements.sw_stats->engineName.c_str());

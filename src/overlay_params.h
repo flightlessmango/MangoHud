@@ -74,6 +74,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(battery)                       \
    OVERLAY_PARAM_BOOL(battery_icon)                  \
    OVERLAY_PARAM_BOOL(force_amdgpu_hwmon)            \
+   OVERLAY_PARAM_BOOL(swappy)                        \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
@@ -224,6 +225,7 @@ struct overlay_params {
    std::vector<KeySym> toggle_hud;
    std::vector<KeySym> toggle_fps_limit;
    std::vector<KeySym> toggle_logging;
+   std::vector<KeySym> toggle_swappy;
    std::vector<KeySym> reload_cfg;
    std::vector<KeySym> upload_log;
    std::vector<KeySym> upload_logs;
