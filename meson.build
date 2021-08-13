@@ -261,6 +261,11 @@ else
   spdlog_dep = dependency('spdlog', required: true)
 endif
 
+swappy_sp = subproject('swappy', default_options: [
+  'default_library=static',
+])
+swappy_dep = swappy_sp.get_variable('swappy_dep')
+
 if ['windows', 'mingw'].contains(host_machine.system())
   subdir('modules/minhook')
   inc_common += ( include_directories('modules/minhook/include'))

@@ -190,6 +190,7 @@ vklayer_mesa_overlay = shared_library(
     vulkan_wsi_deps,
     dearimgui_dep,
     spdlog_dep,
+    swappy_dep,
     dep_libdrm,
     dep_libdrm_amdgpu,
     dep_xcb,

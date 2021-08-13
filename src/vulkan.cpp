@@ -39,6 +39,9 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_layer.h>
 
+#include <SwappyVk.h>
+#include <swappy/swappyVk.h>
+
 #include "imgui.h"
 
 #include "overlay.h"
@@ -1550,7 +1553,13 @@ static VkResult overlay_CreateSwapchainKHR(
 #ifdef __gnu_linux__
       get_device_name(prop.vendorID, prop.deviceID, swapchain_data->sw_stats);
 #endif
+      swappy::SwappyVk& swappy = swappy::SwappyVk::getInstance();
+      uint64_t refreshDuration = std::chrono::duration_cast<std::chrono::nanoseconds> (1s / 100).count();
+      swappy.GetRefreshCycleDuration(device_data->physical_device,
+                                          device_data->device, *pSwapchain, &refreshDuration);
+      swappy.SetSwapDuration(device_data->device, *pSwapchain, 10000000L);//SWAPPY_SWAP_30FPS);
    }
+
    if(driverProps.driverID == VK_DRIVER_ID_NVIDIA_PROPRIETARY){
       swapchain_data->sw_stats.driverName = "NVIDIA";
    }
@@ -1587,6 +1596,9 @@ static void overlay_DestroySwapchainKHR(
 
    struct swapchain_data *swapchain_data =
       FIND(struct swapchain_data, swapchain);
+
+   swappy::SwappyVk& swappy = swappy::SwappyVk::getInstance();
+   swappy.DestroySwapchain(swapchain_data->device->device, swapchain);
 
    shutdown_swapchain_data(swapchain_data);
    swapchain_data->device->vtable.DestroySwapchainKHR(device, swapchain, pAllocator);
@@ -1632,18 +1644,21 @@ static VkResult overlay_QueuePresentKHR(
          present_info.waitSemaphoreCount = 1;
       }
 
-      VkResult chain_result = queue_data->device->vtable.QueuePresentKHR(queue, &present_info);
+      swappy::SwappyVk& swappy = swappy::SwappyVk::getInstance();
+      VkResult chain_result = swappy.QueuePresent(queue, &present_info);
+//       VkResult chain_result = queue_data->device->vtable.QueuePresentKHR(queue, &present_info);
       if (pPresentInfo->pResults)
          pPresentInfo->pResults[i] = chain_result;
       if (chain_result != VK_SUCCESS && result == VK_SUCCESS)
          result = chain_result;
    }
 
+#if 0
    using namespace std::chrono_literals;
    if (fps_limit_stats.targetFrameTime > 0s){
       FpsLimiter(fps_limit_stats);
    }
-
+#endif
    return result;
 }
 
@@ -1747,6 +1762,30 @@ static VkResult overlay_QueueSubmit(
    return device_data->vtable.QueueSubmit(queue, submitCount, pSubmits, fence);
 }
 
+// fugly
+struct VkProvider
+{
+   //VkProvider(instance_data * inst):instance(inst) {}
+   instance_data * instance;
+   device_data * device;
+   static VkProvider& inst()
+   {
+      static VkProvider inst;
+      return inst;
+   }
+
+   static bool init() { return true; }
+   static void * getProcAddr(const char* name)
+   {
+      SPDLOG_DEBUG("{}, {}", (void*)VkProvider::inst().instance->instance, name);
+      if (!strcmp(name, "vkGetDeviceProcAddr"))
+         return (void*)VkProvider::inst().device->vtable.GetDeviceProcAddr;
+      return (void*)VkProvider::inst().device->vtable.GetDeviceProcAddr(VkProvider::inst().device->device, name);
+//       return (void*)VkProvider::inst().instance->vtable.GetInstanceProcAddr(VkProvider::inst().instance->instance, name);
+   };
+   static void close(){};
+};
+
 static VkResult overlay_CreateDevice(
     VkPhysicalDevice                            physicalDevice,
     const VkDeviceCreateInfo*                   pCreateInfo,
@@ -1782,6 +1821,27 @@ static VkResult overlay_CreateDevice(
    std::vector<VkExtensionProperties> available_extensions(extension_count);
    instance_data->vtable.EnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extension_count, available_extensions.data());
 
+   uint32_t swappy_required_extension_count = 0;
+   char** swappy_required_extension_names;
+   swappy::SwappyVk& swappy = swappy::SwappyVk::getInstance();
+   swappy.swappyVkDetermineDeviceExtensions(
+        physicalDevice, extension_count, available_extensions.data(),
+        &swappy_required_extension_count, nullptr);
+
+   swappy_required_extension_names = (char**)malloc(swappy_required_extension_count * sizeof(char*));
+   for (uint32_t i = 0; i < swappy_required_extension_count; i++) {
+      swappy_required_extension_names[i] = (char*)malloc(VK_MAX_EXTENSION_NAME_SIZE + 1);
+   }
+
+   swappy.swappyVkDetermineDeviceExtensions(
+        physicalDevice, extension_count, available_extensions.data(),
+        &swappy_required_extension_count, swappy_required_extension_names);
+
+   for (uint32_t i = 0; i < swappy_required_extension_count; i++) {
+      SPDLOG_DEBUG("SwappyVk requires the following extension: {}", swappy_required_extension_names[i]);
+      free(swappy_required_extension_names[i]);
+   }
+   free(swappy_required_extension_names);
 
    bool can_get_driver_info = instance_data->api_version < VK_API_VERSION_1_1 ? false : true;
 
@@ -1831,9 +1891,13 @@ static VkResult overlay_CreateDevice(
       instance_data->vtable.GetPhysicalDeviceProperties2(device_data->physical_device, &deviceProps);
    }
 
+   VkProvider::inst().device = device_data;
+
    if (!is_blacklisted()) {
       device_map_queues(device_data, pCreateInfo);
       init_gpu_stats(device_data->properties.vendorID, device_data->properties.deviceID, device_data->instance->params);
+      swappy::SwappyVk& swappy = swappy::SwappyVk::getInstance();
+      swappy.SetQueueFamilyIndex(device_data->device, device_data->graphic_queue->queue, device_data->graphic_queue->family_index);
    }
 
    return result;
@@ -1849,6 +1913,8 @@ static void overlay_DestroyDevice(
    device_data->vtable.DestroyDevice(device, pAllocator);
    destroy_device_data(device_data);
 }
+
+//std::unique_ptr<VkProvider> vk_provider;
 
 static VkResult overlay_CreateInstance(
     const VkInstanceCreateInfo*                 pCreateInfo,
@@ -1944,6 +2010,16 @@ static VkResult overlay_CreateInstance(
       instance_data->engine = engine;
       instance_data->engineName = engineName;
       instance_data->engineVersion = engineVersion;
+      //vk_provider = std::make_unique<VkProvider>(instance_data);
+      VkProvider::inst().instance = instance_data;
+      static SwappyVkFunctionProvider c;
+      c.init = &VkProvider::init;
+      c.close = &VkProvider::close;
+      c.getProcAddr = &VkProvider::getProcAddr;
+
+      swappy::SwappyVk& swappy = swappy::SwappyVk::getInstance();
+      swappy.SetFunctionProvider(&c);
+
    }
 
    instance_data->api_version = pCreateInfo->pApplicationInfo ? pCreateInfo->pApplicationInfo->apiVersion : VK_API_VERSION_1_0;
