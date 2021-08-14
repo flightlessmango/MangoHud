@@ -1554,10 +1554,11 @@ static VkResult overlay_CreateSwapchainKHR(
       get_device_name(prop.vendorID, prop.deviceID, swapchain_data->sw_stats);
 #endif
       swappy::SwappyVk& swappy = swappy::SwappyVk::getInstance();
-      uint64_t refreshDuration = std::chrono::duration_cast<std::chrono::nanoseconds> (1s / 100).count();
+      uint64_t refreshDuration = 0;
       swappy.GetRefreshCycleDuration(device_data->physical_device,
                                           device_data->device, *pSwapchain, &refreshDuration);
-      swappy.SetSwapDuration(device_data->device, *pSwapchain, 10000000L);//SWAPPY_SWAP_30FPS);
+      swappy.SetSwapDuration(device_data->device, *pSwapchain, fps_limit_stats.targetFrameTime.count());//SWAPPY_SWAP_30FPS);
+      swappy.SetAutoSwapInterval(true);
    }
 
    if(driverProps.driverID == VK_DRIVER_ID_NVIDIA_PROPRIETARY){
@@ -2023,7 +2024,6 @@ static VkResult overlay_CreateInstance(
 
       swappy::SwappyVk& swappy = swappy::SwappyVk::getInstance();
       swappy.SetFunctionProvider(&c);
-
    }
 
    instance_data->api_version = pCreateInfo->pApplicationInfo ? pCreateInfo->pApplicationInfo->apiVersion : VK_API_VERSION_1_0;
@@ -2044,6 +2044,16 @@ static void overlay_DestroyInstance(
 #endif
    destroy_instance_data(instance_data);
 }
+
+void overlay_DestroyImage(
+   VkDevice                                    device,
+   VkImage                                     image,
+   const VkAllocationCallbacks*                pAllocator)
+{
+   struct device_data *device_data = FIND(struct device_data, device);
+   device_data->vtable.DestroyImage(device, image, pAllocator);
+}
+
 
 extern "C" VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetDeviceProcAddr(VkDevice dev,
                                                                              const char *funcName);
@@ -2072,6 +2082,9 @@ static const struct {
 
    ADD_HOOK(CreateInstance),
    ADD_HOOK(DestroyInstance),
+
+   //memory crap
+   ADD_HOOK(DestroyImage),
 #undef ADD_HOOK
 };
 

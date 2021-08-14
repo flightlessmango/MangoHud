@@ -104,7 +104,7 @@ void NoChoreographerThread::onSettingsChanged() {
         Settings::getInstance()->getDisplayTimings();
     std::lock_guard<std::mutex> lock(mWaitingMutex);
     mRefreshPeriod = displayTimings.refreshPeriod;
-    ALOGV("onSettingsChanged(): refreshPeriod=%lld",
+    ALOGV("onSettingsChanged(): refreshPeriod={}",
           (long long)displayTimings.refreshPeriod.count());
 }
 

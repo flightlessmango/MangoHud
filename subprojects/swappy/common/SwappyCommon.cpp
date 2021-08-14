@@ -120,8 +120,8 @@ bool SwappyCommonSettings::getFromApp(//JNIEnv* env, jobject jactivity,
 
     // random hard coded crap
     auto appVsyncOffsetNanos = 0;
-    auto vsyncPresentationDeadlineNanos = ONE_S_IN_NS / 100;
-    const auto refreshRateHz = 100;
+    const auto refreshRateHz = 144;
+    auto vsyncPresentationDeadlineNanos = ONE_S_IN_NS / refreshRateHz;
 
     const long vsyncPeriodNanos =
         static_cast<long>(ONE_S_IN_NS / refreshRateHz);

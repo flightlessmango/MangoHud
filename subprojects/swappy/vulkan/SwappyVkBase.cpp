@@ -145,7 +145,7 @@ VkResult SwappyVkBase::initializeVkSyncObjects(VkQueue queue,
     VkResult res = vkCreateCommandPool(mDevice, &cmd_pool_info, NULL,
                                        &mCommandPool[queue]);
     if (res) {
-        ALOGE("vkCreateCommandPool failed %d", res);
+        ALOGE("vkCreateCommandPool failed {}", res);
         return res;
     }
     const VkCommandBufferAllocateInfo present_cmd_info = {
@@ -163,7 +163,7 @@ VkResult SwappyVkBase::initializeVkSyncObjects(VkQueue queue,
             .flags = VK_FENCE_CREATE_SIGNALED_BIT};
         res = vkCreateFence(mDevice, &fence_ci, NULL, &sync.fence);
         if (res) {
-            ALOGE("failed to create fence: %d", res);
+            ALOGE("failed to create fence: {}", res);
             return res;
         }
 
@@ -173,14 +173,14 @@ VkResult SwappyVkBase::initializeVkSyncObjects(VkQueue queue,
             .flags = 0};
         res = vkCreateSemaphore(mDevice, &semaphore_ci, NULL, &sync.semaphore);
         if (res) {
-            ALOGE("failed to create semaphore: %d", res);
+            ALOGE("failed to create semaphore: {}", res);
             return res;
         }
 
         res =
             vkAllocateCommandBuffers(mDevice, &present_cmd_info, &sync.command);
         if (res) {
-            ALOGE("vkAllocateCommandBuffers failed %d", res);
+            ALOGE("vkAllocateCommandBuffers failed {}", res);
             return res;
         }
 
@@ -192,7 +192,7 @@ VkResult SwappyVkBase::initializeVkSyncObjects(VkQueue queue,
         };
         res = vkBeginCommandBuffer(sync.command, &cmd_buf_info);
         if (res) {
-            ALOGE("vkAllocateCommandBuffers failed %d", res);
+            ALOGE("vkAllocateCommandBuffers failed {}", res);
             return res;
         }
 
@@ -203,7 +203,7 @@ VkResult SwappyVkBase::initializeVkSyncObjects(VkQueue queue,
         };
         res = vkCreateEvent(mDevice, &event_info, NULL, &sync.event);
         if (res) {
-            ALOGE("vkCreateEvent failed %d", res);
+            ALOGE("vkCreateEvent failed {}", res);
             return res;
         }
 
@@ -212,7 +212,7 @@ VkResult SwappyVkBase::initializeVkSyncObjects(VkQueue queue,
 
         res = vkEndCommandBuffer(sync.command);
         if (res) {
-            ALOGE("vkCreateEvent failed %d", res);
+            ALOGE("vkCreateEvent failed {}", res);
             return res;
         }
 
@@ -390,7 +390,7 @@ void SwappyVkBase::waitForFenceThreadMain(ThreadContext& thread) {
                 vkWaitForFences(mDevice, 1, &sync.fence, VK_TRUE,
                                 mCommonBase.getFenceTimeout().count());
             if (result) {
-                ALOGE("Failed to wait for fence %d", result);
+                ALOGE("Failed to wait for fence {}", result);
             }
             mLastFenceTime = std::chrono::steady_clock::now() - startTime;
 
