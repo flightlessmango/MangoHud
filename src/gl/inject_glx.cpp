@@ -161,9 +161,7 @@ EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
 
     using namespace std::chrono_literals;
     if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s){
-        fps_limit_stats.frameStart = Clock::now();
         FpsLimiter(fps_limit_stats);
-        fps_limit_stats.frameEnd = Clock::now();
     }
 }
 
@@ -178,9 +176,7 @@ EXPORT_C_(int64_t) glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t targe
 
     using namespace std::chrono_literals;
     if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s){
-        fps_limit_stats.frameStart = Clock::now();
         FpsLimiter(fps_limit_stats);
-        fps_limit_stats.frameEnd = Clock::now();
     }
     return ret;
 }

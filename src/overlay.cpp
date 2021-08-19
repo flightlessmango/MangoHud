@@ -764,3 +764,16 @@ void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats&
    trim(sw_stats.gpuName); trim(gpu);
 #endif
 }
+
+void FpsLimiter(struct fps_limit& stats){
+   fps_limit_stats.frameEnd = Clock::now();
+   stats.sleepTime = stats.targetFrameTime - (stats.frameEnd - stats.frameStart);
+   if (stats.sleepTime > stats.frameOverhead) {
+      auto adjustedSleep = stats.sleepTime - stats.frameOverhead;
+      this_thread::sleep_for(adjustedSleep);
+      stats.frameOverhead = ((Clock::now() - stats.frameEnd) - adjustedSleep);
+      if (stats.frameOverhead > stats.targetFrameTime / 2)
+         stats.frameOverhead = Clock::duration(0);
+   }
+   fps_limit_stats.frameStart = Clock::now();
+}

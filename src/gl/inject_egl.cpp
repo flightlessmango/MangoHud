@@ -68,9 +68,7 @@ EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf)
 
         using namespace std::chrono_literals;
         if (fps_limit_stats.targetFrameTime > 0s){
-            fps_limit_stats.frameStart = Clock::now();
             FpsLimiter(fps_limit_stats);
-            fps_limit_stats.frameEnd = Clock::now();
         }
     }
 
