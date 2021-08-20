@@ -70,7 +70,7 @@ and uncomment:
 #Include = /etc/pacman.d/mirrorlist
 ```
 
-then execute:
+then save the file and execute:
 ```
 sudo pacman -Syy
 ```
