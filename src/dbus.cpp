@@ -150,18 +150,7 @@ bool dbus_manager::get_media_player_metadata(metadata& meta, std::string name) {
     return true;
 }
 
-bool dbus_manager::init(const std::string& requested_player) {
-
-    if (!requested_player.empty()) {
-        m_requested_player = "org.mpris.MediaPlayer2." + requested_player;
-    } else
-        m_requested_player.clear();
-
-    if (m_inited) {
-        select_active_player();
-        return true;
-    }
-
+bool dbus_manager::init_internal() {
     if (!m_dbus_ldr.IsLoaded() && !m_dbus_ldr.Load("libdbus-1.so.3")) {
         SPDLOG_ERROR("Could not load libdbus-1.so.3");
         return false;
@@ -182,11 +171,32 @@ bool dbus_manager::init(const std::string& requested_player) {
               m_dbus_ldr.bus_get_unique_name(m_dbus_conn));
 
     dbus_list_name_to_owner();
-    connect_to_signals();
-    select_active_player();
-
     m_inited = true;
     return true;
+}
+
+bool dbus_manager::init(Service srv) {
+    if (!m_inited && !init_internal())
+        return false;
+
+    connect_to_signals(srv);
+    m_active_srvs |= srv;
+    return true;
+}
+
+bool dbus_manager::init_mpris(const std::string& requested_player) {
+    if (!requested_player.empty()) {
+        m_requested_player = "org.mpris.MediaPlayer2." + requested_player;
+    } else
+        m_requested_player.clear();
+
+    if (m_active_srvs & SRV_MPRIS) {
+        select_active_player();
+        return true;
+    }
+
+    SPDLOG_WARN("D-Bus hasn't been inited yet.");
+    return false;
 }
 
 bool dbus_manager::select_active_player() {
@@ -234,20 +244,23 @@ bool dbus_manager::select_active_player() {
     }
 }
 
-void dbus_manager::deinit() {
+void dbus_manager::deinit(Service srv) {
     if (!m_inited) return;
 
+    m_active_srvs &= ~srv;
+    if (m_dbus_conn)
+        disconnect_from_signals(srv);
+
     // unreference system bus connection instead of closing it
-    if (m_dbus_conn) {
-        disconnect_from_signals();
+    if (m_dbus_conn && !m_active_srvs) {
         m_dbus_ldr.connection_unref(m_dbus_conn);
         m_dbus_conn = nullptr;
+        m_dbus_ldr.error_free(&m_error);
+        m_inited = false;
     }
-    m_dbus_ldr.error_free(&m_error);
-    m_inited = false;
 }
 
-dbus_manager::~dbus_manager() { deinit(); }
+dbus_manager::~dbus_manager() { deinit(SRV_ALL); }
 
 DBusHandlerResult dbus_manager::filter_signals(DBusConnection* conn,
                                                DBusMessage* msg,
@@ -320,8 +333,46 @@ bool dbus_manager::handle_name_owner_changed(DBusMessage* _msg,
     return true;
 }
 
-void dbus_manager::connect_to_signals() {
+bool dbus_manager::gamemode_enabled(int32_t pid) {
+    if (!m_inited)
+        return false;
+
+    auto reply =
+        DBusMessage_wrap::new_method_call(
+            "com.feralinteractive.GameMode", "/com/feralinteractive/GameMode",
+            "com.feralinteractive.GameMode", "QueryStatus", &dbus_mgr.dbus())
+            .argument(pid)
+            .send_with_reply_and_block(dbus_mgr.get_conn(), DBUS_TIMEOUT);
+    if (!reply) return false;
+
+    auto iter = reply.iter();
+    if (!iter.is_signed()) return false;
+    return !!iter.get_primitive<int32_t>();
+}
+
+bool dbus_manager::handle_game_registered(DBusMessage* _msg,
+                                             const char* sender) {
+    auto iter = DBusMessageIter_wrap(_msg, &m_dbus_ldr);
+    auto pid = iter.get_primitive<int32_t>();
+    iter.next();
+    auto path = iter.get_primitive<std::string>();
+    SPDLOG_INFO("Game registered: {} '{}'", pid, path);
+    return true;
+}
+
+bool dbus_manager::handle_game_unregistered(DBusMessage* _msg,
+                                             const char* sender) {
+    auto iter = DBusMessageIter_wrap(_msg, &m_dbus_ldr);
+    auto pid = iter.get_primitive<int32_t>();
+    iter.next();
+    auto path = iter.get_primitive<std::string>();
+    SPDLOG_INFO("Game unregistered: {} '{}'", pid, path);
+    return true;
+}
+
+void dbus_manager::connect_to_signals(Service srv) {
     for (auto kv : m_signals) {
+        if (!(kv.srv & srv)) continue;
         auto signal = format_signal(kv);
         m_dbus_ldr.bus_add_match(m_dbus_conn, signal.c_str(), &m_error);
         if (m_dbus_ldr.error_is_set(&m_error)) {
@@ -336,10 +387,11 @@ void dbus_manager::connect_to_signals() {
     start_thread();
 }
 
-void dbus_manager::disconnect_from_signals() {
+void dbus_manager::disconnect_from_signals(Service srv) {
     m_dbus_ldr.connection_remove_filter(m_dbus_conn, filter_signals,
                                         reinterpret_cast<void*>(this));
     for (auto kv : m_signals) {
+        if (!(kv.srv & srv)) continue;
         auto signal = format_signal(kv);
         m_dbus_ldr.bus_remove_match(m_dbus_conn, signal.c_str(), &m_error);
         if (m_dbus_ldr.error_is_set(&m_error)) {

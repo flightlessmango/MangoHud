@@ -7,6 +7,7 @@
 #include <errno.h>
 #ifdef __gnu_linux__
 #include <wordexp.h>
+#include <unistd.h>
 #endif
 #include "imgui.h"
 #include <iostream>
@@ -780,11 +781,21 @@ parse_overlay_config(struct overlay_params *params,
 
 #ifdef HAVE_DBUS
    if (params->enabled[OVERLAY_PARAM_ENABLED_media_player]) {
-      dbusmgr::dbus_mgr.init(params->media_player_name);
+      if (dbusmgr::dbus_mgr.init(dbusmgr::SRV_MPRIS))
+         dbusmgr::dbus_mgr.init_mpris(params->media_player_name);
    } else {
-      dbusmgr::dbus_mgr.deinit();
+      dbusmgr::dbus_mgr.deinit(dbusmgr::SRV_MPRIS);
       main_metadata.meta.valid = false;
    }
+
+   if (params->enabled[OVERLAY_PARAM_ENABLED_gamemode])
+   {
+      if (dbusmgr::dbus_mgr.init(dbusmgr::SRV_GAMEMODE))
+         HUDElements.gamemode_bol = dbusmgr::dbus_mgr.gamemode_enabled(getpid());
+   }
+   else
+      dbusmgr::dbus_mgr.deinit(dbusmgr::SRV_GAMEMODE);
+
 #endif
 
    if(!params->output_file.empty()) {

@@ -137,7 +137,10 @@ bool DBusMessageIter_wrap::is_array() const noexcept {
 template <class T>
 auto DBusMessageIter_wrap::get_primitive() -> T {
     auto requested_type = detail::dbus_type_identifier<T>;
-    if (requested_type != type()) {
+    if (type() == DBUS_TYPE_OBJECT_PATH && requested_type == DBUS_TYPE_STRING) {
+        // no special type, just a string
+    }
+    else if (requested_type != type()) {
         SPDLOG_ERROR("Type mismatch: '{}' vs '{}'",
                   ((char)requested_type), (char)type());
 #ifndef NDEBUG
