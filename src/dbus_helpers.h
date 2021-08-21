@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <spdlog/spdlog.h>
+#include <signal.h>
 
 #include "loaders/loader_dbus.h"
 
@@ -140,10 +141,9 @@ auto DBusMessageIter_wrap::get_primitive() -> T {
         SPDLOG_ERROR("Type mismatch: '{}' vs '{}'",
                   ((char)requested_type), (char)type());
 #ifndef NDEBUG
-        exit(-1);
-#else
-        return T();
+        raise(SIGTRAP);
 #endif
+        return T();
     }
 
     T ret;
@@ -153,7 +153,10 @@ auto DBusMessageIter_wrap::get_primitive() -> T {
 
 template <>
 auto DBusMessageIter_wrap::get_primitive<std::string>() -> std::string {
-    return std::string(get_primitive<const char*>());
+    auto s = get_primitive<const char*>();
+    if (!s)
+        return std::string();
+    return std::string(s);
 }
 
 uint64_t DBusMessageIter_wrap::get_unsigned() {
