@@ -714,16 +714,16 @@ static void check_fonts(struct swapchain_data* data)
       create_fonts(instance_data->params, data->sw_stats.font1, data->sw_stats.font_text);
       unsigned char* pixels;
       int width, height;
-      io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
+      io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
       // wait for rendering to complete, if any
       device_data->vtable.DeviceWaitIdle(device_data->device);
       shutdown_swapchain_font(data);
 
       if (desc_set)
-         create_image(data, desc_set, width, height, VK_FORMAT_R8_UNORM, data->font_image, data->font_mem, data->font_image_view);
+         create_image(data, desc_set, width, height, VK_FORMAT_R8G8B8A8_UNORM, data->font_image, data->font_mem, data->font_image_view);
       else
-         desc_set = create_image_with_desc(data, width, height, VK_FORMAT_R8_UNORM, data->font_image, data->font_mem, data->font_image_view);
+         desc_set = create_image_with_desc(data, width, height, VK_FORMAT_R8G8B8A8_UNORM, data->font_image, data->font_mem, data->font_image_view);
 
       io.Fonts->SetTexID((ImTextureID)desc_set);
       data->font_uploaded = false;
@@ -746,8 +746,8 @@ static void ensure_swapchain_fonts(struct swapchain_data *data,
    ImGuiIO& io = ImGui::GetIO();
    unsigned char* pixels;
    int width, height;
-   io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
-   size_t upload_size = width * height * 1 * sizeof(char);
+   io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+   size_t upload_size = width * height * 4 * sizeof(char);
    upload_image_data(device_data, command_buffer, pixels, upload_size, width, height, data->upload_font_buffer, data->upload_font_buffer_mem, data->font_image);
 }
 

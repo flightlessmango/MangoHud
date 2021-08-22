@@ -471,6 +471,21 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       if((now - logger->last_log_end()) < 12s)
          render_benchmark(data, params, window_size, height, now);
    }
+
+//    ImGui::SetNextWindowBgAlpha(0.5f);
+//    auto dsz = ImGui::GetIO().DisplaySize;
+//    //auto atlas = &font_atlas_text;
+//    auto atlas = ImGui::GetIO().Fonts->Fonts[0]->ContainerAtlas;
+//    float scale = 1; //atlas->TexHeight/512.f;
+//    auto img_pos = ImVec2(dsz.x - atlas->TexWidth/scale - 25.f, dsz.y - atlas->TexHeight - 25.f);
+//    auto img_size = ImVec2(atlas->TexWidth/scale + 20.f, atlas->TexHeight/scale + 20.f);
+//    ImGui::SetNextWindowPos(img_pos, ImGuiCond_Always);
+//    ImGui::SetNextWindowSize(img_size, ImGuiCond_Always);
+//
+//    ImGui::Begin("Font Atlas", nullptr, ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_NoFocusOnAppearing);
+// //   ImGui::GetWindowDrawList()->AddCallback(nullptr, &render_mode[0]);
+//    ImGui::Image(atlas->TexID, ImVec2(atlas->TexWidth/scale, atlas->TexHeight/scale));
+//    ImGui::End();
 }
 
 void init_cpu_stats(overlay_params& params)

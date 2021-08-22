@@ -189,6 +189,7 @@ vklayer_mesa_overlay = shared_library(
   dependencies : [
     vulkan_wsi_deps,
     dearimgui_dep,
+    artery_font_dep,
     spdlog_dep,
     dep_libdrm,
     dep_libdrm_amdgpu,

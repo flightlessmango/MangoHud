@@ -1,10 +1,137 @@
+#include <spdlog/spdlog.h>
+#include <artery-font/std-artery-font.h>
+#include <artery-font/stdio-serialization.h>
+#include <artery-font/structures.h>
+#include <imgui.h>
+#include <imgui_internal.h>
 #include "overlay.h"
 #include "file_utils.h"
+#include "string_utils.h"
 #include "font_default.h"
 #include "IconsForkAwesome.h"
 #include "forkawesome.h"
+
+// Generate font in binary format arfont with https://github.com/Chlumsky/msdf-atlas-gen
+// ./bin/msdf-atlas-gen -type mtsdf -font /usr/share/fonts/TTF/FiraSans-Regular.ttf -format bin -size 16 -pots -charset charset_ascii.txt -arfont ascii.arfont
+void create_font_from_mtsdf(const overlay_params& params, ImFont*& small_font, ImFont*& text_font)
+{
+   auto& io = ImGui::GetIO();
+   io.Fonts->Clear();
+   ImGui::GetIO().FontGlobalScale = params.font_scale; // set here too so ImGui::CalcTextSize is correct
+
+    artery_font::StdArteryFont<float> arfont {};
+    artery_font::readFile(arfont, params.font_file.c_str());
+    SPDLOG_DEBUG("arfont: size: {}x{} {} {}",
+                arfont.images[0].width, arfont.images[0].height,
+                arfont.images[0].imageType,
+                arfont.images[0].encoding);
+
+    if (arfont.images.length() < 1)
+        return;
+
+    if (arfont.images[0].imageType != artery_font::IMAGE_MTSDF)
+    {
+        SPDLOG_ERROR("Font type is not MTSDF");
+        return;
+    }
+
+    if (arfont.images[0].encoding != artery_font::ImageEncoding::IMAGE_RAW_BINARY)
+    {
+        SPDLOG_ERROR("Font image encoding is not raw binary");
+        return;
+    }
+
+    const auto& v = arfont.variants[0];
+    const auto& img = arfont.images[0];
+
+    io.Fonts->ClearInputData();
+    ImFontAtlasBuildInit(io.Fonts);
+    // Clear atlas
+    io.Fonts->TexID = (ImTextureID)NULL;
+    io.Fonts->TexWidth = img.width;
+    io.Fonts->TexHeight = img.height;
+    io.Fonts->TexUvWhitePixel = ImVec2(0.0f, 0.0f);
+
+    io.Fonts->TexHeight += IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1 + 32; // give space for custom stuff
+    io.Fonts->TexHeight = (io.Fonts->Flags & ImFontAtlasFlags_NoPowerOfTwoHeight) ? (io.Fonts->TexHeight + 1) : ImUpperPowerOfTwo(io.Fonts->TexHeight);
+    if (io.Fonts->TexWidth < 256)
+        io.Fonts->TexWidth = 256; // give space for custom stuff
+    io.Fonts->TexUvScale = ImVec2(1.0f / io.Fonts->TexWidth, 1.0f / io.Fonts->TexHeight);
+
+    ImFontConfig font_cfg;
+    io.Fonts->Fonts.push_back(IM_NEW(ImFont));
+    ImFont* font = io.Fonts->Fonts.back();
+    font->Ascent = v.metrics.ascender * v.metrics.fontSize;
+    font->Descent = v.metrics.descender * v.metrics.fontSize;
+    font->FontSize = v.metrics.fontSize; // * v.metrics.lineHeight;
+    font->Scale = 1.0f;
+    font->ContainerAtlas = io.Fonts;
+    font_cfg.DstFont = font;
+    strncpy(font_cfg.Name, (const char *)v.name, min(40, v.name.length()));
+    io.Fonts->ConfigData.push_back(font_cfg);
+    font->ConfigData = &io.Fonts->ConfigData.back();
+    font->ConfigDataCount = 1;
+    io.Fonts->ClearTexData(); // invalidate texture data
+
+    for (const auto& g : v.glyphs.vector)
+    {
+        float u0 = g.imageBounds.l * io.Fonts->TexUvScale.x;
+        float v0 = (img.height - g.imageBounds.t) * io.Fonts->TexUvScale.y;
+        float u1 = g.imageBounds.r * io.Fonts->TexUvScale.x;
+        float v1 = (img.height - g.imageBounds.b) * io.Fonts->TexUvScale.y;
+        font->AddGlyph(nullptr, (ImWchar)g.codepoint,
+                       g.planeBounds.l * v.metrics.fontSize,
+                       (1.0f - g.planeBounds.t) * v.metrics.fontSize,
+                       g.planeBounds.r * v.metrics.fontSize,
+                       (1.0f - g.planeBounds.b) * v.metrics.fontSize,
+                       u0, v0, u1, v1,
+                       g.advance.h * v.metrics.fontSize);
+    }
+
+    // Allocate texture
+    io.Fonts->TexPixelsRGBA32 = (unsigned int*)IM_ALLOC(io.Fonts->TexWidth * io.Fonts->TexHeight * 4);
+    unsigned char* src = (unsigned char*)arfont.images[0].data;
+    memset(io.Fonts->TexPixelsRGBA32, 0, io.Fonts->TexHeight * io.Fonts->TexWidth * 4);
+    for (size_t y = 0; y < img.height; y++) //TODO check orientation
+        memcpy(io.Fonts->TexPixelsRGBA32 + (img.height - y - 1) * io.Fonts->TexWidth, src + y * img.width * 4, img.width * 4);
+
+    // Add custom rects somewhere on texture
+    uint16_t max_h = 0;
+    uint16_t curr_x = 0;
+    uint16_t curr_y = img.height;
+    for (auto& r : io.Fonts->CustomRects)
+    {
+        if (curr_x + r.Width > io.Fonts->TexWidth)
+        {
+            curr_x = 0;
+            curr_y += max_h;
+            max_h = 0;
+        }
+
+        r.X = curr_x;
+        r.Y = curr_y;
+        curr_x += r.Width;
+        max_h = max(max_h, r.Height);
+    }
+
+    ImFontAtlasBuildFinish(io.Fonts);
+
+    io.Fonts->Fonts.push_back(IM_NEW(ImFont));
+    ImFont* tmp = io.Fonts->Fonts.back();
+    *tmp = *io.Fonts->Fonts[0];
+    tmp->Scale *= 0.55f;
+    small_font = io.Fonts->Fonts.back();
+    text_font = io.Fonts->Fonts[0];
+}
+
 void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& text_font)
 {
+   if (ends_with(params.font_file, ".arfont") && file_exists(params.font_file))
+   {
+      create_font_from_mtsdf(params, small_font, text_font);
+      return;
+   }
+
    auto& io = ImGui::GetIO();
    io.Fonts->Clear();
    ImGui::GetIO().FontGlobalScale = params.font_scale; // set here too so ImGui::CalcTextSize is correct
@@ -27,7 +154,10 @@ void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& te
    // Load Icon file and merge to exisitng font
     ImFontConfig config;
     config.MergeMode = true;
-    static const ImWchar icon_ranges[] = { ICON_MIN_FK, ICON_MAX_FK, 0 };
+    static const ImWchar icon_ranges[] = {
+        0xf240, 0xf244, // battery icons
+        0,
+    };
 
    ImVector<ImWchar> glyph_ranges;
    ImFontGlyphRangesBuilder builder;

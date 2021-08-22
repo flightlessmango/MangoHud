@@ -249,6 +249,8 @@ dearimgui_sp = subproject('imgui', default_options: [
   'allegro5=disabled',
 ])
 dearimgui_dep = dearimgui_sp.get_variable('imgui_dep')
+artery_font_sp = subproject('artery-font-format', required: true)
+artery_font_dep = artery_font_sp.get_variable('artery_font_dep')
 
 spdlog_dep = cpp.find_library('spdlog', required: get_option('use_system_spdlog'))
 if not spdlog_dep.found()
