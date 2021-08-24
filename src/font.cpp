@@ -12,7 +12,10 @@
 #include "forkawesome.h"
 
 // Generate font in binary format arfont with https://github.com/Chlumsky/msdf-atlas-gen
-// ./bin/msdf-atlas-gen -type mtsdf -font /usr/share/fonts/TTF/FiraSans-Regular.ttf -format bin -size 16 -pots -charset charset_ascii.txt -arfont ascii.arfont
+// ./bin/msdf-atlas-gen -type mtsdf \
+// 	-font ~/.fonts/unispace\ rg.ttf -fontscale 1.0 -and -fontscale 0.55 -charset charset_ascii.txt \
+// 	-and -font ~/.fonts/forkawesome-webfont.ttf -fontscale 1.0 -charset charset_forkawesome.txt \
+// 	-size 18 -format bin -yorigin top -pxrange 8 -arfont mangohud-font.arfont
 void create_font_from_mtsdf(const overlay_params& params, ImFont*& small_font, ImFont*& text_font)
 {
    auto& io = ImGui::GetIO();
@@ -31,19 +34,29 @@ void create_font_from_mtsdf(const overlay_params& params, ImFont*& small_font, I
 
     if (arfont.images[0].imageType != artery_font::IMAGE_MTSDF)
     {
-        SPDLOG_ERROR("Font type is not MTSDF");
+        SPDLOG_ERROR("Font type is not MTSDF: {}", arfont.images[0].imageType);
         return;
     }
 
     if (arfont.images[0].encoding != artery_font::ImageEncoding::IMAGE_RAW_BINARY)
     {
-        SPDLOG_ERROR("Font image encoding is not raw binary");
+        SPDLOG_ERROR("Font image encoding is not raw binary: {}", arfont.images[0].encoding);
         return;
     }
 
-    const auto& v = arfont.variants[0];
-    const auto& img = arfont.images[0];
+    if (arfont.images[0].channels != 4)
+    {
+        SPDLOG_ERROR("Font image does not have 4 channels: {}", arfont.images[0].channels);
+        return;
+    }
 
+    if (arfont.images[0].pixelFormat != artery_font::PixelFormat::PIXEL_UNSIGNED8)
+    {
+        SPDLOG_ERROR("Font image pixel format is not UNSIGNED8: {}", arfont.images[0].pixelFormat);
+        return;
+    }
+
+    const auto& img = arfont.images[0];
     io.Fonts->ClearInputData();
     ImFontAtlasBuildInit(io.Fonts);
     // Clear atlas
@@ -57,43 +70,60 @@ void create_font_from_mtsdf(const overlay_params& params, ImFont*& small_font, I
     if (io.Fonts->TexWidth < 256)
         io.Fonts->TexWidth = 256; // give space for custom stuff
     io.Fonts->TexUvScale = ImVec2(1.0f / io.Fonts->TexWidth, 1.0f / io.Fonts->TexHeight);
-
-    ImFontConfig font_cfg;
-    io.Fonts->Fonts.push_back(IM_NEW(ImFont));
-    ImFont* font = io.Fonts->Fonts.back();
-    font->Ascent = v.metrics.ascender * v.metrics.fontSize;
-    font->Descent = v.metrics.descender * v.metrics.fontSize;
-    font->FontSize = v.metrics.fontSize; // * v.metrics.lineHeight;
-    font->Scale = 1.0f;
-    font->ContainerAtlas = io.Fonts;
-    font_cfg.DstFont = font;
-    strncpy(font_cfg.Name, (const char *)v.name, min(40, v.name.length()));
-    io.Fonts->ConfigData.push_back(font_cfg);
-    font->ConfigData = &io.Fonts->ConfigData.back();
-    font->ConfigDataCount = 1;
     io.Fonts->ClearTexData(); // invalidate texture data
 
-    for (const auto& g : v.glyphs.vector)
+    size_t i = 0;
+    for (const auto& v : arfont.variants.vector)
     {
-        float u0 = g.imageBounds.l * io.Fonts->TexUvScale.x;
-        float v0 = (img.height - g.imageBounds.t) * io.Fonts->TexUvScale.y;
-        float u1 = g.imageBounds.r * io.Fonts->TexUvScale.x;
-        float v1 = (img.height - g.imageBounds.b) * io.Fonts->TexUvScale.y;
-        font->AddGlyph(nullptr, (ImWchar)g.codepoint,
-                       g.planeBounds.l * v.metrics.fontSize,
-                       (1.0f - g.planeBounds.t) * v.metrics.fontSize,
-                       g.planeBounds.r * v.metrics.fontSize,
-                       (1.0f - g.planeBounds.b) * v.metrics.fontSize,
-                       u0, v0, u1, v1,
-                       g.advance.h * v.metrics.fontSize);
+        ImFont* font = nullptr;
+        i++;
+        if (i != 3)
+        {
+            io.Fonts->Fonts.push_back(IM_NEW(ImFont));
+            font = io.Fonts->Fonts.back();
+            font->Ascent = v.metrics.ascender * v.metrics.fontSize;
+            font->Descent = v.metrics.descender * v.metrics.fontSize;
+            font->FontSize = v.metrics.fontSize; // * v.metrics.lineHeight;
+            font->Scale = 1.0f;
+            font->ContainerAtlas = io.Fonts;
+        }
+        else
+            font = io.Fonts->Fonts.front();
+
+        // Add glyphs, doesn't seem to be affected by orientation
+        for (const auto& g : v.glyphs.vector)
+        {
+            float u0 = g.imageBounds.l * io.Fonts->TexUvScale.x;
+            float v0 = (img.height - g.imageBounds.t) * io.Fonts->TexUvScale.y;
+            float u1 = g.imageBounds.r * io.Fonts->TexUvScale.x;
+            float v1 = (img.height - g.imageBounds.b) * io.Fonts->TexUvScale.y;
+            font->AddGlyph(nullptr, (ImWchar)g.codepoint,
+                        g.planeBounds.l * v.metrics.fontSize,
+                        (1.0f - g.planeBounds.t) * v.metrics.fontSize,
+                        g.planeBounds.r * v.metrics.fontSize,
+                        (1.0f - g.planeBounds.b) * v.metrics.fontSize,
+                        u0, v0, u1, v1,
+                        g.advance.h * v.metrics.fontSize);
+        }
     }
 
     // Allocate texture
     io.Fonts->TexPixelsRGBA32 = (unsigned int*)IM_ALLOC(io.Fonts->TexWidth * io.Fonts->TexHeight * 4);
     unsigned char* src = (unsigned char*)arfont.images[0].data;
     memset(io.Fonts->TexPixelsRGBA32, 0, io.Fonts->TexHeight * io.Fonts->TexWidth * 4);
-    for (size_t y = 0; y < img.height; y++) //TODO check orientation
-        memcpy(io.Fonts->TexPixelsRGBA32 + (img.height - y - 1) * io.Fonts->TexWidth, src + y * img.width * 4, img.width * 4);
+
+    if (img.rawBinaryFormat.orientation == artery_font::ImageOrientation::ORIENTATION_BOTTOM_UP)
+    {
+        for (size_t y = 0; y < img.height; y++)
+            memcpy(io.Fonts->TexPixelsRGBA32 + (img.height - y - 1) * io.Fonts->TexWidth,
+                   src + y * img.rawBinaryFormat.rowLength, img.rawBinaryFormat.rowLength);
+    }
+    else
+    {
+        for (size_t y = 0; y < img.height; y++)
+            memcpy(io.Fonts->TexPixelsRGBA32 + y * io.Fonts->TexWidth,
+                   src + y * img.rawBinaryFormat.rowLength, img.rawBinaryFormat.rowLength);
+    }
 
     // Add custom rects somewhere on texture
     uint16_t max_h = 0;
@@ -116,11 +146,14 @@ void create_font_from_mtsdf(const overlay_params& params, ImFont*& small_font, I
 
     ImFontAtlasBuildFinish(io.Fonts);
 
-    io.Fonts->Fonts.push_back(IM_NEW(ImFont));
-    ImFont* tmp = io.Fonts->Fonts.back();
-    *tmp = *io.Fonts->Fonts[0];
-    tmp->Scale *= 0.55f;
-    small_font = io.Fonts->Fonts.back();
+    if (io.Fonts->Fonts.size() < 2)
+    {
+        io.Fonts->Fonts.push_back(IM_NEW(ImFont));
+        ImFont* tmp = io.Fonts->Fonts.back();
+        *tmp = *io.Fonts->Fonts[0];
+        tmp->Scale *= 0.55f;
+    }
+    small_font = io.Fonts->Fonts[1];
     text_font = io.Fonts->Fonts[0];
 }
 

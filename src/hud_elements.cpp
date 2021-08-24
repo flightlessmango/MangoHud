@@ -581,6 +581,12 @@ void HudElements::resolution(){
         ImGui::TableNextColumn();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "%ix%i", res_width, res_height);
         ImGui::PopFont();
+        ImGui::TableNextColumn();
+
+//         ImGuiIO& io = ImGui::GetIO();
+//         ImGui::PushFont(io.Fonts->Fonts.back());
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_HALF);
+//         ImGui::PopFont();
     }
 }
 
