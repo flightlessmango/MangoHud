@@ -101,13 +101,13 @@ void parseConfigFile(overlay_params& params) {
     std::vector<std::string> paths;
     const char *cfg_file = getenv("MANGOHUD_CONFIGFILE");
 
+    enumerate_config_files(paths);
+
     if (cfg_file)
         paths.push_back(cfg_file);
-    else
-        enumerate_config_files(paths);
 
     std::string line;
-    for (auto p = paths.rbegin(); p != paths.rend(); p++) {
+    for (auto p = paths.begin(); p != paths.end(); p++) {
         std::ifstream stream(*p);
         if (!stream.good()) {
             // printing just so user has an idea of possible configs
@@ -122,6 +122,5 @@ void parseConfigFile(overlay_params& params) {
             parseConfigLine(line, params.options);
         }
         params.config_file_path = *p;
-        return;
     }
 }
