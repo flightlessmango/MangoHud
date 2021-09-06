@@ -37,6 +37,7 @@ struct fps_limit fps_limit_stats {};
 ImVec2 real_font_size;
 std::vector<logData> graph_data;
 const char* engines[] = {"Unknown", "OpenGL", "VULKAN", "DXVK", "VKD3D", "DAMAVAND", "ZINK", "WINED3D", "Feral3D", "ToGL"};
+std::vector<double> fpslist;
 
 void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID)
 {
@@ -95,22 +96,30 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
 }
 
 void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
-   uint32_t f_idx = sw_stats.n_frames % ARRAY_SIZE(sw_stats.frames_stats);
+   // uint32_t f_idx = sw_stats.n_frames % ARRAY_SIZE(sw_stats.frames_stats);
    uint64_t now = os_time_get_nano(); /* ns */
    double elapsed = (double)(now - sw_stats.last_fps_update); /* ns */
-   fps = 1000000000.0 * sw_stats.n_frames_since_update / elapsed;
+   // fps = 1000000000.0 / elapsed;
+   // printf("%f\n", fps);
    if (logger->is_active())
       benchmark.fps_data.push_back(fps);
 
-   if (sw_stats.last_present_time) {
-        sw_stats.frames_stats[f_idx].stats[OVERLAY_PLOTS_frame_timing] =
-            now - sw_stats.last_present_time;
-   }
-
+   // if (sw_stats.last_present_time) {
+   //      sw_stats.frames_stats[f_idx].stats[OVERLAY_PLOTS_frame_timing] =
+   //          now - sw_stats.last_present_time;
+   // }
+   
    frametime = (now - sw_stats.last_present_time) / 1000;
+   // frametime = 1000000 / fps;
+
    if (elapsed >= params.fps_sampling_period) {
       std::thread(update_hw_info, std::ref(sw_stats), std::ref(params), vendorID).detach();
-      sw_stats.fps = fps;
+      double fps_avg = 0;
+      for (auto &fps : fpslist)
+         fps_avg += fps;
+
+      sw_stats.fps = fps_avg / fpslist.size();
+      fpslist.clear();
 
       if (params.enabled[OVERLAY_PARAM_ENABLED_time]) {
          std::time_t t = std::time(nullptr);

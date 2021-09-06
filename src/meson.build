@@ -161,7 +161,7 @@ if is_unixy
   endif
 endif
 
-link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL'])
+link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL', '-lglfw', '-lGL'])
 # meson fails to check version-script so just force add
 link_args += '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version'))
 
@@ -220,6 +220,71 @@ if is_unixy
     include_directories : [inc_common],
     link_args : link_args,
     install_dir : libdir_mangohud,
+    install : true
+  )
+endif
+
+if sizeof_ptr == 8
+  pre_args += '-DIMGUI_IMPL_OPENGL_LOADER_GL3W'
+  overlay_files = files(
+    'overlay.cpp',
+    'hud_elements.cpp',
+    'gpu.cpp',
+    'nvml.cpp',
+    'loaders/loader_nvml.cpp',
+    'loaders/loader_nvctrl.cpp',
+    'nvctrl.cpp',
+    'logging.cpp',
+    'battery.cpp',
+    'memory.cpp',
+    'cpu.cpp',
+    'pci_ids.cpp',
+    'file_utils.cpp',
+    'iostats.cpp',
+    'dbus.cpp',
+    'loaders/loader_libdrm.cpp',
+    'overlay_params.cpp',
+    'loaders/loader_x11.cpp',
+    'loaders/loader_dbus.cpp',
+    'config.cpp',
+    'blacklist.cpp',
+    'font.cpp',
+    'keybinds.cpp',
+    'font_unispace.c',
+    'loaders/loader_x11.cpp',
+    'shared_x11.cpp',
+  )
+  mangoapp = executable(
+    'mangoapp',
+    mangohud_version,
+    util_files,
+    vk_enum_to_str,
+    overlay_files,
+    files(
+      '../subprojects/imgui-1.81/backends/imgui_impl_opengl3.cpp',
+      '../subprojects/imgui-1.81/backends/imgui_impl_glfw.cpp',
+      '../include/GL/gl3w.c',
+      'app/main.cpp',
+    ),
+    c_args : [
+      pre_args,
+      no_override_init_args,
+      vulkan_wsi_args
+      ],
+    cpp_args : [
+      pre_args,
+      vulkan_wsi_args
+      ],
+    gnu_symbol_visibility : 'hidden',
+    dependencies : [
+      dearimgui_dep,
+      dep_dl,
+      spdlog_dep,
+      dbus_dep,
+      dep_libdrm,
+    ],
+    include_directories : [inc_common],
+    link_args : link_args,
     install : true
   )
 endif
