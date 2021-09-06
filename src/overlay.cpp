@@ -169,6 +169,7 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
    }
 
    frametime = (now - sw_stats.last_present_time) / 1000;
+
    if (elapsed >= params.fps_sampling_period) {
       if (!hw_update_thread)
          hw_update_thread = std::make_unique<hw_info_updater>();

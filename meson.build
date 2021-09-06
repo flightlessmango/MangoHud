@@ -235,9 +235,9 @@ dearimgui_sp = subproject('imgui', default_options: [
   'dx11=disabled',
   'dx12=disabled',
   'metal=disabled',
-  'opengl=disabled',
+  'opengl=enabled',
   'vulkan=disabled',
-  'glfw=disabled',
+  'glfw=enabled',
   'sdl2=disabled',
   'osx=disabled',
   'win=disabled',
@@ -266,6 +266,8 @@ if ['windows', 'mingw'].contains(host_machine.system())
 else
   windows_deps = null_dep
 endif
+
+glfw3_dep = dependency('glfw3')
 
 subdir('src')
 subdir('data')
