@@ -170,6 +170,11 @@ bool dbus_manager::init_internal() {
     SPDLOG_DEBUG("Connected to D-Bus as \"{}\"",
               m_dbus_ldr.bus_get_unique_name(m_dbus_conn));
 
+    m_dbus_ldr.connection_add_filter(m_dbus_conn, filter_signals,
+                                     reinterpret_cast<void*>(this), nullptr);
+
+    start_thread();
+
     dbus_list_name_to_owner();
     m_inited = true;
     return true;
@@ -253,6 +258,9 @@ void dbus_manager::deinit(Service srv) {
 
     // unreference system bus connection instead of closing it
     if (m_dbus_conn && !m_active_srvs) {
+        m_dbus_ldr.connection_remove_filter(m_dbus_conn, filter_signals,
+                                            reinterpret_cast<void*>(this));
+        stop_thread();
         m_dbus_ldr.connection_unref(m_dbus_conn);
         m_dbus_conn = nullptr;
         m_dbus_ldr.error_free(&m_error);
@@ -381,15 +389,9 @@ void dbus_manager::connect_to_signals(Service srv) {
             // return;
         }
     }
-    m_dbus_ldr.connection_add_filter(m_dbus_conn, filter_signals,
-                                     reinterpret_cast<void*>(this), nullptr);
-
-    start_thread();
 }
 
 void dbus_manager::disconnect_from_signals(Service srv) {
-    m_dbus_ldr.connection_remove_filter(m_dbus_conn, filter_signals,
-                                        reinterpret_cast<void*>(this));
     for (auto kv : m_signals) {
         if (!(kv.srv & srv)) continue;
         auto signal = format_signal(kv);
@@ -399,8 +401,6 @@ void dbus_manager::disconnect_from_signals(Service srv) {
             m_dbus_ldr.error_free(&m_error);
         }
     }
-
-    stop_thread();
 }
 
 bool dbus_manager::dbus_list_name_to_owner() {
