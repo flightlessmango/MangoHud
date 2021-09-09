@@ -110,7 +110,7 @@ static float parse_float(const std::string& s, std::size_t* float_len = nullptr)
     return ret;
 }
 
-static std::vector<std::string> str_tokenize(const std::string& s, const std::string&& delims = ",:+")
+static std::vector<std::string> str_tokenize(const std::string& s, const std::string& delims = ",:+")
 {
    std::vector<std::string> v;
    size_t old_n = 0, new_n = 0;
