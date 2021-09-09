@@ -286,13 +286,26 @@ void render_mpris_metadata(struct overlay_params& params, mutexed_metadata& meta
       //ImGui::PushFont(data.font1);
 
       if (meta.ticker.needs_recalc) {
-         meta.ticker.tw0 = ImGui::CalcTextSize(meta.meta.title.c_str()).x;
-         meta.ticker.tw1 = ImGui::CalcTextSize(meta.meta.artists.c_str()).x;
-         meta.ticker.tw2 = ImGui::CalcTextSize(meta.meta.album.c_str()).x;
-         meta.ticker.longest = std::max(std::max(
-               meta.ticker.tw0,
-               meta.ticker.tw1),
-            meta.ticker.tw2);
+         meta.ticker.formatted.clear();
+         meta.ticker.longest = 0;
+         for (const auto& f : params.media_player_format)
+         {
+            std::string str;
+            try
+            {
+               str = fmt::format(f,
+                                   fmt::arg("artist", meta.meta.artists),
+                                   fmt::arg("title", meta.meta.title),
+                                   fmt::arg("album", meta.meta.album));
+            }
+            catch (const fmt::v7::format_error& err)
+            {
+               SPDLOG_ERROR("formatting error in '{}': {}", f, err.what());
+            }
+            float w = ImGui::CalcTextSize(str.c_str()).x;
+            meta.ticker.longest = std::max(meta.ticker.longest, w);
+            meta.ticker.formatted.push_back({str, w});
+         }
          meta.ticker.needs_recalc = false;
       }
 
@@ -309,34 +322,12 @@ void render_mpris_metadata(struct overlay_params& params, mutexed_metadata& meta
 
       meta.ticker.pos -= .5f * (frame_timing / 16666666.7f /* ns */) * meta.ticker.dir;
 
-      for (auto order : params.media_player_order) {
-         switch (order) {
-            case MP_ORDER_TITLE:
-            {
-               new_pos = get_ticker_limited_pos(meta.ticker.pos, meta.ticker.tw0, left_limit, right_limit);
-               ImGui::SetCursorPosX(new_pos);
-               ImGui::TextColored(color, "%s", meta.meta.title.c_str());
-            }
-            break;
-            case MP_ORDER_ARTIST:
-            {
-               new_pos = get_ticker_limited_pos(meta.ticker.pos, meta.ticker.tw1, left_limit, right_limit);
-               ImGui::SetCursorPosX(new_pos);
-               ImGui::TextColored(color, "%s", meta.meta.artists.c_str());
-            }
-            break;
-            case MP_ORDER_ALBUM:
-            {
-               //ImGui::NewLine();
-               if (!meta.meta.album.empty()) {
-                  new_pos = get_ticker_limited_pos(meta.ticker.pos, meta.ticker.tw2, left_limit, right_limit);
-                  ImGui::SetCursorPosX(new_pos);
-                  ImGui::TextColored(color, "%s", meta.meta.album.c_str());
-               }
-            }
-            break;
-            default: break;
-         }
+      for (const auto& fmt : meta.ticker.formatted)
+      {
+         if (fmt.text.empty()) continue;
+         new_pos = get_ticker_limited_pos(meta.ticker.pos, fmt.width, left_limit, right_limit);
+         ImGui::SetCursorPosX(new_pos);
+         ImGui::TextColored(color, "%s", fmt.text.c_str());
       }
 
       if (!meta.meta.playing) {

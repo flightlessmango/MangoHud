@@ -225,13 +225,14 @@ parse_load_value(const char *str)
 
 
 static std::vector<std::string>
-parse_str_tokenize(const char *str)
+parse_str_tokenize(const char *str, const std::string& delims = ",:+", bool btrim = true)
 {
    std::vector<std::string> data;
-   auto tokens = str_tokenize(str);
+   auto tokens = str_tokenize(str, delims);
    std::string token;
    for (auto& token : tokens) {
-      trim(token);
+      if (btrim)
+         trim(token);
       data.push_back(token);
    }
     return data;
@@ -282,25 +283,6 @@ parse_path(const char *str)
 #endif
    return str;
 }
-
-static std::vector<media_player_order>
-parse_media_player_order(const char *str)
-{
-   std::vector<media_player_order> order;
-   auto tokens = str_tokenize(str);
-   for (auto& token : tokens) {
-      trim(token);
-      std::transform(token.begin(), token.end(), token.begin(), ::tolower);
-      if (token == "title")
-         order.push_back(MP_ORDER_TITLE);
-      else if (token == "artist")
-         order.push_back(MP_ORDER_ARTIST);
-      else if (token == "album")
-         order.push_back(MP_ORDER_ALBUM);
-   }
-   return order;
-}
-
 
 static std::vector<std::string>
 parse_benchmark_percentiles(const char *str)
@@ -440,7 +422,7 @@ parse_gl_size_query(const char *str)
 #define parse_fps_value(s) parse_load_value(s)
 #define parse_fps_color(s) parse_load_color(s)
 #define parse_battery_color(s) parse_color(s)
-
+#define parse_media_player_format(s) parse_str_tokenize(s, ";", false)
 
 static bool
 parse_help(const char *str)
@@ -618,7 +600,7 @@ parse_overlay_config(struct overlay_params *params,
    params->cpu_load_color = { 0x39f900, 0xfdfd09, 0xb22222 };
    params->font_scale_media_player = 0.55f;
    params->log_interval = 100;
-   params->media_player_order = { MP_ORDER_TITLE, MP_ORDER_ARTIST, MP_ORDER_ALBUM };
+   params->media_player_format = { "{title}", "{artist}", "{album}" };
    params->permit_upload = 0;
    params->benchmark_percentiles = { "97", "AVG", "1", "0.1" };
    params->gpu_load_value = { 60, 90 };

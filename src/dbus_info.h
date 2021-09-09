@@ -28,6 +28,12 @@ struct metadata {
     bool got_playback_data = false;
 };
 
+struct mp_fmt
+{
+    std::string text;
+    float width;
+};
+
 struct mutexed_metadata {
     std::mutex mtx;
     metadata meta;
@@ -37,9 +43,7 @@ struct mutexed_metadata {
         int dir = -1;
         bool needs_recalc = true;
 
-        float tw0;
-        float tw1;
-        float tw2;
+        std::vector<mp_fmt> formatted;
     } ticker;
 };
 
