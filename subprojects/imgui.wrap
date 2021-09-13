@@ -3,7 +3,7 @@ directory = imgui-1.81
 source_url = https://github.com/ocornut/imgui/archive/v1.81.tar.gz
 source_filename = imgui-1.81.tar.gz
 source_hash = f7c619e03a06c0f25e8f47262dbc32d61fd033d2c91796812bf0f8c94fca78fb
-patch_url = https://wrapdb.mesonbuild.com/v1/projects/imgui/1.81/1/get_zip
+patch_url = https://wrapdb.mesonbuild.com/v2/imgui_1.81-1/get_patch
 patch_filename = imgui-1.81-1-wrap.zip
 patch_hash = 6d00b442690b6a5c5d8f898311daafbce16d370cf64f53294c3b8c5c661e435f
 

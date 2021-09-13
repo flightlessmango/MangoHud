@@ -1,5 +1,6 @@
 #include <sstream>
 #include <iomanip>
+#include <spdlog/spdlog.h>
 #include "logging.h"
 #include "overlay.h"
 #include "config.h"
@@ -58,9 +59,7 @@ void upload_files(const std::vector<std::string>& logFiles){
 
 void writeFile(string filename){
   auto& logArray = logger->get_log_data();
-#ifndef NDEBUG
-  std::cerr << "Writing log file [" << filename << "], " << logArray.size() << " entries\n";
-#endif
+  SPDLOG_DEBUG("Writing log file [{}], {} entries", filename, logArray.size());
   std::ofstream out(filename, ios::out | ios::app);
   if (out){
   out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver," << "cpuscheduler" << endl;
@@ -110,9 +109,7 @@ Logger::Logger(overlay_params* in_params)
     m_values_valid(false),
     m_params(in_params)
 {
-#ifndef NDEBUG
-  std::cerr << "Logger constructed!\n";
-#endif
+  SPDLOG_DEBUG("Logger constructed!");
 }
 
 void Logger::start_logging() {

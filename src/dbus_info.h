@@ -55,7 +55,16 @@ namespace dbusmgr {
 class dbus_manager;
 using signal_handler_func = bool (dbus_manager::*)(DBusMessage*, const char*);
 
+enum Service
+{
+    SRV_NONE        = 0,
+    SRV_MPRIS       = (1ul << 0),
+    SRV_GAMEMODE    = (1ul << 1),
+    SRV_ALL         = 0xFFFFFFFF,
+};
+
 struct DBusSignal {
+    Service srv;
     const char* intf;
     const char* signal;
     signal_handler_func handler;
@@ -67,16 +76,20 @@ class dbus_manager {
 
     ~dbus_manager();
 
-    bool init(const std::string& requested_player);
-    void deinit();
+    bool init(Service srv);
+    bool init_mpris(const std::string& requested_player);
+    void deinit(Service srv);
     bool get_media_player_metadata(metadata& meta, std::string name = "");
-    void connect_to_signals();
-    void disconnect_from_signals();
+    void connect_to_signals(Service srv);
+    void disconnect_from_signals(Service srv);
     DBusConnection* get_conn() const { return m_dbus_conn; }
+
+    bool gamemode_enabled(int32_t pid);
 
     libdbus_loader& dbus() { return m_dbus_ldr; }
 
    protected:
+    bool init_internal();
     void stop_thread();
     void start_thread();
     void dbus_thread();
@@ -89,6 +102,8 @@ class dbus_manager {
 
     bool handle_properties_changed(DBusMessage*, const char*);
     bool handle_name_owner_changed(DBusMessage*, const char*);
+    bool handle_game_registered(DBusMessage*, const char*);
+    bool handle_game_unregistered(DBusMessage*, const char*);
 
     void onNewPlayer(
         metadata& meta);  // A different player has become the active player
@@ -105,12 +120,17 @@ class dbus_manager {
     std::unordered_map<std::string, std::string> m_name_owners;
     std::string m_requested_player;
     std::string m_active_player;
+    uint32_t m_active_srvs = SRV_NONE;
 
     const std::array<DBusSignal, 2> m_signals{{
-        {"org.freedesktop.DBus", "NameOwnerChanged",
+        {SRV_MPRIS, "org.freedesktop.DBus", "NameOwnerChanged",
          &dbus_manager::handle_name_owner_changed},
-        {"org.freedesktop.DBus.Properties", "PropertiesChanged",
+        {SRV_MPRIS, "org.freedesktop.DBus.Properties", "PropertiesChanged",
          &dbus_manager::handle_properties_changed},
+//         {SRV_GAMEMODE, "com.feralinteractive.GameMode", "GameRegistered",
+//          &dbus_manager::handle_game_registered},
+//         {SRV_GAMEMODE, "com.feralinteractive.GameMode", "GameUnregistered",
+//          &dbus_manager::handle_game_unregistered},
     }};
 };
 

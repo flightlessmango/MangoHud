@@ -1,12 +1,19 @@
 #!/usr/bin/env bash
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 MANGOHUD_CONFIG_DIR="$XDG_CONFIG_HOME/MangoHud"
-SU_CMD=$(command -v sudo || command -v doas)
+SU_CMD=$(command -v sudo || command -v doas || echo)
 
 # doas requires a double dash if the command it runs will include any dashes,
 # so append a double dash to the command
 [[ $SU_CMD == *doas ]] && SU_CMD="$SU_CMD -- "
 
+# Correctly identify the os-release file.
+for os_release in ${OS_RELEASE_FILES[@]} ; do
+    if [[ ! -e "${os_release}" ]]; then
+        continue
+    fi
+    DISTRO=$(sed -rn 's/^ID(_LIKE)*=(.+)/\2/p' ${os_release} | sed 's/"//g')
+done
 
 mangohud_usage() {
     echo 'Accepted arguments: "install", "uninstall".'
@@ -43,38 +50,55 @@ mangohud_install() {
 
     mangohud_uninstall
 
-    install -Dvm644 ./usr/lib/mangohud/lib32/libMangoHud.so /usr/lib/mangohud/lib32/libMangoHud.so
-    install -Dvm644 ./usr/lib/mangohud/lib32/libMangoHud_dlsym.so /usr/lib/mangohud/lib32/libMangoHud_dlsym.so
+    DEFAULTLIB=lib32
+    for i in $DISTRO; do
+        case $i in
+            *arch*)
+            DEFAULTLIB=lib64
+            ;;
+        esac
+    done
 
-    install -Dvm644 ./usr/lib/mangohud/lib/libMangoHud.so /usr/lib/mangohud/lib/libMangoHud.so
-    install -Dvm644 ./usr/lib/mangohud/lib/libMangoHud_dlsym.so /usr/lib/mangohud/lib/libMangoHud_dlsym.so
+    echo DEFAULTLIB: $DEFAULTLIB
+    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud.so /usr/lib/mangohud/lib64/libMangoHud.so
+    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud_dlsym.so /usr/lib/mangohud/lib64/libMangoHud_dlsym.so
+    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud.so /usr/lib/mangohud/lib32/libMangoHud.so
+    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud_dlsym.so /usr/lib/mangohud/lib32/libMangoHud_dlsym.so
+    /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.json /usr/share/vulkan/implicit_layer.d/MangoHud.json
+    /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.json /usr/share/vulkan/implicit_layer.d/MangoHud.json
+    /usr/bin/install -Dvm644 ./build/release/usr/share/man/man1/mangohud.1 /usr/share/man/man1/mangohud.1
+    /usr/bin/install -Dvm644 ./build/release/usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
+    /usr/bin/install -vm755  ./build/release/usr/bin/mangohud /usr/bin/mangohud
 
-    install -Dvm644 ./usr/share/vulkan/implicit_layer.d/MangoHud.json /usr/share/vulkan/implicit_layer.d/MangoHud.json
-    install -Dvm644 ./usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
-    install -Dvm644 ./usr/share/man/man1/mangohud.1 /usr/share/man/man1/mangohud.1
-    install -vm755 ./usr/bin/mangohud /usr/bin/mangohud
+    ln -sv $DEFAULTLIB /usr/lib/mangohud/lib
 
     # FIXME get the triplet somehow
-    mkdir -p /usr/lib/mangohud/tls
-    ln -sv ../lib /usr/lib/mangohud/tls/x86_64
-    ln -sv ../lib32 /usr/lib/mangohud/tls/i686
-    # Some distros search in $prefix/x86_64-linux-gnu/tls/x86_64 etc instead
-    ln -sv . /usr/lib/mangohud/lib/i686-linux-gnu
-    ln -sv . /usr/lib/mangohud/lib/x86_64-linux-gnu
-    # $LIB can be "lib/tls/x86_64"?
-    ln -sv ../tls /usr/lib/mangohud/lib/tls
+    ln -sv lib64 /usr/lib/mangohud/x86_64
+    ln -sv lib64 /usr/lib/mangohud/x86_64-linux-gnu
+    ln -sv . /usr/lib/mangohud/lib64/x86_64
+    ln -sv . /usr/lib/mangohud/lib64/x86_64-linux-gnu
 
-    ln -sv lib /usr/lib/mangohud/lib64
-    ln -sv lib /usr/lib/mangohud/x86_64
-    ln -sv lib /usr/lib/mangohud/x86_64-linux-gnu
-    ln -sv . /usr/lib/mangohud/lib/x86_64
     ln -sv lib32 /usr/lib/mangohud/i686
     ln -sv lib32 /usr/lib/mangohud/i386-linux-gnu
-    ln -sv ../lib32 /usr/lib/mangohud/lib/i386-linux-gnu
     ln -sv lib32 /usr/lib/mangohud/i686-linux-gnu
-    ln -sv ../lib32 /usr/lib/mangohud/lib/i686-linux-gnu
-    #ln -sv lib /usr/lib/mangohud/aarch64-linux-gnu
-    #ln -sv lib /usr/lib/mangohud/arm-linux-gnueabihf
+
+    mkdir -p /usr/lib/mangohud/tls
+    ln -sv ../lib64 /usr/lib/mangohud/tls/x86_64
+    ln -sv ../lib32 /usr/lib/mangohud/tls/i686
+
+    # Some distros search in $prefix/x86_64-linux-gnu/tls/x86_64 etc instead
+    if [ ! -e /usr/lib/mangohud/lib/i386-linux-gnu ]; then
+        ln -sv ../lib32 /usr/lib/mangohud/lib/i386-linux-gnu
+    fi
+    if [ ! -e /usr/lib/mangohud/lib/i686-linux-gnu ]; then
+        ln -sv ../lib32 /usr/lib/mangohud/lib/i686-linux-gnu
+    fi
+    if [ ! -e /usr/lib/mangohud/lib/x86_64-linux-gnu ]; then
+        ln -sv ../lib64 /usr/lib/mangohud/lib/x86_64-linux-gnu
+    fi
+
+    # $LIB can be "lib/tls/x86_64"?
+    ln -sv ../tls /usr/lib/mangohud/lib/tls
 
     rm -rf ./usr
 

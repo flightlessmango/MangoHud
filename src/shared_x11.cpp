@@ -1,9 +1,10 @@
-#include "shared_x11.h"
-#include "loaders/loader_x11.h"
 #include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <functional>
+#include <spdlog/spdlog.h>
+#include "shared_x11.h"
+#include "loaders/loader_x11.h"
 
 static std::unique_ptr<Display, std::function<void(Display*)>> display;
 
@@ -16,7 +17,7 @@ bool init_x11() {
         return true;
 
     if (!g_x11->IsLoaded()) {
-        std::cerr << "MANGOHUD: X11 loader failed to load\n";
+        SPDLOG_ERROR("X11 loader failed to load");
         failed = true;
         return false;
     }
@@ -34,7 +35,7 @@ bool init_x11() {
 
     failed = !display;
     if (failed)
-        std::cerr << "MANGOHUD: XOpenDisplay failed to open display '" << displayid << "'\n";
+        SPDLOG_ERROR("XOpenDisplay failed to open display '{}'", displayid);
 
     return !!display;
 }

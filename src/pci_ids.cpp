@@ -1,3 +1,4 @@
+#include <spdlog/spdlog.h>
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -22,12 +23,12 @@ std::istream& get_uncommented_line(std::istream& is, std::string &line)
 
 void parse_pciids()
 {
-    std::ifstream file("/usr/share/hwdata/pci.ids");
-    if(file.fail()){
-        std::ifstream file("/usr/share/misc/pci.ids");
+    std::ifstream file;
+    file.open("/usr/share/hwdata/pci.ids");
+    if (file.fail()){
+        file.open("/usr/share/misc/pci.ids");
         if (file.fail())
-            printf("MANGOHUD: can't find file pci.ids\n");
-        
+            SPDLOG_ERROR("can't find file pci.ids");
     }
 
     std::string line;

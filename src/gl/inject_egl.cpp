@@ -2,14 +2,13 @@
 #include <array>
 #include <cstring>
 #include <dlfcn.h>
+#include <chrono>
+#include <iomanip>
+#include <spdlog/spdlog.h>
 #include "real_dlsym.h"
 #include "mesa/util/macros.h"
 #include "mesa/util/os_time.h"
 #include "blacklist.h"
-
-#include <chrono>
-#include <iomanip>
-
 #include "imgui_hud.h"
 
 using namespace MangoHud::GL;
@@ -23,7 +22,7 @@ void* get_egl_proc_address(const char* name) {
     if (!pfn_eglGetProcAddress) {
         void *handle = real_dlopen("libEGL.so.1", RTLD_LAZY|RTLD_LOCAL);
         if (!handle) {
-            std::cerr << "MANGOHUD: Failed to open " << "" MANGOHUD_ARCH << " libEGL.so.1: " << dlerror() << std::endl;
+            SPDLOG_ERROR("Failed to open " MANGOHUD_ARCH " libEGL.so.1: {}", dlerror());
         } else {
             pfn_eglGetProcAddress = reinterpret_cast<decltype(pfn_eglGetProcAddress)>(real_dlsym(handle, "eglGetProcAddress"));
         }
@@ -36,7 +35,7 @@ void* get_egl_proc_address(const char* name) {
         func = get_proc_address( name );
 
     if (!func) {
-        std::cerr << "MANGOHUD: Failed to get function '" << name << "'" << std::endl;
+        SPDLOG_DEBUG("Failed to get function '{}'", name);
     }
 
     return func;
@@ -44,10 +43,7 @@ void* get_egl_proc_address(const char* name) {
 
 //EGLBoolean eglMakeCurrent(EGLDisplay dpy, EGLSurface draw, EGLSurface read, EGLContext ctx);
 EXPORT_C_(int) eglMakeCurrent_OFF(void *dpy, void *draw, void *read,void *ctx) {
-
-#ifndef NDEBUG
-    std::cerr << __func__ << ": " << draw << ", " << ctx << std::endl;
-#endif
+    SPDLOG_TRACE("{}: draw: {}, ctx: {}", __func__, draw, ctx);
     int ret = 0;
     return ret;
 }
@@ -63,9 +59,6 @@ EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf)
         if (!pfn_eglQuerySurface)
             pfn_eglQuerySurface = reinterpret_cast<decltype(pfn_eglQuerySurface)>(get_egl_proc_address("eglQuerySurface"));
 
-
-        //std::cerr << __func__ << "\n";
-
         imgui_create(surf);
 
         int width=0, height=0;
@@ -73,7 +66,6 @@ EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf)
             pfn_eglQuerySurface(dpy, surf, 0x3057, &width))
             imgui_render(width, height);
 
-        //std::cerr << "\t" << width << " x " << height << "\n";
         using namespace std::chrono_literals;
         if (fps_limit_stats.targetFrameTime > 0s){
             fps_limit_stats.frameStart = Clock::now();
@@ -111,10 +103,9 @@ EXPORT_C_(void *) mangohud_find_egl_ptr(const char *name)
 }
 
 EXPORT_C_(void *) eglGetProcAddress(const char* procName) {
-    //std::cerr << __func__ << ": " << procName << std::endl;
-
     void* real_func = get_egl_proc_address(procName);
     void* func = mangohud_find_egl_ptr(procName);
+    SPDLOG_TRACE("{}: proc: {}, real: {}, fun: {}", __func__, procName, real_func, func);
     if (func && real_func)
         return func;
 

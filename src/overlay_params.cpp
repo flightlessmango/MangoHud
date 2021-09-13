@@ -7,6 +7,7 @@
 #include <errno.h>
 #ifdef __gnu_linux__
 #include <wordexp.h>
+#include <unistd.h>
 #endif
 #include "imgui.h"
 #include <iostream>
@@ -16,6 +17,9 @@
 #include <cctype>
 #include <array>
 #include <functional>
+#include <spdlog/spdlog.h>
+#include <spdlog/cfg/env.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 #include "overlay_params.h"
 #include "overlay.h"
@@ -74,6 +78,10 @@ parse_position(const char *str)
       return LAYER_POSITION_TOP_LEFT;
    if (!strcmp(str, "top-right"))
       return LAYER_POSITION_TOP_RIGHT;
+   if (!strcmp(str, "middle-left"))
+      return LAYER_POSITION_MIDDLE_LEFT;
+   if (!strcmp(str, "middle-right"))
+      return LAYER_POSITION_MIDDLE_RIGHT;
    if (!strcmp(str, "bottom-left"))
       return LAYER_POSITION_BOTTOM_LEFT;
    if (!strcmp(str, "bottom-right"))
@@ -88,8 +96,8 @@ parse_control(const char *str)
 {
    int ret = os_socket_listen_abstract(str, 1);
    if (ret < 0) {
-      fprintf(stderr, "ERROR: Couldn't create socket pipe at '%s'\n", str);
-      fprintf(stderr, "ERROR: '%s'\n", strerror(errno));
+      SPDLOG_ERROR("Couldn't create socket pipe at '{}'\n", str);
+      SPDLOG_ERROR("ERROR: '{}'", strerror(errno));
       return ret;
    }
 
@@ -122,7 +130,7 @@ parse_string_to_keysym_vec(const char *str)
          if (xk)
             keys.push_back(xk);
          else
-            std::cerr << "MANGOHUD: Unrecognized key: '" << ks << "'\n";
+            SPDLOG_ERROR("Unrecognized key: '{}'", ks);
       }
    }
    return keys;
@@ -147,7 +155,7 @@ parse_string_to_keysym_vec(const char *str)
 static uint32_t
 parse_fps_sampling_period(const char *str)
 {
-   return strtol(str, NULL, 0) * 1000;
+   return strtol(str, NULL, 0) * 1000000; /* ms to ns */
 }
 
 static std::vector<std::uint32_t>
@@ -163,7 +171,7 @@ parse_fps_limit(const char *str)
       try {
          as_int = static_cast<uint32_t>(std::stoul(value));
       } catch (const std::invalid_argument&) {
-         std::cerr << "MANGOHUD: invalid fps_limit value: '" << value << "'\n";
+         SPDLOG_ERROR("invalid fps_limit value: '{}'", value);
          continue;
       }
 
@@ -313,17 +321,17 @@ parse_benchmark_percentiles(const char *str)
       try {
          as_float = parse_float(value, &float_len);
       } catch (const std::invalid_argument&) {
-         std::cerr << "MANGOHUD: invalid benchmark percentile: '" << value << "'\n";
+         SPDLOG_ERROR("invalid benchmark percentile: '{}'", value);
          continue;
       }
 
       if (float_len != value.length()) {
-         std::cerr << "MANGOHUD: invalid benchmark percentile: '" << value << "'\n";
+         SPDLOG_ERROR("invalid benchmark percentile: '{}'", value);
          continue;
       }
 
       if (as_float > 100 || as_float < 0) {
-         std::cerr << "MANGOHUD: benchmark percentile is not between 0 and 100 (" << value << ")\n";
+         SPDLOG_ERROR("benchmark percentile is not between 0 and 100 ({})", value);
          continue;
       }
 
@@ -431,6 +439,7 @@ parse_gl_size_query(const char *str)
 #define parse_custom_text(s) parse_str(s)
 #define parse_fps_value(s) parse_load_value(s)
 #define parse_fps_color(s) parse_load_color(s)
+#define parse_battery_color(s) parse_color(s)
 
 
 static bool
@@ -490,9 +499,8 @@ parse_string(const char *s, char *out_param, char *out_value)
    }
 
    if (*s && !i) {
-      fprintf(stderr, "MANGOHUD: syntax error: unexpected '%c' (%i) while "
-              "parsing a string\n", *s, *s);
-      fflush(stderr);
+      SPDLOG_ERROR("syntax error: unexpected '{0:c}' ({0:d}) while "
+              "parsing a string", *s);
    }
 
    return i;
@@ -542,7 +550,7 @@ parse_overlay_env(struct overlay_params *params,
       OVERLAY_PARAMS
 #undef OVERLAY_PARAM_BOOL
 #undef OVERLAY_PARAM_CUSTOM
-      fprintf(stderr, "Unknown option '%s'\n", key);
+      SPDLOG_ERROR("Unknown option '{}'", key);
    }
 }
 
@@ -550,6 +558,12 @@ void
 parse_overlay_config(struct overlay_params *params,
                   const char *env)
 {
+   if (!spdlog::get("MANGOHUD"))
+      spdlog::set_default_logger(spdlog::stderr_color_mt("MANGOHUD")); // Just to get the name in log
+#ifndef NDEBUG
+   spdlog::set_level(spdlog::level::level_enum::debug);
+#endif
+   spdlog::cfg::load_env_levels();
 
    *params = {};
 
@@ -575,7 +589,7 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_core_load_change] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_frametime] = true;
-   params->fps_sampling_period = 500000; /* 500ms */
+   params->fps_sampling_period = 500000000; /* 500ms */
    params->width = 0;
    params->height = 140;
    params->control = -1;
@@ -613,6 +627,8 @@ parse_overlay_config(struct overlay_params *params,
    params->fps_color = { 0xb22222, 0xfdfd09, 0x39f900 };
    params->fps_value = { 30, 60 };
    params->round_corners = 0;
+   params->battery_color =0xff9078;
+
 
 
 #ifdef HAVE_X11
@@ -677,7 +693,7 @@ parse_overlay_config(struct overlay_params *params,
          OVERLAY_PARAMS
 #undef OVERLAY_PARAM_BOOL
 #undef OVERLAY_PARAM_CUSTOM
-         fprintf(stderr, "Unknown option '%s'\n", it.first.c_str());
+         SPDLOG_ERROR("Unknown option '{}'", it.first.c_str());
       }
 
    }
@@ -697,7 +713,7 @@ parse_overlay_config(struct overlay_params *params,
       params->font_scale_media_player = 0.55f;
 
    // Convert from 0xRRGGBB to ImGui's format
-   std::array<unsigned *, 20> colors = {
+   std::array<unsigned *, 21> colors = {
       &params->cpu_color,
       &params->gpu_color,
       &params->vram_color,
@@ -709,6 +725,7 @@ parse_overlay_config(struct overlay_params *params,
       &params->text_color,
       &params->media_player_color,
       &params->wine_color,
+      &params->battery_color,
       &params->gpu_load_color[0],
       &params->gpu_load_color[1],
       &params->gpu_load_color[2],
@@ -764,15 +781,26 @@ parse_overlay_config(struct overlay_params *params,
 
 #ifdef HAVE_DBUS
    if (params->enabled[OVERLAY_PARAM_ENABLED_media_player]) {
-      dbusmgr::dbus_mgr.init(params->media_player_name);
+      if (dbusmgr::dbus_mgr.init(dbusmgr::SRV_MPRIS))
+         dbusmgr::dbus_mgr.init_mpris(params->media_player_name);
    } else {
-      dbusmgr::dbus_mgr.deinit();
+      dbusmgr::dbus_mgr.deinit(dbusmgr::SRV_MPRIS);
       main_metadata.meta.valid = false;
    }
+
+   if (params->enabled[OVERLAY_PARAM_ENABLED_gamemode])
+   {
+      if (dbusmgr::dbus_mgr.init(dbusmgr::SRV_GAMEMODE))
+         HUDElements.gamemode_bol = dbusmgr::dbus_mgr.gamemode_enabled(getpid());
+   }
+   else
+      dbusmgr::dbus_mgr.deinit(dbusmgr::SRV_GAMEMODE);
+
 #endif
 
-   if(!params->output_file.empty())
-      printf("MANGOHUD: output_file is Deprecated, use output_folder instead\n");
+   if(!params->output_file.empty()) {
+      SPDLOG_INFO("output_file is deprecated, use output_folder instead");
+   }
 
    auto real_size = params->font_size * params->font_scale;
    real_font_size = ImVec2(real_size, real_size / 2);

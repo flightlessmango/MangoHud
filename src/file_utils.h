@@ -19,6 +19,8 @@ std::vector<std::string> ls(const char* root, const char* prefix = nullptr, LS_F
 bool file_exists(const std::string& path);
 bool dir_exists(const std::string& path);
 std::string read_symlink(const char * link);
+std::string read_symlink(const std::string&& link);
+std::string get_basename(const std::string&& path); //prefix so it doesn't conflict libgen
 std::string get_exe_path();
 std::string get_wine_exe_name(bool keep_ext = false);
 std::string get_home_dir();

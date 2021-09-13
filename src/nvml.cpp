@@ -1,3 +1,4 @@
+#include <spdlog/spdlog.h>
 #include "loaders/loader_nvml.h"
 #include "nvidia_info.h"
 #include <iostream>
@@ -16,30 +17,30 @@ bool checkNVML(const char* pciBusId){
     if (nvml.IsLoaded()){
         result = nvml.nvmlInit();
         if (NVML_SUCCESS != result) {
-            std::cerr << "MANGOHUD: Nvidia module not loaded\n";
+            SPDLOG_ERROR("Nvidia module not loaded");
         } else {
             nvmlReturn_t ret = NVML_ERROR_UNKNOWN;
             if (pciBusId && ((ret = nvml.nvmlDeviceGetHandleByPciBusId(pciBusId, &nvidiaDevice)) != NVML_SUCCESS)) {
-                std::cerr << "MANGOHUD: Getting device handle by PCI bus ID failed: " << nvml.nvmlErrorString(ret) << "\n";
-                std::cerr << "          Using index 0.\n";
+                SPDLOG_ERROR("Getting device handle by PCI bus ID failed: {}", nvml.nvmlErrorString(ret));
+                SPDLOG_ERROR("Using index 0.");
             }
 
             if (ret != NVML_SUCCESS)
                 ret = nvml.nvmlDeviceGetHandleByIndex(0, &nvidiaDevice);
 
             if (ret != NVML_SUCCESS)
-                std::cerr << "MANGOHUD: Getting device handle failed: " << nvml.nvmlErrorString(ret) << "\n";
+                SPDLOG_ERROR("Getting device handle failed: {}", nvml.nvmlErrorString(ret));
 
             nvmlSuccess = (ret == NVML_SUCCESS);
             if (ret == NVML_SUCCESS)
                 nvml.nvmlDeviceGetPciInfo_v3(nvidiaDevice, &nvidiaPciInfo);
-                
+
             return nvmlSuccess;
         }
     } else {
-        std::cerr << "MANGOHUD: Failed to load NVML\n";
+        SPDLOG_ERROR("Failed to load NVML");
     }
-    
+
     return false;
 }
 

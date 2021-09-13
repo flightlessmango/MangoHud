@@ -6,9 +6,13 @@ set -e; \
 mkdir -p /run/systemd; \
 echo 'docker' > /run/systemd/container; \
 mkdir -p /prep; cd /prep; \
-curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py; \
+if [ -f /usr/bin/python3.5 ]; then \
+  ln -sf python3.5 /usr/bin/python3; \
+  curl https://bootstrap.pypa.io/pip/3.5/get-pip.py -o get-pip.py; \
+else \
+  curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py; \
+fi; \
 if [ ! -f /usr/bin/unzip ]; then apt-get update; apt-get -y install unzip; fi; \
-if [ -f /usr/bin/python3.5 ]; then ln -sf python3.5 /usr/bin/python3; fi; \
 python3 ./get-pip.py; \
 pip3 install meson mako; \
 curl -LO http://mirrors.kernel.org/ubuntu/pool/main/n/nvidia-settings/libxnvctrl0_440.64-0ubuntu1_amd64.deb; \

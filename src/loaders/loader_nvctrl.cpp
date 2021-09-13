@@ -1,6 +1,7 @@
 #include "loader_nvctrl.h"
 #include <iostream>
 #include <memory>
+#include <spdlog/spdlog.h>
 
 // Put these sanity checks here so that they fire at most once
 // (to avoid cluttering the build output).
@@ -35,7 +36,7 @@ bool libnvctrl_loader::Load(const std::string& library_name) {
 #if defined(LIBRARY_LOADER_NVCTRL_H_DLOPEN)
   library_ = dlopen(library_name.c_str(), RTLD_LAZY);
   if (!library_) {
-    std::cerr << "MANGOHUD: Failed to open " << "" MANGOHUD_ARCH << " " << library_name << ": " << dlerror() << std::endl;
+    SPDLOG_ERROR("Failed to open " MANGOHUD_ARCH " {}: {}", library_name, dlerror());
     return false;
   }
 
