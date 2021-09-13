@@ -54,6 +54,13 @@
 #  error Unsupported OS
 #endif
 
+#if defined(CLOCK_MONOTONIC_RAW) /* linux */
+#define MANGOHUD_CLOCKTYPE CLOCK_MONOTONIC_RAW
+#elif defined(CLOCK_MONOTONIC_FAST) /* freebsd */
+#define MANGOHUD_CLOCKTYPE CLOCK_MONOTONIC_FAST
+#else /* fallback */
+#define MANGOHUD_CLOCKTYPE CLOCK_MONOTONIC
+#endif
 
 int64_t
 os_time_get_nano(void)
@@ -61,7 +68,7 @@ os_time_get_nano(void)
 #if DETECT_OS_LINUX || DETECT_OS_BSD
 
    struct timespec tv;
-   clock_gettime(CLOCK_MONOTONIC, &tv);
+   clock_gettime(MANGOHUD_CLOCKTYPE, &tv);
    return tv.tv_nsec + tv.tv_sec*INT64_C(1000000000);
 
 #elif DETECT_OS_UNIX
@@ -102,7 +109,7 @@ os_time_sleep(int64_t usecs)
    struct timespec time;
    time.tv_sec = usecs / 1000000;
    time.tv_nsec = (usecs % 1000000) * 1000;
-   while (clock_nanosleep(CLOCK_MONOTONIC, 0, &time, &time) == EINTR);
+   while (clock_nanosleep(MANGOHUD_CLOCKTYPE, 0, &time, &time) == EINTR);
 
 #elif DETECT_OS_UNIX
    usleep(usecs);

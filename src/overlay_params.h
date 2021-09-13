@@ -36,6 +36,9 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(ram)                           \
    OVERLAY_PARAM_BOOL(swap)                          \
    OVERLAY_PARAM_BOOL(vram)                          \
+   OVERLAY_PARAM_BOOL(procmem)                       \
+   OVERLAY_PARAM_BOOL(procmem_shared)                \
+   OVERLAY_PARAM_BOOL(procmem_virt)                  \
    OVERLAY_PARAM_BOOL(time)                          \
    OVERLAY_PARAM_BOOL(full)                          \
    OVERLAY_PARAM_BOOL(read_cfg)                      \
@@ -68,6 +71,9 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(exec)                          \
    OVERLAY_PARAM_BOOL(vkbasalt)                      \
    OVERLAY_PARAM_BOOL(gamemode)                      \
+   OVERLAY_PARAM_BOOL(battery)                       \
+   OVERLAY_PARAM_BOOL(battery_icon)                  \
+   OVERLAY_PARAM_BOOL(force_amdgpu_hwmon)            \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
@@ -112,6 +118,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(io_color)                    \
    OVERLAY_PARAM_CUSTOM(text_color)                  \
    OVERLAY_PARAM_CUSTOM(wine_color)                  \
+   OVERLAY_PARAM_CUSTOM(battery_color)               \
    OVERLAY_PARAM_CUSTOM(alpha)                       \
    OVERLAY_PARAM_CUSTOM(log_duration)                \
    OVERLAY_PARAM_CUSTOM(pci_dev)                     \
@@ -140,6 +147,8 @@ typedef unsigned long KeySym;
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
    LAYER_POSITION_TOP_RIGHT,
+   LAYER_POSITION_MIDDLE_LEFT,
+   LAYER_POSITION_MIDDLE_RIGHT,
    LAYER_POSITION_BOTTOM_LEFT,
    LAYER_POSITION_BOTTOM_RIGHT,
    LAYER_POSITION_TOP_CENTER,
@@ -187,7 +196,7 @@ struct overlay_params {
    bool enabled[OVERLAY_PARAM_ENABLED_MAX];
    enum overlay_param_position position;
    int control;
-   uint32_t fps_sampling_period; /* us */
+   uint32_t fps_sampling_period; /* ns */
    std::vector<std::uint32_t> fps_limit;
    bool help;
    bool no_display;
@@ -203,7 +212,7 @@ struct overlay_params {
    enum gl_size_query gl_size_query {GL_SIZE_DRAWABLE};
    bool gl_dont_flip {false};
    uint64_t log_duration;
-   unsigned cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color, wine_color;
+   unsigned cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color, wine_color, battery_color;
    std::vector<unsigned> gpu_load_color;
    std::vector<unsigned> cpu_load_color;
    std::vector<unsigned> gpu_load_value;

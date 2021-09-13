@@ -5,6 +5,7 @@
 #include <thread>
 #include <unordered_map>
 #include <string>
+#include <spdlog/spdlog.h>
 #include "config.h"
 #include "file_utils.h"
 #include "string_utils.h"
@@ -110,17 +111,16 @@ void parseConfigFile(overlay_params& params) {
         std::ifstream stream(*p);
         if (!stream.good()) {
             // printing just so user has an idea of possible configs
-            std::cerr << "skipping config: " << *p << " [ not found ]" << std::endl;
+            SPDLOG_INFO("skipping config: '{}' [ not found ]", *p);
             continue;
         }
 
         stream.imbue(std::locale::classic());
-        std::cerr << "parsing config: " << *p;
+        SPDLOG_INFO("parsing config: '{}'", *p);
         while (std::getline(stream, line))
         {
             parseConfigLine(line, params.options);
         }
-        std::cerr << " [ ok ]" << std::endl;
         params.config_file_path = *p;
         return;
     }

@@ -3,6 +3,7 @@
 #include <thread>
 #include <string>
 #include <iostream>
+#include <sstream>
 #include <memory>
 #include <unistd.h>
 #include <imgui.h>
@@ -12,6 +13,7 @@
 #include "imgui_hud.h"
 #include "notify.h"
 #include "blacklist.h"
+#include "overlay.h"
 
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
@@ -49,7 +51,7 @@ struct state {
 };
 
 static GLVec last_vp {}, last_sb {};
-static swapchain_stats sw_stats {};
+swapchain_stats sw_stats {};
 static state state;
 static uint32_t vendorID;
 static std::string deviceName;
@@ -75,17 +77,29 @@ void imgui_init()
    for (auto& item : params.blacklist) {
       add_blacklist(item);
    }
-    auto pid = getpid();
-    string find_wined3d = "lsof -w -lnPX -L -p " + to_string(pid) + " | grep -oh wined3d";
-    string find_zink= "lsof -w -lnPX -L -p " + to_string(pid) + " | grep -oh zink";
-    string ret_wined3d = exec(find_wined3d);
-    string ret_zink = exec(find_zink);
-    if (ret_wined3d == "wined3d\n" )
-        sw_stats.engineName = "WineD3D";
-    else if (ret_zink == "zink\n")
-        sw_stats.engineName = "ZINK";
-    else
-        sw_stats.engineName = "OpenGL";
+
+    if (sw_stats.engine != EngineTypes::ZINK){
+        sw_stats.engine = OPENGL;
+
+        stringstream ss;
+        string line;
+        auto pid = getpid();
+        string path = "/proc/" + to_string(pid) + "/map_files/";
+        auto files = exec("ls " + path);
+        ss << files;
+
+        while(std::getline(ss, line, '\n')){
+            auto file = path + line;
+            auto sym = read_symlink(file.c_str());
+            if (sym.find("wined3d") != std::string::npos) {
+                sw_stats.engine = WINED3D;
+                break;
+            } else if (sym.find("libtogl.so") != std::string::npos || sym.find("libtogl_client.so") != std::string::npos) {
+                sw_stats.engine = TOGL;
+                break;
+            }
+        }
+    }
 
     is_blacklisted(true);
     notifier.params = &params;
@@ -145,11 +159,6 @@ void imgui_create(void *ctx)
     ImGui::GetIO().DisplaySize = ImVec2(last_vp[2], last_vp[3]);
 
     ImGui_ImplOpenGL3_Init();
-    // Make a dummy GL call (we don't actually need the result)
-    // IF YOU GET A CRASH HERE: it probably means that you haven't initialized the OpenGL function loader used by this code.
-    // Desktop OpenGL 3/4 need a function loader. See the IMGUI_IMPL_OPENGL_LOADER_xxx explanation above.
-    GLint current_texture;
-    glGetIntegerv(GL_TEXTURE_BINDING_2D, &current_texture);
 
     create_fonts(params, sw_stats.font1, sw_stats.font_text);
     sw_stats.font_params_hash = params.font_params_hash;
@@ -160,10 +169,6 @@ void imgui_create(void *ctx)
 
 void imgui_shutdown()
 {
-#ifndef NDEBUG
-    std::cerr << __func__ << std::endl;
-#endif
-
     if (state.imgui_ctx) {
         ImGui::SetCurrentContext(state.imgui_ctx);
         ImGui_ImplOpenGL3_Shutdown();
@@ -177,10 +182,6 @@ void imgui_set_context(void *ctx)
 {
     if (!ctx)
         return;
-
-#ifndef NDEBUG
-    std::cerr << __func__ << ": " << ctx << std::endl;
-#endif
     imgui_create(ctx);
 }
 
