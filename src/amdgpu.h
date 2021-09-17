@@ -140,5 +140,3 @@ struct gpu_metrics_v2_2 {
 };
 
 bool amdgpu_check_metrics(const std::string& path);
-extern void amdgpu_get_metrics();
-extern std::string metrics_path;

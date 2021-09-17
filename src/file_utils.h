@@ -12,7 +12,7 @@ enum LS_FLAGS
 };
 
 std::string read_line(const std::string& filename);
-std::vector<std::string> ls(const char* root, const char* prefix = nullptr, LS_FLAGS flags = LS_DIRS);
+std::vector<std::string> ls(const std::string& root, const char* prefix = nullptr, LS_FLAGS flags = LS_DIRS);
 bool file_exists(const std::string& path);
 bool dir_exists(const std::string& path);
 std::string read_symlink(const char * link);

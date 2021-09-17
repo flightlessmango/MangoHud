@@ -5,15 +5,9 @@
 #include <nvml.h>
 #include "overlay_params.h"
 
-extern nvmlReturn_t result;
-extern unsigned int nvidiaTemp, processSamplesCount, *vgpuInstanceSamplesCount, nvidiaCoreClock, nvidiaMemClock, nvidiaPowerUsage;
-extern nvmlDevice_t nvidiaDevice;
-extern struct nvmlUtilization_st nvidiaUtilization;
-extern struct nvmlMemory_st nvidiaMemory;
 extern bool nvmlSuccess;
-extern unsigned long long nvml_throttle_reasons;
 
-bool checkNVML(const char* pciBusId);
-bool getNVMLInfo(const struct overlay_params& params);
+bool checkNVML(const char* pciBusId, nvmlDevice_t& device, uint32_t& device_id);
+bool getNVMLInfo(nvmlDevice_t device, const struct overlay_params& params);
 
 #endif //MANGOHUD_NVIDIA_INFO_H

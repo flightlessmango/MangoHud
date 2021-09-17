@@ -156,15 +156,57 @@ void HudElements::version(){
     }
 }
 
-void HudElements::gpu_stats(){
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
+static void per_gpu_vram(const gpu_info& gpu_info){
+    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_vram])
+        return;
+
+    ImGui::TableNextRow(); ImGui::TableNextColumn();
+    ImGui::TextColored(HUDElements.colors.vram, "VRAM");
+    ImGui::TableNextColumn();
+    // Add gtt_used to vram usage for APUs
+    if (cpuStats.cpu_type == "APU")
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", gpu_info.memory_used + gpu_info.gtt_used);
+    else
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", gpu_info.memory_used);
+    ImGui::SameLine(0,1.0f);
+    ImGui::PushFont(HUDElements.sw_stats->font1);
+    ImGui::Text("GiB");
+    ImGui::PopFont();
+#ifndef MANGOAPP
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_mem_clock]){
+        ImguiNextColumnOrNewRow();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", gpu_info.memory_clock);
+        ImGui::SameLine(0, 1.0f);
+        ImGui::PushFont(HUDElements.sw_stats->font1);
+        ImGui::Text("MHz");
+        ImGui::PopFont();
+    }
+#endif
+}
+
+void HudElements::vram(){
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_show_all_gpus])
+        return;
+
+    if (g_active_gpu)
+        per_gpu_vram(g_active_gpu->info);
+}
+
+static void per_gpu_stats(const gpu_device* gpu, bool single){
+   if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
         ImGui::TableNextRow(); ImGui::TableNextColumn();
         const char* gpu_text;
-        if (HUDElements.params->gpu_text.empty())
+        if (!single)
+            gpu_text = gpu->dev_name.c_str();
+        else if (HUDElements.params->gpu_text.empty())
             gpu_text = "GPU";
         else
             gpu_text = HUDElements.params->gpu_text.c_str();
         ImGui::TextColored(HUDElements.colors.gpu, "%s", gpu_text);
+        if (!single) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+        }
         ImGui::TableNextColumn();
         auto text_color = HUDElements.colors.text;
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_load_change]){
@@ -176,13 +218,13 @@ void HudElements::gpu_stats(){
                 HUDElements.params->gpu_load_value[1]
             };
 
-            auto load_color = change_on_load_temp(gpu_data, gpu_info.load);
-            right_aligned_text(load_color, HUDElements.ralign_width, "%i", gpu_info.load);
+            auto load_color = change_on_load_temp(gpu_data, gpu->info.load);
+            right_aligned_text(load_color, HUDElements.ralign_width, "%i", gpu->info.load);
             ImGui::SameLine(0, 1.0f);
             ImGui::TextColored(load_color,"%%");
         }
         else {
-            right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.load);
+            right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu->info.load);
             ImGui::SameLine(0, 1.0f);
             ImGui::TextColored(text_color,"%%");
             // ImGui::SameLine(150);
@@ -190,7 +232,7 @@ void HudElements::gpu_stats(){
         }
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp]){
             ImguiNextColumnOrNewRow();
-            right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.temp);
+            right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu->info.temp);
             ImGui::SameLine(0, 1.0f);
             ImGui::Text("°C");
         }
@@ -199,7 +241,7 @@ void HudElements::gpu_stats(){
         }
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]){
             ImguiNextColumnOrNewRow();
-            right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.CoreClock);
+            right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu->info.core_clock);
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(HUDElements.sw_stats->font1);
             ImGui::Text("MHz");
@@ -208,9 +250,9 @@ void HudElements::gpu_stats(){
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power]) {
             ImguiNextColumnOrNewRow();
 #ifdef MANGOAPP
-            right_aligned_text(text_color, HUDElements.ralign_width, "%.1f", gpu_info.powerUsage);
+            right_aligned_text(text_color, HUDElements.ralign_width, "%.1f", gpu->info.power_usage);
 #else
-            right_aligned_text(text_color, HUDElements.ralign_width, "%.0f", gpu_info.powerUsage);
+            right_aligned_text(text_color, HUDElements.ralign_width, "%.0f", gpu->info.power_usage);
 #endif
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(HUDElements.sw_stats->font1);
@@ -218,6 +260,25 @@ void HudElements::gpu_stats(){
             ImGui::PopFont();
         }
     }
+
+    if (!single)
+        per_gpu_vram(gpu->info);
+}
+
+void HudElements::gpu_stats(){
+    auto p = HUDElements.params;
+    if (!p->enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
+        return;
+
+    if (p->enabled[OVERLAY_PARAM_ENABLED_show_all_gpus])
+    {
+        for (const auto& g : g_gpu_devices)
+            per_gpu_stats(g.second.get(), false);
+        return;
+    }
+
+    if (g_active_gpu)
+        per_gpu_stats(g_active_gpu.get(), true);
 }
 
 void HudElements::cpu_stats(){
@@ -359,33 +420,6 @@ void HudElements::io_stats(){
 #endif
 }
 
-void HudElements::vram(){
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_vram]){
-        ImGui::TableNextRow(); ImGui::TableNextColumn();
-        ImGui::TextColored(HUDElements.colors.vram, "VRAM");
-        ImGui::TableNextColumn();
-        // Add gtt_used to vram usage for APUs
-        if (cpuStats.cpu_type == "APU")
-            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", gpu_info.memoryUsed + gpu_info.gtt_used);
-        else
-            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", gpu_info.memoryUsed);
-        ImGui::SameLine(0,1.0f);
-        ImGui::PushFont(HUDElements.sw_stats->font1);
-        ImGui::Text("GiB");
-        ImGui::PopFont();
-#ifndef MANGOAPP
-        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_mem_clock]){
-            ImguiNextColumnOrNewRow();
-            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", gpu_info.MemClock);
-            ImGui::SameLine(0, 1.0f);
-            ImGui::PushFont(HUDElements.sw_stats->font1);
-            ImGui::Text("MHz");
-            ImGui::PopFont();
-        }
-#endif
-    }
-}
-
 void HudElements::ram(){
 #ifdef __linux__
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram]){
@@ -504,11 +538,11 @@ void HudElements::fps_only(){
 }
 
 void HudElements::gpu_name(){
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_name] && !HUDElements.sw_stats->gpuName.empty()){
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_name] && g_active_gpu && !g_active_gpu->dev_name.empty()){
         ImGui::TableNextRow(); ImGui::TableNextColumn();
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TextColored(HUDElements.colors.engine,
-            "%s", HUDElements.sw_stats->gpuName.c_str());
+            "%s", g_active_gpu->dev_name.c_str());
         ImGui::PopFont();
     }
 }
@@ -944,23 +978,34 @@ void HudElements::fan(){
     }
 }
 
-void HudElements::throttling_status(){
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_throttling_status]){
-        if (gpu_info.is_power_throttled || gpu_info.is_current_throttled || gpu_info.is_temp_throttled || gpu_info.is_other_throttled){
-            ImGui::TableNextRow(); ImGui::TableNextColumn();
-            ImGui::TextColored(HUDElements.colors.engine, "%s", "Throttling");
-            ImGui::TableNextColumn();
-            ImGui::TableNextColumn();
-            if (gpu_info.is_power_throttled)
-                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "Power");
-            if (gpu_info.is_current_throttled)
-                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "Current");
-            if (gpu_info.is_temp_throttled)
-                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "Temp");
-            if (gpu_info.is_other_throttled)
-                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "Other");
-        }
+static void gpu_throttling_status(const gpu_info& gpu_info, const std::string& name)
+{
+    if (gpu_info.is_power_throttled || gpu_info.is_current_throttled || gpu_info.is_temp_throttled || gpu_info.is_other_throttled){
+        ImGui::TableNextRow(); ImGui::TableNextColumn();
+        ImGui::TextColored(HUDElements.colors.engine, "%s %s", "Throttling", name.c_str());
+        ImGui::TableNextColumn();
+        ImGui::TableNextColumn();
+        if (gpu_info.is_power_throttled)
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "Power");
+        if (gpu_info.is_current_throttled)
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "Current");
+        if (gpu_info.is_temp_throttled)
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "Temp");
+        if (gpu_info.is_other_throttled)
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "Other");
     }
+}
+
+void HudElements::throttling_status(){
+    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_throttling_status])
+        return;
+
+    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_show_all_gpus]) {
+        for (const auto& it : g_gpu_devices)
+            gpu_throttling_status(it.second->info, it.second->dev_name);
+    }
+    else if (g_active_gpu)
+        gpu_throttling_status(g_active_gpu->info, g_active_gpu->dev_name);
 }
 
 void HudElements::graphs(){
@@ -1037,12 +1082,12 @@ void HudElements::graphs(){
         ImGui::TextColored(HUDElements.colors.engine, "%s", "GPU Mem Clock");
     }
 
-    if (value == "vram"){
+    if (value == "vram" && g_active_gpu){
         for (auto& it : graph_data){
             arr.push_back(float(it.gpu_vram_used));
         }
 
-        HUDElements.max = gpu_info.memoryTotal;
+        HUDElements.max = g_active_gpu->info.memory_total;
         HUDElements.min = 0;
         ImGui::TextColored(HUDElements.colors.engine, "%s", "VRAM");
     }

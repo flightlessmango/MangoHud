@@ -33,12 +33,12 @@ std::string get_basename(const std::string&& path)
 }
 
 #ifdef __linux__
-std::vector<std::string> ls(const char* root, const char* prefix, LS_FLAGS flags)
+std::vector<std::string> ls(const std::string& root, const char* prefix, LS_FLAGS flags)
 {
     std::vector<std::string> list;
     struct dirent* dp;
 
-    DIR* dirp = opendir(root);
+    DIR* dirp = opendir(root.c_str());
     if (!dirp) {
         SPDLOG_ERROR("Error opening directory '{}': {}", root, strerror(errno));
         return list;

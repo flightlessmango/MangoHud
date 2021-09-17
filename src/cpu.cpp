@@ -248,7 +248,7 @@ bool CPUStats::UpdateCoreMhz() {
 
 bool CPUStats::UpdateCpuTemp() {
     if (cpu_type == "APU"){
-        m_cpuDataTotal.temp = gpu_info.apu_cpu_temp;
+        m_cpuDataTotal.temp = g_active_gpu ? g_active_gpu->info.apu_cpu_temp : 0;
         return true;
     } else {
         if (!m_cpuTempFile)
@@ -349,7 +349,8 @@ static bool get_cpu_power_rapl(CPUPowerData* cpuPowerData, float& power) {
 }
 
 static bool get_cpu_power_amdgpu(float& power) {
-    power = gpu_info.apu_cpu_power;
+    if (g_active_gpu)
+        power = g_active_gpu->info.apu_cpu_power; //FIXME more reliable way to get APU stats
     return true;
 }
 
@@ -383,7 +384,7 @@ bool CPUStats::UpdateCpuPower() {
 
 static bool find_temp_input(const std::string path, std::string& input, const std::string& name)
 {
-    auto files = ls(path.c_str(), "temp", LS_FILES);
+    auto files = ls(path, "temp", LS_FILES);
     for (auto& file : files) {
         if (!ends_with(file, "_label"))
             continue;
@@ -404,7 +405,7 @@ static bool find_temp_input(const std::string path, std::string& input, const st
 
 static bool find_fallback_temp_input(const std::string path, std::string& input)
 {
-    auto files = ls(path.c_str(), "temp", LS_FILES);
+    auto files = ls(path, "temp", LS_FILES);
     if (!files.size())
         return false;
 
@@ -426,7 +427,7 @@ bool CPUStats::GetCpuFile() {
     std::string name, path, input;
     std::string hwmon = "/sys/class/hwmon/";
 
-    auto dirs = ls(hwmon.c_str());
+    auto dirs = ls(hwmon);
     for (auto& dir : dirs) {
         path = hwmon + dir;
         name = read_line(path + "/name");
@@ -458,7 +459,7 @@ bool CPUStats::GetCpuFile() {
 
 static bool find_input(const std::string& path, const char* input_prefix, std::string& input, const std::string& name)
 {
-    auto files = ls(path.c_str(), input_prefix, LS_FILES);
+    auto files = ls(path, input_prefix, LS_FILES);
     for (auto& file : files) {
         if (!ends_with(file, "_label"))
             continue;
@@ -539,7 +540,7 @@ bool CPUStats::InitCpuPowerData() {
 
     CPUPowerData* cpuPowerData = nullptr;
 
-    auto dirs = ls(hwmon.c_str());
+    auto dirs = ls(hwmon);
     for (auto& dir : dirs) {
         path = hwmon + dir;
         name = read_line(path + "/name");
@@ -558,7 +559,7 @@ bool CPUStats::InitCpuPowerData() {
 
     if (!cpuPowerData && intel) {
         std::string powercap = "/sys/class/powercap/";
-        auto powercap_dirs = ls(powercap.c_str());
+        auto powercap_dirs = ls(powercap);
         for (auto& dir : powercap_dirs) {
             path = powercap + dir;
             name = read_line(path + "/name");

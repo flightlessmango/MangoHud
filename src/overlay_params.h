@@ -33,6 +33,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(gpu_temp)                      \
    OVERLAY_PARAM_BOOL(cpu_stats)                     \
    OVERLAY_PARAM_BOOL(gpu_stats)                     \
+   OVERLAY_PARAM_BOOL(show_all_gpus)                 \
    OVERLAY_PARAM_BOOL(ram)                           \
    OVERLAY_PARAM_BOOL(swap)                          \
    OVERLAY_PARAM_BOOL(vram)                          \
