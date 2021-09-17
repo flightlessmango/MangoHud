@@ -116,6 +116,7 @@ void init_cpu_stats(overlay_params& params);
 void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID);
 void init_system_info(void);
 void FpsLimiter(struct fps_limit& stats);
+std::string get_device_name(int32_t vendorID, int32_t deviceID);
 void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats);
 void calculate_benchmark_data();
 void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& text_font);

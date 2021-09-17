@@ -7,12 +7,13 @@
 #include <spdlog/spdlog.h>
 #include "nvctrl.h"
 #include "timing.hpp"
+#include "file_utils.h"
 #ifdef HAVE_NVML
 #include "nvidia_info.h"
 #endif
 
 #ifdef HAVE_LIBDRM_AMDGPU
-//#include "auth.h"
+#include "auth.h"
 #include <xf86drm.h>
 #include <libdrm/amdgpu_drm.h>
 #include <libdrm/amdgpu.h>
@@ -22,120 +23,118 @@
 
 using namespace std::chrono_literals;
 
-struct gpuInfo gpu_info {};
-amdgpu_files amdgpu {};
-decltype(&getAmdGpuInfo) getAmdGpuInfo_actual = nullptr;
+std::shared_ptr<GpuInfo> g_active_gpu;
+std::unordered_map<std::string /*device*/, std::shared_ptr<struct GpuInfo>> g_gpu_infos;
 
-bool checkNvidia(const char *pci_dev){
-    bool nvSuccess = false;
-#ifdef HAVE_NVML
-    nvSuccess = checkNVML(pci_dev) && getNVMLInfo();
-#endif
+bool NVCtrlInfo::init()
+{
 #ifdef HAVE_XNVCTRL
-    if (!nvSuccess)
-        nvSuccess = checkXNVCtrl();
+    // FIXME correct device index
+    return checkXNVCtrl();
+#else
+    return false;
 #endif
-#ifdef _WIN32
-    if (!nvSuccess)
-        nvSuccess = checkNVAPI();
-#endif
-    return nvSuccess;
 }
 
-void getNvidiaGpuInfo(){
-#ifdef HAVE_NVML
-    if (nvmlSuccess){
-        getNVMLInfo();
-        gpu_info.load = nvidiaUtilization.gpu;
-        gpu_info.temp = nvidiaTemp;
-        gpu_info.memoryUsed = nvidiaMemory.used / (1024.f * 1024.f * 1024.f);
-        gpu_info.CoreClock = nvidiaCoreClock;
-        gpu_info.MemClock = nvidiaMemClock;
-        gpu_info.powerUsage = nvidiaPowerUsage / 1000;
-        gpu_info.memoryTotal = nvidiaMemory.total / (1024.f * 1024.f * 1024.f);
-        return;
-    }
-#endif
+void NVCtrlInfo::update()
+{
 #ifdef HAVE_XNVCTRL
     if (nvctrlSuccess) {
         getNvctrlInfo();
-        gpu_info.load = nvctrl_info.load;
-        gpu_info.temp = nvctrl_info.temp;
-        gpu_info.memoryUsed = nvctrl_info.memoryUsed / (1024.f);
-        gpu_info.CoreClock = nvctrl_info.CoreClock;
-        gpu_info.MemClock = nvctrl_info.MemClock;
-        gpu_info.powerUsage = 0;
-        gpu_info.memoryTotal = nvctrl_info.memoryTotal;
+        s.load = nvctrl_info.load;
+        s.temp = nvctrl_info.temp;
+        s.memory_used = nvctrl_info.memoryUsed / (1024.f);
+        s.core_clock = nvctrl_info.CoreClock;
+        s.memory_clock = nvctrl_info.MemClock;
+        s.power_usage = 0;
+        s.memory_total = nvctrl_info.memoryTotal;
         return;
     }
 #endif
-#ifdef _WIN32
-nvapi_util();
-#endif
 }
 
-void getAmdGpuInfo(){
-    if (amdgpu.busy) {
-        rewind(amdgpu.busy);
-        fflush(amdgpu.busy);
-        int value = 0;
-        if (fscanf(amdgpu.busy, "%d", &value) != 1)
-            value = 0;
-        gpu_info.load = value;
+bool AMDGPUHWMonInfo::init()
+{
+    auto path  = sysfs_path + "/device";
+    handles.busy = fopen((path + "/gpu_busy_percent").c_str(), "r");
+    handles.vram_total = fopen((path + "/mem_info_vram_total").c_str(), "r");
+    handles.vram_used = fopen((path + "/mem_info_vram_used").c_str(), "r");
+
+    path += "/hwmon/";
+    std::string tempFolder;
+    if (find_folder(path, "hwmon", tempFolder)) {
+        handles.core_clock = fopen((path + tempFolder + "/freq1_input").c_str(), "r");
+        handles.memory_clock = fopen((path + tempFolder + "/freq2_input").c_str(), "r");
+        handles.temp = fopen((path + tempFolder + "/temp1_input").c_str(), "r");
+        handles.power_usage = fopen((path + tempFolder + "/power1_average").c_str(), "r");
     }
 
-    if (amdgpu.temp) {
-        rewind(amdgpu.temp);
-        fflush(amdgpu.temp);
+    return handles.busy && handles.temp && handles.vram_total && handles.vram_used;
+}
+
+void AMDGPUHWMonInfo::update()
+{
+    if (handles.busy) {
+        rewind(handles.busy);
+        fflush(handles.busy);
         int value = 0;
-        if (fscanf(amdgpu.temp, "%d", &value) != 1)
+        if (fscanf(handles.busy, "%d", &value) != 1)
             value = 0;
-        gpu_info.temp = value / 1000;
+        s.load = value;
+    }
+
+    if (handles.temp) {
+        rewind(handles.temp);
+        fflush(handles.temp);
+        int value = 0;
+        if (fscanf(handles.temp, "%d", &value) != 1)
+            value = 0;
+        s.temp = value / 1000;
     }
 
     int64_t value = 0;
 
-    if (amdgpu.vram_total) {
-        rewind(amdgpu.vram_total);
-        fflush(amdgpu.vram_total);
-        if (fscanf(amdgpu.vram_total, "%" PRId64, &value) != 1)
+    if (handles.vram_total) {
+        rewind(handles.vram_total);
+        fflush(handles.vram_total);
+        if (fscanf(handles.vram_total, "%" PRId64, &value) != 1)
             value = 0;
-        gpu_info.memoryTotal = float(value) / (1024 * 1024 * 1024);
+        s.memory_total = float(value) / (1024 * 1024 * 1024);
     }
 
-    if (amdgpu.vram_used) {
-        rewind(amdgpu.vram_used);
-        fflush(amdgpu.vram_used);
-        if (fscanf(amdgpu.vram_used, "%" PRId64, &value) != 1)
+    if (handles.vram_used) {
+        rewind(handles.vram_used);
+        fflush(handles.vram_used);
+        if (fscanf(handles.vram_used, "%" PRId64, &value) != 1)
             value = 0;
-        gpu_info.memoryUsed = float(value) / (1024 * 1024 * 1024);
+        s.memory_used = float(value) / (1024 * 1024 * 1024);
     }
 
-    if (amdgpu.core_clock) {
-        rewind(amdgpu.core_clock);
-        fflush(amdgpu.core_clock);
-        if (fscanf(amdgpu.core_clock, "%" PRId64, &value) != 1)
+    if (handles.core_clock) {
+        rewind(handles.core_clock);
+        fflush(handles.core_clock);
+        if (fscanf(handles.core_clock, "%" PRId64, &value) != 1)
             value = 0;
 
-        gpu_info.CoreClock = value / 1000000;
+        s.core_clock = value / 1000000;
     }
 
-    if (amdgpu.memory_clock) {
-        rewind(amdgpu.memory_clock);
-        fflush(amdgpu.memory_clock);
-        if (fscanf(amdgpu.memory_clock, "%" PRId64, &value) != 1)
+    if (handles.memory_clock) {
+        rewind(handles.memory_clock);
+        fflush(handles.memory_clock);
+        if (fscanf(handles.memory_clock, "%" PRId64, &value) != 1)
             value = 0;
 
-        gpu_info.MemClock = value / 1000000;
+        s.memory_clock = value / 1000000;
     }
 
-    if (amdgpu.power_usage) {
-        rewind(amdgpu.power_usage);
-        fflush(amdgpu.power_usage);
-        if (fscanf(amdgpu.power_usage, "%" PRId64, &value) != 1)
+    if (handles.power_usage) {
+        rewind(handles.power_usage);
+        fflush(handles.power_usage);
+        if (fscanf(handles.power_usage, "%" PRId64, &value) != 1)
             value = 0;
 
-        gpu_info.powerUsage = value / 1000000;
+        s.power_usage = value / 1000000;
     }
 }
 
@@ -148,7 +147,7 @@ static int getgrbm_amdgpu(amdgpu_device_handle dev, uint32_t *out) {
                                     0xffffffff, 0, out);
 }
 
-struct amdgpu_handles
+struct amdgpu_handles : public gpu_handles
 {
     amdgpu_device_handle dev;
     int fd;
@@ -208,21 +207,20 @@ struct amdgpu_handles
     }
 };
 
-typedef std::unique_ptr<amdgpu_handles> amdgpu_ptr;
-static amdgpu_ptr amdgpu_dev;
-
-void amdgpu_set_sampling_period(uint32_t period)
+void amdgpu_set_sampling_period(gpu_handles* dev, uint32_t period)
 {
+    auto amdgpu_dev = reinterpret_cast<amdgpu_handles*>(dev);
     if (amdgpu_dev)
         amdgpu_dev->set_sampling_period(period);
 }
 
-bool amdgpu_open(const char *path) {
+static amdgpu_handles* amdgpu_open(const char* path)
+{
     int fd = open(path, O_RDWR | O_CLOEXEC);
 
     if (fd < 0) {
         SPDLOG_ERROR("Failed to open DRM device: {}", strerror(errno));
-        return false;
+        return nullptr;
     }
 
     drmVersionPtr ver = drmGetVersion(fd);
@@ -230,69 +228,82 @@ bool amdgpu_open(const char *path) {
     if (!ver) {
         SPDLOG_ERROR("Failed to query driver version: {}", strerror(errno));
         close(fd);
-        return false;
+        return nullptr;
     }
 
     if (strcmp(ver->name, "amdgpu") || !DRM_ATLEAST_VERSION(ver, 3, 11)) {
         SPDLOG_ERROR("Unsupported driver/version: {} {}.{}.{}", ver->name, ver->version_major, ver->version_minor, ver->version_patchlevel);
         close(fd);
         drmFreeVersion(ver);
-        return false;
+        return nullptr;
     }
     drmFreeVersion(ver);
 
-/*
     if (!authenticate_drm(fd)) {
         close(fd);
-        return false;
+        return nullptr;
     }
-*/
 
     uint32_t drm_major, drm_minor;
     amdgpu_device_handle dev;
     if (amdgpu_device_initialize(fd, &drm_major, &drm_minor, &dev)){
         SPDLOG_ERROR("Failed to initialize amdgpu device: {}", strerror(errno));
         close(fd);
+        return nullptr;
+    }
+
+    return new amdgpu_handles(dev, fd, drm_major, drm_minor);
+}
+
+bool AMDGPUInfo::init()
+{
+    int idx = -1;
+
+    if (sscanf(sysfs_path.c_str(), "%*[^0-9]%d", &idx) != 1 || idx < 0)
+        return false;
+
+    const std::string dri_path = "/dev/dri/card" + std::to_string(idx);
+    device = reinterpret_cast<gpu_handles*>(amdgpu_open(dri_path.c_str()));
+    if (!device)
+    {
+        SPDLOG_WARN("Failed to open device '{}' with libdrm", dri_path);
         return false;
     }
 
-    amdgpu_dev = std::make_unique<amdgpu_handles>(dev, fd, drm_major, drm_minor);
     return true;
 }
 
-void getAmdGpuInfo_libdrm()
+
+void AMDGPUInfo::update()
 {
     uint64_t value = 0;
     uint32_t value32 = 0;
+    auto amdgpu_dev = reinterpret_cast<amdgpu_handles*>(device);
 
     if (!amdgpu_dev || !DRM_ATLEAST_VERSION(amdgpu_dev, 3, 11))
-    {
-        getAmdGpuInfo();
-        getAmdGpuInfo_actual = getAmdGpuInfo;
         return;
-    }
 
     if (!amdgpu_query_info(amdgpu_dev->dev, AMDGPU_INFO_VRAM_USAGE, sizeof(uint64_t), &value))
-        gpu_info.memoryUsed = float(value) / (1024 * 1024 * 1024);
+        s.memory_used = float(value) / (1024 * 1024 * 1024);
 
     // FIXME probably not correct sensor
     if (!amdgpu_query_info(amdgpu_dev->dev, AMDGPU_INFO_MEMORY, sizeof(uint64_t), &value))
-        gpu_info.memoryTotal = float(value) / (1024 * 1024 * 1024);
+        s.memory_total = float(value) / (1024 * 1024 * 1024);
 
     if (!amdgpu_query_sensor_info(amdgpu_dev->dev, AMDGPU_INFO_SENSOR_GFX_SCLK, sizeof(uint32_t), &value32))
-        gpu_info.CoreClock = value32;
+        s.core_clock = value32;
 
     if (!amdgpu_query_sensor_info(amdgpu_dev->dev, AMDGPU_INFO_SENSOR_GFX_MCLK, sizeof(uint32_t), &value32)) // XXX Doesn't work on APUs
-        gpu_info.MemClock = value32;
+        s.memory_clock = value32;
 
     //if (!amdgpu_query_sensor_info(amdgpu_dev->dev, AMDGPU_INFO_SENSOR_GPU_LOAD, sizeof(uint32_t), &value32))
-    //    gpu_info.load = value32;
-    gpu_info.load = amdgpu_dev->gui_percent;
+    //    load = value32;
+    s.load = amdgpu_dev->gui_percent;
 
     if (!amdgpu_query_sensor_info(amdgpu_dev->dev, AMDGPU_INFO_SENSOR_GPU_TEMP, sizeof(uint32_t), &value32))
-        gpu_info.temp = value32 / 1000;
+        s.temp = value32 / 1000;
 
     if (!amdgpu_query_sensor_info(amdgpu_dev->dev, AMDGPU_INFO_SENSOR_GPU_AVG_POWER, sizeof(uint32_t), &value32))
-        gpu_info.powerUsage = value32;
+        s.power_usage = value32;
 }
 #endif

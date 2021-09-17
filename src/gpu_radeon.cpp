@@ -119,16 +119,14 @@ struct radeon_handles
     }
 };
 
-typedef std::unique_ptr<radeon_handles> radeon_ptr;
-static radeon_ptr radeon_dev;
-
-void radeon_set_sampling_period(uint32_t period)
+void radeon_set_sampling_period(gpu_handles* dev, uint32_t period)
 {
+    auto radeon_dev = reinterpret_cast<radeon_handles*>(dev);
     if (radeon_dev)
         radeon_dev->set_sampling_period(period);
 }
 
-bool radeon_open(const char *path)
+static radeon_handles* radeon_open(const char *path)
 {
     uint32_t drm_major = 0, drm_minor = 0;
 
@@ -136,7 +134,7 @@ bool radeon_open(const char *path)
 
     if (fd < 0) {
         SPDLOG_ERROR("Failed to open DRM device: {}", strerror(errno));
-        return false;
+        return nullptr;
     }
 
     drmVersionPtr ver = drmGetVersion(fd);
@@ -144,7 +142,7 @@ bool radeon_open(const char *path)
     if (!ver) {
         SPDLOG_ERROR("Failed to query driver version: {}", strerror(errno));
         close(fd);
-        return false;
+        return nullptr;
     }
 
     if (strcmp(ver->name, "radeon") || !DRM_ATLEAST_VERSION(ver, 2, 42)) {
@@ -152,7 +150,7 @@ bool radeon_open(const char *path)
                      ver->name, ver->version_major, ver->version_minor, ver->version_patchlevel);
         close(fd);
         drmFreeVersion(ver);
-        return false;
+        return nullptr;
     }
 
     drm_major = ver->version_major;
@@ -161,42 +159,60 @@ bool radeon_open(const char *path)
 
     if (!authenticate_drm(fd)) {
         close(fd);
+        return nullptr;
+    }
+
+    return new radeon_handles(fd, drm_major, drm_minor);
+}
+
+bool RadeonInfo::init()
+{
+    int idx = -1;
+
+    if (sscanf(sysfs_path.c_str(), "%*[^0-9]%d", &idx) != 1 || idx < 0)
+        return false;
+
+    const std::string dri_path = "/dev/dri/card" + std::to_string(idx);
+    device = reinterpret_cast<gpu_handles*>(radeon_open(dri_path.c_str()));
+    if (!device)
+    {
+        SPDLOG_WARN("Failed to open device '{}' with libdrm", dri_path);
         return false;
     }
 
-    radeon_dev = std::make_unique<radeon_handles>(fd, drm_major, drm_minor);
     return true;
 }
 
-void getRadeonInfo_libdrm()
+void RadeonInfo::update()
 {
     uint64_t value = 0;
     uint32_t value32 = 0;
 
+    auto radeon_dev = reinterpret_cast<radeon_handles*>(device);
     if (!radeon_dev)
         return;
 
-    gpu_info.load = radeon_dev->gui_percent;
+    s.load = radeon_dev->gui_percent;
 
     // TODO one shot?
     struct drm_radeon_gem_info buffer {};
     int ret = 0;
     if (!(ret = ioctl(radeon_dev->fd, DRM_IOCTL_RADEON_GEM_INFO, &buffer)))
-        gpu_info.memoryTotal = buffer.vram_size / (1024.f * 1024.f * 1024.f);
+        s.memory_total = buffer.vram_size / (1024.f * 1024.f * 1024.f);
     else
         SPDLOG_ERROR("DRM_IOCTL_RADEON_GEM_INFO failed: {}", ret);
 
     if (!get_radeon_drm_value(radeon_dev->fd, RADEON_INFO_VRAM_USAGE, &value))
-        gpu_info.memoryUsed = value / (1024.f * 1024.f * 1024.f);
+        s.memory_used = value / (1024.f * 1024.f * 1024.f);
 
     if (!get_radeon_drm_value(radeon_dev->fd, RADEON_INFO_CURRENT_GPU_SCLK, &value32))
-        gpu_info.CoreClock = value32;
+        s.core_clock = value32;
 
     if (!get_radeon_drm_value(radeon_dev->fd, RADEON_INFO_CURRENT_GPU_MCLK, &value32))
-        gpu_info.MemClock = value32;
+        s.memory_clock = value32;
 
     if (!get_radeon_drm_value(radeon_dev->fd, RADEON_INFO_CURRENT_GPU_TEMP, &value32))
-        gpu_info.temp = value32 / 1000;
+        s.temp = value32 / 1000;
 
-    gpu_info.powerUsage = 0;
+    s.power_usage = 0;
 }

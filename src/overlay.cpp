@@ -58,11 +58,8 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
 #endif
    }
    if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || logger->is_active()) {
-      if (vendorID == 0x1002 && getAmdGpuInfo_actual)
-         getAmdGpuInfo_actual();
-
-      if (vendorID == 0x10de)
-         getNvidiaGpuInfo();
+      for (auto& gpu : g_gpu_infos)
+         gpu.second->update();
    }
 
 #ifdef __linux__
@@ -76,12 +73,15 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
       getIoStats(&sw_stats.io);
 #endif
 
-   currentLogData.gpu_load = gpu_info.load;
-   currentLogData.gpu_temp = gpu_info.temp;
-   currentLogData.gpu_core_clock = gpu_info.CoreClock;
-   currentLogData.gpu_mem_clock = gpu_info.MemClock;
-   currentLogData.gpu_vram_used = gpu_info.memoryUsed;
-   currentLogData.gpu_power = gpu_info.powerUsage;
+   if (g_active_gpu)
+   {
+      currentLogData.gpu_load = g_active_gpu->s.load;
+      currentLogData.gpu_temp = g_active_gpu->s.temp;
+      currentLogData.gpu_core_clock = g_active_gpu->s.core_clock;
+      currentLogData.gpu_mem_clock = g_active_gpu->s.memory_clock;
+      currentLogData.gpu_vram_used = g_active_gpu->s.memory_used;
+      currentLogData.gpu_power = g_active_gpu->s.power_usage;
+   }
 #ifdef __linux__
    currentLogData.ram_used = memused;
 #endif
@@ -544,6 +544,118 @@ struct pci_bus {
    int func;
 };
 
+static void enumerate_gpus(overlay_params& params)
+{
+#ifdef WIN32
+   auto gpu = std::make_shared<NVAPIInfo>();
+   if (gpu->init())
+      g_gpu_infos["nvapi_0"] = gpu;
+   return;
+#endif
+
+#ifdef __gnu_linux__
+   string path;
+   string drm = "/sys/class/drm/";
+
+   auto dirs = ls(drm.c_str(), "card");
+   for (auto& dir : dirs) {
+      path = drm + dir;
+
+      // skip display outputs
+      if (!file_exists(path + "/device/vendor"))
+         continue;
+
+      string vendor = read_line(path + "/device/vendor");
+      uint32_t vendor_id = strtoul(vendor.c_str(), NULL, 16);
+
+      string device = read_line(path + "/device/device");
+      uint32_t device_id = strtoul(device.c_str(), NULL, 16); // OGL might fail so read from sysfs
+
+      string pci_device = read_symlink((path + "/device").c_str());
+      auto pos = pci_device.find_last_of('/');
+      pci_device = pci_device.substr(pos != std::string::npos ? pos + 1 : 0);
+      SPDLOG_DEBUG("PCI device symlink: '{}' {}", pci_device, path);
+
+      string module = get_basename(read_symlink(path + "/device/driver/module"));
+      SPDLOG_DEBUG("using device path: '{}', module: '{}'", path, module);
+
+      auto dev_name = get_device_name(vendor_id, device_id);
+      if (module == "amdgpu")
+      {
+#ifdef HAVE_LIBDRM_AMDGPU
+         if (!params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon])
+         {
+            auto gpu = std::make_shared<AMDGPUInfo>(path, pci_device);
+            if (gpu->init())
+            {
+               gpu->vendorID = vendor_id;
+               gpu->deviceID = device_id;
+               gpu->dev_name = dev_name;
+               amdgpu_set_sampling_period(gpu->device, params.fps_sampling_period);
+               g_gpu_infos[pci_device] = gpu;
+
+               SPDLOG_DEBUG("Using libdrm with {}", pci_device);
+               continue;
+            }
+            // fall through and open sysfs handles for fallback or check DRM version beforehand
+            else
+            {
+               SPDLOG_WARN("Falling back to using hwmon sysfs.");
+            }
+         }
+#endif
+
+         if (!file_exists(path + "/device/gpu_busy_percent"))
+            continue;
+
+         auto gpu = std::make_shared<AMDGPUHWMonInfo>(path, pci_device);
+         if (gpu->init())
+         {
+            gpu->vendorID = vendor_id;
+            gpu->deviceID = device_id;
+            gpu->dev_name = dev_name;
+            g_gpu_infos[pci_device] = gpu;
+         }
+      }
+      else if (module == "radeon")
+      {
+#ifdef HAVE_LIBDRM
+         auto gpu = std::make_shared<RadeonInfo>(path, pci_device);
+         if (gpu->init())
+         {
+            gpu->vendorID = vendor_id;
+            gpu->deviceID = device_id;
+            gpu->dev_name = dev_name;
+            g_gpu_infos[pci_device] = gpu;
+         }
+#endif
+      }
+      else if (module == "nvidia")
+      {
+         auto gpu = std::make_shared<NVMLInfo>(path, pci_device);
+         if (gpu->init())
+         {
+            gpu->vendorID = vendor_id;
+            gpu->deviceID = device_id;
+            gpu->dev_name = dev_name;
+            g_gpu_infos[pci_device] = gpu;
+         }
+         else
+         {
+            auto gpu = std::make_shared<NVCtrlInfo>(path, pci_device);
+            if (gpu->init())
+            {
+               gpu->vendorID = vendor_id;
+               gpu->deviceID = device_id;
+               gpu->dev_name = dev_name;
+               g_gpu_infos[pci_device] = gpu;
+            }
+         }
+      }
+   }
+#endif
+}
+
 void init_gpu_stats(uint32_t& vendorID, uint32_t target_device_id, overlay_params& params)
 {
    //if (!params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
@@ -578,129 +690,55 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t target_device_id, overlay_param
       }
    }
 
-   // NVIDIA or Intel but maybe has Optimus
-   if (vendorID == 0x8086
-      || vendorID == 0x10de) {
+   if (!g_gpu_infos.size())
+      enumerate_gpus(params);
 
-      if(checkNvidia(pci_dev))
-         vendorID = 0x10de;
-      else
-         params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
+   if (pci_bus_parsed && pci_dev && g_gpu_infos.find(params.pci_dev) != g_gpu_infos.end())
+   {
+      g_active_gpu = g_gpu_infos[params.pci_dev];
    }
-
-#ifdef __linux__
-   if (vendorID == 0x8086 || vendorID == 0x1002
-       || gpu.find("Radeon") != std::string::npos
-       || gpu.find("AMD") != std::string::npos) {
-      string path;
-      string drm = "/sys/class/drm/";
-      getAmdGpuInfo_actual = getAmdGpuInfo;
-      bool using_libdrm = false;
-
-      auto dirs = ls(drm.c_str(), "card");
-      for (auto& dir : dirs) {
-         path = drm + dir;
-
-         SPDLOG_DEBUG("device path check: {}/device/vendor", path);
-
-         string device = read_line(path + "/device/device");
-         deviceID = strtol(device.c_str(), NULL, 16); // OGL might fail so read from sysfs
-
-         string vendor = read_line(path + "/device/vendor");
-         trim(vendor);
-         if (vendor != "0x1002")
-            continue;
-
-         if (pci_bus_parsed && pci_dev) {
-            string pci_device = read_symlink((path + "/device").c_str());
-            SPDLOG_DEBUG("PCI device symlink: '{}'", pci_device);
-            if (!ends_with(pci_device, pci_dev)) {
-               SPDLOG_WARN("skipping GPU, PCI ID doesn't match: {}", pci_device);
-               continue;
-            }
-         }
-         // Don't skip if intel, maybe there's a dgpu
-         else if (vendorID != 0x8086 && target_device_id && target_device_id != deviceID)
+   else if (vendorID == 0x8086 /*&& target_device_id && target_device_id != deviceID*/)
+   {
+      for (auto& info : g_gpu_infos)
+      {
+         const auto& gpu = info.second;
+         if (gpu->vendorID != 0x8086 && gpu->deviceID == target_device_id)
          {
-            SPDLOG_WARN("expected device id {:04X}, got {:04X}, skipping", target_device_id, deviceID);
-            continue;
-         }
-
-         string module = get_basename(read_symlink(path + "/device/driver/module"));
-         SPDLOG_DEBUG("using device path: '{}', module: '{}'", path, module);
-
-         int idx = -1;
-         //TODO make neater
-         int res = sscanf(path.c_str(), "%*[^0-9]%d", &idx);
-         (void)res;
-         std::string dri_path = "/dev/dri/card" + std::to_string(idx);
-
-         if (module == "amdgpu")
-         {
-#ifdef HAVE_LIBDRM_AMDGPU
-            if (!params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon] && res == 1 && amdgpu_open(dri_path.c_str())) {
-               vendorID = 0x1002;
-               using_libdrm = true;
-               getAmdGpuInfo_actual = getAmdGpuInfo_libdrm;
-               amdgpu_set_sampling_period(params.fps_sampling_period);
-
-               SPDLOG_DEBUG("Using libdrm");
-               // fall through and open sysfs handles for fallback or check DRM version beforehand
-            } else if (!params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon]) {
-               SPDLOG_WARN("Failed to open device '/dev/dri/card{}' with libdrm, falling back to using hwmon sysfs.", idx);
-            }
-#endif
-         }
-#ifdef HAVE_LIBDRM
-         else if (module == "radeon")
-         {
-            if (res == 1 && radeon_open(dri_path.c_str())) {
-               vendorID = 0x1002;
-               using_libdrm = true;
-               getAmdGpuInfo_actual = getRadeonInfo_libdrm;
-               radeon_set_sampling_period(params.fps_sampling_period);
-            } else {
-               SPDLOG_WARN("Failed to open device '/dev/dri/card{}' with libdrm.", idx);
-               params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
-               break;
-            }
-         }
-#endif
-
-         if (!file_exists(path + "/device/gpu_busy_percent"))
-            continue;
-
-         path += "/device";
-         if (!amdgpu.busy)
-            amdgpu.busy = fopen((path + "/gpu_busy_percent").c_str(), "r");
-         if (!amdgpu.vram_total)
-            amdgpu.vram_total = fopen((path + "/mem_info_vram_total").c_str(), "r");
-         if (!amdgpu.vram_used)
-            amdgpu.vram_used = fopen((path + "/mem_info_vram_used").c_str(), "r");
-
-         path += "/hwmon/";
-         string tempFolder;
-         if (find_folder(path, "hwmon", tempFolder)) {
-            if (!amdgpu.core_clock)
-               amdgpu.core_clock = fopen((path + tempFolder + "/freq1_input").c_str(), "r");
-            if (!amdgpu.memory_clock)
-               amdgpu.memory_clock = fopen((path + tempFolder + "/freq2_input").c_str(), "r");
-            if (!amdgpu.temp)
-               amdgpu.temp = fopen((path + tempFolder + "/temp1_input").c_str(), "r");
-            if (!amdgpu.power_usage)
-               amdgpu.power_usage = fopen((path + tempFolder + "/power1_average").c_str(), "r");
-
-            vendorID = 0x1002;
+            g_active_gpu = gpu;
             break;
          }
       }
-
-      // don't bother then
-      if (!using_libdrm && !amdgpu.busy && !amdgpu.temp && !amdgpu.vram_total && !amdgpu.vram_used) {
-         params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
+//       SPDLOG_WARN("expected device id {:04X}, got {:04X}, skipping", target_device_id, deviceID);
+   }
+   else
+   {
+      for (auto& info : g_gpu_infos)
+      {
+         auto& gpu = info.second;
+         if (gpu->vendorID == vendorID && gpu->deviceID == target_device_id)
+         {
+            g_active_gpu = gpu;
+            break;
+         }
       }
    }
+
+#ifdef WIN32
+   //TODO windows' gpu stats
+   if (g_gpu_infos.size())
+      g_active_gpu = g_gpu_infos.begin()->second;
 #endif
+
+   // for compatibility
+   if (g_active_gpu)
+   {
+      vendorID = g_active_gpu->vendorID;
+      deviceID = g_active_gpu->deviceID;
+   }
+
+   if (g_active_gpu)
+      SPDLOG_INFO("Selected GPU: {}, {}, 0x{:X}:0x{:X}", g_active_gpu->sysfs_path, g_active_gpu->dev_name, vendorID, deviceID);
+
    if (!params.permit_upload)
       SPDLOG_INFO("Uploading is disabled (permit_upload = 0)");
 }
@@ -795,13 +833,13 @@ void init_system_info(){
       SPDLOG_DEBUG("Cpu:{}", cpu);
       SPDLOG_DEBUG("Kernel:{}", kernel);
       SPDLOG_DEBUG("Os:{}", os);
-      SPDLOG_DEBUG("Gpu:{}", gpu);
+//       SPDLOG_DEBUG("Gpu:{}", gpu);
       SPDLOG_DEBUG("Driver:{}", driver);
       SPDLOG_DEBUG("CPU Scheduler:{}", cpusched);
 #endif
 }
 
-void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats)
+std::string get_device_name(int32_t vendorID, int32_t deviceID)
 {
 #ifdef __linux__
    if (pci_ids.find(vendorID) == pci_ids.end())
@@ -815,7 +853,14 @@ void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats&
       for (char c: chars)
          desc.erase(remove(desc.begin(), desc.end(), c), desc.end());
    }
-   gpu = sw_stats.gpuName = desc;
-   trim(sw_stats.gpuName); trim(gpu);
+   trim(desc);
+   return desc;
+#else
+   return {};
 #endif
+}
+
+void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats)
+{
+   gpu = sw_stats.gpuName = get_device_name(vendorID, deviceID);
 }

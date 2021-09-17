@@ -23,7 +23,8 @@ class HudElements{
         Clock::time_point last_exec;
         std::vector<std::pair<std::string, std::string>> options;
         std::vector<std::pair<void(*)(), std::string >> ordered_functions;
-        int min, max, gpu_core_max, gpu_mem_max, cpu_temp_max, gpu_temp_max;
+        float min, max;
+        int gpu_core_max, gpu_mem_max, cpu_temp_max, gpu_temp_max;
         const std::vector<std::string> permitted_params = {
             "gpu_load", "cpu_load", "gpu_core_clock", "gpu_mem_clock",
             "vram", "ram", "cpu_temp", "gpu_temp"

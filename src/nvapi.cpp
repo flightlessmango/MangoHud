@@ -40,28 +40,34 @@ bool checkNVAPI(){
     NvAPI_Initialize = (NvAPI_Initialize_t) (*NvAPI_QueryInterface)(0x0150E828);
     NvAPI_EnumPhysicalGPUs = (NvAPI_EnumPhysicalGPUs_t) (*NvAPI_QueryInterface)(0xE5AC921F);
     NvAPI_GPU_GetUsages = (NvAPI_GPU_GetUsages_t) (*NvAPI_QueryInterface)(0x189A1FDF);
-    if (NvAPI_Initialize == NULL || NvAPI_EnumPhysicalGPUs == NULL ||
-        NvAPI_EnumPhysicalGPUs == NULL || NvAPI_GPU_GetUsages == NULL)
+
+    if (!NvAPI_Initialize || !NvAPI_EnumPhysicalGPUs || !NvAPI_EnumPhysicalGPUs || !NvAPI_GPU_GetUsages)
     {
         std::cerr << "Couldn't get functions in nvapi.dll" << std::endl;
         return 2;
     }
-    (*NvAPI_Initialize)();
-    
-    int         *gpuHandles[NVAPI_MAX_PHYSICAL_GPUS] = { NULL };
+    NvAPI_Initialize();
+
+    NvAPI_EnumPhysicalGPUs(gpuHandles, &gpuCount);
 
     return true;
 }
 
-void nvapi_util()
-{  
+bool NVAPIInfo::init()
+{
+    if (!init_nvapi_bool)
+        init_nvapi_bool = checkNVAPI();
+    return init_nvapi_bool;
+}
+
+void NVAPIInfo::update()
+{
     if (!init_nvapi_bool){
         init_nvapi_bool = checkNVAPI();
     }
-    
-    gpuUsages[0] = (NVAPI_MAX_USAGES_PER_GPU * 4) | 0x10000;
-    (*NvAPI_EnumPhysicalGPUs)(gpuHandles, &gpuCount);
-    (*NvAPI_GPU_GetUsages)(gpuHandles[0], gpuUsages);
-    gpu_info.load = gpuUsages[3];
 
+    gpuUsages[0] = (NVAPI_MAX_USAGES_PER_GPU * 4) | 0x10000;
+    NvAPI_GPU_GetUsages(gpuHandles[0], gpuUsages);
+    if (g_active_gpu)
+        g_active_gpu->s.load = gpuUsages[3];
 }

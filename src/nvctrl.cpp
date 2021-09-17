@@ -17,17 +17,22 @@ static std::unique_ptr<Display, std::function<void(Display*)>> display;
 struct nvctrlInfo nvctrl_info;
 bool nvctrlSuccess = false;
 
-static bool find_nv_x11(libnvctrl_loader& nvctrl, Display*& dpy)
+static bool find_nv_x11(libnvctrl_loader& nvctrl, Display*& dpy, int& scr)
 {
     char buf[8] {};
     for (int i = 0; i < 16; i++) {
         snprintf(buf, sizeof(buf), ":%d", i);
         Display *d = g_x11->XOpenDisplay(buf);
         if (d) {
-            if (nvctrl.XNVCTRLIsNvScreen(d, 0)) {
-                dpy = d;
-                SPDLOG_DEBUG("XNVCtrl is using display {}", buf);
-                return true;
+            int nscreens = ScreenCount(d); //FIXME yes, no, maybe?
+            for (int screen = 0; screen < nscreens; screen++)
+            {
+                if (nvctrl.XNVCTRLIsNvScreen(d, screen)) {
+                    dpy = d;
+                    scr = screen;
+                    SPDLOG_DEBUG("XNVCtrl is using display {}", buf);
+                    return true;
+                }
             }
             g_x11->XCloseDisplay(d);
         }
@@ -46,20 +51,15 @@ bool checkXNVCtrl()
         return false;
     }
 
-    Display *dpy;
-    nvctrlSuccess = find_nv_x11(nvctrl, dpy);
+    Display *dpy = nullptr;
+    int screen = 0;
+    nvctrlSuccess = find_nv_x11(nvctrl, dpy, screen);
 
     if (!nvctrlSuccess) {
         SPDLOG_ERROR("XNVCtrl didn't find the correct display");
         return false;
     }
 
-    auto local_x11 = g_x11;
-    display = { dpy,
-        [local_x11](Display *dpy) {
-            local_x11->XCloseDisplay(dpy);
-        }
-    };
     // get device id at init
     int64_t pci_id;
     nvctrl.XNVCTRLQueryTargetAttribute64(display.get(),
@@ -69,6 +69,13 @@ bool checkXNVCtrl()
                     NV_CTRL_PCI_ID,
                     &pci_id);
     deviceID = (pci_id & 0xFFFF);
+
+    auto local_x11 = g_x11;
+    display = { dpy,
+        [local_x11](Display *dpy) {
+            local_x11->XCloseDisplay(dpy);
+        }
+    };
 
     return true;
 }

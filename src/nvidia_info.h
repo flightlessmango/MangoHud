@@ -11,7 +11,7 @@ extern struct nvmlUtilization_st nvidiaUtilization;
 extern struct nvmlMemory_st nvidiaMemory;
 extern bool nvmlSuccess;
 
-bool checkNVML(const char* pciBusId);
-bool getNVMLInfo(void);
+bool checkNVML(const char* pciBusId, nvmlDevice_t& device, uint32_t& device_id);
+bool getNVMLInfo(nvmlDevice_t device);
 
 #endif //MANGOHUD_NVIDIA_INFO_H
