@@ -87,9 +87,12 @@ struct device_data {
 
    struct vk_device_dispatch_table vtable;
    VkPhysicalDevice physical_device;
+   std::vector<VkPhysicalDevice> physical_devices;
    VkDevice device;
+   uint32_t deviceCount = 0;
 
    VkPhysicalDeviceProperties properties;
+   std::vector<VkPhysicalDeviceProperties> propertiesForAllDevices;
 
    struct queue_data *graphic_queue;
 
@@ -270,10 +273,20 @@ static void instance_data_map_physical_devices(struct instance_data *instance_da
                                                   &physicalDeviceCount,
                                                   NULL);
 
+
+
    std::vector<VkPhysicalDevice> physicalDevices(physicalDeviceCount);
    instance_data->vtable.EnumeratePhysicalDevices(instance_data->instance,
                                                   &physicalDeviceCount,
                                                   physicalDevices.data());
+
+
+   // for (uint32_t i = 0; i < deviceGroupCount; i++) {
+   //    if (map)
+   //       map_object(HKEY(physicalDeviceGroupProperties[i]), instance_data);
+   //    else
+   //       unmap_object(HKEY(physicalDeviceGroupProperties[i]));
+   // }
 
    for (uint32_t i = 0; i < physicalDeviceCount; i++) {
       if (map)
@@ -454,8 +467,19 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
 {
    struct device_data *device_data = data->device;
    struct instance_data *instance_data = device_data->instance;
-   update_hud_info(data->sw_stats, instance_data->params, device_data->properties.vendorID);
-   check_keybinds(data->sw_stats, instance_data->params, device_data->properties.vendorID);
+   if(device_data->deviceCount > 1){
+      for(uint32_t i = 0; i < device_data->deviceCount; i++){
+         update_hud_info(data->sw_stats, instance_data->params, device_data->propertiesForAllDevices[i].vendorID,device_data->propertiesForAllDevices[i].deviceID);
+         check_keybinds(data->sw_stats, instance_data->params, device_data->propertiesForAllDevices[i].vendorID,device_data->propertiesForAllDevices[i].deviceID);
+      }
+
+   }
+   else{
+      update_hud_info(data->sw_stats, instance_data->params, device_data->properties.vendorID,device_data->properties.deviceID);
+   check_keybinds(data->sw_stats, instance_data->params, device_data->properties.vendorID,device_data->properties.deviceID);
+
+   }
+
 
    // not currently used
    // if (instance_data->params.control >= 0) {
@@ -1520,8 +1544,59 @@ static VkResult overlay_CreateSwapchainKHR(
    swapchain_data->sw_stats.engineVersion = device_data->instance->engineVersion;
    swapchain_data->sw_stats.engine        = device_data->instance->engine;
 
+
    std::stringstream ss;
-//   ss << prop.deviceName;
+
+   if(device_data->deviceCount > 1){
+      parse_pciids();
+      const std::vector<VkPhysicalDeviceProperties> props = device_data->propertiesForAllDevices;
+      for(uint32_t i = 0; i < device_data->deviceCount;i++){
+
+         if (props[i].vendorID == 0x10de) {
+      ss << " " << ((props[i].driverVersion >> 22) & 0x3ff);
+      ss << "."  << ((props[i].driverVersion >> 14) & 0x0ff);
+      ss << "."  << std::setw(2) << std::setfill('0') << ((props[i].driverVersion >> 6) & 0x0ff);
+   }
+#ifdef _WIN32
+    else if (prop.vendorID == 0x8086) {
+      ss << " " << (prop.driverVersion >> 14);
+      ss << "."  << (prop.driverVersion & 0x3fff);
+   }
+#endif
+   else {
+      ss << " " << VK_VERSION_MAJOR(props[i].driverVersion);
+      ss << "."  << VK_VERSION_MINOR(props[i].driverVersion);
+      ss << "."  << VK_VERSION_PATCH(props[i].driverVersion);
+   }
+   std::string driverVersion = ss.str();
+
+   std::string deviceName = props[i].deviceName;
+   get_device_name(props[i].vendorID, props[i].deviceID, swapchain_data->sw_stats);
+   if(driverProps.driverID == VK_DRIVER_ID_NVIDIA_PROPRIETARY){
+      swapchain_data->sw_stats.driverName = "NVIDIA";
+   }
+   if(driverProps.driverID == VK_DRIVER_ID_AMD_PROPRIETARY)
+      swapchain_data->sw_stats.driverName = "AMDGPU-PRO";
+   if(driverProps.driverID == VK_DRIVER_ID_AMD_OPEN_SOURCE)
+      swapchain_data->sw_stats.driverName = "AMDVLK";
+   if(driverProps.driverID == VK_DRIVER_ID_MESA_RADV){
+      if(deviceName.find("ACO") != std::string::npos){
+         swapchain_data->sw_stats.driverName = "RADV/ACO";
+      } else {
+         swapchain_data->sw_stats.driverName = "RADV";
+      }
+   }
+
+   if (!swapchain_data->sw_stats.driverName.empty())
+      swapchain_data->sw_stats.driverName += driverVersion;
+   else
+      swapchain_data->sw_stats.driverName = props[i].deviceName + driverVersion;
+
+      }
+
+   }
+   else{
+      //   ss << prop.deviceName;
    if (prop.vendorID == 0x10de) {
       ss << " " << ((prop.driverVersion >> 22) & 0x3ff);
       ss << "."  << ((prop.driverVersion >> 14) & 0x0ff);
@@ -1571,6 +1646,10 @@ static VkResult overlay_CreateSwapchainKHR(
       swapchain_data->sw_stats.driverName += driverVersion;
    else
       swapchain_data->sw_stats.driverName = prop.deviceName + driverVersion;
+
+   }
+
+
 
    return result;
 }
@@ -1786,6 +1865,26 @@ static VkResult overlay_CreateDevice(
 
    VkPhysicalDeviceFeatures device_features = {};
    VkDeviceCreateInfo device_info = *pCreateInfo;
+   // uint32_t deviceGroupCount = 0;
+   // instance_data->vtable.EnumeratePhysicalDeviceGroups(instance_data->instance,&deviceGroupCount,nullptr);
+   // std::vector<VkPhysicalDeviceGroupProperties> physicalDeviceGroupProperties(deviceGroupCount);
+   // instance_data->vtable.EnumeratePhysicalDeviceGroups(instance_data->instance,&deviceGroupCount,physicalDeviceGroupProperties.data());
+   // VkDeviceGroupDeviceCreateInfo deviceGroupInfo{};
+   //  deviceGroupInfo.sType = VK_STRUCTURE_TYPE_DEVICE_GROUP_DEVICE_CREATE_INFO;
+   // for(int i=0;i<deviceGroupCount; i++){
+   //    if (physicalDeviceGroupProperties[i].physicalDeviceCount > 1) {
+   //      deviceGroupInfo.physicalDeviceCount = physicalDeviceGroupProperties[i].physicalDeviceCount;
+   //      deviceGroupInfo.pPhysicalDevices = physicalDeviceGroupProperties[i].physicalDevices;
+   //      device_info.pNext = &deviceGroupInfo;
+
+
+   //      std::cout << "physical device group : " << deviceGroupInfo.physicalDeviceCount << std::endl;
+   //  }
+   //  else{
+   //      std::cout<< "CANNOT MAKE CROSSFIRE :(" << std::endl;
+   //  }
+   // }
+
 
    std::vector<const char*> enabled_extensions(device_info.ppEnabledExtensionNames,
                                                device_info.ppEnabledExtensionNames +
@@ -1830,26 +1929,58 @@ static VkResult overlay_CreateDevice(
 
    struct device_data *device_data = new_device_data(*pDevice, instance_data);
    device_data->physical_device = physicalDevice;
+   uint32_t deviceCount = 0;
+   instance_data->vtable.EnumeratePhysicalDevices(instance_data->instance,&deviceCount,nullptr);
    vk_load_device_commands(*pDevice, fpGetDeviceProcAddr, &device_data->vtable);
+    VkLayerDeviceCreateInfo *load_data_info = get_device_chain_info(pCreateInfo, VK_LOADER_DATA_CALLBACK);
+   device_data->set_device_loader_data = load_data_info->u.pfnSetDeviceLoaderData;
+   driverProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES;
+   driverProps.pNext = nullptr;
+    if (can_get_driver_info) {
+               VkPhysicalDeviceProperties2 deviceProps = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &driverProps};
+               instance_data->vtable.GetPhysicalDeviceProperties2(device_data->physical_device, &deviceProps);
+         }
+   device_data->deviceCount = deviceCount;
+   if(deviceCount > 1){
+      instance_data->vtable.GetPhysicalDeviceProperties(device_data->physical_device,
+                                                     &device_data->properties);
+
+      std::cout << "INSIDE MGPU PATH" <<std::endl;
+      std::vector<VkPhysicalDevice> devices(deviceCount);
+      std::vector<VkPhysicalDeviceProperties> copyProps(deviceCount);
+      instance_data->vtable.EnumeratePhysicalDevices(instance_data->instance,&deviceCount,devices.data());
+      for(uint32_t i = 0; i< deviceCount;i++){
+         device_data->physical_devices.push_back(devices[i]);
+         instance_data->vtable.GetPhysicalDeviceProperties(device_data->physical_devices[i], &copyProps[i]);
+         device_data->propertiesForAllDevices.push_back(copyProps[i]);
+         std::cout << "INSIDE MGPU PATH DEVICE LOOP 1" << device_data->propertiesForAllDevices[i].deviceName << " " << device_data->propertiesForAllDevices[i].deviceID  <<std::endl;
+
+      }
+      if (!is_blacklisted()) {
+               device_map_queues(device_data, pCreateInfo);
+
+               for(uint32_t i = 0; i<deviceCount;i++){
+                  std::cout << "INSIDE MGPU PATH DEVICE LOOP 2" <<std::endl;
+                  init_gpu_stats(device_data->propertiesForAllDevices[i].vendorID, instance_data->params,device_data->propertiesForAllDevices[i].deviceID);
+
+               }
+               init_system_info();
+         }
+
+   }
+   else{
+
 
    instance_data->vtable.GetPhysicalDeviceProperties(device_data->physical_device,
                                                      &device_data->properties);
-
-   VkLayerDeviceCreateInfo *load_data_info =
-      get_device_chain_info(pCreateInfo, VK_LOADER_DATA_CALLBACK);
-   device_data->set_device_loader_data = load_data_info->u.pfnSetDeviceLoaderData;
-
-   driverProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES;
-   driverProps.pNext = nullptr;
-   if (can_get_driver_info) {
-      VkPhysicalDeviceProperties2 deviceProps = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &driverProps};
-      instance_data->vtable.GetPhysicalDeviceProperties2(device_data->physical_device, &deviceProps);
-   }
 
    if (!is_blacklisted()) {
       device_map_queues(device_data, pCreateInfo);
       init_gpu_stats(device_data->properties.vendorID, device_data->instance->params);
    }
+
+
+
 
    return result;
 }

@@ -138,7 +138,7 @@ void imgui_create(void *ctx)
     } else {
         vendorID = 0x10de;
     }
-    init_gpu_stats(vendorID, params);
+    init_gpu_stats(vendorID, params,deviceID);
     get_device_name(vendorID, deviceID, sw_stats);
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -191,8 +191,8 @@ void imgui_render(unsigned int width, unsigned int height)
     if (!state.imgui_ctx)
         return;
 
-    check_keybinds(sw_stats, params, vendorID);
-    update_hud_info(sw_stats, params, vendorID);
+    check_keybinds(sw_stats, params, vendorID,deviceID);
+    update_hud_info(sw_stats, params, vendorID,deviceID);
 
     ImGuiContext *saved_ctx = ImGui::GetCurrentContext();
     ImGui::SetCurrentContext(state.imgui_ctx);

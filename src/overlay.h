@@ -109,11 +109,11 @@ extern overlay_params _params;
 
 void position_layer(struct swapchain_stats& data, struct overlay_params& params, ImVec2 window_size);
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan);
-void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID);
-void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID);
-void init_gpu_stats(uint32_t& vendorID, overlay_params& params);
+void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID,int32_t deviceID);
+void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID,int32_t deviceID);
+void init_gpu_stats(uint32_t& vendorID, overlay_params& params, int32_t deviceID);
 void init_cpu_stats(overlay_params& params);
-void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID);
+void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID,int32_t deviceID);
 void init_system_info(void);
 void FpsLimiter(struct fps_limit& stats);
 void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats);
