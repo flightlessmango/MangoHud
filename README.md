@@ -198,7 +198,9 @@ Some Linux native OpenGL games overrides LD_PRELOAD and stops MangoHud from work
 MangoHud comes with a config file which can be used to set configuration options globally or per application. The priorities of different config files are:
 
 1. `/path/to/application/dir/MangoHud.conf`
-2. `$HOME/.config/MangoHud/{application_name}.conf`
+2. Per-application configuration in ~/.config/MangoHud:
+    1. `$HOME/.config/MangoHud/application_name.conf`
+    2. `$HOME/.config/MangoHud/wine-application_name.conf` for wine/proton apps
 3. `$HOME/.config/MangoHud/MangoHud.conf`
 
 You can find an example config in /usr/share/doc/mangohud
