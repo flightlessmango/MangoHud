@@ -85,6 +85,7 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
 #endif
       if (pressed){
          parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
+         _params = params;
          reload_cfg_press = now;
       }
    }
