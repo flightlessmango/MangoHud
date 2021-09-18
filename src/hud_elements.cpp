@@ -163,6 +163,15 @@ void HudElements::vram(){
 static void per_gpu_stats(GpuInfo* gpu, bool single){
     ImGui::TableNextRow(); ImGui::TableNextColumn();
     const char* gpu_text;
+
+    uint32_t enabled_fields = 1; // Count gpu load already
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp])
+        ++enabled_fields;
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock])
+        ++enabled_fields;
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power])
+        ++enabled_fields;
+
     if (single)
     {
         if (HUDElements.params->gpu_text.empty())
@@ -176,6 +185,9 @@ static void per_gpu_stats(GpuInfo* gpu, bool single){
     {
         ImGui::TextColored(HUDElements.colors.gpu, "%s", gpu->dev_name.c_str());
         ImGui::TableNextRow(); ImGui::TableNextColumn();
+
+        if (enabled_fields < 3 || enabled_fields == 4)
+            ImGui::TableNextColumn();
     }
 
     auto text_color = HUDElements.colors.text;
@@ -200,6 +212,7 @@ static void per_gpu_stats(GpuInfo* gpu, bool single){
         // ImGui::SameLine(150);
         // ImGui::Text("%s", "%");
     }
+
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp]){
         ImGui::TableNextColumn();
         right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu->s.temp);
@@ -207,8 +220,10 @@ static void per_gpu_stats(GpuInfo* gpu, bool single){
         ImGui::Text("°C");
     }
 
-    if (single && (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock] || HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power])){
-        ImGui::TableNextRow(); ImGui::TableNextColumn();
+    if (enabled_fields == 4 || (single && enabled_fields == 3))
+    {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
     }
 
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]){
@@ -219,10 +234,7 @@ static void per_gpu_stats(GpuInfo* gpu, bool single){
         ImGui::Text("MHz");
         ImGui::PopFont();
     }
-    if (!single && HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]) {
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-    }
+
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power]) {
         ImGui::TableNextColumn();
         right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu->s.power_usage);
