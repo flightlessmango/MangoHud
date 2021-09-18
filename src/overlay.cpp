@@ -146,9 +146,7 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
    gpuvis_trace_printf("[MH] ram_used: %d", memused);
 }
 
-void calculate_benchmark_data(void *params_void){
-   overlay_params *params = reinterpret_cast<overlay_params *>(params_void);
-
+void calculate_benchmark_data(){
    vector<float> sorted = benchmark.fps_data;
    std::sort(sorted.begin(), sorted.end());
    benchmark.percentile_data.clear();
@@ -160,7 +158,7 @@ void calculate_benchmark_data(void *params_void){
 
    size_t max_label_size = 0;
 
-   for (std::string percentile : params->benchmark_percentiles) {
+   for (std::string percentile : _params.benchmark_percentiles) {
       float result;
 
       // special case handling for a mean-based average

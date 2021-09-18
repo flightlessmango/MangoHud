@@ -7,6 +7,7 @@
 #include <sstream>
 #include <iomanip>
 #include "file_utils.h"
+#include "string_utils.h"
 
 string os, cpu, gpu, ram, kernel, driver, cpu_governor;
 bool sysInfoFetched = false;
@@ -134,12 +135,11 @@ string get_log_suffix(){
   return log_name;
 }
 
-void logging(void *params_void){
-  overlay_params *params = reinterpret_cast<overlay_params *>(params_void);
+void logging(){
   logger->wait_until_data_valid();
   while (logger->is_active()){
       logger->try_log();
-      this_thread::sleep_for(chrono::milliseconds(params->log_interval));
+      this_thread::sleep_for(chrono::milliseconds(_params.log_interval));
   }
 }
 
@@ -159,12 +159,12 @@ void Logger::start_logging() {
   m_logging_on = true;
   m_log_start = Clock::now();
   
-  if (m_params->log_name.empty())
-    m_log_files.emplace_back(m_params->output_folder + "/" + get_program_name() + "_" + get_log_suffix());
+  if (_params.log_name.empty())
+    m_log_files.emplace_back(_params.output_folder + "/" + get_program_name() + "_" + get_log_suffix());
   else
-    m_log_files.emplace_back(m_params->output_folder + "/" + m_params->log_name + ".csv");
+    m_log_files.emplace_back(_params.output_folder + "/" + _params.log_name + ".csv");
 
-  if (m_params->autostart_log){
+  if (_params.autostart_log){
     printf("Named log file: %s\n", m_log_files.back().c_str());
     currentLogFile.open(m_log_files.back(), ios::out | ios::app);
     printf("Opened log file\n");
@@ -183,8 +183,8 @@ void Logger::start_logging() {
     }
     printf("Wrote info to log file\n");
   }
-  if((!m_params->output_folder.empty()) && (m_params->log_interval != 0)){
-    std::thread(logging, m_params).detach();
+  if((!_params.output_folder.empty()) && (_params.log_interval != 0)){
+    std::thread(logging).detach();
   }
 }
 
@@ -193,17 +193,17 @@ void Logger::stop_logging() {
   m_logging_on = false;
   m_log_end = Clock::now();
 
-  std::thread(calculate_benchmark_data, m_params).detach();
+  calculate_benchmark_data();
 
-  if(!m_params->output_folder.empty() && !m_params->autostart_log) {
+  if(!_params.output_folder.empty() && !_params.autostart_log) {
     std::string program = get_wine_exe_name();
     if (program.empty())
         program = get_program_name();
 
-    if (m_params->log_name.empty())
-      m_log_files.emplace_back(m_params->output_folder + "/" + program + "_" + get_log_suffix());
+    if (_params.log_name.empty())
+      m_log_files.emplace_back(_params.output_folder + "/" + program + "_" + get_log_suffix());
     else
-      m_log_files.emplace_back(m_params->output_folder + "/" + m_params->log_name + ".csv");
+      m_log_files.emplace_back(_params.output_folder + "/" + _params.log_name + ".csv");
 
     std::thread(writeFile, m_log_files.back()).detach();
   }
@@ -222,9 +222,9 @@ void Logger::try_log() {
   currentLogData.current_watt = Battery_Stats.current_watt;
 #endif
   m_log_array.push_back(currentLogData);
-  if (m_params->autostart_log)
+  if (_params.autostart_log)
     writeFileContinuous(currentLogFile);
-  if(m_params->log_duration && (elapsedLog >= std::chrono::seconds(m_params->log_duration))){
+  if(_params.log_duration && (elapsedLog >= std::chrono::seconds(_params.log_duration))){
     stop_logging();
   }
 }

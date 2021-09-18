@@ -102,6 +102,7 @@ extern struct benchmark_stats benchmark;
 extern ImVec2 real_font_size;
 extern std::string wineVersion;
 extern std::vector<logData> graph_data;
+extern overlay_params _params;
 
 void position_layer(struct swapchain_stats& data, struct overlay_params& params, ImVec2 window_size);
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan);
@@ -113,7 +114,7 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
 void init_system_info(void);
 void FpsLimiter(struct fps_limit& stats);
 void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats);
-void calculate_benchmark_data(void *params_void);
+void calculate_benchmark_data();
 void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& text_font);
 void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...);
 void center_text(std::string& text);
