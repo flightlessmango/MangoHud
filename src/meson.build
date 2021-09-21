@@ -282,6 +282,7 @@ if sizeof_ptr == 8
       spdlog_dep,
       dbus_dep,
       dep_libdrm,
+      dep_x11,
     ],
     include_directories : [inc_common],
     link_args : link_args,

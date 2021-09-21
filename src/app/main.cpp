@@ -39,6 +39,10 @@ using namespace gl;
 // Include glfw3.h after our OpenGL definitions
 #include <GLFW/glfw3.h>
 
+#define GLFW_EXPOSE_NATIVE_X11
+#include <GLFW/glfw3native.h>
+#include <X11/Xatom.h>
+
 // [Win32] Our example includes a copy of glfw3.lib pre-compiled with VS2010 to maximize ease of testing and compatibility with old VS compilers.
 // To link with VS2010-era libraries, VS2015+ requires linking with legacy_stdio_definitions.lib, which we do using this pragma.
 // Your own project should not be affected, as you are likely to link with a newer binary of GLFW that is adequate for your version of Visual Studio.
@@ -75,6 +79,8 @@ void read_thread(){
     }
 }
 
+static const char *SteamOverlayProperty = "STEAM_OVERLAY";
+
 int main(int, char**)
 {   
     // Setup window
@@ -93,6 +99,17 @@ int main(int, char**)
     GLFWwindow* window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+OpenGL3 example", NULL, NULL);
     if (window == NULL)
         return 1;
+
+    Display *x11_display = glfwGetX11Display();
+    Window x11_window = glfwGetX11Window(window);
+    if (x11_window && x11_display)
+    {
+        // Set atom for gamescope to render as an overlay.
+        Atom overlay_atom = XInternAtom (x11_display, SteamOverlayProperty, False);
+        uint32_t value = 1;
+        XChangeProperty(x11_display, x11_window, overlay_atom, XA_ATOM, 32, PropertyNewValue, (unsigned char *)&value, 1);
+    }
+
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
 
