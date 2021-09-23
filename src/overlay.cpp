@@ -1,6 +1,8 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include <thread>
+#include <condition_variable>
 #include <spdlog/spdlog.h>
 #include "overlay.h"
 #include "logging.h"
@@ -96,6 +98,54 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
    HUDElements.update_exec();
 }
 
+struct hw_info_updater
+{
+   bool quit = false;
+   std::thread thread {};
+   struct swapchain_stats sw_stats;
+   struct overlay_params params;
+   uint32_t vendorID;
+   bool update_hw_info_thread = false;
+
+   std::condition_variable cv_hwupdate;
+   std::mutex cv_m_hwupdate;
+
+   hw_info_updater(struct swapchain_stats& sw_stats_, struct overlay_params& params_, uint32_t vendorID_)
+   : sw_stats(sw_stats_)
+   , params(params_)
+   , vendorID(vendorID_)
+   {
+      thread = std::thread(&hw_info_updater::run, this);
+   }
+
+   ~hw_info_updater()
+   {
+      quit = true;
+      cv_hwupdate.notify_all();
+      if (thread.joinable())
+         thread.join();
+   }
+
+   void update()
+   {
+      update_hw_info_thread = true;
+      cv_hwupdate.notify_all();
+   }
+
+   void run(){
+      while (!quit){
+         std::unique_lock<std::mutex> lk(cv_m_hwupdate);
+         cv_hwupdate.wait(lk, [&]{ return update_hw_info_thread || quit; });
+         if (quit) break;
+
+         update_hw_info(sw_stats, params, vendorID);
+         update_hw_info_thread = false;
+      }
+   }
+};
+
+static std::unique_ptr<hw_info_updater> hw_update_thread;
+
 void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
    uint32_t f_idx = sw_stats.n_frames % ARRAY_SIZE(sw_stats.frames_stats);
    uint64_t now = os_time_get_nano(); /* ns */
@@ -111,7 +161,11 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
 
    frametime = (now - sw_stats.last_present_time) / 1000;
    if (elapsed >= params.fps_sampling_period) {
-      std::thread(update_hw_info, std::ref(sw_stats), std::ref(params), vendorID).detach();
+      if (!hw_update_thread)
+         hw_update_thread = std::make_unique<hw_info_updater>(sw_stats, params, vendorID);
+      else
+         hw_update_thread->update();
+
       sw_stats.fps = fps;
 
       if (params.enabled[OVERLAY_PARAM_ENABLED_time]) {
