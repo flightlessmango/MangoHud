@@ -2,6 +2,7 @@ project('MangoHud',
   ['c', 'cpp'],
   version : 'v0.6.5',
   license : 'MIT',
+  meson_version: '>=0.54.0',
   default_options : ['buildtype=release', 'c_std=c99', 'cpp_std=c++14']
 )
 
@@ -20,13 +21,16 @@ pre_args = [
   '-D__STDC_FORMAT_MACROS',
   '-D__STDC_LIMIT_MACROS',
   '-DPACKAGE_VERSION="@0@"'.format(meson.project_version()),
+  '-DSPDLOG_COMPILED_LIB'
 ]
 
 # Define DEBUG for debug builds only (debugoptimized is not included on this one)
 if get_option('buildtype') == 'debug'
   pre_args += '-DDEBUG'
+  pre_args += '-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE'
 else
   pre_args += '-DNDEBUG'
+  pre_args += '-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_' + get_option('loglevel').to_upper()
 endif
 
 # TODO: this is very incomplete
@@ -84,10 +88,14 @@ if is_unixy
   dep_wayland_client = dependency('wayland-client',
       required: get_option('with_wayland'), version : '>=1.11')
   dbus_dep = dependency('dbus-1', required: get_option('with_dbus')).partial_dependency(compile_args : true, includes : true)
+  dep_libdrm = dependency('libdrm', required: get_option('with_libdrm_amdgpu')).partial_dependency(compile_args : true, includes : true)
+#  dep_libdrm_amdgpu = dependency('libdrm_amdgpu', version : '>=2.4.79', required: get_option('with_libdrm_amdgpu')).partial_dependency(compile_args : true, includes : true)
 else
   dep_x11 = null_dep
   dep_wayland_client = null_dep
   dbus_dep = null_dep
+  dep_libdrm = null_dep
+#  dep_libdrm_amdgpu = null_dep
 endif
 
 if dep_x11.found()
@@ -237,6 +245,17 @@ dearimgui_sp = subproject('imgui', default_options: [
   'allegro5=disabled',
 ])
 dearimgui_dep = dearimgui_sp.get_variable('imgui_dep')
+
+spdlog_dep = cpp.find_library('spdlog', required: get_option('use_system_spdlog'))
+if not spdlog_dep.found()
+  spdlog_sp = subproject('spdlog', default_options: [
+    'default_library=static',
+    'compile_library=true',
+  ])
+  spdlog_dep = spdlog_sp.get_variable('spdlog_dep')
+else
+  spdlog_dep = dependency('spdlog', required: true)
+endif
 
 if ['windows', 'mingw'].contains(host_machine.system())
   subdir('modules/minhook')

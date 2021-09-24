@@ -12,8 +12,7 @@ static std::string get_proc_name() {
    if (!proc_name.empty()) {
        return proc_name;
    }
-   const std::string p = get_exe_path();
-   return p.substr(p.find_last_of("/\\") + 1);
+   return get_basename(get_exe_path());
 }
 
 static  std::vector<std::string> blacklist {

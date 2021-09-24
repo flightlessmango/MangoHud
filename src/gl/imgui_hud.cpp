@@ -3,6 +3,7 @@
 #include <thread>
 #include <string>
 #include <iostream>
+#include <sstream>
 #include <memory>
 #include <unistd.h>
 #include <imgui.h>
@@ -71,6 +72,7 @@ void imgui_init()
         return;
 
     parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
+    _params = params;
 
    //check for blacklist item in the config file
    for (auto& item : params.blacklist) {
@@ -168,10 +170,6 @@ void imgui_create(void *ctx)
 
 void imgui_shutdown()
 {
-#ifndef NDEBUG
-    std::cerr << __func__ << std::endl;
-#endif
-
     if (state.imgui_ctx) {
         ImGui::SetCurrentContext(state.imgui_ctx);
         ImGui_ImplOpenGL3_Shutdown();
@@ -185,10 +183,6 @@ void imgui_set_context(void *ctx)
 {
     if (!ctx)
         return;
-
-#ifndef NDEBUG
-    std::cerr << __func__ << ": " << ctx << std::endl;
-#endif
     imgui_create(ctx);
 }
 

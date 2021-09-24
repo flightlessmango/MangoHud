@@ -8,6 +8,7 @@
 #include <fstream>
 #include <cstring>
 #include <string>
+#include <spdlog/spdlog.h>
 
 std::string read_line(const std::string& filename)
 {
@@ -17,13 +18,25 @@ std::string read_line(const std::string& filename)
     return line;
 }
 
+std::string get_basename(const std::string&& path)
+{
+    auto npos = path.find_last_of("/\\");
+    if (npos == std::string::npos)
+        return path;
+
+    if (npos < path.size() - 1)
+        return path.substr(npos + 1);
+    return path;
+}
+
+#ifdef __gnu_linux__
+
 bool find_folder(const char* root, const char* prefix, std::string& dest)
 {
     struct dirent* dp;
     DIR* dirp = opendir(root);
     if (!dirp) {
-        std::cerr << "Error opening directory '" << root << "': ";
-        perror("");
+        SPDLOG_ERROR("Error opening directory '{}': {}", root, strerror(errno));
         return false;
     }
 
@@ -52,8 +65,7 @@ std::vector<std::string> ls(const char* root, const char* prefix, LS_FLAGS flags
 
     DIR* dirp = opendir(root);
     if (!dirp) {
-        std::cerr << "Error opening directory '" << root << "': ";
-        perror("");
+        SPDLOG_ERROR("Error opening directory '{}': {}", root, strerror(errno));
         return list;
     }
 
@@ -105,6 +117,11 @@ std::string read_symlink(const char * link)
     char result[PATH_MAX] {};
     ssize_t count = readlink(link, result, PATH_MAX);
     return std::string(result, (count > 0) ? count : 0);
+}
+
+std::string read_symlink(const std::string&& link)
+{
+    return read_symlink(link.c_str());
 }
 
 std::string get_exe_path()
@@ -181,3 +198,5 @@ std::string get_config_dir()
         path += "/.config";
     return path;
 }
+
+#endif // __gnu_linux__

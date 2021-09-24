@@ -64,12 +64,14 @@
 //  ES 3.0    300       "#version 300 es"   = WebGL 2.0
 //----------------------------------------
 
+#include <spdlog/spdlog.h>
 #include <imgui.h>
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
 #include <stdint.h>     // intptr_t
 #include <sstream>
 
+#include <spdlog/spdlog.h>
 #include <glad/glad.h>
 
 #include "overlay.h"
@@ -138,13 +140,13 @@ static bool CheckShader(GLuint handle, const char* desc)
     glGetShaderiv(handle, GL_COMPILE_STATUS, &status);
     glGetShaderiv(handle, GL_INFO_LOG_LENGTH, &log_length);
     if ((GLboolean)status == GL_FALSE)
-        fprintf(stderr, "ERROR: ImGui_ImplOpenGL3_CreateDeviceObjects: failed to compile %s!\n", desc);
+        SPDLOG_ERROR("ImGui_ImplOpenGL3_CreateDeviceObjects: failed to compile {}!", desc);
     if (log_length > 1)
     {
         ImVector<char> buf;
         buf.resize((int)(log_length + 1));
         glGetShaderInfoLog(handle, log_length, NULL, (GLchar*)buf.begin());
-        fprintf(stderr, "%s\n", buf.begin());
+        SPDLOG_ERROR("{}", buf.begin());
     }
     return (GLboolean)status == GL_TRUE;
 }
@@ -156,13 +158,13 @@ static bool CheckProgram(GLuint handle, const char* desc)
     glGetProgramiv(handle, GL_LINK_STATUS, &status);
     glGetProgramiv(handle, GL_INFO_LOG_LENGTH, &log_length);
     if ((GLboolean)status == GL_FALSE)
-        fprintf(stderr, "ERROR: ImGui_ImplOpenGL3_CreateDeviceObjects: failed to link %s! (with GLSL '%s')\n", desc, g_GlslVersionString);
+        SPDLOG_ERROR("ImGui_ImplOpenGL3_CreateDeviceObjects: failed to link {}! (with GLSL '{}')", desc, g_GlslVersionString);
     if (log_length > 1)
     {
         ImVector<char> buf;
         buf.resize((int)(log_length + 1));
         glGetProgramInfoLog(handle, log_length, NULL, (GLchar*)buf.begin());
-        fprintf(stderr, "%s\n", buf.begin());
+        SPDLOG_ERROR("{}", buf.begin());
     }
     return (GLboolean)status == GL_TRUE;
 }
@@ -284,7 +286,7 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "}\n";
 
 #ifndef NDEBUG
-    printf("glsl_version: %d\n", glsl_version);
+    fprintf(stderr, "glsl_version: %d\n", glsl_version);
 #endif
     // Select shaders matching our GLSL versions
     const GLchar* vertex_shader = NULL;
@@ -363,7 +365,7 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
 static void    ImGui_ImplOpenGL3_DestroyDeviceObjects()
 {
 #ifndef NDEBUG
-    printf("%s\n", __func__);
+    fprintf(stderr, "%s\n", __func__);
 #endif
     if (g_VboHandle)        { glDeleteBuffers(1, &g_VboHandle); g_VboHandle = 0; }
     if (g_ElementsHandle)   { glDeleteBuffers(1, &g_ElementsHandle); g_ElementsHandle = 0; }
@@ -413,7 +415,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     GLint major = 0, minor = 0;
     GetOpenGLVersion(major, minor, g_IsGLES);
 
-    printf("Version: %d.%d %s\n", major, minor, g_IsGLES ? "ES" : "");
+    SPDLOG_INFO("GL version: {}.{} {}", major, minor, g_IsGLES ? "ES" : "");
 
     if (!g_IsGLES) {
         // Not GL ES
@@ -478,16 +480,12 @@ void    ImGui_ImplOpenGL3_NewFrame()
     if (!g_ShaderHandle)
         ImGui_ImplOpenGL3_CreateDeviceObjects();
     else if (!glIsProgram(g_ShaderHandle)) { // TODO Got created in a now dead context?
-#ifndef NDEBUG
-        fprintf(stderr, "MANGOHUD: recreating lost objects\n");
-#endif
+        SPDLOG_DEBUG("Recreating lost objects");
         ImGui_ImplOpenGL3_CreateDeviceObjects();
     }
 
     if (!glIsTexture(g_FontTexture)) {
-#ifndef NDEBUG
-        fprintf(stderr, "MANGOHUD: GL Texture lost? Regenerating.\n");
-#endif
+        SPDLOG_DEBUG("GL Texture lost? Regenerating.");
         g_FontTexture = 0;
         ImGui_ImplOpenGL3_CreateFontsTexture();
     }

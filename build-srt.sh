@@ -28,7 +28,7 @@ dependencies() {
         }
 
         echo "# Checking Dependencies"
-        DEPS=(${LOCAL_CC}-multilib ${LOCAL_CXX}-multilib unzip)
+        DEPS=(${LOCAL_CC}-multilib ${LOCAL_CXX}-multilib unzip libdrm-dev)
         install
 
 
@@ -42,7 +42,7 @@ dependencies() {
         set -e
 
         if [[ ! -f ./bin/get-pip.py ]]; then
-            curl https://bootstrap.pypa.io/get-pip.py -o bin/get-pip.py
+            curl https://bootstrap.pypa.io/pip/3.5/get-pip.py -o bin/get-pip.py
             python3 ./bin/get-pip.py
         fi
         pip3 install 'meson>=0.54' mako
@@ -81,7 +81,7 @@ configure() {
 
 build() {
     if [[ ! -f "build-srt/meson64/build.ninja" || ! -f "build-srt/meson32/build.ninja" ]]; then
-        configure
+        configure $@
     fi
     DESTDIR="$PWD/build-srt/release" ninja -C build-srt/meson32 install
     DESTDIR="$PWD/build-srt/release" ninja -C build-srt/meson64 install

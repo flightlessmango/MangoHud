@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <regex>
 #include <inttypes.h>
+#include <spdlog/spdlog.h>
 #include "string_utils.h"
 
 #ifndef PROCDIR
@@ -116,13 +117,13 @@ bool CPUStats::Init()
     m_cpuData.clear();
 
     if (!file.is_open()) {
-        std::cerr << "Failed to opening " << PROCSTATFILE << std::endl;
+        SPDLOG_ERROR("Failed to opening " PROCSTATFILE);
         return false;
     }
 
     do {
         if (!std::getline(file, line)) {
-            std::cerr << "Failed to read all of " << PROCSTATFILE << std::endl;
+            SPDLOG_DEBUG("Failed to read all of " PROCSTATFILE);
             return false;
         } else if (starts_with(line, "cpu")) {
             if (first) {
@@ -175,7 +176,7 @@ bool CPUStats::UpdateCPUData()
     bool ret = false;
 
     if (!file.is_open()) {
-        std::cerr << "Failed to opening " << PROCSTATFILE << std::endl;
+        SPDLOG_ERROR("Failed to opening " PROCSTATFILE);
         return false;
     }
 
@@ -189,21 +190,20 @@ bool CPUStats::UpdateCPUData()
         } else if (sscanf(line.c_str(), "cpu%4d %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu",
             &cpuid, &usertime, &nicetime, &systemtime, &idletime, &ioWait, &irq, &softIrq, &steal, &guest, &guestnice) == 11) {
 
-            //std::cerr << "Parsing 'cpu" << cpuid << "' line:" <<  line << std::endl;
+            //SPDLOG_DEBUG("Parsing 'cpu{}' line:{}", cpuid, line);
 
             if (!ret) {
-                //std::cerr << "Failed to parse 'cpu' line" << std::endl;
-                std::cerr << "Failed to parse 'cpu' line:" <<  line << std::endl;
+                SPDLOG_DEBUG("Failed to parse 'cpu' line:{}", line);
                 return false;
             }
 
             if (cpuid < 0 /* can it? */) {
-                std::cerr << "Cpu id '" << cpuid << "' is out of bounds" << std::endl;
+                SPDLOG_DEBUG("Cpu id '{}' is out of bounds", cpuid);
                 return false;
             }
 
             if ((size_t)cpuid >= m_cpuData.size()) {
-                std::cerr << "Cpu id '" << cpuid << "' is out of bounds, reiniting" << std::endl;
+                SPDLOG_DEBUG("Cpu id '{}' is out of bounds, reiniting", cpuid);
                 return Reinit();
             }
 
@@ -399,9 +399,7 @@ static bool find_fallback_temp_input(const std::string path, std::string& input)
         if (!ends_with(file, "_input"))
             continue;
         input = path + "/" + file;
-#ifndef NDEBUG
-        std::cerr << "fallback cpu temp input: " << input << "\n";
-#endif
+        SPDLOG_DEBUG("fallback cpu temp input: {}", input);
         return true;
     }
     return false;
@@ -418,9 +416,8 @@ bool CPUStats::GetCpuFile() {
     for (auto& dir : dirs) {
         path = hwmon + dir;
         name = read_line(path + "/name");
-#ifndef NDEBUG
-        std::cerr << "hwmon: sensor name: " << name << std::endl;
-#endif
+        SPDLOG_DEBUG("hwmon: sensor name: {}", name);
+
         if (name == "coretemp") {
             find_temp_input(path, input, "Package id 0");
             break;
@@ -437,12 +434,11 @@ bool CPUStats::GetCpuFile() {
     }
 
     if (path.empty() || (!file_exists(input) && !find_fallback_temp_input(path, input))) {
-        std::cerr << "MANGOHUD: Could not find cpu temp sensor location" << std::endl;
+        SPDLOG_ERROR("Could not find cpu temp sensor location");
         return false;
     } else {
-#ifndef NDEBUG
-        std::cerr << "hwmon: using input: " << input << std::endl;
-#endif
+
+        SPDLOG_DEBUG("hwmon: using input: {}", input);
         m_cpuTempFile = fopen(input.c_str(), "r");
     }
     return true;
@@ -480,12 +476,10 @@ CPUPowerData_k10temp* init_cpu_power_data_k10temp(const std::string path) {
     if(!find_input(path, "in", socVoltageInput, "Vsoc")) return nullptr;
     if(!find_input(path, "curr", socCurrentInput, "Isoc")) return nullptr;
 
-#ifndef NDEBUG
-    std::cerr << "hwmon: using input: " << coreVoltageInput << std::endl;
-    std::cerr << "hwmon: using input: " << coreCurrentInput << std::endl;
-    std::cerr << "hwmon: using input: " << socVoltageInput << std::endl;
-    std::cerr << "hwmon: using input: " << socCurrentInput << std::endl;
-#endif
+    SPDLOG_DEBUG("hwmon: using input: {}", coreVoltageInput);
+    SPDLOG_DEBUG("hwmon: using input: {}", coreCurrentInput);
+    SPDLOG_DEBUG("hwmon: using input: {}", socVoltageInput);
+    SPDLOG_DEBUG("hwmon: using input: {}", socCurrentInput);
 
     powerData->coreVoltageFile = fopen(coreVoltageInput.c_str(), "r");
     powerData->coreCurrentFile = fopen(coreCurrentInput.c_str(), "r");
@@ -503,10 +497,8 @@ CPUPowerData_zenpower* init_cpu_power_data_zenpower(const std::string path) {
     if(!find_input(path, "power", corePowerInput, "SVI2_P_Core")) return nullptr;
     if(!find_input(path, "power", socPowerInput, "SVI2_P_SoC")) return nullptr;
 
-#ifndef NDEBUG
-    std::cerr << "hwmon: using input: " << corePowerInput << std::endl;
-    std::cerr << "hwmon: using input: " << socPowerInput << std::endl;
-#endif
+    SPDLOG_DEBUG("hwmon: using input: {}", corePowerInput);
+    SPDLOG_DEBUG("hwmon: using input: {}", socPowerInput);
 
     powerData->corePowerFile = fopen(corePowerInput.c_str(), "r");
     powerData->socPowerFile = fopen(socPowerInput.c_str(), "r");
@@ -538,9 +530,8 @@ bool CPUStats::InitCpuPowerData() {
     for (auto& dir : dirs) {
         path = hwmon + dir;
         name = read_line(path + "/name");
-#ifndef NDEBUG
-        std::cerr << "hwmon: sensor name: " << name << std::endl;
-#endif
+        SPDLOG_DEBUG("hwmon: sensor name: {}", name);
+
         if (name == "k10temp") {
             cpuPowerData = (CPUPowerData*)init_cpu_power_data_k10temp(path);
             break;
@@ -556,9 +547,7 @@ bool CPUStats::InitCpuPowerData() {
         for (auto& dir : powercap_dirs) {
             path = powercap + dir;
             name = read_line(path + "/name");
-#ifndef NDEBUG
-            std::cerr << "powercap: name: " << name << std::endl;
-#endif
+            SPDLOG_DEBUG("powercap: name: {}", name);
             if (name == "package-0") {
                 cpuPowerData = (CPUPowerData*)init_cpu_power_data_rapl(path);
                 break;
@@ -567,7 +556,7 @@ bool CPUStats::InitCpuPowerData() {
     }
 
     if(cpuPowerData == nullptr) {
-        std::cerr << "MANGOHUD: Failed to initialize CPU power data" << std::endl;
+        SPDLOG_ERROR("Failed to initialize CPU power data");
         return false;
     }
 

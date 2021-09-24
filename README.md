@@ -16,20 +16,67 @@ git clone --recurse-submodules https://github.com/flightlessmango/MangoHud.git
 cd MangoHud
 ```
 
-To build it, execute:
+Using `meson` to install "manually":
+
+```
+meson build
+ninja -C build install
+```
+
+By default, meson should install MangoHud to `/usr/local`. Specify install prefix with `--prefix=/usr` if desired.
+Add `-Dappend_libdir_mangohud=false` option to meson to not append `mangohud` to libdir if desired (e.g. /usr/local/lib/mangohud).
+
+To install 32-bit build on 64-bit distro, specify proper `libdir`: `lib32` for Arch, `lib/i386-linux-gnu` on Debian. RPM-based distros usually install 32-bit libraries to `/usr/lib` and 64-bit to `/usr/lib64`.
+You may have to change `PKG_CONFIG_PATH` to point to correct folders for your distro.
+
+```
+CC="gcc -m32" \
+CXX="g++ -m32" \
+PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig" \
+meson build32 --libdir lib32
+ninja -C build32 install
+```
+
+### Dependencies
+
+Install necessary development packages.
+
+- gcc, g++
+- or gcc-multilib, g++-multilib for 32-bit support
+- meson >=0.54
+- ninja (ninja-build)
+- glslang
+- vulkan headers if using `-Duse_system_vulkan=enabled` option with `meson`
+- libGL/libEGL (libglvnd, mesa-common-dev, mesa-libGL-devel etc)
+- X11 (libx11-dev)
+- libdrm (libdrm-dev)
+- XNVCtrl (libxnvctrl-dev), optional, use `-Dwith_xnvctrl=disabled` option with `meson` to disable
+- D-Bus (libdbus-1-dev), optional, use `-Dwith_dbus=disabled` option with `meson` to disable
+
+Python 3 libraries:
+
+- Mako (python3-mako or install with `pip`)
+
+
+If distro's packaged `meson` is too old and gives build errors, install newer version with `pip` (`python3-pip`).
+
+### Building with build script
+
+You can also use `build.sh` script to do some things automatically like install dependencies, if distro is supported but it usually assumes you are running on x86_64 architecture.
+
+To just build it, execute:
 
 ```
 ./build.sh build
-./build.sh package
 ```
 
-**NOTE: If you are running an Ubuntu-based, Arch-based, Fedora-based, or openSUSE-based distro, the build script will automatically detect and prompt you to install missing build dependencies. If you run into any issues with this please report them!**
+You can also pass arguments to meson:
 
-Once done, proceed to the [installation](#source).
+```
+./build.sh build -Dwith_xnvctrl=disabled
+```
 
-## Install
-
-### Source
+Resulting files will be install to `./build/release` folder.
 
 If you have compiled MangoHud from source, to install it, execute:
 
@@ -42,6 +89,29 @@ You can then subsequently uninstall MangoHud via the following command
 ```
 ./build.sh uninstall
 ```
+
+To tar up the resulting binaries into a package and create a release tar with installer script, execute:
+
+```
+./build.sh package release
+```
+
+or combine the commands, although `package` should also call `build` if it doesn't find the built libs:
+
+```
+./build.sh build package release
+```
+
+If you have built MangoHud before and suddenly it fails, you can try cleaning the `build` folder, execute:
+
+```
+./build.sh clean
+```
+
+Currently it just does `rm -fr build` and clears subprojects.
+
+**NOTE: If you are running an Ubuntu-based, Arch-based, Fedora-based, or openSUSE-based distro, the build script will automatically detect and prompt you to install missing build dependencies. If you run into any issues with this please report them!**
+
 
 ### Pre-packaged binaries
 
@@ -172,7 +242,9 @@ Some Linux native OpenGL games overrides LD_PRELOAD and stops MangoHud from work
 MangoHud comes with a config file which can be used to set configuration options globally or per application. The priorities of different config files are:
 
 1. `/path/to/application/dir/MangoHud.conf`
-2. `$HOME/.config/MangoHud/{application_name}.conf`
+2. Per-application configuration in ~/.config/MangoHud:
+    1. `$HOME/.config/MangoHud/application_name.conf`
+    2. `$HOME/.config/MangoHud/wine-application_name.conf` for wine/proton apps
 3. `$HOME/.config/MangoHud/MangoHud.conf`
 
 You can find an example config in /usr/share/doc/mangohud
@@ -197,6 +269,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `gpu_core_clock`<br>`gpu_mem_clock`| Displays GPU core/memory frequency                                                    |
 | `ram`<br>`vram`                    | Displays system RAM/VRAM usage                                                        |
 | `swap`                             | Displays swap space usage next to system RAM usage                                    |
+| `procmem`<br>`procmem_shared`, `procmem_virt`| Displays process' memory usage: resident, shared and/or virtual. `procmem` (resident) also toggles others off if disabled. |
 | `full`                             | Enables most of the toggleable parameters (currently excludes `histogram`)            |
 | `font_size=`                       | Customizeable font size (default=24)                                                  |
 | `font_size_text=`                  | Customizeable font size for other text like media metadata (default=24)               |
@@ -221,7 +294,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `vsync`<br> `gl_vsync`             | Set vsync for OpenGL or Vulkan                                                        |
 | `media_player`                     | Show media player metadata                                                            |
 | `media_player_name`                | Force media player DBus service name without the `org.mpris.MediaPlayer2` part, like `spotify`, `vlc`, `audacious` or `cantata`. If none is set, MangoHud tries to switch between currently playing players. |
-| `media_player_order`               | Media player metadata field order. Defaults to `title,artist,album`.                  |
+| `media_player_format`              | Format media player metadata. Add extra text etc. Semi-colon breaks to new line. Defaults to `{title};{artist};{album}`. |
 | `font_scale_media_player`          | Change size of media player text relative to font_size                                |
 | `io_read`<br> `io_write`           | Show non-cached IO read/write, in MiB/s                                               |
 | `pci_dev`                          | Select GPU device in multi-gpu setups                                                 |
@@ -263,6 +336,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `battery`                          | Display current battery percent and energy consumption                                |
 | `battery_icon`                     | Display battery icon instead of percent                                               |
 | `battery_color`                    | Change the BATT text color                                                            |
+| `force_amdgpu_hwmon`               | Use hwmon sysfs instead of libdrm for amdgpu stats                                    |
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 Because comma is also used as option delimiter and needs to be escaped for values with a backslash, you can use `+` like `MANGOHUD_CONFIG=fps_limit=60+30+0` instead.
 

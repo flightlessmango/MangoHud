@@ -36,6 +36,9 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(ram)                           \
    OVERLAY_PARAM_BOOL(swap)                          \
    OVERLAY_PARAM_BOOL(vram)                          \
+   OVERLAY_PARAM_BOOL(procmem)                       \
+   OVERLAY_PARAM_BOOL(procmem_shared)                \
+   OVERLAY_PARAM_BOOL(procmem_virt)                  \
    OVERLAY_PARAM_BOOL(time)                          \
    OVERLAY_PARAM_BOOL(full)                          \
    OVERLAY_PARAM_BOOL(read_cfg)                      \
@@ -70,6 +73,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(gamemode)                      \
    OVERLAY_PARAM_BOOL(battery)                       \
    OVERLAY_PARAM_BOOL(battery_icon)                  \
+   OVERLAY_PARAM_BOOL(force_amdgpu_hwmon)            \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
@@ -120,7 +124,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(pci_dev)                     \
    OVERLAY_PARAM_CUSTOM(media_player_name)           \
    OVERLAY_PARAM_CUSTOM(media_player_color)          \
-   OVERLAY_PARAM_CUSTOM(media_player_order)          \
+   OVERLAY_PARAM_CUSTOM(media_player_format)         \
    OVERLAY_PARAM_CUSTOM(cpu_text)                    \
    OVERLAY_PARAM_CUSTOM(gpu_text)                    \
    OVERLAY_PARAM_CUSTOM(log_interval)                \
@@ -153,12 +157,6 @@ enum overlay_param_position {
 enum overlay_plots {
     OVERLAY_PLOTS_frame_timing,
     OVERLAY_PLOTS_MAX,
-};
-
-enum media_player_order {
-   MP_ORDER_TITLE,
-   MP_ORDER_ARTIST,
-   MP_ORDER_ALBUM,
 };
 
 enum font_glyph_ranges {
@@ -235,7 +233,7 @@ struct overlay_params {
    std::string cpu_text, gpu_text;
    std::vector<std::string> blacklist;
    unsigned log_interval, autostart_log;
-   std::vector<media_player_order> media_player_order;
+   std::vector<std::string> media_player_format;
    std::vector<std::string> benchmark_percentiles;
    std::string font_file, font_file_text;
    uint32_t font_glyph_ranges;

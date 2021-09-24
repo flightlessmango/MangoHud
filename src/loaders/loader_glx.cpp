@@ -1,4 +1,5 @@
 #include <iostream>
+#include <spdlog/spdlog.h>
 #include "real_dlsym.h"
 #include "loaders/loader_glx.h"
 
@@ -24,7 +25,7 @@ bool glx_loader::Load() {
   if (!handle)
     handle = real_dlopen("libGL.so.1", RTLD_LAZY);
   if (!handle) {
-    std::cerr << "MANGOHUD: Failed to open " << "" MANGOHUD_ARCH << " libGL.so.1: " << dlerror() << std::endl;
+    SPDLOG_ERROR("Failed to open " MANGOHUD_ARCH " libGL.so.1: {}", dlerror());
     return false;
   }
 
