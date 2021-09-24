@@ -634,41 +634,6 @@ kiero::Status::Enum kiero::init(RenderType::Enum _renderType)
 
 			return Status::NotSupportedError;
 		}
-		else
-		{
-			RenderType::Enum type = RenderType::None;
-
-			if (::GetModuleHandle(KIERO_TEXT("d3d9.dll")) != NULL)
-			{
-				type = RenderType::D3D9;
-			}
-			else if (::GetModuleHandle(KIERO_TEXT("d3d10.dll")) != NULL)
-			{
-				type = RenderType::D3D10;
-			}
-			else if (::GetModuleHandle(KIERO_TEXT("d3d11.dll")) != NULL)
-			{
-				type = RenderType::D3D11;
-			}
-			else if (::GetModuleHandle(KIERO_TEXT("d3d12.dll")) != NULL)
-			{
-				type = RenderType::D3D12;
-			}
-			else if (::GetModuleHandle(KIERO_TEXT("opengl32.dll")) != NULL)
-			{
-				type = RenderType::OpenGL;
-			}
-			else if (::GetModuleHandle(KIERO_TEXT("vulkan-1.dll")) != NULL)
-			{
-				type = RenderType::Vulkan;
-			}
-			else
-			{
-				return Status::NotSupportedError;
-			}
-
-			return init(type);
-		}
 	}
 
 	return Status::Success;

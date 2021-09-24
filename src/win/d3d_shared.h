@@ -1,10 +1,12 @@
 #include "../overlay.h"
+#include "kiero.h"
 
 extern bool cfg_inited;
 extern ImVec2 window_size;
 extern struct overlay_params params;
 extern struct swapchain_stats sw_stats;
 extern uint32_t vendorID;
+extern kiero::RenderType::Enum dx_version;
 
 extern void init_d3d_shared(void);
 extern void d3d_run(void);

@@ -93,6 +93,7 @@ struct CPUPowerData_zenpower : public CPUPowerData {
 struct CPUPowerData_rapl : public CPUPowerData {
    CPUPowerData_rapl() {
       this->source = CPU_POWER_RAPL;
+      this->lastCounterValue = 0;
       this->lastCounterValueTime = Clock::now();
    };
 
@@ -102,7 +103,7 @@ struct CPUPowerData_rapl : public CPUPowerData {
    };
 
    FILE* energyCounterFile {nullptr};
-   int lastCounterValue;
+   uint64_t lastCounterValue;
    Clock::time_point lastCounterValueTime;
 };
 
@@ -112,6 +113,7 @@ public:
    CPUStats();
    ~CPUStats();
    bool Init();
+   bool Reinit();
    bool Updated()
    {
       return m_updatedCPUs;

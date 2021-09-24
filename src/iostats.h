@@ -2,8 +2,8 @@
 #ifndef MANGOHUD_IOSTATS_H
 #define MANGOHUD_IOSTATS_H
 
-#include <pthread.h>
 #include <inttypes.h>
+#include "timing.hpp"
 
 struct iostats {
     struct {
@@ -18,6 +18,11 @@ struct iostats {
       float read;
       float write;
     } diff;
+    struct {
+      float read;
+      float write;
+    } per_second;
+    Clock::time_point last_update;
 };
 
 void getIoStats(void *args);

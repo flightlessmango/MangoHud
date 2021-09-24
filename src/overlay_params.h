@@ -34,7 +34,11 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(cpu_stats)                     \
    OVERLAY_PARAM_BOOL(gpu_stats)                     \
    OVERLAY_PARAM_BOOL(ram)                           \
+   OVERLAY_PARAM_BOOL(swap)                          \
    OVERLAY_PARAM_BOOL(vram)                          \
+   OVERLAY_PARAM_BOOL(procmem)                       \
+   OVERLAY_PARAM_BOOL(procmem_shared)                \
+   OVERLAY_PARAM_BOOL(procmem_virt)                  \
    OVERLAY_PARAM_BOOL(time)                          \
    OVERLAY_PARAM_BOOL(full)                          \
    OVERLAY_PARAM_BOOL(read_cfg)                      \
@@ -54,10 +58,22 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(wine)                          \
    OVERLAY_PARAM_BOOL(gpu_load_change)               \
    OVERLAY_PARAM_BOOL(cpu_load_change)               \
+   OVERLAY_PARAM_BOOL(core_load_change)              \
    OVERLAY_PARAM_BOOL(graphs)                        \
    OVERLAY_PARAM_BOOL(legacy_layout)                 \
    OVERLAY_PARAM_BOOL(cpu_mhz)                       \
    OVERLAY_PARAM_BOOL(frametime)                     \
+   OVERLAY_PARAM_BOOL(resolution)                    \
+   OVERLAY_PARAM_BOOL(show_fps_limit)                \
+   OVERLAY_PARAM_BOOL(fps_color_change)              \
+   OVERLAY_PARAM_BOOL(custom_text_center)            \
+   OVERLAY_PARAM_BOOL(custom_text)                   \
+   OVERLAY_PARAM_BOOL(exec)                          \
+   OVERLAY_PARAM_BOOL(vkbasalt)                      \
+   OVERLAY_PARAM_BOOL(gamemode)                      \
+   OVERLAY_PARAM_BOOL(battery)                       \
+   OVERLAY_PARAM_BOOL(battery_icon)                  \
+   OVERLAY_PARAM_BOOL(force_amdgpu_hwmon)            \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
@@ -77,6 +93,9 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(fps_limit)                   \
    OVERLAY_PARAM_CUSTOM(vsync)                       \
    OVERLAY_PARAM_CUSTOM(gl_vsync)                    \
+   OVERLAY_PARAM_CUSTOM(gl_size_query)               \
+   OVERLAY_PARAM_CUSTOM(gl_bind_framebuffer)         \
+   OVERLAY_PARAM_CUSTOM(gl_dont_flip)                \
    OVERLAY_PARAM_CUSTOM(toggle_hud)                  \
    OVERLAY_PARAM_CUSTOM(toggle_fps_limit)            \
    OVERLAY_PARAM_CUSTOM(toggle_logging)              \
@@ -99,12 +118,13 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(io_color)                    \
    OVERLAY_PARAM_CUSTOM(text_color)                  \
    OVERLAY_PARAM_CUSTOM(wine_color)                  \
+   OVERLAY_PARAM_CUSTOM(battery_color)               \
    OVERLAY_PARAM_CUSTOM(alpha)                       \
    OVERLAY_PARAM_CUSTOM(log_duration)                \
    OVERLAY_PARAM_CUSTOM(pci_dev)                     \
    OVERLAY_PARAM_CUSTOM(media_player_name)           \
    OVERLAY_PARAM_CUSTOM(media_player_color)          \
-   OVERLAY_PARAM_CUSTOM(media_player_order)          \
+   OVERLAY_PARAM_CUSTOM(media_player_format)         \
    OVERLAY_PARAM_CUSTOM(cpu_text)                    \
    OVERLAY_PARAM_CUSTOM(gpu_text)                    \
    OVERLAY_PARAM_CUSTOM(log_interval)                \
@@ -115,14 +135,20 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(cpu_load_value)              \
    OVERLAY_PARAM_CUSTOM(gpu_load_color)              \
    OVERLAY_PARAM_CUSTOM(cpu_load_color)              \
+   OVERLAY_PARAM_CUSTOM(fps_value)                   \
+   OVERLAY_PARAM_CUSTOM(fps_color)                   \
    OVERLAY_PARAM_CUSTOM(cellpadding_y)               \
    OVERLAY_PARAM_CUSTOM(table_columns)               \
    OVERLAY_PARAM_CUSTOM(blacklist)                   \
    OVERLAY_PARAM_CUSTOM(autostart_log)               \
+   OVERLAY_PARAM_CUSTOM(round_corners)               \
+
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
    LAYER_POSITION_TOP_RIGHT,
+   LAYER_POSITION_MIDDLE_LEFT,
+   LAYER_POSITION_MIDDLE_RIGHT,
    LAYER_POSITION_BOTTOM_LEFT,
    LAYER_POSITION_BOTTOM_RIGHT,
    LAYER_POSITION_TOP_CENTER,
@@ -131,12 +157,6 @@ enum overlay_param_position {
 enum overlay_plots {
     OVERLAY_PLOTS_frame_timing,
     OVERLAY_PLOTS_MAX,
-};
-
-enum media_player_order {
-   MP_ORDER_TITLE,
-   MP_ORDER_ARTIST,
-   MP_ORDER_ALBUM,
 };
 
 enum font_glyph_ranges {
@@ -149,6 +169,12 @@ enum font_glyph_ranges {
    FG_VIETNAMESE              = (1u << 6),
    FG_LATIN_EXT_A             = (1u << 7),
    FG_LATIN_EXT_B             = (1u << 8),
+};
+
+enum gl_size_query {
+   GL_SIZE_DRAWABLE,
+   GL_SIZE_VIEWPORT,
+   GL_SIZE_SCISSORBOX, // needed?
 };
 
 enum overlay_param_enabled {
@@ -164,7 +190,7 @@ struct overlay_params {
    bool enabled[OVERLAY_PARAM_ENABLED_MAX];
    enum overlay_param_position position;
    int control;
-   uint32_t fps_sampling_period; /* us */
+   uint32_t fps_sampling_period; /* ns */
    std::vector<std::uint32_t> fps_limit;
    bool help;
    bool no_display;
@@ -173,14 +199,20 @@ struct overlay_params {
    unsigned width;
    unsigned height;
    int offset_x, offset_y;
+   float round_corners;
    unsigned vsync;
    int gl_vsync;
+   int gl_bind_framebuffer {-1};
+   enum gl_size_query gl_size_query {GL_SIZE_DRAWABLE};
+   bool gl_dont_flip {false};
    uint64_t log_duration;
-   unsigned cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color, wine_color;
+   unsigned cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color, wine_color, battery_color;
    std::vector<unsigned> gpu_load_color;
    std::vector<unsigned> cpu_load_color;
    std::vector<unsigned> gpu_load_value;
    std::vector<unsigned> cpu_load_value;
+   std::vector<unsigned> fps_color;
+   std::vector<unsigned> fps_value;
    unsigned media_player_color;
    unsigned table_columns;
    bool no_small_font;
@@ -199,14 +231,14 @@ struct overlay_params {
    std::string pci_dev;
    std::string media_player_name;
    std::string cpu_text, gpu_text;
-   //std::string blacklist;
    std::vector<std::string> blacklist;
    unsigned log_interval, autostart_log;
-   std::vector<media_player_order> media_player_order;
+   std::vector<std::string> media_player_format;
    std::vector<std::string> benchmark_percentiles;
    std::string font_file, font_file_text;
    uint32_t font_glyph_ranges;
-
+   std::string custom_text_center;
+   std::string custom_text;
    std::string config_file_path;
    std::unordered_map<std::string,std::string> options;
    int permit_upload;

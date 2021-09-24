@@ -1,12 +1,15 @@
+#include <spdlog/spdlog.h>
 #include "memory.h"
 #include <iomanip>
 #include <cstring>
 #include <stdio.h>
 #include <iostream>
 #include <thread>
+#include <unistd.h>
 
 struct memory_information mem_info;
-float memused, memmax;
+float memused, memmax, swapused, swapmax;
+struct process_mem proc_mem {};
 
 FILE *open_file(const char *file, int *reported) {
   FILE *fp = nullptr;
@@ -15,7 +18,7 @@ FILE *open_file(const char *file, int *reported) {
 
   if (fp == nullptr) {
     if ((reported == nullptr) || *reported == 0) {
-      // NORM_ERR("can't open %s: %s", file, strerror(errno));
+      SPDLOG_ERROR("can't open {}: {}", file, strerror(errno));
       if (reported != nullptr) { *reported = 1; }
     }
     return nullptr;
@@ -95,5 +98,34 @@ void update_meminfo(void) {
   memused = (float(mem_info.memmax) - float(mem_info.memeasyfree)) / (1024 * 1024);
   memmax = float(mem_info.memmax) / (1024 * 1024);
 
+  swapused = (float(mem_info.swapmax) - float(mem_info.swapfree)) / (1024 * 1024);
+  swapmax = float(mem_info.swapmax) / (1024 * 1024);
+
   fclose(meminfo_fp);
+}
+
+void update_procmem()
+{
+    static int reported = 0;
+    FILE *statm = open_file("/proc/self/statm", &reported);
+    if (!statm)
+        return;
+
+    static auto pageSize = sysconf(_SC_PAGESIZE);
+    if (pageSize < 0) pageSize = 4096;
+
+    long long int temp[7];
+    if (fscanf(statm, "%lld %lld %lld %lld %lld %lld %lld",
+        &temp[0], &temp[1], &temp[2], &temp[3],
+        &temp[4], /* unused since Linux 2.6; always 0 */
+        &temp[5], &temp[6]) == 7)
+    {
+        proc_mem.virt = temp[0] * pageSize;// / (1024.f * 1024.f); //MiB
+        proc_mem.resident = temp[1] * pageSize;// / (1024.f * 1024.f); //MiB
+        proc_mem.shared = temp[2] * pageSize;// / (1024.f * 1024.f); //MiB;
+        proc_mem.text = temp[3];
+        proc_mem.data = temp[5];
+        proc_mem.dirty = temp[6];
+    }
+    fclose(statm);
 }

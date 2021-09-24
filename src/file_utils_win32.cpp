@@ -1,16 +1,7 @@
 #include "file_utils.h"
 #include "string_utils.h"
-#include <iostream>
 #include <fstream>
-#include <cstring>
-
-std::string read_line(const std::string& filename)
-{
-    std::string line;
-    std::ifstream file(filename);
-    std::getline(file, line);
-    return line;
-}
+#include <string>
 
 bool find_folder(const char* root, const char* prefix, std::string& dest)
 {
@@ -43,9 +34,9 @@ std::string get_exe_path()
     return std::string();
 }
 
-bool get_wine_exe_name(std::string& name, bool keep_ext)
+std::string get_wine_exe_name(bool keep_ext)
 {
-    return false;
+    return std::string();
 }
 
 std::string get_home_dir()

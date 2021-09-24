@@ -1,15 +1,36 @@
 #!/bin/sh
 
 VERSION=$(git describe --tags --dirty)
-NAME=MangoHud-$VERSION-Source
+NAME=MangoHud-${VERSION}
+TAR_NAME=${NAME}-Source.tar.xz
+DFSG_TAR_NAME=${NAME}-Source-DFSG.tar.xz
 
-# create archive via git
-git archive HEAD --format=tar --prefix=${NAME}/ --output=${NAME}.tar
-# remove unused minihook from source tarball
-tar -f ${NAME}.tar --delete ${NAME}/modules
-# create DFSG compliant version which excludes NVML
-cp ${NAME}.tar ${NAME}-DFSG.tar
-tar -f ${NAME}-DFSG.tar --delete ${NAME}/include/nvml.h
-# compress archives
-gzip ${NAME}.tar
-gzip ${NAME}-DFSG.tar
+# remove existing files
+rm -rf sourcedir
+rm -rf ${NAME}
+rm -f ${TAR_NAME}
+rm -f ${DFSG_TAR_NAME}
+
+# create tarball with meson
+meson sourcedir
+meson dist --formats=xztar --include-subprojects --no-tests -C sourcedir
+mv sourcedir/meson-dist/*.tar.xz ${TAR_NAME}
+
+# create DFSG compliant version
+# unpack since tarball is compressed
+mkdir ${NAME}
+tar -xf ${TAR_NAME} --strip 1 -C ${NAME}
+# nvml.h is not DFSG compliant
+rm ${NAME}/include/nvml.h
+# minhook not needed
+rm -r ${NAME}/modules/minhook
+# vulkan headers from system
+rm -r ${NAME}/subprojects/Vulkan-Headers-*
+# remove some dear imgui clutter
+rm -rf ${NAME}/subprojects/imgui-*/examples ${NAME}/subprojects/imgui-*/misc
+# compress new sources
+tar -cJf ${DFSG_TAR_NAME} ${NAME}
+
+# cleanup
+rm -r sourcedir
+rm -r ${NAME}

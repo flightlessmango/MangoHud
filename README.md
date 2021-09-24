@@ -16,20 +16,67 @@ git clone --recurse-submodules https://github.com/flightlessmango/MangoHud.git
 cd MangoHud
 ```
 
-To build it, execute:
+Using `meson` to install "manually":
+
+```
+meson build
+ninja -C build install
+```
+
+By default, meson should install MangoHud to `/usr/local`. Specify install prefix with `--prefix=/usr` if desired.
+Add `-Dappend_libdir_mangohud=false` option to meson to not append `mangohud` to libdir if desired (e.g. /usr/local/lib/mangohud).
+
+To install 32-bit build on 64-bit distro, specify proper `libdir`: `lib32` for Arch, `lib/i386-linux-gnu` on Debian. RPM-based distros usually install 32-bit libraries to `/usr/lib` and 64-bit to `/usr/lib64`.
+You may have to change `PKG_CONFIG_PATH` to point to correct folders for your distro.
+
+```
+CC="gcc -m32" \
+CXX="g++ -m32" \
+PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig" \
+meson build32 --libdir lib32
+ninja -C build32 install
+```
+
+### Dependencies
+
+Install necessary development packages.
+
+- gcc, g++
+- or gcc-multilib, g++-multilib for 32-bit support
+- meson >=0.54
+- ninja (ninja-build)
+- glslang
+- vulkan headers if using `-Duse_system_vulkan=enabled` option with `meson`
+- libGL/libEGL (libglvnd, mesa-common-dev, mesa-libGL-devel etc)
+- X11 (libx11-dev)
+- libdrm (libdrm-dev)
+- XNVCtrl (libxnvctrl-dev), optional, use `-Dwith_xnvctrl=disabled` option with `meson` to disable
+- D-Bus (libdbus-1-dev), optional, use `-Dwith_dbus=disabled` option with `meson` to disable
+
+Python 3 libraries:
+
+- Mako (python3-mako or install with `pip`)
+
+
+If distro's packaged `meson` is too old and gives build errors, install newer version with `pip` (`python3-pip`).
+
+### Building with build script
+
+You can also use `build.sh` script to do some things automatically like install dependencies, if distro is supported but it usually assumes you are running on x86_64 architecture.
+
+To just build it, execute:
 
 ```
 ./build.sh build
-./build.sh package
 ```
 
-**NOTE: If you are running an Ubuntu-based, Arch-based, Fedora-based, or openSUSE-based distro, the build script will automatically detect and prompt you to install missing build dependencies. If you run into any issues with this please report them!**
+You can also pass arguments to meson:
 
-Once done, proceed to the [installation](#source).
+```
+./build.sh build -Dwith_xnvctrl=disabled
+```
 
-## Install
-
-### Source
+Resulting files will be install to `./build/release` folder.
 
 If you have compiled MangoHud from source, to install it, execute:
 
@@ -42,6 +89,29 @@ You can then subsequently uninstall MangoHud via the following command
 ```
 ./build.sh uninstall
 ```
+
+To tar up the resulting binaries into a package and create a release tar with installer script, execute:
+
+```
+./build.sh package release
+```
+
+or combine the commands, although `package` should also call `build` if it doesn't find the built libs:
+
+```
+./build.sh build package release
+```
+
+If you have built MangoHud before and suddenly it fails, you can try cleaning the `build` folder, execute:
+
+```
+./build.sh clean
+```
+
+Currently it just does `rm -fr build` and clears subprojects.
+
+**NOTE: If you are running an Ubuntu-based, Arch-based, Fedora-based, or openSUSE-based distro, the build script will automatically detect and prompt you to install missing build dependencies. If you run into any issues with this please report them!**
+
 
 ### Pre-packaged binaries
 
@@ -56,6 +126,38 @@ If you do not wish to compile anything, simply download the file under [Releases
 #### Arch-based distributions
 
 If you are using an Arch-based distribution, install [`mangohud`](https://aur.archlinux.org/packages/mangohud/) and [`lib32-mangohud`](https://aur.archlinux.org/packages/lib32-mangohud/) with your favourite AUR helper. [`mangohud-git`](https://aur.archlinux.org/packages/mangohud-git/) and [`lib32-mangohud-git`](https://aur.archlinux.org/packages/lib32-mangohud-git/) are also available on the AUR if you want the up-to-date version of MangoHud.
+
+If you are building it by yourself, you need to enable multilib repository, by editing pacman config:
+
+```
+sudo nano /etc/pacman.conf
+```
+
+and uncomment:
+
+```
+#[multilib]
+#Include = /etc/pacman.d/mirrorlist
+```
+
+then save the file and execute:
+```
+sudo pacman -Syy
+```
+
+#### Debian 11 (Bullseye)
+
+If you are using Debian 11 or later, to install the [MangoHud](https://tracker.debian.org/pkg/mangohud) package, execute:
+
+```
+sudo apt install mangohud
+```
+
+Optionally, if you also need MangoHud for 32-bit applications, execute:
+
+```
+sudo apt install mangohud:i386
+```
 
 #### Fedora
 
@@ -82,6 +184,32 @@ sudo add-apt-repository ppa:flexiondotorg/mangohud
 sudo apt update
 sudo apt install mangohud
 ````
+
+#### openSUSE
+
+If you run openSUSE Leap or Tumbleweed you can get Mangohud from the official repositories.
+There are two packages, [mangohud](https://software.opensuse.org/package/mangohud) for 64bit and [mangohud-32bit](https://software.opensuse.org/package/mangohud-32bit) for 32bit application support.
+To have Mangohud working for both 32bit and 64bit applications you need to install both packages even on a 64bit operating system.
+
+```
+sudo zypper in mangohud mangohud-32bit
+```
+
+Leap doesn't seem to have the 32bit package.
+
+Leap 15.2
+
+```
+sudo zypper addrepo -f https://download.opensuse.org/repositories/games:tools/openSUSE_Leap_15.2/games:tools.repo
+sudo zypper install mangohud
+```
+
+Leap 15.3
+
+```
+sudo zypper addrepo -f https://download.opensuse.org/repositories/games:tools/openSUSE_Leap_15.3/games:tools.repo
+sudo zypper install mangohud
+```
 
 #### Flatpak
 
@@ -114,7 +242,7 @@ Or alternatively, add `MANGOHUD=1` to your shell profile (Vulkan only).
 
 ## OpenGL
 
-OpenGL games may also need `dlsym` hooking. Add `MANGOHUD_DLSYM=1` to your command like `MANGOHUD_DLSYM=1 mangohud %command%` for Steam.
+OpenGL games may also need `dlsym` hooking. Add `--dlsym` or `MANGOHUD_DLSYM=1` env var to your command like `mangohud --dlsym %command%` for Steam.
 
 Some Linux native OpenGL games overrides LD_PRELOAD and stops MangoHud from working. You can sometimes fix this by editing LD_PRELOAD in the start script
 `LD_PRELOAD=/path/to/mangohud/lib/`
@@ -124,7 +252,9 @@ Some Linux native OpenGL games overrides LD_PRELOAD and stops MangoHud from work
 MangoHud comes with a config file which can be used to set configuration options globally or per application. The priorities of different config files are:
 
 1. `/path/to/application/dir/MangoHud.conf`
-2. `$HOME/.config/MangoHud/{application_name}.conf`
+2. Per-application configuration in ~/.config/MangoHud:
+    1. `$HOME/.config/MangoHud/application_name.conf`
+    2. `$HOME/.config/MangoHud/wine-application_name.conf` for wine/proton apps
 3. `$HOME/.config/MangoHud/MangoHud.conf`
 
 You can find an example config in /usr/share/doc/mangohud
@@ -148,6 +278,8 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `core_load`                        | Displays load & frequency per core                                                    |
 | `gpu_core_clock`<br>`gpu_mem_clock`| Displays GPU core/memory frequency                                                    |
 | `ram`<br>`vram`                    | Displays system RAM/VRAM usage                                                        |
+| `swap`                             | Displays swap space usage next to system RAM usage                                    |
+| `procmem`<br>`procmem_shared`, `procmem_virt`| Displays process' memory usage: resident, shared and/or virtual. `procmem` (resident) also toggles others off if disabled. |
 | `full`                             | Enables most of the toggleable parameters (currently excludes `histogram`)            |
 | `font_size=`                       | Customizeable font size (default=24)                                                  |
 | `font_size_text=`                  | Customizeable font size for other text like media metadata (default=24)               |
@@ -157,13 +289,13 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `font_glyph_ranges`                | Specify extra font glyph ranges, comma separated: `korean`, `chinese`, `chinese_simplified`, `japanese`, `cyrillic`, `thai`, `vietnamese`, `latin_ext_a`, `latin_ext_b`. If you experience crashes or text is just squares, reduce font size or glyph ranges. |
 | `no_small_font`                    | Use primary font size for smaller text like units                                     |
 | `width=`<br>`height=`              | Customizeable hud dimensions (in pixels)                                              |
-| `position=`                        | Location of the hud: `top-left` (default), `top-right`, `bottom-left`, `bottom-right`, `top-center` |
+| `position=`                        | Location of the hud: `top-left` (default), `top-right`, `middle-left`, `middle-right`, `bottom-left`, `bottom-right`, `top-center` |
 | `offset_x` `offset_y`              | Hud position offsets                                                                  |
 | `no_display`                       | Hide the hud by default                                                               |
 | `toggle_hud=`<br>`toggle_logging=` | Modifiable toggle hotkeys. Default are `Shift_R+F12` and `Shift_L+F2`, respectively.      |
 | `reload_cfg=`                      | Change keybind for reloading the config. Default = `Shift_L+F4`                       |
 | `time`<br>`time_format=%T`         | Displays local time. See [std::put_time](https://en.cppreference.com/w/cpp/io/manip/put_time) for formatting help. NOTE: Sometimes apps (or AMDVLK (should be fixed in latest)) may set `TZ` (timezone) environment variable to UTC/GMT |
-| `gpu_color`<br>`gpu_color`<br>`vram_color`<br>`ram_color`<br>`io_color`<br>`engine_color`<br>`frametime_color`<br>`background_color`<br>`text_color`<br>`media_player_color`         | Change default colors: `gpu_color=RRGGBB`|
+| `gpu_color`<br>`cpu_color`<br>`vram_color`<br>`ram_color`<br>`io_color`<br>`engine_color`<br>`frametime_color`<br>`background_color`<br>`text_color`<br>`media_player_color`         | Change default colors: `gpu_color=RRGGBB`|
 | `alpha`                            | Set the opacity of all text and frametime graph `0.0-1.0`                             |
 | `background_alpha`                 | Set the opacity of the background `0.0-1.0`                                           |
 | `read_cfg`                         | Add to MANGOHUD_CONFIG as first parameter to also load config file. Otherwise only MANGOHUD_CONFIG parameters are used. |
@@ -172,7 +304,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `vsync`<br> `gl_vsync`             | Set vsync for OpenGL or Vulkan                                                        |
 | `media_player`                     | Show media player metadata                                                            |
 | `media_player_name`                | Force media player DBus service name without the `org.mpris.MediaPlayer2` part, like `spotify`, `vlc`, `audacious` or `cantata`. If none is set, MangoHud tries to switch between currently playing players. |
-| `media_player_order`               | Media player metadata field order. Defaults to `title,artist,album`.                  |
+| `media_player_format`              | Format media player metadata. Add extra text etc. Semi-colon breaks to new line. Defaults to `{title};{artist};{album}`. |
 | `font_scale_media_player`          | Change size of media player text relative to font_size                                |
 | `io_read`<br> `io_write`           | Show non-cached IO read/write, in MiB/s                                               |
 | `pci_dev`                          | Select GPU device in multi-gpu setups                                                 |
@@ -199,17 +331,28 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `cpu_load_change`                  | Changes the color of the CPU load depending on load                                   |
 | `cpu_load_color`                   | Set the colors for the gpu load change low,medium and high. e.g `cpu_load_color=0000FF,00FFFF,FF00FF`      |
 | `cpu_load_value`                   | Set the values for medium and high load e.g `cpu_load_value=50,90`                    |
+| `core_load_change`                 | Changes the colors of cpu core loads, uses the same data from `cpu_load_value` and `cpu_load_change`       |
 | `cellpadding_y`                    | Set the vertical cellpadding, default is `-0.085` |
 | `frametime`                        | Display frametime next to fps text                                                    |
 | `table_columns`                    | Set the number of table columns for ImGui, defaults to 3                              |
 | `blacklist`                        | Add a program to the blacklist. e.g `blacklist=vkcube,WatchDogs2.exe`                 |
-
+| `resolution`                       | Display the current resolution                                                        |
+| `show_fps_limit`                   | Display the current fps limit                                                         |
+| `custom_text_center`               | Display a custom text centered useful for a header e.g `custom_text_center=FlightLessMango Benchmarks`     |
+| `custom_text`                      | Display a custom text e.g `custom_text=Fsync enabled`                                 |
+| `round_corners`                    | Change the amount of roundness of the corners have e.g `round_corners=10.0`           |
+| `vkbasalt`                         | Shows if vkbasalt is on                                                               |
+| `gamemode`                         | Shows if gamemode is on                                                               |
+| `battery`                          | Display current battery percent and energy consumption                                |
+| `battery_icon`                     | Display battery icon instead of percent                                               |
+| `battery_color`                    | Change the BATT text color                                                            |
+| `force_amdgpu_hwmon`               | Use hwmon sysfs instead of libdrm for amdgpu stats                                    |
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 Because comma is also used as option delimiter and needs to be escaped for values with a backslash, you can use `+` like `MANGOHUD_CONFIG=fps_limit=60+30+0` instead.
 
 Note: Width and Height are set automatically based on the font_size, but can be overridden.
 
-Note: RAPL is currently used for Intel CPUs to show power draw with `cpu_power` which may be unreadable for non-root users due to [vulnerability](https://platypusattack.com/). The corresponding `energy_uj` file has to be readable by corrensponding user, e.g. by running `chmod o+r /sys/class/powercap/intel-rapl\:0/energy_uj` as root, else the power shown will be *0 W*, though having the file readable may potentially be a security vulnerability persisting until system reboots.
+Note: RAPL is currently used for Intel CPUs to show power draw with `cpu_power` which may be unreadable for non-root users due to [vulnerability](https://platypusattack.com/). The corresponding `energy_uj` file has to be readable by corresponding user, e.g. by running `chmod o+r /sys/class/powercap/intel-rapl\:0/energy_uj` as root, else the power shown will be *0 W*, though having the file readable may potentially be a security vulnerability persisting until system reboots.
 ## Vsync
 ### OpenGL Vsync
 - `-1` = Adaptive sync
@@ -230,6 +373,14 @@ All vulkan vsync options might not be supported on your device, you can check wh
 - `Shift_L+F2` : Toggle Logging
 - `Shift_L+F4` : Reload Config
 - `Shift_R+F12`: Toggle Hud
+
+## Workarounds
+
+Options starting with "gl_*" are for OpenGL.
+
+- `gl_size_query = viewport` : Specify what to use for getting display size. Options are "viewport", "scissorbox" or disabled. Defaults to using glXQueryDrawable.
+- `gl_bind_framebuffer = 0..N` : (Re)bind given framebuffer before MangoHud gets drawn. Helps with Crusader Kings III.
+- `gl_dont_flip = 1` : Don't swap origin if using GL_UPPER_LEFT. Helps with Ryujinx.
 
 ## MangoHud FPS logging
 

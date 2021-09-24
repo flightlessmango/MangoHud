@@ -7,19 +7,12 @@
 #include "file_utils.h"
 
 static std::string get_proc_name() {
-#ifdef _GNU_SOURCE_OFF
-   std::string p(program_invocation_name);
-   std::string proc_name = p.substr(p.find_last_of("/\\") + 1);
-#else
-   std::string p = get_exe_path();
-   std::string proc_name;
-   if (ends_with(p, "wine-preloader") || ends_with(p, "wine64-preloader")) {
-      get_wine_exe_name(proc_name, true);
-   } else {
-      proc_name = p.substr(p.find_last_of("/\\") + 1);
+   // Note: It is possible to use GNU program_invocation_short_name.
+   const std::string proc_name = get_wine_exe_name(/*keep_ext=*/true);
+   if (!proc_name.empty()) {
+       return proc_name;
    }
-#endif
-    return proc_name;
+   return get_basename(get_exe_path());
 }
 
 static  std::vector<std::string> blacklist {
@@ -61,7 +54,7 @@ bool is_blacklisted(bool force_recheck) {
     return blacklisted;
 }
 
-void add_blacklist(std::string new_item) {
+void add_blacklist(const std::string& new_item) {
     // check if item exits in blacklist before adding new item
     if(std::find(blacklist.begin(), blacklist.end(), new_item) != blacklist.end()) {
         return;

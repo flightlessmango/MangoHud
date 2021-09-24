@@ -3,6 +3,8 @@
 #define MANGOHUD_DBUS_HELPERS
 
 #include <vector>
+#include <spdlog/spdlog.h>
+#include <signal.h>
 
 #include "loaders/loader_dbus.h"
 
@@ -26,7 +28,7 @@ template <class T>
 const int dbus_type_identifier = dbus_type_traits<T>().value;
 
 template <class T>
-const bool is_fixed = dbus_type_traits<T>().is_fiexd;
+const bool is_fixed = dbus_type_traits<T>().is_fixed;
 }  // namespace detail
 
 class DBusMessageIter_wrap {
@@ -135,14 +137,16 @@ bool DBusMessageIter_wrap::is_array() const noexcept {
 template <class T>
 auto DBusMessageIter_wrap::get_primitive() -> T {
     auto requested_type = detail::dbus_type_identifier<T>;
-    if (requested_type != type()) {
-        std::cerr << "Type mismatch: '" << ((char)requested_type) << "' vs '"
-                  << (char)type() << "'\n";
+    if (type() == DBUS_TYPE_OBJECT_PATH && requested_type == DBUS_TYPE_STRING) {
+        // no special type, just a string
+    }
+    else if (requested_type != type()) {
+        SPDLOG_ERROR("Type mismatch: '{}' vs '{}'",
+                  ((char)requested_type), (char)type());
 #ifndef NDEBUG
-        exit(-1);
-#else
-        return T();
+        raise(SIGTRAP);
 #endif
+        return T();
     }
 
     T ret;
@@ -152,7 +156,10 @@ auto DBusMessageIter_wrap::get_primitive() -> T {
 
 template <>
 auto DBusMessageIter_wrap::get_primitive<std::string>() -> std::string {
-    return std::string(get_primitive<const char*>());
+    auto s = get_primitive<const char*>();
+    if (!s)
+        return std::string();
+    return std::string(s);
 }
 
 uint64_t DBusMessageIter_wrap::get_unsigned() {
@@ -190,13 +197,13 @@ auto DBusMessageIter_wrap::get_stringified() -> std::string {
     if (is_unsigned()) return std::to_string(get_unsigned());
     if (is_signed()) return std::to_string(get_signed());
     if (is_double()) return std::to_string(get_primitive<double>());
-    std::cerr << "stringify failed\n";
+    SPDLOG_ERROR("stringify failed");
     return std::string();
 }
 
 auto DBusMessageIter_wrap::get_array_iter() -> DBusMessageIter_wrap {
-    if (not is_array()) {
-        std::cerr << "Not an array; " << (char)type() << "\n";
+    if (!is_array()) {
+        SPDLOG_ERROR("Not an array; {}", (char)type());
         return DBusMessageIter_wrap(DBusMessageIter{}, m_DBus);
     }
 
@@ -207,7 +214,7 @@ auto DBusMessageIter_wrap::get_array_iter() -> DBusMessageIter_wrap {
 
 auto DBusMessageIter_wrap::get_dict_entry_iter() -> DBusMessageIter_wrap {
     if (type() != DBUS_TYPE_DICT_ENTRY) {
-        std::cerr << "Not a dict entry" << (char)type() << "\n";
+        SPDLOG_ERROR("Not a dict entry {}", (char)type());
         return DBusMessageIter_wrap(DBusMessageIter{}, m_DBus);
     }
 
@@ -265,7 +272,7 @@ void DBusMessageIter_wrap::string_multimap_for_each_stringify(T action) {
 }
 
 auto DBusMessageIter_wrap::next() -> DBusMessageIter_wrap& {
-    if (not *this) return *this;
+    if (!*this) return *this;
     m_DBus->message_iter_next(&m_Iter);
     // Resolve any variants
     m_resolved_iter = resolve_variants();
@@ -310,8 +317,8 @@ class DBusMessage_wrap {
 
 template <class T>
 DBusMessage_wrap& DBusMessage_wrap::argument(T arg) {
-    if (not m_msg) return *this;
-    if (not m_DBus->message_append_args(m_msg, detail::dbus_type_identifier<T>,
+    if (!m_msg) return *this;
+    if (!m_DBus->message_append_args(m_msg, detail::dbus_type_identifier<T>,
                                         &arg, DBUS_TYPE_INVALID)) {
         free_if_owning();
     }
@@ -326,7 +333,7 @@ DBusMessage_wrap& DBusMessage_wrap::argument<const std::string&>(
 
 DBusMessage_wrap DBusMessage_wrap::send_with_reply_and_block(
     DBusConnection* conn, int timeout) {
-    if (not m_msg) {
+    if (!m_msg) {
         return DBusMessage_wrap(nullptr, m_DBus);
     }
     DBusError err;
@@ -334,7 +341,7 @@ DBusMessage_wrap DBusMessage_wrap::send_with_reply_and_block(
     auto reply = m_DBus->connection_send_with_reply_and_block(conn, m_msg,
                                                               timeout, &err);
     if (reply == nullptr) {
-        std::cerr << "MangoHud[" << __func__ << "]: " << err.message << "\n";
+        SPDLOG_ERROR("[{}]: {}", __func__, err.message);
         free_if_owning();
         m_DBus->error_free(&err);
     }

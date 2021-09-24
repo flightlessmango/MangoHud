@@ -2,7 +2,7 @@ build
 builddir
 __pycache__
 .vscode
-MangoHud*.tar.gz
+MangoHud*.tar.*
 pkg
 mangohud*.tar.*
 lib32-mangohud*.tar.*
@@ -39,6 +39,8 @@ lib32-mangohud*.tar.*
 # subprojects
 subprojects/packagecache/
 subprojects/Vulkan-Headers-*/
+subprojects/imgui-*/
+subprojects/spdlog-*/
 
 #GNU Global Metadata
 **/GPATH

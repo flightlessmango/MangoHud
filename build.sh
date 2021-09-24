@@ -10,7 +10,8 @@ LAYER="build/release/usr/share/vulkan/implicit_layer.d/mangohud.json"
 INSTALL_DIR="build/package/"
 IMPLICIT_LAYER_DIR="$XDG_DATA_HOME/vulkan/implicit_layer.d"
 VERSION=$(git describe --long --tags --always | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/^v//')
-SU_CMD=$(command -v sudo || command -v doas)
+SU_CMD=$(command -v sudo || command -v doas || echo)
+MACHINE=$(uname -m || echo)
 
 # doas requires a double dash if the command it runs will include any dashes,
 # so append a double dash to the command
@@ -21,7 +22,7 @@ for os_release in ${OS_RELEASE_FILES[@]} ; do
     if [[ ! -e "${os_release}" ]]; then
         continue
     fi
-    DISTRO=$(sed -rn 's/^NAME=(.+)/\1/p' ${os_release} | sed 's/"//g')
+    DISTRO=$(sed -rn 's/^ID(_LIKE)*=(.+)/\L\2/p' ${os_release} | sed 's/"//g')
 done
 
 dependencies() {
@@ -50,16 +51,18 @@ dependencies() {
             fi
             set -e
         }
-        echo "# Checking Dependencies"
 
-        case $DISTRO in
-            "Arch Linux"|"Manjaro Linux")
+        for i in $DISTRO; do
+        echo "# Checking dependencies for \"$i\""
+        case $i in
+            *arch*|*manjaro*)
                 MANAGER_QUERY="pacman -Q"
                 MANAGER_INSTALL="pacman -S"
-                DEPS="{gcc,meson,pkgconf,python-mako,glslang,libglvnd,lib32-libglvnd,libxnvctrl}"
+                DEPS="{gcc,meson,pkgconf,python-mako,glslang,libglvnd,lib32-libglvnd,libxnvctrl,libdrm}"
                 dep_install
+                break
             ;;
-            "Fedora")
+            *fedora*)
                 MANAGER_QUERY="dnf list installed"
                 MANAGER_INSTALL="dnf install"
                 DEPS="{meson,gcc,gcc-c++,libX11-devel,glslang,python3-mako,mesa-libGL-devel,libXNVCtrl-devel,dbus-devel}"
@@ -68,8 +71,10 @@ dependencies() {
                 unset INSTALL
                 DEPS="{glibc-devel.i686,libstdc++-devel.i686,libX11-devel.i686}"
                 dep_install
+                break
             ;;
-            *"buntu"|"Linux Mint"|"Debian GNU/Linux"|"Zorin OS"|"Pop!_OS"|"elementary OS"|"KDE neon")
+
+            *debian*|*ubuntu*|*deepin*)
                 MANAGER_QUERY="dpkg-query -s"
                 MANAGER_INSTALL="apt install"
                 DEPS="{gcc,g++,gcc-multilib,g++-multilib,ninja-build,python3-pip,python3-setuptools,python3-wheel,pkg-config,mesa-common-dev,libx11-dev,libxnvctrl-dev,libdbus-1-dev}"
@@ -79,36 +84,31 @@ dependencies() {
                     $SU_CMD pip3 install 'meson>=0.54' mako
                 fi
                 if [[ ! -f /usr/local/bin/glslangValidator ]]; then
-                    wget https://github.com/KhronosGroup/glslang/releases/download/SDK-candidate-26-Jul-2020/glslang-master-linux-Release.zip
+                    wget https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip
                     unzip glslang-master-linux-Release.zip bin/glslangValidator
-                    $SU_CMD install -m755 bin/glslangValidator /usr/local/bin/
+                    $SU_CMD /usr/bin/install -m755 bin/glslangValidator /usr/local/bin/
                     rm bin/glslangValidator glslang-master-linux-Release.zip
                 fi
+                break
             ;;
-            "openSUSE Leap"|"openSUSE Tumbleweed")
+            *suse*)
 
                 PACKMAN_PKGS="libXNVCtrl-devel"
-                case $DISTRO in
-                    "openSUSE Leap")
-                        echo "You may have to enable packman repository for some extra packages: ${PACKMAN_PKGS}"
-                        echo "zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Leap_15.1/ packman"
-                    ;;
-                    "openSUSE Tumbleweed")
-                        echo "You may have to enable packman repository for some extra packages: ${PACKMAN_PKGS}"
-                        echo "zypper ar -cfp 90 http://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/ packman"
-                    ;;
-                esac
+                echo "You may have to enable packman repository for some extra packages: ${PACKMAN_PKGS}"
+                echo "Leap:       zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Leap_15.1/ packman"
+                echo "Tumbleweed: zypper ar -cfp 90 http://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/ packman"
 
                 MANAGER_QUERY="rpm -q"
                 MANAGER_INSTALL="zypper install"
-                DEPS="{gcc-c++,gcc-c++-32bit,libpkgconf-devel,ninja,python3-pip,python3-Mako,libX11-devel,glslang-devel,glibc-devel,glibc-devel-32bit,libstdc++-devel,libstdc++-devel-32bit,Mesa-libGL-devel,dbus-1-devel,${PACKMAN_PKGS}}"
+                DEPS="{gcc-c++,gcc-c++-32bit,libpkgconf-devel,ninja,python3-pip,python3-Mako,libX11-devel,glslang-devel,glibc-devel,glibc-devel-32bit,libstdc++-devel,libstdc++-devel-32bit,Mesa-libGL-devel,dbus-1-devel,libdrm-devel,${PACKMAN_PKGS}}"
                 dep_install
 
                 if [[ $(pip3 show meson; echo $?) == 1 ]]; then
                     $SU_CMD pip3 install 'meson>=0.54'
                 fi
+                break
             ;;
-            "Solus")
+            *solus*)
                 unset MANAGER_QUERY
                 unset DEPS
                 MANAGER_INSTALL="eopkg it"
@@ -130,11 +130,13 @@ dependencies() {
                     INSTALL="${INSTALL}""-c system.devel "
                 fi
                 dep_install
+                break
                 ;;
             *)
                 echo "# Unable to find distro information!"
                 echo "# Attempting to build regardless"
         esac
+        done
     fi
 }
 
@@ -142,9 +144,9 @@ configure() {
     dependencies
     git submodule update --init --depth 50
     if [[ ! -f "build/meson64/build.ninja" ]]; then
-        meson build/meson64 --libdir lib/mangohud/lib --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_prefix=true -Dld_libdir_abs=true $@ ${CONFIGURE_OPTS}
+        meson build/meson64 --libdir lib/mangohud/lib64 --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_prefix=true -Dld_libdir_abs=true $@ ${CONFIGURE_OPTS}
     fi
-    if [[ ! -f "build/meson32/build.ninja" ]]; then
+    if [[ ! -f "build/meson32/build.ninja" && "$MACHINE" = "x86_64" ]]; then
         export CC="gcc -m32"
         export CXX="g++ -m32"
         export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH_32}"
@@ -157,12 +159,15 @@ build() {
     if [[ ! -f "build/meson64/build.ninja" ]]; then
         configure $@
     fi
-    DESTDIR="$PWD/build/release" ninja -C build/meson32 install
     DESTDIR="$PWD/build/release" ninja -C build/meson64 install
+
+    if [ "$MACHINE" = "x86_64" ]; then
+        DESTDIR="$PWD/build/release" ninja -C build/meson32 install
+    fi
 }
 
 package() {
-    LIB="build/release/usr/lib/mangohud/lib/libMangoHud.so"
+    LIB="build/release/usr/lib/mangohud/lib64/libMangoHud.so"
     LIB32="build/release/usr/lib/mangohud/lib32/libMangoHud.so"
     if [[ ! -f "$LIB" || "$LIB" -ot "build/meson64/src/libMangoHud.so" ]]; then
         build
@@ -203,37 +208,67 @@ install() {
     [ "$UID" -eq 0 ] || exec $SU_CMD bash "$0" install
 
     uninstall
-    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud.so /usr/lib/mangohud/lib32/libMangoHud.so
-    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib/libMangoHud.so /usr/lib/mangohud/lib/libMangoHud.so
-    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud_dlsym.so /usr/lib/mangohud/lib32/libMangoHud_dlsym.so
-    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib/libMangoHud_dlsym.so /usr/lib/mangohud/lib/libMangoHud_dlsym.so
+
+    DEFAULTLIB=lib32
+    for i in $DISTRO; do
+        case $i in
+            *arch*)
+            DEFAULTLIB=lib64
+            ;;
+        esac
+    done
+
+    if [ "$MACHINE" != "x86_64" ]; then
+        # Native libs
+        DEFAULTLIB=lib64
+    fi
+
+    echo DEFAULTLIB: $DEFAULTLIB
+    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud.so /usr/lib/mangohud/lib64/libMangoHud.so
+    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud_dlsym.so /usr/lib/mangohud/lib64/libMangoHud_dlsym.so
+    if [ "$MACHINE" = "x86_64" ]; then
+      /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud.so /usr/lib/mangohud/lib32/libMangoHud.so
+      /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud_dlsym.so /usr/lib/mangohud/lib32/libMangoHud_dlsym.so
+    fi
+
     /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.json /usr/share/vulkan/implicit_layer.d/MangoHud.json
     /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.json /usr/share/vulkan/implicit_layer.d/MangoHud.json
     /usr/bin/install -Dvm644 ./build/release/usr/share/man/man1/mangohud.1 /usr/share/man/man1/mangohud.1
     /usr/bin/install -Dvm644 ./build/release/usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
     /usr/bin/install -vm755  ./build/release/usr/bin/mangohud /usr/bin/mangohud
 
+    ln -sv $DEFAULTLIB /usr/lib/mangohud/lib
+
     # FIXME get the triplet somehow
+    ln -sv lib64 /usr/lib/mangohud/x86_64
+    ln -sv lib64 /usr/lib/mangohud/x86_64-linux-gnu
+    ln -sv . /usr/lib/mangohud/lib64/x86_64
+    ln -sv . /usr/lib/mangohud/lib64/x86_64-linux-gnu
+
+    ln -sv lib32 /usr/lib/mangohud/i686
+    ln -sv lib32 /usr/lib/mangohud/i386-linux-gnu
+    ln -sv lib32 /usr/lib/mangohud/i686-linux-gnu
+
     mkdir -p /usr/lib/mangohud/tls
-    ln -sv ../lib /usr/lib/mangohud/tls/x86_64
+    ln -sv ../lib64 /usr/lib/mangohud/tls/x86_64
     ln -sv ../lib32 /usr/lib/mangohud/tls/i686
+
     # Some distros search in $prefix/x86_64-linux-gnu/tls/x86_64 etc instead
-    ln -sv . /usr/lib/mangohud/lib/i686-linux-gnu
-    ln -sv . /usr/lib/mangohud/lib/x86_64-linux-gnu
+    if [ ! -e /usr/lib/mangohud/lib/i386-linux-gnu ]; then
+        ln -sv ../lib32 /usr/lib/mangohud/lib/i386-linux-gnu
+    fi
+    if [ ! -e /usr/lib/mangohud/lib/i686-linux-gnu ]; then
+        ln -sv ../lib32 /usr/lib/mangohud/lib/i686-linux-gnu
+    fi
+    if [ ! -e /usr/lib/mangohud/lib/x86_64-linux-gnu ]; then
+        ln -sv ../lib64 /usr/lib/mangohud/lib/x86_64-linux-gnu
+    fi
+
     # $LIB can be "lib/tls/x86_64"?
     ln -sv ../tls /usr/lib/mangohud/lib/tls
 
-    ln -sv lib /usr/lib/mangohud/lib64
-    ln -sv lib /usr/lib/mangohud/x86_64
-    ln -sv lib /usr/lib/mangohud/x86_64-linux-gnu
-    ln -sv . /usr/lib/mangohud/lib/x86_64
-    ln -sv lib32 /usr/lib/mangohud/i686
-    ln -sv lib32 /usr/lib/mangohud/i386-linux-gnu
-    ln -sv ../lib32 /usr/lib/mangohud/lib/i386-linux-gnu
-    ln -sv lib32 /usr/lib/mangohud/i686-linux-gnu
-    ln -sv ../lib32 /usr/lib/mangohud/lib/i686-linux-gnu
-    #ln -sv lib /usr/lib/mangohud/aarch64-linux-gnu
-    #ln -sv lib /usr/lib/mangohud/arm-linux-gnueabihf
+    #ln -sv lib64 /usr/lib/mangohud/aarch64-linux-gnu
+    #ln -sv lib64 /usr/lib/mangohud/arm-linux-gnueabihf
 
     echo "MangoHud Installed"
 }
@@ -246,11 +281,12 @@ reinstall() {
 
 clean() {
     rm -rf "build"
+    rm -rf subprojects/*/
 }
 
 usage() {
     if test -z $1; then
-        echo "Unrecognized command argument: $a"
+        echo "Unrecognized command argument: $arg"
     else
         echo "$0 requires one argument"
     fi
@@ -293,6 +329,7 @@ while [ $# -gt 0 ]; do
         "pull") git pull ${OPTS[@]};;
         "configure") configure ${OPTS[@]};;
         "build") build ${OPTS[@]};;
+        "build_dbg") build --buildtype=debug -Dglibcxx_asserts=true ${OPTS[@]};;
         "package") package;;
         "install") install;;
         "reinstall") reinstall;;

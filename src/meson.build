@@ -1,6 +1,5 @@
 glslang = find_program('glslangValidator')
 
-ld_libdir_mangohud_abs = ''
 # Needs prefix for configure_file()
 if get_option('append_libdir_mangohud')
   libdir_mangohud = join_paths(get_option('libdir'), 'mangohud')
@@ -16,8 +15,19 @@ if get_option('ld_libdir_prefix')
   ld_libdir_mangohud = get_option('prefix') + '/lib/mangohud/\$LIB/'
 endif
 
+conf_data = configuration_data()
+
 if get_option('ld_libdir_abs')
-  ld_libdir_mangohud_abs = ld_libdir_mangohud
+  conf_data.set('ld_libdir_mangohud_abs', ld_libdir_mangohud)
+  conf_data.set('ld_libdir_mangohud', '')
+else
+  conf_data.set('ld_libdir_mangohud_abs', '')
+  conf_data.set('ld_libdir_mangohud', ld_libdir_mangohud)
+endif
+
+ld_libdir_mangohud_vk = ''
+if get_option('prepend_libdir_vk')
+  ld_libdir_mangohud_vk = ld_libdir_mangohud
 endif
 
 overlay_shaders = [
@@ -43,6 +53,7 @@ vklayer_files = files(
   'gpu.cpp',
   'vulkan.cpp',
   'blacklist.cpp',
+  'file_utils.cpp',
 )
 opengl_files  = []
 if ['windows', 'mingw'].contains(host_machine.system())
@@ -62,13 +73,13 @@ endif
 if is_unixy
   vklayer_files += files(
     'cpu.cpp',
-    'file_utils.cpp',
     'memory.cpp',
     'iostats.cpp',
     'notify.cpp',
     'elfhacks.cpp',
     'real_dlsym.cpp',
     'pci_ids.cpp',
+    'battery.cpp',
   )
 
   opengl_files = files(
@@ -138,6 +149,16 @@ if is_unixy
       'loaders/loader_dbus.cpp',
     )
   endif
+
+#  if get_option('with_libdrm_amdgpu').enabled() and dep_libdrm.found() and dep_libdrm_amdgpu.found()
+  if get_option('with_libdrm_amdgpu').enabled() and dep_libdrm.found()
+    pre_args += '-DHAVE_LIBDRM_AMDGPU'
+    #if dep_xcb.found() and dep_xcb_dri2.found()
+      vklayer_files += files(
+        'loaders/loader_libdrm.cpp',
+      )
+    #endif
+  endif
 endif
 
 link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL'])
@@ -165,6 +186,9 @@ vklayer_mesa_overlay = shared_library(
   dependencies : [
     vulkan_wsi_deps,
     dearimgui_dep,
+    spdlog_dep,
+    dep_libdrm,
+    #dep_libdrm_amdgpu,
     dbus_dep,
     dep_dl,
     dep_rt,
@@ -202,7 +226,7 @@ endif
 
 configure_file(input : 'mangohud.json.in',
   output : '@0@.json'.format(meson.project_name()),
-  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud,
+  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud_vk,
                   'PROJECT_NAME' : meson.project_name().to_upper()},
   install : true,
   install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
@@ -210,8 +234,7 @@ configure_file(input : 'mangohud.json.in',
 
 configure_file(input : '../bin/mangohud.in',
   output : 'mangohud',
-  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud,
-                   'ld_libdir_mangohud_abs': ld_libdir_mangohud_abs},
+  configuration : conf_data,
   install_dir : get_option('bindir'),
 )
 

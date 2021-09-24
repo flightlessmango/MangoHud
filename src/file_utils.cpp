@@ -5,9 +5,10 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <limits.h>
-#include <iostream>
 #include <fstream>
 #include <cstring>
+#include <string>
+#include <spdlog/spdlog.h>
 
 std::string read_line(const std::string& filename)
 {
@@ -17,13 +18,25 @@ std::string read_line(const std::string& filename)
     return line;
 }
 
+std::string get_basename(const std::string&& path)
+{
+    auto npos = path.find_last_of("/\\");
+    if (npos == std::string::npos)
+        return path;
+
+    if (npos < path.size() - 1)
+        return path.substr(npos + 1);
+    return path;
+}
+
+#ifdef __gnu_linux__
+
 bool find_folder(const char* root, const char* prefix, std::string& dest)
 {
     struct dirent* dp;
     DIR* dirp = opendir(root);
     if (!dirp) {
-        std::cerr << "Error opening directory '" << root << "': ";
-        perror("");
+        SPDLOG_ERROR("Error opening directory '{}': {}", root, strerror(errno));
         return false;
     }
 
@@ -52,8 +65,7 @@ std::vector<std::string> ls(const char* root, const char* prefix, LS_FLAGS flags
 
     DIR* dirp = opendir(root);
     if (!dirp) {
-        std::cerr << "Error opening directory '" << root << "': ";
-        perror("");
+        SPDLOG_ERROR("Error opening directory '{}': {}", root, strerror(errno));
         return list;
     }
 
@@ -107,18 +119,34 @@ std::string read_symlink(const char * link)
     return std::string(result, (count > 0) ? count : 0);
 }
 
+std::string read_symlink(const std::string&& link)
+{
+    return read_symlink(link.c_str());
+}
+
 std::string get_exe_path()
 {
     return read_symlink("/proc/self/exe");
 }
 
-bool get_wine_exe_name(std::string& name, bool keep_ext)
+std::string get_wine_exe_name(bool keep_ext)
 {
-    std::string line;
-    std::ifstream cmdline("/proc/self/cmdline");
-    auto n = std::string::npos;
-    while (std::getline(cmdline, line, '\0'))
+    const std::string exe_path = get_exe_path();
+    if (!ends_with(exe_path, "wine-preloader") && !ends_with(exe_path, "wine64-preloader")) {
+        return std::string();
+    }
+
+    std::string line = read_line("/proc/self/comm"); // max 16 characters though
+    if (ends_with(line, ".exe", true))
     {
+        auto dot = keep_ext ? std::string::npos : line.find_last_of('.');
+        return line.substr(0, dot);
+    }
+
+    std::ifstream cmdline("/proc/self/cmdline");
+    // Iterate over arguments (separated by NUL byte).
+    while (std::getline(cmdline, line, '\0')) {
+        auto n = std::string::npos;
         if (!line.empty()
             && ((n = line.find_last_of("/\\")) != std::string::npos)
             && n < line.size() - 1) // have at least one character
@@ -126,17 +154,15 @@ bool get_wine_exe_name(std::string& name, bool keep_ext)
             auto dot = keep_ext ? std::string::npos : line.find_last_of('.');
             if (dot < n)
                 dot = line.size();
-            name = line.substr(n + 1, dot - n - 1);
-            return true;
+            return line.substr(n + 1, dot - n - 1);
         }
         else if (ends_with(line, ".exe", true))
         {
             auto dot = keep_ext ? std::string::npos : line.find_last_of('.');
-            name =  line.substr(0, dot);
-            return true;
+            return line.substr(0, dot);
         }
     }
-    return false;
+    return std::string();
 }
 
 std::string get_home_dir()
@@ -172,3 +198,5 @@ std::string get_config_dir()
         path += "/.config";
     return path;
 }
+
+#endif // __gnu_linux__

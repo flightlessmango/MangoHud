@@ -1,23 +1,28 @@
 name: Build release package
 on:
   release:
-    types: ["created"]
-  push:
-    tags: ["v*"]
-    branches:
-      - main
+    types: [published]
+#  push:
+#    tags: ["v*"]
+#    branches:
+#      - main
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    #runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
 
     steps:
       - uses: actions/checkout@v2
       - name: Install build tools
         run: |
           sudo apt update
-          sudo apt install gcc-multilib g++-multilib ninja-build python3-setuptools python3-wheel mesa-common-dev libxnvctrl-dev libdbus-1-dev
+          sudo apt install gcc-multilib g++-multilib ninja-build python3-setuptools python3-wheel mesa-common-dev libxnvctrl-dev libdbus-1-dev unzip
+          sudo pip3 install 'meson>=0.54' mako
+          wget https://github.com/KhronosGroup/glslang/releases/download/SDK-candidate-26-Jul-2020/glslang-master-linux-Release.zip
+          unzip glslang-master-linux-Release.zip bin/glslangValidator
+          sudo install -m755 bin/glslangValidator /usr/local/bin/
       - name: Prepare Artifact Git Info
         shell: bash
         run: |
@@ -34,23 +39,24 @@ jobs:
           echo "##[set-output name=artifact-metadata;]${ARTIFACT_NAME}"
         id: git-vars
       - name: Build release package
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ./build-source.sh
           ./build.sh build package release
-      - if: github.event_name == 'release' && github.event.action == 'created'
-        name: Upload release
+      - name: Upload release
+        if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           assets=()
-          for asset in ./MangoHud-*-Source*.tar.gz; do
+          for asset in ./MangoHud-*-Source*.tar.*; do
             assets+=("-a" "$asset")
           done
-          for asset in ./build/MangoHud-*.tar.gz; do
+          for asset in ./build/MangoHud-*.tar.*; do
             assets+=("-a" "$asset")
           done
           tag_name="${GITHUB_REF##*/}"
-          hub release create "${assets[@]}" -m "$tag_name" "$tag_name"
+          hub release edit "${assets[@]}" -m "" "$tag_name"
+          #hub release create "${assets[@]}" -m "$tag_name" "$tag_name"
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         continue-on-error: true

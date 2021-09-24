@@ -15,8 +15,9 @@ EXPORT_C_(void*) dlsym(void * handle, const char * name)
         find_egl_ptr = reinterpret_cast<decltype(find_egl_ptr)> (real_dlsym(RTLD_NEXT, "mangohud_find_egl_ptr"));
 
     void* func = nullptr;
+    void* real_func = real_dlsym(handle, name);
 
-    if (find_glx_ptr) {
+    if (find_glx_ptr && real_func) {
         func = find_glx_ptr(name);
         if (func) {
             //fprintf(stderr,"%s: local: %s\n",  __func__ , name);
@@ -24,7 +25,7 @@ EXPORT_C_(void*) dlsym(void * handle, const char * name)
         }
     }
 
-    if (find_egl_ptr) {
+    if (find_egl_ptr && real_func) {
         func = find_egl_ptr(name);
         if (func) {
             //fprintf(stderr,"%s: local: %s\n",  __func__ , name);
@@ -33,5 +34,5 @@ EXPORT_C_(void*) dlsym(void * handle, const char * name)
     }
 
     //fprintf(stderr,"%s: foreign: %s\n",  __func__ , name);
-    return real_dlsym(handle, name);
+    return real_func;
 }

@@ -5,7 +5,7 @@
 #include <string>
 #include <stdint.h>
 #include <vector>
-#include "imgui.h"
+#include <imgui.h>
 #include "overlay_params.h"
 #include "iostats.h"
 #include "timing.hpp"
@@ -20,6 +20,25 @@ extern float g_overflow;
 struct frame_stat {
    uint64_t stats[OVERLAY_PLOTS_MAX];
 };
+
+enum EngineTypes
+{
+   UNKNOWN,
+
+   OPENGL,
+   VULKAN,
+
+   DXVK,
+   VKD3D,
+   DAMAVAND,
+   ZINK,
+
+   WINED3D,
+   FERAL3D,
+   TOGL,
+};
+
+extern const char* engines[];
 
 struct swapchain_stats {
    uint64_t n_frames;
@@ -54,6 +73,7 @@ struct swapchain_stats {
    std::string deviceName;
    std::string gpuName;
    std::string driverName;
+   enum EngineTypes engine;
 };
 
 struct fps_limit {
@@ -85,6 +105,7 @@ extern struct benchmark_stats benchmark;
 extern ImVec2 real_font_size;
 extern std::string wineVersion;
 extern std::vector<logData> graph_data;
+extern overlay_params _params;
 
 void position_layer(struct swapchain_stats& data, struct overlay_params& params, ImVec2 window_size);
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan);
@@ -96,14 +117,15 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
 void init_system_info(void);
 void FpsLimiter(struct fps_limit& stats);
 void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats);
-void calculate_benchmark_data(void *params_void);
+void calculate_benchmark_data();
 void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& text_font);
 void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...);
+void center_text(const std::string& text);
 ImVec4 change_on_load_temp(LOAD_DATA& data, unsigned current);
 float get_time_stat(void *_data, int _idx);
 
 #ifdef HAVE_DBUS
-void render_mpris_metadata(struct overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing, bool is_main);
+void render_mpris_metadata(overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing);
 #endif
 
 #endif //MANGOHUD_OVERLAY_H

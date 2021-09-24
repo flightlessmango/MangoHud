@@ -23,6 +23,7 @@ struct logData{
   int gpu_temp;
   int gpu_core_clock;
   int gpu_mem_clock;
+  int gpu_power;
   float gpu_vram_used;
   float ram_used;
 
@@ -67,7 +68,7 @@ private:
 
 extern std::unique_ptr<Logger> logger;
 
-extern string os, cpu, gpu, ram, kernel, driver;
+extern string os, cpu, gpu, ram, kernel, driver, cpusched;
 extern bool sysInfoFetched;
 extern double fps;
 extern uint64_t frametime;

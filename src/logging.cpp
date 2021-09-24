@@ -1,10 +1,13 @@
+#include <sstream>
+#include <iomanip>
+#include <spdlog/spdlog.h>
 #include "logging.h"
 #include "overlay.h"
 #include "config.h"
-#include <sstream>
-#include <iomanip>
+#include "file_utils.h"
+#include "string_utils.h"
 
-string os, cpu, gpu, ram, kernel, driver;
+string os, cpu, gpu, ram, kernel, driver, cpusched;
 bool sysInfoFetched = false;
 double fps;
 uint64_t frametime;
@@ -15,6 +18,7 @@ std::unique_ptr<Logger> logger;
 string exec(string command) {
    char buffer[128];
    string result = "";
+#ifdef __gnu_linux__
 
    // Open pipe to file
    FILE* pipe = popen(command.c_str(), "r");
@@ -31,6 +35,7 @@ string exec(string command) {
    }
 
    pclose(pipe);
+#endif
    return result;
 }
 
@@ -55,13 +60,12 @@ void upload_files(const std::vector<std::string>& logFiles){
 
 void writeFile(string filename){
   auto& logArray = logger->get_log_data();
-#ifndef NDEBUG
-  std::cerr << "Writing log file [" << filename << "], " << logArray.size() << " entries\n";
-#endif
+  SPDLOG_DEBUG("Writing log file [{}], {} entries", filename, logArray.size());
   std::ofstream out(filename, ios::out | ios::app);
-  out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver" << endl;
-  out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << endl;
-  out << "fps," << "frametime," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "ram_used," << "elapsed" << endl;
+  if (out){
+  out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver," << "cpuscheduler" << endl;
+  out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << "," << cpusched << endl;
+  out << "fps," << "frametime," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "gpu_power," << "ram_used," << "elapsed" << endl;
 
   for (size_t i = 0; i < logArray.size(); i++){
     out << logArray[i].fps << ",";
@@ -73,10 +77,14 @@ void writeFile(string filename){
     out << logArray[i].gpu_core_clock << ",";
     out << logArray[i].gpu_mem_clock << ",";
     out << logArray[i].gpu_vram_used << ",";
+    out << logArray[i].gpu_power << ",";
     out << logArray[i].ram_used << ",";
     out << std::chrono::duration_cast<std::chrono::nanoseconds>(logArray[i].previous).count() << "\n";
   }
   logger->clear_log_data();
+  } else {
+    printf("MANGOHUD: Failed to write log file\n");
+  }
 }
 
 string get_log_suffix(){
@@ -88,23 +96,20 @@ string get_log_suffix(){
   return log_name;
 }
 
-void logging(void *params_void){
-  overlay_params *params = reinterpret_cast<overlay_params *>(params_void);
+void logging(){
   logger->wait_until_data_valid();
   while (logger->is_active()){
       logger->try_log();
-      this_thread::sleep_for(chrono::milliseconds(params->log_interval));
+      this_thread::sleep_for(chrono::milliseconds(_params.log_interval));
   }
 }
 
 Logger::Logger(overlay_params* in_params)
-  : m_logging_on(false), 
-    m_values_valid(false), 
+  : m_logging_on(false),
+    m_values_valid(false),
     m_params(in_params)
 {
-#ifndef NDEBUG
-  std::cerr << "Logger constructed!\n";
-#endif
+  SPDLOG_DEBUG("Logger constructed!");
 }
 
 void Logger::start_logging() {
@@ -112,27 +117,30 @@ void Logger::start_logging() {
   m_values_valid = false;
   m_logging_on = true;
   m_log_start = Clock::now();
-  if((not m_params->output_folder.empty()) and (m_params->log_interval != 0)){
-    std::thread(logging, m_params).detach();
+  if((!_params.output_folder.empty()) && (_params.log_interval != 0)){
+    std::thread(logging).detach();
   }
 }
 
 void Logger::stop_logging() {
-  if(not m_logging_on) return;
+  if(!m_logging_on) return;
   m_logging_on = false;
   m_log_end = Clock::now();
 
-  std::thread(calculate_benchmark_data, m_params).detach();
+  calculate_benchmark_data();
 
-  if(not m_params->output_folder.empty()) {
-    m_log_files.emplace_back(m_params->output_folder + "/" + program_name + "_" + get_log_suffix());
+  if(!_params.output_folder.empty()) {
+    std::string program = get_wine_exe_name();
+    if (program.empty())
+        program = get_program_name();
+    m_log_files.emplace_back(_params.output_folder + "/" + program + "_" + get_log_suffix());
     std::thread(writeFile, m_log_files.back()).detach();
   }
 }
 
 void Logger::try_log() {
-  if(not is_active()) return;
-  if(not m_values_valid) return;
+  if(!is_active()) return;
+  if(!m_values_valid) return;
   auto now = Clock::now();
   auto elapsedLog = now - m_log_start;
 
@@ -141,7 +149,7 @@ void Logger::try_log() {
   currentLogData.frametime = frametime;
   m_log_array.push_back(currentLogData);
 
-  if(m_params->log_duration and (elapsedLog >= std::chrono::seconds(m_params->log_duration))){
+  if(_params.log_duration && (elapsedLog >= std::chrono::seconds(_params.log_duration))){
     stop_logging();
   }
 }
