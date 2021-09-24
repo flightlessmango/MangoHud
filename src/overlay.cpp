@@ -702,7 +702,7 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t target_device_id, overlay_param
       for (auto& info : g_gpu_infos)
       {
          const auto& gpu = info.second;
-         if (gpu->vendorID != 0x8086 && gpu->deviceID == target_device_id)
+         if (gpu->vendorID != 0x8086 && (gpu->deviceID == target_device_id || !target_device_id))
          {
             g_active_gpu = gpu;
             break;
