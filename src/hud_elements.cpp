@@ -5,6 +5,7 @@
 #include "memory.h"
 #include "mesa/util/macros.h"
 #include "string_utils.h"
+#include "file_utils.h"
 #include <IconsForkAwesome.h>
 
 // Cut from https://github.com/ocornut/imgui/pull/2943
@@ -560,6 +561,17 @@ void HudElements::_exec(){
     ImGui::PopFont();
 }
 
+void HudElements::_cat_file(){
+    std::string value = HUDElements.ordered_functions[HUDElements.place].second;
+    ImGui::PushFont(HUDElements.sw_stats->font1);
+    ImGui::TableNextColumn();
+    for (auto& item : HUDElements.cat_file_list){
+        if (item.pos == HUDElements.place)
+            ImGui::Text("%s", item.ret.c_str());
+    }
+    ImGui::PopFont();
+}
+
 void HudElements::gamemode(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gamemode]){
         ImGui::TableNextRow(); ImGui::TableNextColumn();
@@ -773,6 +785,8 @@ void HudElements::sort_elements(std::pair<std::string, std::string> option){
     if (param == "vkbasalt")        { ordered_functions.push_back({vkbasalt, value});               }
     if (param == "exec")            { ordered_functions.push_back({_exec, value});
                                       exec_list.push_back({int(ordered_functions.size() - 1), value});       }
+    if (param == "cat_file")        { ordered_functions.push_back({_cat_file, value});
+                                      cat_file_list.push_back({int(ordered_functions.size() - 1), value});   }
     if (param == "battery")         { ordered_functions.push_back({battery, value});                }
     if (param == "graphs"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs])
@@ -817,6 +831,18 @@ void HudElements::legacy_elements(){
 void HudElements::update_exec(){
     for(auto& item : exec_list)
         item.ret = exec(item.value);
+}
+
+void HudElements::update_cat_file(){
+    for(auto& item : cat_file_list){
+
+        if (!file_exists(item.value)) {
+            item.ret = "File not found";
+            return ;
+        }
+            //amdgpu.busy = fopen((path + "/gpu_busy_percent").c_str(), "r");
+        item.ret = read_line(item.value);
+    }
 }
 
 HudElements HUDElements;

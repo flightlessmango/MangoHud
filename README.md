@@ -263,6 +263,8 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `battery`                          | Display current battery percent and energy consumption                                |
 | `battery_icon`                     | Display battery icon instead of percent                                               |
 | `battery_color`                    | Change the BATT text color                                                            |
+| `cat_file`                         | Display the first line of a text file in next column,e.g<br>`custom_text=Distro`<br>`cat_file=/etc/issue` |
+
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 Because comma is also used as option delimiter and needs to be escaped for values with a backslash, you can use `+` like `MANGOHUD_CONFIG=fps_limit=60+30+0` instead.
 

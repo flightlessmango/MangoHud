@@ -650,6 +650,7 @@ parse_overlay_config(struct overlay_params *params,
 
    HUDElements.ordered_functions.clear();
    HUDElements.exec_list.clear();
+   HUDElements.cat_file_list.clear();
    // first pass with env var
    if (env)
       parse_overlay_env(params, env);

@@ -66,6 +66,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(custom_text_center)            \
    OVERLAY_PARAM_BOOL(custom_text)                   \
    OVERLAY_PARAM_BOOL(exec)                          \
+   OVERLAY_PARAM_BOOL(cat_file)                      \
    OVERLAY_PARAM_BOOL(vkbasalt)                      \
    OVERLAY_PARAM_BOOL(gamemode)                      \
    OVERLAY_PARAM_BOOL(battery)                       \
