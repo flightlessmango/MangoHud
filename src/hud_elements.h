@@ -16,6 +16,11 @@ class HudElements{
             std::string     value;
             std::string     ret;
         };
+        struct cat_file_list {
+            int             pos;
+            std::string     value;
+            std::string     ret;
+        };
         float ralign_width;
         float old_scale;
         float res_width, res_height;
@@ -30,9 +35,11 @@ class HudElements{
             "vram", "ram", "cpu_temp", "gpu_temp"
         };
         std::vector<exec_list> exec_list;
+        std::vector<cat_file_list> cat_file_list;
         void sort_elements(std::pair<std::string, std::string> option);
         void legacy_elements();
         void update_exec();
+        void update_cat_file();
         static void version();
         static void time();
         static void gpu_stats();
@@ -57,6 +64,7 @@ class HudElements{
         static void gamemode();
         static void graphs();
         static void _exec();
+        static void _cat_file();
         static void battery();
 
         void convert_colors(struct overlay_params& params);

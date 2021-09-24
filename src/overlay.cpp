@@ -73,6 +73,7 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
    graph_data.push_back(currentLogData);
    logger->notify_data_valid();
    HUDElements.update_exec();
+   HUDElements.update_cat_file();
 }
 
 void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
