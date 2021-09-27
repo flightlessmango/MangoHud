@@ -163,8 +163,7 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
    if (elapsed >= params.fps_sampling_period) {
       if (!hw_update_thread)
          hw_update_thread = std::make_unique<hw_info_updater>(sw_stats, params, vendorID);
-      else
-         hw_update_thread->update();
+      hw_update_thread->update();
 
       sw_stats.fps = fps;
 
