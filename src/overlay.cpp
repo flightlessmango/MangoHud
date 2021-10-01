@@ -4,6 +4,7 @@
 #include <thread>
 #include <condition_variable>
 #include <spdlog/spdlog.h>
+#include <filesystem.h>
 #include "overlay.h"
 #include "logging.h"
 #include "cpu.h"
@@ -26,6 +27,8 @@
 #include <libgen.h>
 #include <unistd.h>
 #endif
+
+namespace fs = ghc::filesystem;
 
 #ifdef HAVE_DBUS
 float g_overflow = 50.f /* 3333ms * 0.5 / 16.6667 / 2 (to edge and back) */;
@@ -738,15 +741,10 @@ void init_system_info(){
            wineVersion = "";
       }
       // check for gamemode and vkbasalt
-      stringstream ss;
-      string line;
-      auto pid = getpid();
-      string path = "/proc/" + to_string(pid) + "/map_files/";
-      auto files = exec("ls " + path);
-      ss << files;
-      while(std::getline(ss, line, '\n')){
-         auto file = path + line;
-         auto sym = read_symlink(file.c_str());
+      fs::path path("/proc/self/map_files/");
+      for (auto& p : fs::directory_iterator(path)) {
+         auto filename = p.path().string();
+         auto sym = read_symlink(filename.c_str());
          if (sym.find("gamemode") != std::string::npos)
             HUDElements.gamemode_bol = true;
          if (sym.find("vkbasalt") != std::string::npos)

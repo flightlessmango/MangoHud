@@ -6,6 +6,7 @@
 #include <sstream>
 #include <memory>
 #include <unistd.h>
+#include <filesystem.h>
 #include <imgui.h>
 #include "font_default.h"
 #include "cpu.h"
@@ -20,6 +21,8 @@
 #endif
 
 #include <glad/glad.h>
+
+namespace fs = ghc::filesystem;
 
 namespace MangoHud { namespace GL {
 
@@ -82,15 +85,9 @@ void imgui_init()
     if (sw_stats.engine != EngineTypes::ZINK){
         sw_stats.engine = OPENGL;
 
-        stringstream ss;
-        string line;
-        auto pid = getpid();
-        string path = "/proc/" + to_string(pid) + "/map_files/";
-        auto files = exec("ls " + path);
-        ss << files;
-
-        while(std::getline(ss, line, '\n')){
-            auto file = path + line;
+        fs::path path("/proc/self/map_files/");
+        for (auto& p : fs::directory_iterator(path)) {
+            auto file = p.path().string();
             auto sym = read_symlink(file.c_str());
             if (sym.find("wined3d") != std::string::npos) {
                 sw_stats.engine = WINED3D;
