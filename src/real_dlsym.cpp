@@ -20,28 +20,35 @@ void get_real_functions()
     eh_obj_t libdl;
     int ret;
 
+    const char* libs[] = {
 #if defined(__GLIBC__)
-    ret = eh_find_obj(&libdl, "*libdl.so*");
-    if (ret)
+        "*libdl.so*",
 #endif
-        ret = eh_find_obj(&libdl, "*libc.so*"); // musl, glibc 2.34+
+        "*libc.so*",
+        "*libc.*.so*",
+    };
 
-    if (ret) {
-        fprintf(stderr, "MANGOHUD: Cannot find libdl.so and libc.so\n");
-        exit(1);
+    for (size_t i = 0; i < sizeof(libs) / sizeof(*libs); i++)
+    {
+        ret = eh_find_obj(&libdl, libs[i]);
+        if (ret)
+            continue;
+
+        eh_find_sym(&libdl, "dlopen", (void **) &__dlopen);
+        eh_find_sym(&libdl, "dlsym", (void **) &__dlsym);
+        eh_destroy_obj(&libdl);
+
+        if (__dlopen && __dlsym)
+            break;
+        __dlopen = nullptr;
+        __dlsym = nullptr;
     }
 
-    if (eh_find_sym(&libdl, "dlopen", (void **) &__dlopen)) {
-        fprintf(stderr, "MANGOHUD: Can't get dlopen()\n");
-        exit(1);
+    if (!__dlopen && !__dlsym)
+    {
+        fprintf(stderr, "MANGOHUD: Can't get dlopen() and dlsym()\n");
+        exit(ret ? ret : 1);
     }
-
-    if (eh_find_sym(&libdl, "dlsym", (void **) &__dlsym)) {
-        fprintf(stderr, "MANGOHUD: Can't get dlsym()\n");
-        exit(1);
-    }
-
-    eh_destroy_obj(&libdl);
 }
 
 /**
