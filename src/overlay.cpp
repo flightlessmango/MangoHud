@@ -352,7 +352,7 @@ void render_mpris_metadata(struct overlay_params& params, mutexed_metadata& meta
                                    fmt::arg("title", meta.meta.title),
                                    fmt::arg("album", meta.meta.album));
             }
-            catch (const fmt::v7::format_error& err)
+            catch (const fmt::format_error& err)
             {
                SPDLOG_ERROR("formatting error in '{}': {}", f, err.what());
             }
