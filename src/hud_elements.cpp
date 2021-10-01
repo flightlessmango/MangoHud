@@ -348,7 +348,7 @@ void HudElements::vram(){
 }
 
 void HudElements::ram(){
-#ifdef __gnu_linux__
+#ifdef __linux__
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram]){
         ImGui::TableNextRow(); ImGui::TableNextColumn();
         ImGui::TextColored(HUDElements.colors.ram, "RAM");
@@ -373,7 +373,7 @@ void HudElements::ram(){
 
 void HudElements::procmem()
 {
-#ifdef __gnu_linux__
+#ifdef __linux__
     const char* unit = nullptr;
     if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_procmem])
         return;
@@ -653,7 +653,7 @@ void HudElements::vkbasalt(){
 }
 
 void HudElements::battery(){
-#ifdef __gnu_linux__
+#ifdef __linux__
     if (Battery_Stats.batt_count > 0) {
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery]) {
             ImGui::TableNextRow(); ImGui::TableNextColumn();
@@ -781,7 +781,7 @@ void HudElements::graphs(){
         HUDElements.min = 0;
         ImGui::TextColored(HUDElements.colors.engine, "%s", "VRAM");
     }
-#ifdef __gnu_linux__
+#ifdef __linux__
     if (value == "ram"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram])
             HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram] = true;

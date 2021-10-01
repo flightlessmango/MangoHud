@@ -5,7 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
-#ifdef __gnu_linux__
+#ifdef __linux__
 #include <wordexp.h>
 #include <unistd.h>
 #endif

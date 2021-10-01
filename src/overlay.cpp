@@ -23,7 +23,7 @@
 #include "pci_ids.h"
 #include "timing.hpp"
 
-#ifdef __gnu_linux__
+#ifdef __linux__
 #include <libgen.h>
 #include <unistd.h>
 #endif
@@ -45,14 +45,14 @@ const char* engines[] = {"Unknown", "OpenGL", "VULKAN", "DXVK", "VKD3D", "DAMAVA
 
 void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID)
 {
-#ifdef __gnu_linux__
+#ifdef __linux__
    if (params.enabled[OVERLAY_PARAM_ENABLED_battery]) {
       Battery_Stats.update();
    }
 #endif
    if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
       cpuStats.UpdateCPUData();
-#ifdef __gnu_linux__
+#ifdef __linux__
 
       if (params.enabled[OVERLAY_PARAM_ENABLED_core_load] || params.enabled[OVERLAY_PARAM_ENABLED_cpu_mhz])
          cpuStats.UpdateCoreMhz();
@@ -72,7 +72,7 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
 
    // get ram usage/max
 
-#ifdef __gnu_linux__
+#ifdef __linux__
    if (params.enabled[OVERLAY_PARAM_ENABLED_ram] || params.enabled[OVERLAY_PARAM_ENABLED_swap] || logger->is_active())
       update_meminfo();
    if (params.enabled[OVERLAY_PARAM_ENABLED_procmem])
@@ -87,7 +87,7 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
    currentLogData.gpu_mem_clock = gpu_info.MemClock;
    currentLogData.gpu_vram_used = gpu_info.memoryUsed;
    currentLogData.gpu_power = gpu_info.powerUsage;
-#ifdef __gnu_linux__
+#ifdef __linux__
    currentLogData.ram_used = memused;
 #endif
 
@@ -520,7 +520,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
 
 void init_cpu_stats(overlay_params& params)
 {
-#ifdef __gnu_linux__
+#ifdef __linux__
    auto& enabled = params.enabled;
    enabled[OVERLAY_PARAM_ENABLED_cpu_stats] = cpuStats.Init()
                            && enabled[OVERLAY_PARAM_ENABLED_cpu_stats];
@@ -582,7 +582,7 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
          params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
    }
 
-#ifdef __gnu_linux__
+#ifdef __linux__
    if (vendorID == 0x8086 || vendorID == 0x1002
        || gpu.find("Radeon") != std::string::npos
        || gpu.find("AMD") != std::string::npos) {
@@ -671,7 +671,7 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
 }
 
 void init_system_info(){
-   #ifdef __gnu_linux__
+   #ifdef __linux__
       const char* ld_preload = getenv("LD_PRELOAD");
       if (ld_preload)
          unsetenv("LD_PRELOAD");
@@ -768,7 +768,7 @@ void init_system_info(){
 
 void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats)
 {
-#ifdef __gnu_linux__
+#ifdef __linux__
    if (pci_ids.find(vendorID) == pci_ids.end())
       parse_pciids();
 

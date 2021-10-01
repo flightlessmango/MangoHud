@@ -29,7 +29,7 @@ std::string get_basename(const std::string&& path)
     return path;
 }
 
-#ifdef __gnu_linux__
+#ifdef __linux__
 
 bool find_folder(const char* root, const char* prefix, std::string& dest)
 {
@@ -199,4 +199,4 @@ std::string get_config_dir()
     return path;
 }
 
-#endif // __gnu_linux__
+#endif // __linux__

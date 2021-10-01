@@ -1548,7 +1548,7 @@ static VkResult overlay_CreateSwapchainKHR(
 
    std::string deviceName = prop.deviceName;
    if (!is_blacklisted()) {
-#ifdef __gnu_linux__
+#ifdef __linux__
       get_device_name(prop.vendorID, prop.deviceID, swapchain_data->sw_stats);
 #endif
    }
@@ -1940,7 +1940,7 @@ static VkResult overlay_CreateInstance(
    }
 
    if (!is_blacklisted()) {
-#ifdef __gnu_linux__
+#ifdef __linux__
       init_system_info();
       instance_data->notifier.params = &instance_data->params;
       start_notifier(instance_data->notifier);
@@ -1974,7 +1974,7 @@ static void overlay_DestroyInstance(
    struct instance_data *instance_data = FIND(struct instance_data, instance);
    instance_data_map_physical_devices(instance_data, false);
    instance_data->vtable.DestroyInstance(instance, pAllocator);
-#ifdef __gnu_linux__
+#ifdef __linux__
    if (!is_blacklisted())
       stop_notifier(instance_data->notifier);
 #endif
