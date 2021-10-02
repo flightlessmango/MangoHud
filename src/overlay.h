@@ -123,6 +123,7 @@ void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...);
 void center_text(const std::string& text);
 ImVec4 change_on_load_temp(LOAD_DATA& data, unsigned current);
 float get_time_stat(void *_data, int _idx);
+void stop_hw_updater();
 
 #ifdef HAVE_DBUS
 void render_mpris_metadata(overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing);

@@ -45,15 +45,10 @@ const char* engines[] = {"Unknown", "OpenGL", "VULKAN", "DXVK", "VKD3D", "DAMAVA
 
 void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID)
 {
-#ifdef __linux__
-   if (params.enabled[OVERLAY_PARAM_ENABLED_battery]) {
-      Battery_Stats.update();
-   }
-#endif
    if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
       cpuStats.UpdateCPUData();
-#ifdef __linux__
 
+#ifdef __linux__
       if (params.enabled[OVERLAY_PARAM_ENABLED_core_load] || params.enabled[OVERLAY_PARAM_ENABLED_cpu_mhz])
          cpuStats.UpdateCoreMhz();
       if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp] || logger->is_active() || params.enabled[OVERLAY_PARAM_ENABLED_graphs])
@@ -70,9 +65,9 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
          getNvidiaGpuInfo();
    }
 
-   // get ram usage/max
-
 #ifdef __linux__
+   if (params.enabled[OVERLAY_PARAM_ENABLED_battery])
+      Battery_Stats.update();
    if (params.enabled[OVERLAY_PARAM_ENABLED_ram] || params.enabled[OVERLAY_PARAM_ENABLED_swap] || logger->is_active())
       update_meminfo();
    if (params.enabled[OVERLAY_PARAM_ENABLED_procmem])
@@ -105,18 +100,15 @@ struct hw_info_updater
 {
    bool quit = false;
    std::thread thread {};
-   struct swapchain_stats sw_stats;
-   struct overlay_params params;
+   struct swapchain_stats* sw_stats = nullptr;
+   struct overlay_params* params = nullptr;
    uint32_t vendorID;
    bool update_hw_info_thread = false;
 
    std::condition_variable cv_hwupdate;
-   std::mutex cv_m_hwupdate;
+   std::mutex cv_m_hwupdate, m_hw_updating;
 
-   hw_info_updater(struct swapchain_stats& sw_stats_, struct overlay_params& params_, uint32_t vendorID_)
-   : sw_stats(sw_stats_)
-   , params(params_)
-   , vendorID(vendorID_)
+   hw_info_updater()
    {
       thread = std::thread(&hw_info_updater::run, this);
    }
@@ -129,8 +121,12 @@ struct hw_info_updater
          thread.join();
    }
 
-   void update()
+   void update(struct swapchain_stats* sw_stats_, struct overlay_params* params_, uint32_t vendorID_)
    {
+      std::unique_lock<std::mutex> lk(m_hw_updating);
+      sw_stats = sw_stats_;
+      params = params_;
+      vendorID = vendorID_;
       update_hw_info_thread = true;
       cv_hwupdate.notify_all();
    }
@@ -141,13 +137,23 @@ struct hw_info_updater
          cv_hwupdate.wait(lk, [&]{ return update_hw_info_thread || quit; });
          if (quit) break;
 
-         update_hw_info(sw_stats, params, vendorID);
+         if (sw_stats && params)
+         {
+            std::unique_lock<std::mutex> lk(m_hw_updating);
+            update_hw_info(*sw_stats, *params, vendorID);
+         }
          update_hw_info_thread = false;
       }
    }
 };
 
 static std::unique_ptr<hw_info_updater> hw_update_thread;
+
+void stop_hw_updater()
+{
+   if (hw_update_thread)
+      hw_update_thread.reset();
+}
 
 void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
    uint32_t f_idx = sw_stats.n_frames % ARRAY_SIZE(sw_stats.frames_stats);
@@ -165,8 +171,8 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
    frametime = (now - sw_stats.last_present_time) / 1000;
    if (elapsed >= params.fps_sampling_period) {
       if (!hw_update_thread)
-         hw_update_thread = std::make_unique<hw_info_updater>(sw_stats, params, vendorID);
-      hw_update_thread->update();
+         hw_update_thread = std::make_unique<hw_info_updater>();
+      hw_update_thread->update(&sw_stats, &params, vendorID);
 
       sw_stats.fps = fps;
 
