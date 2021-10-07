@@ -185,6 +185,8 @@ sudo apt update
 sudo apt install mangohud
 ````
 
+**NOTE: Currently PPA has no 32-bit libraries**
+
 #### openSUSE
 
 If you run openSUSE Leap or Tumbleweed you can get Mangohud from the official repositories.
