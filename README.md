@@ -217,9 +217,9 @@ sudo zypper install mangohud
 
 If you are using Flatpaks, you will have to add the [Flathub repository](https://flatpak.org/setup/) for your specific distribution, and then, to install it, execute:
 
-##### For Steam flatpak
+##### For flatpak
 ```
-flatpak install com.valvesoftware.Steam.Utility.MangoHud
+flatpak install org.freedesktop.Platform.VulkanLayer.MangoHud
 ```
 To enable MangoHud for all Steam games:
 ```
