@@ -10,6 +10,7 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <thread>
+#include <unistd.h>
 #include "../overlay.h"
 
 // About Desktop OpenGL function loaders:
