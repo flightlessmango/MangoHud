@@ -223,44 +223,65 @@ util_files = files(
 sizeof_ptr = cc.sizeof('void*')
 if sizeof_ptr == 8
   pre_args += '-DMANGOHUD_ARCH="64bit"'
-  dearimgui_sp = subproject('imgui', default_options: [
-  'default_library=static',
-  # use 'auto_features=disabled' once available: https://github.com/mesonbuild/meson/issues/5320
-  'dx9=disabled',
-  'dx10=disabled',
-  'dx11=disabled',
-  'dx12=disabled',
-  'metal=disabled',
-  'opengl=enabled',
-  'vulkan=disabled',
-  'glfw=enabled',
-  'sdl2=disabled',
-  'osx=disabled',
-  'win=disabled',
-  'marmalade=disabled',
-  'allegro5=disabled',
-])
+  if get_option('mangoapp')
+    imgui_options = [
+      'default_library=static',
+      # use 'auto_features=disabled' once available: https://github.com/mesonbuild/meson/issues/5320
+      'dx9=disabled',
+      'dx10=disabled',
+      'dx11=disabled',
+      'dx12=disabled',
+      'metal=disabled',
+      'opengl=enabled',
+      'vulkan=disabled',
+      'glfw=enabled',
+      'sdl2=disabled',
+      'osx=disabled',
+      'win=disabled',
+      'marmalade=disabled',
+      'allegro5=disabled',  
+    ]
+  else
+      imgui_options = [
+      'default_library=static',
+      # use 'auto_features=disabled' once available: https://github.com/mesonbuild/meson/issues/5320
+      'dx9=disabled',
+      'dx10=disabled',
+      'dx11=disabled',
+      'dx12=disabled',
+      'metal=disabled',
+      'opengl=disabled',
+      'vulkan=disabled',
+      'glfw=disabled',
+      'sdl2=disabled',
+      'osx=disabled',
+      'win=disabled',
+      'marmalade=disabled',
+      'allegro5=disabled',  
+    ]
+  endif
 elif sizeof_ptr == 4
   pre_args += '-DMANGOHUD_ARCH="32bit"'
-  dearimgui_sp = subproject('imgui', default_options: [
-  'default_library=static',
-  # use 'auto_features=disabled' once available: https://github.com/mesonbuild/meson/issues/5320
-  'dx9=disabled',
-  'dx10=disabled',
-  'dx11=disabled',
-  'dx12=disabled',
-  'metal=disabled',
-  'opengl=disabled',
-  'vulkan=disabled',
-  'glfw=disabled',
-  'sdl2=disabled',
-  'osx=disabled',
-  'win=disabled',
-  'marmalade=disabled',
-  'allegro5=disabled',
-])
+  imgui_options = [
+    'default_library=static',
+    # use 'auto_features=disabled' once available: https://github.com/mesonbuild/meson/issues/5320
+    'dx9=disabled',
+    'dx10=disabled',
+    'dx11=disabled',
+    'dx12=disabled',
+    'metal=disabled',
+    'opengl=disabled',
+    'vulkan=disabled',
+    'glfw=disabled',
+    'sdl2=disabled',
+    'osx=disabled',
+    'win=disabled',
+    'marmalade=disabled',
+    'allegro5=disabled',  
+  ]
 endif
 
+dearimgui_sp = subproject('imgui', default_options: imgui_options)
 dearimgui_dep = dearimgui_sp.get_variable('imgui_dep')
 
 spdlog_dep = cpp.find_library('spdlog', required: get_option('use_system_spdlog'))
