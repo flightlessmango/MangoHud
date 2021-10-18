@@ -220,65 +220,35 @@ util_files = files(
   'src/mesa/util/os_time.c',
 )
 
+imgui_options = [
+  'default_library=static',
+  # use 'auto_features=disabled' once available: https://github.com/mesonbuild/meson/issues/5320
+  'dx9=disabled',
+  'dx10=disabled',
+  'dx11=disabled',
+  'dx12=disabled',
+  'metal=disabled',
+  'opengl=disabled',
+  'vulkan=disabled',
+  'glfw=disabled',
+  'sdl2=disabled',
+  'osx=disabled',
+  'win=disabled',
+  'marmalade=disabled',
+  'allegro5=disabled',
+]
+
 sizeof_ptr = cc.sizeof('void*')
 if sizeof_ptr == 8
   pre_args += '-DMANGOHUD_ARCH="64bit"'
   if get_option('mangoapp')
-    imgui_options = [
-      'default_library=static',
-      # use 'auto_features=disabled' once available: https://github.com/mesonbuild/meson/issues/5320
-      'dx9=disabled',
-      'dx10=disabled',
-      'dx11=disabled',
-      'dx12=disabled',
-      'metal=disabled',
+    imgui_options += [
       'opengl=enabled',
-      'vulkan=disabled',
       'glfw=enabled',
-      'sdl2=disabled',
-      'osx=disabled',
-      'win=disabled',
-      'marmalade=disabled',
-      'allegro5=disabled',  
-    ]
-  else
-      imgui_options = [
-      'default_library=static',
-      # use 'auto_features=disabled' once available: https://github.com/mesonbuild/meson/issues/5320
-      'dx9=disabled',
-      'dx10=disabled',
-      'dx11=disabled',
-      'dx12=disabled',
-      'metal=disabled',
-      'opengl=disabled',
-      'vulkan=disabled',
-      'glfw=disabled',
-      'sdl2=disabled',
-      'osx=disabled',
-      'win=disabled',
-      'marmalade=disabled',
-      'allegro5=disabled',  
     ]
   endif
 elif sizeof_ptr == 4
   pre_args += '-DMANGOHUD_ARCH="32bit"'
-  imgui_options = [
-    'default_library=static',
-    # use 'auto_features=disabled' once available: https://github.com/mesonbuild/meson/issues/5320
-    'dx9=disabled',
-    'dx10=disabled',
-    'dx11=disabled',
-    'dx12=disabled',
-    'metal=disabled',
-    'opengl=disabled',
-    'vulkan=disabled',
-    'glfw=disabled',
-    'sdl2=disabled',
-    'osx=disabled',
-    'win=disabled',
-    'marmalade=disabled',
-    'allegro5=disabled',  
-  ]
 endif
 
 dearimgui_sp = subproject('imgui', default_options: imgui_options)
