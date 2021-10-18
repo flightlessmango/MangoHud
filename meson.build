@@ -305,7 +305,9 @@ else
   windows_deps = null_dep
 endif
 
-glfw3_dep = dependency('glfw3')
+if get_option('mangoapp')
+  glfw3_dep = dependency('glfw3')
+endif
 
 subdir('src')
 subdir('data')
