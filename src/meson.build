@@ -161,7 +161,7 @@ if is_unixy
   endif
 endif
 
-link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL', '-lglfw', '-lGL'])
+link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL', '-lGL'])
 # meson fails to check version-script so just force add
 link_args += '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version'))
 
@@ -224,7 +224,7 @@ if is_unixy
   )
 endif
 
-if sizeof_ptr == 8
+if get_option('mangoapp') and sizeof_ptr == 8
   pre_args += '-DIMGUI_IMPL_OPENGL_LOADER_GLEW'
   overlay_files = files(
     'overlay.cpp',
