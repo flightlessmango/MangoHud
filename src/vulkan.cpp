@@ -59,7 +59,6 @@
 float offset_x, offset_y, hudSpacing;
 int hudFirstRow, hudSecondRow;
 VkPhysicalDeviceDriverProperties driverProps = {};
-overlay_params _params {};
 
 #if !defined(_WIN32)
 namespace MangoHud { namespace GL {
