@@ -226,40 +226,13 @@ endif
 
 if get_option('mangoapp') and sizeof_ptr == 8
   pre_args += '-DIMGUI_IMPL_OPENGL_LOADER_GLEW'
-  overlay_files = files(
-    'overlay.cpp',
-    'hud_elements.cpp',
-    'gpu.cpp',
-    'nvml.cpp',
-    'loaders/loader_nvml.cpp',
-    'loaders/loader_nvctrl.cpp',
-    'nvctrl.cpp',
-    'logging.cpp',
-    'battery.cpp',
-    'memory.cpp',
-    'cpu.cpp',
-    'pci_ids.cpp',
-    'file_utils.cpp',
-    'iostats.cpp',
-    'dbus.cpp',
-    'loaders/loader_libdrm.cpp',
-    'overlay_params.cpp',
-    'loaders/loader_x11.cpp',
-    'loaders/loader_dbus.cpp',
-    'config.cpp',
-    'blacklist.cpp',
-    'font.cpp',
-    'keybinds.cpp',
-    'font_unispace.c',
-    'loaders/loader_x11.cpp',
-    'shared_x11.cpp',
-  )
   mangoapp = executable(
     'mangoapp',
     mangohud_version,
     util_files,
     vk_enum_to_str,
-    overlay_files,
+    vklayer_files,
+    opengl_files,
     files(
       'app/main.cpp',
     ),
