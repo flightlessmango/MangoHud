@@ -26,7 +26,7 @@ ninja -C build install
 By default, meson should install MangoHud to `/usr/local`. Specify install prefix with `--prefix=/usr` if desired.
 Add `-Dappend_libdir_mangohud=false` option to meson to not append `mangohud` to libdir if desired (e.g. /usr/local/lib/mangohud).
 
-To install 32-bit build on 64-bit distro, specify proper `libdir`: `lib32` for Arch, `lib/i386-linux-gnu` on Debian. RPM-based distros usually install 32-bit libraries to `/usr/lib` and 64-bit to `/usr/lib64`.
+To install 32-bit build on 64-bit distro, specify proper `libdir`: `lib32` for Arch, `lib/i386-linux-gnu` on Debian-based distros. RPM-based distros usually install 32-bit libraries to `/usr/lib` and 64-bit to `/usr/lib64`.
 You may have to change `PKG_CONFIG_PATH` to point to correct folders for your distro.
 
 ```
