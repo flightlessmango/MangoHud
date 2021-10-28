@@ -26,6 +26,8 @@ rm ${NAME}/include/nvml.h
 rm -r ${NAME}/modules/minhook
 # vulkan headers from system
 rm -r ${NAME}/subprojects/Vulkan-Headers-*
+# spdlog from system
+rm -r ${NAME}/subprojects/spdlog-*
 # remove some dear imgui clutter
 rm -rf ${NAME}/subprojects/imgui-*/examples ${NAME}/subprojects/imgui-*/misc
 # compress new sources
