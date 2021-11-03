@@ -239,9 +239,13 @@ bool CPUStats::UpdateCoreMhz() {
         }
     }
     m_cpuDataTotal.cpu_mhz = 0;
+    // rewrite this less clunkily?
+    int max = 0;
     for (auto data : m_cpuData)
-        m_cpuDataTotal.cpu_mhz += data.mhz;
-    m_cpuDataTotal.cpu_mhz /= m_cpuData.size();
+        if (data.mhz > max)
+            max = data.mhz;
+
+    m_cpuDataTotal.cpu_mhz = max;
     return true;
 }
 
