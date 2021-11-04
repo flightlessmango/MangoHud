@@ -13,6 +13,9 @@
 #include "version.h"
 #include "gpu.h"
 #include "logging.h"
+#include "vk_enum_to_str.h"
+#include "notify.h"
+#include <vulkan/vk_layer.h>
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
 extern float g_overflow;
@@ -98,6 +101,36 @@ struct LOAD_DATA {
    unsigned high_load;
 };
 
+/* Mapped from VkInstace/VkPhysicalDevice */
+struct instance_data {
+   struct vk_instance_dispatch_table vtable;
+   VkInstance instance;
+   struct overlay_params params;
+   uint32_t api_version;
+   string engineName, engineVersion;
+   enum EngineTypes engine;
+   notify_thread notifier;
+   int control_client;
+};
+
+/* Mapped from VkDevice */
+struct queue_data;
+struct device_data {
+   struct instance_data *instance;
+
+   PFN_vkSetDeviceLoaderData set_device_loader_data;
+
+   struct vk_device_dispatch_table vtable;
+   VkPhysicalDevice physical_device;
+   VkDevice device;
+
+   VkPhysicalDeviceProperties properties;
+
+   struct queue_data *graphic_queue;
+
+   std::vector<struct queue_data *> queues;
+};
+
 extern struct fps_limit fps_limit_stats;
 extern int32_t deviceID;
 
@@ -124,6 +157,8 @@ void center_text(const std::string& text);
 ImVec4 change_on_load_temp(LOAD_DATA& data, unsigned current);
 float get_time_stat(void *_data, int _idx);
 void stop_hw_updater();
+extern void control_client_check(struct device_data *device_data);
+extern void process_control_socket(struct instance_data *instance_data);
 
 #ifdef HAVE_DBUS
 void render_mpris_metadata(overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing);

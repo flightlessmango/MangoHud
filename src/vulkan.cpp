@@ -66,35 +66,6 @@ namespace MangoHud { namespace GL {
 }}
 #endif
 
-/* Mapped from VkInstace/VkPhysicalDevice */
-struct instance_data {
-   struct vk_instance_dispatch_table vtable;
-   VkInstance instance;
-   struct overlay_params params;
-   uint32_t api_version;
-   string engineName, engineVersion;
-   enum EngineTypes engine;
-   notify_thread notifier;
-};
-
-/* Mapped from VkDevice */
-struct queue_data;
-struct device_data {
-   struct instance_data *instance;
-
-   PFN_vkSetDeviceLoaderData set_device_loader_data;
-
-   struct vk_device_dispatch_table vtable;
-   VkPhysicalDevice physical_device;
-   VkDevice device;
-
-   VkPhysicalDeviceProperties properties;
-
-   struct queue_data *graphic_queue;
-
-   std::vector<struct queue_data *> queues;
-};
-
 /* Mapped from VkCommandBuffer */
 struct queue_data;
 struct command_buffer_data {
@@ -456,11 +427,10 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
    update_hud_info(data->sw_stats, instance_data->params, device_data->properties.vendorID);
    check_keybinds(data->sw_stats, instance_data->params, device_data->properties.vendorID);
 
-   // not currently used
-   // if (instance_data->params.control >= 0) {
-   //    control_client_check(device_data);
-   //    process_control_socket(instance_data);
-   // }
+   if (instance_data->params.control >= 0) {
+      control_client_check(device_data);
+      process_control_socket(instance_data);
+   }
 }
 
 static void compute_swapchain_display(struct swapchain_data *data)
