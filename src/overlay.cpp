@@ -42,7 +42,7 @@ struct fps_limit fps_limit_stats {};
 ImVec2 real_font_size;
 std::vector<logData> graph_data;
 const char* engines[] = {"Unknown", "OpenGL", "VULKAN", "DXVK", "VKD3D", "DAMAVAND", "ZINK", "WINED3D", "Feral3D", "ToGL"};
-overlay_params _params {};
+overlay_params *_params {};
 
 void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID)
 {
@@ -211,7 +211,7 @@ void calculate_benchmark_data(){
 
    size_t max_label_size = 0;
 
-   for (std::string percentile : _params.benchmark_percentiles) {
+   for (std::string percentile : _params->benchmark_percentiles) {
       float result;
 
       // special case handling for a mean-based average

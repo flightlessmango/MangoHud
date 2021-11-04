@@ -1931,7 +1931,7 @@ static VkResult overlay_CreateInstance(
    instance_data_map_physical_devices(instance_data, true);
 
    parse_overlay_config(&instance_data->params, getenv("MANGOHUD_CONFIG"));
-   _params = instance_data->params;
+   _params = &instance_data->params;
 
    //check for blacklist item in the config file
    for (auto& item : instance_data->params.blacklist) {
