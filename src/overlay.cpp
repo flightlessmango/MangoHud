@@ -107,7 +107,7 @@ struct hw_info_updater
    bool update_hw_info_thread = false;
 
    std::condition_variable cv_hwupdate;
-   std::mutex cv_m_hwupdate, m_hw_updating;
+   std::mutex m_cv_hwupdate, m_hw_updating;
 
    hw_info_updater()
    {
@@ -124,23 +124,26 @@ struct hw_info_updater
 
    void update(struct swapchain_stats* sw_stats_, struct overlay_params* params_, uint32_t vendorID_)
    {
-      std::unique_lock<std::mutex> lk(m_hw_updating);
-      sw_stats = sw_stats_;
-      params = params_;
-      vendorID = vendorID_;
-      update_hw_info_thread = true;
-      cv_hwupdate.notify_all();
+      std::unique_lock<std::mutex> lk_hw_updating(m_hw_updating, std::try_to_lock);
+      if (lk_hw_updating.owns_lock())
+      {
+         sw_stats = sw_stats_;
+         params = params_;
+         vendorID = vendorID_;
+         update_hw_info_thread = true;
+         cv_hwupdate.notify_all();
+      }
    }
 
    void run(){
       while (!quit){
-         std::unique_lock<std::mutex> lk(cv_m_hwupdate);
-         cv_hwupdate.wait(lk, [&]{ return update_hw_info_thread || quit; });
+         std::unique_lock<std::mutex> lk_cv_hwupdate(m_cv_hwupdate);
+         cv_hwupdate.wait(lk_cv_hwupdate, [&]{ return update_hw_info_thread || quit; });
          if (quit) break;
 
          if (sw_stats && params)
          {
-            std::unique_lock<std::mutex> lk(m_hw_updating);
+            std::unique_lock<std::mutex> lk_hw_updating(m_hw_updating);
             update_hw_info(*sw_stats, *params, vendorID);
          }
          update_hw_info_thread = false;
