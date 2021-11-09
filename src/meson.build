@@ -226,7 +226,6 @@ if is_unixy
 endif
 
 if get_option('mangoapp') and sizeof_ptr == 8
-  pre_args += '-DIMGUI_IMPL_OPENGL_LOADER_GLEW'
   mangoapp = executable(
     'mangoapp',
     mangohud_version,
