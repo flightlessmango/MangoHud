@@ -1,0 +1,32 @@
+name: Build and test
+on: [push, pull_request]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:testing
+      env:
+        DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          apt update
+          apt install -y build-essential meson pkg-config appstream glslang-tools mesa-common-dev libdbus-1-dev libdrm-dev libglfw3-dev libx11-dev libspdlog-dev libwayland-dev libxnvctrl-dev python3-mako python3-setuptools
+      - name: Compile and install
+        run: |
+          meson builddir --prefix=/usr -Duse_system_vulkan=enabled -Duse_system_spdlog=enabled -Dwith_wayland=enabled -Dmangoapp=true -Dtests=enabled
+          meson compile -C builddir
+          meson install -C builddir
+      - name: Run tests
+        run: |
+          meson test -C builddir
+      - name: Upload logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: logs
+          path: |
+            builddir/meson-logs/
