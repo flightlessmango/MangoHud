@@ -1,0 +1,39 @@
+.\" Manpage for mangoapp.
+.TH mangoapp 1 "" "" "mangoapp"
+
+.SH NAME
+mangoapp \- transparent background application with a built in mangohud
+
+.SH SYNOPSIS
+\fBmangoapp\fR
+
+.SH DESCRIPTION
+MangoHud is a Vulkan/OpenGL overlay for monitoring FPS, temperatures, CPU/GPU load and more.
+.PP
+Mangoapp is a transparent background opengl application with a built in MangoHud. It's designed to be run inside a
+gamescope instance which will display mangoapp ontop of gamescopes output. It also takes frame information from
+gamescope. The purpose of this is to "easily" make MangoHud compatible with any application, or at least any
+application that gamescope can run. This solves issues with some OpenGL games and certain ports that have stdc++ issues
+as it's no longer directly injected into the game.
+
+.SH USAGE
+Create a script (e.g. \fBrun.sh\fR) containing the app you want to run (e.g. \fBvkcube\fR) and \fBmangoapp\fR like so:
+.PP
+.RS 4
+.EX
+#!/bin/sh
+
+vkcube&
+mangoapp
+.EE
+.RE
+.PP
+And then run it with \fBgamescope ./run.sh\fR.
+
+.SH SEE ALSO
+mangohud(1)
+
+.SH ABOUT
+MangoHud development takes place at \fIhttps://github.com/flightlessmango/MangoHud\fR.
+.br
+Benchmarks created with MangoHud can be uploaded to \fIhttps://flightlessmango.com\fR.
