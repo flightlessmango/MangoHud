@@ -426,11 +426,12 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
    struct instance_data *instance_data = device_data->instance;
    update_hud_info(data->sw_stats, instance_data->params, device_data->properties.vendorID);
    check_keybinds(data->sw_stats, instance_data->params, device_data->properties.vendorID);
-
+#ifdef __linux__
    if (instance_data->params.control >= 0) {
       control_client_check(device_data);
       process_control_socket(instance_data);
    }
+#endif
 }
 
 static void compute_swapchain_display(struct swapchain_data *data)

@@ -76,10 +76,6 @@ static void enumerate_config_files(std::vector<std::string>& paths) {
 
     paths.push_back(config_dir + mangohud_dir + "MangoHud.conf");
 
-#ifdef _WIN32
-    paths.push_back("C:\\mangohud\\MangoHud.conf");
-#endif
-
     if (!program_name.empty()) {
         paths.push_back(config_dir + mangohud_dir + program_name + ".conf");
     }
@@ -105,7 +101,9 @@ void parseConfigFile(overlay_params& params) {
         paths.push_back(cfg_file);
     else
         enumerate_config_files(paths);
-
+#ifdef _WIN32
+    paths.push_back("C:\\mangohud\\MangoHud.conf");
+#endif
     std::string line;
     for (auto p = paths.rbegin(); p != paths.rend(); p++) {
         std::ifstream stream(*p);
