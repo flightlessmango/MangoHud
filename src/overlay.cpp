@@ -41,7 +41,7 @@ struct benchmark_stats benchmark;
 struct fps_limit fps_limit_stats {};
 ImVec2 real_font_size;
 std::vector<logData> graph_data;
-const char* engines[] = {"Unknown", "OpenGL", "VULKAN", "DXVK", "VKD3D", "DAMAVAND", "ZINK", "WINED3D", "Feral3D", "ToGL"};
+const char* engines[] = {"Unknown", "OpenGL", "VULKAN", "DXVK", "VKD3D", "DAMAVAND", "ZINK", "WINED3D", "Feral3D", "ToGL", "GAMESCOPE"};
 overlay_params *_params {};
 
 void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID)

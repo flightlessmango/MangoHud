@@ -66,11 +66,18 @@ int fd;
 char str1[80];
 char *shm_str;
 
+struct mangoapp {
+    int pid;
+    int read;
+};
+
+mangoapp *mangoapp_ptr;
+
 void read_thread(){
     while (1){
-        if (strcmp("read", shm_str)) {
-            sprintf(shm_str, "%s", "read");
+        if (mangoapp_ptr->read < 1) {
             update_hud_info(sw_stats, params, vendorID);
+            mangoapp_ptr->read = 1;
         } else {
             sleep(0.0001);
         }
@@ -163,11 +170,12 @@ int main(int, char**)
     }
     init_gpu_stats(vendorID, params);
     init_system_info();
-
+    sw_stats.engine = EngineTypes::GAMESCOPE;
     // Our state
     key_t key = ftok("mangoapp",65);
-    int shmid = shmget(key,1024,0666|IPC_CREAT);
-    shm_str = (char*) shmat(shmid,(void*)0,0);
+    int shmid = shmget(key,sizeof(mangoapp),0666|IPC_CREAT);
+    auto shm_address = shmat(shmid, (void*)0, 0);
+    mangoapp_ptr = (mangoapp*)shm_address;
     std::thread(read_thread).detach();
     // Main loop
     while (!glfwWindowShouldClose(window))
@@ -182,7 +190,7 @@ int main(int, char**)
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
-
+        window_size.x = window_size.x * 1.1;
         ImGui::NewFrame();
         {
             check_keybinds(sw_stats, params, vendorID);

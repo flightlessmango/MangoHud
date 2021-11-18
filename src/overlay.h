@@ -39,6 +39,8 @@ enum EngineTypes
    WINED3D,
    FERAL3D,
    TOGL,
+
+   GAMESCOPE
 };
 
 extern const char* engines[];
