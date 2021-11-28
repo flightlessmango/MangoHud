@@ -832,20 +832,20 @@ static void check_fonts(struct device_data* device_data)
 
    unsigned char* pixels;
    int width, height;
-   device_data->font_atlas->GetTexDataAsAlpha8(&pixels, &width, &height);
+   device_data->font_atlas->GetTexDataAsRGBA32(&pixels, &width, &height);
 
    // wait for rendering to complete, if any
    VK_CHECK(device_data->vtable.DeviceWaitIdle(device_data->device));
    shutdown_device_font(device_data);
-   create_image(device_data, width, height, VK_FORMAT_R8_UNORM, device_data->font_img);
+   create_image(device_data, width, height, VK_FORMAT_R8G8B8A8_UNORM, device_data->font_img);
 
    SPDLOG_DEBUG("Default font tex size: {}x{}px", width, height);
    SPDLOG_DEBUG("Update font image descriptor {}", (void*)device_data->descriptor_set);
    update_image_descriptor(device_data, device_data->font_img.image_view, device_data->descriptor_set);
    device_data->font_atlas->SetTexID((ImTextureID)device_data->descriptor_set);
 
-   std::thread(submit_image_upload_cmd, device_data, &device_data->font_img, pixels, width * height * 1 * sizeof(char)).detach();
-//     submit_image_upload_cmd(device_data, &device_data->font_img, pixels, width * height * 1 * sizeof(char));
+   std::thread(submit_image_upload_cmd, device_data, &device_data->font_img, pixels, width * height * 4 * sizeof(char)).detach();
+//     submit_image_upload_cmd(device_data, &device_data->font_img, pixels, width * height * 4 * sizeof(char));
 }
 
 static void check_fonts(struct swapchain_data* data)
