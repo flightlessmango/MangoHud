@@ -1,4 +1,4 @@
-#include <glad/glad.h>
+#include "load_textures.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
@@ -22,16 +22,21 @@ bool GL_LoadTextureFromFile(const char* filename, GLuint* out_texture, int* out_
 
     int image_width_resized  = image_width * ratio;
     int image_height_resized = image_height * ratio;
-    unsigned char* image_data_resized = (unsigned char*)malloc(image_width_resized * image_height_resized * 4);
-    if (!image_data_resized) {
-        stbi_image_free(image_data);
-        return false;
-    }
 
-    stbir_resize_uint8(image_data, image_width, image_height, 0,
-                        image_data_resized, image_width_resized, image_height_resized, 0,
-                        4);
-    stbi_image_free(image_data);
+    if (ratio != 1)
+    {
+        unsigned char* image_data_resized = (unsigned char*)stbi__malloc(image_width_resized * image_height_resized * 4);
+        if (!image_data_resized) {
+            stbi_image_free(image_data);
+            return false;
+        }
+
+        stbir_resize_uint8(image_data, image_width, image_height, 0,
+                            image_data_resized, image_width_resized, image_height_resized, 0,
+                            4);
+        stbi_image_free(image_data);
+        image_data = image_data_resized;
+    }
 
     // Create a OpenGL texture identifier
     GLuint image_texture;
@@ -48,8 +53,8 @@ bool GL_LoadTextureFromFile(const char* filename, GLuint* out_texture, int* out_
     #if defined(GL_UNPACK_ROW_LENGTH) && !defined(__EMSCRIPTEN__)
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
     #endif
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width_resized, image_height_resized, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data_resized);
-    stbi_image_free(image_data_resized);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width_resized, image_height_resized, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
+    stbi_image_free(image_data);
 
     *out_texture = image_texture;
     *out_width   = image_width_resized;

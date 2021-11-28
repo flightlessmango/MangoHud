@@ -5,9 +5,29 @@
 #include <imgui.h>
 #include "timing.hpp"
 
+struct image_infos {
+  std::string path;
+  int width;
+  int height;
+  bool loaded;
+  bool valid;
+  ImTextureID texture;
+
+  image_infos() {
+    loaded = false;
+    valid  = false;
+  }
+
+  ~image_infos() {
+  }
+};
+
+
 struct overlay_params;
 class HudElements{
     public:
+        struct image_infos image_infos;
+        struct image_infos background_image_infos;
         struct swapchain_stats *sw_stats;
         struct overlay_params *params;
         struct exec_entry {
@@ -54,6 +74,8 @@ class HudElements{
         static void show_fps_limit();
         static void custom_text_center();
         static void custom_text();
+        static void image();
+        static void background_image();
         static void vkbasalt();
         static void gamemode();
         static void graphs();

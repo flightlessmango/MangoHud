@@ -50,6 +50,9 @@
 #include "blacklist.h"
 #include "pci_ids.h"
 
+#include "stb_image.h"
+#include "stb_image_resize.h"
+
 using namespace std;
 
 float offset_x, offset_y, hudSpacing;
@@ -69,6 +72,13 @@ struct vk_image {
    uint32_t width, height;
    size_t size;
    bool uploaded;
+};
+
+struct texture_info {
+   vk_image image;
+   VkDescriptorSet descset;
+   std::string filename;
+   int maxwidth;
 };
 
 /* Mapped from VkInstace/VkPhysicalDevice */
@@ -113,6 +123,8 @@ struct device_data {
    ImFont *font_alt, *font_text;
    struct vk_image font_img;
    size_t font_params_hash = 0;
+
+   std::vector<struct texture_info> textures;
 };
 
 /* Mapped from VkCommandBuffer */
@@ -344,10 +356,10 @@ static void setup_device_pipeline(struct device_data *device_data)
    /* Descriptor pool */
    VkDescriptorPoolSize sampler_pool_size = {};
    sampler_pool_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-   sampler_pool_size.descriptorCount = 1;
+   sampler_pool_size.descriptorCount = 3;
    VkDescriptorPoolCreateInfo desc_pool_info = {};
    desc_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-   desc_pool_info.maxSets = 1;
+   desc_pool_info.maxSets = 3;
    desc_pool_info.poolSizeCount = 1;
    desc_pool_info.pPoolSizes = &sampler_pool_size;
    VK_CHECK(device_data->vtable.CreateDescriptorPool(device_data->device,
@@ -859,6 +871,36 @@ static void check_fonts(struct swapchain_data* data)
    }
 }
 
+ImTextureID add_texture(swapchain_stats *stats, const std::string& filename, int* width, int* height, int maxwidth) {
+   // FIXME hacks
+   struct swapchain_data *data = reinterpret_cast<swapchain_data *>((char*)stats - ((char*)&((swapchain_data*)0)->sw_stats));
+   struct texture_info ti {};
+   int original_width, original_height, channels;
+
+   // load
+   int ret = stbi_info(filename.c_str(), &original_width, &original_height, &channels);
+   if (!ret)
+      return nullptr;
+
+   // reduce the image
+   float ratio = 1.0;
+   if (original_width > maxwidth && maxwidth != 0) {
+      ratio = maxwidth / static_cast<float> (original_width);
+   }
+   *width  = original_width  * ratio;
+   *height = original_height * ratio;
+
+   ti.descset = alloc_descriptor_set(data->device);
+   create_image(data->device, *width, *height, VK_FORMAT_R8G8B8A8_UNORM, ti.image);
+   update_image_descriptor(data->device, ti.image.image_view, ti.descset);
+   ti.filename = filename;
+   ti.maxwidth = maxwidth;
+
+   data->device->textures.push_back(ti);
+
+   return (ImTextureID) ti.descset;
+}
+
 static void CreateOrResizeBuffer(struct device_data *data,
                                  VkBuffer *buffer,
                                  VkDeviceMemory *buffer_memory,
@@ -928,6 +970,39 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
    device_data->vtable.BeginCommandBuffer(draw->command_buffer, &buffer_begin_info);
 
 //    ensure_swapchain_fonts(data->device, draw->command_buffer);
+
+   /* ensure_textures */
+   for (auto& tex : data->device->textures) {
+      if (!tex.descset)
+         continue;
+
+      if (!tex.image.uploaded) {
+//          tex.image.uploaded = true;
+
+         // load
+         int width, height, channels;
+         unsigned char* pixels = stbi_load(tex.filename.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+         if (!pixels)
+         {
+            SPDLOG_ERROR("Failed to load image: {}", tex.filename);
+            continue;
+         }
+
+         // reduce the image
+         if (width > tex.maxwidth && tex.maxwidth != 0) {
+            unsigned char* pixels_resized = (unsigned char*)malloc(width * height * STBI_rgb_alpha);
+            stbir_resize_uint8(pixels, width, height, 0, pixels_resized, tex.image.width, tex.image.height, 0, STBI_rgb_alpha);
+            stbi_image_free(pixels);
+            pixels = pixels_resized;
+         }
+
+         SPDLOG_DEBUG("Uploading '{}' ({}x{})", tex.filename, tex.image.width, tex.image.height);
+         size_t upload_size = tex.image.width * tex.image.height * STBI_rgb_alpha;
+
+         submit_image_upload_cmd(device_data, &tex.image, pixels, upload_size);
+         stbi_image_free(pixels);
+      }
+   }
 
    /* Bounce the image to display back to color attachment layout for
     * rendering on top of it.
@@ -1474,15 +1549,29 @@ static void setup_swapchain_data(struct swapchain_data *data,
                                                   NULL, &data->command_pool));
 }
 
+static void destroy_vk_image(struct device_data *device_data, vk_image& image)
+{
+   device_data->vtable.DestroyImageView(device_data->device, image.image_view, NULL);
+   device_data->vtable.DestroyImage(device_data->device, image.image, NULL);
+   device_data->vtable.FreeMemory(device_data->device, image.mem, NULL);
+   image = {};
+}
+
 static void shutdown_device_font(struct device_data *device_data)
 {
-   device_data->vtable.DestroyImageView(device_data->device, device_data->font_img.image_view, NULL);
-   device_data->vtable.DestroyImage(device_data->device, device_data->font_img.image, NULL);
-   device_data->vtable.FreeMemory(device_data->device, device_data->font_img.mem, NULL);
+   destroy_vk_image(device_data, device_data->font_img);
+}
 
-//    device_data->vtable.DestroyBuffer(device_data->device, device_data->font_img.buffer, NULL);
-//    device_data->vtable.FreeMemory(device_data->device, device_data->font_img.buffer_mem, NULL);
-   device_data->font_img = {};
+static void shutdown_textures(struct device_data *device_data)
+{
+   for (auto& tex : device_data->textures)
+   {
+      device_data->vtable.FreeDescriptorSets(device_data->device, device_data->descriptor_pool, 1, &tex.descset);
+      destroy_vk_image(device_data, tex.image);
+   }
+
+   HUDElements.image_infos = {};
+   HUDElements.background_image_infos = {};
 }
 
 static void shutdown_swapchain_data(struct swapchain_data *data)
@@ -1879,6 +1968,7 @@ static void overlay_DestroyDevice(
    struct device_data *device_data = FIND(struct device_data, device);
    if (!is_blacklisted()) {
       shutdown_device_font(device_data);
+      shutdown_textures(device_data);
       IM_FREE(device_data->font_atlas);
       device_unmap_queues(device_data);
    }
