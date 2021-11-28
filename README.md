@@ -309,6 +309,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `arch`                             | Show if the application is 32- or 64-bit                                              |
 | `autostart_log=`                   | Starts the log after X seconds from mangohud init                                     |
 | `background_alpha`                 | Set the opacity of the background `0.0`-`1.0`                                         |
+| `background_image`                 | Display a background image from argument path on the whole screen (eventually transparent) |
 | `battery_color`                    | Change the battery text color                                                         |
 | `battery_icon`                     | Display battery icon instead of percent                                               |
 | `battery_watt`                     | Display wattage for the battery option                                                |
@@ -379,6 +380,8 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `horizontal_stretch`               | Stretches the background to the screens width in `horizontal` mode                    |
 | `hud_compact`                      | Display compact version of MangoHud                                                   |
 | `hud_no_margin`                    | Remove margins around MangoHud                                                        |
+| `image`                            | Display an image from argument path                                                   |
+| `image_max_width`                  | Maximize the image by a max number of pixel for the width                             |
 | `io_read`<br> `io_write`           | Show non-cached IO read/write, in MiB/s                                               |
 | `log_duration`                     | Set amount of time the logging will run for (in seconds)                              |
 | `log_interval`                     | Change the default log interval in milliseconds. Default is `0`                       |

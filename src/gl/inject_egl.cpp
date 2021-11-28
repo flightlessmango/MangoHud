@@ -5,6 +5,7 @@
 #include <chrono>
 #include <iomanip>
 #include <spdlog/spdlog.h>
+#include <glad/glad.h>
 #include "real_dlsym.h"
 #include "mesa/util/macros.h"
 #include "mesa/util/os_time.h"
@@ -25,6 +26,10 @@ static void* get_egl_proc_address(const char* name) {
             SPDLOG_ERROR("Failed to open " MANGOHUD_ARCH " libEGL.so.1: {}", dlerror());
         } else {
             pfn_eglGetProcAddress = reinterpret_cast<decltype(pfn_eglGetProcAddress)>(real_dlsym(handle, "eglGetProcAddress"));
+
+            if(gladLoadGLES2Loader((GLADloadproc)pfn_eglGetProcAddress) == 0) {
+                pfn_eglGetProcAddress = nullptr;
+            }
         }
     }
 

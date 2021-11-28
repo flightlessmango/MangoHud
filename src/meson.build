@@ -101,6 +101,7 @@ if is_unixy
     'gl/gl_renderer.cpp',
     'gl/gl_hud.cpp',
     'gl/inject_egl.cpp',
+    'load_textures.cpp',
   )
 
   nvml_h_found = get_option('with_nvml') == 'enabled'
@@ -174,6 +175,7 @@ link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z
 # meson fails to check version-script so just force add
 link_args += '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version'))
 
+if get_option('use_vulkan')
 mangohud_static_lib = static_library(
   'MangoHud',
   mangohud_version,
@@ -184,11 +186,13 @@ mangohud_static_lib = static_library(
   overlay_spv,
   c_args : [
     pre_args,
-    vulkan_wsi_args
+    vulkan_wsi_args,
+    '-DHAVE_VULKAN'
     ],
   cpp_args : [
     pre_args,
-    vulkan_wsi_args
+    vulkan_wsi_args,
+    '-DHAVE_VULKAN'
     ],
   gnu_symbol_visibility : 'hidden',
   dependencies : [
@@ -209,6 +213,7 @@ mangohud_static_lib = static_library(
   install_dir : libdir_mangohud,
   install : false
 )
+endif
 
 mangohud_shared_lib = shared_library(
   'MangoHud',
