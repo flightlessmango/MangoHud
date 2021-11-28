@@ -19,6 +19,8 @@
 #define CHAR_CELSIUS    "\xe2\x84\x83"
 #define CHAR_FAHRENHEIT "\xe2\x84\x89"
 
+#include "loadTextures.cpp"
+
 // Cut from https://github.com/ocornut/imgui/pull/2943
 // Probably move to ImGui
 float SRGBToLinear(float in)
@@ -666,6 +668,57 @@ void HudElements::custom_text_center(){
     ImGui::PopFont();
 }
 
+void HudElements::image(){
+    const std::string& value = HUDElements.ordered_functions[HUDElements.place].second;
+
+    // load the image if needed
+    if(HUDElements.image_infos.loaded == false) {
+      HUDElements.image_infos.loaded = true;
+      if (!HUDElements.is_vulkan) {
+	unsigned maxwidth = HUDElements.params->width;
+	if(HUDElements.params->image_max_width != 0 && HUDElements.params->image_max_width < maxwidth) {
+	  maxwidth = HUDElements.params->image_max_width;
+	}
+        HUDElements.image_infos.valid = GL_LoadTextureFromFile(value.c_str(),
+							       &(HUDElements.image_infos.texture),
+							       &(HUDElements.image_infos.width),
+							       &(HUDElements.image_infos.height),
+							       maxwidth);
+	spdlog::info("Image {} loaded ({}x{})", value, HUDElements.image_infos.width, HUDElements.image_infos.height);
+      }
+    }
+
+    // render the image
+    if(HUDElements.image_infos.valid) {
+      ImGui::TableNextRow(); ImGui::TableNextColumn();
+      ImGui::PushFont(HUDElements.sw_stats->font1);
+      ImGui::Image((void*)(intptr_t)(HUDElements.image_infos.texture), ImVec2(HUDElements.image_infos.width, HUDElements.image_infos.height));
+      ImGui::PopFont();
+    }
+}
+
+void HudElements::background_image(){
+    const std::string& value = HUDElements.ordered_functions[HUDElements.place].second;
+
+    // load the image if needed
+    if(HUDElements.background_image_infos.loaded == false) {
+      HUDElements.background_image_infos.loaded = true;
+      if (!HUDElements.is_vulkan) {
+        HUDElements.background_image_infos.valid = GL_LoadTextureFromFile(value.c_str(),
+							       &(HUDElements.background_image_infos.texture),
+							       &(HUDElements.background_image_infos.width),
+							       &(HUDElements.background_image_infos.height),
+							       0);
+	spdlog::info("Image {} loaded ({}x{})", value, HUDElements.background_image_infos.width, HUDElements.background_image_infos.height);
+      }
+    }
+
+    // render the image
+    if(HUDElements.background_image_infos.valid) {
+      ImGui::GetBackgroundDrawList()->AddImage((void*)(intptr_t)(HUDElements.background_image_infos.texture), ImVec2(0, 0), ImVec2(HUDElements.background_image_infos.width, HUDElements.background_image_infos.height));
+    }
+}
+
 void HudElements::custom_text(){
     ImGui::TableNextRow(); ImGui::TableNextColumn();
     ImGui::PushFont(HUDElements.sw_stats->font1);
@@ -1070,6 +1123,8 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
     if (param == "frame_timing")    { ordered_functions.push_back({frame_timing, value});           }
     if (param == "media_player")    { ordered_functions.push_back({media_player, value});           }
     if (param == "custom_text")     { ordered_functions.push_back({custom_text, value});            }
+    if (param == "background_image") { ordered_functions.push_back({background_image, value});      }
+    if (param == "image")           { ordered_functions.push_back({image, value});                  }
     if (param == "custom_text_center")  { ordered_functions.push_back({custom_text_center, value}); }
     if (param == "exec")            { ordered_functions.push_back({_exec, value});
                                       exec_list.push_back({int(ordered_functions.size() - 1), value});       }
