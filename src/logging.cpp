@@ -16,27 +16,16 @@ logData currentLogData = {};
 std::unique_ptr<Logger> logger;
 
 string exec(string command) {
-   char buffer[128];
-   string result = "";
-#ifdef __linux__
-
-   // Open pipe to file
-   FILE* pipe = popen(command.c_str(), "r");
-   if (!pipe) {
+    std::array<char, 128> buffer;
+    std::string result;
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command.c_str(), "r"), pclose);
+    if (!pipe) {
       return "popen failed!";
-   }
-
-   // read till end of process:
-   while (!feof(pipe)) {
-
-      // use buffer to read and add to result
-      if (fgets(buffer, 128, pipe) != NULL)
-         result += buffer;
-   }
-
-   pclose(pipe);
-#endif
-   return result;
+    }
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+      result += buffer.data();
+    }
+    return result;
 }
 
 void upload_file(std::string logFile){
