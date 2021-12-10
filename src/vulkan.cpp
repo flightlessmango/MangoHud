@@ -1520,6 +1520,7 @@ static VkResult overlay_CreateSwapchainKHR(
    if (!is_blacklisted()) {
 #ifdef __linux__
       get_device_name(prop.vendorID, prop.deviceID, swapchain_data->sw_stats);
+      init_system_info();
 #endif
    }
    if(driverProps.driverID == VK_DRIVER_ID_NVIDIA_PROPRIETARY){
@@ -1911,7 +1912,6 @@ static VkResult overlay_CreateInstance(
 
    if (!is_blacklisted()) {
 #ifdef __linux__
-      init_system_info();
       instance_data->notifier.params = &instance_data->params;
       start_notifier(instance_data->notifier);
 #endif
