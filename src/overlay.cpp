@@ -607,10 +607,20 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
          path = drm + dir;
 
          SPDLOG_DEBUG("amdgpu path check: {}/device/vendor", path);
-
-         string device = read_line(path + "/device/device");
-         deviceID = strtol(device.c_str(), NULL, 16);
-         string line = read_line(path + "/device/vendor");
+         FILE *fp;
+         char str[10];
+         string device = path + "/device/device";
+         if (fp = fopen(device.c_str(), "r")){
+            fscanf(fp, "%s", str);
+            deviceID = strtol(str, NULL, 16);
+            fclose(fp);
+         }
+         string vendor = path + "/device/vendor";
+         if (fp = fopen(vendor.c_str(), "r")){
+            fscanf(fp, "%s", str);
+            fclose(fp);
+         }
+         string line = str;
          trim(line);
          if (line != "0x1002" || !file_exists(path + "/device/gpu_busy_percent"))
             continue;
