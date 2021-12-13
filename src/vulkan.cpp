@@ -1505,14 +1505,8 @@ static VkResult overlay_CreateSwapchainKHR(
 #endif
    else {
       ss << " " << VK_VERSION_MAJOR(prop.driverVersion);
-      if (VK_VERSION_PATCH(prop.driverVersion) >= 99){
-         ss << "." << VK_VERSION_MINOR(prop.driverVersion) + 1;
-         ss << "." << "0";
-      }  else {
-         ss << "." << VK_VERSION_MINOR(prop.driverVersion);
-         ss << "." << VK_VERSION_PATCH(prop.driverVersion);
-      }
-
+      ss << "." << VK_VERSION_MINOR(prop.driverVersion);
+      ss << "." << VK_VERSION_PATCH(prop.driverVersion);
    }
    std::string driverVersion = ss.str();
 
@@ -1523,26 +1517,8 @@ static VkResult overlay_CreateSwapchainKHR(
       init_system_info();
 #endif
    }
-   if(driverProps.driverID == VK_DRIVER_ID_NVIDIA_PROPRIETARY){
-      swapchain_data->sw_stats.driverName = "NVIDIA";
-   }
-   if(driverProps.driverID == VK_DRIVER_ID_AMD_PROPRIETARY)
-      swapchain_data->sw_stats.driverName = "AMDGPU-PRO";
-   if(driverProps.driverID == VK_DRIVER_ID_AMD_OPEN_SOURCE)
-      swapchain_data->sw_stats.driverName = "AMDVLK";
-   if(driverProps.driverID == VK_DRIVER_ID_MESA_RADV){
-      if(deviceName.find("ACO") != std::string::npos){
-         swapchain_data->sw_stats.driverName = "RADV/ACO";
-      } else {
-         swapchain_data->sw_stats.driverName = "RADV";
-      }
-   }
-
-   if (!swapchain_data->sw_stats.driverName.empty())
-      swapchain_data->sw_stats.driverName += driverVersion;
-   else
-      swapchain_data->sw_stats.driverName = prop.deviceName + driverVersion;
-
+   swapchain_data->sw_stats.driverName = driverProps.driverInfo;
+   
    return result;
 }
 
