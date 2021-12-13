@@ -159,7 +159,7 @@ void stop_hw_updater()
       hw_update_thread.reset();
 }
 
-void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
+void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID, uint64_t frametime_ns){
    uint32_t f_idx = sw_stats.n_frames % ARRAY_SIZE(sw_stats.frames_stats);
    uint64_t now = os_time_get_nano(); /* ns */
    double elapsed = (double)(now - sw_stats.last_fps_update); /* ns */
@@ -169,10 +169,10 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
 
    if (sw_stats.last_present_time) {
         sw_stats.frames_stats[f_idx].stats[OVERLAY_PLOTS_frame_timing] =
-            now - sw_stats.last_present_time;
+            frametime_ns;
    }
 
-   frametime = (now - sw_stats.last_present_time) / 1000;
+   frametime = frametime_ns / 1000;
 
    if (elapsed >= params.fps_sampling_period) {
       if (!hw_update_thread)
@@ -200,6 +200,12 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
    sw_stats.last_present_time = now;
    sw_stats.n_frames++;
    sw_stats.n_frames_since_update++;
+}
+
+void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
+   uint64_t now = os_time_get_nano(); /* ns */
+   uint64_t frametime_ns = now - sw_stats.last_present_time;
+   update_hud_info_with_frametime(sw_stats, params, vendorID, frametime_ns);
 }
 
 void calculate_benchmark_data(){

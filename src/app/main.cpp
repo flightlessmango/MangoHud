@@ -8,7 +8,7 @@
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
 #include <sys/ipc.h>
-#include <sys/shm.h>
+#include <sys/msg.h>
 #include <thread>
 #include <unistd.h>
 #include "../overlay.h"
@@ -62,24 +62,38 @@ overlay_params params {};
 static ImVec2 window_size;
 static uint32_t vendorID;
 static std::string deviceName;
-int fd;
-char str1[80];
-char *shm_str;
 
-struct mangoapp {
-    int pid;
-    int read;
-};
+struct mangoapp_msg_header {
+    long msg_type;  // Message queue ID, never change
+    uint32_t version;  /* for major changes in the way things work */
+} __attribute__((packed));
 
-mangoapp *mangoapp_ptr;
+struct mangoapp_msg_v1 {
+    struct mangoapp_msg_header hdr;
+    
+    uint32_t pid;
+    uint64_t frametime_ns;
+    // WARNING: Always ADD fields, never remove or repurpose fields
+} __attribute__((packed));
 
-void read_thread(){
+static uint8_t raw_msg[1024] = {0};
+
+void msg_read_thread(){
+    int key = ftok("mangoapp", 65);
+    int msgid = msgget(key, 0666 | IPC_CREAT);
+    const struct mangoapp_msg_header *hdr = (const struct mangoapp_msg_header*) raw_msg;
+    const struct mangoapp_msg_v1 *mangoapp_v1 = (const struct mangoapp_msg_v1*) raw_msg;
     while (1){
-        if (mangoapp_ptr->read < 1) {
-            update_hud_info(sw_stats, params, vendorID);
-            mangoapp_ptr->read = 1;
+        // make sure that the message recieved is compatible
+        // and that we're not trying to use variables that don't exist (yet)
+        size_t msg_size = msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 1, 0);
+        if (hdr->version == 1){
+            if (msg_size > offsetof(struct mangoapp_msg_v1, frametime_ns)){
+                update_hud_info_with_frametime(sw_stats, params, vendorID, mangoapp_v1->frametime_ns);
+            }
         } else {
-            sleep(0.0001);
+            printf("Unsupported mangoapp struct version: %i\n", hdr->version);
+            exit(1);
         }
     }
 }
@@ -171,12 +185,7 @@ int main(int, char**)
     init_gpu_stats(vendorID, params);
     init_system_info();
     sw_stats.engine = EngineTypes::GAMESCOPE;
-    // Our state
-    key_t key = ftok("mangoapp",65);
-    int shmid = shmget(key,sizeof(mangoapp),0666|IPC_CREAT);
-    auto shm_address = shmat(shmid, (void*)0, 0);
-    mangoapp_ptr = (mangoapp*)shm_address;
-    std::thread(read_thread).detach();
+    std::thread(msg_read_thread).detach();
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
