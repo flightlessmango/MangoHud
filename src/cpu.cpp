@@ -24,10 +24,6 @@
 #define PROCMEMINFOFILE PROCDIR "/meminfo"
 #endif
 
-#ifndef PROCCPUINFOFILE
-#define PROCCPUINFOFILE PROCDIR "/cpuinfo"
-#endif
-
 #include "file_utils.h"
 
 void calculateCPUData(CPUData& cpuData,
@@ -227,25 +223,19 @@ bool CPUStats::UpdateCPUData()
 
 bool CPUStats::UpdateCoreMhz() {
     m_coreMhz.clear();
-    std::ifstream cpuInfo(PROCCPUINFOFILE);
-    std::string row;
-    size_t i = 0;
-    while (std::getline(cpuInfo, row) && i < m_cpuData.size()) {
-        if (row.find("MHz") != std::string::npos){
-            row = std::regex_replace(row, std::regex(R"([^0-9.])"), "");
-            if (!try_stoi(m_cpuData[i].mhz, row))
-                m_cpuData[i].mhz = 0;
-            i++;
-        }
+    for (size_t i = 0; i < m_cpuData.size(); i++)
+    {
+        std::string val;
+        std::ifstream file("/sys/devices/system/cpu/cpu" + std::to_string(i) + "/cpufreq/scaling_cur_freq");
+        std::getline(file, val);
+        m_cpuData[i].mhz = std::stoi(val) / 1000;
     }
+    
     m_cpuDataTotal.cpu_mhz = 0;
-    // rewrite this less clunkily?
-    int max = 0;
     for (auto data : m_cpuData)
-        if (data.mhz > max)
-            max = data.mhz;
+        if (data.mhz > m_cpuDataTotal.cpu_mhz)
+            m_cpuDataTotal.cpu_mhz = data.mhz;
 
-    m_cpuDataTotal.cpu_mhz = max;
     return true;
 }
 
