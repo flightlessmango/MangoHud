@@ -673,27 +673,34 @@ void HudElements::image(){
 
     // load the image if needed
     if(HUDElements.image_infos.loaded == false) {
+      unsigned maxwidth = HUDElements.params->width;
+      if(HUDElements.params->image_max_width != 0 && HUDElements.params->image_max_width < maxwidth) {
+	maxwidth = HUDElements.params->image_max_width;
+      }
+
       HUDElements.image_infos.loaded = true;
-      if (!HUDElements.is_vulkan) {
-	unsigned maxwidth = HUDElements.params->width;
-	if(HUDElements.params->image_max_width != 0 && HUDElements.params->image_max_width < maxwidth) {
-	  maxwidth = HUDElements.params->image_max_width;
-	}
+      if (HUDElements.is_vulkan) {
+	HUDElements.image_infos.vktexture = addTexture(value, &(HUDElements.image_infos.width), &(HUDElements.image_infos.height), maxwidth);
+	HUDElements.image_infos.valid = true;
+      } else {
         HUDElements.image_infos.valid = GL_LoadTextureFromFile(value.c_str(),
 							       &(HUDElements.image_infos.texture),
 							       &(HUDElements.image_infos.width),
 							       &(HUDElements.image_infos.height),
 							       maxwidth);
-	spdlog::info("Image {} loaded ({}x{})", value, HUDElements.image_infos.width, HUDElements.image_infos.height);
       }
+      spdlog::info("Image {} loaded ({}x{})", value, HUDElements.image_infos.width, HUDElements.image_infos.height);
     }
 
     // render the image
     if(HUDElements.image_infos.valid) {
       ImGui::TableNextRow(); ImGui::TableNextColumn();
-      ImGui::PushFont(HUDElements.sw_stats->font1);
-      ImGui::Image((void*)(intptr_t)(HUDElements.image_infos.texture), ImVec2(HUDElements.image_infos.width, HUDElements.image_infos.height));
-      ImGui::PopFont();
+
+      if (HUDElements.is_vulkan) {
+	ImGui::Image(HUDElements.image_infos.vktexture, ImVec2(HUDElements.image_infos.width, HUDElements.image_infos.height));
+      } else {
+	ImGui::Image((void*)(intptr_t)(HUDElements.image_infos.texture), ImVec2(HUDElements.image_infos.width, HUDElements.image_infos.height));
+      }
     }
 }
 
@@ -703,19 +710,26 @@ void HudElements::background_image(){
     // load the image if needed
     if(HUDElements.background_image_infos.loaded == false) {
       HUDElements.background_image_infos.loaded = true;
-      if (!HUDElements.is_vulkan) {
+      if (HUDElements.is_vulkan) {
+	HUDElements.background_image_infos.vktexture = addTexture(value, &(HUDElements.background_image_infos.width), &(HUDElements.background_image_infos.height), 0);
+	HUDElements.background_image_infos.valid = true;
+      } else {
         HUDElements.background_image_infos.valid = GL_LoadTextureFromFile(value.c_str(),
 							       &(HUDElements.background_image_infos.texture),
 							       &(HUDElements.background_image_infos.width),
 							       &(HUDElements.background_image_infos.height),
 							       0);
-	spdlog::info("Image {} loaded ({}x{})", value, HUDElements.background_image_infos.width, HUDElements.background_image_infos.height);
       }
+      spdlog::info("Image {} loaded ({}x{})", value, HUDElements.background_image_infos.width, HUDElements.background_image_infos.height);
     }
 
     // render the image
     if(HUDElements.background_image_infos.valid) {
-      ImGui::GetBackgroundDrawList()->AddImage((void*)(intptr_t)(HUDElements.background_image_infos.texture), ImVec2(0, 0), ImVec2(HUDElements.background_image_infos.width, HUDElements.background_image_infos.height));
+      if (HUDElements.is_vulkan) {
+	ImGui::GetBackgroundDrawList()->AddImage(HUDElements.background_image_infos.vktexture, ImVec2(0, 0), ImVec2(HUDElements.background_image_infos.width, HUDElements.background_image_infos.height));
+      } else {
+	ImGui::GetBackgroundDrawList()->AddImage((void*)(intptr_t)(HUDElements.background_image_infos.texture), ImVec2(0, 0), ImVec2(HUDElements.background_image_infos.width, HUDElements.background_image_infos.height));
+      }
     }
 }
 

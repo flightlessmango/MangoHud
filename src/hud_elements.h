@@ -14,6 +14,7 @@ struct image_infos {
   bool loaded;
   bool valid;
   GLuint texture;
+  ImTextureID vktexture;
 
   image_infos() {
     loaded = false;
