@@ -5,6 +5,7 @@
 #include <string>
 #include <stdint.h>
 #include <vector>
+#include <deque>
 #include <imgui.h>
 #include "overlay_params.h"
 #include "iostats.h"
@@ -23,6 +24,8 @@ extern float g_overflow;
 struct frame_stat {
    uint64_t stats[OVERLAY_PLOTS_MAX];
 };
+
+static const int kMaxGraphEntries = 50;
 
 enum EngineTypes
 {
@@ -139,7 +142,7 @@ extern int32_t deviceID;
 extern struct benchmark_stats benchmark;
 extern ImVec2 real_font_size;
 extern std::string wineVersion;
-extern std::vector<logData> graph_data;
+extern std::deque<logData> graph_data;
 extern overlay_params *_params;
 
 void position_layer(struct swapchain_stats& data, struct overlay_params& params, ImVec2 window_size);
