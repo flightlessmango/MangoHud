@@ -153,7 +153,7 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
 void init_system_info(void);
 void FpsLimiter(struct fps_limit& stats);
 void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats);
-void calculate_benchmark_data();
+void calculate_benchmark_data(overlay_params* params);
 void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& text_font);
 void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...);
 void center_text(const std::string& text);

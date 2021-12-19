@@ -208,7 +208,7 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
    update_hud_info_with_frametime(sw_stats, params, vendorID, frametime_ns);
 }
 
-void calculate_benchmark_data(){
+void calculate_benchmark_data(overlay_params* params){
    vector<float> sorted = benchmark.fps_data;
    std::sort(sorted.begin(), sorted.end());
    benchmark.percentile_data.clear();

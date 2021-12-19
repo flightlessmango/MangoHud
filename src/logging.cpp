@@ -116,7 +116,7 @@ void Logger::stop_logging() {
   m_logging_on = false;
   m_log_end = Clock::now();
 
-  calculate_benchmark_data();
+  calculate_benchmark_data(m_params);
 
   if(!_params->output_folder.empty()) {
     std::string program = get_wine_exe_name();
