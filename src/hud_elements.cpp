@@ -537,9 +537,41 @@ void HudElements::frame_timing(){
         double min_time = 0.0f;
         double max_time = 50.0f;
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_histogram]){
-            ImGui::PlotHistogram(hash, get_time_stat, HUDElements.sw_stats,
-                                ARRAY_SIZE(HUDElements.sw_stats->frames_stats), 0,
-                                NULL, min_time, max_time,
+            float *ft = HUDElements.sw_stats->frame_times;
+            size_t ft_size = ARRAY_SIZE(HUDElements.sw_stats->frame_times);
+            uint32_t tsmin=0, tsmax=0;
+            uint32_t p50=0, p90=0, p99=0;
+            // one frame latency between this and update_hud_info_with_frametime.
+            // That makes p99 only kick in after 100 frames.
+            uint32_t frame_count =  std::min((size_t)HUDElements.sw_stats->n_frames, ARRAY_SIZE(HUDElements.sw_stats->frames_stats));
+            uint32_t frames_seen = 0;
+            uint32_t height = 0;
+            for(uint32_t i = 0; i < ft_size; i++) {
+                frames_seen += ft[i];
+                if(ft[i] > height) { height = ft[i]; }
+                if(tsmin == 0 && ft[i] > 0) { tsmin = i; }
+                if(i > tsmax && ft[i] > 0) { tsmax = i; }
+                if(p50 == 0 && frames_seen >= frame_count/2) {
+                    p50 = i;
+                }
+                if(p90 == 0 && frames_seen >= frame_count - (frame_count/10)) {
+                    p90 = i;
+                }
+                if(p99 == 0 && frames_seen >= frame_count - (frame_count/100)) {
+                    p99 = i;
+                }
+            }
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            ImGui::TextColored(HUDElements.colors.text, "p50/p90/p99");
+            ImGui::TextColored(HUDElements.colors.text, "%3d/%3d/%3d ms", p50, p90, p99);
+            // ImGui::TextColored(HUDElements.colors.text, "s:%d,c:%d,h:%d", frames_seen, frame_count, height);
+            ImGui::TextColored(HUDElements.colors.text, "min:%d,max:%d", tsmin, tsmax);
+            ImGui::PopFont();
+            ImGui::TableNextRow(); ImGui::TableNextColumn();
+            // Draw at least 16 buckets.
+            ImGui::PlotHistogram(hash, ft,
+                                std::max(tsmax, 16u), tsmin,
+                                NULL, 0, height,
                                 ImVec2(ImGui::GetContentRegionAvailWidth() * HUDElements.params->table_columns, 50));
         } else {
             ImGui::PlotLines(hash, get_time_stat, HUDElements.sw_stats,

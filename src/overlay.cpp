@@ -170,6 +170,18 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, struct ove
    if (sw_stats.last_present_time) {
         sw_stats.frames_stats[f_idx].stats[OVERLAY_PLOTS_frame_timing] =
             frametime_ns;
+        uint32_t frametime_ms = frametime_ns/1000000;
+        if (frametime_ms < 1000) {
+            sw_stats.frame_times[frametime_ms] += 1.0;
+        }
+        // keep the histogram for the same window as the normal frame graph.
+        if (sw_stats.n_frames >= ARRAY_SIZE(sw_stats.frames_stats)) {
+            uint32_t fp_idx = (sw_stats.n_frames + 1) % ARRAY_SIZE(sw_stats.frames_stats);
+            uint32_t oldest_frametime_ms = sw_stats.frames_stats[fp_idx].stats[OVERLAY_PLOTS_frame_timing]/1000000;
+            if(oldest_frametime_ms < 1000) {
+                sw_stats.frame_times[oldest_frametime_ms] -= 1.0;
+            }
+        }
    }
 
    frametime = frametime_ns / 1000;
