@@ -255,9 +255,13 @@ MangoHud comes with a config file which can be used to set configuration options
 
 1. `/path/to/application/dir/MangoHud.conf`
 2. Per-application configuration in ~/.config/MangoHud:
-    1. `$HOME/.config/MangoHud/application_name.conf`
-    2. `$HOME/.config/MangoHud/wine-application_name.conf` for wine/proton apps
-3. `$HOME/.config/MangoHud/MangoHud.conf`
+    1. `~/.config/MangoHud/<application_name>.conf` for native applications, where `<application_name>` is the case sensitive name of the executable
+    2. `~/.config/MangoHud/wine-<application_name>.conf` for wine/proton apps, where `<application_name>` is the case sensitive name of the executable without the `.exe` ending
+3. `~/.config/MangoHud/MangoHud.conf`
+
+Example: For Overwatch, this would be `wine-Overwatch.conf` (even though the executable you run from Lutris is `Battle.net.exe`, the actual game executable name is `Overwatch.exe`).
+
+If you start the game from the terminal with MangoHud enabled (for example by starting Lutris from the terminal), MangoHud will print the config file names it is looking for.
 
 You can find an example config in /usr/share/doc/mangohud
 
