@@ -220,7 +220,7 @@ void calculate_benchmark_data(overlay_params* params){
 
    size_t max_label_size = 0;
 
-   for (std::string percentile : _params->benchmark_percentiles) {
+   for (std::string percentile : params->benchmark_percentiles) {
       float result;
 
       // special case handling for a mean-based average
