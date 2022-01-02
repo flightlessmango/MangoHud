@@ -555,7 +555,7 @@ struct pci_bus {
    int func;
 };
 
-void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
+void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_params& params)
 {
    //if (!params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
    //   return;
@@ -618,12 +618,20 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
          string device = path + "/device/device";
          if (fp = fopen(device.c_str(), "r")){
             fscanf(fp, "%s", str);
-            deviceID = strtol(str, NULL, 16);
+            uint32_t temp = strtol(str, NULL, 16);
+            if (temp != reported_deviceID && deviceID != 0){
+               SPDLOG_DEBUG("DeviceID does not match vulkan report {}", reported_deviceID);
+               continue;
+            }
+            deviceID = temp;
             fclose(fp);
          }
          string vendor = path + "/device/vendor";
          if (fp = fopen(vendor.c_str(), "r")){
             fscanf(fp, "%s", str);
+            uint32_t temp = strtol(str, NULL, 16);
+            if (temp != vendorID)
+               continue;
             fclose(fp);
          }
          string line = str;

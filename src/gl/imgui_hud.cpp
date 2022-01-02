@@ -135,7 +135,7 @@ void imgui_create(void *ctx)
     } else {
         vendorID = 0x10de;
     }
-    init_gpu_stats(vendorID, params);
+    init_gpu_stats(vendorID, 0, params);
     get_device_name(vendorID, deviceID, sw_stats);
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
