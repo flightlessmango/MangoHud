@@ -58,6 +58,7 @@ class HudElements{
         static void graphs();
         static void _exec();
         static void battery();
+        static void fps_only();
 
         void convert_colors(struct overlay_params& params);
         void convert_colors(bool do_conv, struct overlay_params& params);

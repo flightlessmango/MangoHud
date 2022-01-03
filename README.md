@@ -354,7 +354,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `battery_icon`                     | Display battery icon instead of percent                                               |
 | `battery_color`                    | Change the BATT text color                                                            |
 | `force_amdgpu_hwmon`               | Use hwmon sysfs instead of libdrm for amdgpu stats                                    |
-
+| `fps_only`                         | Show FPS without the engine name e.g. DXVK/VULAKAN etc.                               |
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 Because comma is also used as option delimiter and needs to be escaped for values with a backslash, you can use `+` like `MANGOHUD_CONFIG=fps_limit=60+30+0` instead.
 

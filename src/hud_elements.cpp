@@ -413,7 +413,7 @@ void HudElements::procmem()
 }
 
 void HudElements::fps(){
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps]){
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_only]){
         ImGui::TableNextRow(); ImGui::TableNextColumn();
         ImGui::TextColored(HUDElements.colors.engine, "%s", engines[HUDElements.sw_stats->engine]);
         ImGui::TableNextColumn();
@@ -447,6 +447,38 @@ void HudElements::fps(){
     } else if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_engine_version]){
         ImGui::TableNextRow(); ImGui::TableNextColumn();
         ImGui::TextColored(HUDElements.colors.engine, "%s", HUDElements.sw_stats->engineName.c_str());
+    }
+}
+
+void HudElements::fps_only(){
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_only]){
+        ImGui::TableNextRow(); ImGui::TableNextColumn();
+        ImGui::TextColored(HUDElements.colors.engine, "%s", "FPS");
+        ImGui::TableNextColumn();
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_color_change]){
+            int fps = int(HUDElements.sw_stats->fps);
+            struct LOAD_DATA fps_data = {
+            HUDElements.colors.fps_value_low,
+            HUDElements.colors.fps_value_med,
+            HUDElements.colors.fps_value_high,
+            HUDElements.params->fps_value[0],
+            HUDElements.params->fps_value[1]
+            };
+            auto load_color = change_on_load_temp(fps_data, fps);
+            right_aligned_text(load_color, HUDElements.ralign_width, "%.0f", HUDElements.sw_stats->fps);
+        }
+        else {
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", HUDElements.sw_stats->fps);
+        }
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_frametime]){
+            ImGui::TableNextColumn();
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", 1000 / HUDElements.sw_stats->fps);
+            ImGui::SameLine(0, 1.0f);
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            ImGui::Text("ms");
+            ImGui::PopFont();
+        }
+
     }
 }
 
@@ -847,6 +879,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
     if (param == "exec")            { ordered_functions.push_back({_exec, value});
                                       exec_list.push_back({int(ordered_functions.size() - 1), value});       }
     if (param == "battery")         { ordered_functions.push_back({battery, value});                }
+    if (param == "fps_only")        { ordered_functions.push_back({fps_only, value});               }
     if (param == "graphs"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs])
             HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs] = true;
