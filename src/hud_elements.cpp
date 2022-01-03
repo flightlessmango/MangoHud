@@ -452,10 +452,8 @@ void HudElements::fps(){
 
 void HudElements::fps_only(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_only]){
-        ImGui::TableNextRow(); ImGui::TableNextColumn();
-        ImGui::TextColored(HUDElements.colors.engine, "%s", "FPS");
-        ImGui::TableNextColumn();
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_color_change]){
+            ImGui::TableNextRow(); ImGui::TableNextColumn();
             int fps = int(HUDElements.sw_stats->fps);
             struct LOAD_DATA fps_data = {
             HUDElements.colors.fps_value_low,
@@ -465,10 +463,11 @@ void HudElements::fps_only(){
             HUDElements.params->fps_value[1]
             };
             auto load_color = change_on_load_temp(fps_data, fps);
-            right_aligned_text(load_color, HUDElements.ralign_width, "%.0f", HUDElements.sw_stats->fps);
+            ImGui::TextColored(load_color, "%.0f", HUDElements.sw_stats->fps);
         }
         else {
-            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", HUDElements.sw_stats->fps);
+            ImGui::TableNextRow(); ImGui::TableNextColumn();
+            ImGui::TextColored(HUDElements.colors.text, "%.0f", HUDElements.sw_stats->fps);
         }
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_frametime]){
             ImGui::TableNextColumn();
