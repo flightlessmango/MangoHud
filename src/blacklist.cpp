@@ -33,6 +33,8 @@ static  std::vector<std::string> blacklist {
     "LeagueClient.exe",
     "LeagueClientUxRender.exe",
     "SocialClubHelper.exe",
+    "EADesktop.exe",
+    "EALauncher.exe",
 };
 
 
