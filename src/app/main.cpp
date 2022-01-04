@@ -115,7 +115,7 @@ int main(int, char**)
     glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, 1);
 
     // Create window with graphics context
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+OpenGL3 example", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "mangoapp overlay window", NULL, NULL);
     if (window == NULL)
         return 1;
 
