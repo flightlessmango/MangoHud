@@ -616,7 +616,7 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
          FILE *fp;
          char str[10];
          string device = path + "/device/device";
-         if (fp = fopen(device.c_str(), "r")){
+         if ((fp = fopen(device.c_str(), "r"))){
             fscanf(fp, "%s", str);
             uint32_t temp = strtol(str, NULL, 16);
             if (temp != reported_deviceID && deviceID != 0){
@@ -627,7 +627,7 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
             fclose(fp);
          }
          string vendor = path + "/device/vendor";
-         if (fp = fopen(vendor.c_str(), "r")){
+         if ((fp = fopen(vendor.c_str(), "r"))){
             fscanf(fp, "%s", str);
             uint32_t temp = strtol(str, NULL, 16);
             if (temp != vendorID)
