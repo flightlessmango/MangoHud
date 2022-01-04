@@ -98,7 +98,7 @@ void msg_read_thread(){
     }
 }
 
-static const char *SteamOverlayProperty = "STEAM_OVERLAY";
+static const char *GamescopeOverlayProperty = "GAMESCOPE_EXTERNAL_OVERLAY";
 
 int main(int, char**)
 {   
@@ -124,7 +124,7 @@ int main(int, char**)
     if (x11_window && x11_display)
     {
         // Set atom for gamescope to render as an overlay.
-        Atom overlay_atom = XInternAtom (x11_display, SteamOverlayProperty, False);
+        Atom overlay_atom = XInternAtom (x11_display, GamescopeOverlayProperty, False);
         uint32_t value = 1;
         XChangeProperty(x11_display, x11_window, overlay_atom, XA_ATOM, 32, PropertyNewValue, (unsigned char *)&value, 1);
     }
@@ -182,7 +182,7 @@ int main(int, char**)
     } else {
         vendorID = 0x10de;
     }
-    init_gpu_stats(vendorID, params);
+    init_gpu_stats(vendorID, 0, params);
     init_system_info();
     sw_stats.engine = EngineTypes::GAMESCOPE;
     std::thread(msg_read_thread).detach();
