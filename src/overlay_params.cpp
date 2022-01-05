@@ -38,6 +38,10 @@
 #include "dbus_info.h"
 #endif
 
+#ifdef MANGOAPP
+#include "app/mangoapp.h"
+#endif
+
 #if __cplusplus >= 201703L
 
 template<typename... Ts>
@@ -801,4 +805,8 @@ parse_overlay_config(struct overlay_params *params,
    if(!logger) logger = std::make_unique<Logger>(params);
    if(params->autostart_log && !logger->is_active())
       std::thread(autostart_log, params->autostart_log).detach();
+#ifdef MANGOAPP
+   mangoapp_ctrl.ready_for_updates = int(!params->no_display);
+   msgsnd(msgid, &mangoapp_ctrl, sizeof(mangoapp_ctrl), IPC_NOWAIT);
+#endif
 }

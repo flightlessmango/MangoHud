@@ -1,57 +1,19 @@
-// Dear ImGui: standalone example application for GLFW + OpenGL 3, using programmable pipeline
-// (GLFW is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan/Metal graphics context creation, etc.)
-// If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
-// Read online: https://github.com/ocornut/imgui/tree/master/docs
-
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
-#include <sys/ipc.h>
-#include <sys/msg.h>
 #include <thread>
 #include <unistd.h>
 #include "../overlay.h"
+#include "mangoapp.h"
 
-// About Desktop OpenGL function loaders:
-//  Modern desktop OpenGL doesn't have a standard portable header file to load OpenGL function pointers.
-//  Helper libraries are often used for this purpose! Here we are supporting a few common ones (gl3w, glew, glad).
-//  You may use another loader/header of your choice (glext, glLoadGen, etc.), or chose to manually implement your own.
-#if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
-#include "GL/gl3w.h"            // Initialize with gl3wInit()
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
 #include <GL/glew.h>            // Initialize with glewInit()
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
-#include <glad/glad.h>          // Initialize with gladLoadGL()
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD2)
-#include <glad/gl.h>            // Initialize with gladLoadGL(...) or gladLoaderLoadGL()
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING2)
-#define GLFW_INCLUDE_NONE       // GLFW including OpenGL headers causes ambiguity or multiple definition errors.
-#include <glbinding/Binding.h>  // Initialize with glbinding::Binding::initialize()
-#include <glbinding/gl/gl.h>
-using namespace gl;
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING3)
-#define GLFW_INCLUDE_NONE       // GLFW including OpenGL headers causes ambiguity or multiple definition errors.
-#include <glbinding/glbinding.h>// Initialize with glbinding::initialize()
-#include <glbinding/gl/gl.h>
-using namespace gl;
-#else
-#include IMGUI_IMPL_OPENGL_LOADER_CUSTOM
-#endif
-
 // Include glfw3.h after our OpenGL definitions
 #include <GLFW/glfw3.h>
 
 #define GLFW_EXPOSE_NATIVE_X11
 #include <GLFW/glfw3native.h>
 #include <X11/Xatom.h>
-
-// [Win32] Our example includes a copy of glfw3.lib pre-compiled with VS2010 to maximize ease of testing and compatibility with old VS compilers.
-// To link with VS2010-era libraries, VS2015+ requires linking with legacy_stdio_definitions.lib, which we do using this pragma.
-// Your own project should not be affected, as you are likely to link with a newer binary of GLFW that is adequate for your version of Visual Studio.
-#if defined(_MSC_VER) && (_MSC_VER >= 1900) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS)
-#pragma comment(lib, "legacy_stdio_definitions")
-#endif
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -62,29 +24,25 @@ overlay_params params {};
 static ImVec2 window_size;
 static uint32_t vendorID;
 static std::string deviceName;
-
-struct mangoapp_msg_header {
-    long msg_type;  // Message queue ID, never change
-    uint32_t version;  /* for major changes in the way things work */
-} __attribute__((packed));
-
-struct mangoapp_msg_v1 {
-    struct mangoapp_msg_header hdr;
-    
-    uint32_t pid;
-    uint64_t frametime_ns;
-    // WARNING: Always ADD fields, never remove or repurpose fields
-} __attribute__((packed));
-
+static notify_thread notifier;
 static uint8_t raw_msg[1024] = {0};
+struct mangoapp_ctrl_msg_v1 mangoapp_ctrl;
+int msgid;
+bool mangoapp_paused = false;
+
+void init_ctrl_msg(){
+    mangoapp_ctrl.hdr.version = 1;
+    mangoapp_ctrl.hdr.msg_type = 2;
+}
 
 void msg_read_thread(){
-    int key = ftok("mangoapp", 65);
-    int msgid = msgget(key, 0666 | IPC_CREAT);
+    init_ctrl_msg();
+    static int key = ftok("mangoapp", 65);
+    msgid = msgget(key, 0666 | IPC_CREAT);
     const struct mangoapp_msg_header *hdr = (const struct mangoapp_msg_header*) raw_msg;
     const struct mangoapp_msg_v1 *mangoapp_v1 = (const struct mangoapp_msg_v1*) raw_msg;
     while (1){
-        // make sure that the message recieved is compatible
+        // make sure that the message received is compatible
         // and that we're not trying to use variables that don't exist (yet)
         size_t msg_size = msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 1, 0);
         if (hdr->version == 1){
@@ -98,7 +56,7 @@ void msg_read_thread(){
     }
 }
 
-static const char *SteamOverlayProperty = "STEAM_OVERLAY";
+static const char *GamescopeOverlayProperty = "GAMESCOPE_EXTERNAL_OVERLAY";
 
 int main(int, char**)
 {   
@@ -115,7 +73,8 @@ int main(int, char**)
     glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, 1);
 
     // Create window with graphics context
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+OpenGL3 example", NULL, NULL);
+
+    GLFWwindow* window = glfwCreateWindow(300, 395, "Mangoapp", NULL, NULL);
     if (window == NULL)
         return 1;
 
@@ -124,7 +83,7 @@ int main(int, char**)
     if (x11_window && x11_display)
     {
         // Set atom for gamescope to render as an overlay.
-        Atom overlay_atom = XInternAtom (x11_display, SteamOverlayProperty, False);
+        Atom overlay_atom = XInternAtom (x11_display, GamescopeOverlayProperty, False);
         uint32_t value = 1;
         XChangeProperty(x11_display, x11_window, overlay_atom, XA_ATOM, 32, PropertyNewValue, (unsigned char *)&value, 1);
     }
@@ -133,23 +92,7 @@ int main(int, char**)
     glfwSwapInterval(1); // Enable vsync
 
     // Initialize OpenGL loader
-#if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
-    bool err = gl3wInit() != 0;
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
     bool err = glewInit() != GLEW_OK;
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
-    bool err = gladLoadGL() == 0;
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD2)
-    bool err = gladLoadGL(glfwGetProcAddress) == 0; // glad2 recommend using the windowing library loader instead of the (optionally) bundled one.
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING2)
-    bool err = false;
-    glbinding::Binding::initialize();
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING3)
-    bool err = false;
-    glbinding::initialize([](const char* name) { return (glbinding::ProcAddress)glfwGetProcAddress(name); });
-#else
-    bool err = false; // If you use IMGUI_IMPL_OPENGL_LOADER_CUSTOM, your loader is likely to requires some form of initialization.
-#endif
     if (err)
     {
         fprintf(stderr, "Failed to initialize OpenGL loader!\n");
@@ -160,12 +103,7 @@ int main(int, char**)
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-
-    // Setup Dear ImGui style
     ImGui::StyleColorsDark();
-    //ImGui::StyleColorsClassic();
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -174,7 +112,7 @@ int main(int, char**)
     create_fonts(params, sw_stats.font1, sw_stats.font_text);
     HUDElements.convert_colors(params);
     init_cpu_stats(params);
-        deviceName = (char*)glGetString(GL_RENDERER);
+    deviceName = (char*)glGetString(GL_RENDERER);
     sw_stats.deviceName = deviceName;
     if (deviceName.find("Radeon") != std::string::npos
     || deviceName.find("AMD") != std::string::npos){
@@ -182,44 +120,68 @@ int main(int, char**)
     } else {
         vendorID = 0x10de;
     }
-    init_gpu_stats(vendorID, params);
+    init_gpu_stats(vendorID, 0, params);
     init_system_info();
     sw_stats.engine = EngineTypes::GAMESCOPE;
+    notifier.params = &params;
+    start_notifier(notifier);
     std::thread(msg_read_thread).detach();
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
-        // Poll and handle events (inputs, window resize, etc.)
-        // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
-        // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
-        // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
-        // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-        glfwPollEvents();
+        if (!params.no_display){
+            if (mangoapp_paused){
+                ImGui::CreateContext();
+                ImGuiIO& io = ImGui::GetIO(); (void)io;
+                ImGui::StyleColorsDark();
+                ImGui_ImplGlfw_InitForOpenGL(window, true);
+                ImGui_ImplOpenGL3_Init(glsl_version);
+                create_fonts(params, sw_stats.font1, sw_stats.font_text);
+                HUDElements.convert_colors(params);
+                printf("reinit\n");
+                mangoapp_paused = false;
+            }
+            // Start the Dear ImGui frame
+            ImGui_ImplOpenGL3_NewFrame();
+            ImGui_ImplGlfw_NewFrame();
+            window_size.x = window_size.x * 1.1;
+            ImGui::NewFrame();
+            {
+                check_keybinds(sw_stats, params, vendorID);
+                position_layer(sw_stats, params, window_size);
+                glfwSetWindowSize(window, window_size.x + 15.f, window_size.y + 10.f);
+                render_imgui(sw_stats, params, window_size, true);
+            }
+            ImGui::PopStyleVar(3);
 
-        // Start the Dear ImGui frame
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        window_size.x = window_size.x * 1.1;
-        ImGui::NewFrame();
-        {
-            check_keybinds(sw_stats, params, vendorID);
-            position_layer(sw_stats, params, window_size);
-            render_imgui(sw_stats, params, window_size, true);
+            // Rendering
+            ImGui::Render();
+            int display_w, display_h;
+            glfwGetFramebufferSize(window, &display_w, &display_h);
+            glEnable(GL_DEPTH_TEST);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glClearColor(0, 0, 0, 0);
+            glClear(GL_COLOR_BUFFER_BIT);
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+            glfwSwapBuffers(window);
+        } else {
+            if (!mangoapp_paused){
+                // render just a transparent background before pause
+                glEnable(GL_DEPTH_TEST);        
+                glEnable(GL_BLEND);             
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                glClearColor(0, 0, 0, 0);
+                glClear(GL_COLOR_BUFFER_BIT);
+                glfwSwapBuffers(window);
+                ImGui_ImplOpenGL3_Shutdown();
+                ImGui_ImplGlfw_Shutdown();
+                ImGui::DestroyContext();
+                mangoapp_paused = true;
+                printf("paused\n");
+            }
+            sleep(1);
         }
-        ImGui::PopStyleVar(3);
-
-        // Rendering
-        ImGui::Render();
-        int display_w, display_h;
-        glfwGetFramebufferSize(window, &display_w, &display_h);
-        glEnable(GL_DEPTH_TEST);        
-        glEnable(GL_BLEND);             
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glClearColor(0, 0, 0, 0);
-        glClear(GL_COLOR_BUFFER_BIT);
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-        glfwSwapBuffers(window);
     }
 
     // Cleanup
