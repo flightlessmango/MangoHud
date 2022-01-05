@@ -505,7 +505,6 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    HUDElements.sw_stats = &data; HUDElements.params = &params;
    HUDElements.is_vulkan = is_vulkan;
    ImGui::GetIO().FontGlobalScale = params.font_scale;
-   if(!logger) logger = std::make_unique<Logger>(&params);
    static float ralign_width = 0, old_scale = 0;
    window_size = ImVec2(params.width, params.height);
    unsigned height = ImGui::GetIO().DisplaySize.y;

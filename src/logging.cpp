@@ -108,7 +108,7 @@ void Logger::start_logging() {
   m_values_valid = false;
   m_logging_on = true;
   m_log_start = Clock::now();
-  if((!_params->output_folder.empty()) && (_params->log_interval != 0)){
+  if((!m_params->output_folder.empty()) && (m_params->log_interval != 0)){
     std::thread(logging).detach();
   }
 }
@@ -120,11 +120,11 @@ void Logger::stop_logging() {
 
   calculate_benchmark_data(m_params);
 
-  if(!_params->output_folder.empty()) {
+  if(!m_params->output_folder.empty()) {
     std::string program = get_wine_exe_name();
     if (program.empty())
         program = get_program_name();
-    m_log_files.emplace_back(_params->output_folder + "/" + program + "_" + get_log_suffix());
+    m_log_files.emplace_back(m_params->output_folder + "/" + program + "_" + get_log_suffix());
     std::thread(writeFile, m_log_files.back()).detach();
   }
 }
@@ -140,7 +140,7 @@ void Logger::try_log() {
   currentLogData.frametime = frametime;
   m_log_array.push_back(currentLogData);
 
-  if(_params->log_duration && (elapsedLog >= std::chrono::seconds(_params->log_duration))){
+  if(m_params->log_duration && (elapsedLog >= std::chrono::seconds(m_params->log_duration))){
     stop_logging();
   }
 }
