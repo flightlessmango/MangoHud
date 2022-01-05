@@ -857,24 +857,26 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
     if (param == "gpu_stats")       { ordered_functions.push_back({gpu_stats, value});              }
     if (param == "cpu_stats")       { ordered_functions.push_back({cpu_stats, value});              }
     if (param == "core_load")       { ordered_functions.push_back({core_load, value});              }
+#ifndef MANGOAPP
     if (param == "io_stats")        { ordered_functions.push_back({io_stats, value});               }
-    if (param == "vram")            { ordered_functions.push_back({vram, value});                   }
-    if (param == "ram")             { ordered_functions.push_back({ram, value});                    }
-    if (param == "procmem")         { ordered_functions.push_back({procmem, value});                }
-    if (param == "fps")             { ordered_functions.push_back({fps, value});                    }
-    if (param == "engine_version")  { ordered_functions.push_back({engine_version, value});         }
-    if (param == "gpu_name")        { ordered_functions.push_back({gpu_name, value});               }
-    if (param == "vulkan_driver")   { ordered_functions.push_back({vulkan_driver, value});          }
     if (param == "arch")            { ordered_functions.push_back({arch, value});                   }
     if (param == "wine")            { ordered_functions.push_back({wine, value});                   }
-    if (param == "frame_timing")    { ordered_functions.push_back({frame_timing, value});           }
-    if (param == "media_player")    { ordered_functions.push_back({media_player, value});           }
-    if (param == "resolution")      { ordered_functions.push_back({resolution, value});             }
-    if (param == "show_fps_limit")  { ordered_functions.push_back({show_fps_limit, value});         }
-    if (param == "custom_text")     { ordered_functions.push_back({custom_text, value});            }
-    if (param == "custom_text_center")  { ordered_functions.push_back({custom_text_center, value}); }
+    if (param == "procmem")         { ordered_functions.push_back({procmem, value});                }
     if (param == "gamemode")        { ordered_functions.push_back({gamemode, value});               }
     if (param == "vkbasalt")        { ordered_functions.push_back({vkbasalt, value});               }
+    if (param == "engine_version")  { ordered_functions.push_back({engine_version, value});         }
+    if (param == "vulkan_driver")   { ordered_functions.push_back({vulkan_driver, value});          }
+    if (param == "resolution")      { ordered_functions.push_back({resolution, value});             }
+    if (param == "show_fps_limit")  { ordered_functions.push_back({show_fps_limit, value});         }
+#endif
+    if (param == "vram")            { ordered_functions.push_back({vram, value});                   }
+    if (param == "ram")             { ordered_functions.push_back({ram, value});                    }
+    if (param == "fps")             { ordered_functions.push_back({fps, value});                    }
+    if (param == "gpu_name")        { ordered_functions.push_back({gpu_name, value});               }
+    if (param == "frame_timing")    { ordered_functions.push_back({frame_timing, value});           }
+    if (param == "media_player")    { ordered_functions.push_back({media_player, value});           }
+    if (param == "custom_text")     { ordered_functions.push_back({custom_text, value});            }
+    if (param == "custom_text_center")  { ordered_functions.push_back({custom_text_center, value}); }
     if (param == "exec")            { ordered_functions.push_back({_exec, value});
                                       exec_list.push_back({int(ordered_functions.size() - 1), value});       }
     if (param == "battery")         { ordered_functions.push_back({battery, value});                }
@@ -903,21 +905,29 @@ void HudElements::legacy_elements(){
     ordered_functions.push_back({gpu_stats,          value});
     ordered_functions.push_back({cpu_stats,          value});
     ordered_functions.push_back({core_load,          value});
+#ifndef MANGOAPP
     ordered_functions.push_back({io_stats,           value});
+#endif
     ordered_functions.push_back({vram,               value});
     ordered_functions.push_back({ram,                value});
     ordered_functions.push_back({battery,            value});
     ordered_functions.push_back({fps,                value});
+#ifndef MANGOAPP
     ordered_functions.push_back({engine_version,     value});
+#endif
     ordered_functions.push_back({gpu_name,           value});
+#ifndef MANGOAPP
     ordered_functions.push_back({vulkan_driver,      value});
     ordered_functions.push_back({arch,               value});
     ordered_functions.push_back({wine,               value});
+#endif
     ordered_functions.push_back({frame_timing,       value});
+#ifndef MANGOAPP
     ordered_functions.push_back({gamemode,           value});
     ordered_functions.push_back({vkbasalt,           value});
     ordered_functions.push_back({show_fps_limit,     value});
     ordered_functions.push_back({resolution,         value});
+#endif
     ordered_functions.push_back({media_player,       value});
 }
 
