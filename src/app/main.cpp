@@ -137,7 +137,7 @@ int main(int, char**)
     sw_stats.engine = EngineTypes::GAMESCOPE;
     std::thread(msg_read_thread).detach();
     // Main loop
-    while (!glfwWindowShouldClose(window))
+    while (!glfwWindowShouldClose(window) && !params.no_display)
     {
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
