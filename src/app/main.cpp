@@ -28,6 +28,7 @@ overlay_params params {};
 static ImVec2 window_size;
 static uint32_t vendorID;
 static std::string deviceName;
+static notify_thread notifier;
 
 struct mangoapp_msg_header {
     long msg_type;  // Message queue ID, never change
@@ -121,6 +122,8 @@ int main(int, char**)
     create_fonts(params, sw_stats.font1, sw_stats.font_text);
     HUDElements.convert_colors(params);
     init_cpu_stats(params);
+    notifier.params = &params;
+    start_notifier(notifier);
         deviceName = (char*)glGetString(GL_RENDERER);
     sw_stats.deviceName = deviceName;
     if (deviceName.find("Radeon") != std::string::npos
