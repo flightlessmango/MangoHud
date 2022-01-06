@@ -663,6 +663,7 @@ parse_overlay_config(struct overlay_params *params,
 #undef OVERLAY_PARAM_BOOL
 #undef OVERLAY_PARAM_CUSTOM
          params->enabled[OVERLAY_PARAM_ENABLED_histogram] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_fps_only] = 0;
          params->options.erase("full");
       }
       for (auto& it : params->options) {
