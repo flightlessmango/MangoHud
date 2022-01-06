@@ -49,6 +49,56 @@ void upload_files(const std::vector<std::string>& logFiles){
   exec("xdg-open " + url);
 }
 
+bool compareByFps(const logData &a, const logData &b)
+{
+    return a.fps < b.fps;
+}
+
+void writeSummary(string filename){
+  auto& logArray = logger->get_log_data();
+  filename = filename.substr(0, filename.size() - 4);
+  filename += "_summary.csv";
+  printf("%s\n", filename.c_str());
+  SPDLOG_DEBUG("Writing summary log file [{}]", filename, logArray.size());
+  std::ofstream out(filename, ios::out | ios::app);
+  if (out){
+    out << "0.1% Min," << "1% Min," << "97% Percentile," << "Average," << "GPU Load," << "CPU Load" << "\n";
+    std::vector<logData> sorted = logArray;
+    std::sort(sorted.begin(), sorted.end(), compareByFps);
+    float total, total_cpu, total_gpu; float result;
+    float percents[2] = {0.001, 0.01};
+    for (auto percent : percents){
+      total = 0;
+      size_t idx = ceil(sorted.size() * percent);
+      for (size_t i = 0; i < idx; i++){
+        total = total + sorted[i].fps;
+      }
+      result = total / idx;
+      out << fixed << setprecision(1) << result << ",";
+    }
+    // 97th percentile
+    result = sorted[floor(0.97 * (sorted.size() - 1))].fps;
+    out << fixed << setprecision(1) << result << ",";
+    // avg
+    total = 0;
+    for (auto input : sorted){
+      total = total + input.fps;
+      total_cpu = total_cpu + input.cpu_load;
+      total_gpu = total_gpu + input.gpu_load;
+    }
+    result = total / sorted.size();
+    out << fixed << setprecision(1) << result << ",";
+    // GPU
+    result = total_gpu / sorted.size();
+    out << fixed << setprecision(1) << result << ",";
+    // CPU
+    result = total_cpu / sorted.size();
+    out << fixed << setprecision(1) << result << "";
+  } else {
+    printf("MANGOHUD: Failed to write log file\n");
+  }
+}
+
 void writeFile(string filename){
   auto& logArray = logger->get_log_data();
   SPDLOG_DEBUG("Writing log file [{}], {} entries", filename, logArray.size());
@@ -72,7 +122,6 @@ void writeFile(string filename){
     out << logArray[i].ram_used << ",";
     out << std::chrono::duration_cast<std::chrono::nanoseconds>(logArray[i].previous).count() << "\n";
   }
-  logger->clear_log_data();
   } else {
     printf("MANGOHUD: Failed to write log file\n");
   }
@@ -125,8 +174,17 @@ void Logger::stop_logging() {
     if (program.empty())
         program = get_program_name();
     m_log_files.emplace_back(m_params->output_folder + "/" + program + "_" + get_log_suffix());
-    std::thread(writeFile, m_log_files.back()).detach();
+    std::thread writefile (writeFile, m_log_files.back());
+    std::thread writesummary (writeSummary, m_log_files.back());
+    writefile.join();
+    writesummary.join();
+  } else {
+#ifdef MANGOAPP    
+    string path = std::getenv("HOME");
+    writeSummary(path + "/mangoapp_" + get_log_suffix());
+#endif
   }
+  logger->clear_log_data();
 }
 
 void Logger::try_log() {
