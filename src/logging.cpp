@@ -230,36 +230,55 @@ void autostart_log(int sleep) {
 }
 
 void Logger::calculate_benchmark_data(){
-   vector<float> sorted = benchmark.fps_data;
-   std::sort(sorted.begin(), sorted.end());
-   benchmark.percentile_data.clear();
+  vector<float> sorted = benchmark.fps_data;
+  std::sort(sorted.begin(), sorted.end());
+  benchmark.percentile_data.clear();
 
-   benchmark.total = 0.f;
-   for (auto fps_ : sorted){
-      benchmark.total = benchmark.total + fps_;
-   }
+  benchmark.total = 0.f;
+  for (auto fps_ : sorted){
+    benchmark.total = benchmark.total + fps_;
+  }
 
-   size_t max_label_size = 0;
+  size_t max_label_size = 0;
 
-   for (std::string percentile : m_params->benchmark_percentiles) {
-      float result;
-
+  float result;
+  for (std::string percentile : m_params->benchmark_percentiles) {
       // special case handling for a mean-based average
       if (percentile == "AVG") {
-         result = benchmark.total / sorted.size();
+        result = benchmark.total / sorted.size();
       } else {
-         // the percentiles are already validated when they're parsed from the config.
-         float fraction = parse_float(percentile) / 100;
+        // the percentiles are already validated when they're parsed from the config.
+        float fraction = parse_float(percentile) / 100;
 
-         result = sorted[(fraction * sorted.size()) - 1];
-         percentile += "%";
+        result = sorted[(fraction * sorted.size()) - 1];
+        percentile += "%";
       }
 
       if (percentile.length() > max_label_size)
-         max_label_size = percentile.length();
+        max_label_size = percentile.length();
 
       benchmark.percentile_data.push_back({percentile, result});
-   }
+  }
+  string label;
+  float mins[2] = {0.01f, 0.001f}, total;
+  for (auto percent : mins){
+    total = 0;
+    size_t idx = ceil(sorted.size() * percent);
+    for (size_t i = 0; i < idx; i++){
+      total = total + sorted[i];
+    }
+    result = total / idx;
+
+    if (percent == 0.001f)
+      label = "0.1%";
+    if (percent == 0.01f)
+      label = "1%";
+    
+    if (label.length() > max_label_size)
+      max_label_size = label.length();
+
+    benchmark.percentile_data.push_back({label, result});
+  }
 
    for (auto& entry : benchmark.percentile_data) {
       entry.first.append(max_label_size - entry.first.length(), ' ');

@@ -607,7 +607,7 @@ parse_overlay_config(struct overlay_params *params,
    params->log_interval = 100;
    params->media_player_format = { "{title}", "{artist}", "{album}" };
    params->permit_upload = 0;
-   params->benchmark_percentiles = { "97", "AVG", "1", "0.1" };
+   params->benchmark_percentiles = { "97", "AVG"};
    params->gpu_load_value = { 60, 90 };
    params->cpu_load_value = { 60, 90 };
    params->cellpadding_y = -0.085;
