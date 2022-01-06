@@ -167,7 +167,7 @@ void Logger::stop_logging() {
   m_logging_on = false;
   m_log_end = Clock::now();
 
-  calculate_benchmark_data(m_params);
+  calculate_benchmark_data();
 
   if(!m_params->output_folder.empty()) {
     std::string program = get_wine_exe_name();
@@ -227,4 +227,41 @@ void Logger::upload_last_logs() {
 void autostart_log(int sleep) {
   os_time_sleep(sleep * 1000000);
   logger->start_logging();
+}
+
+void Logger::calculate_benchmark_data(){
+   vector<float> sorted = benchmark.fps_data;
+   std::sort(sorted.begin(), sorted.end());
+   benchmark.percentile_data.clear();
+
+   benchmark.total = 0.f;
+   for (auto fps_ : sorted){
+      benchmark.total = benchmark.total + fps_;
+   }
+
+   size_t max_label_size = 0;
+
+   for (std::string percentile : m_params->benchmark_percentiles) {
+      float result;
+
+      // special case handling for a mean-based average
+      if (percentile == "AVG") {
+         result = benchmark.total / sorted.size();
+      } else {
+         // the percentiles are already validated when they're parsed from the config.
+         float fraction = parse_float(percentile) / 100;
+
+         result = sorted[(fraction * sorted.size()) - 1];
+         percentile += "%";
+      }
+
+      if (percentile.length() > max_label_size)
+         max_label_size = percentile.length();
+
+      benchmark.percentile_data.push_back({percentile, result});
+   }
+
+   for (auto& entry : benchmark.percentile_data) {
+      entry.first.append(max_label_size - entry.first.length(), ' ');
+   }
 }
