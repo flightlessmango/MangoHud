@@ -52,6 +52,7 @@ public:
 
   void upload_last_log();
   void upload_last_logs();
+  void calculate_benchmark_data();
 private:
   std::vector<logData> m_log_array;
   std::vector<std::string> m_log_files;

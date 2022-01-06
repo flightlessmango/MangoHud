@@ -208,44 +208,6 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
    update_hud_info_with_frametime(sw_stats, params, vendorID, frametime_ns);
 }
 
-void calculate_benchmark_data(overlay_params* params){
-   vector<float> sorted = benchmark.fps_data;
-   std::sort(sorted.begin(), sorted.end());
-   benchmark.percentile_data.clear();
-
-   benchmark.total = 0.f;
-   for (auto fps_ : sorted){
-      benchmark.total = benchmark.total + fps_;
-   }
-
-   size_t max_label_size = 0;
-
-   for (std::string percentile : params->benchmark_percentiles) {
-      float result;
-
-      // special case handling for a mean-based average
-      if (percentile == "AVG") {
-         result = benchmark.total / sorted.size();
-      } else {
-         // the percentiles are already validated when they're parsed from the config.
-         float fraction = parse_float(percentile) / 100;
-
-         result = sorted[(fraction * sorted.size()) - 1];
-         percentile += "%";
-      }
-
-      if (percentile.length() > max_label_size)
-         max_label_size = percentile.length();
-
-      benchmark.percentile_data.push_back({percentile, result});
-   }
-
-   for (auto& entry : benchmark.percentile_data) {
-      entry.first.append(max_label_size - entry.first.length(), ' ');
-   }
-}
-
-
 float get_time_stat(void *_data, int _idx)
 {
    struct swapchain_stats *data = (struct swapchain_stats *) _data;
