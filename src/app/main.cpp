@@ -145,7 +145,7 @@ int main(int, char**)
             // Start the Dear ImGui frame
             ImGui_ImplOpenGL3_NewFrame();
             ImGui_ImplGlfw_NewFrame();
-            window_size.x = window_size.x * 1.1;
+            window_size.x = window_size.x * 1.2;
             ImGui::NewFrame();
             {
                 check_keybinds(sw_stats, params, vendorID);
