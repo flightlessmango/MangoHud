@@ -807,8 +807,6 @@ parse_overlay_config(struct overlay_params *params,
    if(params->autostart_log && !logger->is_active())
       std::thread(autostart_log, params->autostart_log).detach();
 #ifdef MANGOAPP
-   mangoapp_ctrl.ready_for_updates = int(!params->no_display);
-   msgsnd(msgid, &mangoapp_ctrl, sizeof(mangoapp_ctrl), IPC_NOWAIT);
    {
       std::lock_guard<std::mutex> lk(mangoapp_m);
       params->no_display = params->no_display;

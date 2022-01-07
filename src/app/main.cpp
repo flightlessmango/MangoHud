@@ -28,7 +28,6 @@ static ImVec2 window_size;
 static uint32_t vendorID;
 static std::string deviceName;
 static notify_thread notifier;
-struct mangoapp_ctrl_msg_v1 mangoapp_ctrl;
 int msgid;
 bool mangoapp_paused = false;
 std::mutex mangoapp_m;
@@ -36,8 +35,6 @@ std::condition_variable mangoapp_cv;
 static uint8_t raw_msg[1024] = {0};
 
 void msg_read_thread(){
-    mangoapp_ctrl.hdr.version = 1;
-    mangoapp_ctrl.hdr.msg_type = 2;
     int key = ftok("mangoapp", 65);
     msgid = msgget(key, 0666 | IPC_CREAT);
     const struct mangoapp_msg_header *hdr = (const struct mangoapp_msg_header*) raw_msg;
@@ -156,7 +153,8 @@ int main(int, char**)
 
             // Rendering
             ImGui::Render();
-            int display_w, display_h;
+            static int display_w, display_h;
+            glfwSetWindowSize(window, window_size.x + 45.f, window_size.y + 10.f);
             glfwGetFramebufferSize(window, &display_w, &display_h);
             glEnable(GL_DEPTH_TEST);        
             glEnable(GL_BLEND);             
