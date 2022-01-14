@@ -16,6 +16,8 @@
 #include "vk_enum_to_str.h"
 #include "notify.h"
 #include <vulkan/vk_layer.h>
+#include "amdgpu.h"
+
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
 extern float g_overflow;
@@ -141,6 +143,7 @@ extern ImVec2 real_font_size;
 extern std::string wineVersion;
 extern std::vector<logData> graph_data;
 extern overlay_params *_params;
+extern struct gpu_metrics_v2_2 amdgpu_metrics;
 
 void position_layer(struct swapchain_stats& data, struct overlay_params& params, ImVec2 window_size);
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan);

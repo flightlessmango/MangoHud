@@ -95,6 +95,9 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
    graph_data.push_back(currentLogData);
    logger->notify_data_valid();
    HUDElements.update_exec();
+#ifdef MANGOAPP   
+   amdgpu_get_metrics();
+#endif
 }
 
 struct hw_info_updater

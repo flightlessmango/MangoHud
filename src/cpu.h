@@ -45,7 +45,8 @@ typedef struct CPUData_ {
 enum {
    CPU_POWER_K10TEMP,
    CPU_POWER_ZENPOWER,
-   CPU_POWER_RAPL
+   CPU_POWER_RAPL,
+   CPU_POWER_AMDGPU
 };
 
 struct CPUPowerData {
@@ -105,6 +106,12 @@ struct CPUPowerData_rapl : public CPUPowerData {
    FILE* energyCounterFile {nullptr};
    uint64_t lastCounterValue;
    Clock::time_point lastCounterValueTime;
+};
+
+struct CPUPowerData_amdgpu : public CPUPowerData {
+   CPUPowerData_amdgpu() {
+      this->source = CPU_POWER_AMDGPU;
+   };
 };
 
 class CPUStats

@@ -11,6 +11,9 @@
 #include <inttypes.h>
 #include <spdlog/spdlog.h>
 #include "string_utils.h"
+#include "hud_elements.h"
+#include "overlay.h"
+#include "amdgpu.h"
 
 #ifndef PROCDIR
 #define PROCDIR "/proc"
@@ -244,6 +247,9 @@ bool CPUStats::UpdateCoreMhz() {
 }
 
 bool CPUStats::UpdateCpuTemp() {
+#ifdef MANGOAPP
+    m_cpuDataTotal.temp = amdgpu_metrics.temperature_soc / 100;
+#else
     if (!m_cpuTempFile)
         return false;
 
@@ -254,6 +260,8 @@ bool CPUStats::UpdateCpuTemp() {
     m_cpuDataTotal.temp = temp / 1000;
 
     return ret;
+#endif
+    return true;
 }
 
 static bool get_cpu_power_k10temp(CPUPowerData* cpuPowerData, int& power) {
@@ -340,6 +348,12 @@ static bool get_cpu_power_rapl(CPUPowerData* cpuPowerData, int& power) {
     return true;
 }
 
+static bool get_cpu_power_amdgpu(int& power) {
+    int _power;
+    power = amdgpu_metrics.average_cpu_power / 1000;
+    return true;
+}
+
 bool CPUStats::UpdateCpuPower() {
     if(!m_cpuPowerData)
         return false;
@@ -355,6 +369,9 @@ bool CPUStats::UpdateCpuPower() {
             break;
         case CPU_POWER_RAPL:
             if (!get_cpu_power_rapl(m_cpuPowerData.get(), power)) return false;
+            break;
+        case CPU_POWER_AMDGPU:
+            if (!get_cpu_power_amdgpu(power)) return false;
             break;
         default:
             return false;
@@ -425,20 +442,20 @@ bool CPUStats::GetCpuFile() {
             break;
         } else if (name == "atk0110") {
             find_temp_input(path, input, "CPU Temperature");
-            break;
+            break;        
         } else {
             path.clear();
         }
     }
-
+#ifndef MANGOAPP
     if (path.empty() || (!file_exists(input) && !find_fallback_temp_input(path, input))) {
         SPDLOG_ERROR("Could not find cpu temp sensor location");
         return false;
     } else {
-
         SPDLOG_DEBUG("hwmon: using input: {}", input);
         m_cpuTempFile = fopen(input.c_str(), "r");
     }
+#endif
     return true;
 }
 
@@ -521,6 +538,7 @@ bool CPUStats::InitCpuPowerData() {
 
     std::string name, path;
     std::string hwmon = "/sys/class/hwmon/";
+    bool intel = false;
 
     CPUPowerData* cpuPowerData = nullptr;
 
@@ -536,10 +554,12 @@ bool CPUStats::InitCpuPowerData() {
         } else if (name == "zenpower") {
             cpuPowerData = (CPUPowerData*)init_cpu_power_data_zenpower(path);
             break;
+        } else if (name == "coretemp") {
+            intel = true;
         }
     }
 
-    if (!cpuPowerData) {
+    if (!cpuPowerData && intel) {
         std::string powercap = "/sys/class/powercap/";
         auto powercap_dirs = ls(powercap.c_str());
         for (auto& dir : powercap_dirs) {
@@ -551,6 +571,9 @@ bool CPUStats::InitCpuPowerData() {
                 break;
             }
         }
+    } else {
+        auto powerData = std::make_unique<CPUPowerData_amdgpu>();
+        cpuPowerData = (CPUPowerData*)powerData.release();
     }
 
     if(cpuPowerData == nullptr) {

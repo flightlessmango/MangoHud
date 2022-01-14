@@ -54,6 +54,7 @@ vklayer_files = files(
   'vulkan.cpp',
   'blacklist.cpp',
   'file_utils.cpp',
+  'amdgpu.cpp',
 )
 opengl_files  = []
 if ['windows', 'mingw'].contains(host_machine.system())
