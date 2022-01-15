@@ -336,6 +336,7 @@ void HudElements::vram(){
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::Text("GiB");
         ImGui::PopFont();
+#ifndef MANGOAPP        
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_mem_clock]){
             ImGui::TableNextColumn();
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", gpu_info.MemClock);
@@ -344,6 +345,7 @@ void HudElements::vram(){
             ImGui::Text("MHz");
             ImGui::PopFont();
         }
+#endif
     }
 }
 
