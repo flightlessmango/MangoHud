@@ -130,6 +130,7 @@ int main(int, char**)
     init_system_info();
     sw_stats.engine = EngineTypes::GAMESCOPE;
     std::thread(msg_read_thread).detach();
+    if(!logger) logger = std::make_unique<Logger>(HUDElements.params);
     // Main loop
     while (!glfwWindowShouldClose(window)){
         if (!params.no_display){
