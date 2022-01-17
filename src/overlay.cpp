@@ -40,7 +40,7 @@ bool gui_open = false;
 struct benchmark_stats benchmark;
 struct fps_limit fps_limit_stats {};
 ImVec2 real_font_size;
-std::vector<logData> graph_data;
+std::deque<logData> graph_data;
 const char* engines[] = {"Unknown", "OpenGL", "VULKAN", "DXVK", "VKD3D", "DAMAVAND", "ZINK", "WINED3D", "Feral3D", "ToGL", "GAMESCOPE"};
 overlay_params *_params {};
 
@@ -90,8 +90,8 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
    currentLogData.cpu_load = cpuStats.GetCPUDataTotal().percent;
    currentLogData.cpu_temp = cpuStats.GetCPUDataTotal().temp;
    // Save data for graphs
-   if (graph_data.size() > 50)
-      graph_data.erase(graph_data.begin());
+   if (graph_data.size() >= kMaxGraphEntries)
+      graph_data.pop_front();
    graph_data.push_back(currentLogData);
    logger->notify_data_valid();
    HUDElements.update_exec();

@@ -731,13 +731,13 @@ void HudElements::graphs(){
     ImGui::TableNextRow(); ImGui::TableNextColumn();
     ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
     const std::string& value = HUDElements.ordered_functions[HUDElements.place].second;
-    std::vector<float> arr(50, 0);
+    assert(kMaxGraphEntries >= graph_data.size());
+    std::vector<float> arr(kMaxGraphEntries - graph_data.size());
 
     ImGui::PushFont(HUDElements.sw_stats->font1);
     if (value == "cpu_load"){
         for (auto& it : graph_data){
             arr.push_back(float(it.cpu_load));
-            arr.erase(arr.begin());
         }
         HUDElements.max = 100; HUDElements.min = 0;
         ImGui::TextColored(HUDElements.colors.engine, "%s", "CPU Load");
@@ -746,7 +746,6 @@ void HudElements::graphs(){
     if (value == "gpu_load"){
         for (auto& it : graph_data){
             arr.push_back(float(it.gpu_load));
-            arr.erase(arr.begin());
         }
         HUDElements.max = 100; HUDElements.min = 0;
         ImGui::TextColored(HUDElements.colors.engine, "%s", "GPU Load");
@@ -755,7 +754,6 @@ void HudElements::graphs(){
     if (value == "cpu_temp"){
         for (auto& it : graph_data){
             arr.push_back(float(it.cpu_temp));
-            arr.erase(arr.begin());
         }
         if (int(arr.back()) > HUDElements.cpu_temp_max)
             HUDElements.cpu_temp_max = arr.back();
@@ -768,7 +766,6 @@ void HudElements::graphs(){
     if (value == "gpu_temp"){
         for (auto& it : graph_data){
             arr.push_back(float(it.gpu_temp));
-            arr.erase(arr.begin());
         }
         if (int(arr.back()) > HUDElements.gpu_temp_max)
             HUDElements.gpu_temp_max = arr.back();
@@ -781,7 +778,6 @@ void HudElements::graphs(){
     if (value == "gpu_core_clock"){
         for (auto& it : graph_data){
             arr.push_back(float(it.gpu_core_clock));
-            arr.erase(arr.begin());
         }
         if (int(arr.back()) > HUDElements.gpu_core_max)
             HUDElements.gpu_core_max = arr.back();
@@ -794,7 +790,6 @@ void HudElements::graphs(){
     if (value == "gpu_mem_clock"){
         for (auto& it : graph_data){
             arr.push_back(float(it.gpu_mem_clock));
-            arr.erase(arr.begin());
         }
         if (int(arr.back()) > HUDElements.gpu_mem_max)
             HUDElements.gpu_mem_max = arr.back();
@@ -807,7 +802,6 @@ void HudElements::graphs(){
     if (value == "vram"){
         for (auto& it : graph_data){
             arr.push_back(float(it.gpu_vram_used));
-            arr.erase(arr.begin());
         }
 
         HUDElements.max = gpu_info.memoryTotal;
@@ -820,7 +814,6 @@ void HudElements::graphs(){
             HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram] = true;
         for (auto& it : graph_data){
             arr.push_back(float(it.ram_used));
-            arr.erase(arr.begin());
         }
 
         HUDElements.max = memmax;
