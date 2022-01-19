@@ -155,7 +155,10 @@ int main(int, char**)
             // Rendering
             ImGui::Render();
             static int display_w, display_h;
-            glfwSetWindowSize(window, window_size.x + 45.f, window_size.y + 10.f);
+            if((Clock::now() - logger->last_log_end()) < 12s)
+                glfwSetWindowSize(window, window_size.x + 145.f, window_size.y + 325.f);
+            else
+                glfwSetWindowSize(window, window_size.x + 45.f, window_size.y + 10.f);
             glfwGetFramebufferSize(window, &display_w, &display_h);
             glEnable(GL_DEPTH_TEST);        
             glEnable(GL_BLEND);             
