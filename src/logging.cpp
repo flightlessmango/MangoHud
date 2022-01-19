@@ -158,6 +158,9 @@ void Logger::start_logging() {
   m_values_valid = false;
   m_logging_on = true;
   m_log_start = Clock::now();
+#ifdef MANGOAPP
+  HUDElements.params->log_interval = 0;
+#endif
   if((!m_params->output_folder.empty()) && (m_params->log_interval != 0)){
     std::thread(logging).detach();
   }
