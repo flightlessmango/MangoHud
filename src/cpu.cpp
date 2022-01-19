@@ -349,7 +349,6 @@ static bool get_cpu_power_rapl(CPUPowerData* cpuPowerData, int& power) {
 }
 
 static bool get_cpu_power_amdgpu(int& power) {
-    int _power;
     power = amdgpu_metrics.average_cpu_power / 1000;
     return true;
 }
