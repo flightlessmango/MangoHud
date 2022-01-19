@@ -231,7 +231,7 @@ bool CPUStats::UpdateCoreMhz() {
     for (size_t i = 0; i < m_cpuData.size(); i++)
     {
         std::string path = "/sys/devices/system/cpu/cpu" + std::to_string(i) + "/cpufreq/scaling_cur_freq";
-        if (fp = fopen(path.c_str(), "r")){
+        if ((fp = fopen(path.c_str(), "r"))){
             fscanf(fp, "%s", str);
             m_cpuData[i].mhz = atoi(str) / 1000;
             fclose(fp);
