@@ -521,6 +521,8 @@ parse_overlay_env(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_gpu_load_change] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_cpu_load_change] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_fps_only] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_fps_color_change] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_core_load_change] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = read_cfg;
       }
 #define OVERLAY_PARAM_BOOL(name)                                       \
