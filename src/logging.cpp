@@ -77,7 +77,7 @@ void writeSummary(string filename){
       out << fixed << setprecision(1) << result << ",";
     }
     // 97th percentile
-    result = sorted[floor(0.97 * (sorted.size() - 1))].fps;
+    result = sorted.empty() ? 0.0f : sorted[floor(0.97 * (sorted.size() - 1))].fps;
     out << fixed << setprecision(1) << result << ",";
     // avg
     total = 0;
@@ -251,7 +251,7 @@ void Logger::calculate_benchmark_data(){
         // the percentiles are already validated when they're parsed from the config.
         float fraction = parse_float(percentile) / 100;
 
-        result = sorted[(fraction * sorted.size()) - 1];
+        result = sorted.empty() ? 0.0f : sorted[(fraction * sorted.size()) - 1];
         percentile += "%";
       }
 

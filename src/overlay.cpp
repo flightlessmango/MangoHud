@@ -431,7 +431,7 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
       ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), "%s %.1f", data_.first.c_str(), data_.second);
    }
 
-   float max = *max_element(benchmark.fps_data.begin(), benchmark.fps_data.end());
+   float max = benchmark.fps_data.empty() ? 0.0f : *max_element(benchmark.fps_data.begin(), benchmark.fps_data.end());
    ImVec4 plotColor = HUDElements.colors.frametime;
    plotColor.w = alpha / params.background_alpha;
    ImGui::PushStyleColor(ImGuiCol_PlotLines, plotColor);
