@@ -170,22 +170,20 @@ def control(args):
         info += "Mesa Version: {}"
         print(info.format(version, name, mesa_version))
 
-    if args.cmd == 'start-capture':
-        conn.send(bytearray(':capture=1;', 'utf-8'))
-    elif args.cmd == 'stop-capture':
-        conn.send(bytearray(':capture=0;', 'utf-8'))
+
+    if args.cmd == 'toggle-logging':
+        conn.send(bytearray(':logging;', 'utf-8'))
     elif args.cmd == 'toggle-hud':
         conn.send(bytearray(':hud;', 'utf-8'))
 
 def main():
-    parser = argparse.ArgumentParser(description='MESA_overlay control client')
+    parser = argparse.ArgumentParser(description='MangoHud control client')
     parser.add_argument('--info', action='store_true', help='Print info from socket')
     parser.add_argument('--socket', '-s', type=str, help='Path to socket')
 
     commands = parser.add_subparsers(help='commands to run', dest='cmd')
-    commands.add_parser('start-capture')
-    commands.add_parser('stop-capture')
     commands.add_parser('toggle-hud')
+    commands.add_parser('toggle-logging')
 
     args = parser.parse_args()
 

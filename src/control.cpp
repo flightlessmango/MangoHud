@@ -12,6 +12,12 @@ static void parse_command(struct instance_data *instance_data,
     if (!strncmp(cmd, "hud", cmdlen)) {
       _params->no_display = !_params->no_display;
     }
+    if (!strncmp(cmd, "logging", cmdlen)) {
+      if (logger->is_active())
+         logger->stop_logging();
+      else
+         logger->start_logging();
+    }
 }
 
 #define BUFSIZE 4096
