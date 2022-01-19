@@ -65,7 +65,10 @@ void writeSummary(string filename){
     out << "0.1% Min," << "1% Min," << "97% Percentile," << "Average," << "GPU Load," << "CPU Load" << "\n";
     std::vector<logData> sorted = logArray;
     std::sort(sorted.begin(), sorted.end(), compareByFps);
-    float total, total_cpu, total_gpu; float result;
+    float total = 0.0f;
+    float total_cpu = 0.0f;
+    float total_gpu = 0.0f;
+    float result;
     float percents[2] = {0.001, 0.01};
     for (auto percent : percents){
       total = 0;
