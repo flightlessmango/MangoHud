@@ -3,6 +3,9 @@
 #include <cstring>
 #include "mesa/util/os_socket.h"
 #include "overlay.h"
+#ifdef MANGOAPP
+#include "app/mangoapp.h"
+#endif
 
 using namespace std;
 static void parse_command(struct instance_data *instance_data,
@@ -10,13 +13,22 @@ static void parse_command(struct instance_data *instance_data,
                           const char *param, unsigned paramlen)
 {
     if (!strncmp(cmd, "hud", cmdlen)) {
-      _params->no_display = !_params->no_display;
+#ifdef MANGOAPP
+      std::lock_guard<std::mutex> lk(mangoapp_m);
+      instance_data->params.no_display = !instance_data->params.no_display;
+      mangoapp_cv.notify_one();
+#else
+      instance_data->params.no_display = !instance_data->params.no_display;
+#endif
     }
     if (!strncmp(cmd, "logging", cmdlen)) {
-      if (logger->is_active())
-         logger->stop_logging();
-      else
-         logger->start_logging();
+      auto now = Clock::now(); /* us */
+      if (now - logger->last_log_end() > 11s){
+         if (logger->is_active())
+            logger->stop_logging();
+         else
+            logger->start_logging();
+      }
     }
 }
 
