@@ -185,7 +185,9 @@ void Logger::stop_logging() {
   } else {
 #ifdef MANGOAPP    
     string path = std::getenv("HOME");
-    writeSummary(path + "/mangoapp_" + get_log_suffix());
+    std::string logName = path + "/mangoapp_" + get_log_suffix();
+    writeSummary(logName);
+    writeFile(logName);
 #endif
   }
   logger->clear_log_data();
