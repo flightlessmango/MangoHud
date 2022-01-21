@@ -34,6 +34,31 @@ std::mutex mangoapp_m;
 std::condition_variable mangoapp_cv;
 static uint8_t raw_msg[1024] = {0};
 
+void ctrl_thread(){
+    while (1){
+        const struct mangoapp_ctrl_msgid1_v1 *mangoapp_ctrl_v1 = (const struct mangoapp_ctrl_msgid1_v1*) raw_msg;
+        size_t msg_size = msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 2, 0);
+        switch (mangoapp_ctrl_v1->log_session) {
+            case 1:
+                logger->start_logging();
+            case 2:
+                logger->stop_logging();
+            case 3:
+                logger->is_active() ? logger->stop_logging() : logger->start_logging();
+        }
+        std::lock_guard<std::mutex> lk(mangoapp_m);
+        switch (mangoapp_ctrl_v1->no_display){
+            case 1:
+                params->no_display = 1;
+            case 2:
+                params->no_display = 0;
+            case 3:
+                params->no_display ? params->no_display = 0 : params->no_display = 1;
+        }
+        mangoapp_cv.notify_one();
+    }
+}
+
 void msg_read_thread(){
     int key = ftok("mangoapp", 65);
     msgid = msgget(key, 0666 | IPC_CREAT);
@@ -134,6 +159,7 @@ int main(int, char**)
     init_system_info();
     sw_stats.engine = EngineTypes::GAMESCOPE;
     std::thread(msg_read_thread).detach();
+    std::thread(ctrl_thread).detach();
     if(!logger) logger = std::make_unique<Logger>(HUDElements.params);
     // Main loop
     while (!glfwWindowShouldClose(window)){
