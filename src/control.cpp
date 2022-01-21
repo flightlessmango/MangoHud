@@ -23,12 +23,11 @@ static void parse_command(struct instance_data *instance_data,
     }
     if (!strncmp(cmd, "logging", cmdlen)) {
       auto now = Clock::now(); /* us */
-      if (now - logger->last_log_end() > 11s){
-         if (logger->is_active())
-            logger->stop_logging();
-         else
-            logger->start_logging();
-      }
+      if (logger->is_active())
+         logger->stop_logging();
+      else
+         logger->start_logging();
+
     }
 }
 
