@@ -62,7 +62,7 @@ void writeSummary(string filename){
   SPDLOG_DEBUG("Writing summary log file [{}]", filename, logArray.size());
   std::ofstream out(filename, ios::out | ios::app);
   if (out){
-    out << "0.1% Min," << "1% Min," << "97% Percentile," << "Average," << "GPU Load," << "CPU Load" << "\n";
+    out << "0.1% Min FPS," << "1% Min FPS," << "97% Percentile FPS," << "Average FPS," << "GPU Load," << "CPU Load" << "\n";
     std::vector<logData> sorted = logArray;
     std::sort(sorted.begin(), sorted.end(), compareByFps);
     float total, total_cpu, total_gpu; float result;
@@ -90,10 +90,10 @@ void writeSummary(string filename){
     out << fixed << setprecision(1) << result << ",";
     // GPU
     result = total_gpu / sorted.size();
-    out << fixed << setprecision(1) << result << ",";
+    out << result << ",";
     // CPU
     result = total_cpu / sorted.size();
-    out << fixed << setprecision(1) << result << "";
+    out << result;
   } else {
     printf("MANGOHUD: Failed to write log file\n");
   }
