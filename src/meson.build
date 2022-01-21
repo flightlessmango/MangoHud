@@ -264,6 +264,14 @@ if get_option('mangoapp') and sizeof_ptr == 8
   )
 endif
 
+if get_option('mangohudctl') and sizeof_ptr == 8
+mangoapp = executable(
+  'mangohudctl',
+  files('app/control.cpp'),
+  install : true
+)
+endif
+
 configure_file(input : 'mangohud.json.in',
   output : '@0@.json'.format(meson.project_name()),
   configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud_vk,
