@@ -37,23 +37,35 @@ static uint8_t raw_msg[1024] = {0};
 void ctrl_thread(){
     while (1){
         const struct mangoapp_ctrl_msgid1_v1 *mangoapp_ctrl_v1 = (const struct mangoapp_ctrl_msgid1_v1*) raw_msg;
+        memset(raw_msg, 0, sizeof(raw_msg));
         size_t msg_size = msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 2, 0);
         switch (mangoapp_ctrl_v1->log_session) {
             case 1:
-                logger->start_logging();
+                if (!logger->is_active())
+                    logger->start_logging();
+                break;
             case 2:
-                logger->stop_logging();
+                if (logger->is_active())
+                    logger->stop_logging();
+                break;
             case 3:
                 logger->is_active() ? logger->stop_logging() : logger->start_logging();
+                break;
         }
         std::lock_guard<std::mutex> lk(mangoapp_m);
         switch (mangoapp_ctrl_v1->no_display){
             case 1:
                 params->no_display = 1;
+                printf("set no_display 1\n");
+                break;
             case 2:
                 params->no_display = 0;
+                printf("set no_display 0\n");
+                break;
             case 3:
                 params->no_display ? params->no_display = 0 : params->no_display = 1;
+                printf("toggle no_display\n");
+                break;
         }
         mangoapp_cv.notify_one();
     }
