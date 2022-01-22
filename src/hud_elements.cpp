@@ -336,7 +336,7 @@ void HudElements::vram(){
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::Text("GiB");
         ImGui::PopFont();
-#ifndef MANGOAPP        
+#ifndef MANGOAPP
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_mem_clock]){
             ImGui::TableNextColumn();
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", gpu_info.MemClock);
@@ -907,6 +907,7 @@ void HudElements::legacy_elements(){
     ordered_functions.push_back({ram,                value});
     ordered_functions.push_back({battery,            value});
     ordered_functions.push_back({fps,                value});
+    ordered_functions.push_back({fps_only,           value});
 #ifndef MANGOAPP
     ordered_functions.push_back({engine_version,     value});
 #endif
