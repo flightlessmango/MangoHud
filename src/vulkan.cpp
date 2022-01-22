@@ -1924,6 +1924,7 @@ static void overlay_DestroyInstance(
    if (!is_blacklisted())
       stop_notifier(instance_data->notifier);
 #endif
+   logger.reset();
    destroy_instance_data(instance_data);
 }
 
