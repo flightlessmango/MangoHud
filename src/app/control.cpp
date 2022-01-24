@@ -1,10 +1,18 @@
 #include <string.h>
-#include "mangoapp.h"
 #include <stdio.h>
+#include "mangoapp.h"
 
 void help_and_quit() {
     // TODO! document attributes and values
     fprintf(stderr, "Usage: mangohudctl [set|toggle] attribute [value]\n");
+    fprintf(stderr, "Attributes:\n");
+    fprintf(stderr, "   no_display      hides or shows hud\n");
+    fprintf(stderr, "   log_session     handles logging status\n");
+    fprintf(stderr, "Accepted values:\n");
+    fprintf(stderr, "   true\n");
+    fprintf(stderr, "   false\n");
+    fprintf(stderr, "   1\n");
+    fprintf(stderr, "   0\n");
     exit(1);
 }
 
@@ -20,7 +28,6 @@ bool str_to_bool(const char *value)
     exit(1);
 }
 
-
 bool set_attribute(struct mangoapp_ctrl_msgid1_v1 *ctrl_msg,
                    const char *attribute, const char* value)
 {
@@ -34,7 +41,6 @@ bool set_attribute(struct mangoapp_ctrl_msgid1_v1 *ctrl_msg,
     
     return false;
 }
-
 
 bool toggle_attribute(struct mangoapp_ctrl_msgid1_v1 *ctrl_msg,
                       const char *attribute)
@@ -80,4 +86,4 @@ int main(int argc, char *argv[])
     msgsnd(msgid, &ctrl_msg, sizeof(mangoapp_ctrl_msgid1_v1), IPC_NOWAIT);
         
     return 0;
-} 
+}
