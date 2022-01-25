@@ -53,6 +53,8 @@ public:
   void upload_last_log();
   void upload_last_logs();
   void calculate_benchmark_data();
+  overlay_params* m_params;
+
 private:
   std::vector<logData> m_log_array;
   std::vector<std::string> m_log_files;
@@ -63,8 +65,6 @@ private:
   std::mutex m_values_valid_mtx;
   std::condition_variable m_values_valid_cv;
   bool m_values_valid;
-
-  overlay_params* m_params;
 };
 
 extern std::unique_ptr<Logger> logger;

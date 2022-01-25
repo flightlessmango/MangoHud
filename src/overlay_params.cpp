@@ -806,6 +806,7 @@ parse_overlay_config(struct overlay_params *params,
    // Needs ImGui context but it is null here for OpenGL so just note it and update somewhere else
    HUDElements.colors.update = true;
 
+   if(logger && logger->m_params == nullptr) logger.reset();
    if(!logger) logger = std::make_unique<Logger>(HUDElements.params);
    if(params->autostart_log && !logger->is_active())
       std::thread(autostart_log, params->autostart_log).detach();
