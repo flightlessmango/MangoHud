@@ -559,7 +559,7 @@ void HudElements::frame_timing(){
         for (size_t i = 0; i < HUDElements.params->table_columns - 1; i++)
             ImGui::TableNextColumn();
         ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "%.1f ms", 1000 / HUDElements.sw_stats->fps);
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "min: %.1fms, max: %.1fms", min_frametime, max_frametime);
         ImGui::PopFont();
         ImGui::TableNextRow(); ImGui::TableNextColumn();
         char hash[40];

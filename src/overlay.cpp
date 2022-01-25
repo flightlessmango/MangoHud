@@ -43,6 +43,7 @@ ImVec2 real_font_size;
 std::deque<logData> graph_data;
 const char* engines[] = {"Unknown", "OpenGL", "VULKAN", "DXVK", "VKD3D", "DAMAVAND", "ZINK", "WINED3D", "Feral3D", "ToGL", "GAMESCOPE"};
 overlay_params *_params {};
+double min_frametime, max_frametime;
 
 void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID)
 {
@@ -195,7 +196,13 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, struct ove
       sw_stats.last_fps_update = now;
 
    }
-
+   double min_time = UINT64_MAX, max_time = 0;
+   for (auto& stat : sw_stats.frames_stats ){
+      min_time = MIN2(stat.stats[0], min_time);
+      max_time = MAX2(stat.stats[0], min_time);
+   }
+   min_frametime = min_time / sw_stats.time_dividor;
+   max_frametime = max_time / sw_stats.time_dividor;
    if (params.log_interval == 0){
       logger->try_log();
    }

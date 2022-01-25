@@ -147,6 +147,7 @@ extern std::string wineVersion;
 extern std::deque<logData> graph_data;
 extern overlay_params *_params;
 extern struct gpu_metrics_v2_2 amdgpu_metrics;
+extern double min_frametime, max_frametime;
 
 void position_layer(struct swapchain_stats& data, struct overlay_params& params, ImVec2 window_size);
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan);
