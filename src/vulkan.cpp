@@ -1468,16 +1468,19 @@ static VkResult overlay_CreateSwapchainKHR(
     const VkAllocationCallbacks*                pAllocator,
     VkSwapchainKHR*                             pSwapchain)
 {
+   VkSwapchainCreateInfoKHR createInfo = *pCreateInfo;
+
+   createInfo.imageUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
    struct device_data *device_data = FIND(struct device_data, device);
    array<VkPresentModeKHR, 4> modes = {VK_PRESENT_MODE_FIFO_RELAXED_KHR,
            VK_PRESENT_MODE_IMMEDIATE_KHR,
            VK_PRESENT_MODE_MAILBOX_KHR,
            VK_PRESENT_MODE_FIFO_KHR};
-
    if (device_data->instance->params.vsync < 4)
-      const_cast<VkSwapchainCreateInfoKHR*> (pCreateInfo)->presentMode = modes[device_data->instance->params.vsync];
+      createInfo.presentMode = modes[device_data->instance->params.vsync];
 
-   VkResult result = device_data->vtable.CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
+   VkResult result = device_data->vtable.CreateSwapchainKHR(device, &createInfo, pAllocator, pSwapchain);
    if (result != VK_SUCCESS) return result;
    struct swapchain_data *swapchain_data = new_swapchain_data(*pSwapchain, device_data);
    setup_swapchain_data(swapchain_data, pCreateInfo);
