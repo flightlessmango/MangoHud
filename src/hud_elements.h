@@ -30,7 +30,7 @@ struct overlay_params;
 class HudElements{
     public:
         struct image_infos image_infos;
-	struct image_infos background_image_infos;
+        struct image_infos background_image_infos;
         struct swapchain_stats *sw_stats;
         struct overlay_params *params;
         struct exec_entry {
@@ -77,7 +77,7 @@ class HudElements{
         static void custom_text_center();
         static void custom_text();
         static void image();
-	static void background_image();
+        static void background_image();
         static void vkbasalt();
         static void gamemode();
         static void graphs();
