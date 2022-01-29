@@ -173,7 +173,9 @@ struct amdgpu_handles
     , version_minor(minor)
     {
         set_sampling_period(500000000 /* 500ms */);
+#ifndef MANGOAPP
         collector = std::thread(&amdgpu_handles::amdgpu_poll, this);
+#endif
     }
 
     ~amdgpu_handles()
