@@ -814,7 +814,7 @@ parse_overlay_config(struct overlay_params *params,
    {
       std::lock_guard<std::mutex> lk(mangoapp_m);
       params->no_display = params->no_display;
-      mangoapp_cv.notify_one();
    }
+   mangoapp_cv.notify_one();
 #endif
 }

@@ -52,20 +52,22 @@ void ctrl_thread(){
                 logger->is_active() ? logger->stop_logging() : logger->start_logging();
                 break;
         }
-        std::lock_guard<std::mutex> lk(mangoapp_m);
-        switch (mangoapp_ctrl_v1->no_display){
-            case 1:
-                params->no_display = 1;
-                printf("set no_display 1\n");
-                break;
-            case 2:
-                params->no_display = 0;
-                printf("set no_display 0\n");
-                break;
-            case 3:
-                params->no_display ? params->no_display = 0 : params->no_display = 1;
-                printf("toggle no_display\n");
-                break;
+        {
+            std::lock_guard<std::mutex> lk(mangoapp_m);
+            switch (mangoapp_ctrl_v1->no_display){
+                case 1:
+                    params->no_display = 1;
+                    printf("set no_display 1\n");
+                    break;
+                case 2:
+                    params->no_display = 0;
+                    printf("set no_display 0\n");
+                    break;
+                case 3:
+                    params->no_display ? params->no_display = 0 : params->no_display = 1;
+                    printf("toggle no_display\n");
+                    break;
+            }
         }
         mangoapp_cv.notify_one();
     }
