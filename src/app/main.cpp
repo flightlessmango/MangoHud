@@ -131,6 +131,19 @@ void shutdown(GLFWwindow* window){
     glfwDestroyWindow(window);
 }
 
+bool render(GLFWwindow* window) {
+    ImVec2 last_window_size = window_size;
+    ImGui_ImplGlfw_NewFrame();
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui::NewFrame();
+    position_layer(sw_stats, *params, window_size);
+    render_imgui(sw_stats, *params, window_size, true);
+    glfwSetWindowSize(window, window_size.x + 45.f, window_size.y + 325.f);
+    ImGui::PopStyleVar(3);
+    ImGui::EndFrame();
+    return last_window_size.x != window_size.x || last_window_size.y != window_size.y;
+}
+
 int main(int, char**)
 {   
     // Setup window
@@ -196,27 +209,25 @@ int main(int, char**)
                 mangoapp_cv.wait(lk, []{return new_frame || params->no_display;});
                 new_frame = false;
             }
+
+            check_keybinds(sw_stats, *params, vendorID);
             // Start the Dear ImGui frame
-            ImGui_ImplOpenGL3_NewFrame();
-            ImGui_ImplGlfw_NewFrame();
-            window_size.x = window_size.x * 1.2;
-            ImGui::NewFrame();
             {
-                check_keybinds(sw_stats, *params, vendorID);
-                position_layer(sw_stats, *params, window_size);
-                render_imgui(sw_stats, *params, window_size, true);
+                if (render(window)) {
+                    // If we need to resize our window, give it another couple of rounds for the
+                    // stupid display size stuff to propagate through ImGUI (using NDC and scaling
+                    // in GL makes me a very unhappy boy.)
+                    render(window);
+                    render(window);
+                }
+
                 if (params->control >= 0) {
                     control_client_check(device_data);
                     process_control_socket(device_data->instance);
                 }
             }
-            ImGui::PopStyleVar(3);
-
             // Rendering
             ImGui::Render();
-            static int display_w, display_h;
-            glfwSetWindowSize(window, window_size.x + 45.f, window_size.y + 325.f);
-            glfwGetFramebufferSize(window, &display_w, &display_h);
             glEnable(GL_DEPTH_TEST);        
             glEnable(GL_BLEND);             
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
