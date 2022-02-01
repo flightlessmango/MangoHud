@@ -14,8 +14,10 @@ static void parse_command(struct instance_data *instance_data,
 {
     if (!strncmp(cmd, "hud", cmdlen)) {
 #ifdef MANGOAPP
-      std::lock_guard<std::mutex> lk(mangoapp_m);
-      instance_data->params.no_display = !instance_data->params.no_display;
+      {
+         std::lock_guard<std::mutex> lk(mangoapp_m);
+         instance_data->params.no_display = !instance_data->params.no_display;
+      }
       mangoapp_cv.notify_one();
 #else
       instance_data->params.no_display = !instance_data->params.no_display;

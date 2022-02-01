@@ -52,24 +52,28 @@ void ctrl_thread(){
                 logger->is_active() ? logger->stop_logging() : logger->start_logging();
                 break;
         }
-        std::lock_guard<std::mutex> lk(mangoapp_m);
-        switch (mangoapp_ctrl_v1->no_display){
-            case 1:
-                params->no_display = 1;
-                printf("set no_display 1\n");
-                break;
-            case 2:
-                params->no_display = 0;
-                printf("set no_display 0\n");
-                break;
-            case 3:
-                params->no_display ? params->no_display = 0 : params->no_display = 1;
-                printf("toggle no_display\n");
-                break;
+        {
+            std::lock_guard<std::mutex> lk(mangoapp_m);
+            switch (mangoapp_ctrl_v1->no_display){
+                case 1:
+                    params->no_display = 1;
+                    printf("set no_display 1\n");
+                    break;
+                case 2:
+                    params->no_display = 0;
+                    printf("set no_display 0\n");
+                    break;
+                case 3:
+                    params->no_display ? params->no_display = 0 : params->no_display = 1;
+                    printf("toggle no_display\n");
+                    break;
+            }
         }
         mangoapp_cv.notify_one();
     }
 }
+
+bool new_frame = false;
 
 void msg_read_thread(){
     int key = ftok("mangoapp", 65);
@@ -83,6 +87,11 @@ void msg_read_thread(){
         if (hdr->version == 1){
             if (msg_size > offsetof(struct mangoapp_msg_v1, frametime_ns)){
                 update_hud_info_with_frametime(sw_stats, *params, vendorID, mangoapp_v1->frametime_ns);
+                {
+                    std::unique_lock<std::mutex> lk(mangoapp_m);
+                    new_frame = true;
+                }
+                mangoapp_cv.notify_one();
             }
         } else {
             printf("Unsupported mangoapp struct version: %i\n", hdr->version);
@@ -120,6 +129,19 @@ void shutdown(GLFWwindow* window){
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
     glfwDestroyWindow(window);
+}
+
+bool render(GLFWwindow* window) {
+    ImVec2 last_window_size = window_size;
+    ImGui_ImplGlfw_NewFrame();
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui::NewFrame();
+    position_layer(sw_stats, *params, window_size);
+    render_imgui(sw_stats, *params, window_size, true);
+    glfwSetWindowSize(window, window_size.x + 45.f, window_size.y + 325.f);
+    ImGui::PopStyleVar(3);
+    ImGui::EndFrame();
+    return last_window_size.x != window_size.x || last_window_size.y != window_size.y;
 }
 
 int main(int, char**)
@@ -182,27 +204,30 @@ int main(int, char**)
                 HUDElements.convert_colors(*params);
                 mangoapp_paused = false;
             }
-            // Start the Dear ImGui frame
-            ImGui_ImplOpenGL3_NewFrame();
-            ImGui_ImplGlfw_NewFrame();
-            window_size.x = window_size.x * 1.2;
-            ImGui::NewFrame();
             {
-                check_keybinds(sw_stats, *params, vendorID);
-                position_layer(sw_stats, *params, window_size);
-                render_imgui(sw_stats, *params, window_size, true);
+                std::unique_lock<std::mutex> lk(mangoapp_m);
+                mangoapp_cv.wait(lk, []{return new_frame || params->no_display;});
+                new_frame = false;
+            }
+
+            check_keybinds(sw_stats, *params, vendorID);
+            // Start the Dear ImGui frame
+            {
+                if (render(window)) {
+                    // If we need to resize our window, give it another couple of rounds for the
+                    // stupid display size stuff to propagate through ImGUI (using NDC and scaling
+                    // in GL makes me a very unhappy boy.)
+                    render(window);
+                    render(window);
+                }
+
                 if (params->control >= 0) {
                     control_client_check(device_data);
                     process_control_socket(device_data->instance);
                 }
             }
-            ImGui::PopStyleVar(3);
-
             // Rendering
             ImGui::Render();
-            static int display_w, display_h;
-            glfwSetWindowSize(window, window_size.x + 45.f, window_size.y + 325.f);
-            glfwGetFramebufferSize(window, &display_w, &display_h);
             glEnable(GL_DEPTH_TEST);        
             glEnable(GL_BLEND);             
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

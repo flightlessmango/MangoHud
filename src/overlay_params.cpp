@@ -812,9 +812,11 @@ parse_overlay_config(struct overlay_params *params,
       std::thread(autostart_log, params->autostart_log).detach();
 #ifdef MANGOAPP
    {
+      extern bool new_frame;
       std::lock_guard<std::mutex> lk(mangoapp_m);
       params->no_display = params->no_display;
-      mangoapp_cv.notify_one();
+      new_frame = true; // we probably changed how we look.
    }
+   mangoapp_cv.notify_one();
 #endif
 }
