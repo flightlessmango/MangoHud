@@ -109,11 +109,13 @@ void writeFile(string filename){
   if (out){
   out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver," << "cpuscheduler" << endl;
   out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << "," << cpusched << endl;
-  out << "fps," << "frametime," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "gpu_power," << "ram_used," << "elapsed" << endl;
+  out << "fps," << "frametime," << "min_frametime,"<< "max_frametime," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "gpu_power," << "ram_used," << "elapsed" << endl;
 
   for (size_t i = 0; i < logArray.size(); i++){
     out << logArray[i].fps << ",";
     out << logArray[i].frametime << ",";
+    out << logArray[i].min_frametime << ",";
+    out << logArray[i].max_frametime << ",";
     out << logArray[i].cpu_load << ",";
     out << logArray[i].gpu_load << ",";
     out << logArray[i].cpu_temp << ",";
@@ -205,6 +207,8 @@ void Logger::try_log() {
   currentLogData.previous = elapsedLog;
   currentLogData.fps = fps;
   currentLogData.frametime = frametime;
+  currentLogData.min_frametime = min_frametime;
+  currentLogData.max_frametime = max_frametime;
   m_log_array.push_back(currentLogData);
 
   if(m_params->log_duration && (elapsedLog >= std::chrono::seconds(m_params->log_duration))){
