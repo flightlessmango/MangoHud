@@ -73,6 +73,8 @@ void ctrl_thread(){
     }
 }
 
+bool new_frame = false;
+
 void msg_read_thread(){
     int key = ftok("mangoapp", 65);
     msgid = msgget(key, 0666 | IPC_CREAT);
@@ -85,6 +87,11 @@ void msg_read_thread(){
         if (hdr->version == 1){
             if (msg_size > offsetof(struct mangoapp_msg_v1, frametime_ns)){
                 update_hud_info_with_frametime(sw_stats, *params, vendorID, mangoapp_v1->frametime_ns);
+                {
+                    std::unique_lock<std::mutex> lk(mangoapp_m);
+                    new_frame = true;
+                }
+                mangoapp_cv.notify_one();
             }
         } else {
             printf("Unsupported mangoapp struct version: %i\n", hdr->version);
@@ -183,6 +190,11 @@ int main(int, char**)
                 create_fonts(*params, sw_stats.font1, sw_stats.font_text);
                 HUDElements.convert_colors(*params);
                 mangoapp_paused = false;
+            }
+            {
+                std::unique_lock<std::mutex> lk(mangoapp_m);
+                mangoapp_cv.wait(lk, []{return new_frame || params->no_display;});
+                new_frame = false;
             }
             // Start the Dear ImGui frame
             ImGui_ImplOpenGL3_NewFrame();
