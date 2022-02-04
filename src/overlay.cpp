@@ -5,6 +5,7 @@
 #include <condition_variable>
 #include <spdlog/spdlog.h>
 #include <filesystem.h>
+#include <sys/stat.h>
 #include "overlay.h"
 #include "logging.h"
 #include "cpu.h"
@@ -44,6 +45,7 @@ std::deque<logData> graph_data;
 const char* engines[] = {"Unknown", "OpenGL", "VULKAN", "DXVK", "VKD3D", "DAMAVAND", "ZINK", "WINED3D", "Feral3D", "ToGL", "GAMESCOPE"};
 overlay_params *_params {};
 double min_frametime, max_frametime;
+bool gpu_metrics_exists = false;
 
 void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID)
 {
@@ -62,6 +64,9 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
    if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || logger->is_active()) {
       if (vendorID == 0x1002 && getAmdGpuInfo_actual)
          getAmdGpuInfo_actual();
+      
+      if (gpu_metrics_exists)
+         amdgpu_get_metrics();
 
       if (vendorID == 0x10de)
          getNvidiaGpuInfo();
@@ -96,9 +101,6 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
    graph_data.push_back(currentLogData);
    logger->notify_data_valid();
    HUDElements.update_exec();
-#ifdef MANGOAPP   
-   amdgpu_get_metrics();
-#endif
 }
 
 struct hw_info_updater
@@ -624,22 +626,32 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
          SPDLOG_DEBUG("using amdgpu path: {}", path);
 
 #ifdef HAVE_LIBDRM_AMDGPU
-         int idx = -1;
-         //TODO make neater
-         int res = sscanf(path.c_str(), "/sys/class/drm/card%d", &idx);
-         std::string dri_path = "/dev/dri/card" + std::to_string(idx);
+         struct stat buffer;
+         std::string gpu_metrics_path = path + "/device/gpu_metrics";
+         if (stat(gpu_metrics_path.c_str(), &buffer) == 0 ){
+            gpu_metrics_exists = true;
+            metrics_path = gpu_metrics_path;
+            SPDLOG_DEBUG("Using gpu_metrics");
+         } else {
+            int idx = -1;
+            //TODO make neater
+            int res = sscanf(path.c_str(), "/sys/class/drm/card%d", &idx);
+            std::string dri_path = "/dev/dri/card" + std::to_string(idx);
 
-         if (!params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon] && res == 1 && amdgpu_open(dri_path.c_str())) {
-            vendorID = 0x1002;
-            using_libdrm = true;
-            getAmdGpuInfo_actual = getAmdGpuInfo_libdrm;
-            amdgpu_set_sampling_period(params.fps_sampling_period);
+            if (!params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon] && res == 1 && amdgpu_open(dri_path.c_str())) {
+               vendorID = 0x1002;
+               using_libdrm = true;
+               getAmdGpuInfo_actual = getAmdGpuInfo_libdrm;
+               amdgpu_set_sampling_period(params.fps_sampling_period);
 
-            SPDLOG_DEBUG("Using libdrm");
+               SPDLOG_DEBUG("Using libdrm");
 
-            // fall through and open sysfs handles for fallback or check DRM version beforehand
-         } else if (!params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon]) {
-            SPDLOG_ERROR("Failed to open device '/dev/dri/card{}' with libdrm, falling back to using hwmon sysfs.", idx);
+               // fall through and open sysfs handles for fallback or check DRM version beforehand
+            } else if (!params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon]) {
+               SPDLOG_ERROR("Failed to open device '/dev/dri/card{}' with libdrm, falling back to using hwmon sysfs.", idx);
+            } else if (params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon]) {
+               SPDLOG_DEBUG("Using amdgpu hwmon");
+            }
          }
 #endif
 

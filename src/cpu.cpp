@@ -248,7 +248,7 @@ bool CPUStats::UpdateCoreMhz() {
 
 bool CPUStats::UpdateCpuTemp() {
 #ifdef MANGOAPP
-    m_cpuDataTotal.temp = amdgpu_metrics.temperature_soc / 100;
+    m_cpuDataTotal.temp = gpu_info.temp;
 #else
     if (!m_cpuTempFile)
         return false;
@@ -349,7 +349,7 @@ static bool get_cpu_power_rapl(CPUPowerData* cpuPowerData, int& power) {
 }
 
 static bool get_cpu_power_amdgpu(int& power) {
-    power = amdgpu_metrics.average_cpu_power / 1000;
+    power = gpu_info.apu_cpu_power / 1000;
     return true;
 }
 
