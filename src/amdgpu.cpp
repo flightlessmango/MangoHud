@@ -1,5 +1,6 @@
 #include "amdgpu.h"
 #include "overlay.h"
+#include "cpu.h"
 
 std::string metrics_path = "";
 
@@ -32,6 +33,12 @@ void amdgpu_get_metrics()
 			gpu_info.temp = amdgpu_metrics.temperature_gfx / 100;
 			gpu_info.MemClock = amdgpu_metrics.current_uclk;
 			gpu_info.apu_cpu_power = amdgpu_metrics.average_cpu_power;
+			int cpu_temp = 0;
+			for (int i = 0; i < cpuStats.GetCPUData().size() / 2; i++)
+				if (amdgpu_metrics.temperature_core[i] > cpu_temp)
+            		cpu_temp = amdgpu_metrics.temperature_core[i];
+
+			gpu_info.apu_cpu_temp = cpu_temp / 100;
 		}
 	}
 }

@@ -27,6 +27,7 @@ struct gpuInfo{
     int CoreClock;
     int powerUsage;
     int apu_cpu_power;
+    int apu_cpu_temp;
 };
 
 extern struct gpuInfo gpu_info;
