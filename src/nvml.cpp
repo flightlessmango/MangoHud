@@ -55,7 +55,10 @@ bool getNVMLInfo(){
     nvml.nvmlDeviceGetPowerUsage(nvidiaDevice, &nvidiaPowerUsage);
     deviceID = nvidiaPciInfo.pciDeviceId >> 16;
 
-    if (response == NVML_ERROR_NOT_SUPPORTED)
+    if (response == NVML_ERROR_NOT_SUPPORTED) {
+        if (nvmlSuccess)
+            SPDLOG_ERROR("nvmlDeviceGetUtilizationRates failed");
         nvmlSuccess = false;
+    }
     return nvmlSuccess;
 }
