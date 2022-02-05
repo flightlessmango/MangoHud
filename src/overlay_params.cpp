@@ -658,7 +658,14 @@ parse_overlay_config(struct overlay_params *params,
    if (!env || read_cfg) {
 
       // Get config options
-      parseConfigFile(*params);
+      bool has_config_file = parseConfigFile(*params);
+#ifdef MANGOAPP
+      // Enable no_display if we have no config at all
+      // so we don't start randomly showing mangoapp if
+      // things went wrong somewhere.
+      if (!has_config_file)
+         params->no_display = true;
+#endif
       if (params->options.find("full") != params->options.end() && params->options.find("full")->second != "0") {
 #define OVERLAY_PARAM_BOOL(name) \
             params->enabled[OVERLAY_PARAM_ENABLED_##name] = 1;
