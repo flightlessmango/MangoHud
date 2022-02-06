@@ -248,7 +248,7 @@ bool CPUStats::UpdateCoreMhz() {
 
 bool CPUStats::UpdateCpuTemp() {
 #ifdef MANGOAPP
-    m_cpuDataTotal.temp = gpu_info.temp;
+    m_cpuDataTotal.temp = gpu_info.apu_cpu_temp;
 #else
     if (!m_cpuTempFile)
         return false;
