@@ -5,7 +5,7 @@
 #include "overlay_params.h"
 #include <string>
 
-void parseConfigFile(overlay_params& p);
+bool parseConfigFile(overlay_params& p);
 std::string get_program_name();
 
 #endif //MANGOHUD_CONFIG_H
