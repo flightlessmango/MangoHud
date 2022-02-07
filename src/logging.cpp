@@ -203,7 +203,7 @@ void Logger::try_log() {
   auto elapsedLog = now - m_log_start;
 
   currentLogData.previous = elapsedLog;
-  currentLogData.fps = fps;
+  currentLogData.fps = 1000.f / (frametime / 1000.f);
   currentLogData.frametime = frametime;
   m_log_array.push_back(currentLogData);
 
