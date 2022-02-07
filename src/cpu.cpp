@@ -264,7 +264,7 @@ bool CPUStats::UpdateCpuTemp() {
     return true;
 }
 
-static bool get_cpu_power_k10temp(CPUPowerData* cpuPowerData, int& power) {
+static bool get_cpu_power_k10temp(CPUPowerData* cpuPowerData, float& power) {
     CPUPowerData_k10temp* powerData_k10temp = (CPUPowerData_k10temp*)cpuPowerData;
 
     if (!powerData_k10temp->coreVoltageFile || !powerData_k10temp->coreCurrentFile || !powerData_k10temp->socVoltageFile || !powerData_k10temp->socCurrentFile)
@@ -297,7 +297,7 @@ static bool get_cpu_power_k10temp(CPUPowerData* cpuPowerData, int& power) {
     return true;
 }
 
-static bool get_cpu_power_zenpower(CPUPowerData* cpuPowerData, int& power) {
+static bool get_cpu_power_zenpower(CPUPowerData* cpuPowerData, float& power) {
     CPUPowerData_zenpower* powerData_zenpower = (CPUPowerData_zenpower*)cpuPowerData;
 
     if (!powerData_zenpower->corePowerFile || !powerData_zenpower->socPowerFile)
@@ -321,7 +321,7 @@ static bool get_cpu_power_zenpower(CPUPowerData* cpuPowerData, int& power) {
     return true;
 }
 
-static bool get_cpu_power_rapl(CPUPowerData* cpuPowerData, int& power) {
+static bool get_cpu_power_rapl(CPUPowerData* cpuPowerData, float& power) {
     CPUPowerData_rapl* powerData_rapl = (CPUPowerData_rapl*)cpuPowerData;
 
     if (!powerData_rapl->energyCounterFile)
@@ -348,8 +348,8 @@ static bool get_cpu_power_rapl(CPUPowerData* cpuPowerData, int& power) {
     return true;
 }
 
-static bool get_cpu_power_amdgpu(int& power) {
-    power = gpu_info.apu_cpu_power / 1000;
+static bool get_cpu_power_amdgpu(float& power) {
+    power = gpu_info.apu_cpu_power;
     return true;
 }
 
@@ -357,7 +357,7 @@ bool CPUStats::UpdateCpuPower() {
     if(!m_cpuPowerData)
         return false;
 
-    int power = 0;
+    float power = 0;
 
     switch(m_cpuPowerData->source) {
         case CPU_POWER_K10TEMP:

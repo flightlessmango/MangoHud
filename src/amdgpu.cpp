@@ -29,10 +29,10 @@ void amdgpu_get_metrics()
 			in.read((char*)&amdgpu_metrics, sizeof(amdgpu_metrics));
 			gpu_info.load = amdgpu_metrics.average_gfx_activity;
 			gpu_info.CoreClock = amdgpu_metrics.current_gfxclk;
-			gpu_info.powerUsage = amdgpu_metrics.average_gfx_power / 100;
+			gpu_info.powerUsage = amdgpu_metrics.average_gfx_power / 1000.f;
 			gpu_info.temp = amdgpu_metrics.temperature_gfx / 100;
 			gpu_info.MemClock = amdgpu_metrics.current_uclk;
-			gpu_info.apu_cpu_power = amdgpu_metrics.average_cpu_power;
+			gpu_info.apu_cpu_power = amdgpu_metrics.average_cpu_power / 1000.f;
 			int cpu_temp = 0;
 			for (int i = 0; i < cpuStats.GetCPUData().size() / 2; i++)
 				if (amdgpu_metrics.temperature_core[i] > cpu_temp)

@@ -39,7 +39,7 @@ typedef struct CPUData_ {
    int mhz;
    int temp;
    int cpu_mhz;
-   int power;
+   float power;
 } CPUData;
 
 enum {

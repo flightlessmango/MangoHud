@@ -25,8 +25,8 @@ struct gpuInfo{
     float memoryTotal;
     int MemClock;
     int CoreClock;
-    int powerUsage;
-    int apu_cpu_power;
+    float powerUsage;
+    float apu_cpu_power;
     int apu_cpu_temp;
 };
 
