@@ -19,6 +19,8 @@ struct mangoapp_msg_v1 {
     
     uint32_t pid;
     uint64_t frametime_ns;
+    uint8_t fsrUpscale;
+    uint8_t fsrSharpness;
     // WARNING: Always ADD fields, never remove or repurpose fields
 } __attribute__((packed));
 
@@ -38,3 +40,6 @@ struct mangoapp_ctrl_msgid1_v1 {
     
     // WARNING: Always ADD fields, never remove or repurpose fields
 } __attribute__((packed));
+
+extern uint8_t g_fsrUpscale;
+extern uint8_t g_fsrSharpness;

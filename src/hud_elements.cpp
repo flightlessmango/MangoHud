@@ -12,6 +12,7 @@
 #include "memory.h"
 #include "mesa/util/macros.h"
 #include "string_utils.h"
+#include "app/mangoapp.h"
 #include <IconsForkAwesome.h>
 
 #define CHAR_CELSIUS    "\xe2\x84\x83"
@@ -734,6 +735,33 @@ void HudElements::battery(){
 #endif
 }
 
+void HudElements::gamescope_fsr(){
+#ifdef MANGOAPP
+    ImGui::TableNextRow(); ImGui::TableNextColumn();
+    string FSR_TEXT;
+    ImVec4 FSR_COLOR;
+    if (g_fsrUpscale){
+        FSR_TEXT = "ON";
+        FSR_COLOR = HUDElements.colors.fps_value_high;
+    } else {
+        FSR_TEXT = "OFF";
+        FSR_COLOR = HUDElements.colors.fps_value_low;
+    }
+    
+    ImGui::TextColored(HUDElements.colors.engine, "%s", "FSR");
+    if (g_fsrUpscale){
+        ImGui::SameLine();
+        ImGui::TextColored(FSR_COLOR, "%s", FSR_TEXT.c_str());
+        ImGui::TableNextColumn();
+        ImGui::TextColored(HUDElements.colors.engine, "Sharpness");
+        ImGui::TableNextColumn();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", g_fsrSharpness);
+    } else {
+        ImGui::TableNextColumn();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", FSR_TEXT.c_str());
+    }
+#endif
+}
 
 void HudElements::graphs(){
     ImGui::TableNextRow(); ImGui::TableNextColumn();
@@ -884,6 +912,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
                                       exec_list.push_back({int(ordered_functions.size() - 1), value});       }
     if (param == "battery")         { ordered_functions.push_back({battery, value});                }
     if (param == "fps_only")        { ordered_functions.push_back({fps_only, value});               }
+    if (param == "fsr")             { ordered_functions.push_back({gamescope_fsr, value});          }
     if (param == "graphs"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs])
             HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs] = true;
@@ -914,6 +943,7 @@ void HudElements::legacy_elements(){
     ordered_functions.push_back({vram,               value});
     ordered_functions.push_back({ram,                value});
     ordered_functions.push_back({battery,            value});
+    ordered_functions.push_back({gamescope_fsr,      value});
     ordered_functions.push_back({fps,                value});
     ordered_functions.push_back({fps_only,           value});
 #ifndef MANGOAPP
