@@ -33,6 +33,8 @@ bool mangoapp_paused = false;
 std::mutex mangoapp_m;
 std::condition_variable mangoapp_cv;
 static uint8_t raw_msg[1024] = {0};
+uint8_t g_fsrUpscale;
+uint8_t g_fsrSharpness;
 
 void ctrl_thread(){
     while (1){
@@ -87,6 +89,8 @@ void msg_read_thread(){
         if (hdr->version == 1){
             if (msg_size > offsetof(struct mangoapp_msg_v1, frametime_ns)){
                 update_hud_info_with_frametime(sw_stats, *params, vendorID, mangoapp_v1->frametime_ns);
+                g_fsrUpscale = mangoapp_v1->fsrUpscale;
+                g_fsrSharpness = mangoapp_v1->fsrSharpness;
                 {
                     std::unique_lock<std::mutex> lk(mangoapp_m);
                     new_frame = true;
