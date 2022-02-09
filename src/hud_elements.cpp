@@ -8,6 +8,7 @@
 #include "hud_elements.h"
 #include "logging.h"
 #include "battery.h"
+#include "gamepad.h"
 #include "cpu.h"
 #include "memory.h"
 #include "mesa/util/macros.h"
@@ -588,7 +589,7 @@ void HudElements::frame_timing(){
         int width = ImGui::GetContentRegionAvailWidth() * HUDElements.params->table_columns - 30;
 #else
         int width = ImGui::GetContentRegionAvailWidth() * HUDElements.params->table_columns;
-#endif        
+#endif
             ImGui::PlotLines(hash, get_time_stat, HUDElements.sw_stats,
                             ARRAY_SIZE(HUDElements.sw_stats->frames_stats), 0,
                             NULL, min_time, max_time,
@@ -852,6 +853,41 @@ void HudElements::gamescope_frame_timing(){
 #endif
 }
 
+void HudElements::gamepad_battery()
+{
+#ifdef __linux__
+    gamepad_update();
+
+    if (gamepad_found) {
+        gamepad_info();
+        for (int i = 0; i < gamepad_count; i++) {
+            std::string battery = gamepad_data[i].battery;
+            std::string state = gamepad_data[i].state;
+            std::string name = gamepad_data[i].name;
+            ImGui::TableNextRow(); ImGui::TableNextColumn();
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            ImGui::TextColored(HUDElements.colors.engine, "%s", name.c_str());
+            ImGui::TableNextColumn();
+            if (state == "Charging")
+                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_USB);
+            else {
+                if (battery == "Full")
+                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_FULL);
+                else if (battery == "High")
+                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_THREE_QUARTERS);
+                else if (battery == "Normal")
+                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_HALF);
+                else if (battery == "Low")
+                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_QUARTER);
+                else
+                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_USB);
+            }
+            ImGui::PopFont();
+        }
+    }
+#endif
+}
+
 void HudElements::graphs(){
     ImGui::TableNextRow(); ImGui::TableNextColumn();
     ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
@@ -1003,6 +1039,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
     if (param == "fps_only")        { ordered_functions.push_back({fps_only, value});               }
     if (param == "fsr")             { ordered_functions.push_back({gamescope_fsr, value});          }
     if (param == "debug")           { ordered_functions.push_back({gamescope_frame_timing, value}); }
+    if (param == "gamepad_battery") { ordered_functions.push_back({gamepad_battery, value});        }
     if (param == "graphs"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs])
             HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs] = true;
