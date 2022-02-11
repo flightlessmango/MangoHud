@@ -59,15 +59,12 @@ void ctrl_thread(){
             switch (mangoapp_ctrl_v1->no_display){
                 case 1:
                     params->no_display = 1;
-                    printf("set no_display 1\n");
                     break;
                 case 2:
                     params->no_display = 0;
-                    printf("set no_display 0\n");
                     break;
                 case 3:
                     params->no_display ? params->no_display = 0 : params->no_display = 1;
-                    printf("toggle no_display\n");
                     break;
             }
         }
