@@ -594,10 +594,10 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
          if ((fp = fopen(device.c_str(), "r"))){
             fscanf(fp, "%s", str);
             uint32_t temp = strtol(str, NULL, 16);
-            if (temp != reported_deviceID && deviceID != 0){
-               SPDLOG_DEBUG("DeviceID does not match vulkan report {}", reported_deviceID);
-               continue;
-            }
+            // if (temp != reported_deviceID && deviceID != 0){
+            //    SPDLOG_DEBUG("DeviceID does not match vulkan report {}", reported_deviceID);
+            //    continue;
+            // }
             deviceID = temp;
             fclose(fp);
          }
