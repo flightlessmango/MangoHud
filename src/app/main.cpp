@@ -124,6 +124,7 @@ GLFWwindow* init(GLFWwindow* window, const char* glsl_version){
     glfwSwapInterval(1); // Enable vsync
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.IniFilename = NULL;
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
