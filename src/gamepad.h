@@ -14,10 +14,6 @@ extern std::vector<gamepad> gamepad_data;
 
 extern bool gamepad_found;
 extern int gamepad_count;
-extern int xone_count;
-extern int ds4_count;
-extern int ds5_count;
-extern int switch_count;
 void gamepad_update();
 void gamepad_info();
 

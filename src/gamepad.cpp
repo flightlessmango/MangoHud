@@ -80,7 +80,7 @@ void gamepad_info () {
 
         gamepad_data.push_back(gamepad());
 
-        //Xone devices
+        //Xone nad xpadneo devices
         if (path.find("gip") != std::string::npos || path.find("xpadneo") != std::string::npos) {
             if (xbox_count == 1 )
                 gamepad_data[gamepad_count].name = "XBOX PAD";
