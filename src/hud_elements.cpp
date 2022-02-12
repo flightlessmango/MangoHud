@@ -182,7 +182,7 @@ void HudElements::gpu_stats(){
         }
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power]) {
             ImGui::TableNextColumn();
-#ifdef MANGOAPP            
+#ifdef MANGOAPP
             right_aligned_text(text_color, HUDElements.ralign_width, "%.1f", gpu_info.powerUsage);
 #else
     right_aligned_text(text_color, HUDElements.ralign_width, "%.0f", gpu_info.powerUsage);
@@ -247,7 +247,7 @@ void HudElements::cpu_stats(){
         }
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_power]){
             ImGui::TableNextColumn();
-        #ifdef MANGOAPP   
+        #ifdef MANGOAPP
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", cpuStats.GetCPUDataTotal().power);
         #else
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", cpuStats.GetCPUDataTotal().power);
@@ -743,6 +743,10 @@ void HudElements::battery(){
                 ImGui::TableNextColumn();
                 ImGui::TextColored(HUDElements.colors.text, "%02.0f:%02.0f:%02.0f", hours, minutes, seconds);
             }
+            else {
+                ImGui::TableNextColumn();
+                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_PLUG);
+            }
         }
     }
 #endif
@@ -760,7 +764,7 @@ void HudElements::gamescope_fsr(){
         FSR_TEXT = "OFF";
         FSR_COLOR = HUDElements.colors.fps_value_low;
     }
-    
+
     ImGui::TextColored(HUDElements.colors.engine, "%s", "FSR");
     if (g_fsrUpscale){
         ImGui::SameLine();
