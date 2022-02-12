@@ -123,7 +123,7 @@ void gamepad_info () {
         }
         //8bitdo devices
         if (path.find("hid-e4") != std::string::npos) {
-            if (switch_count == 1)
+            if (bitdo_count == 1)
                 gamepad_data[gamepad_count].name = "8BITDO PAD";
             else
                 gamepad_data[gamepad_count].name = "8BITDO PAD-" + to_string(switch_counter + 1);

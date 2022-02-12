@@ -1090,6 +1090,7 @@ void HudElements::legacy_elements(){
     ordered_functions.push_back({show_fps_limit,     value});
     ordered_functions.push_back({resolution,         value});
 #endif
+    ordered_functions.push_back({gamepad_battery,    value});
     ordered_functions.push_back({media_player,       value});
 }
 
