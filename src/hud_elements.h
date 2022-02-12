@@ -61,7 +61,6 @@ class HudElements{
         static void fps_only();
         static void gamescope_fsr();
         static void gamescope_frame_timing();
-        static void xone_battery();
         static void gamepad_battery();
 
         void convert_colors(struct overlay_params& params);

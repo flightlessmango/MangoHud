@@ -10,7 +10,7 @@ std::vector<gamepad> gamepad_data;
 std::vector<std::string> list;
 bool gamepad_found = false;
 int  gamepad_count = 0;
-int xone_count = 0;
+int xbox_count = 0;
 int ds4_count = 0;
 int ds5_count = 0;
 int switch_count = 0;
@@ -25,7 +25,7 @@ bool operator<(const gamepad& a, const gamepad& b)
 void gamepad_update(){
     fs::path path("/sys/class/power_supply");
     list.clear();
-    xone_count = 0;
+    xbox_count = 0;
     ds4_count = 0;
     ds5_count = 0;
     switch_count = 0;
@@ -36,7 +36,7 @@ void gamepad_update(){
             if (fileName.find(n) != std::string::npos) {
                 list.push_back(p.path());
                 gamepad_found = true;
-                xone_count += 1;
+                xbox_count += 1;
             }
         }
         //CHECK FOR DUAL SHOCK 4 DEVICES
@@ -63,7 +63,7 @@ void gamepad_update(){
 void gamepad_info () {
     gamepad_count = 0;
     gamepad_data.clear();
-    int xone_counter = 0;
+    int xbox_counter = 0;
     int ds4_counter = 0;
     int ds5_counter = 0;
     int switch_counter = 0;
@@ -82,11 +82,11 @@ void gamepad_info () {
 
         //Xone devices
         if (path.find("gip") != std::string::npos || path.find("xpadneo") != std::string::npos) {
-            if (xone_count == 1 )
+            if (xbox_count == 1 )
                 gamepad_data[gamepad_count].name = "XBOX PAD";
             else
-                gamepad_data[gamepad_count].name = "XBOX PAD-" + to_string(xone_counter + 1);
-            xone_counter++;
+                gamepad_data[gamepad_count].name = "XBOX PAD-" + to_string(xbox_counter + 1);
+            xbox_counter++;
         }
         //DualShock 4 devices
         if (path.find("sony_controller") != std::string::npos) {
