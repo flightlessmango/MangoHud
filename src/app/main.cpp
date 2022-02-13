@@ -35,6 +35,35 @@ std::condition_variable mangoapp_cv;
 static uint8_t raw_msg[1024] = {0};
 uint8_t g_fsrUpscale = 0;
 uint8_t g_fsrSharpness = 0;
+GLFWwindow* glfwWindow;
+
+static unsigned int get_prop(GLFWwindow* window){
+    Display *x11_display = glfwGetX11Display();
+    Window x11_window = glfwGetX11Window(window);
+    Atom gamescope_focused = XInternAtom(x11_display, "GAMESCOPE_FOCUSED_APP", true);
+    auto scr = DefaultScreen(x11_display);
+    auto root = RootWindow(x11_display, scr);
+    Atom actual;
+    int format;
+    unsigned long n, left;
+    uint64_t *data;
+    int result = XGetWindowProperty(x11_display, root, gamescope_focused, 0L, 1L, false,
+                            XA_CARDINAL, &actual, &format,
+                            &n, &left, ( unsigned char** )&data);
+
+    if (result == Success && data != NULL){
+        bool *found = nullptr;
+        unsigned int i;
+        memcpy(&i, data, sizeof(unsigned int));
+        XFree((void *) data);
+        if ( found != nullptr )
+        {
+            *found = true;
+        }
+        return i;
+    }
+    return 0;
+}
 
 void ctrl_thread(){
     while (1){
@@ -93,6 +122,10 @@ void msg_read_thread(){
                 {
                     std::unique_lock<std::mutex> lk(mangoapp_m);
                     new_frame = true;
+                    if (get_prop(glfwWindow) == 769)
+                        params->no_display = 1;
+                    else
+                        params->no_display = 0;
                 }
                 mangoapp_cv.notify_one();
             }
@@ -163,7 +196,8 @@ int main(int, char**)
     glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, 1);
 
     // Create window with graphics context
-    GLFWwindow* window = init(window, glsl_version);;
+    GLFWwindow* window = init(window, glsl_version);
+    glfwWindow = window;
     // Initialize OpenGL loader
 
     bool err = glewInit() != GLEW_OK;

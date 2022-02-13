@@ -620,8 +620,7 @@ parse_overlay_config(struct overlay_params *params,
    params->fps_value = { 30, 60 };
    params->round_corners = 0;
    params->battery_color =0xff9078;
-
-
+   params->no_display = 1;
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_Shift_R, XK_F12 };
@@ -660,13 +659,6 @@ parse_overlay_config(struct overlay_params *params,
 
       // Get config options
       bool has_config_file = parseConfigFile(*params);
-#ifdef MANGOAPP
-      // Enable no_display if we have no config at all
-      // so we don't start randomly showing mangoapp if
-      // things went wrong somewhere.
-      if (!has_config_file)
-         params->no_display = true;
-#endif
       if (params->options.find("full") != params->options.end() && params->options.find("full")->second != "0") {
 #define OVERLAY_PARAM_BOOL(name) \
             params->enabled[OVERLAY_PARAM_ENABLED_##name] = 1;
