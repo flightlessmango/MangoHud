@@ -136,6 +136,8 @@ void gamepad_info () {
         //Get device Battery
         if (fs::exists(capacity)) {
             if (std::getline(input_capacity, line)) {
+                gamepad_data[gamepad_count].battery_percent = line;
+                gamepad_data[gamepad_count].report_percent = true;
                 switch(std::stoi(line)) {
                     case 0 ... 25:
                         gamepad_data[gamepad_count].battery = "Low";

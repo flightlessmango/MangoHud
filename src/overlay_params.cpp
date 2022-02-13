@@ -583,6 +583,7 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_frametime] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_fps_only] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_gamepad_battery] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_gamepad_battery_icon] = true;
    params->fps_sampling_period = 500000000; /* 500ms */
    params->width = 0;
    params->height = 140;
