@@ -129,10 +129,11 @@ void gamepad_info () {
                 gamepad_data[gamepad_count].name = "8BITDO PAD-" + to_string(bitdo_counter + 1);
             bitdo_counter++;
         }
-        //Get device status
-        if (std::getline(input_status, line))
-               gamepad_data[gamepad_count].state = line;
-
+        //Get device charging status
+        if (std::getline(input_status, line)) {
+            if (line == "Charging" || line == "Full")
+                 gamepad_data[gamepad_count].is_charging = true;
+        }
         //Get device Battery
         if (fs::exists(capacity)) {
             if (std::getline(input_capacity, line)) {

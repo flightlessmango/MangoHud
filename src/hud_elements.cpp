@@ -862,17 +862,17 @@ void HudElements::gamepad_battery()
         gamepad_info();
         for (int i = 0; i < gamepad_count; i++) {
             std::string battery = gamepad_data[i].battery;
-            std::string state = gamepad_data[i].state;
             std::string name = gamepad_data[i].name;
             std::string battery_percent = gamepad_data[i].battery_percent;
             bool report_percent = gamepad_data[i].report_percent;
+            bool charging = gamepad_data[i].is_charging;
 
             ImGui::TableNextRow(); ImGui::TableNextColumn();
             ImGui::PushFont(HUDElements.sw_stats->font1);
             ImGui::TextColored(HUDElements.colors.engine, "%s", name.c_str());
             ImGui::TableNextColumn();
             if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gamepad_battery_icon]) {
-                if (state == "Charging" || state == "Full")
+                if (charging)
                     right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_USB);
                 else {
                     if (battery == "Full")
@@ -888,7 +888,7 @@ void HudElements::gamepad_battery()
                 }
             }
             else {
-                if (state == "Charging" || state == "Full")
+                if (charging)
                     right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_USB);
                 else if (report_percent) {
                     right_aligned_text(HUDElements.colors.text,HUDElements.ralign_width, "%s", battery_percent.c_str());

@@ -6,10 +6,10 @@
 
 struct gamepad {
     std::string battery;
-    std::string state;
     std::string name;
     bool report_percent;
     std::string battery_percent;
+    bool is_charging;
 };
 
 extern std::vector<gamepad> gamepad_data;
