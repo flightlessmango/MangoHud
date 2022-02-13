@@ -104,7 +104,7 @@ float BatteryStats::getPower() {
             state[i]=current_status;
         }
 
-        if (state[i] == "Charging" ||  state[i] == "Unknown") {
+        if (state[i] == "Charging" ||  state[i] == "Unknown" || state[i] == "Full") {
             return 0;
         }
 
@@ -171,7 +171,7 @@ float BatteryStats::getTimeRemaining(){
         if (current_now_vec.size() > 25)
             current_now_vec.erase(current_now_vec.begin());
     }
-    
+
     for(auto& current_now : current_now_vec){
         current += current_now;
     }
