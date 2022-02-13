@@ -732,16 +732,17 @@ void HudElements::battery(){
                 ImGui::TableNextRow(); ImGui::TableNextColumn();
                 float hours;
                 float minutes;
-                float seconds;
+                // float seconds;
                 minutes = std::modf(Battery_Stats.remaining_time, &hours);
                 minutes *= 60;
-                seconds = std::modf(minutes, &minutes);
-                seconds *= 60;
+                // seconds = std::modf(minutes, &minutes);
+                // seconds *= 60;
                 ImGui::PushFont(HUDElements.sw_stats->font1);
                 ImGui::TextColored(HUDElements.colors.text, "%s", "Remaining Time");
                 ImGui::PopFont();
-                ImGui::TableNextColumn();
-                ImGui::TextColored(HUDElements.colors.text, "%02.0f:%02.0f:%02.0f", hours, minutes, seconds);
+                ImGui::TableNextColumn(); ImGui::TableNextColumn();
+                // ImGui::TextColored(HUDElements.colors.text, "%02.0f:%02.0f:%02.0f", hours, minutes, seconds);
+                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%02.0f:%02.0f", hours, minutes);
             }
             else {
                 ImGui::TableNextColumn();
