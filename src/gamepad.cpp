@@ -126,7 +126,7 @@ void gamepad_info () {
             if (bitdo_count == 1)
                 gamepad_data[gamepad_count].name = "8BITDO PAD";
             else
-                gamepad_data[gamepad_count].name = "8BITDO PAD-" + to_string(switch_counter + 1);
+                gamepad_data[gamepad_count].name = "8BITDO PAD-" + to_string(bitdo_counter + 1);
             bitdo_counter++;
         }
         //Get device status
