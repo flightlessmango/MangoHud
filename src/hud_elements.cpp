@@ -770,11 +770,13 @@ void HudElements::gamescope_fsr(){
     ImGui::TableNextColumn();
     right_aligned_text(FSR_COLOR, HUDElements.ralign_width, "%s", FSR_TEXT.c_str());
     ImGui::TableNextColumn();
-    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", g_fsrSharpness);
-    ImGui::SameLine(0,1.0f);
-    ImGui::PushFont(HUDElements.sw_stats->font1);
-    ImGui::Text("Sharp");
-    ImGui::PopFont();
+    if (g_fsrUpscale){
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", g_fsrSharpness);
+        ImGui::SameLine(0,1.0f);
+        ImGui::PushFont(HUDElements.sw_stats->font1);
+        ImGui::Text("Sharp");
+        ImGui::PopFont();
+    }
 #endif
 }
 
