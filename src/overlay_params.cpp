@@ -525,6 +525,7 @@ parse_overlay_env(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_fps_color_change] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_core_load_change] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_battery_icon] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = read_cfg;
       }
 #define OVERLAY_PARAM_BOOL(name)                                       \
@@ -620,9 +621,6 @@ parse_overlay_config(struct overlay_params *params,
    params->fps_value = { 30, 60 };
    params->round_corners = 0;
    params->battery_color =0xff9078;
-#ifdef MANGOAPP
-   params->no_display = 1;
-#endif
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_Shift_R, XK_F12 };
@@ -672,6 +670,7 @@ parse_overlay_config(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_fps_only] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_battery_icon] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam] = 0;
          params->options.erase("full");
       }
       for (auto& it : params->options) {
@@ -816,6 +815,10 @@ parse_overlay_config(struct overlay_params *params,
    if(params->autostart_log && !logger->is_active())
       std::thread(autostart_log, params->autostart_log).detach();
 #ifdef MANGOAPP
+   if (params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam])
+      params->no_display = 0;
+   else
+      params->no_display = 1;
    {
       extern bool new_frame;
       std::lock_guard<std::mutex> lk(mangoapp_m);

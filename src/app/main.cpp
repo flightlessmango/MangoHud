@@ -122,10 +122,12 @@ void msg_read_thread(){
                 {
                     std::unique_lock<std::mutex> lk(mangoapp_m);
                     new_frame = true;
-                    if (get_prop(glfwWindow) == 769)
-                        params->no_display = 1;
-                    else
-                        params->no_display = 0;
+                    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam]){
+                        if (get_prop() == 769)
+                            params->no_display = 1;
+                        else
+                            params->no_display = 0;
+                    }
                 }
                 mangoapp_cv.notify_one();
             }
