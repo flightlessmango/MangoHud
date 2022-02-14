@@ -35,11 +35,9 @@ std::condition_variable mangoapp_cv;
 static uint8_t raw_msg[1024] = {0};
 uint8_t g_fsrUpscale = 0;
 uint8_t g_fsrSharpness = 0;
-GLFWwindow* glfwWindow;
 
-static unsigned int get_prop(GLFWwindow* window){
+static unsigned int get_prop(){
     Display *x11_display = glfwGetX11Display();
-    Window x11_window = glfwGetX11Window(window);
     Atom gamescope_focused = XInternAtom(x11_display, "GAMESCOPE_FOCUSED_APP", true);
     auto scr = DefaultScreen(x11_display);
     auto root = RootWindow(x11_display, scr);
@@ -199,7 +197,6 @@ int main(int, char**)
 
     // Create window with graphics context
     GLFWwindow* window = init(window, glsl_version);
-    glfwWindow = window;
     // Initialize OpenGL loader
 
     bool err = glewInit() != GLEW_OK;
