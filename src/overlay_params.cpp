@@ -620,7 +620,9 @@ parse_overlay_config(struct overlay_params *params,
    params->fps_value = { 30, 60 };
    params->round_corners = 0;
    params->battery_color =0xff9078;
+#ifdef MANGOAPP
    params->no_display = 1;
+#endif
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_Shift_R, XK_F12 };
