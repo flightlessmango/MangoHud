@@ -1932,10 +1932,14 @@ static void overlay_DestroyInstance(
 
 extern "C" VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetDeviceProcAddr(VkDevice dev,
                                                                              const char *funcName);
+extern "C" VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetInstanceProcAddr(VkInstance instance,
+                                                                               const char *funcName);
+
 static const struct {
    const char *name;
    void *ptr;
 } name_to_funcptr_map[] = {
+   { "vkGetInstanceProcAddr", (void *) overlay_GetInstanceProcAddr },
    { "vkGetDeviceProcAddr", (void *) overlay_GetDeviceProcAddr },
 #define ADD_HOOK(fn) { "vk" # fn, (void *) overlay_ ## fn }
 #define ADD_ALIAS_HOOK(alias, fn) { "vk" # alias, (void *) overlay_ ## fn }
