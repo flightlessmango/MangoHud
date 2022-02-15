@@ -815,10 +815,6 @@ parse_overlay_config(struct overlay_params *params,
    if(params->autostart_log && !logger->is_active())
       std::thread(autostart_log, params->autostart_log).detach();
 #ifdef MANGOAPP
-   if (params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam])
-      params->no_display = 0;
-   else
-      params->no_display = 1;
    {
       extern bool new_frame;
       std::lock_guard<std::mutex> lk(mangoapp_m);

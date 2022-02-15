@@ -145,9 +145,9 @@ void msg_read_thread(){
                     new_frame = true;
                     if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam]){
                         if (get_prop() == 769)
-                            params->no_display = 1;
+                            steam_focused = true;
                         else
-                            params->no_display = 0;
+                            steam_focused = false;
                     }
                 }
                 mangoapp_cv.notify_one();

@@ -46,6 +46,7 @@ const char* engines[] = {"Unknown", "OpenGL", "VULKAN", "DXVK", "VKD3D", "DAMAVA
 overlay_params *_params {};
 double min_frametime, max_frametime;
 bool gpu_metrics_exists = false;
+bool steam_focused = false;
 
 void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID)
 {
@@ -491,7 +492,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       old_scale = params.font_scale;
    }
 
-   if (!params.no_display){
+   if (!params.no_display && !steam_focused){
       ImGui::Begin("Main", &gui_open, ImGuiWindowFlags_NoDecoration);
       ImGui::BeginTable("hud", params.table_columns, ImGuiTableFlags_NoClip);
       HUDElements.place = 0;
