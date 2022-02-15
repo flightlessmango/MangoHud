@@ -35,6 +35,8 @@ std::condition_variable mangoapp_cv;
 static uint8_t raw_msg[1024] = {0};
 uint8_t g_fsrUpscale = 0;
 uint8_t g_fsrSharpness = 0;
+std::vector<float> gamescope_debug_latency {};
+std::vector<float> gamescope_debug_app {};
 
 void ctrl_thread(){
     while (1){
@@ -74,7 +76,25 @@ void ctrl_thread(){
 
 bool new_frame = false;
 
+void gamescope_frametime(uint64_t app_frametime_ns, uint64_t latency_ns){
+    float app_frametime_ms = app_frametime_ns / 1000000.f;
+    gamescope_debug_app.push_back(app_frametime_ms);
+    if (gamescope_debug_app.size() > 200)
+        gamescope_debug_app.erase(gamescope_debug_app.begin());
+
+    float latency_ms = latency_ns / 1000000.f;
+    if (latency_ns == -1)
+        latency_ms = -1;
+    gamescope_debug_latency.push_back(latency_ms);
+    if (gamescope_debug_latency.size() > 200)
+        gamescope_debug_latency.erase(gamescope_debug_latency.begin());
+}
+
 void msg_read_thread(){
+    for (size_t i = 0; i < 200; i++){
+        gamescope_debug_app.push_back(0);
+        gamescope_debug_latency.push_back(0);
+    }
     int key = ftok("mangoapp", 65);
     msgid = msgget(key, 0666 | IPC_CREAT);
     const struct mangoapp_msg_header *hdr = (const struct mangoapp_msg_header*) raw_msg;
@@ -84,11 +104,14 @@ void msg_read_thread(){
         // and that we're not trying to use variables that don't exist (yet)
         size_t msg_size = msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 1, 0);
         if (hdr->version == 1){
-            if (msg_size > offsetof(struct mangoapp_msg_v1, frametime_ns)){
-                update_hud_info_with_frametime(sw_stats, *params, vendorID, mangoapp_v1->frametime_ns);
+            if (msg_size > offsetof(struct mangoapp_msg_v1, visible_frametime_ns)){
+                update_hud_info_with_frametime(sw_stats, *params, vendorID, mangoapp_v1->visible_frametime_ns);
                 if (msg_size > offsetof(mangoapp_msg_v1, fsrUpscale)){
                     g_fsrUpscale = mangoapp_v1->fsrUpscale;
                     g_fsrSharpness = mangoapp_v1->fsrSharpness;
+                }
+                if (msg_size > offsetof(mangoapp_msg_v1, latency_ns)){
+                    gamescope_frametime(mangoapp_v1->app_frametime_ns, mangoapp_v1->latency_ns);
                 }
                 {
                     std::unique_lock<std::mutex> lk(mangoapp_m);
