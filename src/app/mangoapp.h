@@ -3,6 +3,7 @@
 #include <sys/msg.h>
 #include <mutex>
 #include <condition_variable>
+#include <vector>
 
 extern int ctrl_msgid;
 extern int msgid;
@@ -18,9 +19,12 @@ struct mangoapp_msg_v1 {
     struct mangoapp_msg_header hdr;
     
     uint32_t pid;
-    uint64_t frametime_ns;
+    uint64_t visible_frametime_ns;
     uint8_t fsrUpscale;
     uint8_t fsrSharpness;
+    // For debugging
+    uint64_t app_frametime_ns;
+    uint64_t latency_ns;
     // WARNING: Always ADD fields, never remove or repurpose fields
 } __attribute__((packed));
 
@@ -43,3 +47,5 @@ struct mangoapp_ctrl_msgid1_v1 {
 
 extern uint8_t g_fsrUpscale;
 extern uint8_t g_fsrSharpness;
+extern std::vector<float> gamescope_debug_latency;
+extern std::vector<float> gamescope_debug_app;

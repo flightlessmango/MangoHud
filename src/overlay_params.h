@@ -77,6 +77,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(fps_only)                      \
    OVERLAY_PARAM_BOOL(fsr)                           \
    OVERLAY_PARAM_BOOL(mangoapp_steam)                \
+   OVERLAY_PARAM_BOOL(debug)                         \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
