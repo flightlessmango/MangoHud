@@ -148,6 +148,8 @@ void msg_read_thread(){
                             steam_focused = true;
                         else
                             steam_focused = false;
+                    } else {
+                        steam_focused = false;
                     }
                 }
                 mangoapp_cv.notify_one();
