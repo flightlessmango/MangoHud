@@ -237,7 +237,7 @@ bool CPUStats::UpdateCoreMhz() {
             fclose(fp);
         }
     }
-    
+
     m_cpuDataTotal.cpu_mhz = 0;
     for (auto data : m_cpuData)
         if (data.mhz > m_cpuDataTotal.cpu_mhz)
@@ -441,7 +441,7 @@ bool CPUStats::GetCpuFile() {
             break;
         } else if (name == "atk0110") {
             find_temp_input(path, input, "CPU Temperature");
-            break;        
+            break;
         } else {
             path.clear();
         }
@@ -570,7 +570,8 @@ bool CPUStats::InitCpuPowerData() {
                 break;
             }
         }
-    } else {
+    }
+    if (!cpuPowerData && !intel) {
         auto powerData = std::make_unique<CPUPowerData_amdgpu>();
         cpuPowerData = (CPUPowerData*)powerData.release();
     }
