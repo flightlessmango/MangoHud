@@ -131,13 +131,13 @@ void msg_read_thread(){
         // and that we're not trying to use variables that don't exist (yet)
         size_t msg_size = msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 1, 0);
         if (hdr->version == 1){
-            if (msg_size > offsetof(struct mangoapp_msg_v1, visible_frametime_ns)){
+            if (msg_size > offsetof(struct mangoapp_msg_v1, visible_frametime_ns) + sizeof(long)){
                 update_hud_info_with_frametime(sw_stats, *params, vendorID, mangoapp_v1->visible_frametime_ns);
-                if (msg_size > offsetof(mangoapp_msg_v1, fsrUpscale)){
+                if (msg_size > offsetof(mangoapp_msg_v1, fsrUpscale) + sizeof(long)){
                     g_fsrUpscale = mangoapp_v1->fsrUpscale;
                     g_fsrSharpness = mangoapp_v1->fsrSharpness;
                 }
-                if (msg_size > offsetof(mangoapp_msg_v1, latency_ns)){
+                if (msg_size > offsetof(mangoapp_msg_v1, latency_ns) + sizeof(long)){
                     gamescope_frametime(mangoapp_v1->app_frametime_ns, mangoapp_v1->latency_ns);
                 }
                 {
