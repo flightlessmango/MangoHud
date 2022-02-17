@@ -47,6 +47,7 @@ overlay_params *_params {};
 double min_frametime, max_frametime;
 bool gpu_metrics_exists = false;
 bool steam_focused = false;
+vector<float> frametime_data = {};
 
 void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID)
 {
@@ -170,7 +171,12 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, struct ove
    uint32_t f_idx = sw_stats.n_frames % ARRAY_SIZE(sw_stats.frames_stats);
    uint64_t now = os_time_get_nano(); /* ns */
    double elapsed = (double)(now - sw_stats.last_fps_update); /* ns */
-   fps = 1000000000.0 * sw_stats.n_frames_since_update / elapsed;
+   float frametime_ms = frametime_ns / 1000000.f;
+   fps = 1000.f / frametime_ms;
+   frametime_data.push_back(frametime_ms);
+   if (frametime_data.size() > 200)
+      frametime_data.erase(frametime_data.begin(), frametime_data.end());
+
    if (logger->is_active())
       benchmark.fps_data.push_back(fps);
 
@@ -199,13 +205,17 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, struct ove
       sw_stats.last_fps_update = now;
 
    }
-   double min_time = UINT64_MAX, max_time = 0;
-   for (auto& stat : sw_stats.frames_stats ){
-      min_time = MIN2(stat.stats[0], min_time);
-      max_time = MAX2(stat.stats[0], min_time);
-   }
-   min_frametime = min_time / sw_stats.time_dividor;
-   max_frametime = max_time / sw_stats.time_dividor;
+   auto min = std::min_element(frametime_data.begin(), frametime_data.end());
+   auto max = std::max_element(frametime_data.begin(), frametime_data.end());
+   min_frametime = min[0];
+   max_frametime = max[0];
+   // double min_time = UINT64_MAX, max_time = 0;
+   // for (auto& stat : sw_stats.frames_stats ){
+   //    min_time = MIN2(stat.stats[0], min_time);
+   //    max_time = MAX2(stat.stats[0], min_time);
+   // }
+   // min_frametime = min_time / sw_stats.time_dividor;
+   // max_frametime = max_time / sw_stats.time_dividor;
    if (params.log_interval == 0){
       logger->try_log();
    }
