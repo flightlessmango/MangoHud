@@ -148,6 +148,7 @@ extern std::deque<logData> graph_data;
 extern overlay_params *_params;
 extern double min_frametime, max_frametime;
 extern bool steam_focused;
+extern int current_fps_limit;
 
 void position_layer(struct swapchain_stats& data, struct overlay_params& params, ImVec2 window_size);
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan);

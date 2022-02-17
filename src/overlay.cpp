@@ -23,6 +23,7 @@
 #include "memory.h"
 #include "pci_ids.h"
 #include "timing.hpp"
+#include "app/mangoapp.h"
 
 #ifdef __linux__
 #include <libgen.h>
@@ -47,6 +48,7 @@ overlay_params *_params {};
 double min_frametime, max_frametime;
 bool gpu_metrics_exists = false;
 bool steam_focused = false;
+int current_fps_limit = 0;
 
 void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID)
 {
@@ -197,7 +199,16 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, struct ove
 
       sw_stats.n_frames_since_update = 0;
       sw_stats.last_fps_update = now;
-
+#ifdef MANGOAPP
+      current_fps_limit = get_prop("GAMESCOPE_FPS_LIMIT");
+#else
+        int limit = 0;
+        double frame_time_limit = (double)fps_limit_stats.targetFrameTime.count() / 1000000;
+        limit = (1 / frame_time_limit) *1000;
+        if (frame_time_limit == 0.0)
+            limit = 0;
+      current_fps_limit = limit;
+#endif
    }
    double min_time = UINT64_MAX, max_time = 0;
    for (auto& stat : sw_stats.frames_stats ){

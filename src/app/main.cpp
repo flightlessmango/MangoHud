@@ -38,9 +38,9 @@ uint8_t g_fsrSharpness = 0;
 std::vector<float> gamescope_debug_latency {};
 std::vector<float> gamescope_debug_app {};
 
-static unsigned int get_prop(){
+unsigned int get_prop(const char* name){
     Display *x11_display = glfwGetX11Display();
-    Atom gamescope_focused = XInternAtom(x11_display, "GAMESCOPE_FOCUSED_APP", true);
+    Atom gamescope_focused = XInternAtom(x11_display, name, true);
     auto scr = DefaultScreen(x11_display);
     auto root = RootWindow(x11_display, scr);
     Atom actual;
@@ -144,7 +144,7 @@ void msg_read_thread(){
                     std::unique_lock<std::mutex> lk(mangoapp_m);
                     new_frame = true;
                     if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam]){
-                        if (get_prop() == 769)
+                        if (get_prop("GAMESCOPE_FOCUSED_APP") == 769)
                             steam_focused = true;
                         else
                             steam_focused = false;

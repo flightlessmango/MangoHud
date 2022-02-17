@@ -632,17 +632,14 @@ void HudElements::resolution(){
 
 void HudElements::show_fps_limit(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_show_fps_limit]){
-        int fps = 0;
-        double frame_time = (double)fps_limit_stats.targetFrameTime.count()/1000000;
-        fps = (1 / frame_time) *1000;
-        if (frame_time == 0.0){
-            fps = 0;
-        }
         ImGui::TableNextRow(); ImGui::TableNextColumn();
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TextColored(HUDElements.colors.engine, "%s","FPS limit");
         ImGui::TableNextColumn();
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", fps);
+        if (current_fps_limit == 0)
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", "OFF");
+        else
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", current_fps_limit); 
         ImGui::PopFont();
     }
 }
@@ -981,8 +978,8 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
     if (param == "engine_version")  { ordered_functions.push_back({engine_version, value});         }
     if (param == "vulkan_driver")   { ordered_functions.push_back({vulkan_driver, value});          }
     if (param == "resolution")      { ordered_functions.push_back({resolution, value});             }
-    if (param == "show_fps_limit")  { ordered_functions.push_back({show_fps_limit, value});         }
 #endif
+    if (param == "show_fps_limit")  { ordered_functions.push_back({show_fps_limit, value});         }
     if (param == "vram")            { ordered_functions.push_back({vram, value});                   }
     if (param == "ram")             { ordered_functions.push_back({ram, value});                    }
     if (param == "fps")             { ordered_functions.push_back({fps, value});                    }
@@ -1044,7 +1041,9 @@ void HudElements::legacy_elements(){
 #ifndef MANGOAPP
     ordered_functions.push_back({gamemode,           value});
     ordered_functions.push_back({vkbasalt,           value});
+#endif
     ordered_functions.push_back({show_fps_limit,     value});
+#ifndef MANGOAPP
     ordered_functions.push_back({resolution,         value});
 #endif
     ordered_functions.push_back({media_player,       value});
