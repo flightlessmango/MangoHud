@@ -631,14 +631,14 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
 
          SPDLOG_DEBUG("using amdgpu path: {}", path);
 
-#ifdef HAVE_LIBDRM_AMDGPU
-         struct stat buffer;
          std::string gpu_metrics_path = path + "/device/gpu_metrics";
-         if (stat(gpu_metrics_path.c_str(), &buffer) == 0 ){
+         if (file_exists(gpu_metrics_path)) {
             gpu_metrics_exists = true;
             metrics_path = gpu_metrics_path;
             SPDLOG_DEBUG("Using gpu_metrics");
-         } else {
+         }
+#ifdef HAVE_LIBDRM_AMDGPU
+         else {
             int idx = -1;
             //TODO make neater
             int res = sscanf(path.c_str(), "/sys/class/drm/card%d", &idx);

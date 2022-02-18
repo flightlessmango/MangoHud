@@ -1,5 +1,5 @@
 #include "amdgpu.h"
-#include "overlay.h"
+#include "gpu.h"
 #include "cpu.h"
 
 std::string metrics_path = "";
