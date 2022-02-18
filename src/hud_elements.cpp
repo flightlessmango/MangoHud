@@ -584,17 +584,23 @@ void HudElements::frame_timing(){
                                 NULL, min_time, max_time,
                                 ImVec2(ImGui::GetContentRegionAvailWidth() * HUDElements.params->table_columns, 50));
         } else {
+#ifdef MANGOAPP
+        int width = ImGui::GetContentRegionAvailWidth() * HUDElements.params->table_columns - 30;
+#else
+        int width = ImGui::GetContentRegionAvailWidth() * HUDElements.params->table_columns;
+#endif        
             ImGui::PlotLines(hash, get_time_stat, HUDElements.sw_stats,
                             ARRAY_SIZE(HUDElements.sw_stats->frames_stats), 0,
                             NULL, min_time, max_time,
-                            ImVec2(ImGui::GetContentRegionAvailWidth() * HUDElements.params->table_columns - 30, 50));
+                            ImVec2(width, 50));
+#ifdef MANGOAPP
             ImGui::SameLine();
             ImGui::PushFont(HUDElements.sw_stats->font1);
             ImGui::Text("%.1fms", frametime / 1000.f);
             ImGui::PopFont();
+#endif
         }
         ImGui::PopStyleColor();
-
     }
 }
 
