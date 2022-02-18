@@ -47,7 +47,7 @@ overlay_params *_params {};
 double min_frametime, max_frametime;
 bool gpu_metrics_exists = false;
 bool steam_focused = false;
-vector<float> frametime_data = {};
+vector<float> frametime_data(200,0.f);
 
 void update_hw_info(struct overlay_params& params, uint32_t vendorID)
 {
@@ -170,10 +170,7 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, struct ove
    uint64_t now = os_time_get_nano(); /* ns */
    double elapsed = (double)(now - sw_stats.last_fps_update); /* ns */
    float frametime_ms = frametime_ns / 1000000.f;
-   fps = 1000.f / frametime_ms;
-   frametime_data.push_back(frametime_ms);
-   if (frametime_data.size() > 200)
-      frametime_data.erase(frametime_data.begin(), frametime_data.end());
+   frametime_data[f_idx] = frametime_ms;
 
    if (logger->is_active())
       benchmark.fps_data.push_back(fps);
