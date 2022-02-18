@@ -40,7 +40,7 @@ std::vector<float> gamescope_debug_app {};
 
 static unsigned int get_prop(){
     Display *x11_display = glfwGetX11Display();
-    Atom gamescope_focused = XInternAtom(x11_display, "GAMESCOPE_FOCUSED_APP", true);
+    Atom gamescope_focused = XInternAtom(x11_display, "GAMESCOPE_FOCUSED_APP_GFX", true);
     auto scr = DefaultScreen(x11_display);
     auto root = RootWindow(x11_display, scr);
     Atom actual;
