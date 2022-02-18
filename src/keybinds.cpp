@@ -3,7 +3,7 @@
 #include "logging.h"
 #include "keybinds.h"
 
-void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
+void check_keybinds(struct overlay_params& params, uint32_t vendorID){
    using namespace std::chrono_literals;
    bool pressed = false; // FIXME just a placeholder until wayland support
    auto now = Clock::now(); /* us */
@@ -32,8 +32,7 @@ void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& par
          logger->stop_logging();
        } else {
          logger->start_logging();
-         std::thread(update_hw_info, std::ref(sw_stats), std::ref(params),
-                     vendorID)
+         std::thread(update_hw_info, std::ref(params), vendorID)
              .detach();
          benchmark.fps_data.clear();
        }

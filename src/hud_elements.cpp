@@ -316,7 +316,7 @@ void HudElements::io_stats(){
 
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_io_read]){
             ImGui::TableNextColumn();
-            float val = HUDElements.sw_stats->io.per_second.read;
+            const float val = g_io_stats.per_second.read;
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, val < 100 ? "%.1f" : "%.f", val);
             ImGui::SameLine(0,1.0f);
             ImGui::PushFont(HUDElements.sw_stats->font1);
@@ -325,7 +325,7 @@ void HudElements::io_stats(){
         }
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_io_write]){
             ImGui::TableNextColumn();
-            float val = HUDElements.sw_stats->io.per_second.write;
+            const float val = g_io_stats.per_second.write;
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, val < 100 ? "%.1f" : "%.f", val);
             ImGui::SameLine(0,1.0f);
             ImGui::PushFont(HUDElements.sw_stats->font1);

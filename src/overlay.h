@@ -62,7 +62,6 @@ struct swapchain_stats {
    size_t font_params_hash = 0;
    std::string time;
    double fps;
-   struct iostats io;
    uint64_t last_present_time;
    unsigned n_frames_since_update;
    uint64_t last_fps_update;
@@ -153,10 +152,10 @@ void position_layer(struct swapchain_stats& data, struct overlay_params& params,
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan);
 void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID);
 void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID, uint64_t frametime_ns);
-void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID);
+void update_hw_info(struct overlay_params& params, uint32_t vendorID);
 void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_params& params);
 void init_cpu_stats(overlay_params& params);
-void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID);
+void check_keybinds(overlay_params& params, uint32_t vendorID);
 void init_system_info(void);
 void FpsLimiter(struct fps_limit& stats);
 void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats);

@@ -25,6 +25,7 @@ struct iostats {
     Clock::time_point last_update;
 };
 
-void getIoStats(void *args);
+extern iostats g_io_stats;
+void getIoStats(iostats& io);
 
 #endif //MANGOHUD_IOSTATS_H

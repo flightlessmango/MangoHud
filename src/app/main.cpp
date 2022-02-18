@@ -272,7 +272,7 @@ int main(int, char**)
                 new_frame = false;
             }
 
-            check_keybinds(sw_stats, *params, vendorID);
+            check_keybinds(*params, vendorID);
             // Start the Dear ImGui frame
             {
                 if (render(window)) {

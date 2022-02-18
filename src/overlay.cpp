@@ -49,7 +49,7 @@ bool gpu_metrics_exists = false;
 bool steam_focused = false;
 vector<float> frametime_data = {};
 
-void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID)
+void update_hw_info(struct overlay_params& params, uint32_t vendorID)
 {
    if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
       cpuStats.UpdateCPUData();
@@ -66,7 +66,7 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
    if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || logger->is_active()) {
       if (vendorID == 0x1002 && getAmdGpuInfo_actual)
          getAmdGpuInfo_actual();
-      
+
       if (gpu_metrics_exists)
          amdgpu_get_metrics();
 
@@ -82,7 +82,7 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
    if (params.enabled[OVERLAY_PARAM_ENABLED_procmem])
       update_procmem();
    if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])
-      getIoStats(&sw_stats.io);
+      getIoStats(g_io_stats);
 #endif
 
    currentLogData.gpu_load = gpu_info.load;
@@ -109,7 +109,6 @@ struct hw_info_updater
 {
    bool quit = false;
    std::thread thread {};
-   struct swapchain_stats* sw_stats = nullptr;
    struct overlay_params* params = nullptr;
    uint32_t vendorID;
    bool update_hw_info_thread = false;
@@ -130,12 +129,11 @@ struct hw_info_updater
          thread.join();
    }
 
-   void update(struct swapchain_stats* sw_stats_, struct overlay_params* params_, uint32_t vendorID_)
+   void update(struct overlay_params* params_, uint32_t vendorID_)
    {
       std::unique_lock<std::mutex> lk_hw_updating(m_hw_updating, std::try_to_lock);
       if (lk_hw_updating.owns_lock())
       {
-         sw_stats = sw_stats_;
          params = params_;
          vendorID = vendorID_;
          update_hw_info_thread = true;
@@ -149,10 +147,10 @@ struct hw_info_updater
          cv_hwupdate.wait(lk_cv_hwupdate, [&]{ return update_hw_info_thread || quit; });
          if (quit) break;
 
-         if (sw_stats && params)
+         if (params)
          {
             std::unique_lock<std::mutex> lk_hw_updating(m_hw_updating);
-            update_hw_info(*sw_stats, *params, vendorID);
+            update_hw_info(*params, vendorID);
          }
          update_hw_info_thread = false;
       }
@@ -190,7 +188,7 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, struct ove
    if (elapsed >= params.fps_sampling_period) {
       if (!hw_update_thread)
          hw_update_thread = std::make_unique<hw_info_updater>();
-      hw_update_thread->update(&sw_stats, &params, vendorID);
+      hw_update_thread->update(&params, vendorID);
 
       sw_stats.fps = fps;
 
