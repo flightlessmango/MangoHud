@@ -190,7 +190,7 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, struct ove
          hw_update_thread = std::make_unique<hw_info_updater>();
       hw_update_thread->update(&params, vendorID);
 
-      sw_stats.fps = fps;
+      sw_stats.fps = 1000000000.0 * sw_stats.n_frames_since_update / elapsed;
 
       if (params.enabled[OVERLAY_PARAM_ENABLED_time]) {
          std::time_t t = std::time(nullptr);
