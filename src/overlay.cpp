@@ -173,7 +173,7 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, struct ove
    frametime_data[f_idx] = frametime_ms;
 
    if (logger->is_active())
-      benchmark.fps_data.push_back(fps);
+      benchmark.fps_data.push_back(1000 / frametime_ms);
 
    if (sw_stats.last_present_time) {
         sw_stats.frames_stats[f_idx].stats[OVERLAY_PLOTS_frame_timing] =
