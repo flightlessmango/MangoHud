@@ -306,6 +306,7 @@ void HudElements::core_load(){
 }
 
 void HudElements::io_stats(){
+#ifndef _WIN32
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_io_read] || HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_io_write]){
         ImGui::TableNextRow(); ImGui::TableNextColumn();
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_io_read] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_io_write])
@@ -334,6 +335,7 @@ void HudElements::io_stats(){
             ImGui::PopFont();
         }
     }
+#endif
 }
 
 void HudElements::vram(){

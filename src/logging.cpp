@@ -16,8 +16,10 @@ logData currentLogData = {};
 std::unique_ptr<Logger> logger;
 
 string exec(string command) {
+#ifndef _WIN32
     if (getenv("LD_PRELOAD"))
         unsetenv("LD_PRELOAD");
+#endif
     std::array<char, 128> buffer;
     std::string result;
     std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command.c_str(), "r"), pclose);

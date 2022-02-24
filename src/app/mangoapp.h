@@ -1,6 +1,8 @@
 #include <stdint.h>
+#ifndef _WIN32
 #include <sys/ipc.h>
 #include <sys/msg.h>
+#endif
 #include <mutex>
 #include <condition_variable>
 #include <vector>
