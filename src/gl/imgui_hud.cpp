@@ -7,6 +7,7 @@
 #include <memory>
 #include <unistd.h>
 #include <filesystem.h>
+#include <spdlog/spdlog.h>
 #include <imgui.h>
 #include "font_default.h"
 #include "cpu.h"
@@ -128,6 +129,7 @@ void imgui_create(void *ctx)
         sw_stats.version_gl.is_gles);
 
     deviceName = (char*)glGetString(GL_RENDERER);
+    SPDLOG_DEBUG("deviceName: {}", deviceName);
     sw_stats.deviceName = deviceName;
     if (deviceName.find("Radeon") != std::string::npos
     || deviceName.find("AMD") != std::string::npos){
@@ -136,7 +138,8 @@ void imgui_create(void *ctx)
         vendorID = 0x10de;
     }
     init_gpu_stats(vendorID, 0, params);
-    get_device_name(vendorID, deviceID, sw_stats);
+    sw_stats.gpuName = gpu = get_device_name(vendorID, deviceID);
+    SPDLOG_DEBUG("gpu: {}", gpu);
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGuiContext *saved_ctx = ImGui::GetCurrentContext();

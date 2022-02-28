@@ -786,19 +786,19 @@ void init_system_info(){
       SPDLOG_DEBUG("Cpu:{}", cpu);
       SPDLOG_DEBUG("Kernel:{}", kernel);
       SPDLOG_DEBUG("Os:{}", os);
-      SPDLOG_DEBUG("Gpu:{}", gpu);
       SPDLOG_DEBUG("Driver:{}", driver);
       SPDLOG_DEBUG("CPU Scheduler:{}", cpusched);
 #endif
 }
 
-void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats)
+std::string get_device_name(int32_t vendorID, int32_t deviceID)
 {
+   string desc;
 #ifdef __linux__
    if (pci_ids.find(vendorID) == pci_ids.end())
       parse_pciids();
 
-   string desc = pci_ids[vendorID].second[deviceID].desc;
+   desc = pci_ids[vendorID].second[deviceID].desc;
    size_t position = desc.find("[");
    if (position != std::string::npos) {
       desc = desc.substr(position);
@@ -806,7 +806,7 @@ void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats&
       for (char c: chars)
          desc.erase(remove(desc.begin(), desc.end(), c), desc.end());
    }
-   gpu = sw_stats.gpuName = desc;
-   trim(sw_stats.gpuName); trim(gpu);
+   trim(desc);
 #endif
+   return desc;
 }

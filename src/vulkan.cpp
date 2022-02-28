@@ -1516,7 +1516,7 @@ static VkResult overlay_CreateSwapchainKHR(
    std::string deviceName = prop.deviceName;
    if (!is_blacklisted()) {
 #ifdef __linux__
-      get_device_name(prop.vendorID, prop.deviceID, swapchain_data->sw_stats);
+      swapchain_data->sw_stats.gpuName = get_device_name(prop.vendorID, prop.deviceID);
 #endif
    }
    swapchain_data->sw_stats.driverName = driverProps.driverInfo;
@@ -1797,6 +1797,10 @@ static VkResult overlay_CreateDevice(
 
    if (!is_blacklisted()) {
       device_map_queues(device_data, pCreateInfo);
+#ifdef __linux__
+      gpu = get_device_name(device_data->properties.vendorID, device_data->properties.deviceID);
+      SPDLOG_DEBUG("gpu: {}", gpu);
+#endif
       init_gpu_stats(device_data->properties.vendorID, device_data->properties.deviceID, device_data->instance->params);
    }
 
