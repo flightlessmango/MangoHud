@@ -34,11 +34,6 @@ extern struct gpuInfo gpu_info;
 
 void getNvidiaGpuInfo(void);
 void getAmdGpuInfo(void);
-#ifdef HAVE_LIBDRM_AMDGPU
-void getAmdGpuInfo_libdrm();
-bool amdgpu_open(const char *path);
-void amdgpu_set_sampling_period(uint32_t period);
-#endif
 extern decltype(&getAmdGpuInfo) getAmdGpuInfo_actual;
 bool checkNvidia(const char *pci_dev);
 extern void nvapi_util();

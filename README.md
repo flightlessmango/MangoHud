@@ -49,7 +49,6 @@ Install necessary development packages.
 - vulkan headers if using `-Duse_system_vulkan=enabled` option with `meson`
 - libGL/libEGL (libglvnd, mesa-common-dev, mesa-libGL-devel etc)
 - X11 (libx11-dev)
-- libdrm (libdrm-dev)
 - XNVCtrl (libxnvctrl-dev), optional, use `-Dwith_xnvctrl=disabled` option with `meson` to disable
 - D-Bus (libdbus-1-dev), optional, use `-Dwith_dbus=disabled` option with `meson` to disable
 

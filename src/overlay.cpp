@@ -587,7 +587,6 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
       string path;
       string drm = "/sys/class/drm/";
       getAmdGpuInfo_actual = getAmdGpuInfo;
-      bool using_libdrm = false;
 
       auto dirs = ls(drm.c_str(), "card");
       for (auto& dir : dirs) {
@@ -639,30 +638,6 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
             metrics_path = gpu_metrics_path;
             SPDLOG_DEBUG("Using gpu_metrics");
          }
-#ifdef HAVE_LIBDRM_AMDGPU
-         else {
-            int idx = -1;
-            //TODO make neater
-            int res = sscanf(path.c_str(), "/sys/class/drm/card%d", &idx);
-            std::string dri_path = "/dev/dri/card" + std::to_string(idx);
-
-            if (!params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon] && res == 1 && amdgpu_open(dri_path.c_str())) {
-               vendorID = 0x1002;
-               using_libdrm = true;
-               getAmdGpuInfo_actual = getAmdGpuInfo_libdrm;
-               amdgpu_set_sampling_period(params.fps_sampling_period);
-
-               SPDLOG_DEBUG("Using libdrm");
-
-               // fall through and open sysfs handles for fallback or check DRM version beforehand
-            } else if (!params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon]) {
-               SPDLOG_ERROR("Failed to open device '/dev/dri/card{}' with libdrm, falling back to using hwmon sysfs.", idx);
-            } else if (params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon]) {
-               SPDLOG_DEBUG("Using amdgpu hwmon");
-            }
-         }
-#endif
-
          path += "/device";
          if (!amdgpu.busy)
             amdgpu.busy = fopen((path + "/gpu_busy_percent").c_str(), "r");
@@ -689,7 +664,7 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
       }
 
       // don't bother then
-      if (!using_libdrm && !amdgpu.busy && !amdgpu.temp && !amdgpu.vram_total && !amdgpu.vram_used) {
+      if (!amdgpu.busy && !amdgpu.temp && !amdgpu.vram_total && !amdgpu.vram_used) {
          params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
       }
    }
