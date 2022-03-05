@@ -78,7 +78,8 @@ std::vector<std::string> ls(const char* root, const char* prefix, LS_FLAGS flags
             || !strcmp(dp->d_name, ".."))
             continue;
 
-        if (dp->d_type == DT_LNK) {
+        switch (dp->d_type) {
+        case DT_LNK: {
             struct stat s;
             std::string path(root);
             if (path.back() != '/')
@@ -92,10 +93,16 @@ std::vector<std::string> ls(const char* root, const char* prefix, LS_FLAGS flags
                 || ((flags & LS_FILES) && S_ISREG(s.st_mode))) {
                 list.push_back(dp->d_name);
             }
-        } else if (((flags & LS_DIRS) && dp->d_type == DT_DIR)
-            || ((flags & LS_FILES) && dp->d_type == DT_REG)
-        ) {
-            list.push_back(dp->d_name);
+            break;
+        }
+        case DT_DIR:
+            if (flags & LS_DIRS)
+                list.push_back(dp->d_name);
+            break;
+        case DT_REG:
+            if (flags & LS_FILES)
+                list.push_back(dp->d_name);
+            break;
         }
     }
 
