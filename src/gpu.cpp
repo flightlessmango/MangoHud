@@ -12,7 +12,6 @@
 #endif
 
 #ifdef HAVE_LIBDRM_AMDGPU
-//#include "auth.h"
 #include <xf86drm.h>
 #include <libdrm/amdgpu_drm.h>
 #include <libdrm/amdgpu.h>
@@ -258,13 +257,6 @@ bool amdgpu_open(const char *path) {
         return false;
     }
     g_libdrm.drmFreeVersion(ver);
-
-/*
-    if (!authenticate_drm(fd)) {
-        close(fd);
-        return false;
-    }
-*/
 
     uint32_t drm_major, drm_minor;
     amdgpu_device_handle dev;
