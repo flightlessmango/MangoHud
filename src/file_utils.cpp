@@ -33,34 +33,6 @@ std::string get_basename(const std::string&& path)
 }
 
 #ifdef __linux__
-
-bool find_folder(const char* root, const char* prefix, std::string& dest)
-{
-    struct dirent* dp;
-    DIR* dirp = opendir(root);
-    if (!dirp) {
-        SPDLOG_ERROR("Error opening directory '{}': {}", root, strerror(errno));
-        return false;
-    }
-
-    // XXX xfs/jfs need stat() for inode type
-    while ((dp = readdir(dirp))) {
-        if ((dp->d_type == DT_LNK || dp->d_type == DT_DIR) && starts_with(dp->d_name, prefix)) {
-            dest = dp->d_name;
-            closedir(dirp);
-            return true;
-        }
-    }
-
-    closedir(dirp);
-    return false;
-}
-
-bool find_folder(const std::string& root, const std::string& prefix, std::string& dest)
-{
-    return find_folder(root.c_str(), prefix.c_str(), dest);
-}
-
 std::vector<std::string> ls(const char* root, const char* prefix, LS_FLAGS flags)
 {
     std::vector<std::string> list;

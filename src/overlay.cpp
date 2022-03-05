@@ -647,20 +647,20 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
             amdgpu.vram_used = fopen((path + "/mem_info_vram_used").c_str(), "r");
 
          path += "/hwmon/";
-         string tempFolder;
-         if (find_folder(path, "hwmon", tempFolder)) {
+         auto dirs = ls(path.c_str(), "hwmon", LS_DIRS);
+         for (auto& dir : dirs) {
             if (!amdgpu.core_clock)
-               amdgpu.core_clock = fopen((path + tempFolder + "/freq1_input").c_str(), "r");
+               amdgpu.core_clock = fopen((path + dir + "/freq1_input").c_str(), "r");
             if (!amdgpu.memory_clock)
-               amdgpu.memory_clock = fopen((path + tempFolder + "/freq2_input").c_str(), "r");
+               amdgpu.memory_clock = fopen((path + dir + "/freq2_input").c_str(), "r");
             if (!amdgpu.temp)
-               amdgpu.temp = fopen((path + tempFolder + "/temp1_input").c_str(), "r");
+               amdgpu.temp = fopen((path + dir + "/temp1_input").c_str(), "r");
             if (!amdgpu.power_usage)
-               amdgpu.power_usage = fopen((path + tempFolder + "/power1_average").c_str(), "r");
+               amdgpu.power_usage = fopen((path + dir + "/power1_average").c_str(), "r");
 
             vendorID = 0x1002;
-            break;
          }
+         break;
       }
 
       // don't bother then
