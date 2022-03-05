@@ -657,8 +657,6 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
                amdgpu.temp = fopen((path + dir + "/temp1_input").c_str(), "r");
             if (!amdgpu.power_usage)
                amdgpu.power_usage = fopen((path + dir + "/power1_average").c_str(), "r");
-
-            vendorID = 0x1002;
          }
          break;
       }
