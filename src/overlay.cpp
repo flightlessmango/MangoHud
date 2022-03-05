@@ -704,13 +704,13 @@ void init_system_info(){
       if (ld_preload)
          unsetenv("LD_PRELOAD");
 
-      ram =  exec("cat /proc/meminfo | grep 'MemTotal' | awk '{print $2}'");
+      ram =  exec("sed -n 's/^MemTotal: *\\([0-9]*\\).*/\\1/p' /proc/meminfo");
       trim(ram);
-      cpu =  exec("cat /proc/cpuinfo | grep 'model name' | tail -n1 | sed 's/^.*: //' | sed 's/([^)]*)/()/g' | tr -d '(/)'");
+      cpu =  exec("sed -n 's/^model name.*: \\(.*\\)/\\1/p' /proc/cpuinfo | sed 's/([^)]*)//g' | tail -n1");
       trim(cpu);
       kernel = exec("uname -r");
       trim(kernel);
-      os = exec("cat /etc/*-release | grep 'PRETTY_NAME' | cut -d '=' -f 2-");
+      os = exec("sed -n 's/PRETTY_NAME=\\(.*\\)/\\1/p' /etc/*-release");
       os.erase(remove(os.begin(), os.end(), '\"' ), os.end());
       trim(os);
       cpusched = read_line("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
@@ -718,7 +718,7 @@ void init_system_info(){
       const char* mangohud_recursion = getenv("MANGOHUD_RECURSION");
       if (!mangohud_recursion) {
          setenv("MANGOHUD_RECURSION", "1", 1);
-         driver = exec("glxinfo -B | grep 'OpenGL version' | sed 's/^.*: //' | sed 's/([^()]*)//g' | tr -s ' '");
+         driver = exec("glxinfo -B | sed -n 's/^OpenGL version.*: \\(.*\\)/\\1/p' | sed 's/([^)]*)//g;s/  / /g'");
          trim(driver);
          unsetenv("MANGOHUD_RECURSION");
       } else {
