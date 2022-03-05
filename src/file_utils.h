@@ -7,7 +7,6 @@
 
 enum LS_FLAGS
 {
-    LS_ALL = 0x00,
     LS_DIRS = 0x01,
     LS_FILES = 0x02,
 };
