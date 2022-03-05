@@ -662,7 +662,7 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
       }
 
       // don't bother then
-      if (!amdgpu.busy && !amdgpu.temp && !amdgpu.vram_total && !amdgpu.vram_used) {
+      if (metrics_path.empty() && !amdgpu.busy && !amdgpu.temp && !amdgpu.vram_total && !amdgpu.vram_used) {
          params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
       }
    }
