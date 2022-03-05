@@ -7,10 +7,11 @@
 
 struct amdgpu_files
 {
-    FILE *busy;
-    FILE *temp;
     FILE *vram_total;
     FILE *vram_used;
+    /* The following can be NULL, in that case we're using the gpu_metrics node */
+    FILE *busy;
+    FILE *temp;
     FILE *core_clock;
     FILE *memory_clock;
     FILE *power_usage;
