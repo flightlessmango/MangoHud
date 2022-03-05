@@ -89,7 +89,7 @@ std::vector<std::string> ls(const char* root, const char* prefix, LS_FLAGS flags
                 continue;
 
             if (((flags & LS_DIRS) && S_ISDIR(s.st_mode))
-                || ((flags & LS_FILES) && !S_ISDIR(s.st_mode))) {
+                || ((flags & LS_FILES) && S_ISREG(s.st_mode))) {
                 list.push_back(dp->d_name);
             }
         } else if (((flags & LS_DIRS) && dp->d_type == DT_DIR)
