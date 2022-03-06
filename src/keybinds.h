@@ -13,7 +13,7 @@ typedef unsigned long KeySym;
 
 Clock::time_point last_f2_press, toggle_fps_limit_press , last_f12_press, reload_cfg_press, last_upload_press;
 
-#ifdef HAVE_X11
+#if defined(HAVE_X11)
 bool keys_are_pressed(const std::vector<KeySym>& keys) {
 
     if (!init_x11())
@@ -39,9 +39,7 @@ bool keys_are_pressed(const std::vector<KeySym>& keys) {
 
     return false;
 }
-#endif //HAVE_X11
-
-#ifdef _WIN32
+#elif defined(_WIN32)
 #include <windows.h>
 bool keys_are_pressed(const std::vector<KeySym>& keys) {
     size_t pressed = 0;
@@ -55,6 +53,10 @@ bool keys_are_pressed(const std::vector<KeySym>& keys) {
         return true;
     }
 
+    return false;
+}
+#else // XXX: Add wayland support
+bool keys_are_pressed(const std::vector<KeySym>& keys) {
     return false;
 }
 #endif
