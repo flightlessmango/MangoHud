@@ -150,9 +150,9 @@ void logging(){
 }
 
 Logger::Logger(overlay_params* in_params)
-  : m_logging_on(false),
-    m_values_valid(false),
-    m_params(in_params)
+  : m_params(in_params),
+    m_logging_on(false),
+    m_values_valid(false)
 {
   m_log_end = Clock::now() - 15s;
   SPDLOG_DEBUG("Logger constructed!");
