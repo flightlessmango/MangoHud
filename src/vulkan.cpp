@@ -62,6 +62,15 @@ namespace MangoHud { namespace GL {
 }}
 #endif
 
+struct vk_image {
+   bool uploaded;
+   VkImage image;
+   VkImageView image_view;
+   VkDeviceMemory mem;
+   VkBuffer buffer;
+   VkDeviceMemory buffer_mem;
+};
+
 /* Mapped from VkInstace/VkPhysicalDevice */
 struct instance_data {
    struct vk_instance_dispatch_table vtable;
@@ -90,6 +99,18 @@ struct device_data {
    struct queue_data *graphic_queue;
 
    std::vector<struct queue_data *> queues;
+
+   VkDescriptorPool descriptor_pool;
+   VkDescriptorSetLayout descriptor_layout;
+   VkDescriptorSet descriptor_set;
+
+   VkSampler sampler;
+
+   std::mutex font_mutex;
+   ImFontAtlas* font_atlas;
+   ImFont *font_alt, *font_text;
+   struct vk_image font_img;
+   size_t font_params_hash = 0;
 };
 
 /* Mapped from VkCommandBuffer */
@@ -143,25 +164,12 @@ struct swapchain_data {
 
    VkRenderPass render_pass;
 
-   VkDescriptorPool descriptor_pool;
-   VkDescriptorSetLayout descriptor_layout;
-   VkDescriptorSet descriptor_set;
-
-   VkSampler font_sampler;
-
    VkPipelineLayout pipeline_layout;
    VkPipeline pipeline;
 
    VkCommandPool command_pool;
 
    std::list<overlay_draw *> draws; /* List of struct overlay_draw */
-
-   bool font_uploaded;
-   VkImage font_image;
-   VkImageView font_image_view;
-   VkDeviceMemory font_mem;
-   VkBuffer upload_font_buffer;
-   VkDeviceMemory upload_font_buffer_mem;
 
    /**/
    ImGuiContext* imgui_context;
@@ -211,7 +219,8 @@ static void unmap_object(uint64_t obj)
 
 /**/
 
-static void shutdown_swapchain_font(struct swapchain_data*);
+static void shutdown_device_font(struct device_data*);
+static void check_fonts(struct swapchain_data* data);
 
 static VkLayerInstanceCreateInfo *get_instance_chain_info(const VkInstanceCreateInfo *pCreateInfo,
                                                           VkLayerFunction func)
@@ -284,8 +293,74 @@ static struct device_data *new_device_data(VkDevice device, struct instance_data
    struct device_data *data = new device_data();
    data->instance = instance;
    data->device = device;
+   data->font_atlas = IM_NEW(ImFontAtlas);
    map_object(HKEY(data->device), data);
    return data;
+}
+
+static VkDescriptorSet alloc_descriptor_set(const struct device_data *device_data)
+{
+   VkDescriptorSet descriptor_set {};
+
+   VkDescriptorSetAllocateInfo alloc_info {};
+   alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+   alloc_info.descriptorPool = device_data->descriptor_pool;
+   alloc_info.descriptorSetCount = 1;
+   alloc_info.pSetLayouts = &device_data->descriptor_layout;
+   VK_CHECK(device_data->vtable.AllocateDescriptorSets(device_data->device,
+                                                       &alloc_info,
+                                                       &descriptor_set));
+   return descriptor_set;
+}
+
+static void setup_device_pipeline(struct device_data *device_data)
+{
+   /* Sampler */
+   VkSamplerCreateInfo sampler_info = {};
+   sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+   sampler_info.magFilter = VK_FILTER_LINEAR;
+   sampler_info.minFilter = VK_FILTER_LINEAR;
+   sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+   sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+   sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+   sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+   sampler_info.minLod = -1000;
+   sampler_info.maxLod = 1000;
+   sampler_info.maxAnisotropy = 1.0f;
+   VK_CHECK(device_data->vtable.CreateSampler(device_data->device, &sampler_info,
+                                              NULL, &device_data->sampler));
+
+   /* Descriptor pool */
+   VkDescriptorPoolSize sampler_pool_size = {};
+   sampler_pool_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+   sampler_pool_size.descriptorCount = 1;
+   VkDescriptorPoolCreateInfo desc_pool_info = {};
+   desc_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+   desc_pool_info.maxSets = 1;
+   desc_pool_info.poolSizeCount = 1;
+   desc_pool_info.pPoolSizes = &sampler_pool_size;
+   VK_CHECK(device_data->vtable.CreateDescriptorPool(device_data->device,
+                                                     &desc_pool_info,
+                                                     NULL, &device_data->descriptor_pool));
+
+   /* Descriptor layout */
+   VkSampler sampler[1] = { device_data->sampler };
+   VkDescriptorSetLayoutBinding binding[1] = {};
+   binding[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+   binding[0].descriptorCount = 1;
+   binding[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+   binding[0].pImmutableSamplers = sampler;
+   VkDescriptorSetLayoutCreateInfo set_layout_info = {};
+   set_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+   set_layout_info.bindingCount = 1;
+   set_layout_info.pBindings = binding;
+   VK_CHECK(device_data->vtable.CreateDescriptorSetLayout(device_data->device,
+                                                          &set_layout_info,
+                                                          NULL, &device_data->descriptor_layout));
+
+   /* Descriptor set */
+   device_data->descriptor_set = alloc_descriptor_set(device_data);
+
 }
 
 static struct queue_data *new_queue_data(VkQueue queue,
@@ -467,6 +542,8 @@ static void compute_swapchain_display(struct swapchain_data *data)
    if (instance_data->params.no_display)
       return;
 
+   check_fonts(data);
+
    ImGui::SetCurrentContext(data->imgui_context);
    if (HUDElements.colors.update)
       HUDElements.convert_colors(instance_data->params);
@@ -496,12 +573,11 @@ static uint32_t vk_memory_type(struct device_data *data,
     return 0xFFFFFFFF; // Unable to find memoryType
 }
 
-static void update_image_descriptor(struct swapchain_data *data, VkImageView image_view, VkDescriptorSet set)
+static void update_image_descriptor(struct device_data *device_data, VkImageView image_view, VkDescriptorSet set)
 {
-   struct device_data *device_data = data->device;
    /* Descriptor set */
    VkDescriptorImageInfo desc_image[1] = {};
-   desc_image[0].sampler = data->font_sampler;
+   desc_image[0].sampler = device_data->sampler;
    desc_image[0].imageView = image_view;
    desc_image[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
    VkWriteDescriptorSet write_desc[1] = {};
@@ -614,8 +690,7 @@ static void upload_image_data(struct device_data *device_data,
                                           1, use_barrier);
 }
 
-static void create_image(struct swapchain_data *data,
-                        VkDescriptorSet descriptor_set,
+static void create_image(struct device_data *device_data,
                         uint32_t width,
                         uint32_t height,
                         VkFormat format,
@@ -623,7 +698,6 @@ static void create_image(struct swapchain_data *data,
                         VkDeviceMemory& image_mem,
                         VkImageView& image_view)
 {
-   struct device_data *device_data = data->device;
 
    VkImageCreateInfo image_info = {};
    image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -667,64 +741,43 @@ static void create_image(struct swapchain_data *data,
    view_info.subresourceRange.layerCount = 1;
    VK_CHECK(device_data->vtable.CreateImageView(device_data->device, &view_info,
                                                 NULL, &image_view));
-
-   update_image_descriptor(data, image_view, descriptor_set);
 }
 
-static VkDescriptorSet create_image_with_desc(struct swapchain_data *data,
-                                          uint32_t width,
-                                          uint32_t height,
-                                          VkFormat format,
-                                          VkImage& image,
-                                          VkDeviceMemory& image_mem,
-                                          VkImageView& image_view)
+static void check_fonts(struct device_data* device_data)
 {
-   struct device_data *device_data = data->device;
+   const auto& params = device_data->instance->params;
+   if (params.font_params_hash == device_data->font_params_hash)
+      return;
 
-   VkDescriptorSet descriptor_set {};
+   std::unique_lock<std::mutex> lk(device_data->font_mutex);
+   SPDLOG_DEBUG("Recreating font image");
+   create_fonts(device_data->font_atlas, params, device_data->font_alt, device_data->font_text);
+   unsigned char* pixels;
+   int width, height;
+   device_data->font_atlas->GetTexDataAsAlpha8(&pixels, &width, &height);
 
-   VkDescriptorSetAllocateInfo alloc_info {};
-   alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-   alloc_info.descriptorPool = data->descriptor_pool;
-   alloc_info.descriptorSetCount = 1;
-   alloc_info.pSetLayouts = &data->descriptor_layout;
-   VK_CHECK(device_data->vtable.AllocateDescriptorSets(device_data->device,
-                                                       &alloc_info,
-                                                       &descriptor_set));
+   // wait for rendering to complete, if any
+   VK_CHECK(device_data->vtable.DeviceWaitIdle(device_data->device));
+   shutdown_device_font(device_data);
+   create_image(device_data, width, height, VK_FORMAT_R8_UNORM, device_data->font_img.image, device_data->font_img.mem, device_data->font_img.image_view);
 
-   create_image(data, descriptor_set, width, height, format, image, image_mem, image_view);
-   return descriptor_set;
+   device_data->font_img.uploaded = false;
+   device_data->font_params_hash = params.font_params_hash;
+   SPDLOG_DEBUG("Default font tex size: {}x{}px", width, height);
+
+   SPDLOG_DEBUG("Update font image descriptor {}", (void*)device_data->descriptor_set);
+   update_image_descriptor(device_data, device_data->font_img.image_view, device_data->descriptor_set);
+   device_data->font_atlas->SetTexID((ImTextureID)device_data->descriptor_set);
 }
 
 static void check_fonts(struct swapchain_data* data)
 {
    struct device_data *device_data = data->device;
-   struct instance_data *instance_data = device_data->instance;
-   auto& params = instance_data->params;
-   ImGuiIO& io = ImGui::GetIO();
-
-   if (params.font_params_hash != data->sw_stats.font_params_hash)
+   if (device_data->font_alt != data->sw_stats.font1)
    {
-      SPDLOG_DEBUG("Recreating font image");
-      VkDescriptorSet desc_set = (VkDescriptorSet)io.Fonts->TexID;
-      create_fonts(instance_data->params, data->sw_stats.font1, data->sw_stats.font_text);
-      unsigned char* pixels;
-      int width, height;
-      io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
-
-      // wait for rendering to complete, if any
-      device_data->vtable.DeviceWaitIdle(device_data->device);
-      shutdown_swapchain_font(data);
-
-      if (desc_set)
-         create_image(data, desc_set, width, height, VK_FORMAT_R8_UNORM, data->font_image, data->font_mem, data->font_image_view);
-      else
-         desc_set = create_image_with_desc(data, width, height, VK_FORMAT_R8_UNORM, data->font_image, data->font_mem, data->font_image_view);
-
-      io.Fonts->SetTexID((ImTextureID)desc_set);
-      data->font_uploaded = false;
-      data->sw_stats.font_params_hash = params.font_params_hash;
-      SPDLOG_DEBUG("Default font tex size: {}x{}px", width, height);
+      SPDLOG_DEBUG("Update swapchain fonts: {}", device_data->font_atlas->Fonts.size());
+      data->sw_stats.font1 = device_data->font_alt;
+      data->sw_stats.font_text = device_data->font_text;
    }
 }
 
@@ -733,18 +786,16 @@ static void ensure_swapchain_fonts(struct swapchain_data *data,
 {
    struct device_data *device_data = data->device;
 
-   check_fonts(data);
-
-   if (data->font_uploaded)
+   if (device_data->font_img.uploaded)
       return;
 
-   data->font_uploaded = true;
-   ImGuiIO& io = ImGui::GetIO();
+   device_data->font_img.uploaded = true;
    unsigned char* pixels;
    int width, height;
-   io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
+   device_data->font_atlas->GetTexDataAsAlpha8(&pixels, &width, &height);
    size_t upload_size = width * height * 1 * sizeof(char);
-   upload_image_data(device_data, command_buffer, pixels, upload_size, width, height, data->upload_font_buffer, data->upload_font_buffer_mem, data->font_image);
+   upload_image_data(device_data, command_buffer, pixels, upload_size, width, height,
+                     device_data->font_img.buffer, device_data->font_img.buffer_mem, device_data->font_img.image);
 }
 
 static void CreateOrResizeBuffer(struct device_data *data,
@@ -890,7 +941,7 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
    /* Bind pipeline and descriptor sets */
    device_data->vtable.CmdBindPipeline(draw->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, data->pipeline);
 
-#if 1 // disable if using >1 font textures
+#if 0 // disable if using >1 font textures
    VkDescriptorSet desc_set[1] = {
       //data->descriptor_set
       reinterpret_cast<VkDescriptorSet>(ImGui::GetIO().Fonts->Fonts[0]->ContainerAtlas->TexID)
@@ -953,7 +1004,7 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
          scissor.extent.width = (uint32_t)(pcmd->ClipRect.z - pcmd->ClipRect.x);
          scissor.extent.height = (uint32_t)(pcmd->ClipRect.w - pcmd->ClipRect.y + 1); // FIXME: Why +1 here?
          device_data->vtable.CmdSetScissor(draw->command_buffer, 0, 1, &scissor);
-#if 0 //enable if using >1 font textures or use texture array
+#if 1 //enable if using >1 font textures or use texture array
          VkDescriptorSet desc_set[1] = { (VkDescriptorSet)pcmd->TextureId };
          device_data->vtable.CmdBindDescriptorSets(draw->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                                    data->pipeline_layout, 0, 1, desc_set, 0, NULL);
@@ -1071,61 +1122,6 @@ static void setup_swapchain_data_pipeline(struct swapchain_data *data)
    VK_CHECK(device_data->vtable.CreateShaderModule(device_data->device,
                                                    &frag_info, NULL, &frag_module));
 
-   /* Font sampler */
-   VkSamplerCreateInfo sampler_info = {};
-   sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-   sampler_info.magFilter = VK_FILTER_LINEAR;
-   sampler_info.minFilter = VK_FILTER_LINEAR;
-   sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-   sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-   sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-   sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-   sampler_info.minLod = -1000;
-   sampler_info.maxLod = 1000;
-   sampler_info.maxAnisotropy = 1.0f;
-   VK_CHECK(device_data->vtable.CreateSampler(device_data->device, &sampler_info,
-                                              NULL, &data->font_sampler));
-
-   /* Descriptor pool */
-   VkDescriptorPoolSize sampler_pool_size = {};
-   sampler_pool_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-   sampler_pool_size.descriptorCount = 1;
-   VkDescriptorPoolCreateInfo desc_pool_info = {};
-   desc_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-   desc_pool_info.maxSets = 1;
-   desc_pool_info.poolSizeCount = 1;
-   desc_pool_info.pPoolSizes = &sampler_pool_size;
-   VK_CHECK(device_data->vtable.CreateDescriptorPool(device_data->device,
-                                                     &desc_pool_info,
-                                                     NULL, &data->descriptor_pool));
-
-   /* Descriptor layout */
-   VkSampler sampler[1] = { data->font_sampler };
-   VkDescriptorSetLayoutBinding binding[1] = {};
-   binding[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-   binding[0].descriptorCount = 1;
-   binding[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-   binding[0].pImmutableSamplers = sampler;
-   VkDescriptorSetLayoutCreateInfo set_layout_info = {};
-   set_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-   set_layout_info.bindingCount = 1;
-   set_layout_info.pBindings = binding;
-   VK_CHECK(device_data->vtable.CreateDescriptorSetLayout(device_data->device,
-                                                          &set_layout_info,
-                                                          NULL, &data->descriptor_layout));
-
-   /* Descriptor set */
-/*
-   VkDescriptorSetAllocateInfo alloc_info = {};
-   alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-   alloc_info.descriptorPool = data->descriptor_pool;
-   alloc_info.descriptorSetCount = 1;
-   alloc_info.pSetLayouts = &data->descriptor_layout;
-   VK_CHECK(device_data->vtable.AllocateDescriptorSets(device_data->device,
-                                                       &alloc_info,
-                                                       &data->descriptor_set));
-*/
-
    /* Constants: we are using 'vec2 offset' and 'vec2 scale' instead of a full
     * 3d projection matrix
     */
@@ -1136,7 +1132,7 @@ static void setup_swapchain_data_pipeline(struct swapchain_data *data)
    VkPipelineLayoutCreateInfo layout_info = {};
    layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
    layout_info.setLayoutCount = 1;
-   layout_info.pSetLayouts = &data->descriptor_layout;
+   layout_info.pSetLayouts = &device_data->descriptor_layout;
    layout_info.pushConstantRangeCount = 1;
    layout_info.pPushConstantRanges = push_constants;
    VK_CHECK(device_data->vtable.CreatePipelineLayout(device_data->device,
@@ -1246,10 +1242,7 @@ static void setup_swapchain_data_pipeline(struct swapchain_data *data)
    device_data->vtable.DestroyShaderModule(device_data->device, vert_module, NULL);
    device_data->vtable.DestroyShaderModule(device_data->device, frag_module, NULL);
 
-   check_fonts(data);
-
-//   if (data->descriptor_set)
-//      update_image_descriptor(data, data->font_image_view[0], data->descriptor_set);
+   check_fonts(device_data);
 }
 
 // TODO probably needs colorspace check too
@@ -1307,7 +1300,7 @@ static void setup_swapchain_data(struct swapchain_data *data,
    data->height = pCreateInfo->imageExtent.height;
    data->format = pCreateInfo->imageFormat;
 
-   data->imgui_context = ImGui::CreateContext();
+   data->imgui_context = ImGui::CreateContext(device_data->font_atlas);
    ImGui::SetCurrentContext(data->imgui_context);
 
    ImGui::GetIO().IniFilename = NULL;
@@ -1417,16 +1410,15 @@ static void setup_swapchain_data(struct swapchain_data *data,
                                                   NULL, &data->command_pool));
 }
 
-static void shutdown_swapchain_font(struct swapchain_data *data)
+static void shutdown_device_font(struct device_data *device_data)
 {
-   struct device_data *device_data = data->device;
+   device_data->vtable.DestroyImageView(device_data->device, device_data->font_img.image_view, NULL);
+   device_data->vtable.DestroyImage(device_data->device, device_data->font_img.image, NULL);
+   device_data->vtable.FreeMemory(device_data->device, device_data->font_img.mem, NULL);
 
-   device_data->vtable.DestroyImageView(device_data->device, data->font_image_view, NULL);
-   device_data->vtable.DestroyImage(device_data->device, data->font_image, NULL);
-   device_data->vtable.FreeMemory(device_data->device, data->font_mem, NULL);
-
-   device_data->vtable.DestroyBuffer(device_data->device, data->upload_font_buffer, NULL);
-   device_data->vtable.FreeMemory(device_data->device, data->upload_font_buffer_mem, NULL);
+   device_data->vtable.DestroyBuffer(device_data->device, device_data->font_img.buffer, NULL);
+   device_data->vtable.FreeMemory(device_data->device, device_data->font_img.buffer_mem, NULL);
+   device_data->font_img = {};
 }
 
 static void shutdown_swapchain_data(struct swapchain_data *data)
@@ -1455,14 +1447,6 @@ static void shutdown_swapchain_data(struct swapchain_data *data)
 
    device_data->vtable.DestroyPipeline(device_data->device, data->pipeline, NULL);
    device_data->vtable.DestroyPipelineLayout(device_data->device, data->pipeline_layout, NULL);
-
-   device_data->vtable.DestroyDescriptorPool(device_data->device,
-                                             data->descriptor_pool, NULL);
-   device_data->vtable.DestroyDescriptorSetLayout(device_data->device,
-                                                  data->descriptor_layout, NULL);
-
-   device_data->vtable.DestroySampler(device_data->device, data->font_sampler, NULL);
-   shutdown_swapchain_font(data);
 
    ImGui::DestroyContext(data->imgui_context);
 }
@@ -1573,6 +1557,8 @@ static VkResult overlay_QueuePresentKHR(
     const VkPresentInfoKHR*                     pPresentInfo)
 {
    struct queue_data *queue_data = FIND(struct queue_data, queue);
+
+   check_fonts(queue_data->device);
 
    /* Otherwise we need to add our overlay drawing semaphore to the list of
     * semaphores to wait on. If we don't do that the presented picture might
@@ -1811,6 +1797,7 @@ static VkResult overlay_CreateDevice(
 
    if (!is_blacklisted()) {
       device_map_queues(device_data, pCreateInfo);
+      setup_device_pipeline(device_data);
 #ifdef __linux__
       gpu = get_device_name(device_data->properties.vendorID, device_data->properties.deviceID);
       SPDLOG_DEBUG("gpu: {}", gpu);
@@ -1826,8 +1813,19 @@ static void overlay_DestroyDevice(
     const VkAllocationCallbacks*                pAllocator)
 {
    struct device_data *device_data = FIND(struct device_data, device);
-   if (!is_blacklisted())
+   if (!is_blacklisted()) {
+      shutdown_device_font(device_data);
+      IM_FREE(device_data->font_atlas);
       device_unmap_queues(device_data);
+   }
+
+   device_data->vtable.DestroyDescriptorPool(device_data->device,
+                                             device_data->descriptor_pool, NULL);
+   device_data->vtable.DestroyDescriptorSetLayout(device_data->device,
+                                                  device_data->descriptor_layout, NULL);
+
+   device_data->vtable.DestroySampler(device_data->device, device_data->sampler, NULL);
+
    device_data->vtable.DestroyDevice(device, pAllocator);
    destroy_device_data(device_data);
 }

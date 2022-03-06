@@ -3,10 +3,14 @@
 #include "font_default.h"
 #include "IconsForkAwesome.h"
 #include "forkawesome.h"
-void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& text_font)
+
+void create_fonts(ImFontAtlas* font_atlas, const overlay_params& params, ImFont*& small_font, ImFont*& text_font)
 {
    auto& io = ImGui::GetIO();
-   io.Fonts->Clear();
+   if (!font_atlas)
+        font_atlas = io.Fonts;
+   font_atlas->Clear();
+
    ImGui::GetIO().FontGlobalScale = params.font_scale; // set here too so ImGui::CalcTextSize is correct
    float font_size = params.font_size;
    if (font_size < FLT_EPSILON)
@@ -31,21 +35,21 @@ void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& te
 
    ImVector<ImWchar> glyph_ranges;
    ImFontGlyphRangesBuilder builder;
-   builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
+   builder.AddRanges(font_atlas->GetGlyphRangesDefault());
    if (params.font_glyph_ranges & FG_KOREAN)
-      builder.AddRanges(io.Fonts->GetGlyphRangesKorean());
+      builder.AddRanges(font_atlas->GetGlyphRangesKorean());
    if (params.font_glyph_ranges & FG_CHINESE_FULL)
-      builder.AddRanges(io.Fonts->GetGlyphRangesChineseFull());
+      builder.AddRanges(font_atlas->GetGlyphRangesChineseFull());
    if (params.font_glyph_ranges & FG_CHINESE_SIMPLIFIED)
-      builder.AddRanges(io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
+      builder.AddRanges(font_atlas->GetGlyphRangesChineseSimplifiedCommon());
    if (params.font_glyph_ranges & FG_JAPANESE)
-      builder.AddRanges(io.Fonts->GetGlyphRangesJapanese()); // Not exactly Shift JIS compatible?
+      builder.AddRanges(font_atlas->GetGlyphRangesJapanese()); // Not exactly Shift JIS compatible?
    if (params.font_glyph_ranges & FG_CYRILLIC)
-      builder.AddRanges(io.Fonts->GetGlyphRangesCyrillic());
+      builder.AddRanges(font_atlas->GetGlyphRangesCyrillic());
    if (params.font_glyph_ranges & FG_THAI)
-      builder.AddRanges(io.Fonts->GetGlyphRangesThai());
+      builder.AddRanges(font_atlas->GetGlyphRangesThai());
    if (params.font_glyph_ranges & FG_VIETNAMESE)
-      builder.AddRanges(io.Fonts->GetGlyphRangesVietnamese());
+      builder.AddRanges(font_atlas->GetGlyphRangesVietnamese());
    if (params.font_glyph_ranges & FG_LATIN_EXT_A) {
       constexpr ImWchar latin_ext_a[] { 0x0100, 0x017F, 0 };
       builder.AddRanges(latin_ext_a);
@@ -61,23 +65,23 @@ void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& te
 
    // ImGui takes ownership of the data, no need to free it
    if (!params.font_file.empty() && file_exists(params.font_file)) {
-      io.Fonts->AddFontFromFileTTF(params.font_file.c_str(), font_size, nullptr, same_font && same_size ? glyph_ranges.Data : default_range);
-      io.Fonts->AddFontFromMemoryCompressedBase85TTF(forkawesome_compressed_data_base85, font_size, &config, icon_ranges);
+      font_atlas->AddFontFromFileTTF(params.font_file.c_str(), font_size, nullptr, same_font && same_size ? glyph_ranges.Data : default_range);
+      font_atlas->AddFontFromMemoryCompressedBase85TTF(forkawesome_compressed_data_base85, font_size, &config, icon_ranges);
       if (params.no_small_font)
-         small_font = io.Fonts->Fonts[0];
+         small_font = font_atlas->Fonts[0];
       else {
-         small_font = io.Fonts->AddFontFromFileTTF(params.font_file.c_str(), font_size * 0.55f, nullptr, default_range);
-         io.Fonts->AddFontFromMemoryCompressedBase85TTF(forkawesome_compressed_data_base85, font_size * 0.55f, &config, icon_ranges);
+         small_font = font_atlas->AddFontFromFileTTF(params.font_file.c_str(), font_size * 0.55f, nullptr, default_range);
+         font_atlas->AddFontFromMemoryCompressedBase85TTF(forkawesome_compressed_data_base85, font_size * 0.55f, &config, icon_ranges);
       }
    } else {
       const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
-      io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size, nullptr, default_range);
-      io.Fonts->AddFontFromMemoryCompressedBase85TTF(forkawesome_compressed_data_base85, font_size, &config, icon_ranges);
+      font_atlas->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size, nullptr, default_range);
+      font_atlas->AddFontFromMemoryCompressedBase85TTF(forkawesome_compressed_data_base85, font_size, &config, icon_ranges);
       if (params.no_small_font)
-         small_font = io.Fonts->Fonts[0];
+         small_font = font_atlas->Fonts[0];
       else {
-         small_font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size * 0.55f, nullptr, default_range);
-         io.Fonts->AddFontFromMemoryCompressedBase85TTF(forkawesome_compressed_data_base85, font_size * 0.55f, &config, icon_ranges);
+         small_font = font_atlas->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size * 0.55f, nullptr, default_range);
+         font_atlas->AddFontFromMemoryCompressedBase85TTF(forkawesome_compressed_data_base85, font_size * 0.55f, &config, icon_ranges);
       }
    }
 
@@ -86,9 +90,9 @@ void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& te
       font_file_text = params.font_file;
 
    if ((!same_font || !same_size) && file_exists(font_file_text))
-      text_font = io.Fonts->AddFontFromFileTTF(font_file_text.c_str(), font_size_text, nullptr, glyph_ranges.Data);
+      text_font = font_atlas->AddFontFromFileTTF(font_file_text.c_str(), font_size_text, nullptr, glyph_ranges.Data);
    else
-      text_font = io.Fonts->Fonts[0];
+      text_font = font_atlas->Fonts[0];
 
-   io.Fonts->Build();
+   font_atlas->Build();
 }
