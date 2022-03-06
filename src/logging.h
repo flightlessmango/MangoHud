@@ -36,6 +36,7 @@ public:
 
   void start_logging();
   void stop_logging();
+  void logging();
 
   void try_log();
 

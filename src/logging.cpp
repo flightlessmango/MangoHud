@@ -141,14 +141,6 @@ string get_log_suffix(){
   return log_name;
 }
 
-void logging(){
-  logger->wait_until_data_valid();
-  while (logger->is_active()){
-      logger->try_log();
-      this_thread::sleep_for(chrono::milliseconds(_params->log_interval));
-  }
-}
-
 Logger::Logger(overlay_params* in_params)
   : m_params(in_params),
     m_logging_on(false),
@@ -167,7 +159,7 @@ void Logger::start_logging() {
   HUDElements.params->log_interval = 0;
 #endif
   if((!m_params->output_folder.empty()) && (m_params->log_interval != 0)){
-    std::thread(logging).detach();
+    std::thread(&Logger::logging, this).detach();
   }
 }
 
@@ -195,7 +187,15 @@ void Logger::stop_logging() {
     writeFile(logName);
 #endif
   }
-  logger->clear_log_data();
+  clear_log_data();
+}
+
+void Logger::logging(){
+  wait_until_data_valid();
+  while (is_active()){
+      try_log();
+      this_thread::sleep_for(chrono::milliseconds(m_params->log_interval));
+  }
 }
 
 void Logger::try_log() {
