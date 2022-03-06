@@ -24,7 +24,6 @@ static void parse_command(struct instance_data *instance_data,
 #endif
     }
     if (!strncmp(cmd, "logging", cmdlen)) {
-      auto now = Clock::now(); /* us */
       if (logger->is_active())
          logger->stop_logging();
       else
@@ -213,4 +212,4 @@ void process_control_socket(struct instance_data *instance_data)
             break;
       }
    }
-} 
+}
