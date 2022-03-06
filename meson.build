@@ -123,8 +123,8 @@ c_args = []
 foreach a : ['-Werror=implicit-function-declaration',
              '-Werror=missing-prototypes', '-Werror=return-type',
              '-Werror=incompatible-pointer-types',
-             '-fno-math-errno',
-             '-fno-trapping-math', '-Qunused-arguments']
+             '-Wno-unused-parameter', '-Qunused-arguments',
+             '-fno-math-errno', '-fno-trapping-math']
   if cc.has_argument(a)
     c_args += a
   endif
@@ -139,8 +139,8 @@ endforeach
 # Check for generic C++ arguments
 cpp_args = []
 foreach a : ['-Werror=return-type',
-             '-fno-math-errno', '-fno-trapping-math',
-             '-Qunused-arguments']
+             '-Wno-unused-parameter', '-Qunused-arguments',
+             '-fno-math-errno', '-fno-trapping-math']
   if cpp.has_argument(a)
     cpp_args += a
   endif
