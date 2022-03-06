@@ -595,29 +595,29 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
 
          SPDLOG_DEBUG("amdgpu path check: {}/device/vendor", path);
          FILE *fp;
-         char str[10];
          string device = path + "/device/device";
          if ((fp = fopen(device.c_str(), "r"))){
-            fscanf(fp, "%s", str);
-            uint32_t temp = strtol(str, NULL, 16);
+            uint32_t temp = 0;
+            if (fscanf(fp, "%x", &temp) == 1) {
             // if (temp != reported_deviceID && deviceID != 0){
+            //    fclose(fp);
             //    SPDLOG_DEBUG("DeviceID does not match vulkan report {}", reported_deviceID);
             //    continue;
             // }
-            deviceID = temp;
+               deviceID = temp;
+            }
             fclose(fp);
          }
          string vendor = path + "/device/vendor";
          if ((fp = fopen(vendor.c_str(), "r"))){
-            fscanf(fp, "%s", str);
-            uint32_t temp = strtol(str, NULL, 16);
-            if (temp != vendorID)
+            uint32_t temp = 0;
+            if (fscanf(fp, "%x", &temp) != 1 || temp != vendorID) {
+               fclose(fp);
                continue;
+            }
             fclose(fp);
          }
-         string line = str;
-         trim(line);
-         if (line != "0x1002" || !file_exists(path + "/device/gpu_busy_percent"))
+         if (deviceID != 0x1002 || !file_exists(path + "/device/gpu_busy_percent"))
             continue;
 
          if (pci_bus_parsed && pci_dev) {
