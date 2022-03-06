@@ -227,13 +227,14 @@ bool CPUStats::UpdateCPUData()
 bool CPUStats::UpdateCoreMhz() {
     m_coreMhz.clear();
     FILE *fp;
-    char str[10];
     for (size_t i = 0; i < m_cpuData.size(); i++)
     {
         std::string path = "/sys/devices/system/cpu/cpu" + std::to_string(i) + "/cpufreq/scaling_cur_freq";
         if ((fp = fopen(path.c_str(), "r"))){
-            fscanf(fp, "%s", str);
-            m_cpuData[i].mhz = atoi(str) / 1000;
+            int64_t temp;
+            if (fscanf(fp, "%" PRId64, &temp) != 1)
+                temp = 0;
+            m_cpuData[i].mhz = temp / 1000;
             fclose(fp);
         }
     }

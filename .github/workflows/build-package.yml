@@ -41,7 +41,7 @@ jobs:
       - name: Build release package
         run: |
           ./build-source.sh
-          ./build.sh build package release
+          ./build.sh build -Dwerror=true package release
       - name: Upload release
         if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
         env:

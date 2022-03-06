@@ -91,7 +91,7 @@ static void enumerate_config_files(std::vector<std::string>& paths) {
      }
 }
 
-bool parseConfigFile(overlay_params& params) {
+void parseConfigFile(overlay_params& params) {
     HUDElements.options.clear();
     params.options.clear();
     std::vector<std::string> paths;
@@ -120,8 +120,6 @@ bool parseConfigFile(overlay_params& params) {
             parseConfigLine(line, params.options);
         }
         params.config_file_path = *p;
-        return true;
+        return;
     }
-
-    return false;
 }

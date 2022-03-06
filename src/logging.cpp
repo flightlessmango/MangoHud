@@ -150,9 +150,9 @@ void logging(){
 }
 
 Logger::Logger(overlay_params* in_params)
-  : m_logging_on(false),
-    m_values_valid(false),
-    m_params(in_params)
+  : m_params(in_params),
+    m_logging_on(false),
+    m_values_valid(false)
 {
   m_log_end = Clock::now() - 15s;
   SPDLOG_DEBUG("Logger constructed!");
@@ -188,7 +188,7 @@ void Logger::stop_logging() {
     writefile.join();
     writesummary.join();
   } else {
-#ifdef MANGOAPP    
+#ifdef MANGOAPP
     string path = std::getenv("HOME");
     std::string logName = path + "/mangoapp_" + get_log_suffix();
     writeSummary(logName);
@@ -284,7 +284,7 @@ void Logger::calculate_benchmark_data(){
       label = "0.1%";
     if (percent == 0.01f)
       label = "1%";
-    
+
     if (label.length() > max_label_size)
       max_label_size = label.length();
 
