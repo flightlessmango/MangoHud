@@ -608,16 +608,18 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
             }
             fclose(fp);
          }
+
          string vendor = path + "/device/vendor";
          if ((fp = fopen(vendor.c_str(), "r"))){
             uint32_t temp = 0;
-            if (fscanf(fp, "%x", &temp) != 1 || temp != vendorID) {
+            if (fscanf(fp, "%x", &temp) != 1 || temp != 0x1002) {
                fclose(fp);
                continue;
             }
             fclose(fp);
          }
-         if (deviceID != 0x1002 || !file_exists(path + "/device/gpu_busy_percent"))
+
+         if (!file_exists(path + "/device/gpu_busy_percent"))
             continue;
 
          if (pci_bus_parsed && pci_dev) {
