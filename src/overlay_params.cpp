@@ -427,6 +427,7 @@ parse_gl_size_query(const char *str)
 #define parse_fps_color(s) parse_load_color(s)
 #define parse_battery_color(s) parse_color(s)
 #define parse_media_player_format(s) parse_str_tokenize(s, ";", false)
+#define parse_fsr_steam_sharpness(s) parse_float(s)
 
 static bool
 parse_help(const char *str)
@@ -824,5 +825,6 @@ parse_overlay_config(struct overlay_params *params,
       new_frame = true; // we probably changed how we look.
    }
    mangoapp_cv.notify_one();
+   g_fsrSharpness = params->fsr_steam_sharpness;
 #endif
 }

@@ -148,7 +148,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(blacklist)                   \
    OVERLAY_PARAM_CUSTOM(autostart_log)               \
    OVERLAY_PARAM_CUSTOM(round_corners)               \
-
+   OVERLAY_PARAM_CUSTOM(fsr_steam_sharpness)         \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -248,6 +248,7 @@ struct overlay_params {
    std::string config_file_path;
    std::unordered_map<std::string,std::string> options;
    int permit_upload;
+   int fsr_steam_sharpness;
 
    size_t font_params_hash;
 };
