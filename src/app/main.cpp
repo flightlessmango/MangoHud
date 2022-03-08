@@ -135,7 +135,8 @@ void msg_read_thread(){
                 update_hud_info_with_frametime(sw_stats, *params, vendorID, mangoapp_v1->visible_frametime_ns);
                 if (msg_size > offsetof(mangoapp_msg_v1, fsrUpscale)){
                     g_fsrUpscale = mangoapp_v1->fsrUpscale;
-                    // g_fsrSharpness = mangoapp_v1->fsrSharpness;
+                    if (params->fsr_steam_sharpness < 0)
+                        g_fsrSharpness = mangoapp_v1->fsrSharpness;
                 }
                 if (msg_size > offsetof(mangoapp_msg_v1, latency_ns)){
                     gamescope_frametime(mangoapp_v1->app_frametime_ns, mangoapp_v1->latency_ns);

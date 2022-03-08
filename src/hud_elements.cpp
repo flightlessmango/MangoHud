@@ -768,27 +768,29 @@ void HudElements::battery(){
 
 void HudElements::gamescope_fsr(){
 #ifdef MANGOAPP
-    ImGui::TableNextRow(); ImGui::TableNextColumn();
-    string FSR_TEXT;
-    ImVec4 FSR_COLOR;
-    if (g_fsrUpscale){
-        FSR_TEXT = "ON";
-        FSR_COLOR = HUDElements.colors.fps_value_high;
-    } else {
-        FSR_TEXT = "OFF";
-        FSR_COLOR = HUDElements.colors.fps_value_low;
-    }
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fsr]) {
+        ImGui::TableNextRow(); ImGui::TableNextColumn();
+        string FSR_TEXT;
+        ImVec4 FSR_COLOR;
+        if (g_fsrUpscale){
+            FSR_TEXT = "ON";
+            FSR_COLOR = HUDElements.colors.fps_value_high;
+        } else {
+            FSR_TEXT = "OFF";
+            FSR_COLOR = HUDElements.colors.fps_value_low;
+        }
 
-    ImGui::TextColored(HUDElements.colors.engine, "%s", "FSR");
-    ImGui::TableNextColumn();
-    right_aligned_text(FSR_COLOR, HUDElements.ralign_width, "%s", FSR_TEXT.c_str());
-    ImGui::TableNextColumn();
-    if (g_fsrUpscale){
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", g_fsrSharpness);
-        ImGui::SameLine(0,1.0f);
-        ImGui::PushFont(HUDElements.sw_stats->font1);
-        ImGui::Text("Sharp");
-        ImGui::PopFont();
+        ImGui::TextColored(HUDElements.colors.engine, "%s", "FSR");
+        ImGui::TableNextColumn();
+        right_aligned_text(FSR_COLOR, HUDElements.ralign_width, "%s", FSR_TEXT.c_str());
+        ImGui::TableNextColumn();
+        if (g_fsrUpscale){
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", g_fsrSharpness);
+            ImGui::SameLine(0,1.0f);
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            ImGui::Text("Sharp");
+            ImGui::PopFont();
+        }
     }
 #endif
 }
