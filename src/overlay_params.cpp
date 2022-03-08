@@ -785,13 +785,13 @@ parse_overlay_config(struct overlay_params *params,
       main_metadata.meta.valid = false;
    }
 
-   if (params->enabled[OVERLAY_PARAM_ENABLED_gamemode])
-   {
-      if (dbusmgr::dbus_mgr.init(dbusmgr::SRV_GAMEMODE))
-         HUDElements.gamemode_bol = dbusmgr::dbus_mgr.gamemode_enabled(getpid());
-   }
-   else
-      dbusmgr::dbus_mgr.deinit(dbusmgr::SRV_GAMEMODE);
+   // if (params->enabled[OVERLAY_PARAM_ENABLED_gamemode])
+   // {
+   //    if (dbusmgr::dbus_mgr.init(dbusmgr::SRV_GAMEMODE))
+   //       HUDElements.gamemode_bol = dbusmgr::dbus_mgr.gamemode_enabled(getpid());
+   // }
+   // else
+   //    dbusmgr::dbus_mgr.deinit(dbusmgr::SRV_GAMEMODE);
 
 #endif
 
