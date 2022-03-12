@@ -352,7 +352,6 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `battery`                          | Display current battery percent and energy consumption                                |
 | `battery_icon`                     | Display battery icon instead of percent                                               |
 | `battery_color`                    | Change the BATT text color                                                            |
-| `force_amdgpu_hwmon`               | Use hwmon sysfs instead of libdrm for amdgpu stats                                    |
 | `fps_only`                         | Show FPS without the engine name e.g. DXVK/VULAKAN etc.                               |
 | `gamepad_battery`                  | Display battey of wireless gamepads (xone,xpadneo,ds4)                                |
 | `gamepad_battery_icon`             | Display gamepad battery percent with icon. *enabled by default                        |

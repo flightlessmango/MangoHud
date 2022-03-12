@@ -522,7 +522,6 @@ parse_overlay_env(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_gpu_load_change] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_cpu_load_change] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_fps_only] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_fps_color_change] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_core_load_change] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_battery_icon] = 0;
@@ -674,7 +673,6 @@ parse_overlay_config(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_histogram] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_fps_only] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_battery_icon] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_hide_fsr_sharpness] = 0;
          params->options.erase("full");
