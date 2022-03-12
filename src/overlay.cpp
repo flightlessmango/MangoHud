@@ -618,9 +618,6 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
             fclose(fp);
          }
 
-         if (!file_exists(path + "/device/gpu_busy_percent"))
-            continue;
-
          if (pci_bus_parsed && pci_dev) {
             string pci_device = read_symlink((path + "/device").c_str());
             SPDLOG_DEBUG("PCI device symlink: '{}'", pci_device);
@@ -647,8 +644,12 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
          if (!metrics_path.empty())
             break;
 
+         // The card output nodes - cardX-output, will point to the card node
+         // As such the actual metrics nodes will be missing.
+         amdgpu.busy = fopen((path + "/gpu_busy_percent").c_str(), "r");
          if (!amdgpu.busy)
-            amdgpu.busy = fopen((path + "/gpu_busy_percent").c_str(), "r");
+            continue;
+
          path += "/hwmon/";
          auto dirs = ls(path.c_str(), "hwmon", LS_DIRS);
          for (auto& dir : dirs) {
@@ -665,7 +666,7 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
       }
 
       // don't bother then
-      if (metrics_path.empty() && !amdgpu.busy && !amdgpu.temp && !amdgpu.vram_total && !amdgpu.vram_used) {
+      if (metrics_path.empty() && !amdgpu.busy) {
          params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
       }
    }
