@@ -162,7 +162,6 @@ void check_keybinds(overlay_params& params, uint32_t vendorID);
 void init_system_info(void);
 void FpsLimiter(struct fps_limit& stats);
 std::string get_device_name(int32_t vendorID, int32_t deviceID);
-void calculate_benchmark_data(overlay_params* params);
 void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& text_font);
 void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...);
 void center_text(const std::string& text);
