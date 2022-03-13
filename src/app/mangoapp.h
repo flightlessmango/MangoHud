@@ -7,7 +7,6 @@
 #include <condition_variable>
 #include <vector>
 
-extern int ctrl_msgid;
 extern int msgid;
 extern bool mangoapp_paused;
 extern std::mutex mangoapp_m;
