@@ -249,7 +249,6 @@ bool CPUStats::UpdateCoreMhz() {
 
 bool CPUStats::UpdateCpuTemp() {
     if (cpu_type == "APU"){
-        fprintf(stderr, "%s\n", "getting gpu_metrics cpu temps");
         m_cpuDataTotal.temp = gpu_info.apu_cpu_temp;
         return true;
     } else {
