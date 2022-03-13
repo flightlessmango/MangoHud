@@ -75,6 +75,9 @@ static void ctrl_thread(){
         memset(raw_msg, 0, sizeof(raw_msg));
         msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 2, 0);
         switch (mangoapp_ctrl_v1->log_session) {
+            case 0:
+                // Keep as-is
+                break;
             case 1:
                 if (!logger->is_active())
                     logger->start_logging();
@@ -90,6 +93,9 @@ static void ctrl_thread(){
         {
             std::lock_guard<std::mutex> lk(mangoapp_m);
             switch (mangoapp_ctrl_v1->no_display){
+                case 0:
+                    // Keep as-is
+                    break;
                 case 1:
                     params->no_display = 1;
                     break;
