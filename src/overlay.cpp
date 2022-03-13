@@ -275,7 +275,7 @@ float get_time_stat(void *_data, int _idx)
    return data->frames_stats[idx].stats[data->stat_selector] / data->time_dividor;
 }
 
-void position_layer(struct swapchain_stats& data, struct overlay_params& params, ImVec2 window_size)
+void position_layer(struct swapchain_stats& data, struct overlay_params& params, const ImVec2& window_size)
 {
    unsigned width = ImGui::GetIO().DisplaySize.x;
    unsigned height = ImGui::GetIO().DisplaySize.y;
