@@ -11,6 +11,7 @@ void amdgpu_get_metrics()
 		std::ifstream in(metrics_path, std::ios_base::in | std::ios_base::binary);
 		in.read((char*)&header, sizeof(header));
 		if (header.format_revision == 1){
+			cpuStats.cpu_type = "CPU";
 			// Desktop GPUs
 			struct gpu_metrics_v1_3 amdgpu_metrics;
 			in.clear();
@@ -23,6 +24,7 @@ void amdgpu_get_metrics()
 			gpu_info.MemClock = amdgpu_metrics.current_uclk;
 		} else if (header.format_revision == 2){
 			// APUs
+			cpuStats.cpu_type = "APU";
 			struct gpu_metrics_v2_2 amdgpu_metrics;
 			in.clear();
 			in.seekg(0);

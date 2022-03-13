@@ -248,21 +248,22 @@ bool CPUStats::UpdateCoreMhz() {
 }
 
 bool CPUStats::UpdateCpuTemp() {
-#ifdef MANGOAPP
-    m_cpuDataTotal.temp = gpu_info.apu_cpu_temp;
-#else
-    if (!m_cpuTempFile)
-        return false;
+    if (cpu_type == "APU"){
+        fprintf(stderr, "%s\n", "getting gpu_metrics cpu temps");
+        m_cpuDataTotal.temp = gpu_info.apu_cpu_temp;
+        return true;
+    } else {
+        if (!m_cpuTempFile)
+            return false;
 
-    int temp = 0;
-    rewind(m_cpuTempFile);
-    fflush(m_cpuTempFile);
-    bool ret = (fscanf(m_cpuTempFile, "%d", &temp) == 1);
-    m_cpuDataTotal.temp = temp / 1000;
+        int temp = 0;
+        rewind(m_cpuTempFile);
+        fflush(m_cpuTempFile);
+        bool ret = (fscanf(m_cpuTempFile, "%d", &temp) == 1);
+        m_cpuDataTotal.temp = temp / 1000;
 
-    return ret;
-#endif
-    return true;
+        return ret;
+    }
 }
 
 static bool get_cpu_power_k10temp(CPUPowerData* cpuPowerData, float& power) {
@@ -447,7 +448,6 @@ bool CPUStats::GetCpuFile() {
             path.clear();
         }
     }
-#ifndef MANGOAPP
     if (path.empty() || (!file_exists(input) && !find_fallback_temp_input(path, input))) {
         SPDLOG_ERROR("Could not find cpu temp sensor location");
         return false;
@@ -455,7 +455,6 @@ bool CPUStats::GetCpuFile() {
         SPDLOG_DEBUG("hwmon: using input: {}", input);
         m_cpuTempFile = fopen(input.c_str(), "r");
     }
-#endif
     return true;
 }
 

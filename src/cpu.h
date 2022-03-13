@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <memory>
+#include <string>
 
 #include "timing.hpp"
 
@@ -140,6 +141,7 @@ public:
    const CPUData& GetCPUDataTotal() const {
       return m_cpuDataTotal;
    }
+   std::string cpu_type = "CPU";
 private:
    unsigned long long int m_boottime = 0;
    std::vector<CPUData> m_cpuData;
