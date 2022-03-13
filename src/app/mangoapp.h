@@ -7,8 +7,6 @@
 #include <condition_variable>
 #include <vector>
 
-extern int msgid;
-extern bool mangoapp_paused;
 extern std::mutex mangoapp_m;
 extern std::condition_variable mangoapp_cv;
 struct mangoapp_msg_header {

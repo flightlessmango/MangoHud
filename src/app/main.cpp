@@ -25,14 +25,15 @@ static void glfw_error_callback(int error, const char* description)
 {
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
+
 swapchain_stats sw_stats {};
 overlay_params *params;
 static ImVec2 window_size;
 static uint32_t vendorID;
 static std::string deviceName;
 static notify_thread notifier;
-int msgid;
-bool mangoapp_paused = false;
+static int msgid;
+static bool mangoapp_paused = false;
 std::mutex mangoapp_m;
 std::condition_variable mangoapp_cv;
 static uint8_t raw_msg[1024] = {0};
