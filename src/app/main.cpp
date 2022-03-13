@@ -330,11 +330,8 @@ int main(int, char**)
     }
 
     // Cleanup
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
+    shutdown(window);
 
-    glfwDestroyWindow(window);
     glfwTerminate();
 
     return 0;
