@@ -223,7 +223,7 @@ bool render(GLFWwindow* window) {
 }
 
 int main(int, char**)
-{   
+{
     // Setup window
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
@@ -306,8 +306,8 @@ int main(int, char**)
             }
             // Rendering
             ImGui::Render();
-            glEnable(GL_DEPTH_TEST);        
-            glEnable(GL_BLEND);             
+            glEnable(GL_DEPTH_TEST);
+            glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             glClearColor(0, 0, 0, 0);
             glClear(GL_COLOR_BUFFER_BIT);
