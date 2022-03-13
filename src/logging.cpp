@@ -141,7 +141,7 @@ string get_log_suffix(){
   return log_name;
 }
 
-Logger::Logger(overlay_params* in_params)
+Logger::Logger(const overlay_params* in_params)
   : m_params(in_params),
     m_logging_on(false),
     m_values_valid(false)
