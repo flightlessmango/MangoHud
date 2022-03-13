@@ -266,6 +266,7 @@ int main(int, char**)
     init_cpu_stats(*params);
     notifier.params = params;
     start_notifier(notifier);
+    window_size = ImVec2(params->width, params->height);
         deviceName = (char*)glGetString(GL_RENDERER);
     sw_stats.deviceName = deviceName;
     if (deviceName.find("Radeon") != std::string::npos
