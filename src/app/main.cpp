@@ -284,9 +284,7 @@ int main(int, char**)
     while (!glfwWindowShouldClose(window)){
         if (!params->no_display){
             if (mangoapp_paused){
-                window = init(glsl_version);
-                create_fonts(*params, sw_stats.font1, sw_stats.font_text);
-                HUDElements.convert_colors(*params);
+                glfwRestoreWindow(window);
                 mangoapp_paused = false;
             }
             {
@@ -322,7 +320,7 @@ int main(int, char**)
 
             glfwSwapBuffers(window);
         } else if (!mangoapp_paused) {
-            shutdown(window);
+            glfwIconifyWindow(window);
             mangoapp_paused = true;
             std::unique_lock<std::mutex> lk(mangoapp_m);
             mangoapp_cv.wait(lk, []{return !params->no_display;});
