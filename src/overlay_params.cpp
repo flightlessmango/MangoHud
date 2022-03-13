@@ -499,7 +499,7 @@ const char *overlay_param_names[] = {
 #undef OVERLAY_PARAM_CUSTOM
 };
 
-void
+static void
 parse_overlay_env(struct overlay_params *params,
                   const char *env)
 {
