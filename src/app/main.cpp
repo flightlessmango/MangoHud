@@ -69,7 +69,7 @@ static unsigned int get_prop(const char* propName){
     return 0;
 }
 
-void ctrl_thread(){
+static void ctrl_thread(){
     while (1){
         const struct mangoapp_ctrl_msgid1_v1 *mangoapp_ctrl_v1 = (const struct mangoapp_ctrl_msgid1_v1*) raw_msg;
         memset(raw_msg, 0, sizeof(raw_msg));
@@ -107,7 +107,7 @@ void ctrl_thread(){
 
 bool new_frame = false;
 
-void gamescope_frametime(uint64_t app_frametime_ns, uint64_t latency_ns){
+static void gamescope_frametime(uint64_t app_frametime_ns, uint64_t latency_ns){
     float app_frametime_ms = app_frametime_ns / 1000000.f;
     gamescope_debug_app.push_back(app_frametime_ms);
     if (gamescope_debug_app.size() > 200)
@@ -121,7 +121,7 @@ void gamescope_frametime(uint64_t app_frametime_ns, uint64_t latency_ns){
         gamescope_debug_latency.erase(gamescope_debug_latency.begin());
 }
 
-void msg_read_thread(){
+static void msg_read_thread(){
     for (size_t i = 0; i < 200; i++){
         gamescope_debug_app.push_back(0);
         gamescope_debug_latency.push_back(0);
@@ -180,7 +180,7 @@ void msg_read_thread(){
 
 static const char *GamescopeOverlayProperty = "GAMESCOPE_EXTERNAL_OVERLAY";
 
-GLFWwindow* init(const char* glsl_version){
+static GLFWwindow* init(const char* glsl_version){
     GLFWwindow *window = glfwCreateWindow(1280, 720, "mangoapp overlay window", NULL, NULL);
     Display *x11_display = glfwGetX11Display();
     Window x11_window = glfwGetX11Window(window);
@@ -203,14 +203,14 @@ GLFWwindow* init(const char* glsl_version){
     return window;
 }
 
-void shutdown(GLFWwindow* window){
+static void shutdown(GLFWwindow* window){
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
     glfwDestroyWindow(window);
 }
 
-bool render(GLFWwindow* window) {
+static bool render(GLFWwindow* window) {
     ImVec2 last_window_size = window_size;
     ImGui_ImplGlfw_NewFrame();
     ImGui_ImplOpenGL3_NewFrame();
