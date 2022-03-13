@@ -937,7 +937,8 @@ void HudElements::graphs(){
         for (auto& it : graph_data){
             arr.push_back(float(it.cpu_load));
         }
-        HUDElements.max = 100; HUDElements.min = 0;
+        HUDElements.max = 100;
+        HUDElements.min = 0;
         ImGui::TextColored(HUDElements.colors.engine, "%s", "CPU Load");
     }
 
@@ -945,7 +946,8 @@ void HudElements::graphs(){
         for (auto& it : graph_data){
             arr.push_back(float(it.gpu_load));
         }
-        HUDElements.max = 100; HUDElements.min = 0;
+        HUDElements.max = 100;
+        HUDElements.min = 0;
         ImGui::TextColored(HUDElements.colors.engine, "%s", "GPU Load");
     }
 
