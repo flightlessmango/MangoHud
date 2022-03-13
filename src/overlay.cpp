@@ -426,7 +426,7 @@ void render_mpris_metadata(struct overlay_params& params, mutexed_metadata& meta
 }
 #endif
 
-void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, unsigned height, Clock::time_point now){
+static void render_benchmark(swapchain_stats& data, struct overlay_params& params, const ImVec2& window_size, unsigned height, Clock::time_point now){
    // TODO, FIX LOG_DURATION FOR BENCHMARK
    int benchHeight = (2 + benchmark.percentile_data.size()) * real_font_size.x + 10.0f + 58;
    ImGui::SetNextWindowSize(ImVec2(window_size.x, benchHeight), ImGuiCond_Always);
