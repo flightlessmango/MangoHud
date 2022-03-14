@@ -304,7 +304,6 @@ static VkResult overlay_CreateInstance(
     instance_data->engineVersion = engineVersion;
 
     struct stat info;
-    // string path = "/var/run/user/" + to_string(getuid()) + "/mangoapp/";
     string path = "/tmp/mangoapp/";
     string command = "mkdir -p " + path;
     string json_path = path + to_string(getpid()) + ".json"; 
@@ -356,13 +355,6 @@ static const struct {
 
 static void *find_ptr(const char *name)
 {
-    std::string f(name);
-
-    if ((f != "vkCreateInstance" && f != "vkDestroyInstance" && f != "vkCreateDevice" && f != "vkDestroyDevice"))
-    {
-        return NULL;
-    }
-
    for (uint32_t i = 0; i < ARRAY_SIZE(name_to_funcptr_map); i++) {
       if (strcmp(name, name_to_funcptr_map[i].name) == 0)
          return name_to_funcptr_map[i].ptr;
