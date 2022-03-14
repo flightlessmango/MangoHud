@@ -18,6 +18,9 @@
 #include <GLFW/glfw3native.h>
 #include <X11/Xatom.h>
 
+#include "nlohmann/json.hpp"
+using json = nlohmann::json;
+
 static void glfw_error_callback(int error, const char* description)
 {
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
@@ -124,6 +127,7 @@ void msg_read_thread(){
     }
     int key = ftok("mangoapp", 65);
     msgid = msgget(key, 0666 | IPC_CREAT);
+    pid_t previous_pid;
     const struct mangoapp_msg_header *hdr = (const struct mangoapp_msg_header*) raw_msg;
     const struct mangoapp_msg_v1 *mangoapp_v1 = (const struct mangoapp_msg_v1*) raw_msg;
     while (1){
@@ -137,6 +141,19 @@ void msg_read_thread(){
                     g_fsrUpscale = mangoapp_v1->fsrUpscale;
                     if (params->fsr_steam_sharpness < 0)
                         g_fsrSharpness = mangoapp_v1->fsrSharpness;
+                }
+                if (mangoapp_v1->pid != previous_pid){
+                    fprintf(stderr, "PID: %i\n", mangoapp_v1->pid);
+                    string path = "/tmp/mangoapp/" + to_string(mangoapp_v1->pid) + ".json";
+                    ifstream i(path);
+                    if (i.fail()){
+                        sw_stats.engine = EngineTypes::GAMESCOPE;
+                    } else {
+                        json j;
+                        i >> j;
+                        sw_stats.engine = static_cast<EngineTypes> (j["engine"]);
+                    }
+                    previous_pid = mangoapp_v1->pid;
                 }
                 if (msg_size > offsetof(mangoapp_msg_v1, latency_ns)){
                     gamescope_frametime(mangoapp_v1->app_frametime_ns, mangoapp_v1->latency_ns);

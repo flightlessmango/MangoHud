@@ -2,6 +2,7 @@
 #ifndef MANGOHUD_OVERLAY_H
 #define MANGOHUD_OVERLAY_H
 
+#ifndef MANGOAPP_LAYER
 #include <string>
 #include <stdint.h>
 #include <vector>
@@ -13,16 +14,20 @@
 #include "hud_elements.h"
 #include "version.h"
 #include "gpu.h"
-#include "logging.h"
-#include "vk_enum_to_str.h"
-#include "notify.h"
-#include <vulkan/vk_layer.h>
 #include "amdgpu.h"
 
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
 extern float g_overflow;
 #endif
+#endif
+#include "logging.h"
+#include "notify.h"
+#include "vk_enum_to_str.h"
+#include <vulkan/vk_layer.h>
+
+using namespace std;
+
 struct frame_stat {
    uint64_t stats[OVERLAY_PLOTS_MAX];
 };
@@ -49,7 +54,7 @@ enum EngineTypes
 };
 
 extern const char* engines[];
-
+#ifndef MANGOAPP_LAYER
 struct swapchain_stats {
    uint64_t n_frames;
    enum overlay_plots stat_selector;
@@ -106,7 +111,7 @@ struct LOAD_DATA {
    unsigned med_load;
    unsigned high_load;
 };
-
+#endif
 /* Mapped from VkInstace/VkPhysicalDevice */
 struct instance_data {
    struct vk_instance_dispatch_table vtable;
@@ -137,6 +142,7 @@ struct device_data {
    std::vector<struct queue_data *> queues;
 };
 
+#ifndef MANGOAPP_LAYER
 extern struct fps_limit fps_limit_stats;
 extern int32_t deviceID;
 
@@ -168,9 +174,9 @@ float get_time_stat(void *_data, int _idx);
 void stop_hw_updater();
 extern void control_client_check(struct device_data *device_data);
 extern void process_control_socket(struct instance_data *instance_data);
-
-#ifdef HAVE_DBUS
-void render_mpris_metadata(overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing);
+   #ifdef HAVE_DBUS
+   void render_mpris_metadata(overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing);
+   #endif
 #endif
 
 #endif //MANGOHUD_OVERLAY_H

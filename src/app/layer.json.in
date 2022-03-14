@@ -1,0 +1,21 @@
+{
+    "file_format_version" : "1.0.0",
+    "layer" : {
+      "name": "VK_LAYER_MANGOAPP_overlay",
+      "type": "GLOBAL",
+      "api_version": "1.2.135",
+      "library_path": "libMangoApp.so",
+      "implementation_version": "1",
+      "description": "Mangoapp Layer",
+      "functions": {
+         "vkGetInstanceProcAddr": "overlay_GetInstanceProcAddr",
+         "vkGetDeviceProcAddr": "overlay_GetDeviceProcAddr"
+      },
+      "enable_environment": {
+        "MANGOAPP": "1"
+      },
+      "disable_environment": {
+        "DISABLE_MANGOAPP": "1"
+      }
+    }
+}

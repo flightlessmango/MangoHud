@@ -273,6 +273,28 @@ mangoapp = executable(
 )
 endif
 
+if get_option('mangoapp_layer')
+  pre_args += '-DMANGOAPP_LAYER'
+  mangoapp_layer = shared_library(
+    'MangoApp',
+    vk_enum_to_str,
+    files(
+      'app/layer.cpp',
+    ),
+    c_args : [
+      pre_args,
+      no_override_init_args,
+      ],
+    cpp_args : [
+      pre_args,
+      ],
+    gnu_symbol_visibility : 'hidden',
+    include_directories : [inc_common],
+    link_args : link_args,
+    install : true
+  )
+endif
+
 configure_file(input : 'mangohud.json.in',
   output : '@0@.json'.format(meson.project_name()),
   configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud_vk,
@@ -294,3 +316,10 @@ if get_option('include_doc')
     rename : ['MangoHud.conf.example']
   )
 endif
+
+configure_file(input : 'app/layer.json.in',
+  output : 'libMangoApp.json',
+  copy: true,
+  install : true,
+  install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
+)

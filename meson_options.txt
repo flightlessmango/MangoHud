@@ -17,3 +17,4 @@ option('with_libdrm_amdgpu', type : 'feature', value : 'enabled', description: '
 option('loglevel', type: 'combo', choices : ['trace', 'debug', 'info', 'warn', 'err', 'critical', 'off'], value : 'info', description: 'Max log level in non-debug build')
 option('mangoapp', type: 'boolean', value : 'false')
 option('mangohudctl', type: 'boolean', value : 'false')
+option('mangoapp_layer', type: 'boolean', value : 'false')
