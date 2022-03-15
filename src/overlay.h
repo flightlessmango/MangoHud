@@ -140,7 +140,7 @@ struct device_data {
 
 #ifndef MANGOAPP_LAYER
 extern struct fps_limit fps_limit_stats;
-extern int32_t deviceID;
+extern uint32_t deviceID;
 
 extern struct benchmark_stats benchmark;
 extern ImVec2 real_font_size;
@@ -162,7 +162,7 @@ void init_cpu_stats(overlay_params& params);
 void check_keybinds(overlay_params& params, uint32_t vendorID);
 void init_system_info(void);
 void FpsLimiter(struct fps_limit& stats);
-std::string get_device_name(int32_t vendorID, int32_t deviceID);
+std::string get_device_name(uint32_t vendorID, uint32_t deviceID);
 void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& text_font);
 void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...);
 void center_text(const std::string& text);

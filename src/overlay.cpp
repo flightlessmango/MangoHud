@@ -35,7 +35,7 @@ float g_overflow = 50.f /* 3333ms * 0.5 / 16.6667 / 2 (to edge and back) */;
 #endif
 
 string gpuString,wineVersion,wineProcess;
-int32_t deviceID;
+uint32_t deviceID;
 bool gui_open = false;
 struct benchmark_stats benchmark;
 struct fps_limit fps_limit_stats {};
@@ -812,7 +812,7 @@ void init_system_info(){
 #endif
 }
 
-std::string get_device_name(int32_t vendorID, int32_t deviceID)
+std::string get_device_name(uint32_t vendorID, uint32_t deviceID)
 {
    string desc;
 #ifdef __linux__
