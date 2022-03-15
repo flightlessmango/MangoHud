@@ -271,8 +271,10 @@ else
   windows_deps = null_dep
 endif
 
-if get_option('mangoapp')
+if get_option('mangoapp') or get_option('mangoapp_layer')
   glfw3_dep = dependency('glfw3')
+  json_sp = subproject('nlohmann_json')
+  json_dep = json_sp.get_variable('nlohmann_json_dep')
 endif
 
 subdir('src')

@@ -245,6 +245,7 @@ if get_option('mangoapp') and sizeof_ptr == 8
       dbus_dep,
       dep_x11,
       glfw3_dep,
+      json_dep,
     ],
     include_directories : [inc_common],
     link_args : link_args,
@@ -275,6 +276,9 @@ if get_option('mangoapp_layer')
     cpp_args : [
       pre_args,
       ],
+    dependencies : [
+      json_dep
+    ],
     gnu_symbol_visibility : 'hidden',
     include_directories : [inc_common],
     link_args : link_args,

@@ -41,6 +41,7 @@ subprojects/packagecache/
 subprojects/Vulkan-Headers-*/
 subprojects/imgui-*/
 subprojects/spdlog-*/
+subprojects/nlohmann_json-*/
 
 #GNU Global Metadata
 **/GPATH
