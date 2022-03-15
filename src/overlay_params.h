@@ -73,7 +73,6 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(gamemode)                      \
    OVERLAY_PARAM_BOOL(battery)                       \
    OVERLAY_PARAM_BOOL(battery_icon)                  \
-   OVERLAY_PARAM_BOOL(force_amdgpu_hwmon)            \
    OVERLAY_PARAM_BOOL(fps_only)                      \
    OVERLAY_PARAM_BOOL(fsr)                           \
    OVERLAY_PARAM_BOOL(mangoapp_steam)                \

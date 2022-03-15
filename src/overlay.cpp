@@ -587,7 +587,6 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
       string path;
       string drm = "/sys/class/drm/";
       getAmdGpuInfo_actual = getAmdGpuInfo;
-      bool using_libdrm = false;
 
       auto dirs = ls(drm.c_str(), "card");
       for (auto& dir : dirs) {
@@ -619,9 +618,6 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
             fclose(fp);
          }
 
-         if (!file_exists(path + "/device/gpu_busy_percent"))
-            continue;
-
          if (pci_bus_parsed && pci_dev) {
             string pci_device = read_symlink((path + "/device").c_str());
             SPDLOG_DEBUG("PCI device symlink: '{}'", pci_device);
@@ -639,57 +635,38 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
             metrics_path = gpu_metrics_path;
             SPDLOG_DEBUG("Using gpu_metrics");
          }
-#ifdef HAVE_LIBDRM_AMDGPU
-         else {
-            int idx = -1;
-            //TODO make neater
-            int res = sscanf(path.c_str(), "/sys/class/drm/card%d", &idx);
-            std::string dri_path = "/dev/dri/card" + std::to_string(idx);
-
-            if (!params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon] && res == 1 && amdgpu_open(dri_path.c_str())) {
-               vendorID = 0x1002;
-               using_libdrm = true;
-               getAmdGpuInfo_actual = getAmdGpuInfo_libdrm;
-               amdgpu_set_sampling_period(params.fps_sampling_period);
-
-               SPDLOG_DEBUG("Using libdrm");
-
-               // fall through and open sysfs handles for fallback or check DRM version beforehand
-            } else if (!params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon]) {
-               SPDLOG_ERROR("Failed to open device '/dev/dri/card{}' with libdrm, falling back to using hwmon sysfs.", idx);
-            } else if (params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon]) {
-               SPDLOG_DEBUG("Using amdgpu hwmon");
-            }
-         }
-#endif
-
          path += "/device";
-         if (!amdgpu.busy)
-            amdgpu.busy = fopen((path + "/gpu_busy_percent").c_str(), "r");
          if (!amdgpu.vram_total)
             amdgpu.vram_total = fopen((path + "/mem_info_vram_total").c_str(), "r");
          if (!amdgpu.vram_used)
             amdgpu.vram_used = fopen((path + "/mem_info_vram_used").c_str(), "r");
 
-         path += "/hwmon/";
-         string tempFolder;
-         if (find_folder(path, "hwmon", tempFolder)) {
-            if (!amdgpu.core_clock)
-               amdgpu.core_clock = fopen((path + tempFolder + "/freq1_input").c_str(), "r");
-            if (!amdgpu.memory_clock)
-               amdgpu.memory_clock = fopen((path + tempFolder + "/freq2_input").c_str(), "r");
-            if (!amdgpu.temp)
-               amdgpu.temp = fopen((path + tempFolder + "/temp1_input").c_str(), "r");
-            if (!amdgpu.power_usage)
-               amdgpu.power_usage = fopen((path + tempFolder + "/power1_average").c_str(), "r");
-
-            vendorID = 0x1002;
+         if (!metrics_path.empty())
             break;
+
+         // The card output nodes - cardX-output, will point to the card node
+         // As such the actual metrics nodes will be missing.
+         amdgpu.busy = fopen((path + "/gpu_busy_percent").c_str(), "r");
+         if (!amdgpu.busy)
+            continue;
+
+         path += "/hwmon/";
+         auto dirs = ls(path.c_str(), "hwmon", LS_DIRS);
+         for (auto& dir : dirs) {
+            if (!amdgpu.core_clock)
+               amdgpu.core_clock = fopen((path + dir + "/freq1_input").c_str(), "r");
+            if (!amdgpu.memory_clock)
+               amdgpu.memory_clock = fopen((path + dir + "/freq2_input").c_str(), "r");
+            if (!amdgpu.temp)
+               amdgpu.temp = fopen((path + dir + "/temp1_input").c_str(), "r");
+            if (!amdgpu.power_usage)
+               amdgpu.power_usage = fopen((path + dir + "/power1_average").c_str(), "r");
          }
+         break;
       }
 
       // don't bother then
-      if (!using_libdrm && !amdgpu.busy && !amdgpu.temp && !amdgpu.vram_total && !amdgpu.vram_used) {
+      if (metrics_path.empty() && !amdgpu.busy) {
          params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
       }
    }
@@ -704,13 +681,13 @@ void init_system_info(){
       if (ld_preload)
          unsetenv("LD_PRELOAD");
 
-      ram =  exec("cat /proc/meminfo | grep 'MemTotal' | awk '{print $2}'");
+      ram =  exec("sed -n 's/^MemTotal: *\\([0-9]*\\).*/\\1/p' /proc/meminfo");
       trim(ram);
-      cpu =  exec("cat /proc/cpuinfo | grep 'model name' | tail -n1 | sed 's/^.*: //' | sed 's/([^)]*)/()/g' | tr -d '(/)'");
+      cpu =  exec("sed -n 's/^model name.*: \\(.*\\)/\\1/p' /proc/cpuinfo | sed 's/([^)]*)//g' | tail -n1");
       trim(cpu);
       kernel = exec("uname -r");
       trim(kernel);
-      os = exec("cat /etc/*-release | grep 'PRETTY_NAME' | cut -d '=' -f 2-");
+      os = exec("sed -n 's/PRETTY_NAME=\\(.*\\)/\\1/p' /etc/*-release");
       os.erase(remove(os.begin(), os.end(), '\"' ), os.end());
       trim(os);
       cpusched = read_line("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
@@ -718,7 +695,7 @@ void init_system_info(){
       const char* mangohud_recursion = getenv("MANGOHUD_RECURSION");
       if (!mangohud_recursion) {
          setenv("MANGOHUD_RECURSION", "1", 1);
-         driver = exec("glxinfo -B | grep 'OpenGL version' | sed 's/^.*: //' | sed 's/([^()]*)//g' | tr -s ' '");
+         driver = exec("glxinfo -B | sed -n 's/^OpenGL version.*: \\(.*\\)/\\1/p' | sed 's/([^)]*)//g;s/  / /g'");
          trim(driver);
          unsetenv("MANGOHUD_RECURSION");
       } else {
