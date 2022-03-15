@@ -914,6 +914,18 @@ void HudElements::gamepad_battery()
 #endif
 }
 
+void HudElements::framecount(){
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_framecount]){
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::PushFont(HUDElements.sw_stats->font1);
+        ImGui::TextColored(HUDElements.colors.engine, "Frame Count");
+        ImGui::TableNextColumn();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%llu", HUDElements.sw_stats->n_frames);
+        ImGui::PopFont();
+    }
+}
+
 void HudElements::graphs(){
     ImGui::TableNextRow(); ImGui::TableNextColumn();
     ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
@@ -1066,6 +1078,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
     if (param == "fsr")             { ordered_functions.push_back({gamescope_fsr, value});          }
     if (param == "debug")           { ordered_functions.push_back({gamescope_frame_timing, value}); }
     if (param == "gamepad_battery") { ordered_functions.push_back({gamepad_battery, value});        }
+    if (param == "framecount")      { ordered_functions.push_back({framecount, value});             }
     if (param == "graphs"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs])
             HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs] = true;
@@ -1109,6 +1122,7 @@ void HudElements::legacy_elements(){
     ordered_functions.push_back({wine,               value});
 #endif
     ordered_functions.push_back({frame_timing,       value});
+    ordered_functions.push_back({framecount,         value});
     ordered_functions.push_back({gamescope_frame_timing, value});
 #ifndef MANGOAPP
     ordered_functions.push_back({gamemode,           value});
