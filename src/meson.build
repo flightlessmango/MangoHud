@@ -306,7 +306,7 @@ endif
 
 configure_file(input : 'app/layer.json.in',
   output : 'libMangoApp.json',
-  copy: true,
+  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud_vk},
   install : true,
   install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
 )
