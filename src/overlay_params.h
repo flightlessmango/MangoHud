@@ -63,6 +63,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(legacy_layout)                 \
    OVERLAY_PARAM_BOOL(cpu_mhz)                       \
    OVERLAY_PARAM_BOOL(frametime)                     \
+   OVERLAY_PARAM_BOOL(framecount)                    \
    OVERLAY_PARAM_BOOL(resolution)                    \
    OVERLAY_PARAM_BOOL(show_fps_limit)                \
    OVERLAY_PARAM_BOOL(fps_color_change)              \
