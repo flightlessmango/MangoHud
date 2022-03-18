@@ -9,5 +9,6 @@ if bashcompletiondir == ''
 endif
 
 if bashcompletiondir != 'no'
-  install_data('mangohud', install_dir: bashcompletiondir)
+  install_data('mangohud',    install_dir: bashcompletiondir)
+  install_data('mangohudctl', install_dir: bashcompletiondir)
 endif

@@ -1,4 +1,4 @@
-# bash completion for mangohud(8)                          -*- shell-script -*-
+# bash completion for mangohud(1)                          -*- shell-script -*-
 
 _mangohud() {
     local cur prev words cword split
