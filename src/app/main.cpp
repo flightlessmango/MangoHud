@@ -41,9 +41,9 @@ uint8_t g_fsrSharpness = 0;
 std::vector<float> gamescope_debug_latency {};
 std::vector<float> gamescope_debug_app {};
 
-static unsigned int get_prop(){
+static unsigned int get_prop(const char* propName){
     Display *x11_display = glfwGetX11Display();
-    Atom gamescope_focused = XInternAtom(x11_display, "GAMESCOPE_FOCUSED_APP_GFX", true);
+    Atom gamescope_focused = XInternAtom(x11_display, propName, true);
     auto scr = DefaultScreen(x11_display);
     auto root = RootWindow(x11_display, scr);
     Atom actual;
@@ -72,7 +72,7 @@ void ctrl_thread(){
     while (1){
         const struct mangoapp_ctrl_msgid1_v1 *mangoapp_ctrl_v1 = (const struct mangoapp_ctrl_msgid1_v1*) raw_msg;
         memset(raw_msg, 0, sizeof(raw_msg));
-        size_t msg_size = msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 2, 0);
+        msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 2, 0);
         switch (mangoapp_ctrl_v1->log_session) {
             case 1:
                 if (!logger->is_active())
@@ -113,7 +113,7 @@ void gamescope_frametime(uint64_t app_frametime_ns, uint64_t latency_ns){
         gamescope_debug_app.erase(gamescope_debug_app.begin());
 
     float latency_ms = latency_ns / 1000000.f;
-    if (latency_ns == -1)
+    if (latency_ns == uint64_t(-1))
         latency_ms = -1;
     gamescope_debug_latency.push_back(latency_ms);
     if (gamescope_debug_latency.size() > 200)
@@ -127,7 +127,7 @@ void msg_read_thread(){
     }
     int key = ftok("mangoapp", 65);
     msgid = msgget(key, 0666 | IPC_CREAT);
-    pid_t previous_pid;
+    uint32_t previous_pid = 0;
     const struct mangoapp_msg_header *hdr = (const struct mangoapp_msg_header*) raw_msg;
     const struct mangoapp_msg_v1 *mangoapp_v1 = (const struct mangoapp_msg_v1*) raw_msg;
     while (1){
@@ -142,8 +142,12 @@ void msg_read_thread(){
                     if (params->fsr_steam_sharpness < 0)
                         g_fsrSharpness = mangoapp_v1->fsrSharpness;
                 }
-                if (mangoapp_v1->pid != previous_pid){
-                    fprintf(stderr, "PID: %i\n", mangoapp_v1->pid);
+                if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam]){
+                    steam_focused = get_prop("GAMESCOPE_FOCUSED_APP_GFX") == 769;
+                } else {
+                    steam_focused = false;
+                }
+                if (!steam_focused && mangoapp_v1->pid != previous_pid){
                     string path = "/tmp/mangoapp/" + to_string(mangoapp_v1->pid) + ".json";
                     ifstream i(path);
                     if (i.fail()){
@@ -155,20 +159,12 @@ void msg_read_thread(){
                     }
                     previous_pid = mangoapp_v1->pid;
                 }
-                if (msg_size > offsetof(mangoapp_msg_v1, latency_ns)){
+                if (msg_size > offsetof(mangoapp_msg_v1, latency_ns))
                     gamescope_frametime(mangoapp_v1->app_frametime_ns, mangoapp_v1->latency_ns);
-                }
+
                 {
                     std::unique_lock<std::mutex> lk(mangoapp_m);
                     new_frame = true;
-                    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam]){
-                        if (get_prop() == 769)
-                            steam_focused = true;
-                        else
-                            steam_focused = false;
-                    } else {
-                        steam_focused = false;
-                    }
                 }
                 mangoapp_cv.notify_one();
             }
@@ -181,8 +177,8 @@ void msg_read_thread(){
 
 static const char *GamescopeOverlayProperty = "GAMESCOPE_EXTERNAL_OVERLAY";
 
-GLFWwindow* init(GLFWwindow* window, const char* glsl_version){
-    window = glfwCreateWindow(1280, 720, "mangoapp overlay window", NULL, NULL);
+GLFWwindow* init(const char* glsl_version){
+    GLFWwindow *window = glfwCreateWindow(1280, 720, "mangoapp overlay window", NULL, NULL);
     Display *x11_display = glfwGetX11Display();
     Window x11_window = glfwGetX11Window(window);
     if (x11_window && x11_display)
@@ -239,7 +235,7 @@ int main(int, char**)
     glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, 1);
 
     // Create window with graphics context
-    GLFWwindow* window = init(window, glsl_version);
+    GLFWwindow* window = init(glsl_version);
     // Initialize OpenGL loader
 
     bool err = glewInit() != GLEW_OK;
@@ -279,7 +275,7 @@ int main(int, char**)
     while (!glfwWindowShouldClose(window)){
         if (!params->no_display){
             if (mangoapp_paused){
-                window = init(window, glsl_version);
+                window = init(glsl_version);
                 create_fonts(*params, sw_stats.font1, sw_stats.font_text);
                 HUDElements.convert_colors(*params);
                 mangoapp_paused = false;

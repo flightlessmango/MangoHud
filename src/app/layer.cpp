@@ -61,8 +61,6 @@ static VkLayerDeviceCreateInfo *get_device_chain_info(const VkDeviceCreateInfo *
    return NULL;
 }
 
-/**/
-
 static struct instance_data *new_instance_data(VkInstance instance)
 {
    struct instance_data *data = new instance_data();
@@ -94,15 +92,12 @@ static void instance_data_map_physical_devices(struct instance_data *instance_da
    }
 }
 
-
-
-
 static VkResult overlay_CreateInstance(
     const VkInstanceCreateInfo*                 pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkInstance*                                 pInstance)
 {
-    printf("MANGOAPP LAYER!!!\n");
+    fprintf(stderr, "MANGOAPP LAYER: Init\n");
     VkLayerInstanceCreateInfo *chain_info =
         get_instance_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
     std::string engineVersion,engineName;
