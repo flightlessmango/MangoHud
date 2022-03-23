@@ -1,3 +1,5 @@
+#ifdef HAVE_VULKAN
+
 #include <assert.h>
 #include <cerrno>
 #include <cstring>
@@ -213,3 +215,5 @@ void process_control_socket(struct instance_data *instance_data)
       }
    }
 }
+
+#endif

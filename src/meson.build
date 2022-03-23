@@ -308,6 +308,10 @@ if get_option('include_doc')
   )
 endif
 
+if get_option('use_vulkan')
+    pre_args += '-DHAVE_VULKAN'
+endif
+
 configure_file(input : 'app/layer.json.in',
   output : 'libMangoApp.json',
   configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud_vk},

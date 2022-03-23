@@ -23,8 +23,10 @@ extern float g_overflow;
 #endif
 #include "logging.h"
 #include "notify.h"
+#ifdef HAVE_VULKAN
 #include "vk_enum_to_str.h"
 #include <vulkan/vk_layer.h>
+#endif
 
 using namespace std;
 
@@ -112,6 +114,7 @@ struct LOAD_DATA {
    unsigned high_load;
 };
 #endif
+#ifdef HAVE_VULKAN
 /* Mapped from VkInstace/VkPhysicalDevice */
 struct instance_data {
    struct vk_instance_dispatch_table vtable;
@@ -141,6 +144,7 @@ struct device_data {
 
    std::vector<struct queue_data *> queues;
 };
+#endif
 
 #ifndef MANGOAPP_LAYER
 extern struct fps_limit fps_limit_stats;
@@ -173,8 +177,10 @@ ImVec4 change_on_load_temp(LOAD_DATA& data, unsigned current);
 float get_time_stat(void *_data, int _idx);
 void stop_hw_updater();
 ImTextureID addTexture(const std::string& filename, int* width, int* height, int maxwidth);
+#ifdef HAVE_VULKAN
 extern void control_client_check(struct device_data *device_data);
 extern void process_control_socket(struct instance_data *instance_data);
+#endif
    #ifdef HAVE_DBUS
    void render_mpris_metadata(overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing);
    #endif

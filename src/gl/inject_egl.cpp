@@ -25,6 +25,10 @@ void* get_egl_proc_address(const char* name) {
             SPDLOG_ERROR("Failed to open " MANGOHUD_ARCH " libEGL.so.1: {}", dlerror());
         } else {
             pfn_eglGetProcAddress = reinterpret_cast<decltype(pfn_eglGetProcAddress)>(real_dlsym(handle, "eglGetProcAddress"));
+
+ 	    if(gladLoadGLES2Loader((GLADloadproc)pfn_eglGetProcAddress) == 0) {
+	      pfn_eglGetProcAddress = nullptr;
+	    }
         }
     }
 
@@ -69,7 +73,9 @@ EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf)
         using namespace std::chrono_literals;
         if (fps_limit_stats.targetFrameTime > 0s){
             fps_limit_stats.frameStart = Clock::now();
+#ifdef HAVE_VULKAN
             FpsLimiter(fps_limit_stats);
+#endif
             fps_limit_stats.frameEnd = Clock::now();
         }
     }
