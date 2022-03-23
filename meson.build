@@ -88,10 +88,12 @@ if is_unixy
   dep_wayland_client = dependency('wayland-client',
       required: get_option('with_wayland'), version : '>=1.11')
   dbus_dep = dependency('dbus-1', required: get_option('with_dbus')).partial_dependency(compile_args : true, includes : true)
+  dep_libdrm = dependency('libdrm', required: false).partial_dependency(compile_args : true, includes : true)
 else
   dep_x11 = null_dep
   dep_wayland_client = null_dep
   dbus_dep = null_dep
+  dep_libdrm = null_dep
 endif
 
 if dep_x11.found()
@@ -103,8 +105,8 @@ if dep_wayland_client.found()
   vulkan_wsi_deps += dep_wayland_client
 endif
 
-if is_unixy and not dep_x11.found() and not dep_wayland_client.found()
-  error('At least one of "with_x11" and "with_wayland" should be enabled')
+if is_unixy and not dep_x11.found() and not dep_wayland_client.found() and not dep_libdrm.found()
+  error('At least one of "with_x11" and "with_wayland" should be enabled or libdrm must be found')
 endif
 
 inc_common = [
