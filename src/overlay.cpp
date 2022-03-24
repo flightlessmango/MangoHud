@@ -49,6 +49,17 @@ bool gpu_metrics_exists = false;
 bool steam_focused = false;
 vector<float> frametime_data(200,0.f);
 
+void FpsLimiter(struct fps_limit& stats){
+   stats.sleepTime = stats.targetFrameTime - (stats.frameStart - stats.frameEnd);
+   if (stats.sleepTime > stats.frameOverhead) {
+      auto adjustedSleep = stats.sleepTime - stats.frameOverhead;
+      this_thread::sleep_for(adjustedSleep);
+      stats.frameOverhead = ((Clock::now() - stats.frameStart) - adjustedSleep);
+      if (stats.frameOverhead > stats.targetFrameTime / 2)
+         stats.frameOverhead = Clock::duration(0);
+   }
+}
+
 void update_hw_info(struct overlay_params& params, uint32_t vendorID)
 {
    if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {

@@ -1543,17 +1543,6 @@ static void overlay_DestroySwapchainKHR(
    destroy_swapchain_data(swapchain_data);
 }
 
-void FpsLimiter(struct fps_limit& stats){
-   stats.sleepTime = stats.targetFrameTime - (stats.frameStart - stats.frameEnd);
-   if (stats.sleepTime > stats.frameOverhead) {
-      auto adjustedSleep = stats.sleepTime - stats.frameOverhead;
-      this_thread::sleep_for(adjustedSleep);
-      stats.frameOverhead = ((Clock::now() - stats.frameStart) - adjustedSleep);
-      if (stats.frameOverhead > stats.targetFrameTime / 2)
-         stats.frameOverhead = Clock::duration(0);
-   }
-}
-
 static VkResult overlay_QueuePresentKHR(
     VkQueue                                     queue,
     const VkPresentInfoKHR*                     pPresentInfo)
