@@ -10,8 +10,7 @@
 #define EVENT_SIZE  ( sizeof (struct inotify_event) )
 #define EVENT_BUF_LEN     ( 1024 * ( EVENT_SIZE + 16 ) )
 
-static void fileChanged(void *params_void) {
-    notify_thread *nt = reinterpret_cast<notify_thread *>(params_void);
+static void fileChanged(notify_thread *nt) {
     int length, i = 0;
     char buffer[EVENT_BUF_LEN];
     overlay_params local_params = *nt->params;
@@ -23,7 +22,7 @@ static void fileChanged(void *params_void) {
                 (struct inotify_event *) &buffer[i];
             i += EVENT_SIZE + event->len;
             if (event->mask & IN_MODIFY || event->mask & IN_DELETE_SELF) {
-                // In the case of IN_DELETE_SELF, some editors may to a save-to-temp-file/delete-original/move-temp-file
+                // In the case of IN_DELETE_SELF, some editors may do a save-to-temp-file/delete-original/move-temp-file
                 // so sleep a little to let file to be replaced
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 parse_overlay_config(&local_params, getenv("MANGOHUD_CONFIG"));
