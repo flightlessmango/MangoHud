@@ -88,7 +88,7 @@ class dbus_manager {
     void disconnect_from_signals(Service srv);
     DBusConnection* get_conn() const { return m_dbus_conn; }
 
-    bool gamemode_enabled(int32_t pid);
+    bool gamemode_enabled(pid_t pid);
 
     libdbus_loader& dbus() { return m_dbus_ldr; }
 

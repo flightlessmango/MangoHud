@@ -6,6 +6,7 @@
 #include "dbus_helpers.h"
 #include "dbus_info.h"
 #include "string_utils.h"
+#include "file_utils.h"
 
 using ms = std::chrono::milliseconds;
 using namespace DBus_helpers;
@@ -341,14 +342,33 @@ bool dbus_manager::handle_name_owner_changed(DBusMessage* _msg,
     return true;
 }
 
-bool dbus_manager::gamemode_enabled(int32_t pid) {
+bool dbus_manager::gamemode_enabled(pid_t pid) {
     if (!m_inited)
         return false;
 
+    static int isvc = file_exists("/.flatpak-info") ? 1 : 0;
+    const struct dbus_ep
+    {
+        const char *name;
+        const char *path;
+        const char *iface;
+    } svc[] {
+        {
+            "com.feralinteractive.GameMode",
+            "/com/feralinteractive/GameMode",
+            "com.feralinteractive.GameMode"
+        },
+        {
+            "org.freedesktop.portal.Desktop",
+            "/org/freedesktop/portal/desktop",
+            "org.freedesktop.portal.GameMode"
+        }
+    };
+
     auto reply =
         DBusMessage_wrap::new_method_call(
-            "com.feralinteractive.GameMode", "/com/feralinteractive/GameMode",
-            "com.feralinteractive.GameMode", "QueryStatus", &dbus_mgr.dbus())
+            svc[isvc].name, svc[isvc].path, svc[isvc].iface,
+            "QueryStatus", &dbus_mgr.dbus())
             .argument(pid)
             .send_with_reply_and_block(dbus_mgr.get_conn(), DBUS_TIMEOUT);
     if (!reply) return false;
