@@ -339,6 +339,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `core_load_change`                 | Changes the colors of cpu core loads, uses the same data from `cpu_load_value` and `cpu_load_change`       |
 | `cellpadding_y`                    | Set the vertical cellpadding, default is `-0.085` |
 | `frametime`                        | Display frametime next to fps text                                                    |
+| `framecount`                       | Display frame count                                                                   |
 | `table_columns`                    | Set the number of table columns for ImGui, defaults to 3                              |
 | `blacklist`                        | Add a program to the blacklist. e.g `blacklist=vkcube,WatchDogs2.exe`                 |
 | `resolution`                       | Display the current resolution                                                        |
