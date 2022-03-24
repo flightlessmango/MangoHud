@@ -34,24 +34,18 @@
 #include <list>
 #include <array>
 #include <iomanip>
+#include <inttypes.h>
 #include <spdlog/spdlog.h>
+#include <imgui.h>
 
+#include "mesa/util/macros.h" // defines "restrict" for vk_util.h
+#include "mesa/util/os_socket.h"
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_layer.h>
-
-#include "imgui.h"
+#include <vulkan/vk_util.h>
+#include "vk_enum_to_str.h"
 
 #include "overlay.h"
-
-// #include "util/debug.h"
-#include <inttypes.h>
-#include "mesa/util/macros.h"
-#include "mesa/util/os_time.h"
-#include "mesa/util/os_socket.h"
-
-#include "vk_enum_to_str.h"
-#include <vulkan/vk_util.h>
-
 #include "notify.h"
 #include "blacklist.h"
 #include "pci_ids.h"

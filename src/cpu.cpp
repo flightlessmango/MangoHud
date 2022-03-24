@@ -11,9 +11,7 @@
 #include <inttypes.h>
 #include <spdlog/spdlog.h>
 #include "string_utils.h"
-#include "hud_elements.h"
-#include "overlay.h"
-#include "amdgpu.h"
+#include "gpu.h"
 
 #ifndef PROCDIR
 #define PROCDIR "/proc"

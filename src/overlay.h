@@ -8,13 +8,9 @@
 #include <vector>
 #include <deque>
 #include <imgui.h>
-#include "overlay_params.h"
-#include "iostats.h"
-#include "timing.hpp"
-#include "hud_elements.h"
 #include "version.h"
-#include "gpu.h"
-#include "amdgpu.h"
+#include "overlay_params.h"
+#include "hud_elements.h"
 
 #ifdef HAVE_DBUS
 #include "dbus_info.h"

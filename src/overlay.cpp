@@ -10,22 +10,18 @@
 #include <filesystem.h>
 #include <sys/stat.h>
 #include "overlay.h"
-#include "logging.h"
 #include "cpu.h"
 #include "gpu.h"
 #include "memory.h"
 #include "timing.hpp"
 #include "mesa/util/macros.h"
-#include "string_utils.h"
 #include "battery.h"
 #include "string_utils.h"
 #include "file_utils.h"
-#include "gpu.h"
-#include "logging.h"
-#include "cpu.h"
-#include "memory.h"
 #include "pci_ids.h"
-#include "timing.hpp"
+#include "iostats.h"
+#include "amdgpu.h"
+
 
 #ifdef __linux__
 #include <libgen.h>
