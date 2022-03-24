@@ -18,8 +18,6 @@
 #include <array>
 #include <functional>
 #include <spdlog/spdlog.h>
-#include <spdlog/cfg/env.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
 
 #include "overlay_params.h"
 #include "overlay.h"
@@ -551,13 +549,6 @@ void
 parse_overlay_config(struct overlay_params *params,
                   const char *env)
 {
-   if (!spdlog::get("MANGOHUD"))
-      spdlog::set_default_logger(spdlog::stderr_color_mt("MANGOHUD")); // Just to get the name in log
-#ifndef NDEBUG
-   spdlog::set_level(spdlog::level::level_enum::debug);
-#endif
-   spdlog::cfg::load_env_levels();
-
    *params = {};
 
    /* Visible by default */

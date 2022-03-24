@@ -4,6 +4,9 @@
 #include <thread>
 #include <condition_variable>
 #include <spdlog/spdlog.h>
+#include <spdlog/cfg/env.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/sinks/rotating_file_sink.h>
 #include <filesystem.h>
 #include <sys/stat.h>
 #include "overlay.h"
@@ -48,6 +51,31 @@ double min_frametime, max_frametime;
 bool gpu_metrics_exists = false;
 bool steam_focused = false;
 vector<float> frametime_data(200,0.f);
+
+void init_spdlog()
+{
+   if (spdlog::get("MANGOHUD"))
+      return;
+
+   spdlog::set_default_logger(spdlog::stderr_color_mt("MANGOHUD")); // Just to get the name in log
+   if (getenv("MANGOHUD_USE_LOGFILE"))
+   {
+      try
+      {
+         // Not rotating when opening log as proton/wine create multiple (sub)processes
+         auto log = std::make_shared<spdlog::sinks::rotating_file_sink_mt> (get_config_dir() + "/MangoHud/MangoHud.log", 10*1024*1024, 5, false);
+         spdlog::get("MANGOHUD")->sinks().push_back(log);
+      }
+      catch (const spdlog::spdlog_ex &ex)
+      {
+         SPDLOG_ERROR("{}", ex.what());
+      }
+   }
+#ifndef NDEBUG
+   spdlog::set_level(spdlog::level::level_enum::debug);
+#endif
+   spdlog::cfg::load_env_levels();
+}
 
 void FpsLimiter(struct fps_limit& stats){
    stats.sleepTime = stats.targetFrameTime - (stats.frameStart - stats.frameEnd);
@@ -638,13 +666,11 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
             }
          }
 
-         SPDLOG_DEBUG("using amdgpu path: {}", path);
-
          std::string gpu_metrics_path = path + "/device/gpu_metrics";
          if (file_exists(gpu_metrics_path)) {
             gpu_metrics_exists = true;
             metrics_path = gpu_metrics_path;
-            SPDLOG_DEBUG("Using gpu_metrics");
+            SPDLOG_DEBUG("Using gpu_metrics of {}", path);
          }
          path += "/device";
          if (!amdgpu.vram_total)
@@ -660,6 +686,8 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
          amdgpu.busy = fopen((path + "/gpu_busy_percent").c_str(), "r");
          if (!amdgpu.busy)
             continue;
+
+         SPDLOG_DEBUG("using amdgpu path: {}", path);
 
          path += "/hwmon/";
          auto dirs = ls(path.c_str(), "hwmon", LS_DIRS);

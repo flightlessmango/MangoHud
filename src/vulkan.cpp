@@ -1977,6 +1977,7 @@ static void *find_ptr(const char *name)
 extern "C" VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetDeviceProcAddr(VkDevice dev,
                                                                              const char *funcName)
 {
+   init_spdlog();
    void *ptr = find_ptr(funcName);
    if (ptr) return reinterpret_cast<PFN_vkVoidFunction>(ptr);
 
@@ -1990,6 +1991,7 @@ extern "C" VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetD
 extern "C" VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetInstanceProcAddr(VkInstance instance,
                                                                                const char *funcName)
 {
+   init_spdlog();
    void *ptr = find_ptr(funcName);
    if (ptr) return reinterpret_cast<PFN_vkVoidFunction>(ptr);
 

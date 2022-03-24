@@ -75,6 +75,7 @@ void imgui_init()
     if (cfg_inited)
         return;
 
+    init_spdlog();
     parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
     _params = &params;
 
