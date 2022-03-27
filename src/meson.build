@@ -51,7 +51,6 @@ vklayer_files = files(
   'logging.cpp',
   'config.cpp',
   'gpu.cpp',
-  'vulkan.cpp',
   'blacklist.cpp',
   'file_utils.cpp',
   'amdgpu.cpp',
@@ -154,7 +153,7 @@ if is_unixy
   endif
 endif
 
-link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL', '-lGL'])
+link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL'])
 # meson fails to check version-script so just force add
 link_args += '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version'))
 
@@ -163,6 +162,7 @@ vklayer_mesa_overlay = shared_library(
   mangohud_version,
   util_files,
   vk_enum_to_str,
+  files('vulkan.cpp'),
   vklayer_files,
   opengl_files,
   overlay_spv,
@@ -216,7 +216,6 @@ if is_unixy
 endif
 
 if get_option('mangoapp') and sizeof_ptr == 8
-  pre_args += '-DIMGUI_IMPL_OPENGL_LOADER_GLEW'
   pre_args += '-DMANGOAPP'
   mangoapp = executable(
     'mangoapp',
@@ -224,9 +223,9 @@ if get_option('mangoapp') and sizeof_ptr == 8
     util_files,
     vk_enum_to_str,
     vklayer_files,
-    opengl_files,
     files(
       'app/main.cpp',
+      'gl/glad.c',
     ),
     c_args : [
       pre_args,

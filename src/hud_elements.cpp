@@ -829,7 +829,7 @@ void HudElements::gamescope_frame_timing(){
         ImGui::PlotLines("", gamescope_debug_app.data(),
                 gamescope_debug_app.size(), 0,
                 NULL, min_time, max_time,
-                    ImVec2(ImGui::GetContentRegionAvailWidth() * HUDElements.params->table_columns - 30, 50));
+                    ImVec2(ImGui::GetContentRegionAvail().x * HUDElements.params->table_columns - 30, 50));
             ImGui::SameLine();
             ImGui::PushFont(HUDElements.sw_stats->font1);
             ImGui::Text("%.1fms", gamescope_debug_app.back());
@@ -854,7 +854,7 @@ void HudElements::gamescope_frame_timing(){
             ImGui::PlotLines("", gamescope_debug_latency.data(),
                     gamescope_debug_latency.size(), 0,
                     NULL, min_time, max_time,
-                    ImVec2(ImGui::GetContentRegionAvailWidth() * HUDElements.params->table_columns - 30, 50));
+                    ImVec2(ImGui::GetContentRegionAvail().x * HUDElements.params->table_columns - 30, 50));
             ImGui::SameLine();
             ImGui::PushFont(HUDElements.sw_stats->font1);
             ImGui::Text("%.1fms", gamescope_debug_latency.back());

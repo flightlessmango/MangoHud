@@ -12,7 +12,7 @@
 #include "../overlay.h"
 #include "notify.h"
 #include "mangoapp.h"
-#include <GL/glew.h>
+#include "glad/glad.h"
 #include <GLFW/glfw3.h>
 
 #define GLFW_EXPOSE_NATIVE_X11
@@ -255,10 +255,7 @@ int main(int, char**)
     Window x11_window = glfwGetX11Window(window);
     Atom overlay_atom = XInternAtom (x11_display, GamescopeOverlayProperty, False);
     // Initialize OpenGL loader
-
-    bool err = glewInit() != GLEW_OK;
-
-    if (err)
+    if (!gladLoadGL())
     {
         fprintf(stderr, "Failed to initialize OpenGL loader!\n");
         return 1;
