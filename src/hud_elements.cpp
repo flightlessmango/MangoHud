@@ -644,11 +644,8 @@ void HudElements::resolution(){
 void HudElements::show_fps_limit(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_show_fps_limit]){
         int fps = 0;
-        double frame_time = (double)fps_limit_stats.targetFrameTime.count()/1000000;
-        fps = (1 / frame_time) *1000;
-        if (frame_time == 0.0){
-            fps = 0;
-        }
+        if (fps_limit_stats.targetFrameTime.count())
+            fps = 1000000000 / fps_limit_stats.targetFrameTime.count();
         ImGui::TableNextRow(); ImGui::TableNextColumn();
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TextColored(HUDElements.colors.engine, "%s","FPS limit");

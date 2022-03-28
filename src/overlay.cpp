@@ -203,7 +203,7 @@ void stop_hw_updater()
 void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID, uint64_t frametime_ns){
    uint32_t f_idx = sw_stats.n_frames % ARRAY_SIZE(sw_stats.frames_stats);
    uint64_t now = os_time_get_nano(); /* ns */
-   double elapsed = (double)(now - sw_stats.last_fps_update); /* ns */
+   auto elapsed = now - sw_stats.last_fps_update; /* ns */
    float frametime_ms = frametime_ns / 1000000.f;
    frametime_data[f_idx] = frametime_ms;
 
