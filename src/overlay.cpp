@@ -205,7 +205,6 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, struct ove
    uint64_t now = os_time_get_nano(); /* ns */
    auto elapsed = now - sw_stats.last_fps_update; /* ns */
    float frametime_ms = frametime_ns / 1000000.f;
-   frametime_data[f_idx] = frametime_ms;
 
    if (logger->is_active())
       benchmark.fps_data.push_back(1000 / frametime_ms);
@@ -213,6 +212,7 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, struct ove
    if (sw_stats.last_present_time) {
         sw_stats.frames_stats[f_idx].stats[OVERLAY_PLOTS_frame_timing] =
             frametime_ns;
+      frametime_data[f_idx] = frametime_ms;
    }
 
    frametime = frametime_ns / 1000;
