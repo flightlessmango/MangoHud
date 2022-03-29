@@ -57,6 +57,7 @@ struct swapchain_stats {
    double time_dividor;
    struct frame_stat stats_min, stats_max;
    struct frame_stat frames_stats[200];
+   float frame_times[1000]; // histogram buckets.
 
    ImFont* font1 = nullptr;
    ImFont* font_text = nullptr;
