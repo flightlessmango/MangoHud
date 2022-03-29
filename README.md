@@ -346,6 +346,9 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `show_fps_limit`                   | Display the current fps limit                                                         |
 | `custom_text_center`               | Display a custom text centered useful for a header e.g `custom_text_center=FlightLessMango Benchmarks`     |
 | `custom_text`                      | Display a custom text e.g `custom_text=Fsync enabled`                                 |
+| `background_image`                 | Display a background image from argument path on the whole screen (eventually transparent) |
+| `image`                            | Display an image from argument path                                                   |
+| `image_max_width`                  | Maximize the image by a max number of pixel for the width                             |
 | `exec`                             | Display output of bash command in next column, e.g `custom_text=/home` , `exec=df -h /home \| tail -n 1`. Only works with legacy_layout=false  |
 | `round_corners`                    | Change the amount of roundness of the corners have e.g `round_corners=10.0`           |
 | `vkbasalt`                         | Shows if vkbasalt is on                                                               |

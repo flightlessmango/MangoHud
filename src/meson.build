@@ -154,6 +154,10 @@ if is_unixy
   endif
 endif
 
+if get_option('use_vulkan')
+    pre_args += '-DHAVE_VULKAN'
+endif
+
 link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL', '-lGL'])
 # meson fails to check version-script so just force add
 link_args += '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version'))
