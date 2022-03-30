@@ -1,8 +1,36 @@
+#include <spdlog/spdlog.h>
 #include "amdgpu.h"
 #include "gpu.h"
 #include "cpu.h"
 
 std::string metrics_path = "";
+
+bool amdgpu_check_metrics(const std::string& path)
+{
+    metrics_table_header header {};
+    std::ifstream in(path, std::ios_base::binary);
+    if (!in.read((char*)&header, sizeof(header)))
+    {
+        SPDLOG_DEBUG("Failed to read '{}': {}", path, in.eof() ? "End of file" : strerror(errno));
+        return false;
+    }
+
+    switch (header.structure_size)
+    {
+        case 80: // v1_0, not naturally aligned
+        case 96: // v1_1
+        case 104: // v1_2
+        case sizeof(gpu_metrics_v1_3): // v2.0, v2.1
+        case sizeof(gpu_metrics_v2_2):
+            if (header.format_revision == 1 || header.format_revision == 2)
+                return true;
+        default:
+            break;
+    }
+
+    SPDLOG_WARN("Unsupported gpu_metrics version: {}.{}", header.format_revision, header.content_revision);
+    return false;
+}
 
 void amdgpu_get_metrics()
 {

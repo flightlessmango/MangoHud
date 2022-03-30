@@ -663,7 +663,7 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
          }
 
          std::string gpu_metrics_path = path + "/device/gpu_metrics";
-         if (file_exists(gpu_metrics_path)) {
+         if (amdgpu_check_metrics(gpu_metrics_path)) {
             gpu_metrics_exists = true;
             metrics_path = gpu_metrics_path;
             SPDLOG_DEBUG("Using gpu_metrics of {}", path);
