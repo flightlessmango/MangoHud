@@ -84,7 +84,7 @@ void FpsLimiter(struct fps_limit& stats){
    }
 }
 
-void update_hw_info(struct overlay_params& params, uint32_t vendorID)
+void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
 {
    if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
       cpuStats.UpdateCPUData();
@@ -144,7 +144,7 @@ struct hw_info_updater
 {
    bool quit = false;
    std::thread thread {};
-   struct overlay_params* params = nullptr;
+   const struct overlay_params* params = nullptr;
    uint32_t vendorID;
    bool update_hw_info_thread = false;
 
@@ -164,7 +164,7 @@ struct hw_info_updater
          thread.join();
    }
 
-   void update(struct overlay_params* params_, uint32_t vendorID_)
+   void update(const struct overlay_params* params_, uint32_t vendorID_)
    {
       std::unique_lock<std::mutex> lk_hw_updating(m_hw_updating, std::try_to_lock);
       if (lk_hw_updating.owns_lock())
@@ -200,7 +200,7 @@ void stop_hw_updater()
       hw_update_thread.reset();
 }
 
-void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID, uint64_t frametime_ns){
+void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const struct overlay_params& params, uint32_t vendorID, uint64_t frametime_ns){
    uint32_t f_idx = sw_stats.n_frames % ARRAY_SIZE(sw_stats.frames_stats);
    uint64_t now = os_time_get_nano(); /* ns */
    auto elapsed = now - sw_stats.last_fps_update; /* ns */
@@ -255,7 +255,7 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, struct ove
    sw_stats.n_frames_since_update++;
 }
 
-void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
+void update_hud_info(struct swapchain_stats& sw_stats, const struct overlay_params& params, uint32_t vendorID){
    uint64_t now = os_time_get_nano(); /* ns */
    uint64_t frametime_ns = now - sw_stats.last_present_time;
    update_hud_info_with_frametime(sw_stats, params, vendorID, frametime_ns);
@@ -275,7 +275,7 @@ float get_time_stat(void *_data, int _idx)
    return data->frames_stats[idx].stats[data->stat_selector] / data->time_dividor;
 }
 
-void position_layer(struct swapchain_stats& data, struct overlay_params& params, ImVec2 window_size)
+void position_layer(struct swapchain_stats& data, const struct overlay_params& params, const ImVec2& window_size)
 {
    unsigned width = ImGui::GetIO().DisplaySize.x;
    unsigned height = ImGui::GetIO().DisplaySize.y;
@@ -363,7 +363,7 @@ float get_ticker_limited_pos(float pos, float tw, float& left_limit, float& righ
 }
 
 #ifdef HAVE_DBUS
-void render_mpris_metadata(struct overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing)
+void render_mpris_metadata(const struct overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing)
 {
    if (meta.meta.valid) {
       auto color = ImGui::ColorConvertU32ToFloat4(params.media_player_color);
@@ -426,7 +426,7 @@ void render_mpris_metadata(struct overlay_params& params, mutexed_metadata& meta
 }
 #endif
 
-void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, unsigned height, Clock::time_point now){
+static void render_benchmark(swapchain_stats& data, const struct overlay_params& params, const ImVec2& window_size, unsigned height, Clock::time_point now){
    // TODO, FIX LOG_DURATION FOR BENCHMARK
    int benchHeight = (2 + benchmark.percentile_data.size()) * real_font_size.x + 10.0f + 58;
    ImGui::SetNextWindowSize(ImVec2(window_size.x, benchHeight), ImGuiCond_Always);
@@ -519,7 +519,7 @@ ImVec4 change_on_load_temp(LOAD_DATA& data, unsigned current)
 
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan)
 {
-   HUDElements.sw_stats = &data; HUDElements.params = &params;
+   HUDElements.sw_stats = &data;
    HUDElements.is_vulkan = is_vulkan;
    ImGui::GetIO().FontGlobalScale = params.font_scale;
    static float ralign_width = 0, old_scale = 0;

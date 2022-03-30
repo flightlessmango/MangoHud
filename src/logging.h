@@ -32,7 +32,7 @@ struct logData{
 
 class Logger {
 public:
-  Logger(overlay_params* in_params);
+  Logger(const overlay_params* in_params);
 
   void start_logging();
   void stop_logging();
@@ -54,7 +54,7 @@ public:
   void upload_last_log();
   void upload_last_logs();
   void calculate_benchmark_data();
-  overlay_params* m_params;
+  const overlay_params* m_params;
 
 private:
   std::vector<logData> m_log_array;

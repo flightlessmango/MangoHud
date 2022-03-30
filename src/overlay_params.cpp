@@ -499,7 +499,7 @@ const char *overlay_param_names[] = {
 #undef OVERLAY_PARAM_CUSTOM
 };
 
-void
+static void
 parse_overlay_env(struct overlay_params *params,
                   const char *env)
 {
@@ -794,6 +794,9 @@ parse_overlay_config(struct overlay_params *params,
 
    auto real_size = params->font_size * params->font_scale;
    real_font_size = ImVec2(real_size, real_size / 2);
+#ifdef MANGOAPP
+   params->log_interval = 0;
+#endif
    HUDElements.params = params;
    if (params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout]){
         HUDElements.legacy_elements();

@@ -73,7 +73,7 @@ R format_units(T value, const char*& unit)
     return out_value;
 }
 
-void HudElements::convert_colors(struct overlay_params& params)
+void HudElements::convert_colors(const struct overlay_params& params)
 {
     HUDElements.colors.update = false;
     auto convert = [](unsigned color) -> ImVec4 {
@@ -114,7 +114,7 @@ void HudElements::convert_colors(struct overlay_params& params)
     style.WindowRounding = params.round_corners;
 }
 
-void HudElements::convert_colors(bool do_conv, struct overlay_params& params)
+void HudElements::convert_colors(bool do_conv, const struct overlay_params& params)
 {
     HUDElements.colors.convert = do_conv;
     convert_colors(params);
@@ -188,7 +188,7 @@ void HudElements::gpu_stats(){
 #ifdef MANGOAPP
             right_aligned_text(text_color, HUDElements.ralign_width, "%.1f", gpu_info.powerUsage);
 #else
-    right_aligned_text(text_color, HUDElements.ralign_width, "%.0f", gpu_info.powerUsage);
+            right_aligned_text(text_color, HUDElements.ralign_width, "%.0f", gpu_info.powerUsage);
 #endif
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(HUDElements.sw_stats->font1);
@@ -937,7 +937,8 @@ void HudElements::graphs(){
         for (auto& it : graph_data){
             arr.push_back(float(it.cpu_load));
         }
-        HUDElements.max = 100; HUDElements.min = 0;
+        HUDElements.max = 100;
+        HUDElements.min = 0;
         ImGui::TextColored(HUDElements.colors.engine, "%s", "CPU Load");
     }
 
@@ -945,7 +946,8 @@ void HudElements::graphs(){
         for (auto& it : graph_data){
             arr.push_back(float(it.gpu_load));
         }
-        HUDElements.max = 100; HUDElements.min = 0;
+        HUDElements.max = 100;
+        HUDElements.min = 0;
         ImGui::TextColored(HUDElements.colors.engine, "%s", "GPU Load");
     }
 

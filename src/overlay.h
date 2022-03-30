@@ -151,18 +151,17 @@ extern double min_frametime, max_frametime;
 extern bool steam_focused;
 
 void init_spdlog();
-void position_layer(struct swapchain_stats& data, struct overlay_params& params, ImVec2 window_size);
+void position_layer(struct swapchain_stats& data, const struct overlay_params& params, const ImVec2& window_size);
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan);
-void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID);
-void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID, uint64_t frametime_ns);
-void update_hw_info(struct overlay_params& params, uint32_t vendorID);
+void update_hud_info(struct swapchain_stats& sw_stats, const struct overlay_params& params, uint32_t vendorID);
+void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const struct overlay_params& params, uint32_t vendorID, uint64_t frametime_ns);
+void update_hw_info(const struct overlay_params& params, uint32_t vendorID);
 void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_params& params);
 void init_cpu_stats(overlay_params& params);
 void check_keybinds(overlay_params& params, uint32_t vendorID);
 void init_system_info(void);
 void FpsLimiter(struct fps_limit& stats);
 std::string get_device_name(int32_t vendorID, int32_t deviceID);
-void calculate_benchmark_data(overlay_params* params);
 void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& text_font);
 void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...);
 void center_text(const std::string& text);
@@ -171,9 +170,9 @@ float get_time_stat(void *_data, int _idx);
 void stop_hw_updater();
 extern void control_client_check(struct device_data *device_data);
 extern void process_control_socket(struct instance_data *instance_data);
-   #ifdef HAVE_DBUS
-   void render_mpris_metadata(overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing);
-   #endif
+#ifdef HAVE_DBUS
+void render_mpris_metadata(const overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing);
 #endif
+#endif //MANGOAPP_LAYER
 
 #endif //MANGOHUD_OVERLAY_H

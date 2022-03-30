@@ -256,8 +256,6 @@ struct overlay_params {
 
 const extern char *overlay_param_names[];
 
-void parse_overlay_env(struct overlay_params *params,
-                       const char *env);
 void parse_overlay_config(struct overlay_params *params,
                        const char *env);
 

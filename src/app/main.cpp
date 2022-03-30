@@ -25,14 +25,15 @@ static void glfw_error_callback(int error, const char* description)
 {
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
+
 swapchain_stats sw_stats {};
 overlay_params *params;
 static ImVec2 window_size;
 static uint32_t vendorID;
 static std::string deviceName;
 static notify_thread notifier;
-int msgid;
-bool mangoapp_paused = false;
+static int msgid;
+static bool mangoapp_paused = false;
 std::mutex mangoapp_m;
 std::condition_variable mangoapp_cv;
 static uint8_t raw_msg[1024] = {0};
@@ -68,12 +69,15 @@ static unsigned int get_prop(const char* propName){
     return 0;
 }
 
-void ctrl_thread(){
+static void ctrl_thread(){
     while (1){
         const struct mangoapp_ctrl_msgid1_v1 *mangoapp_ctrl_v1 = (const struct mangoapp_ctrl_msgid1_v1*) raw_msg;
         memset(raw_msg, 0, sizeof(raw_msg));
         msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 2, 0);
         switch (mangoapp_ctrl_v1->log_session) {
+            case 0:
+                // Keep as-is
+                break;
             case 1:
                 if (!logger->is_active())
                     logger->start_logging();
@@ -89,6 +93,9 @@ void ctrl_thread(){
         {
             std::lock_guard<std::mutex> lk(mangoapp_m);
             switch (mangoapp_ctrl_v1->no_display){
+                case 0:
+                    // Keep as-is
+                    break;
                 case 1:
                     params->no_display = 1;
                     break;
@@ -106,7 +113,7 @@ void ctrl_thread(){
 
 bool new_frame = false;
 
-void gamescope_frametime(uint64_t app_frametime_ns, uint64_t latency_ns){
+static void gamescope_frametime(uint64_t app_frametime_ns, uint64_t latency_ns){
     float app_frametime_ms = app_frametime_ns / 1000000.f;
     gamescope_debug_app.push_back(app_frametime_ms);
     if (gamescope_debug_app.size() > 200)
@@ -120,7 +127,7 @@ void gamescope_frametime(uint64_t app_frametime_ns, uint64_t latency_ns){
         gamescope_debug_latency.erase(gamescope_debug_latency.begin());
 }
 
-void msg_read_thread(){
+static void msg_read_thread(){
     for (size_t i = 0; i < 200; i++){
         gamescope_debug_app.push_back(0);
         gamescope_debug_latency.push_back(0);
@@ -179,7 +186,7 @@ void msg_read_thread(){
 
 static const char *GamescopeOverlayProperty = "GAMESCOPE_EXTERNAL_OVERLAY";
 
-GLFWwindow* init(const char* glsl_version){
+static GLFWwindow* init(const char* glsl_version){
     GLFWwindow *window = glfwCreateWindow(1280, 720, "mangoapp overlay window", NULL, NULL);
     Display *x11_display = glfwGetX11Display();
     Window x11_window = glfwGetX11Window(window);
@@ -202,14 +209,14 @@ GLFWwindow* init(const char* glsl_version){
     return window;
 }
 
-void shutdown(GLFWwindow* window){
+static void shutdown(GLFWwindow* window){
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
     glfwDestroyWindow(window);
 }
 
-bool render(GLFWwindow* window) {
+static bool render(GLFWwindow* window) {
     ImVec2 last_window_size = window_size;
     ImGui_ImplGlfw_NewFrame();
     ImGui_ImplOpenGL3_NewFrame();
@@ -223,7 +230,7 @@ bool render(GLFWwindow* window) {
 }
 
 int main(int, char**)
-{   
+{
     // Setup window
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
@@ -259,6 +266,7 @@ int main(int, char**)
     init_cpu_stats(*params);
     notifier.params = params;
     start_notifier(notifier);
+    window_size = ImVec2(params->width, params->height);
         deviceName = (char*)glGetString(GL_RENDERER);
     sw_stats.deviceName = deviceName;
     if (deviceName.find("Radeon") != std::string::npos
@@ -277,9 +285,7 @@ int main(int, char**)
     while (!glfwWindowShouldClose(window)){
         if (!params->no_display){
             if (mangoapp_paused){
-                window = init(glsl_version);
-                create_fonts(*params, sw_stats.font1, sw_stats.font_text);
-                HUDElements.convert_colors(*params);
+                glfwRestoreWindow(window);
                 mangoapp_paused = false;
             }
             {
@@ -306,8 +312,8 @@ int main(int, char**)
             }
             // Rendering
             ImGui::Render();
-            glEnable(GL_DEPTH_TEST);        
-            glEnable(GL_BLEND);             
+            glEnable(GL_DEPTH_TEST);
+            glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             glClearColor(0, 0, 0, 0);
             glClear(GL_COLOR_BUFFER_BIT);
@@ -315,7 +321,7 @@ int main(int, char**)
 
             glfwSwapBuffers(window);
         } else if (!mangoapp_paused) {
-            shutdown(window);
+            glfwIconifyWindow(window);
             mangoapp_paused = true;
             std::unique_lock<std::mutex> lk(mangoapp_m);
             mangoapp_cv.wait(lk, []{return !params->no_display;});
@@ -323,11 +329,8 @@ int main(int, char**)
     }
 
     // Cleanup
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
+    shutdown(window);
 
-    glfwDestroyWindow(window);
     glfwTerminate();
 
     return 0;

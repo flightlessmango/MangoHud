@@ -141,7 +141,7 @@ string get_log_suffix(){
   return log_name;
 }
 
-Logger::Logger(overlay_params* in_params)
+Logger::Logger(const overlay_params* in_params)
   : m_params(in_params),
     m_logging_on(false),
     m_values_valid(false)
@@ -155,9 +155,6 @@ void Logger::start_logging() {
   m_values_valid = false;
   m_logging_on = true;
   m_log_start = Clock::now();
-#ifdef MANGOAPP
-  HUDElements.params->log_interval = 0;
-#endif
   if((!m_params->output_folder.empty()) && (m_params->log_interval != 0)){
     std::thread(&Logger::logging, this).detach();
   }
