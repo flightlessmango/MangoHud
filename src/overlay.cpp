@@ -519,7 +519,7 @@ ImVec4 change_on_load_temp(LOAD_DATA& data, unsigned current)
 
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan)
 {
-   HUDElements.sw_stats = &data;
+   HUDElements.sw_stats = &data; HUDElements.params = &params;
    HUDElements.is_vulkan = is_vulkan;
    ImGui::GetIO().FontGlobalScale = params.font_scale;
    static float ralign_width = 0, old_scale = 0;
