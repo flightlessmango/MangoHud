@@ -269,7 +269,7 @@ void dbus_manager::deinit(Service srv) {
     }
 }
 
-dbus_manager::~dbus_manager() { deinit(SRV_ALL); }
+dbus_manager::~dbus_manager() { deinit(static_cast<Service>(m_active_srvs)); }
 
 DBusHandlerResult dbus_manager::filter_signals(DBusConnection* conn,
                                                DBusMessage* msg,
@@ -417,7 +417,11 @@ void dbus_manager::disconnect_from_signals(Service srv) {
         auto signal = format_signal(kv);
         m_dbus_ldr.bus_remove_match(m_dbus_conn, signal.c_str(), &m_error);
         if (m_dbus_ldr.error_is_set(&m_error)) {
-            SPDLOG_ERROR("{}: {}", m_error.name, m_error.message);
+#ifndef NDEBUG
+            // spdlog might be destroyed by now
+            std::cerr << "[MANGOHUD] [debug] " << __func__ << " "
+            << m_error.name << ": " << m_error.message << std::endl;
+#endif
             m_dbus_ldr.error_free(&m_error);
         }
     }
