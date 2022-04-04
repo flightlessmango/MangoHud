@@ -1093,7 +1093,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
     if (param == "debug")           { ordered_functions.push_back({gamescope_frame_timing, value}); }
     if (param == "gamepad_battery") { ordered_functions.push_back({gamepad_battery, value});        }
     if (param == "framecount")      { ordered_functions.push_back({framecount, value});             }
-    if (param == "fan")             { ordered_functions.push_back({gamescope_fsr, value});          }
+    if (param == "fan")             { ordered_functions.push_back({fan, value});          }
     if (param == "graphs"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs])
             HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs] = true;
