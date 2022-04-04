@@ -47,6 +47,7 @@ double min_frametime, max_frametime;
 bool gpu_metrics_exists = false;
 bool steam_focused = false;
 vector<float> frametime_data(200,0.f);
+int fan_speed;
 
 void init_spdlog()
 {
@@ -86,6 +87,7 @@ void FpsLimiter(struct fps_limit& stats){
 
 void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
 {
+   update_fan();
    if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
       cpuStats.UpdateCPUData();
 
@@ -823,4 +825,12 @@ std::string get_device_name(int32_t vendorID, int32_t deviceID)
    trim(desc);
 #endif
    return desc;
+}
+
+void update_fan(){
+   // This just handles steam deck fan for now
+   if (read_line("/sys/class/hwmon/hwmon8/name").find("jupiter") != string::npos)
+      fan_speed = stoi(read_line("/sys/class/hwmon/hwmon8/fan1_input"));
+   else
+      fan_speed = -1;
 }

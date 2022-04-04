@@ -63,6 +63,7 @@ class HudElements{
         static void gamescope_frame_timing();
         static void gamepad_battery();
         static void framecount();
+        static void fan();
 
         void convert_colors(const struct overlay_params& params);
         void convert_colors(bool do_conv, const struct overlay_params& params);

@@ -149,6 +149,7 @@ extern std::deque<logData> graph_data;
 extern overlay_params *_params;
 extern double min_frametime, max_frametime;
 extern bool steam_focused;
+extern int fan_speed;
 
 void init_spdlog();
 void position_layer(struct swapchain_stats& data, const struct overlay_params& params, const ImVec2& window_size);
@@ -173,6 +174,7 @@ extern void process_control_socket(struct instance_data *instance_data);
 #ifdef HAVE_DBUS
 void render_mpris_metadata(const overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing);
 #endif
+void update_fan();
 #endif //MANGOAPP_LAYER
 
 #endif //MANGOHUD_OVERLAY_H

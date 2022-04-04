@@ -925,6 +925,19 @@ void HudElements::framecount(){
     }
 }
 
+void HudElements::fan(){
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fan] && fan_speed != -1) {
+        ImGui::TableNextRow(); ImGui::TableNextColumn();
+        ImGui::TextColored(HUDElements.colors.engine, "%s", "FAN");
+        ImGui::TableNextColumn();
+        right_aligned_text(HUDElements.colors.text,HUDElements.ralign_width, "%i", fan_speed);
+        ImGui::SameLine(0, 1.0f);
+        ImGui::PushFont(HUDElements.sw_stats->font1);
+        ImGui::Text("RPM");
+        ImGui::PopFont();
+    }
+}
+
 void HudElements::graphs(){
     ImGui::TableNextRow(); ImGui::TableNextColumn();
     ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
@@ -1080,6 +1093,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
     if (param == "debug")           { ordered_functions.push_back({gamescope_frame_timing, value}); }
     if (param == "gamepad_battery") { ordered_functions.push_back({gamepad_battery, value});        }
     if (param == "framecount")      { ordered_functions.push_back({framecount, value});             }
+    if (param == "fan")             { ordered_functions.push_back({gamescope_fsr, value});          }
     if (param == "graphs"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs])
             HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs] = true;
@@ -1110,6 +1124,7 @@ void HudElements::legacy_elements(){
     ordered_functions.push_back({vram,               value});
     ordered_functions.push_back({ram,                value});
     ordered_functions.push_back({battery,            value});
+    ordered_functions.push_back({fan,                value});
     ordered_functions.push_back({gamescope_fsr,      value});
     ordered_functions.push_back({fps,                value});
     ordered_functions.push_back({fps_only,           value});
