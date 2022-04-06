@@ -83,6 +83,7 @@ if is_unixy
     'battery.cpp',
     'control.cpp',
     'gamepad.cpp',
+    'process.cpp',
   )
 
   opengl_files = files(
