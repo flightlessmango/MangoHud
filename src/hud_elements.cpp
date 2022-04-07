@@ -21,6 +21,8 @@
 #define CHAR_CELSIUS    "\xe2\x84\x83"
 #define CHAR_FAHRENHEIT "\xe2\x84\x89"
 
+using namespace std;
+
 // Cut from https://github.com/ocornut/imgui/pull/2943
 // Probably move to ImGui
 float SRGBToLinear(float in)

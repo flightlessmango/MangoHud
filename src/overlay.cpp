@@ -31,6 +31,7 @@
 #endif
 
 namespace fs = ghc::filesystem;
+using namespace std;
 
 #ifdef HAVE_DBUS
 float g_overflow = 50.f /* 3333ms * 0.5 / 16.6667 / 2 (to edge and back) */;
