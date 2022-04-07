@@ -21,6 +21,7 @@ extern "C" {
 
 int os_socket_accept(int s);
 
+int os_socket_listen_file(const char *path, int count);
 int os_socket_listen_abstract(const char *path, int count);
 
 ssize_t os_socket_recv(int socket, void *buffer, size_t length, int flags);

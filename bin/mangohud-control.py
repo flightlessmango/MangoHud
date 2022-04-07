@@ -150,7 +150,9 @@ class MsgParser:
         return parsed
 
 def control(args):
-    if args.socket:
+    if os.path.exists(args.socket):
+        address = args.socket
+    elif args.socket:
         address = '\0' + args.socket
     else:
         address = DEFAULT_SERVER_ADDRESS

@@ -96,13 +96,19 @@ parse_position(const char *str)
 static int
 parse_control(const char *str)
 {
+   int ret = -1;
    std::string path(str);
    size_t npos = path.find("%p");
    if (npos != std::string::npos)
       path.replace(npos, 2, std::to_string(getpid()));
    SPDLOG_DEBUG("Socket: {}", path);
 
-   int ret = os_socket_listen_abstract(path.c_str(), 1);
+   if (path[0] == '/')
+      ret = os_socket_listen_file(path.c_str(), 1);
+   if (ret < 0) {
+      SPDLOG_WARN("Couldn't create socket file at '{}'", str);
+      ret = os_socket_listen_abstract(path.c_str(), 1);
+   }
    if (ret < 0) {
       SPDLOG_ERROR("Couldn't create socket pipe at '{}'", str);
       SPDLOG_ERROR("ERROR: '{}'", strerror(errno));

@@ -18,6 +18,29 @@
 #include <unistd.h>
 
 int
+os_socket_listen_file(const char *path, int count)
+{
+   int s = socket(AF_UNIX, SOCK_STREAM, 0);
+   if (s < 0)
+      return -1;
+
+   unlink(path);
+
+   struct sockaddr_un addr;
+   memset(&addr, 0, sizeof(addr));
+   addr.sun_family = AF_UNIX;
+   strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
+
+   int ret = bind(s, (struct sockaddr*)&addr, sizeof(addr));
+   if (ret < 0)
+      return -1;
+
+   listen(s, count);
+
+   return s;
+}
+
+int
 os_socket_listen_abstract(const char *path, int count)
 {
    int s = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -80,6 +103,12 @@ os_socket_close(int s)
 }
 
 #else
+int
+os_socket_listen_file(const char *path, int count)
+{
+   errno = -ENOSYS;
+   return -1;
+}
 
 int
 os_socket_listen_abstract(const char *path, int count)
