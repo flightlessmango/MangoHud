@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <cerrno>
 #include <cstring>
+#include <sys/socket.h>
 #include "mesa/util/os_socket.h"
 #include "overlay.h"
 #ifdef MANGOAPP
@@ -8,7 +9,7 @@
 #endif
 
 using namespace std;
-static void parse_command(struct instance_data *instance_data,
+static void parse_command(overlay_params &params,
                           const char *cmd, unsigned cmdlen,
                           const char *param, unsigned paramlen)
 {
@@ -16,17 +17,18 @@ static void parse_command(struct instance_data *instance_data,
 #ifdef MANGOAPP
       {
          std::lock_guard<std::mutex> lk(mangoapp_m);
-         instance_data->params.no_display = !instance_data->params.no_display;
+         params.no_display = !params.no_display;
       }
       mangoapp_cv.notify_one();
 #else
-      instance_data->params.no_display = !instance_data->params.no_display;
+      params.no_display = !params.no_display;
 #endif
     }
     if (!strncmp(cmd, "logging", cmdlen)) {
-      if (logger->is_active())
+      int value = atoi(param);
+      if (!value && logger->is_active())
          logger->stop_logging();
-      else
+      else if (value > 0 && !logger->is_active())
          logger->start_logging();
 
     }
@@ -43,7 +45,7 @@ static void parse_command(struct instance_data *instance_data,
  *
  *    :cmd=param;
  */
-static void process_char(struct instance_data *instance_data, char c)
+static void process_char(const int control_client, overlay_params &params, char c)
 {
    static char cmd[BUFSIZE];
    static char param[BUFSIZE];
@@ -65,7 +67,7 @@ static void process_char(struct instance_data *instance_data, char c)
          break;
       cmd[cmdpos++] = '\0';
       param[parampos++] = '\0';
-      parse_command(instance_data, cmd, cmdpos, param, parampos);
+      parse_command(params, cmd, cmdpos, param, parampos);
       reading_cmd = false;
       reading_param = false;
       break;
@@ -99,7 +101,7 @@ static void process_char(struct instance_data *instance_data, char c)
    }
 }
 
-static void control_send(struct instance_data *instance_data,
+static void control_send(int control_client,
                          const char *cmd, unsigned cmdlen,
                          const char *param, unsigned paramlen)
 {
@@ -120,42 +122,37 @@ static void control_send(struct instance_data *instance_data,
       buffer[msglen++] = ';';
    }
 
-   os_socket_send(instance_data->control_client, buffer, msglen, 0);
+   os_socket_send(control_client, buffer, msglen, MSG_NOSIGNAL);
 }
 
-static void control_send_connection_string(struct device_data *device_data)
+static void control_send_connection_string(int control_client, const std::string& deviceName)
 {
-   struct instance_data *instance_data = device_data->instance;
-
-   const char *controlVersionCmd = "MesaOverlayControlVersion";
+   const char *controlVersionCmd = "MangoHudControlVersion";
    const char *controlVersionString = "1";
 
-   control_send(instance_data, controlVersionCmd, strlen(controlVersionCmd),
+   control_send(control_client, controlVersionCmd, strlen(controlVersionCmd),
                 controlVersionString, strlen(controlVersionString));
 
    const char *deviceCmd = "DeviceName";
-   const char *deviceName = device_data->properties.deviceName;
 
-   control_send(instance_data, deviceCmd, strlen(deviceCmd),
-                deviceName, strlen(deviceName));
+   control_send(control_client, deviceCmd, strlen(deviceCmd),
+                deviceName.c_str(), deviceName.size());
 
    const char *mesaVersionCmd = "MesaVersion";
    const char *mesaVersionString = "Mesa";
 
-   control_send(instance_data, mesaVersionCmd, strlen(mesaVersionCmd),
+   control_send(control_client, mesaVersionCmd, strlen(mesaVersionCmd),
                 mesaVersionString, strlen(mesaVersionString));
 
 }
 
-void control_client_check(struct device_data *device_data)
+void control_client_check(int control, int& control_client, const std::string& deviceName)
 {
-   struct instance_data *instance_data = device_data->instance;
-
    /* Already connected, just return. */
-   if (instance_data->control_client >= 0)
+   if (control_client >= 0)
       return;
 
-   int socket = os_socket_accept(instance_data->params.control);
+   int socket = os_socket_accept(control);
    if (socket == -1) {
       if (errno != EAGAIN && errno != EWOULDBLOCK && errno != ECONNABORTED)
          fprintf(stderr, "ERROR on socket: %s\n", strerror(errno));
@@ -164,25 +161,24 @@ void control_client_check(struct device_data *device_data)
 
    if (socket >= 0) {
       os_socket_block(socket, false);
-      instance_data->control_client = socket;
-      control_send_connection_string(device_data);
+      control_client = socket;
+      control_send_connection_string(control_client, deviceName);
    }
 }
 
-static void control_client_disconnected(struct instance_data *instance_data)
+static void control_client_disconnected(int& control_client)
 {
-   os_socket_close(instance_data->control_client);
-   instance_data->control_client = -1;
+   os_socket_close(control_client);
+   control_client = -1;
 }
 
-void process_control_socket(struct instance_data *instance_data)
+void process_control_socket(int& control_client, overlay_params &params)
 {
-   const int client = instance_data->control_client;
-   if (client >= 0) {
+   if (control_client >= 0) {
       char buf[BUFSIZE];
 
       while (true) {
-         ssize_t n = os_socket_recv(client, buf, BUFSIZE, 0);
+         ssize_t n = os_socket_recv(control_client, buf, BUFSIZE, 0);
 
          if (n == -1) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -193,14 +189,14 @@ void process_control_socket(struct instance_data *instance_data)
             if (errno != ECONNRESET)
                fprintf(stderr, "ERROR on connection: %s\n", strerror(errno));
 
-            control_client_disconnected(instance_data);
+            control_client_disconnected(control_client);
          } else if (n == 0) {
             /* recv() returns 0 when the client disconnects */
-            control_client_disconnected(instance_data);
+            control_client_disconnected(control_client);
          }
 
          for (ssize_t i = 0; i < n; i++) {
-            process_char(instance_data, buf[i]);
+            process_char(control_client, params, buf[i]);
          }
 
          /* If we try to read BUFSIZE and receive BUFSIZE bytes from the

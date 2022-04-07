@@ -60,8 +60,37 @@ namespace MangoHud { namespace GL {
 }}
 #endif
 
-/* Mapped from VkCommandBuffer */
+/* Mapped from VkInstace/VkPhysicalDevice */
+struct instance_data {
+   struct vk_instance_dispatch_table vtable;
+   VkInstance instance;
+   struct overlay_params params;
+   uint32_t api_version;
+   string engineName, engineVersion;
+   enum EngineTypes engine;
+   notify_thread notifier;
+   int control_client;
+};
+
+/* Mapped from VkDevice */
 struct queue_data;
+struct device_data {
+   struct instance_data *instance;
+
+   PFN_vkSetDeviceLoaderData set_device_loader_data;
+
+   struct vk_device_dispatch_table vtable;
+   VkPhysicalDevice physical_device;
+   VkDevice device;
+
+   VkPhysicalDeviceProperties properties;
+
+   struct queue_data *graphic_queue;
+
+   std::vector<struct queue_data *> queues;
+};
+
+/* Mapped from VkCommandBuffer */
 struct command_buffer_data {
    struct device_data *device;
 
@@ -422,8 +451,8 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
    check_keybinds(instance_data->params, device_data->properties.vendorID);
 #ifdef __linux__
    if (instance_data->params.control >= 0) {
-      control_client_check(device_data);
-      process_control_socket(instance_data);
+      control_client_check(instance_data->params.control, instance_data->control_client, device_data->properties.deviceName);
+      process_control_socket(instance_data->control_client, instance_data->params);
    }
 #endif
 }

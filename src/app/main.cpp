@@ -256,18 +256,16 @@ int main(int, char**)
     }
 
     // Setup Platform/Renderer backends
-    struct device_data *device_data = new struct device_data();
-    device_data->instance = new struct instance_data();
-    device_data->instance->params = {};
-    params = &device_data->instance->params;
-    parse_overlay_config(params, getenv("MANGOHUD_CONFIG"));
-    create_fonts(*params, sw_stats.font1, sw_stats.font_text);
-    HUDElements.convert_colors(*params);
-    init_cpu_stats(*params);
-    notifier.params = params;
+    overlay_params params {};
+    int control_client = -1;
+    parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
+    create_fonts(params, sw_stats.font1, sw_stats.font_text);
+    HUDElements.convert_colors(params);
+    init_cpu_stats(params);
+    notifier.params = &params;
     start_notifier(notifier);
-    window_size = ImVec2(params->width, params->height);
-        deviceName = (char*)glGetString(GL_RENDERER);
+    window_size = ImVec2(params.width, params.height);
+    deviceName = (char*)glGetString(GL_RENDERER);
     sw_stats.deviceName = deviceName;
     if (deviceName.find("Radeon") != std::string::npos
     || deviceName.find("AMD") != std::string::npos){
@@ -275,7 +273,7 @@ int main(int, char**)
     } else {
         vendorID = 0x10de;
     }
-    init_gpu_stats(vendorID, 0, *params);
+    init_gpu_stats(vendorID, 0, params);
     init_system_info();
     sw_stats.engine = EngineTypes::GAMESCOPE;
     std::thread(msg_read_thread).detach();
@@ -283,18 +281,18 @@ int main(int, char**)
     if(!logger) logger = std::make_unique<Logger>(HUDElements.params);
     // Main loop
     while (!glfwWindowShouldClose(window)){
-        if (!params->no_display){
+        if (!params.no_display){
             if (mangoapp_paused){
                 glfwRestoreWindow(window);
                 mangoapp_paused = false;
             }
             {
                 std::unique_lock<std::mutex> lk(mangoapp_m);
-                mangoapp_cv.wait(lk, []{return new_frame || params->no_display;});
+                mangoapp_cv.wait(lk, [&params]{return new_frame || params.no_display;});
                 new_frame = false;
             }
 
-            check_keybinds(*params, vendorID);
+            check_keybinds(params, vendorID);
             // Start the Dear ImGui frame
             {
                 if (render(window)) {
@@ -305,9 +303,9 @@ int main(int, char**)
                     render(window);
                 }
 
-                if (params->control >= 0) {
-                    control_client_check(device_data);
-                    process_control_socket(device_data->instance);
+                if (params.control >= 0) {
+                    control_client_check(params.control, control_client, deviceName);
+                    process_control_socket(control_client, params);
                 }
             }
             // Rendering
@@ -324,7 +322,7 @@ int main(int, char**)
             glfwIconifyWindow(window);
             mangoapp_paused = true;
             std::unique_lock<std::mutex> lk(mangoapp_m);
-            mangoapp_cv.wait(lk, []{return !params->no_display;});
+            mangoapp_cv.wait(lk, [&params]{return !params.no_display;});
         }
     }
 

@@ -192,6 +192,12 @@ void imgui_render(unsigned int width, unsigned int height)
     if (!state.imgui_ctx)
         return;
 
+    static int control_client = -1;
+    if (params.control >= 0) {
+        control_client_check(params.control, control_client, deviceName);
+        process_control_socket(control_client, params);
+    }
+
     check_keybinds(params, vendorID);
     update_hud_info(sw_stats, params, vendorID);
 
