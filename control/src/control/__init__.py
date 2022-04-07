@@ -10,9 +10,9 @@ import argparse
 
 TIMEOUT = 1.0 # seconds
 
-VERSION_HEADER = bytearray('MesaOverlayControlVersion', 'utf-8')
+VERSION_HEADER = bytearray('MangoHudControlVersion', 'utf-8')
 DEVICE_NAME_HEADER = bytearray('DeviceName', 'utf-8')
-MESA_VERSION_HEADER = bytearray('MesaVersion', 'utf-8')
+MANGOHUD_VERSION_HEADER = bytearray('MangoHudVersion', 'utf-8')
 
 DEFAULT_SERVER_ADDRESS = "\0mangohud"
 
@@ -160,19 +160,32 @@ def control(args):
 
     version = None
     name = None
-    mesa_version = None
+    mangohud_version = None
 
     msgs = msgparser.readCmd(3)
+
+    for m in msgs:
+        cmd, param = m
+        if cmd == VERSION_HEADER:
+            version = int(param)
+        elif cmd == DEVICE_NAME_HEADER:
+            name = param.decode('utf-8')
+        elif cmd == MANGOHUD_VERSION_HEADER:
+            mangohud_version = param.decode('utf-8')
 
     if args.info:
         info = "Protocol Version: {}\n"
         info += "Device Name: {}\n"
-        info += "Mesa Version: {}"
-        print(info.format(version, name, mesa_version))
+        info += "MangoHud Version: {}"
+        print(info.format(version, name, mangohud_version))
 
 
     if args.cmd == 'toggle-logging':
         conn.send(bytearray(':logging;', 'utf-8'))
+    elif args.cmd == 'start-logging':
+        conn.send(bytearray(':logging=1;', 'utf-8'))
+    elif args.cmd == 'stop-logging':
+        conn.send(bytearray(':logging=0;', 'utf-8'))
     elif args.cmd == 'toggle-hud':
         conn.send(bytearray(':hud;', 'utf-8'))
 
@@ -184,6 +197,8 @@ def main():
     commands = parser.add_subparsers(help='commands to run', dest='cmd')
     commands.add_parser('toggle-hud')
     commands.add_parser('toggle-logging')
+    commands.add_parser('start-logging')
+    commands.add_parser('stop-logging')
 
     args = parser.parse_args()
 

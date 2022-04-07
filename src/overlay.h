@@ -2,7 +2,6 @@
 #ifndef MANGOHUD_OVERLAY_H
 #define MANGOHUD_OVERLAY_H
 
-#ifndef MANGOAPP_LAYER
 #include <string>
 #include <stdint.h>
 #include <vector>
@@ -11,18 +10,13 @@
 #include "version.h"
 #include "overlay_params.h"
 #include "hud_elements.h"
+#include "engine_types.h"
 
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
 extern float g_overflow;
 #endif
-#endif
 #include "logging.h"
-#include "notify.h"
-#include "vk_enum_to_str.h"
-#include <vulkan/vk_layer.h>
-
-using namespace std;
 
 struct frame_stat {
    uint64_t stats[OVERLAY_PLOTS_MAX];
@@ -30,27 +24,6 @@ struct frame_stat {
 
 static const int kMaxGraphEntries = 50;
 
-enum EngineTypes
-{
-   UNKNOWN,
-
-   OPENGL,
-   VULKAN,
-
-   DXVK,
-   VKD3D,
-   DAMAVAND,
-   ZINK,
-
-   WINED3D,
-   FERAL3D,
-   TOGL,
-
-   GAMESCOPE
-};
-
-extern const char* engines[];
-#ifndef MANGOAPP_LAYER
 struct swapchain_stats {
    uint64_t n_frames;
    enum overlay_plots stat_selector;
@@ -107,38 +80,7 @@ struct LOAD_DATA {
    unsigned med_load;
    unsigned high_load;
 };
-#endif
-/* Mapped from VkInstace/VkPhysicalDevice */
-struct instance_data {
-   struct vk_instance_dispatch_table vtable;
-   VkInstance instance;
-   struct overlay_params params;
-   uint32_t api_version;
-   string engineName, engineVersion;
-   enum EngineTypes engine;
-   notify_thread notifier;
-   int control_client;
-};
 
-/* Mapped from VkDevice */
-struct queue_data;
-struct device_data {
-   struct instance_data *instance;
-
-   PFN_vkSetDeviceLoaderData set_device_loader_data;
-
-   struct vk_device_dispatch_table vtable;
-   VkPhysicalDevice physical_device;
-   VkDevice device;
-
-   VkPhysicalDeviceProperties properties;
-
-   struct queue_data *graphic_queue;
-
-   std::vector<struct queue_data *> queues;
-};
-
-#ifndef MANGOAPP_LAYER
 extern struct fps_limit fps_limit_stats;
 extern uint32_t deviceID;
 
@@ -171,12 +113,11 @@ void center_text(const std::string& text);
 ImVec4 change_on_load_temp(LOAD_DATA& data, unsigned current);
 float get_time_stat(void *_data, int _idx);
 void stop_hw_updater();
-extern void control_client_check(struct device_data *device_data);
-extern void process_control_socket(struct instance_data *instance_data);
+extern void control_client_check(int control, int& control_client, const std::string& deviceName);
+extern void process_control_socket(int& control_client, overlay_params &params);
 #ifdef HAVE_DBUS
 void render_mpris_metadata(const overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing);
 #endif
 void update_fan();
-#endif //MANGOAPP_LAYER
 
 #endif //MANGOHUD_OVERLAY_H

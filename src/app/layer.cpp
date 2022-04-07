@@ -1,20 +1,32 @@
 #include <mutex>
 #include <list>
+#include <fstream>
 #include <unordered_map>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "overlay.h"
 #include <inttypes.h>
 #include "mesa/util/macros.h"
+#include "vk_enum_to_str.h"
+#include <vulkan/vk_layer.h>
 #include <vulkan/vk_util.h>
 #include "nlohmann/json.hpp"
+#include "engine_types.h"
 
+using namespace std;
 using json = nlohmann::json;
 
 // single global lock, for simplicity
 std::mutex global_lock;
 typedef std::lock_guard<std::mutex> scoped_lock;
 std::unordered_map<uint64_t, void *> vk_object_to_data;
+
+/* Mapped from VkInstace/VkPhysicalDevice */
+struct instance_data {
+   struct vk_instance_dispatch_table vtable;
+   VkInstance instance;
+   string engineName, engineVersion;
+   enum EngineTypes engine;
+};
 
 #define HKEY(obj) ((uint64_t)(obj))
 #define FIND(type, obj) (reinterpret_cast<type *>(find_object_data(HKEY(obj))))
@@ -53,8 +65,6 @@ static struct instance_data *new_instance_data(VkInstance instance)
 {
    struct instance_data *data = new instance_data();
    data->instance = instance;
-   data->params = {};
-   data->params.control = -1;
    map_object(HKEY(data->instance), data);
    return data;
 }
@@ -147,7 +157,7 @@ static VkResult overlay_CreateInstance(
     struct stat info;
     string path = "/tmp/mangoapp/";
     string command = "mkdir -p " + path;
-    string json_path = path + to_string(getpid()) + ".json"; 
+    string json_path = path + to_string(getpid()) + ".json";
     if( stat(path.c_str(), &info ) != 0 )
         system(command.c_str());
     json j;

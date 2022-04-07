@@ -7,6 +7,8 @@
 #include "file_utils.h"
 #include "string_utils.h"
 
+using namespace std;
+
 string os, cpu, gpu, ram, kernel, driver, cpusched;
 bool sysInfoFetched = false;
 double fps;
@@ -171,7 +173,7 @@ void Logger::stop_logging() {
     std::string program = get_wine_exe_name();
     if (program.empty())
         program = get_program_name();
-    
+
     m_log_files.emplace_back(HUDElements.params->output_folder + "/" + program + "_" + get_log_suffix());
     std::thread writefile (writeFile, m_log_files.back());
     std::thread writesummary (writeSummary, m_log_files.back());

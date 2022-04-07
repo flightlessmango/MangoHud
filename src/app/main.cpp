@@ -10,6 +10,7 @@
 #include <thread>
 #include <unistd.h>
 #include "../overlay.h"
+#include "notify.h"
 #include "mangoapp.h"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -20,6 +21,7 @@
 
 #include "nlohmann/json.hpp"
 using json = nlohmann::json;
+using namespace std;
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -27,7 +29,7 @@ static void glfw_error_callback(int error, const char* description)
 }
 
 swapchain_stats sw_stats {};
-overlay_params *params;
+overlay_params params {};
 static ImVec2 window_size;
 static uint32_t vendorID;
 static std::string deviceName;
@@ -97,13 +99,13 @@ static void ctrl_thread(){
                     // Keep as-is
                     break;
                 case 1:
-                    params->no_display = 1;
+                    params.no_display = 1;
                     break;
                 case 2:
-                    params->no_display = 0;
+                    params.no_display = 0;
                     break;
                 case 3:
-                    params->no_display ? params->no_display = 0 : params->no_display = 1;
+                    params.no_display ? params.no_display = 0 : params.no_display = 1;
                     break;
             }
         }
@@ -143,13 +145,13 @@ static void msg_read_thread(){
         size_t msg_size = msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 1, 0) + sizeof(long);
         if (hdr->version == 1){
             if (msg_size > offsetof(struct mangoapp_msg_v1, visible_frametime_ns)){
-                update_hud_info_with_frametime(sw_stats, *params, vendorID, mangoapp_v1->visible_frametime_ns);
+                update_hud_info_with_frametime(sw_stats, params, vendorID, mangoapp_v1->visible_frametime_ns);
                 if (msg_size > offsetof(mangoapp_msg_v1, fsrUpscale)){
                     g_fsrUpscale = mangoapp_v1->fsrUpscale;
-                    if (params->fsr_steam_sharpness < 0)
+                    if (params.fsr_steam_sharpness < 0)
                         g_fsrSharpness = mangoapp_v1->fsrSharpness;
                     else
-                        g_fsrSharpness = params->fsr_steam_sharpness - mangoapp_v1->fsrSharpness;
+                        g_fsrSharpness = params.fsr_steam_sharpness - mangoapp_v1->fsrSharpness;
                 }
                 if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam]){
                     steam_focused = get_prop("GAMESCOPE_FOCUSED_APP_GFX") == 769;
@@ -221,9 +223,9 @@ static bool render(GLFWwindow* window) {
     ImGui_ImplGlfw_NewFrame();
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
-    overlay_new_frame(*params);
-    position_layer(sw_stats, *params, window_size);
-    render_imgui(sw_stats, *params, window_size, true);
+    overlay_new_frame(params);
+    position_layer(sw_stats, params, window_size);
+    render_imgui(sw_stats, params, window_size, true);
     overlay_end_frame();
     glfwSetWindowSize(window, window_size.x + 45.f, window_size.y + 325.f);
     ImGui::EndFrame();
@@ -257,18 +259,15 @@ int main(int, char**)
     }
 
     // Setup Platform/Renderer backends
-    struct device_data *device_data = new struct device_data();
-    device_data->instance = new struct instance_data();
-    device_data->instance->params = {};
-    params = &device_data->instance->params;
-    parse_overlay_config(params, getenv("MANGOHUD_CONFIG"));
-    create_fonts(*params, sw_stats.font1, sw_stats.font_text);
-    HUDElements.convert_colors(*params);
-    init_cpu_stats(*params);
-    notifier.params = params;
+    int control_client = -1;
+    parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
+    create_fonts(params, sw_stats.font1, sw_stats.font_text);
+    HUDElements.convert_colors(params);
+    init_cpu_stats(params);
+    notifier.params = &params;
     start_notifier(notifier);
-    window_size = ImVec2(params->width, params->height);
-        deviceName = (char*)glGetString(GL_RENDERER);
+    window_size = ImVec2(params.width, params.height);
+    deviceName = (char*)glGetString(GL_RENDERER);
     sw_stats.deviceName = deviceName;
     if (deviceName.find("Radeon") != std::string::npos
     || deviceName.find("AMD") != std::string::npos){
@@ -276,7 +275,7 @@ int main(int, char**)
     } else {
         vendorID = 0x10de;
     }
-    init_gpu_stats(vendorID, 0, *params);
+    init_gpu_stats(vendorID, 0, params);
     init_system_info();
     sw_stats.engine = EngineTypes::GAMESCOPE;
     std::thread(msg_read_thread).detach();
@@ -284,18 +283,18 @@ int main(int, char**)
     if(!logger) logger = std::make_unique<Logger>(HUDElements.params);
     // Main loop
     while (!glfwWindowShouldClose(window)){
-        if (!params->no_display){
+        if (!params.no_display){
             if (mangoapp_paused){
                 glfwRestoreWindow(window);
                 mangoapp_paused = false;
             }
             {
                 std::unique_lock<std::mutex> lk(mangoapp_m);
-                mangoapp_cv.wait(lk, []{return new_frame || params->no_display;});
+                mangoapp_cv.wait(lk, []{return new_frame || params.no_display;});
                 new_frame = false;
             }
 
-            check_keybinds(*params, vendorID);
+            check_keybinds(params, vendorID);
             // Start the Dear ImGui frame
             {
                 if (render(window)) {
@@ -306,9 +305,9 @@ int main(int, char**)
                     render(window);
                 }
 
-                if (params->control >= 0) {
-                    control_client_check(device_data);
-                    process_control_socket(device_data->instance);
+                if (params.control >= 0) {
+                    control_client_check(params.control, control_client, deviceName);
+                    process_control_socket(control_client, params);
                 }
             }
             // Rendering
@@ -325,7 +324,7 @@ int main(int, char**)
             glfwIconifyWindow(window);
             mangoapp_paused = true;
             std::unique_lock<std::mutex> lk(mangoapp_m);
-            mangoapp_cv.wait(lk, []{return !params->no_display;});
+            mangoapp_cv.wait(lk, []{return !params.no_display;});
         }
     }
 
