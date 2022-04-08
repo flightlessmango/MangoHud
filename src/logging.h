@@ -17,6 +17,8 @@ using namespace std;
 struct logData{
   double fps;
   uint64_t frametime;
+  double min_frametime;
+  double max_frametime;
   float cpu_load;
   int gpu_load;
   int cpu_temp;
