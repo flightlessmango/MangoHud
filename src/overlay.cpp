@@ -14,6 +14,7 @@
 #include "gpu.h"
 #include "memory.h"
 #include "timing.hpp"
+#include "fcat.h"
 #include "mesa/util/macros.h"
 #include "battery.h"
 #include "gamepad.h"
@@ -38,6 +39,7 @@ float g_overflow = 50.f /* 3333ms * 0.5 / 16.6667 / 2 (to edge and back) */;
 string gpuString,wineVersion,wineProcess;
 uint32_t deviceID;
 bool gui_open = false;
+bool fcat_open = false;
 struct benchmark_stats benchmark;
 struct fps_limit fps_limit_stats {};
 ImVec2 real_font_size;
@@ -49,6 +51,7 @@ bool gpu_metrics_exists = false;
 bool steam_focused = false;
 vector<float> frametime_data(200,0.f);
 int fan_speed;
+fcatoverlay fcatstatus;
 
 void init_spdlog()
 {
@@ -568,6 +571,22 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       if((now - logger->last_log_end()) < 12s && !logger->is_active())
          render_benchmark(data, params, window_size, height, now);
    }
+   
+   if(params.enabled[OVERLAY_PARAM_ENABLED_fcat])
+     {
+       fcatstatus.update(&params);
+       auto window_corners = fcatstatus.get_overlay_corners();
+       auto p_min=window_corners[0];
+       auto p_max=window_corners[1];
+       auto window_size= window_corners[2];
+       ImGui::SetNextWindowPos(p_min, ImGuiCond_Always);
+       ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0));
+       ImGui::SetNextWindowSize(window_size);
+       ImGui::Begin("FCAT", &fcat_open, ImGuiWindowFlags_NoDecoration| ImGuiWindowFlags_NoBackground);
+       ImGui::GetWindowDrawList()->AddRectFilled(p_min,p_max,fcatstatus.get_next_color(data),0.0);
+       ImGui::End();
+       ImGui::PopStyleVar();
+     }
 }
 
 void init_cpu_stats(overlay_params& params)

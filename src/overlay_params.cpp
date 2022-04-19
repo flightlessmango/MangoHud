@@ -402,6 +402,8 @@ parse_gl_size_query(const char *str)
 #define parse_gl_bind_framebuffer(s) parse_unsigned(s)
 #define parse_gl_dont_flip(s) parse_unsigned(s) != 0
 #define parse_round_corners(s) parse_unsigned(s)
+#define parse_fcat_overlay_width(s) parse_unsigned(s)
+#define parse_fcat_screen_edge(s) parse_unsigned(s)
 
 #define parse_cpu_color(s) parse_color(s)
 #define parse_gpu_color(s) parse_color(s)
@@ -578,6 +580,7 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_gamepad_battery] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_gamepad_battery_icon] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_throttling_status] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_fcat] = false;
    params->fps_sampling_period = 500000000; /* 500ms */
    params->width = 0;
    params->height = 140;
@@ -589,6 +592,8 @@ parse_overlay_config(struct overlay_params *params,
    params->offset_y = 0;
    params->background_alpha = 0.5;
    params->alpha = 1.0;
+   params->fcat_screen_edge = 0;
+   params->fcat_overlay_width = 24;
    params->time_format = "%T";
    params->gpu_color = 0x2e9762;
    params->cpu_color = 0x2e97cb;
