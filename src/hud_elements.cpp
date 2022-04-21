@@ -485,15 +485,6 @@ void HudElements::fps_only(){
             ImGui::TableNextRow(); ImGui::TableNextColumn();
             ImGui::TextColored(HUDElements.colors.text, "%.0f", HUDElements.sw_stats->fps);
         }
-        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_frametime]){
-            ImGui::TableNextColumn();
-            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", 1000 / HUDElements.sw_stats->fps);
-            ImGui::SameLine(0, 1.0f);
-            ImGui::PushFont(HUDElements.sw_stats->font1);
-            ImGui::Text("ms");
-            ImGui::PopFont();
-        }
-
     }
 }
 
