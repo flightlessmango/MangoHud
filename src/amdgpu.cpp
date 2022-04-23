@@ -1,4 +1,5 @@
 #include <spdlog/spdlog.h>
+#include <thread>
 #include "amdgpu.h"
 #include "gpu.h"
 #include "cpu.h"
@@ -32,6 +33,44 @@ bool amdgpu_check_metrics(const std::string& path)
     return false;
 }
 
+void calculate_gpu_load(){
+	int gpu_load = 0;
+	int i = 0;
+	struct metrics_table_header header;
+	std::ifstream in(metrics_path, std::ios_base::in | std::ios_base::binary);
+	in.read((char*)&header, sizeof(header));
+	if (header.format_revision == 1){
+		struct gpu_metrics_v1_3 amdgpu_metrics;
+		while (i < 100){
+			in.clear();
+			in.seekg(0);
+			in.read((char*)&amdgpu_metrics, sizeof(amdgpu_metrics));
+			if (amdgpu_metrics.average_gfx_activity > 100)
+				gpu_load += amdgpu_metrics.average_gfx_activity / 100;
+			else
+				gpu_load += amdgpu_metrics.average_gfx_activity;
+
+			i++;
+			sleep(0.005);
+		}
+	} else if (header.format_revision == 2){
+		struct gpu_metrics_v2_2 amdgpu_metrics;
+		while (i < 100){
+			in.clear();
+			in.seekg(0);
+			in.read((char*)&amdgpu_metrics, sizeof(amdgpu_metrics));
+			if (amdgpu_metrics.average_gfx_activity > 100)
+				gpu_load += amdgpu_metrics.average_gfx_activity / 100;
+			else
+				gpu_load += amdgpu_metrics.average_gfx_activity;
+
+			i++;
+			sleep(0.005);
+		}
+	}
+	gpu_info.load = gpu_load / 100;
+}
+
 void amdgpu_get_metrics()
 {
 	if (!metrics_path.empty()){
@@ -45,7 +84,8 @@ void amdgpu_get_metrics()
 			in.clear();
 			in.seekg(0);
 			in.read((char*)&amdgpu_metrics, sizeof(amdgpu_metrics));
-			gpu_info.load = amdgpu_metrics.average_gfx_activity;
+			// gpu_info.load = amdgpu_metrics.average_gfx_activity;
+			std::thread(calculate_gpu_load).detach();
 			gpu_info.CoreClock = amdgpu_metrics.average_gfxclk_frequency;
 			gpu_info.powerUsage = amdgpu_metrics.average_socket_power;
 			gpu_info.temp = amdgpu_metrics.temperature_edge;
@@ -57,7 +97,8 @@ void amdgpu_get_metrics()
 			in.clear();
 			in.seekg(0);
 			in.read((char*)&amdgpu_metrics, sizeof(amdgpu_metrics));
-			gpu_info.load = amdgpu_metrics.average_gfx_activity;
+			// gpu_info.load = amdgpu_metrics.average_gfx_activity;
+			std::thread(calculate_gpu_load).detach();
 			gpu_info.CoreClock = amdgpu_metrics.current_gfxclk;
 			gpu_info.powerUsage = amdgpu_metrics.average_gfx_power / 1000.f;
 			gpu_info.temp = amdgpu_metrics.temperature_gfx / 100;
