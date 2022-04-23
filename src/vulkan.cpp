@@ -63,12 +63,12 @@ namespace MangoHud { namespace GL {
 #endif
 
 struct vk_image {
-   bool uploaded;
    VkImage image;
    VkImageView image_view;
    VkDeviceMemory mem;
-   VkBuffer buffer;
-   VkDeviceMemory buffer_mem;
+   uint32_t width, height;
+   size_t size;
+   bool uploaded;
 };
 
 /* Mapped from VkInstace/VkPhysicalDevice */
@@ -97,9 +97,11 @@ struct device_data {
    VkPhysicalDeviceProperties properties;
 
    struct queue_data *graphic_queue;
+   struct queue_data *transfer_queue;
 
    std::vector<struct queue_data *> queues;
 
+   VkCommandPool command_pool;
    VkDescriptorPool descriptor_pool;
    VkDescriptorSetLayout descriptor_layout;
    VkDescriptorSet descriptor_set;
@@ -315,6 +317,15 @@ static VkDescriptorSet alloc_descriptor_set(const struct device_data *device_dat
 
 static void setup_device_pipeline(struct device_data *device_data)
 {
+   /* Command buffer pool for transfers */
+   VkCommandPoolCreateInfo cmd_buffer_pool_info = {};
+   cmd_buffer_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+   cmd_buffer_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+   cmd_buffer_pool_info.queueFamilyIndex = device_data->transfer_queue->family_index;
+   VK_CHECK(device_data->vtable.CreateCommandPool(device_data->device,
+                                                  &cmd_buffer_pool_info,
+                                                  NULL, &device_data->command_pool));
+
    /* Sampler */
    VkSamplerCreateInfo sampler_info = {};
    sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -360,7 +371,6 @@ static void setup_device_pipeline(struct device_data *device_data)
 
    /* Descriptor set */
    device_data->descriptor_set = alloc_descriptor_set(device_data);
-
 }
 
 static struct queue_data *new_queue_data(VkQueue queue,
@@ -375,9 +385,11 @@ static struct queue_data *new_queue_data(VkQueue queue,
    data->family_index = family_index;
    map_object(HKEY(data->queue), data);
 
+   SPDLOG_DEBUG("queue: 0x{:02x}", data->flags);
    if (data->flags & VK_QUEUE_GRAPHICS_BIT)
       device_data->graphic_queue = data;
-
+   if (data->flags & VK_QUEUE_TRANSFER_BIT)
+      device_data->transfer_queue = data;
    return data;
 }
 
@@ -694,10 +706,10 @@ static void create_image(struct device_data *device_data,
                         uint32_t width,
                         uint32_t height,
                         VkFormat format,
-                        VkImage& image,
-                        VkDeviceMemory& image_mem,
-                        VkImageView& image_view)
+                        vk_image& image)
 {
+   image.width = width;
+   image.height = height;
 
    VkImageCreateInfo image_info = {};
    image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -714,33 +726,93 @@ static void create_image(struct device_data *device_data,
    image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
    image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
    VK_CHECK(device_data->vtable.CreateImage(device_data->device, &image_info,
-                                            NULL, &image));
-   VkMemoryRequirements font_image_req;
+                                            NULL, &image.image));
+   VkMemoryRequirements image_req;
    device_data->vtable.GetImageMemoryRequirements(device_data->device,
-                                                  image, &font_image_req);
+                                                  image.image, &image_req);
    VkMemoryAllocateInfo image_alloc_info = {};
    image_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-   image_alloc_info.allocationSize = font_image_req.size;
+   image_alloc_info.allocationSize = image_req.size;
    image_alloc_info.memoryTypeIndex = vk_memory_type(device_data,
                                                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                                                     font_image_req.memoryTypeBits);
+                                                     image_req.memoryTypeBits);
    VK_CHECK(device_data->vtable.AllocateMemory(device_data->device, &image_alloc_info,
-                                               NULL, &image_mem));
+                                               NULL, &image.mem));
    VK_CHECK(device_data->vtable.BindImageMemory(device_data->device,
-                                                image,
-                                                image_mem, 0));
+                                                image.image,
+                                                image.mem, 0));
 
    /* Font image view */
    VkImageViewCreateInfo view_info = {};
    view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-   view_info.image = image;
+   view_info.image = image.image;
    view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
    view_info.format = format;
    view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
    view_info.subresourceRange.levelCount = 1;
    view_info.subresourceRange.layerCount = 1;
    VK_CHECK(device_data->vtable.CreateImageView(device_data->device, &view_info,
-                                                NULL, &image_view));
+                                                NULL, &image.image_view));
+}
+
+static void submit_image_upload_cmd(struct device_data *device_data, vk_image *img, void *pixels, size_t upload_size)
+{
+   if (img->uploaded)
+      return;
+
+   auto start = Clock::now();
+   VkCommandBuffer cmd_buffer;
+   VkCommandBufferAllocateInfo cmd_buffer_info = {};
+   cmd_buffer_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+   cmd_buffer_info.commandPool = device_data->command_pool;
+   cmd_buffer_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+   cmd_buffer_info.commandBufferCount = 1;
+   VK_CHECK(device_data->vtable.AllocateCommandBuffers(device_data->device,
+                                                       &cmd_buffer_info,
+                                                       &cmd_buffer));
+   VK_CHECK(device_data->set_device_loader_data(device_data->device,
+                                                cmd_buffer));
+
+   VkCommandBufferBeginInfo buffer_begin_info = {};
+   buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+   VK_CHECK(device_data->vtable.BeginCommandBuffer(cmd_buffer, &buffer_begin_info));
+
+   VkBuffer buffer;
+   VkDeviceMemory buffer_mem;
+   upload_image_data(device_data, cmd_buffer, pixels, upload_size, img->width, img->height,
+                     buffer, buffer_mem, img->image);
+
+   device_data->vtable.EndCommandBuffer(cmd_buffer);
+
+   VkFence fence;
+   VkFenceCreateInfo fence_info = {};
+   fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+   VK_CHECK(device_data->vtable.CreateFence(device_data->device,
+                                            &fence_info,
+                                            NULL,
+                                            &fence));
+
+   VkSubmitInfo submit_info = {};
+   submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+   submit_info.commandBufferCount = 1;
+   submit_info.pCommandBuffers = &cmd_buffer;
+
+   SPDLOG_DEBUG("transfer queue: {}, {}", (void*)device_data->transfer_queue->queue, (void*)device_data->graphic_queue->queue);
+   VkResult r;
+   VK_CHECK(r = device_data->vtable.QueueSubmit(device_data->transfer_queue->queue, 1, &submit_info, fence));
+
+   if (r == VK_SUCCESS)
+      VK_CHECK(device_data->vtable.WaitForFences(device_data->device, 1, &fence, VK_TRUE, UINT64_MAX));
+   device_data->vtable.FreeCommandBuffers(device_data->device, device_data->command_pool, 1, &cmd_buffer);
+   device_data->vtable.DestroyFence(device_data->device, fence, NULL);
+
+   device_data->vtable.DestroyBuffer(device_data->device, buffer, NULL);
+   device_data->vtable.FreeMemory(device_data->device, buffer_mem, NULL);
+
+   img->uploaded = true;
+   auto dur = Clock::now() - start;
+   auto dur_us = std::chrono::duration_cast<std::chrono::microseconds>(dur).count();
+   SPDLOG_DEBUG("upload duration: {} us, {} bytes, {:0.02f} MiB/s", dur_us, upload_size, upload_size/(dur_us/1e6f)/(1024*1024));
 }
 
 static void check_fonts(struct device_data* device_data)
@@ -750,8 +822,14 @@ static void check_fonts(struct device_data* device_data)
       return;
 
    std::unique_lock<std::mutex> lk(device_data->font_mutex);
+   if (params.font_params_hash == device_data->font_params_hash)
+      return;
+
    SPDLOG_DEBUG("Recreating font image");
+   device_data->font_params_hash = params.font_params_hash;
+
    create_fonts(device_data->font_atlas, params, device_data->font_alt, device_data->font_text);
+
    unsigned char* pixels;
    int width, height;
    device_data->font_atlas->GetTexDataAsAlpha8(&pixels, &width, &height);
@@ -759,15 +837,15 @@ static void check_fonts(struct device_data* device_data)
    // wait for rendering to complete, if any
    VK_CHECK(device_data->vtable.DeviceWaitIdle(device_data->device));
    shutdown_device_font(device_data);
-   create_image(device_data, width, height, VK_FORMAT_R8_UNORM, device_data->font_img.image, device_data->font_img.mem, device_data->font_img.image_view);
+   create_image(device_data, width, height, VK_FORMAT_R8_UNORM, device_data->font_img);
 
-   device_data->font_img.uploaded = false;
-   device_data->font_params_hash = params.font_params_hash;
    SPDLOG_DEBUG("Default font tex size: {}x{}px", width, height);
-
    SPDLOG_DEBUG("Update font image descriptor {}", (void*)device_data->descriptor_set);
    update_image_descriptor(device_data, device_data->font_img.image_view, device_data->descriptor_set);
    device_data->font_atlas->SetTexID((ImTextureID)device_data->descriptor_set);
+
+   std::thread(submit_image_upload_cmd, device_data, &device_data->font_img, pixels, width * height * 1 * sizeof(char)).detach();
+//     submit_image_upload_cmd(device_data, &device_data->font_img, pixels, width * height * 1 * sizeof(char));
 }
 
 static void check_fonts(struct swapchain_data* data)
@@ -779,23 +857,6 @@ static void check_fonts(struct swapchain_data* data)
       data->sw_stats.font1 = device_data->font_alt;
       data->sw_stats.font_text = device_data->font_text;
    }
-}
-
-static void ensure_swapchain_fonts(struct swapchain_data *data,
-                                   VkCommandBuffer command_buffer)
-{
-   struct device_data *device_data = data->device;
-
-   if (device_data->font_img.uploaded)
-      return;
-
-   device_data->font_img.uploaded = true;
-   unsigned char* pixels;
-   int width, height;
-   device_data->font_atlas->GetTexDataAsAlpha8(&pixels, &width, &height);
-   size_t upload_size = width * height * 1 * sizeof(char);
-   upload_image_data(device_data, command_buffer, pixels, upload_size, width, height,
-                     device_data->font_img.buffer, device_data->font_img.buffer_mem, device_data->font_img.image);
 }
 
 static void CreateOrResizeBuffer(struct device_data *data,
@@ -847,6 +908,9 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
    if (!draw_data || draw_data->TotalVtxCount == 0 || device_data->instance->params.no_display)
       return nullptr;
 
+   if (!device_data->font_img.uploaded)
+      return nullptr;
+
    struct overlay_draw *draw = get_overlay_draw(data);
 
    device_data->vtable.ResetCommandBuffer(draw->command_buffer, 0);
@@ -863,7 +927,7 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
 
    device_data->vtable.BeginCommandBuffer(draw->command_buffer, &buffer_begin_info);
 
-   ensure_swapchain_fonts(data, draw->command_buffer);
+//    ensure_swapchain_fonts(data->device, draw->command_buffer);
 
    /* Bounce the image to display back to color attachment layout for
     * rendering on top of it.
@@ -1416,8 +1480,8 @@ static void shutdown_device_font(struct device_data *device_data)
    device_data->vtable.DestroyImage(device_data->device, device_data->font_img.image, NULL);
    device_data->vtable.FreeMemory(device_data->device, device_data->font_img.mem, NULL);
 
-   device_data->vtable.DestroyBuffer(device_data->device, device_data->font_img.buffer, NULL);
-   device_data->vtable.FreeMemory(device_data->device, device_data->font_img.buffer_mem, NULL);
+//    device_data->vtable.DestroyBuffer(device_data->device, device_data->font_img.buffer, NULL);
+//    device_data->vtable.FreeMemory(device_data->device, device_data->font_img.buffer_mem, NULL);
    device_data->font_img = {};
 }
 
@@ -1826,6 +1890,7 @@ static void overlay_DestroyDevice(
 
    device_data->vtable.DestroySampler(device_data->device, device_data->sampler, NULL);
 
+   device_data->vtable.DestroyCommandPool(device_data->device, device_data->command_pool, NULL);
    device_data->vtable.DestroyDevice(device, pAllocator);
    destroy_device_data(device_data);
 }
