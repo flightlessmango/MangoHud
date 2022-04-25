@@ -36,6 +36,8 @@ typedef struct CPUData_ {
    unsigned long long int softIrqPeriod;
    unsigned long long int stealPeriod;
    unsigned long long int guestPeriod;
+
+   int cpu_id;
    float percent;
    int mhz;
    int temp;

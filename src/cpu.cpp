@@ -131,6 +131,7 @@ bool CPUStats::Init()
             CPUData cpu = {};
             cpu.totalTime = 1;
             cpu.totalPeriod = 1;
+            sscanf(line.c_str(), "cpu%4d ", &cpu.cpu_id);
             m_cpuData.push_back(cpu);
 
         } else if (starts_with(line, "btime ")) {
@@ -199,12 +200,12 @@ bool CPUStats::UpdateCPUData()
                 return false;
             }
 
-            if ((size_t)cpuid >= m_cpuData.size()) {
-                SPDLOG_DEBUG("Cpu id '{}' is out of bounds, reiniting", cpuid);
+            if (cpu_count + 1 > m_cpuData.size() || m_cpuData[cpu_count].cpu_id != cpuid) {
+                SPDLOG_DEBUG("Cpu id '{}' is out of bounds or wrong index, reiniting", cpuid);
                 return Reinit();
             }
 
-            CPUData& cpuData = m_cpuData[cpuid];
+            CPUData& cpuData = m_cpuData[cpu_count];
             calculateCPUData(cpuData, usertime, nicetime, systemtime, idletime, ioWait, irq, softIrq, steal, guest, guestnice);
             cpuid = -1;
             cpu_count++;
@@ -225,14 +226,14 @@ bool CPUStats::UpdateCPUData()
 bool CPUStats::UpdateCoreMhz() {
     m_coreMhz.clear();
     FILE *fp;
-    for (size_t i = 0; i < m_cpuData.size(); i++)
+    for (auto& cpu : m_cpuData)
     {
-        std::string path = "/sys/devices/system/cpu/cpu" + std::to_string(i) + "/cpufreq/scaling_cur_freq";
+        std::string path = "/sys/devices/system/cpu/cpu" + std::to_string(cpu.cpu_id) + "/cpufreq/scaling_cur_freq";
         if ((fp = fopen(path.c_str(), "r"))){
             int64_t temp;
             if (fscanf(fp, "%" PRId64, &temp) != 1)
                 temp = 0;
-            m_cpuData[i].mhz = temp / 1000;
+            cpu.mhz = temp / 1000;
             fclose(fp);
         }
     }

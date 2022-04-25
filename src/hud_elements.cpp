@@ -265,14 +265,13 @@ void HudElements::cpu_stats(){
 
 void HudElements::core_load(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_core_load]){
-         int i = 0;
          for (const CPUData &cpuData : cpuStats.GetCPUData())
          {
             ImGui::TableNextRow(); ImGui::TableNextColumn();
             ImGui::TextColored(HUDElements.colors.cpu, "CPU");
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(HUDElements.sw_stats->font1);
-            ImGui::TextColored(HUDElements.colors.cpu,"%i", i);
+            ImGui::TextColored(HUDElements.colors.cpu,"%i", cpuData.cpu_id);
             ImGui::PopFont();
             ImGui::TableNextColumn();
             auto text_color = HUDElements.colors.text;
@@ -302,7 +301,6 @@ void HudElements::core_load(){
             ImGui::PushFont(HUDElements.sw_stats->font1);
             ImGui::Text("MHz");
             ImGui::PopFont();
-            i++;
          }
     }
 }
