@@ -525,7 +525,11 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    HUDElements.is_vulkan = is_vulkan;
    ImGui::GetIO().FontGlobalScale = params.font_scale;
    static float ralign_width = 0, old_scale = 0;
-   window_size = ImVec2(params.width, params.height);
+   if (params.enabled[OVERLAY_PARAM_ENABLED_fps_only]){
+      window_size = ImVec2((to_string(int(HUDElements.sw_stats->fps)).length() * ImGui::CalcTextSize("A").x) + 15.f, params.height);
+   } else {
+      window_size = ImVec2(params.width, params.height);
+   }
    unsigned height = ImGui::GetIO().DisplaySize.y;
    auto now = Clock::now();
 
