@@ -225,6 +225,15 @@ To enable MangoHud for all Steam games:
 flatpak override --user --env=MANGOHUD=1 com.valvesoftware.Steam
 ```
 
+For OpenGL, using Citra as example:
+```
+flatpak run --command="bash" org.citra_emu.citra /usr/lib/extensions/vulkan/MangoHud/bin/mangohud --dlsym /app/bin/citra-qt
+```
+Allow read-only access to configuration file:
+```
+flatpak override --user --filesystem=xdg-config/MangoHud:ro your.flatpak.application
+```
+
 # Normal usage
 
 To enable the MangoHud overlay layer for Vulkan and OpenGL, run :
