@@ -927,6 +927,25 @@ void HudElements::fan(){
     }
 }
 
+void HudElements::throttling_status(){
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_throttling_status]){
+        if (gpu_info.is_power_throttled || gpu_info.is_current_throttled || gpu_info.is_temp_throttled || gpu_info.is_other_throttled){
+            ImGui::TableNextRow(); ImGui::TableNextColumn();
+            ImGui::TextColored(HUDElements.colors.engine, "%s", "Throttling");
+            ImGui::TableNextColumn();
+            ImGui::TableNextColumn();
+            if (gpu_info.is_power_throttled)
+                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "Power");
+            if (gpu_info.is_current_throttled)
+                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "Current");
+            if (gpu_info.is_temp_throttled)
+                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "Temp");
+            if (gpu_info.is_other_throttled)
+                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "Other");
+        }
+    }
+}
+
 void HudElements::graphs(){
     ImGui::TableNextRow(); ImGui::TableNextColumn();
     ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
@@ -1082,7 +1101,8 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
     if (param == "debug")           { ordered_functions.push_back({gamescope_frame_timing, value}); }
     if (param == "gamepad_battery") { ordered_functions.push_back({gamepad_battery, value});        }
     if (param == "framecount")      { ordered_functions.push_back({framecount, value});             }
-    if (param == "fan")             { ordered_functions.push_back({fan, value});          }
+    if (param == "fan")             { ordered_functions.push_back({fan, value});                    }
+    if (param == "throttling_status")        { ordered_functions.push_back({throttling_status, value});               }
     if (param == "graphs"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs])
             HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs] = true;
@@ -1115,6 +1135,7 @@ void HudElements::legacy_elements(){
     ordered_functions.push_back({battery,            value});
     ordered_functions.push_back({fan,                value});
     ordered_functions.push_back({gamescope_fsr,      value});
+    ordered_functions.push_back({throttling_status,  value});
     ordered_functions.push_back({fps,                value});
     ordered_functions.push_back({fps_only,           value});
 #ifndef MANGOAPP

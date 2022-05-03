@@ -29,6 +29,10 @@ struct gpuInfo{
     float powerUsage;
     float apu_cpu_power;
     int apu_cpu_temp;
+    bool is_power_throttled;
+    bool is_current_throttled;
+    bool is_temp_throttled;
+    bool is_other_throttled;
 };
 
 extern struct gpuInfo gpu_info;

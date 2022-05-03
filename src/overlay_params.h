@@ -82,6 +82,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(gamepad_battery_icon)          \
    OVERLAY_PARAM_BOOL(hide_fsr_sharpness)            \
    OVERLAY_PARAM_BOOL(fan)                           \
+   OVERLAY_PARAM_BOOL(throttling_status)             \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \

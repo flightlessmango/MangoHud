@@ -31,6 +31,12 @@ struct amdgpu_common_metrics {
 	uint16_t soc_temp_c;
 	uint16_t gpu_temp_c;
 	uint16_t apu_cpu_temp_c;
+
+	/* throttling status */
+	bool is_power_throttled;
+	bool is_current_throttled;
+	bool is_temp_throttled;
+	bool is_other_throttled;
 } amdgpu_common_metrics;
 
 std::mutex amdgpu_common_metrics_m;
@@ -71,6 +77,7 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		struct metrics_table_header header;
 		std::ifstream in(metrics_path, std::ios_base::in | std::ios_base::binary);
 		in.read((char*)&header, sizeof(header));
+		int64_t indep_throttle_status = 0;
 		if (header.format_revision == 1) {
 			// Desktop GPUs
 			struct gpu_metrics_v1_3 amdgpu_metrics;
@@ -86,6 +93,7 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 			metrics->current_uclk_mhz = amdgpu_metrics.current_uclk;
 
 			metrics->gpu_temp_c = amdgpu_metrics.temperature_edge;
+			indep_throttle_status = amdgpu_metrics.indep_throttle_status;
 		} else if (header.format_revision == 2) {
 			// APUs
 			cpuStats.cpu_type = "APU";
@@ -108,7 +116,16 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 			for (unsigned i = 0; i < 8; i++)
 				cpu_temp = MAX(cpu_temp, amdgpu_metrics.temperature_core[i]);
 			metrics->apu_cpu_temp_c = cpu_temp / 100;
+			indep_throttle_status = amdgpu_metrics.indep_throttle_status;
 		}
+
+		/* Throttling: See 
+		https://elixir.bootlin.com/linux/latest/source/drivers/gpu/drm/amd/pm/inc/amdgpu_smu.h
+		for the offsets */ 
+		metrics->is_power_throttled = ((indep_throttle_status >> 0) & 0xFF) != 0;
+		metrics->is_current_throttled = ((indep_throttle_status >> 16) & 0xFF) != 0;
+		metrics->is_temp_throttled = ((indep_throttle_status >> 32) & 0xFFFF) != 0;
+		metrics->is_other_throttled = ((indep_throttle_status >> 56) & 0xFF) != 0;
 	}
 }
 
@@ -149,6 +166,10 @@ void amdgpu_metrics_polling_thread() {
 		UPDATE_METRIC_MAX(soc_temp_c);
 		UPDATE_METRIC_MAX(gpu_temp_c);
 		UPDATE_METRIC_MAX(apu_cpu_temp_c);
+		UPDATE_METRIC_MAX(is_power_throttled);
+		UPDATE_METRIC_MAX(is_current_throttled);
+		UPDATE_METRIC_MAX(is_temp_throttled);
+		UPDATE_METRIC_MAX(is_other_throttled);
 		amdgpu_common_metrics_m.unlock();
 	}
 }
@@ -170,5 +191,11 @@ void amdgpu_get_metrics(){
 
 	gpu_info.temp = amdgpu_common_metrics.gpu_temp_c;
 	gpu_info.apu_cpu_power = amdgpu_common_metrics.apu_cpu_temp_c;
+
+	gpu_info.is_power_throttled = amdgpu_common_metrics.is_power_throttled;
+	gpu_info.is_current_throttled = amdgpu_common_metrics.is_current_throttled;
+	gpu_info.is_temp_throttled = amdgpu_common_metrics.is_temp_throttled;
+	gpu_info.is_other_throttled = amdgpu_common_metrics.is_other_throttled;
+
 	amdgpu_common_metrics_m.unlock();
 }

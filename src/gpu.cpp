@@ -46,6 +46,9 @@ void getNvidiaGpuInfo(){
         gpu_info.MemClock = nvidiaMemClock;
         gpu_info.powerUsage = nvidiaPowerUsage / 1000;
         gpu_info.memoryTotal = nvidiaMemory.total / (1024.f * 1024.f * 1024.f);
+        gpu_info.is_temp_throttled = (nvml_throttle_reasons & 0x0000000000000060LL) != 0;
+        gpu_info.is_power_throttled = (nvml_throttle_reasons & 0x000000000000008CLL) != 0;
+        gpu_info.is_other_throttled = (nvml_throttle_reasons & 0x0000000000000112LL) != 0;
         return;
     }
 #endif

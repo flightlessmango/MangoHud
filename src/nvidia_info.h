@@ -10,6 +10,7 @@ extern nvmlDevice_t nvidiaDevice;
 extern struct nvmlUtilization_st nvidiaUtilization;
 extern struct nvmlMemory_st nvidiaMemory;
 extern bool nvmlSuccess;
+extern unsigned long long nvml_throttle_reasons;
 
 bool checkNVML(const char* pciBusId);
 bool getNVMLInfo(void);

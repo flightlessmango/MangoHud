@@ -64,6 +64,7 @@ class HudElements{
         static void gamepad_battery();
         static void framecount();
         static void fan();
+        static void throttling_status();
 
         void convert_colors(const struct overlay_params& params);
         void convert_colors(bool do_conv, const struct overlay_params& params);

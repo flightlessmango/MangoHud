@@ -189,6 +189,19 @@ bool libnvml_loader::Load(const std::string& library_name) {
   }
 
 #if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
+  nvmlDeviceGetCurrentClocksThrottleReasons =
+      reinterpret_cast<decltype(this->nvmlDeviceGetCurrentClocksThrottleReasons)>(
+          dlsym(library_, "nvmlDeviceGetCurrentClocksThrottleReasons"));
+#endif
+#if defined(LIBRARY_LOADER_NVML_H_DT_NEEDED)
+  nvmlDeviceGetCurrentClocksThrottleReasons = &::nvmlDeviceGetCurrentClocksThrottleReasons;
+#endif
+  if (!nvmlErrorString) {
+    CleanUp(true);
+    return false;
+  }
+
+#if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
   nvmlDeviceGetPowerUsage =
       reinterpret_cast<decltype(this->nvmlDeviceGetPowerUsage)>(
           dlsym(library_, "nvmlDeviceGetPowerUsage"));
@@ -204,6 +217,7 @@ bool libnvml_loader::Load(const std::string& library_name) {
   loaded_ = true;
   return true;
 }
+
 
 void libnvml_loader::CleanUp(bool unload) {
 #if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
@@ -221,5 +235,5 @@ void libnvml_loader::CleanUp(bool unload) {
   nvmlDeviceGetCount_v2 = NULL;
   nvmlDeviceGetHandleByIndex_v2 = NULL;
   nvmlDeviceGetHandleByPciBusId_v2 = NULL;
-
+  nvmlDeviceGetCurrentClocksThrottleReasons = NULL;
 }
