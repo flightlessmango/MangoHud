@@ -80,6 +80,7 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		int64_t indep_throttle_status = 0;
 		if (header.format_revision == 1) {
 			// Desktop GPUs
+			cpuStats.cpu_type = "GPU";
 			struct gpu_metrics_v1_3 amdgpu_metrics;
 			in.clear();
 			in.seekg(0);
@@ -113,7 +114,7 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 			metrics->soc_temp_c = amdgpu_metrics.temperature_soc / 100;
 			metrics->gpu_temp_c = amdgpu_metrics.temperature_gfx / 100;
 			int cpu_temp = 0;
-			for (unsigned i = 0; i < 8; i++)
+			for (unsigned i = 0; i < cpuStats.GetCPUData().size() / 2; i++)
 				cpu_temp = MAX(cpu_temp, amdgpu_metrics.temperature_core[i]);
 			metrics->apu_cpu_temp_c = cpu_temp / 100;
 			indep_throttle_status = amdgpu_metrics.indep_throttle_status;
@@ -190,7 +191,8 @@ void amdgpu_get_metrics(){
 	gpu_info.MemClock = amdgpu_common_metrics.current_uclk_mhz;
 
 	gpu_info.temp = amdgpu_common_metrics.gpu_temp_c;
-	gpu_info.apu_cpu_power = amdgpu_common_metrics.apu_cpu_temp_c;
+	gpu_info.apu_cpu_power = amdgpu_common_metrics.average_cpu_power_w;
+	gpu_info.apu_cpu_temp = amdgpu_common_metrics.apu_cpu_temp_c;
 
 	gpu_info.is_power_throttled = amdgpu_common_metrics.is_power_throttled;
 	gpu_info.is_current_throttled = amdgpu_common_metrics.is_current_throttled;
