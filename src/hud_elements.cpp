@@ -902,8 +902,8 @@ void HudElements::gamepad_battery()
 #endif
 }
 
-void HudElements::framecount(){
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_framecount]){
+void HudElements::frame_count(){
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_frame_count]){
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         ImGui::PushFont(HUDElements.sw_stats->font1);
@@ -1100,7 +1100,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
     if (param == "fsr")             { ordered_functions.push_back({gamescope_fsr, value});          }
     if (param == "debug")           { ordered_functions.push_back({gamescope_frame_timing, value}); }
     if (param == "gamepad_battery") { ordered_functions.push_back({gamepad_battery, value});        }
-    if (param == "framecount")      { ordered_functions.push_back({framecount, value});             }
+    if (param == "frame_count")     { ordered_functions.push_back({frame_count, value});            }
     if (param == "fan")             { ordered_functions.push_back({fan, value});                    }
     if (param == "throttling_status")        { ordered_functions.push_back({throttling_status, value});               }
     if (param == "graphs"){
@@ -1148,7 +1148,7 @@ void HudElements::legacy_elements(){
     ordered_functions.push_back({wine,               value});
 #endif
     ordered_functions.push_back({frame_timing,       value});
-    ordered_functions.push_back({framecount,         value});
+    ordered_functions.push_back({frame_count,         value});
     ordered_functions.push_back({gamescope_frame_timing, value});
 #ifndef MANGOAPP
     ordered_functions.push_back({gamemode,           value});

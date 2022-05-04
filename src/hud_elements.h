@@ -62,7 +62,7 @@ class HudElements{
         static void gamescope_fsr();
         static void gamescope_frame_timing();
         static void gamepad_battery();
-        static void framecount();
+        static void frame_count();
         static void fan();
         static void throttling_status();
 
