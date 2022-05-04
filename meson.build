@@ -218,6 +218,7 @@ util_files = files(
 
 imgui_options = [
   'default_library=static',
+  'werror=false',
   # use 'auto_features=disabled' once available: https://github.com/mesonbuild/meson/issues/5320
   'dx9=disabled',
   'dx10=disabled',
