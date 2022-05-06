@@ -49,18 +49,6 @@ static VkLayerInstanceCreateInfo *get_instance_chain_info(const VkInstanceCreate
    return NULL;
 }
 
-static VkLayerDeviceCreateInfo *get_device_chain_info(const VkDeviceCreateInfo *pCreateInfo,
-                                                      VkLayerFunction func)
-{
-   vk_foreach_struct(item, pCreateInfo->pNext) {
-      if (item->sType == VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO &&
-          ((VkLayerDeviceCreateInfo *) item)->function == func)
-         return (VkLayerDeviceCreateInfo *)item;
-   }
-   unreachable("device chain info not found");
-   return NULL;
-}
-
 static struct instance_data *new_instance_data(VkInstance instance)
 {
    struct instance_data *data = new instance_data();
