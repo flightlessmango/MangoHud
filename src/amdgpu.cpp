@@ -16,8 +16,8 @@ std::string metrics_path = "";
  */
 struct amdgpu_common_metrics {
 	/* Load level: averaged across the sampling period */
-	uint8_t gpu_load_percent;
-	// uint8_t mem_load_percent;
+	uint16_t gpu_load_percent;
+	// uint16_t mem_load_percent;
 
 	/* Power usage: averaged across the sampling period */
 	float average_gfx_power_w;
@@ -140,6 +140,10 @@ void amdgpu_metrics_polling_thread() {
 
 	// Initial poll of the metrics, so that we have values to display as fast as possible
 	amdgpu_get_instant_metrics(&amdgpu_common_metrics);
+	if (amdgpu_common_metrics.gpu_load_percent > 100){
+		gpu_load_needs_dividing = true;
+		amdgpu_common_metrics.gpu_load_percent /= 100;
+	}
 
 	while (1) {
 		// Get all the samples
