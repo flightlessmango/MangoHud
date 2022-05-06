@@ -679,6 +679,12 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
             amdgpu.vram_total = fopen((path + "/mem_info_vram_total").c_str(), "r");
          if (!amdgpu.vram_used)
             amdgpu.vram_used = fopen((path + "/mem_info_vram_used").c_str(), "r");
+         
+         path += "/hwmon/";
+         auto dirs = ls(path.c_str(), "hwmon", LS_DIRS);
+         for (auto& dir : dirs)
+            if (!amdgpu.temp)
+               amdgpu.temp = fopen((path + dir + "/temp1_input").c_str(), "r");
 
          if (!metrics_path.empty())
             break;
@@ -691,15 +697,11 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
 
          SPDLOG_DEBUG("using amdgpu path: {}", path);
 
-         path += "/hwmon/";
-         auto dirs = ls(path.c_str(), "hwmon", LS_DIRS);
          for (auto& dir : dirs) {
             if (!amdgpu.core_clock)
                amdgpu.core_clock = fopen((path + dir + "/freq1_input").c_str(), "r");
             if (!amdgpu.memory_clock)
                amdgpu.memory_clock = fopen((path + dir + "/freq2_input").c_str(), "r");
-            if (!amdgpu.temp)
-               amdgpu.temp = fopen((path + dir + "/temp1_input").c_str(), "r");
             if (!amdgpu.power_usage)
                amdgpu.power_usage = fopen((path + dir + "/power1_average").c_str(), "r");
          }
