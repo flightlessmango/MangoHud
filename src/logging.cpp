@@ -155,7 +155,7 @@ void Logger::start_logging() {
   m_values_valid = false;
   m_logging_on = true;
   m_log_start = Clock::now();
-  if((!m_params->output_folder.empty()) && (m_params->log_interval != 0)){
+  if(m_params->log_interval != 0){
     std::thread(&Logger::logging, this).detach();
   }
 }
@@ -238,7 +238,10 @@ void autostart_log(int sleep) {
 }
 
 void Logger::calculate_benchmark_data(){
-  vector<float> sorted = benchmark.fps_data;
+  vector<float> sorted {};
+  for (auto& point : m_log_array)
+    sorted.push_back(point.fps);
+
   std::sort(sorted.begin(), sorted.end());
   benchmark.percentile_data.clear();
 

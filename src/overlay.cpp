@@ -208,9 +208,6 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
    auto elapsed = now - sw_stats.last_fps_update; /* ns */
    float frametime_ms = frametime_ns / 1000000.f;
 
-   if (logger->is_active())
-      benchmark.fps_data.push_back(1000 / frametime_ms);
-
    if (sw_stats.last_present_time) {
         sw_stats.frames_stats[f_idx].stats[OVERLAY_PLOTS_frame_timing] =
             frametime_ns;
