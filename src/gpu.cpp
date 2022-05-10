@@ -137,4 +137,12 @@ void getAmdGpuInfo(){
             value = 0;
         gpu_info.temp = value / 1000;
     }
+
+    if (amdgpu.gtt_used) {
+        rewind(amdgpu.gtt_used);
+        fflush(amdgpu.gtt_used);
+        if (fscanf(amdgpu.gtt_used, "%" PRId64, &value) != 1)
+            value = 0;
+        gpu_info.gtt_used = float(value) / (1024 * 1024 * 1024);
+    }
 }

@@ -676,6 +676,8 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
             amdgpu.vram_total = fopen((path + "/mem_info_vram_total").c_str(), "r");
          if (!amdgpu.vram_used)
             amdgpu.vram_used = fopen((path + "/mem_info_vram_used").c_str(), "r");
+         if (!amdgpu.gtt_used)
+            amdgpu.gtt_used = fopen((path + "/mem_info_gtt_used").c_str(), "r");
          
          path += "/hwmon/";
          auto dirs = ls(path.c_str(), "hwmon", LS_DIRS);

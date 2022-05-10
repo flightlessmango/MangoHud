@@ -343,7 +343,11 @@ void HudElements::vram(){
         ImGui::TableNextRow(); ImGui::TableNextColumn();
         ImGui::TextColored(HUDElements.colors.vram, "VRAM");
         ImGui::TableNextColumn();
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", gpu_info.memoryUsed);
+        // Add gtt_used to vram usage for APUs
+        if (cpuStats.cpu_type == "APU")
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", gpu_info.memoryUsed + gpu_info.gtt_used);
+        else
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", gpu_info.memoryUsed);
         ImGui::SameLine(0,1.0f);
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::Text("GiB");
