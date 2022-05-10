@@ -665,44 +665,45 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
             }
          }
 
-         std::string gpu_metrics_path = path + "/device/gpu_metrics";
+         const std::string device_path = path + "/device";
+         const std::string gpu_metrics_path = device_path + "/gpu_metrics";
          if (amdgpu_check_metrics(gpu_metrics_path)) {
             gpu_metrics_exists = true;
             metrics_path = gpu_metrics_path;
-            SPDLOG_DEBUG("Using gpu_metrics of {}", path);
+            SPDLOG_DEBUG("Using gpu_metrics of {}", gpu_metrics_path);
          }
-         path += "/device";
+
          if (!amdgpu.vram_total)
-            amdgpu.vram_total = fopen((path + "/mem_info_vram_total").c_str(), "r");
+            amdgpu.vram_total = fopen((device_path + "/mem_info_vram_total").c_str(), "r");
          if (!amdgpu.vram_used)
-            amdgpu.vram_used = fopen((path + "/mem_info_vram_used").c_str(), "r");
+            amdgpu.vram_used = fopen((device_path + "/mem_info_vram_used").c_str(), "r");
          if (!amdgpu.gtt_used)
-            amdgpu.gtt_used = fopen((path + "/mem_info_gtt_used").c_str(), "r");
-         
-         path += "/hwmon/";
-         auto dirs = ls(path.c_str(), "hwmon", LS_DIRS);
-         for (auto& dir : dirs)
+            amdgpu.gtt_used = fopen((device_path + "/mem_info_gtt_used").c_str(), "r");
+
+         const std::string hwmon_path = device_path + "/hwmon/";
+         const auto dirs = ls(hwmon_path.c_str(), "hwmon", LS_DIRS);
+         for (const auto& dir : dirs)
             if (!amdgpu.temp)
-               amdgpu.temp = fopen((path + dir + "/temp1_input").c_str(), "r");
+               amdgpu.temp = fopen((hwmon_path + dir + "/temp1_input").c_str(), "r");
 
          if (!metrics_path.empty())
             break;
 
          // The card output nodes - cardX-output, will point to the card node
          // As such the actual metrics nodes will be missing.
-         amdgpu.busy = fopen((path + "/gpu_busy_percent").c_str(), "r");
+         amdgpu.busy = fopen((device_path + "/gpu_busy_percent").c_str(), "r");
          if (!amdgpu.busy)
             continue;
 
-         SPDLOG_DEBUG("using amdgpu path: {}", path);
+         SPDLOG_DEBUG("using amdgpu path: {}", device_path);
 
-         for (auto& dir : dirs) {
+         for (const auto& dir : dirs) {
             if (!amdgpu.core_clock)
-               amdgpu.core_clock = fopen((path + dir + "/freq1_input").c_str(), "r");
+               amdgpu.core_clock = fopen((hwmon_path + dir + "/freq1_input").c_str(), "r");
             if (!amdgpu.memory_clock)
-               amdgpu.memory_clock = fopen((path + dir + "/freq2_input").c_str(), "r");
+               amdgpu.memory_clock = fopen((hwmon_path + dir + "/freq2_input").c_str(), "r");
             if (!amdgpu.power_usage)
-               amdgpu.power_usage = fopen((path + dir + "/power1_average").c_str(), "r");
+               amdgpu.power_usage = fopen((hwmon_path + dir + "/power1_average").c_str(), "r");
          }
          break;
       }
