@@ -22,7 +22,7 @@ decltype(&getAmdGpuInfo) getAmdGpuInfo_actual = nullptr;
 bool checkNvidia(const char *pci_dev){
     bool nvSuccess = false;
 #ifdef HAVE_NVML
-    nvSuccess = checkNVML(pci_dev) && getNVMLInfo();
+    nvSuccess = checkNVML(pci_dev) && getNVMLInfo({});
 #endif
 #ifdef HAVE_XNVCTRL
     if (!nvSuccess)
@@ -35,10 +35,10 @@ bool checkNvidia(const char *pci_dev){
     return nvSuccess;
 }
 
-void getNvidiaGpuInfo(){
+void getNvidiaGpuInfo(const struct overlay_params& params){
 #ifdef HAVE_NVML
     if (nvmlSuccess){
-        getNVMLInfo();
+        getNVMLInfo(params);
         gpu_info.load = nvidiaUtilization.gpu;
         gpu_info.temp = nvidiaTemp;
         gpu_info.memoryUsed = nvidiaMemory.used / (1024.f * 1024.f * 1024.f);
@@ -46,9 +46,11 @@ void getNvidiaGpuInfo(){
         gpu_info.MemClock = nvidiaMemClock;
         gpu_info.powerUsage = nvidiaPowerUsage / 1000;
         gpu_info.memoryTotal = nvidiaMemory.total / (1024.f * 1024.f * 1024.f);
-        gpu_info.is_temp_throttled = (nvml_throttle_reasons & 0x0000000000000060LL) != 0;
-        gpu_info.is_power_throttled = (nvml_throttle_reasons & 0x000000000000008CLL) != 0;
-        gpu_info.is_other_throttled = (nvml_throttle_reasons & 0x0000000000000112LL) != 0;
+        if (params.enabled[OVERLAY_PARAM_ENABLED_throttling_status]){
+            gpu_info.is_temp_throttled = (nvml_throttle_reasons & 0x0000000000000060LL) != 0;
+            gpu_info.is_power_throttled = (nvml_throttle_reasons & 0x000000000000008CLL) != 0;
+            gpu_info.is_other_throttled = (nvml_throttle_reasons & 0x0000000000000112LL) != 0;
+        }
         return;
     }
 #endif

@@ -108,7 +108,7 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
          amdgpu_get_metrics();
 
       if (vendorID == 0x10de)
-         getNvidiaGpuInfo();
+         getNvidiaGpuInfo(params);
    }
 
 #ifdef __linux__

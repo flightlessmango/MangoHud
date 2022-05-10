@@ -4,6 +4,7 @@
 
 #include <cstdio>
 #include <cstdint>
+#include "overlay_params.h"
 
 struct amdgpu_files
 {
@@ -37,7 +38,7 @@ struct gpuInfo{
 
 extern struct gpuInfo gpu_info;
 
-void getNvidiaGpuInfo(void);
+void getNvidiaGpuInfo(const struct overlay_params& params);
 void getAmdGpuInfo(void);
 extern decltype(&getAmdGpuInfo) getAmdGpuInfo_actual;
 bool checkNvidia(const char *pci_dev);

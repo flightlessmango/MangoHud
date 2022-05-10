@@ -3,6 +3,7 @@
 #include "nvidia_info.h"
 #include <iostream>
 #include "overlay.h"
+#include "overlay_params.h"
 
 nvmlReturn_t result;
 nvmlDevice_t nvidiaDevice;
@@ -45,7 +46,7 @@ bool checkNVML(const char* pciBusId){
     return false;
 }
 
-bool getNVMLInfo(){
+bool getNVMLInfo(const struct overlay_params& params){
     nvmlReturn_t response;
     auto& nvml = get_libnvml_loader();
     response = nvml.nvmlDeviceGetUtilizationRates(nvidiaDevice, &nvidiaUtilization);
@@ -55,8 +56,8 @@ bool getNVMLInfo(){
     nvml.nvmlDeviceGetClockInfo(nvidiaDevice, NVML_CLOCK_MEM, &nvidiaMemClock);
     nvml.nvmlDeviceGetPowerUsage(nvidiaDevice, &nvidiaPowerUsage);
     deviceID = nvidiaPciInfo.pciDeviceId >> 16;
-
-    nvml.nvmlDeviceGetCurrentClocksThrottleReasons(nvidiaDevice, &nvml_throttle_reasons);
+    if (params.enabled[OVERLAY_PARAM_ENABLED_throttling_status])
+        nvml.nvmlDeviceGetCurrentClocksThrottleReasons(nvidiaDevice, &nvml_throttle_reasons);
 
     if (response == NVML_ERROR_NOT_SUPPORTED) {
         if (nvmlSuccess)

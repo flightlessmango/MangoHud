@@ -525,6 +525,7 @@ parse_overlay_env(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_battery_icon] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_hide_fsr_sharpness] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_throttling_status] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = read_cfg;
       }
 #define OVERLAY_PARAM_BOOL(name)                                       \
@@ -576,6 +577,7 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_fps_only] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_gamepad_battery] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_gamepad_battery_icon] = true;
+   params->enabled[OVERLAY_PARAM_ENABLED_throttling_status] = false;
    params->fps_sampling_period = 500000000; /* 500ms */
    params->width = 0;
    params->height = 140;
@@ -666,6 +668,7 @@ parse_overlay_config(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_battery_icon] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_hide_fsr_sharpness] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_throttling_status] = 0;
          params->options.erase("full");
       }
       for (auto& it : params->options) {

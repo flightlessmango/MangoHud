@@ -3,6 +3,7 @@
 #define MANGOHUD_NVIDIA_INFO_H
 
 #include <nvml.h>
+#include "overlay_params.h"
 
 extern nvmlReturn_t result;
 extern unsigned int nvidiaTemp, processSamplesCount, *vgpuInstanceSamplesCount, nvidiaCoreClock, nvidiaMemClock, nvidiaPowerUsage;
@@ -13,6 +14,6 @@ extern bool nvmlSuccess;
 extern unsigned long long nvml_throttle_reasons;
 
 bool checkNVML(const char* pciBusId);
-bool getNVMLInfo(void);
+bool getNVMLInfo(const struct overlay_params& params);
 
 #endif //MANGOHUD_NVIDIA_INFO_H
