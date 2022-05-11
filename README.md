@@ -124,7 +124,7 @@ If you do not wish to compile anything, simply download the file under [Releases
 
 #### Arch-based distributions
 
-If you are using an Arch-based distribution, install [`mangohud`](https://aur.archlinux.org/packages/mangohud/) and [`lib32-mangohud`](https://aur.archlinux.org/packages/lib32-mangohud/) with your favourite AUR helper. [`mangohud-git`](https://aur.archlinux.org/packages/mangohud-git/) and [`lib32-mangohud-git`](https://aur.archlinux.org/packages/lib32-mangohud-git/) are also available on the AUR if you want the up-to-date version of MangoHud.
+If you are using an Arch-based distribution, install [`mangohud-x11`](https://aur.archlinux.org/packages/mangohud-x11) and [`lib32-mangohud-x11`](https://aur.archlinux.org/packages/lib32-mangohud-x11) with your favourite AUR helper. [`mangohud-git`](https://aur.archlinux.org/packages/mangohud-git/) and [`lib32-mangohud-git`](https://aur.archlinux.org/packages/lib32-mangohud-git/) are also available on the AUR if you want the up-to-date version of MangoHud.
 
 If you are building it by yourself, you need to enable multilib repository, by editing pacman config:
 
