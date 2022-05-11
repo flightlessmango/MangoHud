@@ -256,6 +256,8 @@ if not spdlog_dep.found()
   spdlog_sp = subproject('spdlog', default_options: [
     'default_library=static',
     'compile_library=true',
+    'werror=false',
+    'tests=false',
   ])
   spdlog_dep = spdlog_sp.get_variable('spdlog_dep')
 else
