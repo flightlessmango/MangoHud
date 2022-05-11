@@ -138,6 +138,8 @@ void imgui_create(void *ctx)
     } else {
         vendorID = 0x10de;
     }
+    if (deviceName.find("zink") != std::string::npos)
+        sw_stats.engine = EngineTypes::ZINK;
     init_gpu_stats(vendorID, 0, params);
     sw_stats.gpuName = gpu = get_device_name(vendorID, deviceID);
     SPDLOG_DEBUG("gpu: {}", gpu);
