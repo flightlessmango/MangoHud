@@ -54,6 +54,7 @@ bool amdgpu_check_metrics(const std::string& path)
     switch (header.structure_size)
     {
         case 80: // v1_0, not naturally aligned
+			return false;
         case 96: // v1_1
         case 104: // v1_2
         case sizeof(gpu_metrics_v1_3): // v2.0, v2.1
