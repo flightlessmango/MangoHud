@@ -629,17 +629,26 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
       for (auto& dir : dirs) {
          path = drm + dir;
 
-         SPDLOG_DEBUG("amdgpu path check: {}/device/vendor", path);
+         SPDLOG_DEBUG("amdgpu path check: {}", path);
+         if (pci_bus_parsed && pci_dev) {
+            string pci_device = read_symlink((path + "/device").c_str());
+            SPDLOG_DEBUG("PCI device symlink: '{}'", pci_device);
+            if (!ends_with(pci_device, pci_dev)) {
+               SPDLOG_DEBUG("skipping GPU, no PCI ID match");
+               continue;
+            }
+         }
+
          FILE *fp;
          string device = path + "/device/device";
          if ((fp = fopen(device.c_str(), "r"))){
             uint32_t temp = 0;
             if (fscanf(fp, "%x", &temp) == 1) {
-            // if (temp != reported_deviceID && deviceID != 0){
-            //    fclose(fp);
-            //    SPDLOG_DEBUG("DeviceID does not match vulkan report {}", reported_deviceID);
-            //    continue;
-            // }
+               if (reported_deviceID && temp != reported_deviceID){
+                  fclose(fp);
+                  SPDLOG_DEBUG("DeviceID does not match vulkan report {}", reported_deviceID);
+                  continue;
+               }
                deviceID = temp;
             }
             fclose(fp);
@@ -653,15 +662,6 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
                continue;
             }
             fclose(fp);
-         }
-
-         if (pci_bus_parsed && pci_dev) {
-            string pci_device = read_symlink((path + "/device").c_str());
-            SPDLOG_DEBUG("PCI device symlink: '{}'", pci_device);
-            if (!ends_with(pci_device, pci_dev)) {
-               SPDLOG_DEBUG("skipping GPU, no PCI ID match");
-               continue;
-            }
          }
 
          const std::string device_path = path + "/device";
