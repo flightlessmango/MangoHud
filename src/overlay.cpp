@@ -274,6 +274,18 @@ float get_time_stat(void *_data, int _idx)
    return data->frames_stats[idx].stats[data->stat_selector] / data->time_dividor;
 }
 
+void overlay_new_frame(const struct overlay_params& params)
+{
+   ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+   ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,-3));
+   ImGui::PushStyleVar(ImGuiStyleVar_Alpha, params.alpha);
+}
+
+void overlay_end_frame()
+{
+   ImGui::PopStyleVar(3);
+}
+
 void position_layer(struct swapchain_stats& data, const struct overlay_params& params, const ImVec2& window_size)
 {
    unsigned width = ImGui::GetIO().DisplaySize.x;
@@ -284,9 +296,6 @@ void position_layer(struct swapchain_stats& data, const struct overlay_params& p
 
    ImGui::SetNextWindowBgAlpha(params.background_alpha);
    ImGui::SetNextWindowSize(window_size, ImGuiCond_Always);
-   ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-   ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,-3));
-   ImGui::PushStyleVar(ImGuiStyleVar_Alpha, params.alpha);
    switch (params.position) {
    case LAYER_POSITION_TOP_LEFT:
       data.main_window_pos = ImVec2(margin + params.offset_x, margin + params.offset_y);

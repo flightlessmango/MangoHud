@@ -152,6 +152,8 @@ extern bool steam_focused;
 extern int fan_speed;
 
 void init_spdlog();
+void overlay_new_frame(const struct overlay_params& params);
+void overlay_end_frame();
 void position_layer(struct swapchain_stats& data, const struct overlay_params& params, const ImVec2& window_size);
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan);
 void update_hud_info(struct swapchain_stats& sw_stats, const struct overlay_params& params, uint32_t vendorID);

@@ -443,11 +443,11 @@ static void compute_swapchain_display(struct swapchain_data *data)
    ImGui::NewFrame();
    {
       ::scoped_lock lk(instance_data->notifier.mutex);
+      overlay_new_frame(instance_data->params);
       position_layer(data->sw_stats, instance_data->params, data->window_size);
       render_imgui(data->sw_stats, instance_data->params, data->window_size, true);
+      overlay_end_frame();
    }
-   ImGui::PopStyleVar(3);
-
    ImGui::EndFrame();
    ImGui::Render();
 
