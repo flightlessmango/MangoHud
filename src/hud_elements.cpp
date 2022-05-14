@@ -854,53 +854,55 @@ void HudElements::gamescope_frame_timing(){
 void HudElements::gamepad_battery()
 {
 #ifdef __linux__
-    gamepad_update();
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gamepad_battery]) {
+        gamepad_update();
 
-    if (gamepad_found) {
-        gamepad_info();
-        for (int i = 0; i < gamepad_count; i++) {
-            std::string battery = gamepad_data[i].battery;
-            std::string name = gamepad_data[i].name;
-            std::string battery_percent = gamepad_data[i].battery_percent;
-            bool report_percent = gamepad_data[i].report_percent;
-            bool charging = gamepad_data[i].is_charging;
+        if (gamepad_found) {
+            gamepad_info();
+            for (int i = 0; i < gamepad_count; i++) {
+                std::string battery = gamepad_data[i].battery;
+                std::string name = gamepad_data[i].name;
+                std::string battery_percent = gamepad_data[i].battery_percent;
+                bool report_percent = gamepad_data[i].report_percent;
+                bool charging = gamepad_data[i].is_charging;
 
-            ImGui::TableNextRow(); ImGui::TableNextColumn();
-            ImGui::PushFont(HUDElements.sw_stats->font1);
-            ImGui::TextColored(HUDElements.colors.engine, "%s", name.c_str());
-            ImGui::TableNextColumn();
-            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gamepad_battery_icon]) {
-                if (charging)
-                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_USB);
-                else {
-                    if (battery == "Full")
-                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_FULL);
-                    else if (battery == "High")
-                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_THREE_QUARTERS);
-                    else if (battery == "Normal")
-                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_HALF);
-                    else if (battery == "Low")
-                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_QUARTER);
-                    else if (battery == "Unknown")
+                ImGui::TableNextRow(); ImGui::TableNextColumn();
+                ImGui::PushFont(HUDElements.sw_stats->font1);
+                ImGui::TextColored(HUDElements.colors.engine, "%s", name.c_str());
+                ImGui::TableNextColumn();
+                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gamepad_battery_icon]) {
+                    if (charging)
                         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_USB);
-                }
-            }
-            else {
-                if (charging)
-                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_USB);
-                else if (report_percent) {
-                    right_aligned_text(HUDElements.colors.text,HUDElements.ralign_width, "%s", battery_percent.c_str());
-                    ImGui::SameLine(0,1.0f);
-                    ImGui::Text("%%");
+                    else {
+                        if (battery == "Full")
+                            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_FULL);
+                        else if (battery == "High")
+                            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_THREE_QUARTERS);
+                        else if (battery == "Normal")
+                            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_HALF);
+                        else if (battery == "Low")
+                            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_QUARTER);
+                        else if (battery == "Unknown")
+                            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_USB);
+                    }
                 }
                 else {
-                    if (battery == "Unknown")
+                    if (charging)
                         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_USB);
-                    else
-                        right_aligned_text(HUDElements.colors.text,HUDElements.ralign_width, "%s", battery.c_str());
+                    else if (report_percent) {
+                        right_aligned_text(HUDElements.colors.text,HUDElements.ralign_width, "%s", battery_percent.c_str());
+                        ImGui::SameLine(0,1.0f);
+                        ImGui::Text("%%");
+                    }
+                    else {
+                        if (battery == "Unknown")
+                            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_USB);
+                        else
+                            right_aligned_text(HUDElements.colors.text,HUDElements.ralign_width, "%s", battery.c_str());
+                    }
                 }
+                ImGui::PopFont();
             }
-            ImGui::PopFont();
         }
     }
 #endif
