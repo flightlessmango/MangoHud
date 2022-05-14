@@ -17,7 +17,6 @@ using namespace std::chrono_literals;
 
 struct gpuInfo gpu_info {};
 amdgpu_files amdgpu {};
-decltype(&getAmdGpuInfo) getAmdGpuInfo_actual = nullptr;
 
 bool checkNvidia(const char *pci_dev){
     bool nvSuccess = false;

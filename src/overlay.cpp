@@ -101,8 +101,8 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
 #endif
    }
    if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || logger->is_active()) {
-      if (vendorID == 0x1002 && getAmdGpuInfo_actual)
-         getAmdGpuInfo_actual();
+      if (vendorID == 0x1002)
+         getAmdGpuInfo();
 
       if (gpu_metrics_exists)
          amdgpu_get_metrics();
@@ -624,7 +624,6 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
        || gpu.find("AMD") != std::string::npos) {
       string path;
       string drm = "/sys/class/drm/";
-      getAmdGpuInfo_actual = getAmdGpuInfo;
 
       auto dirs = ls(drm.c_str(), "card");
       for (auto& dir : dirs) {
