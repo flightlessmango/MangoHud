@@ -614,8 +614,11 @@ void HudElements::media_player(){
     scaled_font.Scale = HUDElements.params->font_scale_media_player;
     ImGui::PushFont(&scaled_font);
     {
-        std::lock_guard<std::mutex> lck(main_metadata.mtx);
-        render_mpris_metadata(*HUDElements.params, main_metadata, frame_timing);
+        std::unique_lock<std::mutex> lck(main_metadata.mtx, std::try_to_lock);
+        if (lck.owns_lock())
+            render_mpris_metadata(*HUDElements.params, main_metadata, frame_timing);
+        else
+            SPDLOG_DEBUG("failed to acquire lock");
     }
     ImGui::PopFont();
 #endif
