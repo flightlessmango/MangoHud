@@ -20,6 +20,7 @@ class HudElements{
         float res_width, res_height;
         bool is_vulkan, gamemode_bol = false, vkbasalt_bol = false;
         int place;
+        int text_column = 1;
         Clock::time_point last_exec;
         std::vector<std::pair<std::string, std::string>> options;
         std::vector<std::pair<void(*)(), std::string >> ordered_functions;

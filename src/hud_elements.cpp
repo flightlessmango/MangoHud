@@ -135,6 +135,11 @@ void ImguiNextColumnOrNewRow(int column = -1)
     }
 }
 
+void ImGuiTableSetColumnIndex(int column)
+{
+    ImGui::TableSetColumnIndex(std::min(column, ImGui::TableGetColumnCount() - 1));
+}
+
 void HudElements::time(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_time]){
         ImGui::TableNextRow(); ImGui::TableNextColumn();
@@ -571,7 +576,7 @@ void HudElements::frame_timing(){
         ImGui::TextColored(HUDElements.colors.engine, "%s", "Frametime");
         ImGui::TableSetColumnIndex(ImGui::TableGetColumnCount() - 1);
         ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "min: %.1fms, max: %.1fms", min_frametime, max_frametime);
+        right_aligned_text(HUDElements.colors.text, ImGui::GetContentRegionAvail().x, "min: %.1fms, max: %.1fms", min_frametime, max_frametime);
         ImGui::PopFont();
         ImGui::TableNextRow(); ImGui::TableNextColumn();
         char hash[40];
@@ -632,12 +637,11 @@ void HudElements::media_player(){
 void HudElements::resolution(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_resolution]){
         ImGui::TableNextRow(); ImGui::TableNextColumn();
-        unsigned res_width  = ImGui::GetIO().DisplaySize.x;
-        unsigned res_height = ImGui::GetIO().DisplaySize.y;
+        const auto res  = ImGui::GetIO().DisplaySize;
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TextColored(HUDElements.colors.engine, "Resolution");
-        ImGui::TableNextColumn();
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "%ix%i", res_width, res_height);
+        ImGuiTableSetColumnIndex(HUDElements.text_column);
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "%.0fx%.0f", res.x, res.y);
         ImGui::PopFont();
     }
 }
@@ -650,7 +654,7 @@ void HudElements::show_fps_limit(){
         ImGui::TableNextRow(); ImGui::TableNextColumn();
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TextColored(HUDElements.colors.engine, "%s","FPS limit");
-        ImGui::TableNextColumn();
+        ImGuiTableSetColumnIndex(HUDElements.text_column);
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", fps);
         ImGui::PopFont();
     }
@@ -690,7 +694,7 @@ void HudElements::gamemode(){
         ImGui::TableNextRow(); ImGui::TableNextColumn();
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TextColored(HUDElements.colors.engine, "%s", "GAMEMODE");
-        ImGui::TableNextColumn();
+        ImGuiTableSetColumnIndex(HUDElements.text_column);
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", HUDElements.gamemode_bol ? "ON" : "OFF");
         ImGui::PopFont();
     }
@@ -701,7 +705,7 @@ void HudElements::vkbasalt(){
         ImGui::TableNextRow(); ImGui::TableNextColumn();
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TextColored(HUDElements.colors.engine, "%s", "VKBASALT");
-        ImGui::TableNextColumn();
+        ImGuiTableSetColumnIndex(HUDElements.text_column);
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", HUDElements.vkbasalt_bol ? "ON" : "OFF");
         ImGui::PopFont();
     }
@@ -753,7 +757,7 @@ void HudElements::battery(){
                 ImGui::PushFont(HUDElements.sw_stats->font1);
                 ImGui::TextColored(HUDElements.colors.text, "%s", "Remaining Time");
                 ImGui::PopFont();
-                ImguiNextColumnOrNewRow(std::min(2, ImGui::TableGetColumnCount() - 1));
+                ImGuiTableSetColumnIndex(2);
                 // ImGui::TextColored(HUDElements.colors.text, "%02.0f:%02.0f:%02.0f", hours, minutes, seconds);
                 right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%02.0f:%02.0f", hours, minutes);
             }
@@ -922,8 +926,8 @@ void HudElements::frame_count(){
         ImGui::TableNextColumn();
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TextColored(HUDElements.colors.engine, "Frame Count");
-        ImGui::TableNextColumn();
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%llu", HUDElements.sw_stats->n_frames);
+        ImGuiTableSetColumnIndex(HUDElements.text_column);
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%" PRIu64, HUDElements.sw_stats->n_frames);
         ImGui::PopFont();
     }
 }

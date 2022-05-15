@@ -741,17 +741,20 @@ parse_overlay_config(struct overlay_params *params,
    if (!params->table_columns)
       params->table_columns = 3;
 
+   params->table_columns = std::max(1u, std::min(64u, params->table_columns));
+
    if (!params->font_size) {
       params->font_size = 24;
    }
 
    //increase hud width if io read and write
    if (!params->width) {
+      params->width = params->font_size * params->font_scale * params->table_columns * 4;
+
       if ((params->enabled[OVERLAY_PARAM_ENABLED_io_read] || params->enabled[OVERLAY_PARAM_ENABLED_io_write])) {
-         params->width = 13 * params->font_size * params->font_scale;
-      } else {
-         params->width = params->font_size * params->font_scale * 11.7;
+         params->width += 2 * params->font_size * params->font_scale;
       }
+
       // Treat it like hud would need to be ~7 characters wider with default font.
       if (params->no_small_font)
          params->width += 7 * params->font_size * params->font_scale;
@@ -810,6 +813,10 @@ parse_overlay_config(struct overlay_params *params,
 
    // Needs ImGui context but it is null here for OpenGL so just note it and update somewhere else
    HUDElements.colors.update = true;
+   if (params->no_small_font)
+      HUDElements.text_column = 2;
+   else
+      HUDElements.text_column = 1;
 
    if(logger && logger->m_params == nullptr) logger.reset();
    if(!logger) logger = std::make_unique<Logger>(HUDElements.params);
