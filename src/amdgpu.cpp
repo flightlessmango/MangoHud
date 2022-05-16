@@ -44,10 +44,14 @@ std::mutex amdgpu_common_metrics_m;
 bool amdgpu_check_metrics(const std::string& path)
 {
     metrics_table_header header {};
-    std::ifstream in(path, std::ios_base::binary);
-    if (!in.read((char*)&header, sizeof(header)))
+	FILE *f;
+	f = fopen(path.c_str(), "rb");
+	if (!f)
+		return false;
+
+    if (fread(&header, sizeof(header), 1, f) == 0)
     {
-        SPDLOG_DEBUG("Failed to read '{}': {}", path, in.eof() ? "End of file" : strerror(errno));
+        SPDLOG_DEBUG("Failed to read the metrics header of '{}'", path);
         return false;
     }
 
@@ -71,64 +75,65 @@ bool amdgpu_check_metrics(const std::string& path)
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
-	// Set all the fields to 0 by default
-	memset(metrics, 0, sizeof(struct amdgpu_common_metrics));
+	FILE *f;
+	void *buf[MAX(sizeof(struct gpu_metrics_v1_3), sizeof(struct gpu_metrics_v2_2))];
+	struct metrics_table_header* header = (metrics_table_header*)buf;
 
-	if (!metrics_path.empty()){
-		struct metrics_table_header header;
-		std::ifstream in(metrics_path, std::ios_base::in | std::ios_base::binary);
-		in.read((char*)&header, sizeof(header));
-		int64_t indep_throttle_status = 0;
-		if (header.format_revision == 1) {
-			// Desktop GPUs
-			cpuStats.cpu_type = "GPU";
-			struct gpu_metrics_v1_3 amdgpu_metrics;
-			in.clear();
-			in.seekg(0);
-			in.read((char*)&amdgpu_metrics, sizeof(amdgpu_metrics));
+	f = fopen(metrics_path.c_str(), "rb");
+	if (!f)
+		return;
 
-			metrics->gpu_load_percent = amdgpu_metrics.average_gfx_activity;
-
-			metrics->average_gfx_power_w = amdgpu_metrics.average_socket_power;
-
-			metrics->current_gfxclk_mhz = amdgpu_metrics.average_gfxclk_frequency;
-			metrics->current_uclk_mhz = amdgpu_metrics.current_uclk;
-
-			metrics->gpu_temp_c = amdgpu_metrics.temperature_edge;
-			indep_throttle_status = amdgpu_metrics.indep_throttle_status;
-		} else if (header.format_revision == 2) {
-			// APUs
-			cpuStats.cpu_type = "APU";
-			struct gpu_metrics_v2_2 amdgpu_metrics;
-			in.clear();
-			in.seekg(0);
-			in.read((char*)&amdgpu_metrics, sizeof(amdgpu_metrics));
-
-			metrics->gpu_load_percent = amdgpu_metrics.average_gfx_activity;
-
-			metrics->average_gfx_power_w = amdgpu_metrics.average_gfx_power / 1000.f;
-			metrics->average_cpu_power_w = amdgpu_metrics.average_cpu_power / 1000.f;
-
-			metrics->current_gfxclk_mhz = amdgpu_metrics.current_gfxclk;
-			metrics->current_uclk_mhz = amdgpu_metrics.current_uclk;
-
-			metrics->soc_temp_c = amdgpu_metrics.temperature_soc / 100;
-			metrics->gpu_temp_c = amdgpu_metrics.temperature_gfx / 100;
-			int cpu_temp = 0;
-			for (unsigned i = 0; i < cpuStats.GetCPUData().size() / 2; i++)
-				cpu_temp = MAX(cpu_temp, amdgpu_metrics.temperature_core[i]);
-			metrics->apu_cpu_temp_c = cpu_temp / 100;
-			indep_throttle_status = amdgpu_metrics.indep_throttle_status;
-		}
-
-		/* Throttling: See 
-		https://elixir.bootlin.com/linux/latest/source/drivers/gpu/drm/amd/pm/inc/amdgpu_smu.h
-		for the offsets */ 
-		metrics->is_power_throttled = ((indep_throttle_status >> 0) & 0xFF) != 0;
-		metrics->is_current_throttled = ((indep_throttle_status >> 16) & 0xFF) != 0;
-		metrics->is_temp_throttled = ((indep_throttle_status >> 32) & 0xFFFF) != 0;
-		metrics->is_other_throttled = ((indep_throttle_status >> 56) & 0xFF) != 0;
+	// Read the whole file
+	if (!fread(buf, sizeof(buf), 1, f) == 0) {
+		SPDLOG_DEBUG("Failed to read amdgpu metrics file '{}'", metrics_path.c_str());
+		fclose(f);
+		return;
 	}
+	fclose(f);
+
+	int64_t indep_throttle_status = 0;
+	if (header->format_revision == 1) {
+		// Desktop GPUs
+		cpuStats.cpu_type = "GPU";
+		struct gpu_metrics_v1_3 *amdgpu_metrics = (struct gpu_metrics_v1_3 *) buf;
+		metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
+
+		metrics->average_gfx_power_w = amdgpu_metrics->average_socket_power;
+
+		metrics->current_gfxclk_mhz = amdgpu_metrics->average_gfxclk_frequency;
+		metrics->current_uclk_mhz = amdgpu_metrics->current_uclk;
+
+		metrics->gpu_temp_c = amdgpu_metrics->temperature_edge;
+		indep_throttle_status = amdgpu_metrics->indep_throttle_status;
+	} else if (header->format_revision == 2) {
+		// APUs
+		cpuStats.cpu_type = "APU";
+		struct gpu_metrics_v2_2 *amdgpu_metrics = (struct gpu_metrics_v2_2 *) buf;
+
+		metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
+
+		metrics->average_gfx_power_w = amdgpu_metrics->average_gfx_power / 1000.f;
+		metrics->average_cpu_power_w = amdgpu_metrics->average_cpu_power / 1000.f;
+
+		metrics->current_gfxclk_mhz = amdgpu_metrics->current_gfxclk;
+		metrics->current_uclk_mhz = amdgpu_metrics->current_uclk;
+
+		metrics->soc_temp_c = amdgpu_metrics->temperature_soc / 100;
+		metrics->gpu_temp_c = amdgpu_metrics->temperature_gfx / 100;
+		int cpu_temp = 0;
+		for (unsigned i = 0; i < cpuStats.GetCPUData().size() / 2; i++)
+			cpu_temp = MAX(cpu_temp, amdgpu_metrics->temperature_core[i]);
+		metrics->apu_cpu_temp_c = cpu_temp / 100;
+		indep_throttle_status = amdgpu_metrics->indep_throttle_status;
+	}
+
+	/* Throttling: See
+	https://elixir.bootlin.com/linux/latest/source/drivers/gpu/drm/amd/pm/inc/amdgpu_smu.h
+	for the offsets */
+	metrics->is_power_throttled = ((indep_throttle_status >> 0) & 0xFF) != 0;
+	metrics->is_current_throttled = ((indep_throttle_status >> 16) & 0xFF) != 0;
+	metrics->is_temp_throttled = ((indep_throttle_status >> 32) & 0xFFFF) != 0;
+	metrics->is_other_throttled = ((indep_throttle_status >> 56) & 0xFF) != 0;
 }
 
 #define UPDATE_METRIC_AVERAGE(FIELD) do { int value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer[s].FIELD; } amdgpu_common_metrics.FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
@@ -145,6 +150,9 @@ void amdgpu_metrics_polling_thread() {
 		gpu_load_needs_dividing = true;
 		amdgpu_common_metrics.gpu_load_percent /= 100;
 	}
+	
+	// Set all the fields to 0 by default. Only done once as we're just replacing previous values after
+	memset(metrics_buffer, 0, sizeof(metrics_buffer));
 
 	while (1) {
 		// Get all the samples
