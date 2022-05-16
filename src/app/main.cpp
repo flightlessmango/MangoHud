@@ -221,10 +221,11 @@ static bool render(GLFWwindow* window) {
     ImGui_ImplGlfw_NewFrame();
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
+    overlay_new_frame(*params);
     position_layer(sw_stats, *params, window_size);
     render_imgui(sw_stats, *params, window_size, true);
+    overlay_end_frame();
     glfwSetWindowSize(window, window_size.x + 45.f, window_size.y + 325.f);
-    ImGui::PopStyleVar(3);
     ImGui::EndFrame();
     return last_window_size.x != window_size.x || last_window_size.y != window_size.y;
 }
