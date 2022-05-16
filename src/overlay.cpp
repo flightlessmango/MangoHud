@@ -16,6 +16,7 @@
 #include "timing.hpp"
 #include "mesa/util/macros.h"
 #include "battery.h"
+#include "gamepad.h"
 #include "string_utils.h"
 #include "file_utils.h"
 #include "pci_ids.h"
@@ -114,6 +115,12 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
 #ifdef __linux__
    if (params.enabled[OVERLAY_PARAM_ENABLED_battery])
       Battery_Stats.update();
+   if (params.enabled[OVERLAY_PARAM_ENABLED_gamepad_battery]) {
+      gamepad_update();
+      if (gamepad_found) {
+            gamepad_info();
+      }
+   }
    if (params.enabled[OVERLAY_PARAM_ENABLED_ram] || params.enabled[OVERLAY_PARAM_ENABLED_swap] || logger->is_active())
       update_meminfo();
    if (params.enabled[OVERLAY_PARAM_ENABLED_procmem])
@@ -853,7 +860,7 @@ void update_fan(){
          break;
       }
    }
-   
+
    if (!hwmon_path.empty())
       fan_speed = stoi(read_line(hwmon_path));
    else

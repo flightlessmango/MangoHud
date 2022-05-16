@@ -867,10 +867,7 @@ void HudElements::gamepad_battery()
 {
 #ifdef __linux__
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gamepad_battery]) {
-        gamepad_update();
-
         if (gamepad_found) {
-            gamepad_info();
             for (int i = 0; i < gamepad_count; i++) {
                 std::string battery = gamepad_data[i].battery;
                 std::string name = gamepad_data[i].name;
