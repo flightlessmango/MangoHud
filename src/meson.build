@@ -87,8 +87,8 @@ if is_unixy
 
   opengl_files = files(
     'gl/glad.c',
-    'gl/imgui_impl_opengl3.cpp',
-    'gl/imgui_hud.cpp',
+    'gl/gl_renderer.cpp',
+    'gl/gl_hud.cpp',
     'gl/inject_egl.cpp',
   )
 

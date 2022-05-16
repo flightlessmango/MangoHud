@@ -18,7 +18,7 @@
 #include <iomanip>
 
 #include <glad/glad.h>
-#include "imgui_hud.h"
+#include "gl_hud.h"
 
 using namespace MangoHud::GL;
 

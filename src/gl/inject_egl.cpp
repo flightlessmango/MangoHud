@@ -9,7 +9,7 @@
 #include "mesa/util/macros.h"
 #include "mesa/util/os_time.h"
 #include "blacklist.h"
-#include "imgui_hud.h"
+#include "gl_hud.h"
 
 using namespace MangoHud::GL;
 

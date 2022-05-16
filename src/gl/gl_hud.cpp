@@ -9,13 +9,10 @@
 #include <filesystem.h>
 #include <spdlog/spdlog.h>
 #include <imgui.h>
-#include "font_default.h"
-#include "cpu.h"
+#include "gl_hud.h"
 #include "file_utils.h"
-#include "imgui_hud.h"
 #include "notify.h"
 #include "blacklist.h"
-#include "overlay.h"
 
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
