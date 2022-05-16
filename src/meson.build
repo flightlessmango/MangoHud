@@ -100,7 +100,7 @@ if is_unixy
   if get_option('with_nvml') == 'system'
     nvml_h_found = cc.has_header('nvml.h')
     if not nvml_h_found
-      error('nvml.h was not found. Disable with \'-Dwith_nvml=disabled\' if gpu stats by NVML is not needed.')
+      error('nvml.h was not found. Disable with \'-Dwith_nvml=disabled\' if gpu stats by NVML are not needed.')
     endif
     pre_args += '-DUSE_SYSTEM_NVML'
   endif
@@ -121,7 +121,7 @@ if is_unixy
 
     xnvctrl_h_found = cc.has_header('NVCtrl/NVCtrl.h')
     if not xnvctrl_h_found
-      error('NVCtrl.h was not found. Disable with \'-Dwith_xnvctrl=disabled\' if gpu stats by XNVCtrl is not needed.')
+      error('NVCtrl.h was not found. Disable with \'-Dwith_xnvctrl=disabled\' if gpu stats by XNVCtrl are not needed.')
     endif
 
     pre_args += '-DHAVE_XNVCTRL'
