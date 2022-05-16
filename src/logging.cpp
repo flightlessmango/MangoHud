@@ -171,7 +171,8 @@ void Logger::stop_logging() {
     std::string program = get_wine_exe_name();
     if (program.empty())
         program = get_program_name();
-    m_log_files.emplace_back(m_params->output_folder + "/" + program + "_" + get_log_suffix());
+    
+    m_log_files.emplace_back(HUDElements.params->output_folder + "/" + program + "_" + get_log_suffix());
     std::thread writefile (writeFile, m_log_files.back());
     std::thread writesummary (writeSummary, m_log_files.back());
     writefile.join();
@@ -253,7 +254,7 @@ void Logger::calculate_benchmark_data(){
   size_t max_label_size = 0;
 
   float result;
-  for (std::string percentile : m_params->benchmark_percentiles) {
+  for (std::string percentile : HUDElements.params->benchmark_percentiles) {
       // special case handling for a mean-based average
       if (percentile == "AVG") {
         result = benchmark.total / sorted.size();
