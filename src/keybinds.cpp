@@ -26,7 +26,6 @@ void check_keybinds(struct overlay_params& params, uint32_t vendorID){
          logger->stop_logging();
       } else {
          logger->start_logging();
-         std::thread(update_hw_info, std::ref(params), vendorID).detach();
          benchmark.fps_data.clear();
       }
    }
