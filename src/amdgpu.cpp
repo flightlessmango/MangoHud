@@ -137,6 +137,7 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 }
 
 #define UPDATE_METRIC_AVERAGE(FIELD) do { int value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer[s].FIELD; } amdgpu_common_metrics.FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
+#define UPDATE_METRIC_AVERAGE_FLOAT(FIELD) do { float value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer[s].FIELD; } amdgpu_common_metrics.FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
 #define UPDATE_METRIC_MAX(FIELD) do { int cur_max = metrics_buffer[0].FIELD; for (size_t s=1; s < METRICS_SAMPLE_COUNT; s++) { cur_max = MAX(cur_max, metrics_buffer[s].FIELD); }; amdgpu_common_metrics.FIELD = cur_max; } while(0)
 #define UPDATE_METRIC_LAST(FIELD) do { amdgpu_common_metrics.FIELD = metrics_buffer[METRICS_SAMPLE_COUNT - 1].FIELD; } while(0)
 
@@ -171,8 +172,8 @@ void amdgpu_metrics_polling_thread() {
 		// Copy the results from the different metrics to amdgpu_common_metrics
 		amdgpu_common_metrics_m.lock();
 		UPDATE_METRIC_AVERAGE(gpu_load_percent);
-		UPDATE_METRIC_AVERAGE(average_gfx_power_w);
-		UPDATE_METRIC_AVERAGE(average_cpu_power_w);
+		UPDATE_METRIC_AVERAGE_FLOAT(average_gfx_power_w);
+		UPDATE_METRIC_AVERAGE_FLOAT(average_cpu_power_w);
 
 		UPDATE_METRIC_AVERAGE(current_gfxclk_mhz);
 		UPDATE_METRIC_AVERAGE(current_uclk_mhz);
@@ -199,7 +200,6 @@ void amdgpu_get_metrics(){
 	gpu_info.load = amdgpu_common_metrics.gpu_load_percent;
 
 	gpu_info.powerUsage = amdgpu_common_metrics.average_gfx_power_w;
-
 	gpu_info.CoreClock = amdgpu_common_metrics.current_gfxclk_mhz;
 	gpu_info.MemClock = amdgpu_common_metrics.current_uclk_mhz;
 
