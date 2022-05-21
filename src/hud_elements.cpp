@@ -519,6 +519,7 @@ void HudElements::engine_version(){
         ImGui::TableNextRow(); ImGui::TableNextColumn();
         ImGui::PushFont(HUDElements.sw_stats->font1);
         if (HUDElements.is_vulkan) {
+#ifdef HAVE_VULKAN
             if ((HUDElements.sw_stats->engine == EngineTypes::DXVK || HUDElements.sw_stats->engine == EngineTypes::VKD3D)){
                 ImGui::TextColored(HUDElements.colors.engine,
                     "%s/%d.%d.%d", HUDElements.sw_stats->engineVersion.c_str(),
@@ -532,6 +533,7 @@ void HudElements::engine_version(){
                     HUDElements.sw_stats->version_vk.minor,
                     HUDElements.sw_stats->version_vk.patch);
             }
+#endif
         } else {
             ImGui::TextColored(HUDElements.colors.engine,
                 "%d.%d%s", HUDElements.sw_stats->version_gl.major, HUDElements.sw_stats->version_gl.minor,
@@ -685,8 +687,10 @@ void HudElements::image(){
 
         HUDElements.image_infos.loaded = true;
         if (HUDElements.is_vulkan) {
+#ifdef HAVE_VULKAN
             if ((HUDElements.image_infos.texture = add_texture(HUDElements.sw_stats, value, &(HUDElements.image_infos.width), &(HUDElements.image_infos.height), maxwidth)))
                 HUDElements.image_infos.valid = true;
+#endif
         } else {
             HUDElements.image_infos.valid = GL_LoadTextureFromFile(value.c_str(),
                                                                 reinterpret_cast<unsigned int*>(&(HUDElements.image_infos.texture)),
@@ -715,8 +719,10 @@ void HudElements::background_image(){
     if (HUDElements.background_image_infos.loaded == false) {
         HUDElements.background_image_infos.loaded = true;
         if (HUDElements.is_vulkan) {
+#ifdef HAVE_VULKAN
             if ((HUDElements.background_image_infos.texture = add_texture(HUDElements.sw_stats, value, &(HUDElements.background_image_infos.width), &(HUDElements.background_image_infos.height), 0)))
                 HUDElements.background_image_infos.valid = true;
+#endif
         } else {
             HUDElements.background_image_infos.valid = GL_LoadTextureFromFile(value.c_str(),
                                                                             reinterpret_cast<unsigned int*>(&(HUDElements.background_image_infos.texture)),

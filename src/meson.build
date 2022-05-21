@@ -51,12 +51,16 @@ vklayer_files = files(
   'logging.cpp',
   'config.cpp',
   'gpu.cpp',
-  'vulkan.cpp',
   'blacklist.cpp',
   'file_utils.cpp',
   'amdgpu.cpp',
   'load_textures.cpp',
 )
+
+if get_option('use_vulkan')
+  vklayer_files += files('vulkan.cpp')
+endif
+
 opengl_files  = []
 if ['windows', 'mingw'].contains(host_machine.system())
   vklayer_files += files(
@@ -153,6 +157,10 @@ if is_unixy
       'loaders/loader_dbus.cpp',
     )
   endif
+endif
+
+if get_option('use_vulkan')
+    pre_args += '-DHAVE_VULKAN'
 endif
 
 link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL', '-lGL'])

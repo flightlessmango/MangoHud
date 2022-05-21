@@ -186,6 +186,7 @@ else
   dep_rt = null_dep
 endif
 
+if get_option('use_vulkan')
 if dep_vulkan.found()
   datadir = get_option('vulkan_datadir')
   if datadir == ''
@@ -210,6 +211,9 @@ vk_enum_to_str = custom_target(
     '--outdir', meson.current_build_dir()
   ],
 )
+else
+  vk_enum_to_str = []
+endif
 
 util_files = files(
   'src/mesa/util/os_socket.c',
