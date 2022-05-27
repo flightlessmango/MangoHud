@@ -1594,7 +1594,7 @@ static VkResult overlay_QueuePresentKHR(
       struct overlay_draw *draw = before_present(swapchain_data,
                                                    queue_data,
                                                    pPresentInfo->pWaitSemaphores,
-                                                   pPresentInfo->waitSemaphoreCount,
+                                                   i == 0 ? pPresentInfo->waitSemaphoreCount : 0,
                                                    image_index);
 
       /* Because the submission of the overlay draw waits on the semaphores
