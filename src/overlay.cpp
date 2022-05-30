@@ -93,13 +93,17 @@ void init_spdlog()
 
 }
 
-void FpsLimiter(struct fps_limit& stats){
-   stats.sleepTime = stats.targetFrameTime - (stats.frameStart - stats.frameEnd);
+void FpsLimiter(struct fps_limit& stats, bool lost_focus){
+   auto targetFrameTime = stats.targetFrameTime;
+   if (lost_focus && stats.focusLossFrameTime > 0s)
+      targetFrameTime = stats.focusLossFrameTime;
+
+   stats.sleepTime = targetFrameTime - (stats.frameStart - stats.frameEnd);
    if (stats.sleepTime > stats.frameOverhead) {
       auto adjustedSleep = stats.sleepTime - stats.frameOverhead;
       this_thread::sleep_for(adjustedSleep);
       stats.frameOverhead = ((Clock::now() - stats.frameStart) - adjustedSleep);
-      if (stats.frameOverhead > stats.targetFrameTime / 2)
+      if (stats.frameOverhead > targetFrameTime / 2)
          stats.frameOverhead = Clock::duration(0);
    }
 }
@@ -245,6 +249,11 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
       if (!hw_update_thread)
          hw_update_thread = std::make_unique<hw_info_updater>();
       hw_update_thread->update(&params, vendorID);
+
+#ifndef MANGOAPP
+      sw_stats.lost_focus = !window_has_focus(sw_stats.wsi);
+      SPDLOG_DEBUG("lost focus: {}", sw_stats.lost_focus);
+#endif
 
       sw_stats.fps = 1000000000.0 * sw_stats.n_frames_since_update / elapsed;
 

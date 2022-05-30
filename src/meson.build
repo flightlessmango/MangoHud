@@ -41,6 +41,11 @@ foreach s : ['overlay.frag', 'overlay.vert']
     command : [glslang, '-V', '-x', '-o', '@OUTPUT@', '@INPUT@'])
 endforeach
 
+# files not to be included with mangoapp etc.
+vklayer_files_only = files(
+  'wsi_helpers.cpp',
+)
+
 vklayer_files = files(
   'hud_elements.cpp',
   'overlay.cpp',
@@ -164,6 +169,7 @@ vklayer_mesa_overlay = shared_library(
   util_files,
   vk_enum_to_str,
   vklayer_files,
+  vklayer_files_only,
   opengl_files,
   overlay_spv,
   c_args : [
@@ -216,8 +222,7 @@ if is_unixy
 endif
 
 if get_option('mangoapp') and sizeof_ptr == 8
-  pre_args += '-DIMGUI_IMPL_OPENGL_LOADER_GLEW'
-  pre_args += '-DMANGOAPP'
+  pre_args += ['-DIMGUI_IMPL_OPENGL_LOADER_GLEW', '-DMANGOAPP']
   mangoapp = executable(
     'mangoapp',
     mangohud_version,

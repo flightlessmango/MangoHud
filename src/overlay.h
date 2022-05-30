@@ -24,6 +24,7 @@ struct frame_stat {
 
 static const int kMaxGraphEntries = 50;
 
+struct wsi_connection;
 struct swapchain_stats {
    uint64_t n_frames;
    enum overlay_plots stat_selector;
@@ -57,12 +58,16 @@ struct swapchain_stats {
    std::string gpuName;
    std::string driverName;
    enum EngineTypes engine;
+
+   wsi_connection *wsi;
+   bool lost_focus;
 };
 
 struct fps_limit {
    Clock::time_point frameStart;
    Clock::time_point frameEnd;
    Clock::duration targetFrameTime;
+   Clock::duration focusLossFrameTime;
    Clock::duration frameOverhead;
    Clock::duration sleepTime;
 };
@@ -105,7 +110,7 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
 void init_cpu_stats(overlay_params& params);
 void check_keybinds(overlay_params& params, uint32_t vendorID);
 void init_system_info(void);
-void FpsLimiter(struct fps_limit& stats);
+void FpsLimiter(struct fps_limit& stats, bool lost_focus = false);
 std::string get_device_name(uint32_t vendorID, uint32_t deviceID);
 void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& text_font);
 void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...);
@@ -119,5 +124,6 @@ extern void process_control_socket(int& control_client, overlay_params &params);
 void render_mpris_metadata(const overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing);
 #endif
 void update_fan();
+bool window_has_focus(const wsi_connection*);
 
 #endif //MANGOHUD_OVERLAY_H

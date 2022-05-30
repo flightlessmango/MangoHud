@@ -49,6 +49,7 @@
 #include "notify.h"
 #include "blacklist.h"
 #include "pci_ids.h"
+#include "wsi_helpers.h"
 
 using namespace std;
 
@@ -61,6 +62,12 @@ namespace MangoHud { namespace GL {
    extern swapchain_stats sw_stats;
 }}
 #endif
+
+struct surface_data {
+   VkSurfaceKHR surface;
+   bool changed_flags;
+   wsi_connection wsi;
+};
 
 /* Mapped from VkInstace/VkPhysicalDevice */
 struct instance_data {
@@ -132,6 +139,7 @@ struct overlay_draw {
 /* Mapped from VkSwapchainKHR */
 struct swapchain_data {
    struct device_data *device;
+   struct surface_data *surface_data;
 
    VkSwapchainKHR swapchain;
    unsigned width, height;
@@ -396,6 +404,77 @@ static void destroy_swapchain_data(struct swapchain_data *data)
 {
    unmap_object(HKEY(data->swapchain));
    delete data;
+}
+
+static struct surface_data *new_surface_data(VkSurfaceKHR surface)
+{
+   struct surface_data *data = new surface_data();
+   data->surface = surface;
+   map_object(HKEY(data->surface), data);
+   return data;
+}
+
+static void destroy_surface_data(struct surface_data *data)
+{
+   unmap_object(HKEY(data->surface));
+   delete data;
+}
+
+#ifdef VK_USE_PLATFORM_XCB_KHR
+static VkResult overlay_CreateXcbSurfaceKHR(VkInstance instance, const VkXcbSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface)
+{
+   SPDLOG_DEBUG("{}", __func__);
+   struct instance_data *instance_data = FIND(struct instance_data, instance);
+   VkResult result = instance_data->vtable.CreateXcbSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
+
+   if (result == VK_SUCCESS) {
+      struct surface_data *data = new_surface_data(*pSurface);
+      data->wsi.xcb.conn   = pCreateInfo->connection;
+      data->wsi.xcb.window = pCreateInfo->window;
+   }
+
+   return result;
+}
+#endif
+
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+static VkResult overlay_CreateXlibSurfaceKHR(VkInstance instance, const VkXlibSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface)
+{
+   SPDLOG_DEBUG("{}", __func__);
+   struct instance_data *instance_data = FIND(struct instance_data, instance);
+   VkResult result = instance_data->vtable.CreateXlibSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
+
+   if (result == VK_SUCCESS) {
+      struct surface_data *data = new_surface_data(*pSurface);
+      data->wsi.xlib.dpy    = pCreateInfo->dpy;
+      data->wsi.xlib.window = pCreateInfo->window;
+   }
+   return result;
+}
+#endif
+
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+static VkResult overlay_CreateWaylandSurfaceKHR(VkInstance instance, const VkWaylandSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface)
+{
+   SPDLOG_DEBUG("{}", __func__);
+   struct instance_data *instance_data = FIND(struct instance_data, instance);
+   VkResult result = instance_data->vtable.CreateWaylandSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
+
+   if (result == VK_SUCCESS) {
+      struct surface_data *data = new_surface_data(*pSurface);
+      data->wsi.wl.display = pCreateInfo->display;
+      data->wsi.wl.surface = pCreateInfo->surface;
+   }
+   return result;
+}
+#endif
+
+static void overlay_DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface, const VkAllocationCallbacks* pAllocator)
+{
+   struct instance_data *instance_data = FIND(struct instance_data, instance);
+   struct surface_data *surface_data = FIND(struct surface_data, surface);
+   destroy_surface_data(surface_data);
+   instance_data->vtable.DestroySurfaceKHR(instance, surface, pAllocator);
 }
 
 struct overlay_draw *get_overlay_draw(struct swapchain_data *data)
@@ -1304,9 +1383,15 @@ static void setup_swapchain_data(struct swapchain_data *data,
                                  const VkSwapchainCreateInfoKHR *pCreateInfo)
 {
    struct device_data *device_data = data->device;
+   struct surface_data *surface_data = FIND(struct surface_data, pCreateInfo->surface);
+   data->surface_data = surface_data;
    data->width = pCreateInfo->imageExtent.width;
    data->height = pCreateInfo->imageExtent.height;
    data->format = pCreateInfo->imageFormat;
+
+#ifndef MANGOAPP
+   data->sw_stats.wsi = &data->surface_data->wsi;
+#endif
 
    data->imgui_context = ImGui::CreateContext();
    ImGui::SetCurrentContext(data->imgui_context);
@@ -1573,6 +1658,7 @@ static VkResult overlay_QueuePresentKHR(
     VkQueue                                     queue,
     const VkPresentInfoKHR*                     pPresentInfo)
 {
+   bool lost_focus = false;
    struct queue_data *queue_data = FIND(struct queue_data, queue);
 
    /* Otherwise we need to add our overlay drawing semaphore to the list of
@@ -1608,6 +1694,7 @@ static VkResult overlay_QueuePresentKHR(
          present_info.waitSemaphoreCount = 1;
       }
 
+      lost_focus |= swapchain_data->sw_stats.lost_focus;
       VkResult chain_result = queue_data->device->vtable.QueuePresentKHR(queue, &present_info);
       if (pPresentInfo->pResults)
          pPresentInfo->pResults[i] = chain_result;
@@ -1617,9 +1704,9 @@ static VkResult overlay_QueuePresentKHR(
 
    using namespace std::chrono_literals;
 
-   if (fps_limit_stats.targetFrameTime > 0s){
+   if (fps_limit_stats.targetFrameTime > 0s || (lost_focus && fps_limit_stats.focusLossFrameTime > 0s)){
       fps_limit_stats.frameStart = Clock::now();
-      FpsLimiter(fps_limit_stats);
+      FpsLimiter(fps_limit_stats, lost_focus);
       fps_limit_stats.frameEnd = Clock::now();
    }
 
@@ -1977,6 +2064,11 @@ static const struct {
 
    ADD_HOOK(CreateDevice),
    ADD_HOOK(DestroyDevice),
+
+   ADD_HOOK(CreateXlibSurfaceKHR),
+   ADD_HOOK(CreateXcbSurfaceKHR),
+   ADD_HOOK(CreateWaylandSurfaceKHR),
+   ADD_HOOK(DestroySurfaceKHR),
 
    ADD_HOOK(CreateInstance),
    ADD_HOOK(DestroyInstance),

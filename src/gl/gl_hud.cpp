@@ -13,6 +13,7 @@
 #include "file_utils.h"
 #include "notify.h"
 #include "blacklist.h"
+#include "wsi_helpers.h"
 
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
@@ -53,6 +54,7 @@ struct state {
 
 static GLVec last_vp {}, last_sb {};
 swapchain_stats sw_stats {};
+wsi_connection wsi_conn {};
 static state state;
 static uint32_t vendorID;
 static std::string deviceName;
@@ -75,6 +77,7 @@ void imgui_init()
     init_spdlog();
     parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
     _params = &params;
+    sw_stats.wsi = &wsi_conn;
 
    //check for blacklist item in the config file
    for (auto& item : params.blacklist) {

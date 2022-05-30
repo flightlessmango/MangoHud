@@ -101,6 +101,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(no_display)                  \
    OVERLAY_PARAM_CUSTOM(control)                     \
    OVERLAY_PARAM_CUSTOM(fps_limit)                   \
+   OVERLAY_PARAM_CUSTOM(focus_loss_fps_limit)        \
    OVERLAY_PARAM_CUSTOM(vsync)                       \
    OVERLAY_PARAM_CUSTOM(gl_vsync)                    \
    OVERLAY_PARAM_CUSTOM(gl_size_query)               \
@@ -204,6 +205,7 @@ struct overlay_params {
    int control;
    uint32_t fps_sampling_period; /* ns */
    std::vector<std::uint32_t> fps_limit;
+   unsigned focus_loss_fps_limit;
    bool help;
    bool no_display;
    bool full;

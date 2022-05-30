@@ -69,6 +69,30 @@ bool libx11_loader::Load(const std::string& library_name) {
     return false;
   }
 
+  XGetInputFocus =
+      reinterpret_cast<decltype(this->XGetInputFocus)>(
+          dlsym(library_, "XGetInputFocus"));
+  if (!XGetInputFocus) {
+    CleanUp(true);
+    return false;
+  }
+
+  XQueryTree =
+      reinterpret_cast<decltype(this->XQueryTree)>(
+          dlsym(library_, "XQueryTree"));
+  if (!XQueryTree) {
+    CleanUp(true);
+    return false;
+  }
+
+  XFree =
+      reinterpret_cast<decltype(this->XFree)>(
+          dlsym(library_, "XFree"));
+  if (!XFree) {
+    CleanUp(true);
+    return false;
+  }
+
   loaded_ = true;
   return true;
 }

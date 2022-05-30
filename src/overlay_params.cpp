@@ -410,6 +410,7 @@ parse_gl_size_query(const char *str)
 #define parse_round_corners(s) parse_unsigned(s)
 #define parse_fcat_overlay_width(s) parse_unsigned(s)
 #define parse_fcat_screen_edge(s) parse_unsigned(s)
+#define parse_focus_loss_fps_limit(s) parse_unsigned(s)
 
 #define parse_cpu_color(s) parse_color(s)
 #define parse_gpu_color(s) parse_color(s)
@@ -791,6 +792,11 @@ parse_overlay_config(struct overlay_params *params,
       fps_limit_stats.targetFrameTime = duration_cast<Clock::duration>(duration<double>(1) / params->fps_limit[0]);
    else
       fps_limit_stats.targetFrameTime = {};
+
+   if (params->focus_loss_fps_limit > 0)
+      fps_limit_stats.focusLossFrameTime = duration_cast<Clock::duration>(duration<double>(1) / params->focus_loss_fps_limit);
+   else
+      fps_limit_stats.focusLossFrameTime = {};
 
 #ifdef HAVE_DBUS
    if (params->enabled[OVERLAY_PARAM_ENABLED_media_player]) {

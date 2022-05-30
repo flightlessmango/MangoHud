@@ -13,6 +13,7 @@
 #include "mesa/util/macros.h"
 #include "mesa/util/os_time.h"
 #include "blacklist.h"
+#include "wsi_helpers.h"
 
 #include <chrono>
 #include <iomanip>
@@ -21,6 +22,11 @@
 #include "gl_hud.h"
 
 using namespace MangoHud::GL;
+
+namespace MangoHud { namespace GL {
+   extern swapchain_stats sw_stats;
+   extern wsi_connection wsi_conn;
+}}
 
 EXPORT_C_(void *) glXGetProcAddress(const unsigned char* procName);
 EXPORT_C_(void *) glXGetProcAddressARB(const unsigned char* procName);
@@ -100,6 +106,7 @@ EXPORT_C_(int) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
     int ret = glx.MakeCurrent(dpy, drawable, ctx);
 
     if (!is_blacklisted()) {
+
         if (ret) {
             imgui_set_context(ctx);
             SPDLOG_DEBUG("GL ref count: {}", refcnt);
@@ -127,6 +134,9 @@ static void do_imgui_swap(void *dpy, void *drawable)
     if (!is_blacklisted()) {
         imgui_create(glx.GetCurrentContext());
 
+        wsi_conn.xlib.dpy = (Display*)dpy;
+        wsi_conn.xlib.window = (Window)drawable;
+
         unsigned int width = -1, height = -1;
 
         switch (params.gl_size_query)
@@ -152,18 +162,25 @@ static void do_imgui_swap(void *dpy, void *drawable)
     }
 }
 
+static void fps_limit()
+{
+    if (is_blacklisted())
+        return;
+
+    using namespace std::chrono_literals;
+    if (fps_limit_stats.targetFrameTime > 0s || (sw_stats.lost_focus && fps_limit_stats.focusLossFrameTime > 0s)){
+        fps_limit_stats.frameStart = Clock::now();
+        FpsLimiter(fps_limit_stats, sw_stats.lost_focus);
+        fps_limit_stats.frameEnd = Clock::now();
+    }
+}
+
 EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
     glx.Load();
 
     do_imgui_swap(dpy, drawable);
     glx.SwapBuffers(dpy, drawable);
-
-    using namespace std::chrono_literals;
-    if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s){
-        fps_limit_stats.frameStart = Clock::now();
-        FpsLimiter(fps_limit_stats);
-        fps_limit_stats.frameEnd = Clock::now();
-    }
+    fps_limit();
 }
 
 EXPORT_C_(int64_t) glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t target_msc, int64_t divisor, int64_t remainder)
@@ -174,13 +191,7 @@ EXPORT_C_(int64_t) glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t targe
 
     do_imgui_swap(dpy, drawable);
     int64_t ret = glx.SwapBuffersMscOML(dpy, drawable, target_msc, divisor, remainder);
-
-    using namespace std::chrono_literals;
-    if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s){
-        fps_limit_stats.frameStart = Clock::now();
-        FpsLimiter(fps_limit_stats);
-        fps_limit_stats.frameEnd = Clock::now();
-    }
+    fps_limit();
     return ret;
 }
 

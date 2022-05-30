@@ -20,7 +20,9 @@ class libx11_loader {
   decltype(&::XKeysymToKeycode) XKeysymToKeycode;
   decltype(&::XStringToKeysym) XStringToKeysym;
   decltype(&::XGetGeometry) XGetGeometry;
-
+  decltype(&::XGetInputFocus) XGetInputFocus;
+  decltype(&::XQueryTree) XQueryTree;
+  decltype(&::XFree) XFree;
 
  private:
   void CleanUp(bool unload);
