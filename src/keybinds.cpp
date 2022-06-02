@@ -2,6 +2,7 @@
 #include "timing.hpp"
 #include "logging.h"
 #include "keybinds.h"
+#include <wayland-client.h>
 
 void check_keybinds(struct overlay_params& params, uint32_t vendorID){
    using namespace std::chrono_literals;

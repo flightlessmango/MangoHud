@@ -124,6 +124,6 @@ extern void process_control_socket(int& control_client, overlay_params &params);
 void render_mpris_metadata(const overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing);
 #endif
 void update_fan();
-bool window_has_focus(const wsi_connection*);
+void window_has_focus(wsi_connection*);
 
 #endif //MANGOHUD_OVERLAY_H

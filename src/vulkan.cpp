@@ -65,7 +65,6 @@ namespace MangoHud { namespace GL {
 
 struct surface_data {
    VkSurfaceKHR surface;
-   bool changed_flags;
    wsi_connection wsi;
 };
 
@@ -454,6 +453,7 @@ static VkResult overlay_CreateXlibSurfaceKHR(VkInstance instance, const VkXlibSu
 #endif
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
+extern void wayland_init(wsi_connection&);
 static VkResult overlay_CreateWaylandSurfaceKHR(VkInstance instance, const VkWaylandSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface)
 {
    SPDLOG_DEBUG("{}", __func__);
@@ -464,6 +464,7 @@ static VkResult overlay_CreateWaylandSurfaceKHR(VkInstance instance, const VkWay
       struct surface_data *data = new_surface_data(*pSurface);
       data->wsi.wl.display = pCreateInfo->display;
       data->wsi.wl.surface = pCreateInfo->surface;
+      wayland_init(data->wsi);
    }
    return result;
 }
@@ -1384,6 +1385,9 @@ static void setup_swapchain_data(struct swapchain_data *data,
 {
    struct device_data *device_data = data->device;
    struct surface_data *surface_data = FIND(struct surface_data, pCreateInfo->surface);
+   surface_data->wsi.focus_changed = [data](bool b) {
+      data->sw_stats.lost_focus = !b;
+   };
    data->surface_data = surface_data;
    data->width = pCreateInfo->imageExtent.width;
    data->height = pCreateInfo->imageExtent.height;

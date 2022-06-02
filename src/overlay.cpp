@@ -251,7 +251,7 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
       hw_update_thread->update(&params, vendorID);
 
 #ifndef MANGOAPP
-      sw_stats.lost_focus = !window_has_focus(sw_stats.wsi);
+      window_has_focus(sw_stats.wsi);
       SPDLOG_DEBUG("lost focus: {}", sw_stats.lost_focus);
 #endif
 

@@ -69,6 +69,10 @@ overlay_params params {};
 static std::unique_ptr<notify_thread, std::function<void(notify_thread *)>>
     stop_it(&notifier, [](notify_thread *n){ stop_notifier(*n); });
 
+static void focus_changed(bool b) {
+    sw_stats.lost_focus = !b;
+};
+
 void imgui_init()
 {
     if (cfg_inited)
@@ -166,6 +170,7 @@ void imgui_create(void *ctx)
 
     create_fonts(params, sw_stats.font1, sw_stats.font_text);
     sw_stats.font_params_hash = params.font_params_hash;
+    wsi_conn.focus_changed = focus_changed;
 
     // Restore global context or ours might clash with apps that use Dear ImGui
     ImGui::SetCurrentContext(saved_ctx);

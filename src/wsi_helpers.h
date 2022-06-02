@@ -1,4 +1,5 @@
 #pragma once
+#include <functional>
 #ifdef VK_USE_PLATFORM_XLIB_KHR
 #include "loaders/loader_x11.h"
 #endif
@@ -14,6 +15,8 @@
 
 struct wsi_connection
 {
+    std::function<void(bool)> focus_changed;
+
 #ifdef VK_USE_PLATFORM_XCB_KHR
     struct xcb {
         xcb_connection_t *conn = nullptr;

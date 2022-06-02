@@ -76,19 +76,87 @@ static bool check_window_focus(Display *disp, Window window)
 }
 #endif
 
-bool window_has_focus(const wsi_connection* conn)
+void window_has_focus(wsi_connection* conn)
 {
-    if (!conn)
-        return true;
+    if (!conn || !conn->focus_changed)
+        return;
 
 #ifdef VK_USE_PLATFORM_XCB_KHR
     if (conn->xcb.conn)
-        return check_window_focus(conn->xcb.conn, conn->xcb.window);
+        conn->focus_changed(check_window_focus(conn->xcb.conn, conn->xcb.window));
 #endif
 
 #ifdef VK_USE_PLATFORM_XLIB_KHR
     if (conn->xlib.dpy)
-        return check_window_focus(conn->xlib.dpy, conn->xlib.window);
+        conn->focus_changed(check_window_focus(conn->xlib.dpy, conn->xlib.window));
 #endif
-    return true;
+}
+
+struct interfaces_
+{
+   wl_shell *shell;
+   wl_seat *seat;
+   wsi_connection *wsi;
+};
+
+static void keyboard_keymap (void *data, struct wl_keyboard *keyboard, uint32_t format, int32_t fd, uint32_t size) {
+    SPDLOG_DEBUG("{}", __func__);
+}
+
+static void keyboard_enter (void *data, struct wl_keyboard *keyboard, uint32_t serial, struct wl_surface *surface, struct wl_array *keys) {
+    SPDLOG_DEBUG("{}", __func__);
+    auto wsi = reinterpret_cast<wsi_connection*>(data);
+    if (wsi->focus_changed && surface == wsi->wl.surface)
+        wsi->focus_changed(true);
+}
+
+static void keyboard_leave (void *data, struct wl_keyboard *keyboard, uint32_t serial, struct wl_surface *surface) {
+    SPDLOG_DEBUG("{}", __func__);
+    auto wsi = reinterpret_cast<wsi_connection*>(data);
+    if (wsi->focus_changed && surface == wsi->wl.surface)
+        wsi->focus_changed(false);
+}
+
+static void keyboard_key (void *data, struct wl_keyboard *keyboard, uint32_t serial, uint32_t time, uint32_t key, uint32_t state) {
+    SPDLOG_DEBUG("{}: key pressed: {}", __func__, key);
+}
+
+static void keyboard_modifiers (void *data, struct wl_keyboard *keyboard, uint32_t serial, uint32_t mods_depressed, uint32_t mods_latched, uint32_t mods_locked, uint32_t group) {
+    SPDLOG_DEBUG("{}", __func__);
+}
+
+static struct wl_keyboard_listener keyboard_listener = {&keyboard_keymap, &keyboard_enter, &keyboard_leave, &keyboard_key, &keyboard_modifiers};
+
+static void seat_capabilities (void *data, struct wl_seat *seat, uint32_t capabilities) {
+    SPDLOG_DEBUG("{}", __func__);
+    if (capabilities & WL_SEAT_CAPABILITY_KEYBOARD) {
+        SPDLOG_DEBUG("SEAT");
+        struct wl_keyboard *keyboard = wl_seat_get_keyboard (seat);
+        wl_keyboard_add_listener (keyboard, &keyboard_listener, data);
+    }
+}
+static struct wl_seat_listener seat_listener = {&seat_capabilities};
+
+static void registry_add_object (void *data, struct wl_registry *registry, uint32_t name, const char *interface, uint32_t version) {
+    SPDLOG_DEBUG("{}", __func__);
+    if (!strcmp(interface,"wl_seat")) {
+        //input_reader* ir = wl_registry_get_user_data(registry);
+        auto seat = (wl_seat*)wl_registry_bind (registry, name, &wl_seat_interface, 1);
+//         SPDLOG_DEBUG("wl_seat_add_listener {}", wl_proxy_get_listener((wl_proxy*)seat));
+        wl_seat_add_listener (seat, &seat_listener, data);
+    }
+}
+static void registry_remove_object (void *data, struct wl_registry *registry, uint32_t name) {
+
+}
+
+static struct wl_registry_listener registry_listener = {&registry_add_object, &registry_remove_object};
+
+// interfaces_ g_interfaces {};
+
+void wayland_init(wsi_connection& conn)
+{
+   auto registry = wl_display_get_registry(conn.wl.display);
+   wl_registry_add_listener(registry, &registry_listener, &conn);
+   wl_display_roundtrip(conn.wl.display);
 }

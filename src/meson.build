@@ -43,6 +43,7 @@ endforeach
 
 # files not to be included with mangoapp etc.
 vklayer_files_only = files(
+  'vulkan.cpp',
   'wsi_helpers.cpp',
 )
 
@@ -56,7 +57,6 @@ vklayer_files = files(
   'logging.cpp',
   'config.cpp',
   'gpu.cpp',
-  'vulkan.cpp',
   'blacklist.cpp',
   'file_utils.cpp',
   'amdgpu.cpp',
