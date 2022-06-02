@@ -124,22 +124,19 @@ parse_float(const char *str)
    return val;
 }
 
-#ifdef HAVE_X11
-static std::vector<KeySym>
+#ifdef HAVE_XKBCOMMON
+static std::vector<xkb_keysym_t>
 parse_string_to_keysym_vec(const char *str)
 {
-   std::vector<KeySym> keys;
-   if(g_x11->IsLoaded())
-   {
-      auto keyStrings = str_tokenize(str);
-      for (auto& ks : keyStrings) {
-         trim(ks);
-         KeySym xk = g_x11->XStringToKeysym(ks.c_str());
-         if (xk)
-            keys.push_back(xk);
-         else
-            SPDLOG_ERROR("Unrecognized key: '{}'", ks);
-      }
+   std::vector<xkb_keysym_t> keys;
+   auto keyStrings = str_tokenize(str);
+   for (auto& ks : keyStrings) {
+      trim(ks);
+      auto xk = xkb_keysym_from_name(ks.c_str(), XKB_KEYSYM_NO_FLAGS);
+      if (xk)
+         keys.push_back(xk);
+      else
+         SPDLOG_ERROR("Unrecognized key: '{}'", ks);
    }
    return keys;
 }

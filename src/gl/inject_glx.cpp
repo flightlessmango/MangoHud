@@ -132,10 +132,10 @@ static void do_imgui_swap(void *dpy, void *drawable)
 {
     GLint vp[4];
     if (!is_blacklisted()) {
-        imgui_create(glx.GetCurrentContext());
 
         wsi_conn.xlib.dpy = (Display*)dpy;
         wsi_conn.xlib.window = (Window)drawable;
+        imgui_create(glx.GetCurrentContext(), GL_SESSION_X11);
 
         unsigned int width = -1, height = -1;
 

@@ -14,6 +14,7 @@
 #include "notify.h"
 #include "blacklist.h"
 #include "wsi_helpers.h"
+#include "keybinds.h"
 
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
@@ -115,7 +116,7 @@ void imgui_init()
 }
 
 //static
-void imgui_create(void *ctx)
+void imgui_create(void *ctx, GL_SESSION gl_session)
 {
     if (inited)
         return;
@@ -172,6 +173,16 @@ void imgui_create(void *ctx)
     sw_stats.font_params_hash = params.font_params_hash;
     wsi_conn.focus_changed = focus_changed;
 
+    if (gl_session == GL_SESSION_X11)
+        wsi_conn.keys_are_pressed = keys_are_pressed;
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    if (gl_session == GL_SESSION_WL)
+    {
+        wsi_conn.keys_are_pressed = wl_keys_are_pressed;
+        wsi_wayland_init(wsi_conn);
+    }
+#endif
+
     // Restore global context or ours might clash with apps that use Dear ImGui
     ImGui::SetCurrentContext(saved_ctx);
 }
@@ -191,7 +202,7 @@ void imgui_set_context(void *ctx)
 {
     if (!ctx)
         return;
-    imgui_create(ctx);
+    imgui_create(ctx, GL_SESSION_X11);
 }
 
 void imgui_render(unsigned int width, unsigned int height)
@@ -205,7 +216,7 @@ void imgui_render(unsigned int width, unsigned int height)
         process_control_socket(control_client, params);
     }
 
-    check_keybinds(params, vendorID);
+    check_keybinds(wsi_conn, params);
     update_hud_info(sw_stats, params, vendorID);
 
     ImGuiContext *saved_ctx = ImGui::GetCurrentContext();

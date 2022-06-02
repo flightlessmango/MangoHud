@@ -1,5 +1,13 @@
 #pragma once
 #include <functional>
+#include <vector>
+
+#ifdef HAVE_XKBCOMMON
+#include <xkbcommon/xkbcommon.h>
+#else
+typedef uint32_t xkb_keysym_t;
+#endif
+
 #ifdef VK_USE_PLATFORM_XLIB_KHR
 #include "loaders/loader_x11.h"
 #endif
@@ -16,28 +24,32 @@
 struct wsi_connection
 {
     std::function<void(bool)> focus_changed;
+    std::function<void(xkb_keysym_t, uint32_t)> key_pressed;
+    std::function<bool(const std::vector<xkb_keysym_t>& keys)> keys_are_pressed;
 
 #ifdef VK_USE_PLATFORM_XCB_KHR
     struct xcb {
-        xcb_connection_t *conn = nullptr;
-        xcb_window_t window = 0;
+        xcb_connection_t *conn;
+        xcb_window_t window;
     } xcb;
 #endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
     struct xlib {
-        Display *dpy = nullptr;
-        Window window = 0;
-        int evmask = 0;
+        Display *dpy;
+        Window window;
+        int evmask;
     } xlib;
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
     struct wl {
         wl_display *display;
         wl_surface *surface;
-        bool has_focus;
     } wl;
 #endif
 };
 
 // struct wsi_connection;
 // bool check_window_focus(const wsi_connection&);
+
+void wsi_wayland_init(wsi_connection& conn);
+

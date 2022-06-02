@@ -50,6 +50,7 @@
 #include "blacklist.h"
 #include "pci_ids.h"
 #include "wsi_helpers.h"
+#include "keybinds.h"
 
 using namespace std;
 
@@ -430,6 +431,7 @@ static VkResult overlay_CreateXcbSurfaceKHR(VkInstance instance, const VkXcbSurf
       struct surface_data *data = new_surface_data(*pSurface);
       data->wsi.xcb.conn   = pCreateInfo->connection;
       data->wsi.xcb.window = pCreateInfo->window;
+      data->wsi.keys_are_pressed = keys_are_pressed;
    }
 
    return result;
@@ -447,13 +449,14 @@ static VkResult overlay_CreateXlibSurfaceKHR(VkInstance instance, const VkXlibSu
       struct surface_data *data = new_surface_data(*pSurface);
       data->wsi.xlib.dpy    = pCreateInfo->dpy;
       data->wsi.xlib.window = pCreateInfo->window;
+      data->wsi.keys_are_pressed = keys_are_pressed;
    }
    return result;
 }
 #endif
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-extern void wayland_init(wsi_connection&);
+extern void wsi_wayland_init(wsi_connection&);
 static VkResult overlay_CreateWaylandSurfaceKHR(VkInstance instance, const VkWaylandSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface)
 {
    SPDLOG_DEBUG("{}", __func__);
@@ -464,7 +467,9 @@ static VkResult overlay_CreateWaylandSurfaceKHR(VkInstance instance, const VkWay
       struct surface_data *data = new_surface_data(*pSurface);
       data->wsi.wl.display = pCreateInfo->display;
       data->wsi.wl.surface = pCreateInfo->surface;
-      wayland_init(data->wsi);
+      data->wsi.keys_are_pressed = wl_keys_are_pressed;
+      data->wsi.key_pressed = wl_key_pressed;
+      wsi_wayland_init(data->wsi);
    }
    return result;
 }
@@ -531,7 +536,7 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
    struct device_data *device_data = data->device;
    struct instance_data *instance_data = device_data->instance;
    update_hud_info(data->sw_stats, instance_data->params, device_data->properties.vendorID);
-   check_keybinds(instance_data->params, device_data->properties.vendorID);
+   check_keybinds(data->surface_data->wsi, instance_data->params);
 #ifdef __linux__
    if (instance_data->params.control >= 0) {
       control_client_check(instance_data->params.control, instance_data->control_client, gpu.c_str());

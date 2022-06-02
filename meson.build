@@ -84,6 +84,7 @@ vulkan_wsi_args = []
 vulkan_wsi_deps = []
 
 if is_unixy
+  dep_xkb = dependency('xkbcommon', required: true)
   dep_x11 = dependency('x11', required: get_option('with_x11'))
   dep_xcb = dependency('xcb', required: get_option('with_x11'))
   dep_wayland_client = dependency('wayland-client',
@@ -92,8 +93,13 @@ if is_unixy
 else
   dep_x11 = null_dep
   dep_xcb = null_dep
+  dep_xkb = null_dep
   dep_wayland_client = null_dep
   dbus_dep = null_dep
+endif
+
+if dep_xkb.found()
+  pre_args += '-DHAVE_XKBCOMMON'
 endif
 
 if dep_x11.found()
@@ -104,9 +110,9 @@ if dep_xcb.found()
   vulkan_wsi_args += ['-DVK_USE_PLATFORM_XCB_KHR']
   vulkan_wsi_deps += dep_xcb #.partial_dependency(compile_args : true, includes : true)
 endif
-if dep_wayland_client.found()
+if dep_wayland_client.found() and dep_xkb.found()
   vulkan_wsi_args += ['-DVK_USE_PLATFORM_WAYLAND_KHR']
-  vulkan_wsi_deps += dep_wayland_client
+  vulkan_wsi_deps += [dep_wayland_client, dep_xkb]
 endif
 
 if is_unixy and not dep_x11.found() and not dep_wayland_client.found()

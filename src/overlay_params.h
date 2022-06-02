@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <xkbcommon/xkbcommon.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -235,12 +236,12 @@ struct overlay_params {
    float font_scale_media_player;
    float background_alpha, alpha;
    float cellpadding_y;
-   std::vector<KeySym> toggle_hud;
-   std::vector<KeySym> toggle_fps_limit;
-   std::vector<KeySym> toggle_logging;
-   std::vector<KeySym> reload_cfg;
-   std::vector<KeySym> upload_log;
-   std::vector<KeySym> upload_logs;
+   std::vector<xkb_keysym_t> toggle_hud;
+   std::vector<xkb_keysym_t> toggle_fps_limit;
+   std::vector<xkb_keysym_t> toggle_logging;
+   std::vector<xkb_keysym_t> reload_cfg;
+   std::vector<xkb_keysym_t> upload_log;
+   std::vector<xkb_keysym_t> upload_logs;
    std::string time_format, output_folder, output_file;
    std::string pci_dev;
    std::string media_player_name;
