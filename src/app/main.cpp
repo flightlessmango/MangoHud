@@ -248,6 +248,10 @@ int main(int, char**)
 
     // Create window with graphics context
     GLFWwindow* window = init(glsl_version);
+
+    Display *x11_display = glfwGetX11Display();
+    Window x11_window = glfwGetX11Window(window);
+    Atom overlay_atom = XInternAtom (x11_display, GamescopeOverlayProperty, False);
     // Initialize OpenGL loader
 
     bool err = glewInit() != GLEW_OK;
@@ -286,6 +290,9 @@ int main(int, char**)
         if (!params.no_display){
             if (mangoapp_paused){
                 glfwRestoreWindow(window);
+                uint32_t value = 1;
+                XChangeProperty(x11_display, x11_window, overlay_atom, XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&value, 1);
+                XSync(x11_display, 0);
                 mangoapp_paused = false;
             }
             {
@@ -322,6 +329,9 @@ int main(int, char**)
             glfwSwapBuffers(window);
         } else if (!mangoapp_paused) {
             glfwIconifyWindow(window);
+            uint32_t value = 0;
+            XChangeProperty(x11_display, x11_window, overlay_atom, XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&value, 1);
+            XSync(x11_display, 0);
             mangoapp_paused = true;
             std::unique_lock<std::mutex> lk(mangoapp_m);
             mangoapp_cv.wait(lk, []{return !params.no_display;});
