@@ -362,6 +362,7 @@ static void setup_device_pipeline(struct device_data *device_data)
    desc_pool_info.maxSets = 3;
    desc_pool_info.poolSizeCount = 1;
    desc_pool_info.pPoolSizes = &sampler_pool_size;
+   desc_pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
    VK_CHECK(device_data->vtable.CreateDescriptorPool(device_data->device,
                                                      &desc_pool_info,
                                                      NULL, &device_data->descriptor_pool));
