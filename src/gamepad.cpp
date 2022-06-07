@@ -15,6 +15,8 @@ int ds4_count = 0;
 int ds5_count = 0;
 int switch_count = 0;
 int bitdo_count = 0;
+int logi_count = 0; //Logitech devices, mice & keyboards etc.
+
 std::string  xbox_paths [2]{"gip","xpadneo"};
 
 static bool operator<(const gamepad& a, const gamepad& b)
@@ -33,6 +35,7 @@ void gamepad_update(){
     bitdo_count = 0;
     for (auto &p : fs::directory_iterator(path)) {
         string fileName = p.path().filename();
+//Gamepads
         //CHECK XONE AND XPADNEO DEVICES
         for (string n : xbox_paths ) {
             if (fileName.find(n) != std::string::npos) {
@@ -64,6 +67,12 @@ void gamepad_update(){
             gamepad_found = true;
             bitdo_count += 1;
         }
+// Mice and Keyboards
+        //CHECK LOGITECH DEVICES
+        if (fileName.find("hidpp_battery") != std::string::npos) {
+            list.push_back(p.path());
+            gamepad_found = true;
+        }
     }
 }
 
@@ -71,6 +80,7 @@ void gamepad_update(){
 void gamepad_info () {
     gamepad_count = 0;
     gamepad_data.clear();
+    //gamepad counters
     int xbox_counter = 0;
     int ds4_counter = 0;
     int ds5_counter = 0;
@@ -82,9 +92,11 @@ void gamepad_info () {
         std::string capacity = path + "/capacity";
         std::string capacity_level = path + "/capacity_level";
         std::string status = path + "/status";
+        std::string model = path + "/model_name";
         std::ifstream input_capacity(capacity);
         std::ifstream input_capacity_level(capacity_level);
         std::ifstream input_status(status);
+        std::ifstream device_name(model);
         std::string line;
 
         gamepad_data.push_back(gamepad());
@@ -129,6 +141,12 @@ void gamepad_info () {
             else
                 gamepad_data[gamepad_count].name = "8BITDO PAD-" + to_string(bitdo_counter + 1);
             bitdo_counter++;
+        }
+        //Logitech Devices
+        if (path.find("hidpp_battery") != std::string::npos) {
+            if (std::getline(device_name, line)) {
+                gamepad_data[gamepad_count].name = line;
+            }
         }
         //Get device charging status
         if (std::getline(input_status, line)) {
