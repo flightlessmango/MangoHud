@@ -15,6 +15,8 @@ int ds4_count = 0;
 int ds5_count = 0;
 int switch_count = 0;
 int bitdo_count = 0;
+int logi_count = 0; //Logitech devices, mice & keyboards etc.
+
 std::string  xbox_paths [2]{"gip","xpadneo"};
 
 static bool operator<(const gamepad& a, const gamepad& b)
@@ -31,6 +33,7 @@ void gamepad_update(){
     ds5_count = 0;
     switch_count = 0;
     bitdo_count = 0;
+    logi_count = 0;
     for (auto &p : fs::directory_iterator(path)) {
         string fileName = p.path().filename();
         //CHECK XONE AND XPADNEO DEVICES
@@ -64,6 +67,12 @@ void gamepad_update(){
             gamepad_found = true;
             bitdo_count += 1;
         }
+        //CHECK LOGITECH DEVICES
+        if (fileName.find("hidpp_battery") != std::string::npos) {
+            list.push_back(p.path());
+            gamepad_found = true;
+            logi_count += 1;
+        }
     }
 }
 
@@ -76,6 +85,7 @@ void gamepad_info () {
     int ds5_counter = 0;
     int switch_counter = 0;
     int bitdo_counter = 0;
+    int logi_counter = 0;
 
     for (auto &path : list ) {
         //Set devices paths
@@ -129,6 +139,14 @@ void gamepad_info () {
             else
                 gamepad_data[gamepad_count].name = "8BITDO PAD-" + to_string(bitdo_counter + 1);
             bitdo_counter++;
+        }
+        //Logitech Devices
+        if (path.find("hidpp_battery") != std::string::npos) {
+            if (logi_count == 1)
+                gamepad_data[gamepad_count].name = "LOGI DEVICE";
+            else
+                gamepad_data[gamepad_count].name = "LOGI DEVICE-" + to_string(logi_counter + 1);
+            logi_counter++;
         }
         //Get device charging status
         if (std::getline(input_status, line)) {
