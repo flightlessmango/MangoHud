@@ -197,7 +197,7 @@ static GLFWwindow* init(const char* glsl_version){
         // Set atom for gamescope to render as an overlay.
         Atom overlay_atom = XInternAtom (x11_display, GamescopeOverlayProperty, False);
         uint32_t value = 1;
-        XChangeProperty(x11_display, x11_window, overlay_atom, XA_ATOM, 32, PropertyNewValue, (unsigned char *)&value, 1);
+        XChangeProperty(x11_display, x11_window, overlay_atom, XA_CARDINAL, 32, PropertyNewValue, (unsigned char *)&value, 1);
     }
 
     glfwMakeContextCurrent(window);
