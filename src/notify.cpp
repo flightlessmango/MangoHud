@@ -13,7 +13,7 @@
 static void fileChanged(notify_thread *nt) {
     int length, i = 0;
     char buffer[EVENT_BUF_LEN];
-    overlay_params local_params = *nt->params;
+//     overlay_params local_params = *nt->params;
 
     while (!nt->quit) {
         length = read( nt->fd, buffer, EVENT_BUF_LEN );
@@ -25,14 +25,17 @@ static void fileChanged(notify_thread *nt) {
                 // In the case of IN_DELETE_SELF, some editors may do a save-to-temp-file/delete-original/move-temp-file
                 // so sleep a little to let file to be replaced
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                overlay_params local_params;
                 parse_overlay_config(&local_params, getenv("MANGOHUD_CONFIG"));
-                if ((event->mask & IN_DELETE_SELF) || (nt->params->config_file_path != local_params.config_file_path)) {
+                auto w = nt->params->get();
+                if ((event->mask & IN_DELETE_SELF) || (w.params.config_file_path != local_params.config_file_path)) {
                     SPDLOG_DEBUG("Watching config file: {}", local_params.config_file_path.c_str());
                     inotify_rm_watch(nt->fd, nt->wd);
                     nt->wd = inotify_add_watch(nt->fd, local_params.config_file_path.c_str(), IN_MODIFY | IN_DELETE_SELF);
                 }
-                std::lock_guard<std::mutex> lk(nt->mutex);
-                *nt->params = local_params;
+                nt->params->assign(local_params);
+//                 std::lock_guard<std::mutex> lk(nt->mutex);
+//                 *nt->params = local_params;
             }
         }
         i = 0;
@@ -48,7 +51,8 @@ bool start_notifier(notify_thread& nt)
         return false;
     }
 
-    nt.wd = inotify_add_watch(nt.fd, nt.params->config_file_path.c_str(), IN_MODIFY | IN_DELETE_SELF);
+    auto w = nt.params->get();
+    nt.wd = inotify_add_watch(nt.fd, w.params.config_file_path.c_str(), IN_MODIFY | IN_DELETE_SELF);
     if (nt.wd < 0) {
         close(nt.fd);
         nt.fd = -1;

@@ -40,6 +40,9 @@
 #include "app/mangoapp.h"
 #endif
 
+// Global params
+overlay_params_mutexed g_overlay_params;
+
 #if __cplusplus >= 201703L
 
 template<typename... Ts>
@@ -561,7 +564,8 @@ void
 parse_overlay_config(struct overlay_params *params,
                   const char *env)
 {
-   *params = {};
+   if (params->control >= 0)
+      os_socket_close(params->control);
 
    /* Visible by default */
    params->enabled[OVERLAY_PARAM_ENABLED_fps] = true;
@@ -782,6 +786,7 @@ parse_overlay_config(struct overlay_params *params,
                                  params->font_file_text,
                                  params->font_glyph_ranges
                                 );
+   params->image_params_hash = get_hash(params->image, params->background_image);
 
    // set frametime limit
    using namespace std::chrono;

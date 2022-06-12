@@ -87,7 +87,6 @@ extern struct benchmark_stats benchmark;
 extern ImVec2 real_font_size;
 extern std::string wineVersion;
 extern std::deque<logData> graph_data;
-extern overlay_params *_params;
 extern double min_frametime, max_frametime;
 extern bool steam_focused;
 extern int fan_speed;

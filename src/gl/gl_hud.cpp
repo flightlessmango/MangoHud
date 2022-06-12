@@ -54,6 +54,7 @@ struct state {
 static GLVec last_vp {}, last_sb {};
 swapchain_stats sw_stats {};
 static size_t font_params_hash = 0;
+// static size_t image_params_hash = 0;
 static state state;
 static uint32_t vendorID;
 static std::string deviceName;
@@ -62,7 +63,7 @@ static notify_thread notifier;
 static bool cfg_inited = false;
 static ImVec2 window_size;
 static bool inited = false;
-overlay_params params {};
+// overlay_params params {};
 
 // seems to quit by itself though
 static std::unique_ptr<notify_thread, std::function<void(notify_thread *)>>
@@ -74,11 +75,11 @@ void imgui_init()
         return;
 
     init_spdlog();
-    parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
-    _params = &params;
+    auto w = g_overlay_params.get();
+    parse_overlay_config(&w.params, getenv("MANGOHUD_CONFIG"));
 
-   //check for blacklist item in the config file
-   for (auto& item : params.blacklist) {
+    //check for blacklist item in the config file
+   for (auto& item : w.params.blacklist) {
       add_blacklist(item);
    }
 
@@ -100,12 +101,12 @@ void imgui_init()
     }
 
     is_blacklisted(true);
-    notifier.params = &params;
+    notifier.params = &g_overlay_params;
     start_notifier(notifier);
-    window_size = ImVec2(params.width, params.height);
+    window_size = ImVec2(w.params.width, w.params.height);
     init_system_info();
     cfg_inited = true;
-    init_cpu_stats(params);
+    init_cpu_stats(w.params);
 }
 
 //static
@@ -138,7 +139,9 @@ void imgui_create(void *ctx)
     }
     if (deviceName.find("zink") != std::string::npos)
         sw_stats.engine = EngineTypes::ZINK;
-    init_gpu_stats(vendorID, 0, params);
+
+    auto w = g_overlay_params.get();
+    init_gpu_stats(vendorID, 0, w.params);
     sw_stats.gpuName = gpu = get_device_name(vendorID, deviceID);
     SPDLOG_DEBUG("gpu: {}", gpu);
     // Setup Dear ImGui context
@@ -152,7 +155,7 @@ void imgui_create(void *ctx)
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
-    HUDElements.convert_colors(false, params);
+    HUDElements.convert_colors(false, w.params);
 
     glGetIntegerv (GL_VIEWPORT, last_vp.v);
     glGetIntegerv (GL_SCISSOR_BOX, last_sb.v);
@@ -162,8 +165,8 @@ void imgui_create(void *ctx)
 
     ImGui_ImplOpenGL3_Init();
 
-    create_fonts(nullptr, params, sw_stats.font1, sw_stats.font_text);
-    font_params_hash = params.font_params_hash;
+    create_fonts(nullptr, w.params, sw_stats.font1, sw_stats.font_text);
+    font_params_hash = w.params.font_params_hash;
 
     // Restore global context or ours might clash with apps that use Dear ImGui
     ImGui::SetCurrentContext(saved_ctx);
@@ -192,35 +195,36 @@ void imgui_render(unsigned int width, unsigned int height)
     if (!state.imgui_ctx)
         return;
 
+    auto w = g_overlay_params.get();
     static int control_client = -1;
-    if (params.control >= 0) {
-        control_client_check(params.control, control_client, deviceName);
-        process_control_socket(control_client, params);
+    if (w.params.control >= 0) {
+        control_client_check(w.params.control, control_client, deviceName);
+        process_control_socket(control_client, w.params);
     }
 
-    check_keybinds(params, vendorID);
-    update_hud_info(sw_stats, params, vendorID);
+    check_keybinds(w.params, vendorID);
+    update_hud_info(sw_stats, w.params, vendorID);
 
     ImGuiContext *saved_ctx = ImGui::GetCurrentContext();
     ImGui::SetCurrentContext(state.imgui_ctx);
     ImGui::GetIO().DisplaySize = ImVec2(width, height);
     if (HUDElements.colors.update)
-        HUDElements.convert_colors(params);
+        HUDElements.convert_colors(w.params);
 
-    if (font_params_hash != params.font_params_hash)
+    if (font_params_hash != w.params.font_params_hash)
     {
-        font_params_hash = params.font_params_hash;
-        create_fonts(nullptr, params, sw_stats.font1, sw_stats.font_text);
+        font_params_hash = w.params.font_params_hash;
+        create_fonts(nullptr, w.params, sw_stats.font1, sw_stats.font_text);
         ImGui_ImplOpenGL3_CreateFontsTexture();
     }
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
     {
-        std::lock_guard<std::mutex> lk(notifier.mutex);
-        overlay_new_frame(params);
-        position_layer(sw_stats, params, window_size);
-        render_imgui(sw_stats, params, window_size, false);
+//         std::lock_guard<std::mutex> lk(notifier.mutex);
+        overlay_new_frame(w.params);
+        position_layer(sw_stats, w.params, window_size);
+        render_imgui(sw_stats, w.params, window_size, false);
         overlay_end_frame();
     }
 

@@ -7,7 +7,7 @@
 
 namespace MangoHud { namespace GL {
 
-extern overlay_params params;
+// extern overlay_params params;
 void imgui_init();
 void imgui_create(void *ctx);
 void imgui_shutdown();

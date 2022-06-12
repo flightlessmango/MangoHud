@@ -2,9 +2,14 @@
 #ifndef MANGOHUD_OVERLAY_PARAMS_H
 #define MANGOHUD_OVERLAY_PARAMS_H
 
+#include <spdlog/spdlog.h>
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <mutex>
+#include <condition_variable>
+#include <atomic>
+#include <functional>
 
 #ifdef __cplusplus
 extern "C" {
@@ -265,7 +270,80 @@ struct overlay_params {
    unsigned short fcat_overlay_width;
 
    size_t font_params_hash;
+   size_t image_params_hash;
 };
+
+class overlay_params_wrapper {
+public:
+   overlay_params_wrapper(overlay_params& p, std::function<void(void)> f)
+   : params(p), unlocker(f)
+   {
+   }
+
+   ~overlay_params_wrapper()
+   {
+      unlocker();
+   }
+
+   overlay_params& params;
+private:
+   std::function<void(void)> unlocker;
+};
+
+class overlay_params_mutexed {
+   overlay_params instance;
+   std::mutex m;
+   std::condition_variable reader_cv;
+   std::condition_variable writer_cv;
+   std::atomic_size_t waiting_writers, active_readers, active_writers;
+public:
+   overlay_params_mutexed() = default;
+
+   overlay_params_mutexed(const overlay_params& r) {
+      assign(r);
+   }
+
+   overlay_params_mutexed(const overlay_params&& r) {
+      assign(r);
+   }
+
+   overlay_params_mutexed& operator=(const overlay_params& r)
+   {
+      assign(r);
+      return *this;
+   }
+
+   void assign(const overlay_params& r)
+   {
+      std::unique_lock<std::mutex> lk(m);
+      ++waiting_writers;
+      writer_cv.wait(lk, [&](){ return active_readers == 0 && active_writers == 0; });
+      ++active_writers;
+      instance = r;
+      --waiting_writers;
+      --active_writers;
+      reader_cv.notify_all();
+   }
+
+   const overlay_params* operator->() {
+//       std::unique_lock<std::mutex> l(m);
+      return &instance;
+   }
+
+   overlay_params_wrapper get()
+   {
+      std::unique_lock<std::mutex> lk(m);
+      // If get() is called again from a sub function, it may block on waiting writers so just continue if active_readers > 0
+      reader_cv.wait(lk, [&](){ return waiting_writers == 0 || active_readers > 0; });
+      ++active_readers;
+      return {instance, [&]() -> void {
+         --active_readers;
+         writer_cv.notify_all();
+      }};
+   }
+};
+
+extern overlay_params_mutexed g_overlay_params;
 
 const extern char *overlay_param_names[];
 

@@ -13,8 +13,7 @@ void init_d3d_shared(){
     vendorID = get_device_id_dxgi();
     if (cfg_inited)
         return;
-     parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
-     _params = &params;
+     parse_overlay_config(/*&params, */getenv("MANGOHUD_CONFIG"));
      cfg_inited = true;
     //  init_cpu_stats(params);
 }

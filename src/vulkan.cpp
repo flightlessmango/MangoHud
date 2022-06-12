@@ -85,7 +85,7 @@ struct texture_info {
 struct instance_data {
    struct vk_instance_dispatch_table vtable;
    VkInstance instance;
-   struct overlay_params params;
+//    struct overlay_params params;
    uint32_t api_version;
    string engineName, engineVersion;
    enum EngineTypes engine;
@@ -123,6 +123,7 @@ struct device_data {
    ImFont *font_alt, *font_text;
    struct vk_image font_img;
    size_t font_params_hash = 0;
+   size_t image_params_hash = 0;
 
    std::vector<struct texture_info> textures;
 };
@@ -266,16 +267,13 @@ static struct instance_data *new_instance_data(VkInstance instance)
 {
    struct instance_data *data = new instance_data();
    data->instance = instance;
-   data->params = {};
-   data->params.control = -1;
+   data->control_client = -1;
    map_object(HKEY(data->instance), data);
    return data;
 }
 
 static void destroy_instance_data(struct instance_data *data)
 {
-   if (data->params.control >= 0)
-      os_socket_close(data->params.control);
    unmap_object(HKEY(data->instance));
    delete data;
 }
@@ -480,13 +478,15 @@ static void destroy_command_buffer_data(struct command_buffer_data *data)
 
 /**/
 static struct swapchain_data *new_swapchain_data(VkSwapchainKHR swapchain,
-                                                 struct device_data *device_data)
+                                                 struct device_data *device_data,
+                                                 overlay_params& params)
 {
-   struct instance_data *instance_data = device_data->instance;
+//    struct instance_data *instance_data = device_data->instance;
+//    const overlay_params_wrapper w = g_overlay_params.get();
    struct swapchain_data *data = new swapchain_data();
    data->device = device_data;
    data->swapchain = swapchain;
-   data->window_size = ImVec2(instance_data->params.width, instance_data->params.height);
+   data->window_size = ImVec2(params.width, params.height);
    map_object(HKEY(data->swapchain), data);
    return data;
 }
@@ -547,38 +547,37 @@ struct overlay_draw *get_overlay_draw(struct swapchain_data *data)
 
 static void snapshot_swapchain_frame(struct swapchain_data *data)
 {
+   const overlay_params_wrapper w = g_overlay_params.get();
    struct device_data *device_data = data->device;
    struct instance_data *instance_data = device_data->instance;
-   update_hud_info(data->sw_stats, instance_data->params, device_data->properties.vendorID);
-   check_keybinds(instance_data->params, device_data->properties.vendorID);
+   (void)instance_data;
+   update_hud_info(data->sw_stats, w.params, device_data->properties.vendorID);
+   check_keybinds(w.params, device_data->properties.vendorID);
 #ifdef __linux__
-   if (instance_data->params.control >= 0) {
-      control_client_check(instance_data->params.control, instance_data->control_client, gpu.c_str());
-      process_control_socket(instance_data->control_client, instance_data->params);
+   if (w.params.control >= 0) {
+      control_client_check(w.params.control, instance_data->control_client, gpu.c_str());
+      process_control_socket(instance_data->control_client, w.params);
    }
 #endif
 }
 
 static void compute_swapchain_display(struct swapchain_data *data)
 {
-   struct device_data *device_data = data->device;
-   struct instance_data *instance_data = device_data->instance;
-
-   if (instance_data->params.no_display)
+   const overlay_params_wrapper w = g_overlay_params.get();
+   if (w.params.no_display)
       return;
 
    check_fonts(data);
 
    ImGui::SetCurrentContext(data->imgui_context);
    if (HUDElements.colors.update)
-      HUDElements.convert_colors(instance_data->params);
+      HUDElements.convert_colors(w.params);
 
    ImGui::NewFrame();
    {
-      ::scoped_lock lk(instance_data->notifier.mutex);
-      overlay_new_frame(instance_data->params);
-      position_layer(data->sw_stats, instance_data->params, data->window_size);
-      render_imgui(data->sw_stats, instance_data->params, data->window_size, true);
+      overlay_new_frame(w.params);
+      position_layer(data->sw_stats, w.params, data->window_size);
+      render_imgui(data->sw_stats, w.params, data->window_size, true);
       overlay_end_frame();
    }
    ImGui::EndFrame();
@@ -825,12 +824,14 @@ static void submit_image_upload_cmd(struct device_data *device_data, vk_image *i
    img->uploaded = true;
    auto dur = Clock::now() - start;
    auto dur_us = std::chrono::duration_cast<std::chrono::microseconds>(dur).count();
+   (void)dur_us;
    SPDLOG_DEBUG("upload duration: {} us, {} bytes, {:0.02f} MiB/s", dur_us, upload_size, upload_size/(dur_us/1e6f)/(1024*1024));
 }
 
 static void check_fonts(struct device_data* device_data)
 {
-   const auto& params = device_data->instance->params;
+   const overlay_params_wrapper w = g_overlay_params.get();
+   const auto& params = w.params;
    if (params.font_params_hash == device_data->font_params_hash)
       return;
 
@@ -857,8 +858,9 @@ static void check_fonts(struct device_data* device_data)
    update_image_descriptor(device_data, device_data->font_img.image_view, device_data->descriptor_set);
    device_data->font_atlas->SetTexID((ImTextureID)device_data->descriptor_set);
 
-   std::thread(submit_image_upload_cmd, device_data, &device_data->font_img, pixels, width * height * 4 * sizeof(char)).detach();
-//     submit_image_upload_cmd(device_data, &device_data->font_img, pixels, width * height * 4 * sizeof(char));
+//    std::thread(submit_image_upload_cmd, device_data, &device_data->font_img, pixels, width * height * 4 * sizeof(char)).detach();
+   // Blocking until font image is uploaded might be more preferable
+   submit_image_upload_cmd(device_data, &device_data->font_img, pixels, width * height * 4 * sizeof(char));
 }
 
 static void check_fonts(struct swapchain_data* data)
@@ -900,6 +902,18 @@ ImTextureID add_texture(swapchain_stats *stats, const std::string& filename, int
    data->device->textures.push_back(ti);
 
    return (ImTextureID) ti.descset;
+}
+
+static void check_images(struct device_data* device_data)
+{
+   const overlay_params_wrapper w = g_overlay_params.get();
+   const auto& params = w.params;
+   if (params.image_params_hash == device_data->image_params_hash)
+      return;
+
+   std::unique_lock<std::mutex> lk(device_data->font_mutex);
+   if (params.image_params_hash == device_data->image_params_hash)
+      return;
 }
 
 static void CreateOrResizeBuffer(struct device_data *data,
@@ -947,8 +961,9 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
 {
    ImDrawData* draw_data = ImGui::GetDrawData();
    struct device_data *device_data = data->device;
+   const overlay_params_wrapper w = g_overlay_params.get();
 
-   if (!draw_data || draw_data->TotalVtxCount == 0 || device_data->instance->params.no_display)
+   if (!draw_data || draw_data->TotalVtxCount == 0 || w.params.no_display)
       return nullptr;
 
    if (!device_data->font_img.uploaded)
@@ -1435,6 +1450,7 @@ static void convert_colors_vk(VkFormat format, struct swapchain_stats& sw_stats,
 static void setup_swapchain_data(struct swapchain_data *data,
                                  const VkSwapchainCreateInfoKHR *pCreateInfo)
 {
+   const overlay_params_wrapper w = g_overlay_params.get();
    struct device_data *device_data = data->device;
    data->width = pCreateInfo->imageExtent.width;
    data->height = pCreateInfo->imageExtent.height;
@@ -1445,7 +1461,7 @@ static void setup_swapchain_data(struct swapchain_data *data,
 
    ImGui::GetIO().IniFilename = NULL;
    ImGui::GetIO().DisplaySize = ImVec2((float)data->width, (float)data->height);
-   convert_colors_vk(pCreateInfo->imageFormat, data->sw_stats, device_data->instance->params);
+   convert_colors_vk(pCreateInfo->imageFormat, data->sw_stats, w.params);
 
    /* Render pass */
    VkAttachmentDescription attachment_desc = {};
@@ -1640,12 +1656,14 @@ static VkResult overlay_CreateSwapchainKHR(
            VK_PRESENT_MODE_IMMEDIATE_KHR,
            VK_PRESENT_MODE_MAILBOX_KHR,
            VK_PRESENT_MODE_FIFO_KHR};
-   if (device_data->instance->params.vsync < 4)
-      createInfo.presentMode = modes[device_data->instance->params.vsync];
+
+   const overlay_params_wrapper w = g_overlay_params.get();
+   if (w.params.vsync < 4)
+      createInfo.presentMode = modes[w.params.vsync];
 
    VkResult result = device_data->vtable.CreateSwapchainKHR(device, &createInfo, pAllocator, pSwapchain);
    if (result != VK_SUCCESS) return result;
-   struct swapchain_data *swapchain_data = new_swapchain_data(*pSwapchain, device_data);
+   struct swapchain_data *swapchain_data = new_swapchain_data(*pSwapchain, device_data, w.params);
    setup_swapchain_data(swapchain_data, pCreateInfo);
 
    const VkPhysicalDeviceProperties& prop = device_data->properties;
@@ -1713,6 +1731,7 @@ static VkResult overlay_QueuePresentKHR(
    struct queue_data *queue_data = FIND(struct queue_data, queue);
 
    check_fonts(queue_data->device);
+   check_images(queue_data->device);
 
    /* Otherwise we need to add our overlay drawing semaphore to the list of
     * semaphores to wait on. If we don't do that the presented picture might
@@ -1956,7 +1975,8 @@ static VkResult overlay_CreateDevice(
       gpu = get_device_name(device_data->properties.vendorID, device_data->properties.deviceID);
       SPDLOG_DEBUG("gpu: {}", gpu);
 #endif
-      init_gpu_stats(device_data->properties.vendorID, device_data->properties.deviceID, device_data->instance->params);
+      const overlay_params_wrapper w = g_overlay_params.get();
+      init_gpu_stats(device_data->properties.vendorID, device_data->properties.deviceID, w.params);
    }
 
    return result;
@@ -2052,29 +2072,29 @@ static VkResult overlay_CreateInstance(
                              &instance_data->vtable);
    instance_data_map_physical_devices(instance_data, true);
 
-   parse_overlay_config(&instance_data->params, getenv("MANGOHUD_CONFIG"));
-   _params = &instance_data->params;
+   auto w = g_overlay_params.get();
+   parse_overlay_config(&w.params, getenv("MANGOHUD_CONFIG"));
 
    //check for blacklist item in the config file
-   for (auto& item : instance_data->params.blacklist) {
+   for (auto& item : w.params.blacklist) {
       add_blacklist(item);
    }
 
    if (!is_blacklisted()) {
 #ifdef __linux__
       init_system_info();
-      instance_data->notifier.params = &instance_data->params;
+      instance_data->notifier.params = &g_overlay_params;
       start_notifier(instance_data->notifier);
 #endif
 
-      init_cpu_stats(instance_data->params);
+      init_cpu_stats(w.params);
 
       // Adjust height for DXVK/VKD3D version number
       if (engineName == "DXVK" || engineName == "VKD3D"){
-         if (instance_data->params.font_size){
-            instance_data->params.height += instance_data->params.font_size * instance_data->params.font_scale / 2;
+         if (w.params.font_size){
+            w.params.height += w.params.font_size * w.params.font_scale / 2;
          } else {
-            instance_data->params.height += 24 * instance_data->params.font_scale / 2;
+            w.params.height += 24 * w.params.font_scale / 2;
          }
       }
 
@@ -2084,7 +2104,6 @@ static VkResult overlay_CreateInstance(
    }
 
    instance_data->api_version = pCreateInfo->pApplicationInfo ? pCreateInfo->pApplicationInfo->apiVersion : VK_API_VERSION_1_0;
-
    return result;
 }
 

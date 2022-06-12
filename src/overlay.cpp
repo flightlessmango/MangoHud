@@ -46,7 +46,6 @@ struct fps_limit fps_limit_stats {};
 ImVec2 real_font_size;
 std::deque<logData> graph_data;
 const char* engines[] = {"Unknown", "OpenGL", "VULKAN", "DXVK", "VKD3D", "DAMAVAND", "ZINK", "WINED3D", "Feral3D", "ToGL", "GAMESCOPE"};
-overlay_params *_params {};
 double min_frametime, max_frametime;
 bool gpu_metrics_exists = false;
 bool steam_focused = false;
@@ -572,7 +571,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       if((now - logger->last_log_end()) < 12s && !logger->is_active())
          render_benchmark(data, params, window_size, height, now);
    }
-   
+
    if(params.enabled[OVERLAY_PARAM_ENABLED_fcat])
      {
        fcatstatus.update(&params);

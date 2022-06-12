@@ -78,7 +78,7 @@
 
 namespace MangoHud { namespace GL {
 
-extern overlay_params params;
+// extern overlay_params params;
 
 // OpenGL Data
 static GLuint       g_GlVersion = 0;                // Extracted at runtime using GL_MAJOR_VERSION, GL_MINOR_VERSION queries.
@@ -494,8 +494,8 @@ void    ImGui_ImplOpenGL3_NewFrame()
 static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_width, int fb_height, GLuint vertex_array_object)
 {
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, polygon fill
-    if (params.gl_bind_framebuffer >= 0 && (g_IsGLES || g_GlVersion >= 300))
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, params.gl_bind_framebuffer);
+    if (g_overlay_params->gl_bind_framebuffer >= 0 && (g_IsGLES || g_GlVersion >= 300))
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, g_overlay_params->gl_bind_framebuffer);
     glEnable(GL_BLEND);
     glBlendEquation(GL_FUNC_ADD);
     glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
@@ -530,7 +530,7 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
     float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
     float T = draw_data->DisplayPos.y;
     float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
-    if (!params.gl_dont_flip && !clip_origin_lower_left) { float tmp = T; T = B; B = tmp; } // Swap top and bottom if origin is upper left
+    if (!g_overlay_params->gl_dont_flip && !clip_origin_lower_left) { float tmp = T; T = B; B = tmp; } // Swap top and bottom if origin is upper left
     const float ortho_projection[4][4] =
     {
         { 2.0f/(R-L),   0.0f,         0.0f,   0.0f },
@@ -574,7 +574,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
 
     // Backup GL state
     GLint last_fb = -1;
-    if (params.gl_bind_framebuffer >= 0 && (g_IsGLES || g_GlVersion >= 300))
+    if (g_overlay_params->gl_bind_framebuffer >= 0 && (g_IsGLES || g_GlVersion >= 300))
         glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &last_fb);
     GLenum last_active_texture; glGetIntegerv(GL_ACTIVE_TEXTURE, (GLint*)&last_active_texture);
     glActiveTexture(GL_TEXTURE0);
@@ -660,7 +660,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
                 if (clip_rect.x < fb_width && clip_rect.y < fb_height && clip_rect.z >= 0.0f && clip_rect.w >= 0.0f)
                 {
                     // Apply scissor/clipping rectangle
-                    if (!params.gl_dont_flip)
+                    if (!g_overlay_params->gl_dont_flip)
                         glScissor((int)clip_rect.x, (int)(fb_height - clip_rect.w), (int)(clip_rect.z - clip_rect.x), (int)(clip_rect.w - clip_rect.y));
                     else
                         glScissor((int)clip_rect.x, (int)clip_rect.y, (int)clip_rect.z, (int)clip_rect.w);

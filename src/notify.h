@@ -9,9 +9,9 @@
 struct notify_thread
 {
     int fd = -1, wd = -1;
-    overlay_params *params = nullptr;
+    overlay_params_mutexed *params = nullptr;
     bool quit = false;
-    std::mutex mutex;
+//     std::mutex mutex;
     std::thread thread;
 };
 
