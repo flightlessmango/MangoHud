@@ -245,6 +245,7 @@ static struct instance_data *new_instance_data(VkInstance instance)
    data->instance = instance;
    data->params = {};
    data->params.control = -1;
+   data->control_client = -1;
    map_object(HKEY(data->instance), data);
    return data;
 }
