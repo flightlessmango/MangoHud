@@ -263,6 +263,7 @@ struct overlay_params {
    std::string image;
    unsigned image_max_width;
    std::string config_file_path;
+   std::vector<std::pair<std::string, std::string>> option_pairs;
    std::unordered_map<std::string,std::string> options;
    int permit_upload;
    int fsr_steam_sharpness;
@@ -275,6 +276,8 @@ struct overlay_params {
 
 class overlay_params_wrapper {
 public:
+//    overlay_params_wrapper(const overlay_params_wrapper&) = delete;
+//    overlay_params_wrapper(const overlay_params_wrapper&&) = delete;
    overlay_params_wrapper(overlay_params& p, std::function<void(void)> f)
    : params(p), unlocker(f)
    {
@@ -298,32 +301,24 @@ class overlay_params_mutexed {
    std::atomic_size_t waiting_writers, active_readers, active_writers;
 public:
    overlay_params_mutexed() = default;
+   overlay_params_mutexed(const overlay_params_mutexed&) = delete;
+   overlay_params_mutexed(const overlay_params_mutexed&&) = delete;
 
-   overlay_params_mutexed(const overlay_params& r) {
+   overlay_params_mutexed(overlay_params& r) {
       assign(r);
    }
 
-   overlay_params_mutexed(const overlay_params&& r) {
+   overlay_params_mutexed(overlay_params&& r) {
       assign(r);
    }
 
-   overlay_params_mutexed& operator=(const overlay_params& r)
+   overlay_params_mutexed& operator=(overlay_params& r)
    {
       assign(r);
       return *this;
    }
 
-   void assign(const overlay_params& r)
-   {
-      std::unique_lock<std::mutex> lk(m);
-      ++waiting_writers;
-      writer_cv.wait(lk, [&](){ return active_readers == 0 && active_writers == 0; });
-      ++active_writers;
-      instance = r;
-      --waiting_writers;
-      --active_writers;
-      reader_cv.notify_all();
-   }
+    void assign(overlay_params& r);
 
    const overlay_params* operator->() {
 //       std::unique_lock<std::mutex> l(m);
@@ -336,10 +331,13 @@ public:
       // If get() is called again from a sub function, it may block on waiting writers so just continue if active_readers > 0
       reader_cv.wait(lk, [&](){ return waiting_writers == 0 || active_readers > 0; });
       ++active_readers;
-      return {instance, [&]() -> void {
-         --active_readers;
-         writer_cv.notify_all();
-      }};
+      return {
+         instance,
+         [&]() -> void {
+            --active_readers;
+            writer_cv.notify_all();
+         }
+      };
    }
 };
 

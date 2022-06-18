@@ -678,71 +678,25 @@ void HudElements::custom_text_center(){
 void HudElements::image(){
     const std::string& value = HUDElements.ordered_functions[HUDElements.place].second;
 
-    // load the image if needed
-    if (HUDElements.image_infos.loaded == false) {
-        unsigned maxwidth = HUDElements.params->width;
-        if (HUDElements.params->image_max_width != 0 && HUDElements.params->image_max_width < maxwidth) {
-            maxwidth = HUDElements.params->image_max_width;
-        }
+    auto& image_info = HUDElements.images[value];
+    if (!image_info.loaded)
+        return;
 
-        HUDElements.image_infos.loaded = true;
-        if (HUDElements.is_vulkan) {
-#ifdef HAVE_VULKAN
-            if ((HUDElements.image_infos.texture = add_texture(HUDElements.sw_stats, value, &(HUDElements.image_infos.width), &(HUDElements.image_infos.height), maxwidth)))
-                HUDElements.image_infos.valid = true;
-#endif
-        } else {
-            HUDElements.image_infos.valid = GL_LoadTextureFromFile(value.c_str(),
-                                                                reinterpret_cast<unsigned int*>(&(HUDElements.image_infos.texture)),
-                                                                &(HUDElements.image_infos.width),
-                                                                &(HUDElements.image_infos.height),
-                                                                maxwidth);
-        }
-
-        if (HUDElements.image_infos.valid)
-            SPDLOG_INFO("Image {} loaded ({}x{})", value, HUDElements.image_infos.width, HUDElements.image_infos.height);
-        else
-            SPDLOG_WARN("Failed to load image: {}", value);
-    }
-
-    // render the image
-    if (HUDElements.image_infos.valid) {
-        ImGui::TableNextRow(); ImGui::TableNextColumn();
-        ImGui::Image(HUDElements.image_infos.texture, ImVec2(HUDElements.image_infos.width, HUDElements.image_infos.height));
-    }
+    ImGui::TableNextRow(); ImGui::TableNextColumn();
+    ImGui::Image(image_info.texture, ImVec2(image_info.width, image_info.height));
 }
 
 void HudElements::background_image(){
-    const std::string& value = HUDElements.params->background_image;
+    const std::string& value = HUDElements.ordered_functions[HUDElements.place].second;
 
-    // load the image if needed
-    if (HUDElements.background_image_infos.loaded == false) {
-        HUDElements.background_image_infos.loaded = true;
-        if (HUDElements.is_vulkan) {
-#ifdef HAVE_VULKAN
-            if ((HUDElements.background_image_infos.texture = add_texture(HUDElements.sw_stats, value, &(HUDElements.background_image_infos.width), &(HUDElements.background_image_infos.height), 0)))
-                HUDElements.background_image_infos.valid = true;
-#endif
-        } else {
-            HUDElements.background_image_infos.valid = GL_LoadTextureFromFile(value.c_str(),
-                                                                            reinterpret_cast<unsigned int*>(&(HUDElements.background_image_infos.texture)),
-                                                                            &(HUDElements.background_image_infos.width),
-                                                                            &(HUDElements.background_image_infos.height),
-                                                                            0);
-        }
+    auto& image_info = HUDElements.images[value];
+    if (!image_info.loaded)
+        return;
 
-        if (HUDElements.background_image_infos.valid)
-            SPDLOG_INFO("Image {} loaded ({}x{})", value, HUDElements.background_image_infos.width, HUDElements.background_image_infos.height);
-        else
-            SPDLOG_WARN("Failed to load image: {}", value);
-    }
-
-    // render the image
-    if (HUDElements.background_image_infos.valid) {
-        ImGui::GetBackgroundDrawList()->AddImage(HUDElements.background_image_infos.texture,
-                                                 ImVec2(0, 0),
-                                                 ImVec2(HUDElements.background_image_infos.width, HUDElements.background_image_infos.height));
-    }
+    ImGui::GetBackgroundDrawList()->AddImage(image_info.texture,
+                                                ImVec2(0, 0),
+//                                              ImVec2(image_info.width, image_info.height));
+                                            ImGui::GetIO().DisplaySize);
 }
 
 void HudElements::custom_text(){

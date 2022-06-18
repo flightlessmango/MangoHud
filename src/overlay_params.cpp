@@ -40,8 +40,22 @@
 #include "app/mangoapp.h"
 #endif
 
+static void apply_params(overlay_params& params, const overlay_params& old_params);
+
 // Global params
 overlay_params_mutexed g_overlay_params;
+void overlay_params_mutexed::assign(overlay_params& r)
+{
+   std::unique_lock<std::mutex> lk(m);
+   ++waiting_writers;
+   writer_cv.wait(lk, [&](){ return active_readers == 0 && active_writers == 0; });
+   ++active_writers;
+   apply_params(r, instance);
+   instance = r;
+   --waiting_writers;
+   --active_writers;
+   reader_cv.notify_all();
+}
 
 #if __cplusplus >= 201703L
 
@@ -564,9 +578,7 @@ void
 parse_overlay_config(struct overlay_params *params,
                   const char *env)
 {
-   if (params->control >= 0)
-      os_socket_close(params->control);
-
+   *params = {};
    /* Visible by default */
    params->enabled[OVERLAY_PARAM_ENABLED_fps] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_frame_timing] = true;
@@ -664,8 +676,6 @@ parse_overlay_config(struct overlay_params *params,
    #define parse_reload_cfg(x)         params->reload_cfg
 #endif
 
-   HUDElements.ordered_functions.clear();
-   HUDElements.exec_list.clear();
    // first pass with env var
    if (env)
       parse_overlay_env(params, env);
@@ -675,6 +685,9 @@ parse_overlay_config(struct overlay_params *params,
 
       // Get config options
       parseConfigFile(*params);
+      for (auto& p : params->option_pairs)
+         params->options[p.first] = p.second;
+
       if (params->options.find("full") != params->options.end() && params->options.find("full")->second != "0") {
 #define OVERLAY_PARAM_BOOL(name) \
             params->enabled[OVERLAY_PARAM_ENABLED_##name] = 1;
@@ -714,7 +727,6 @@ parse_overlay_config(struct overlay_params *params,
    // second pass, override config file settings with MANGOHUD_CONFIG
    if (params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout] && env && read_cfg) {
       // If passing legacy_layout=0 to MANGOHUD_CONFIG anyway then clear first pass' results
-      HUDElements.ordered_functions.clear();
       parse_overlay_env(params, env);
    }
 
@@ -786,19 +798,64 @@ parse_overlay_config(struct overlay_params *params,
                                  params->font_file_text,
                                  params->font_glyph_ranges
                                 );
-   params->image_params_hash = get_hash(params->image, params->background_image);
 
-   // set frametime limit
+   for (auto& p : params->option_pairs) {
+      if (p.first == "image")
+         params->image_params_hash ^= get_hash(p.second) << 1;
+   }
+   params->image_params_hash ^= get_hash(/*params->image, */params->background_image) << 1;
+
+   if(!params->output_file.empty()) {
+      SPDLOG_INFO("output_file is deprecated, use output_folder instead");
+   }
+
+#ifdef MANGOAPP
+   params->log_interval = 0;
+#endif
+
+}
+
+static void apply_params(overlay_params& params, const overlay_params& old_params)
+{
+   if (old_params.control >= 0)
+      os_socket_close(old_params.control);
+
+   HUDElements.ordered_functions.clear();
+   HUDElements.exec_list.clear();
+   HUDElements.params = &params;
+   if (params.enabled[OVERLAY_PARAM_ENABLED_legacy_layout]){
+      HUDElements.legacy_elements();
+   } else {
+      for (auto& option : params.option_pairs)
+         HUDElements.sort_elements(option);
+   }
+
+   auto real_size = params.font_size * params.font_scale;
+   real_font_size = ImVec2(real_size, real_size / 2);
+
+   // Needs ImGui context but it is null here for OpenGL so just note it and update somewhere else
+   HUDElements.colors.update = true;
+   if (params.no_small_font)
+      HUDElements.text_column = 2;
+   else
+      HUDElements.text_column = 1;
+
+   if(logger && logger->m_params == nullptr) logger.reset();
+   if(!logger) logger = std::make_unique<Logger>(HUDElements.params);
+   if(params.autostart_log && !logger->is_active())
+      std::thread(autostart_log, params.autostart_log).detach();
+
+      // set frametime limit
    using namespace std::chrono;
-   if (params->fps_limit.size() > 0 && params->fps_limit[0] > 0)
-      fps_limit_stats.targetFrameTime = duration_cast<Clock::duration>(duration<double>(1) / params->fps_limit[0]);
+   if (params.fps_limit.size() > 0 && params.fps_limit[0] > 0)
+      fps_limit_stats.targetFrameTime = duration_cast<Clock::duration>(duration<double>(1) / params.fps_limit[0]);
    else
       fps_limit_stats.targetFrameTime = {};
 
 #ifdef HAVE_DBUS
-   if (params->enabled[OVERLAY_PARAM_ENABLED_media_player]) {
+   if (params.enabled[OVERLAY_PARAM_ENABLED_media_player]) {
       if (dbusmgr::dbus_mgr.init(dbusmgr::SRV_MPRIS))
-         dbusmgr::dbus_mgr.init_mpris(params->media_player_name);
+         dbusmgr::dbus_mgr.init_mpris(params.media_player_name);
    } else {
       dbusmgr::dbus_mgr.deinit(dbusmgr::SRV_MPRIS);
       main_metadata.meta.valid = false;
@@ -814,42 +871,13 @@ parse_overlay_config(struct overlay_params *params,
 
 #endif
 
-   if(!params->output_file.empty()) {
-      SPDLOG_INFO("output_file is deprecated, use output_folder instead");
-   }
-
-   auto real_size = params->font_size * params->font_scale;
-   real_font_size = ImVec2(real_size, real_size / 2);
-#ifdef MANGOAPP
-   params->log_interval = 0;
-#endif
-   HUDElements.params = params;
-   if (params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout]){
-        HUDElements.legacy_elements();
-   } else {
-      for (auto& option : HUDElements.options)
-         HUDElements.sort_elements(option);
-   }
-
-   // Needs ImGui context but it is null here for OpenGL so just note it and update somewhere else
-   HUDElements.colors.update = true;
-   if (params->no_small_font)
-      HUDElements.text_column = 2;
-   else
-      HUDElements.text_column = 1;
-
-   if(logger && logger->m_params == nullptr) logger.reset();
-   if(!logger) logger = std::make_unique<Logger>(HUDElements.params);
-   if(params->autostart_log && !logger->is_active())
-      std::thread(autostart_log, params->autostart_log).detach();
 #ifdef MANGOAPP
    {
       extern bool new_frame;
       std::lock_guard<std::mutex> lk(mangoapp_m);
-      params->no_display = params->no_display;
       new_frame = true; // we probably changed how we look.
    }
    mangoapp_cv.notify_one();
-   g_fsrSharpness = params->fsr_steam_sharpness;
+   g_fsrSharpness = params.fsr_steam_sharpness;
 #endif
 }

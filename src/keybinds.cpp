@@ -57,9 +57,11 @@ void check_keybinds(struct overlay_params& params, uint32_t vendorID){
 
    if (elapsedReloadCfg >= keyPressDelay &&
        keys_are_pressed(params.reload_cfg)) {
-      overlay_params temp;
-      parse_overlay_config(&temp, getenv("MANGOHUD_CONFIG"));
-      g_overlay_params = temp;
+      std::thread([](){
+         overlay_params temp;
+         parse_overlay_config(&temp, getenv("MANGOHUD_CONFIG"));
+         g_overlay_params = temp;
+      }).detach();
       reload_cfg_press = now;
    }
 

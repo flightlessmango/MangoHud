@@ -11,7 +11,7 @@
 #include "string_utils.h"
 #include "hud_elements.h"
 
-static void parseConfigLine(std::string line, std::unordered_map<std::string, std::string>& options) {
+static void parseConfigLine(std::string line, std::vector<std::pair<std::string, std::string>>& options) {
     std::string param, value;
 
     if (line.find("#") != std::string::npos)
@@ -27,8 +27,7 @@ static void parseConfigLine(std::string line, std::unordered_map<std::string, st
     trim(param);
     trim(value);
     if (!param.empty()){
-        HUDElements.options.push_back({param, value});
-        options[param] = value;
+        options.push_back({param, value});
     }
 }
 
@@ -92,8 +91,7 @@ static void enumerate_config_files(std::vector<std::string>& paths) {
 }
 
 void parseConfigFile(overlay_params& params) {
-    HUDElements.options.clear();
-    params.options.clear();
+    params.option_pairs.clear();
     std::vector<std::string> paths;
     const char *cfg_file = getenv("MANGOHUD_CONFIGFILE");
 
@@ -117,7 +115,7 @@ void parseConfigFile(overlay_params& params) {
         SPDLOG_INFO("parsing config: '{}'", *p);
         while (std::getline(stream, line))
         {
-            parseConfigLine(line, params.options);
+            parseConfigLine(line, params.option_pairs);
         }
         params.config_file_path = *p;
         return;

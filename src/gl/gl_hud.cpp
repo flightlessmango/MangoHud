@@ -13,6 +13,7 @@
 #include "file_utils.h"
 #include "notify.h"
 #include "blacklist.h"
+#include "load_textures.h"
 
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
@@ -54,7 +55,8 @@ struct state {
 static GLVec last_vp {}, last_sb {};
 swapchain_stats sw_stats {};
 static size_t font_params_hash = 0;
-// static size_t image_params_hash = 0;
+static size_t image_params_hash = 0;
+static std::vector<GLuint> images;
 static state state;
 static uint32_t vendorID;
 static std::string deviceName;
@@ -65,9 +67,62 @@ static ImVec2 window_size;
 static bool inited = false;
 // overlay_params params {};
 
+
 // seems to quit by itself though
 static std::unique_ptr<notify_thread, std::function<void(notify_thread *)>>
     stop_it(&notifier, [](notify_thread *n){ stop_notifier(*n); });
+
+static void check_images(overlay_params& params)
+{
+    if (params.image_params_hash == image_params_hash)
+        return;
+    image_params_hash = params.image_params_hash;
+
+    for (auto& tex : images)
+    {
+        SPDLOG_DEBUG("Delete image: {}", tex);
+        glDeleteTextures(1, (GLuint*)&tex);
+    }
+    images.clear();
+
+    unsigned maxwidth = params.width;
+    if (params.image_max_width != 0 && params.image_max_width < maxwidth) {
+        maxwidth = params.image_max_width;
+    }
+
+    GLuint tex = 0;
+    for (auto& o : params.option_pairs)
+    {
+        if (o.first == "image" && !o.second.empty())
+        {
+            auto& ti = HUDElements.images[o.second];
+//             ti.path = o.second;
+            ti.valid = GL_LoadTextureFromFile(o.second.c_str(),
+                                            &tex,
+                                            &(ti.width),
+                                            &(ti.height),
+                                            maxwidth);
+            ti.loaded = true;
+            ti.texture = (ImTextureID)(intptr_t)tex;
+            images.push_back(tex);
+        }
+    }
+
+    if (!params.background_image.empty())
+    {
+        auto& ti = HUDElements.images[params.background_image];
+//         ti.path = params.background_image;
+        ti.valid = GL_LoadTextureFromFile(params.background_image.c_str(),
+                                        &tex,
+                                        &(ti.width),
+                                        &(ti.height),
+                                        0);
+        ti.loaded = true;
+        ti.texture = (ImTextureID)(intptr_t)tex;
+        images.push_back(tex);
+    }
+
+}
 
 void imgui_init()
 {
@@ -75,11 +130,12 @@ void imgui_init()
         return;
 
     init_spdlog();
-    auto w = g_overlay_params.get();
-    parse_overlay_config(&w.params, getenv("MANGOHUD_CONFIG"));
+
+    overlay_params params;
+    parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
 
     //check for blacklist item in the config file
-   for (auto& item : w.params.blacklist) {
+   for (auto& item : params.blacklist) {
       add_blacklist(item);
    }
 
@@ -100,13 +156,15 @@ void imgui_init()
         }
     }
 
+    g_overlay_params = params;
     is_blacklisted(true);
     notifier.params = &g_overlay_params;
     start_notifier(notifier);
-    window_size = ImVec2(w.params.width, w.params.height);
+    window_size = ImVec2(params.width, params.height);
     init_system_info();
     cfg_inited = true;
-    init_cpu_stats(w.params);
+    init_cpu_stats(params);
+    images.reserve(10);
 }
 
 //static
@@ -217,6 +275,7 @@ void imgui_render(unsigned int width, unsigned int height)
         create_fonts(nullptr, w.params, sw_stats.font1, sw_stats.font_text);
         ImGui_ImplOpenGL3_CreateFontsTexture();
     }
+    check_images(w.params);
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();

@@ -69,23 +69,19 @@ struct vk_image {
    VkImage image;
    VkImageView image_view;
    VkDeviceMemory mem;
-   uint32_t width, height;
+   VkDescriptorSet descset;
    size_t size;
    bool uploaded;
-};
-
-struct texture_info {
-   vk_image image;
-   VkDescriptorSet descset;
-   std::string filename;
-   int maxwidth;
+//    std::string path;
+   int width;
+   int height;
 };
 
 /* Mapped from VkInstace/VkPhysicalDevice */
 struct instance_data {
    struct vk_instance_dispatch_table vtable;
    VkInstance instance;
-//    struct overlay_params params;
+   HudElements *hud_elements;
    uint32_t api_version;
    string engineName, engineVersion;
    enum EngineTypes engine;
@@ -125,7 +121,8 @@ struct device_data {
    size_t font_params_hash = 0;
    size_t image_params_hash = 0;
 
-   std::vector<struct texture_info> textures;
+   std::thread loader_thr;
+   std::unordered_map<uint64_t, vk_image> images;
 };
 
 /* Mapped from VkCommandBuffer */
@@ -354,10 +351,10 @@ static void setup_device_pipeline(struct device_data *device_data)
    /* Descriptor pool */
    VkDescriptorPoolSize sampler_pool_size = {};
    sampler_pool_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-   sampler_pool_size.descriptorCount = 3;
+   sampler_pool_size.descriptorCount = 1000;
    VkDescriptorPoolCreateInfo desc_pool_info = {};
    desc_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-   desc_pool_info.maxSets = 3;
+   desc_pool_info.maxSets = 1000;
    desc_pool_info.poolSizeCount = 1;
    desc_pool_info.pPoolSizes = &sampler_pool_size;
    desc_pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
@@ -453,8 +450,38 @@ static void device_unmap_queues(struct device_data *data)
 
 static void destroy_device_data(struct device_data *data)
 {
+   if (data->loader_thr.joinable())
+      data->loader_thr.join();
+
    unmap_object(HKEY(data->device));
    delete data;
+}
+
+static void destroy_vk_image(struct device_data *device_data, vk_image& image)
+{
+   device_data->vtable.DestroyImageView(device_data->device, image.image_view, NULL);
+   device_data->vtable.DestroyImage(device_data->device, image.image, NULL);
+   device_data->vtable.FreeMemory(device_data->device, image.mem, NULL);
+   image = {};
+}
+
+static void shutdown_device_font(struct device_data *device_data)
+{
+   destroy_vk_image(device_data, device_data->font_img);
+}
+
+static void shutdown_images(struct device_data *data)
+{
+   if (data->loader_thr.joinable())
+      data->loader_thr.join();
+
+   for (auto& tex : data->images)
+   {
+      data->vtable.FreeDescriptorSets(data->device, data->descriptor_pool, 1, &tex.second.descset);
+      destroy_vk_image(data, tex.second);
+   }
+
+   data->images.clear();
 }
 
 /**/
@@ -874,10 +901,39 @@ static void check_fonts(struct swapchain_data* data)
    }
 }
 
-ImTextureID add_texture(swapchain_stats *stats, const std::string& filename, int* width, int* height, int maxwidth) {
-   // FIXME hacks
-   struct swapchain_data *data = reinterpret_cast<swapchain_data *>((char*)stats - ((char*)&((swapchain_data*)0)->sw_stats));
-   struct texture_info ti {};
+static void load_image_file(struct device_data* device_data, std::string path, vk_image *tex)
+{
+   SPDLOG_DEBUG("load_image_file '{}'", path);
+
+//    std::this_thread::sleep_for(2s);
+
+   // load
+   int width, height, channels;
+   unsigned char* pixels = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+   if (!pixels)
+   {
+      SPDLOG_ERROR("Failed to load image: {}", path);
+      return;
+   }
+
+   // reduce the image
+   if (width > tex->width) {
+      unsigned char* pixels_resized = (unsigned char*)malloc(width * height * STBI_rgb_alpha);
+      stbir_resize_uint8(pixels, width, height, 0, pixels_resized, tex->width, tex->height, 0, STBI_rgb_alpha);
+      stbi_image_free(pixels);
+      pixels = pixels_resized;
+   }
+
+   SPDLOG_DEBUG("Uploading '{}' ({}x{})", path, tex->width, tex->height);
+   size_t upload_size = tex->width * tex->height * STBI_rgb_alpha;
+
+   submit_image_upload_cmd(device_data, tex, pixels, upload_size);
+   stbi_image_free(pixels);
+}
+
+ImTextureID add_texture(device_data *data, const std::string& filename, int* width, int* height, int maxwidth) {
+   auto desc_set = alloc_descriptor_set(data);
+   auto& ti = data->images[HKEY(desc_set)];
    int original_width, original_height, channels;
 
    // load
@@ -893,27 +949,70 @@ ImTextureID add_texture(swapchain_stats *stats, const std::string& filename, int
    *width  = original_width  * ratio;
    *height = original_height * ratio;
 
-   ti.descset = alloc_descriptor_set(data->device);
-   create_image(data->device, *width, *height, VK_FORMAT_R8G8B8A8_UNORM, ti.image);
-   update_image_descriptor(data->device, ti.image.image_view, ti.descset);
-   ti.filename = filename;
-   ti.maxwidth = maxwidth;
-
-   data->device->textures.push_back(ti);
-
+   create_image(data, *width, *height, VK_FORMAT_R8G8B8A8_UNORM, ti);
+   update_image_descriptor(data, ti.image_view, desc_set);
+   ti.descset = desc_set;
    return (ImTextureID) ti.descset;
 }
 
-static void check_images(struct device_data* device_data)
+static void check_images(struct device_data* data)
 {
    const overlay_params_wrapper w = g_overlay_params.get();
-   const auto& params = w.params;
-   if (params.image_params_hash == device_data->image_params_hash)
+   if (w.params.image_params_hash == data->image_params_hash)
       return;
 
-   std::unique_lock<std::mutex> lk(device_data->font_mutex);
-   if (params.image_params_hash == device_data->image_params_hash)
+   std::unique_lock<std::mutex> lk(data->font_mutex);
+   if (w.params.image_params_hash == data->image_params_hash)
       return;
+
+   data->image_params_hash = w.params.image_params_hash;
+
+   shutdown_images(data);
+
+   data->loader_thr = std::thread([data](){
+      const overlay_params_wrapper w = g_overlay_params.get();
+      SPDLOG_DEBUG("STARTING LOADING");
+//       std::this_thread::sleep_for(2s);
+
+      unsigned maxwidth = w.params.width;
+      if (w.params.image_max_width != 0 && w.params.image_max_width < maxwidth) {
+         maxwidth = w.params.image_max_width;
+      }
+
+      for (auto& o : w.params.option_pairs)
+      {
+         if (o.first == "image" && !o.second.empty())
+         {
+            auto& ti = HUDElements.images[o.second];
+            if ((ti.texture = add_texture(data, o.second, &ti.width, &ti.height, maxwidth)))
+            {
+               ti.valid = true;
+               auto& image = data->images[HKEY(ti.texture)];
+               SPDLOG_DEBUG("Adding '{}'", o.second);
+               load_image_file(data, o.second, &image);
+               ti.loaded = true;
+            }
+            else
+               SPDLOG_WARN("Failed to load image: {}", o.second);
+         }
+      }
+
+      if (!w.params.background_image.empty())
+      {
+         auto& ti = HUDElements.images[w.params.background_image];
+         if ((ti.texture = add_texture(data, w.params.background_image, &(ti.width), &(ti.height), 0)))
+         {
+            ti.valid = true;
+            auto& image = data->images[HKEY(ti.texture)];
+            SPDLOG_DEBUG("Adding '{}'", w.params.background_image);
+            load_image_file(data, w.params.background_image, &image);
+            ti.loaded = true;
+         }
+         else
+            SPDLOG_WARN("Failed to load image: {}", w.params.background_image);
+      }
+      SPDLOG_DEBUG("DONE LOADING");
+   });
 }
 
 static void CreateOrResizeBuffer(struct device_data *data,
@@ -988,37 +1087,40 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
 //    ensure_swapchain_fonts(data->device, draw->command_buffer);
 
    /* ensure_textures */
-   for (auto& tex : data->device->textures) {
-      if (!tex.descset)
-         continue;
+//    for (auto& tex : data->device->textures) {
+//       if (!tex.descset)
+//          continue;
 
-      if (!tex.image.uploaded) {
-//          tex.image.uploaded = true;
-
-         // load
-         int width, height, channels;
-         unsigned char* pixels = stbi_load(tex.filename.c_str(), &width, &height, &channels, STBI_rgb_alpha);
-         if (!pixels)
-         {
-            SPDLOG_ERROR("Failed to load image: {}", tex.filename);
-            continue;
-         }
-
-         // reduce the image
-         if (width > tex.maxwidth && tex.maxwidth != 0) {
-            unsigned char* pixels_resized = (unsigned char*)malloc(width * height * STBI_rgb_alpha);
-            stbir_resize_uint8(pixels, width, height, 0, pixels_resized, tex.image.width, tex.image.height, 0, STBI_rgb_alpha);
-            stbi_image_free(pixels);
-            pixels = pixels_resized;
-         }
-
-         SPDLOG_DEBUG("Uploading '{}' ({}x{})", tex.filename, tex.image.width, tex.image.height);
-         size_t upload_size = tex.image.width * tex.image.height * STBI_rgb_alpha;
-
-         submit_image_upload_cmd(device_data, &tex.image, pixels, upload_size);
-         stbi_image_free(pixels);
-      }
-   }
+//       if (!tex.image.uploaded && tex.image.loading) {
+//          // Not yet uploaded, clear image
+//          VkImageMemoryBarrier copy_barrier[1] = {};
+//          copy_barrier[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+//          copy_barrier[0].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+//          copy_barrier[0].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+//          copy_barrier[0].newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+//          copy_barrier[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+//          copy_barrier[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+//          copy_barrier[0].image = tex.image.image;
+//          copy_barrier[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+//          copy_barrier[0].subresourceRange.levelCount = 1;
+//          copy_barrier[0].subresourceRange.layerCount = 1;
+//          device_data->vtable.CmdPipelineBarrier(draw->command_buffer,
+//                                                 VK_PIPELINE_STAGE_HOST_BIT,
+//                                                 VK_PIPELINE_STAGE_TRANSFER_BIT,
+//                                                 0, 0, NULL, 0, NULL,
+//                                                 1, copy_barrier);
+//          VkClearColorValue color {};
+//          VkImageSubresourceRange ImageSubresourceRange;
+//          ImageSubresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+//          ImageSubresourceRange.baseMipLevel   = 0;
+//          ImageSubresourceRange.levelCount     = 1;
+//          ImageSubresourceRange.baseArrayLayer = 0;
+//          ImageSubresourceRange.layerCount     = 1;
+//          device_data->vtable.CmdClearColorImage(draw->command_buffer, tex.image.image,
+//                                                 VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED,
+//                                                 &color, 1, &ImageSubresourceRange);
+//       }
+//    }
 
    /* Bounce the image to display back to color attachment layout for
     * rendering on top of it.
@@ -1566,31 +1668,6 @@ static void setup_swapchain_data(struct swapchain_data *data,
                                                   NULL, &data->command_pool));
 }
 
-static void destroy_vk_image(struct device_data *device_data, vk_image& image)
-{
-   device_data->vtable.DestroyImageView(device_data->device, image.image_view, NULL);
-   device_data->vtable.DestroyImage(device_data->device, image.image, NULL);
-   device_data->vtable.FreeMemory(device_data->device, image.mem, NULL);
-   image = {};
-}
-
-static void shutdown_device_font(struct device_data *device_data)
-{
-   destroy_vk_image(device_data, device_data->font_img);
-}
-
-static void shutdown_textures(struct device_data *device_data)
-{
-   for (auto& tex : device_data->textures)
-   {
-      device_data->vtable.FreeDescriptorSets(device_data->device, device_data->descriptor_pool, 1, &tex.descset);
-      destroy_vk_image(device_data, tex.image);
-   }
-
-   HUDElements.image_infos = {};
-   HUDElements.background_image_infos = {};
-}
-
 static void shutdown_swapchain_data(struct swapchain_data *data)
 {
    struct device_data *device_data = data->device;
@@ -1989,7 +2066,7 @@ static void overlay_DestroyDevice(
    struct device_data *device_data = FIND(struct device_data, device);
    if (!is_blacklisted()) {
       shutdown_device_font(device_data);
-      shutdown_textures(device_data);
+        shutdown_images(device_data);
       IM_FREE(device_data->font_atlas);
       device_unmap_queues(device_data);
    }
@@ -2072,11 +2149,11 @@ static VkResult overlay_CreateInstance(
                              &instance_data->vtable);
    instance_data_map_physical_devices(instance_data, true);
 
-   auto w = g_overlay_params.get();
-   parse_overlay_config(&w.params, getenv("MANGOHUD_CONFIG"));
+   overlay_params params {};
+   parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
 
    //check for blacklist item in the config file
-   for (auto& item : w.params.blacklist) {
+   for (auto& item : params.blacklist) {
       add_blacklist(item);
    }
 
@@ -2087,14 +2164,14 @@ static VkResult overlay_CreateInstance(
       start_notifier(instance_data->notifier);
 #endif
 
-      init_cpu_stats(w.params);
+      init_cpu_stats(params);
 
       // Adjust height for DXVK/VKD3D version number
       if (engineName == "DXVK" || engineName == "VKD3D"){
-         if (w.params.font_size){
-            w.params.height += w.params.font_size * w.params.font_scale / 2;
+         if (params.font_size){
+            params.height += params.font_size * params.font_scale / 2;
          } else {
-            w.params.height += 24 * w.params.font_scale / 2;
+            params.height += 24 * params.font_scale / 2;
          }
       }
 
@@ -2104,6 +2181,8 @@ static VkResult overlay_CreateInstance(
    }
 
    instance_data->api_version = pCreateInfo->pApplicationInfo ? pCreateInfo->pApplicationInfo->apiVersion : VK_API_VERSION_1_0;
+
+   g_overlay_params = params;
    return result;
 }
 

@@ -1,33 +1,24 @@
 #pragma once
 #include <vector>
+#include <map>
 #include <string>
 #include <utility>
 #include <imgui.h>
 #include "timing.hpp"
 
 struct image_infos {
-  std::string path;
+//   std::string path;
   int width;
   int height;
   bool loaded;
   bool valid;
   ImTextureID texture;
-
-  image_infos() {
-    loaded = false;
-    valid  = false;
-  }
-
-  ~image_infos() {
-  }
 };
-
 
 struct overlay_params;
 class HudElements{
     public:
-        struct image_infos image_infos;
-        struct image_infos background_image_infos;
+        std::unordered_map<std::string, image_infos> images;
         struct swapchain_stats *sw_stats;
         struct overlay_params *params;
         struct exec_entry {
@@ -42,7 +33,6 @@ class HudElements{
         int place;
         int text_column = 1;
         Clock::time_point last_exec;
-        std::vector<std::pair<std::string, std::string>> options;
         std::vector<std::pair<void(*)(), std::string >> ordered_functions;
         int min, max, gpu_core_max, gpu_mem_max, cpu_temp_max, gpu_temp_max;
         const std::vector<std::string> permitted_params = {
