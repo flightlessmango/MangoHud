@@ -572,7 +572,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       if((now - logger->last_log_end()) < 12s && !logger->is_active())
          render_benchmark(data, params, window_size, height, now);
    }
-   
+
    if(params.enabled[OVERLAY_PARAM_ENABLED_fcat])
      {
        fcatstatus.update(&params);
@@ -815,7 +815,8 @@ void init_system_info(){
             if (wine_env)
                unsetenv("WINELOADERNOEXEC");
             wineVersion = exec(findVersion.str());
-            std::cout << "WINE VERSION = " << wineVersion << "\n";
+            trim(wineVersion);
+            SPDLOG_DEBUG("WINE version: {}", wineVersion);
             if (wine_env)
                setenv("WINELOADERNOEXEC", wine_env, 1);
          }

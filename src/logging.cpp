@@ -62,8 +62,8 @@ void writeSummary(string filename){
   auto& logArray = logger->get_log_data();
   filename = filename.substr(0, filename.size() - 4);
   filename += "_summary.csv";
-  printf("%s\n", filename.c_str());
-  SPDLOG_DEBUG("Writing summary log file [{}]", filename, logArray.size());
+  SPDLOG_INFO("{}", filename);
+  SPDLOG_DEBUG("Writing summary log file [{}]", filename);
   std::ofstream out(filename, ios::out | ios::app);
   if (out){
     out << "0.1% Min FPS," << "1% Min FPS," << "97% Percentile FPS," << "Average FPS," << "GPU Load," << "CPU Load" << "\n";
@@ -102,7 +102,7 @@ void writeSummary(string filename){
     result = total_cpu / sorted.size();
     out << result;
   } else {
-    printf("MANGOHUD: Failed to write log file\n");
+    SPDLOG_ERROR("Failed to write log file");
   }
 }
 
@@ -130,7 +130,7 @@ void writeFile(string filename){
     out << std::chrono::duration_cast<std::chrono::nanoseconds>(logArray[i].previous).count() << "\n";
   }
   } else {
-    printf("MANGOHUD: Failed to write log file\n");
+    SPDLOG_ERROR("Failed to write log file");
   }
 }
 

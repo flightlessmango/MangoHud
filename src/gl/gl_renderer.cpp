@@ -285,9 +285,8 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "    Out_Color = Frag_Color * vec4(1, 1, 1, texture(Texture, Frag_UV.st).r);\n"
         "}\n";
 
-#ifndef NDEBUG
-    fprintf(stderr, "glsl_version: %d\n", glsl_version);
-#endif
+    SPDLOG_DEBUG("glsl_version: {}", glsl_version);
+
     // Select shaders matching our GLSL versions
     const GLchar* vertex_shader = NULL;
     const GLchar* fragment_shader = NULL;
@@ -364,9 +363,6 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
 
 static void    ImGui_ImplOpenGL3_DestroyDeviceObjects()
 {
-#ifndef NDEBUG
-    fprintf(stderr, "%s\n", __func__);
-#endif
     if (g_VboHandle)        { glDeleteBuffers(1, &g_VboHandle); g_VboHandle = 0; }
     if (g_ElementsHandle)   { glDeleteBuffers(1, &g_ElementsHandle); g_ElementsHandle = 0; }
     if (g_ShaderHandle && g_VertHandle) { glDetachShader(g_ShaderHandle, g_VertHandle); }
