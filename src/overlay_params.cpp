@@ -681,6 +681,7 @@ parse_overlay_config(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_hide_fsr_sharpness] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_throttling_status] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_fcat] = 0;
          params->options.erase("full");
       }
       for (auto& it : params->options) {
