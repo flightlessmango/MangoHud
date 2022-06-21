@@ -53,8 +53,8 @@ build() {
     ${_build_args} -Dmangoapp=true -Dmangohudctl=true
 
   ninja -C build64
-  export CC="gcc -m32"
-  export CXX="g++ -m32"
+  export CC="${CC:-gcc} -m32"
+  export CXX="${CXX:-g++} -m32"
   export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH_32}"
   export LLVM_CONFIG="/usr/bin/llvm-config32"
 
