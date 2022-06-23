@@ -282,6 +282,7 @@ if get_option('mangoapp_layer')
     gnu_symbol_visibility : 'hidden',
     include_directories : [inc_common],
     link_args : link_args,
+    install_dir : libdir_mangohud,
     install : true
   )
 endif
