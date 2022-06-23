@@ -75,6 +75,7 @@ struct vk_image {
 //    std::string path;
    int width;
    int height;
+   std::function<void()> free_image;
 };
 
 /* Mapped from VkInstace/VkPhysicalDevice */
@@ -477,6 +478,8 @@ static void shutdown_images(struct device_data *data)
 
    for (auto& tex : data->images)
    {
+      SPDLOG_DEBUG("Freeing desc set {}", (void*)tex.second.descset);
+      tex.second.free_image();
       data->vtable.FreeDescriptorSets(data->device, data->descriptor_pool, 1, &tex.second.descset);
       destroy_vk_image(data, tex.second);
    }
@@ -931,7 +934,7 @@ static void load_image_file(struct device_data* device_data, std::string path, v
    stbi_image_free(pixels);
 }
 
-ImTextureID add_texture(device_data *data, const std::string& filename, int* width, int* height, int maxwidth) {
+ImTextureID add_texture(device_data *data, const std::string& filename, image_infos& info, int maxwidth) {
    auto desc_set = alloc_descriptor_set(data);
    auto& ti = data->images[HKEY(desc_set)];
    int original_width, original_height, channels;
@@ -946,12 +949,13 @@ ImTextureID add_texture(device_data *data, const std::string& filename, int* wid
    if (original_width > maxwidth && maxwidth != 0) {
       ratio = maxwidth / static_cast<float> (original_width);
    }
-   *width  = original_width  * ratio;
-   *height = original_height * ratio;
+   info.width  = original_width  * ratio;
+   info.height = original_height * ratio;
 
-   create_image(data, *width, *height, VK_FORMAT_R8G8B8A8_UNORM, ti);
+   create_image(data, info.width, info.height, VK_FORMAT_R8G8B8A8_UNORM, ti);
    update_image_descriptor(data, ti.image_view, desc_set);
    ti.descset = desc_set;
+   ti.free_image = [&info](){ info.valid = false; info.loaded = false; };
    return (ImTextureID) ti.descset;
 }
 
@@ -967,6 +971,7 @@ static void check_images(struct device_data* data)
 
    data->image_params_hash = w.params.image_params_hash;
 
+   data->vtable.DeviceWaitIdle(data->device);
    shutdown_images(data);
 
    data->loader_thr = std::thread([data](){
@@ -984,7 +989,7 @@ static void check_images(struct device_data* data)
          if (o.first == "image" && !o.second.empty())
          {
             auto& ti = HUDElements.images[o.second];
-            if ((ti.texture = add_texture(data, o.second, &ti.width, &ti.height, maxwidth)))
+            if ((ti.texture = add_texture(data, o.second, ti, maxwidth)))
             {
                ti.valid = true;
                auto& image = data->images[HKEY(ti.texture)];
@@ -1000,7 +1005,7 @@ static void check_images(struct device_data* data)
       if (!w.params.background_image.empty())
       {
          auto& ti = HUDElements.images[w.params.background_image];
-         if ((ti.texture = add_texture(data, w.params.background_image, &(ti.width), &(ti.height), 0)))
+         if (!ti.loaded && (ti.texture = add_texture(data, w.params.background_image, ti, 0)))
          {
             ti.valid = true;
             auto& image = data->images[HKEY(ti.texture)];
