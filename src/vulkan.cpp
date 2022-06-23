@@ -2161,7 +2161,7 @@ static VkResult overlay_CreateInstance(
 #ifdef __linux__
       init_system_info();
       instance_data->notifier.params = &g_overlay_params;
-      start_notifier(instance_data->notifier);
+      start_notifier(instance_data->notifier, params);
 #endif
 
       init_cpu_stats(params);

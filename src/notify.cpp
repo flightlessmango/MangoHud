@@ -43,7 +43,7 @@ static void fileChanged(notify_thread *nt) {
     }
 }
 
-bool start_notifier(notify_thread& nt)
+bool start_notifier(notify_thread& nt, overlay_params& params)
 {
     nt.fd = inotify_init1(IN_NONBLOCK);
     if (nt.fd < 0) {
@@ -51,8 +51,7 @@ bool start_notifier(notify_thread& nt)
         return false;
     }
 
-    auto w = nt.params->get();
-    nt.wd = inotify_add_watch(nt.fd, w.params.config_file_path.c_str(), IN_MODIFY | IN_DELETE_SELF);
+    nt.wd = inotify_add_watch(nt.fd, params.config_file_path.c_str(), IN_MODIFY | IN_DELETE_SELF);
     if (nt.wd < 0) {
         close(nt.fd);
         nt.fd = -1;

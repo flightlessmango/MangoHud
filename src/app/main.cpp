@@ -265,7 +265,7 @@ int main(int, char**)
     HUDElements.convert_colors(params);
     init_cpu_stats(params);
     notifier.params = &g_overlay_params;
-    start_notifier(notifier);
+    start_notifier(notifier, params);
     window_size = ImVec2(params.width, params.height);
     deviceName = (char*)glGetString(GL_RENDERER);
     sw_stats.deviceName = deviceName;

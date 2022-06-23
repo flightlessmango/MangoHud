@@ -159,7 +159,7 @@ void imgui_init()
     g_overlay_params = params;
     is_blacklisted(true);
     notifier.params = &g_overlay_params;
-    start_notifier(notifier);
+    start_notifier(notifier, params);
     window_size = ImVec2(params.width, params.height);
     init_system_info();
     cfg_inited = true;

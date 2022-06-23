@@ -15,7 +15,7 @@ struct notify_thread
     std::thread thread;
 };
 
-bool start_notifier(notify_thread& nt);
+bool start_notifier(notify_thread& nt, overlay_params& params);
 void stop_notifier(notify_thread& nt);
 
 #endif //MANGOHUD_NOTIFY_H
