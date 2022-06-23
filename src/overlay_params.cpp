@@ -46,14 +46,13 @@ static void apply_params(overlay_params& params, const overlay_params& old_param
 overlay_params_mutexed g_overlay_params;
 void overlay_params_mutexed::assign(overlay_params& r)
 {
-   std::unique_lock<std::mutex> lk(m);
-   ++waiting_writers;
-   writer_cv.wait(lk, [&](){ return active_readers == 0 && active_writers == 0; });
-   ++active_writers;
+   std::unique_lock<std::mutex> lk(writer_mutex);
+   writer_cv.wait(lk, [&](){ return readers == 0 && writers == 0; });
+   ++writers;
    apply_params(r, instance);
    instance = r;
-   --waiting_writers;
-   --active_writers;
+   SPDLOG_DEBUG("{}", __func__);
+   --writers;
    reader_cv.notify_all();
 }
 

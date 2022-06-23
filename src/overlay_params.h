@@ -295,10 +295,10 @@ private:
 
 class overlay_params_mutexed {
    overlay_params instance;
-   std::mutex m;
+   std::mutex writer_mutex;
    std::condition_variable reader_cv;
    std::condition_variable writer_cv;
-   std::atomic_size_t waiting_writers, active_readers, active_writers;
+   std::atomic_size_t writers, readers;
 public:
    overlay_params_mutexed() = default;
    overlay_params_mutexed(const overlay_params_mutexed&) = delete;
@@ -327,14 +327,25 @@ public:
 
    overlay_params_wrapper get()
    {
-      std::unique_lock<std::mutex> lk(m);
-      // If get() is called again from a sub function, it may block on waiting writers so just continue if active_readers > 0
-      reader_cv.wait(lk, [&](){ return waiting_writers == 0 || active_readers > 0; });
-      ++active_readers;
+      do
+      {
+         if (writers > 0)
+         {
+            std::unique_lock<std::mutex> lk(writer_mutex);
+            // If get() is called again from a sub function, it may block on waiting writers so just continue if active_readers > 0
+            reader_cv.wait(lk, [&](){ return writers == 0 || readers > 0; });
+         }
+
+         ++readers;
+         if (writers == 0)
+            break;
+         --readers;
+      } while(true);
+
       return {
          instance,
          [&]() -> void {
-            --active_readers;
+            --readers;
             writer_cv.notify_all();
          }
       };
