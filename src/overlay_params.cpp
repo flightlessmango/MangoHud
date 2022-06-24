@@ -712,6 +712,10 @@ parse_overlay_config(struct overlay_params *params,
       parse_overlay_env(params, env);
    }
 
+   // If fps_only param is enabled disable legacy_layout
+   if (params->enabled[OVERLAY_PARAM_ENABLED_fps_only])
+      params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout] = false;
+
    if (is_blacklisted())
       return;
 
