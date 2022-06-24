@@ -353,7 +353,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `battery`                          | Display current battery percent and energy consumption                                |
 | `battery_icon`                     | Display battery icon instead of percent                                               |
 | `battery_color`                    | Change the BATT text color                                                            |
-| `fps_only`                         | Show FPS without the engine name e.g. DXVK/VULAKAN etc.                               |
+| `fps_only`                         | Show FPS only. ***Not meant to be used with other display params***                   |
 | `gamepad_battery`                  | Display battey of wireless gamepads (xone,xpadneo,ds4)                                |
 | `gamepad_battery_icon`             | Display gamepad battery percent with icon. *enabled by default                        |
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
