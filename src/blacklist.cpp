@@ -1,6 +1,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <spdlog/spdlog.h>
 
 #include "blacklist.h"
 #include "string_utils.h"
@@ -45,7 +46,7 @@ static bool check_blacklisted() {
     bool blacklisted = std::find(blacklist.begin(), blacklist.end(), proc_name) != blacklist.end();
 
     if(blacklisted) {
-        fprintf(stderr, "INFO: process %s is blacklisted in MangoHud\n", proc_name.c_str());
+        SPDLOG_INFO("process '{}' is blacklisted in MangoHud", proc_name);
     }
 
     return blacklisted;
