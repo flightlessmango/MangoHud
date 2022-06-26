@@ -77,6 +77,12 @@ void init_spdlog()
    spdlog::set_level(spdlog::level::level_enum::debug);
 #endif
    spdlog::cfg::load_env_levels();
+
+   const char* log_level = getenv("MANGOHUD_LOG_LEVEL");
+   if (log_level) {
+      spdlog::set_level(spdlog::level::from_str(log_level));
+   }
+
 }
 
 void FpsLimiter(struct fps_limit& stats){
