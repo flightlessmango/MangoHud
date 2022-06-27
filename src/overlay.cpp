@@ -80,7 +80,25 @@ void init_spdlog()
 
    const char* log_level = getenv("MANGOHUD_LOG_LEVEL");
    if (log_level) {
-      spdlog::set_level(spdlog::level::from_str(log_level));
+      std::string level = log_level;
+      if( level == "off" || level == "OFF" ) {
+         spdlog::set_level(spdlog::level::level_enum::off);
+      }
+      else if( level == "info" || level == "INFO" ) {
+         spdlog::set_level(spdlog::level::level_enum::info);
+      }
+      else if( level == "err" || level == "ERR" ) {
+         spdlog::set_level(spdlog::level::level_enum::err);
+      }
+      else if( level == "warn" || level == "WARN" ) {
+         spdlog::set_level(spdlog::level::level_enum::warn);
+      }
+      else if( level == "debug" || level == "DEBUG") {
+         spdlog::set_level(spdlog::level::level_enum::debug);
+      }
+      else {
+         SPDLOG_ERROR("'{}' is not a valid log_level", level);
+      }
    }
 
 }
