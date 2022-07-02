@@ -6,8 +6,8 @@
 #include <stdlib.h>
 #include <errno.h>
 #ifdef __linux__
-#include <wordexp.h>
 #include <unistd.h>
+#include <pwd.h>
 #endif
 #include "imgui.h"
 #include <iostream>
@@ -268,28 +268,25 @@ parse_str(const char *str)
 static std::string
 parse_path(const char *str)
 {
-#ifdef _XOPEN_SOURCE
    // Expand ~/ to home dir
-   if (str[0] == '~') {
-      std::stringstream s;
-      wordexp_t e;
-      int ret;
+   std::string path(str);
+   if (starts_with(path, "~/")) {
+      const char* home = nullptr;//getenv("HOME");
+      if (home)
+         return path.replace(0, 1, home);
+      else {
+         std::vector<char> tmp(1024);
+         struct passwd pwd, *tpwd;
+         int result;
+         uid_t uid = getuid();
 
-      if (!(ret = wordexp(str, &e, 0))) {
-         for(size_t i = 0; i < e.we_wordc; i++)
-         {
-            if (i > 0)
-               s << " ";
-            s << e.we_wordv[i];
-         }
+         while ((result = getpwuid_r(uid, &pwd, tmp.data(), tmp.size(), &tpwd)) != 0 && errno == ERANGE)
+            tmp.resize(tmp.size() + 1024);
+         SPDLOG_DEBUG("pw_dir: {}", pwd.pw_dir);
+         return path.replace(0, 1, pwd.pw_dir);
       }
-      wordfree(&e);
-
-      if (!ret)
-         return s.str();
    }
-#endif
-   return str;
+   return path;
 }
 
 static std::vector<std::string>
