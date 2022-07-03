@@ -1,0 +1,22 @@
+# bash completion for mangohud(1)                          -*- shell-script -*-
+
+_mangohud() {
+    local cur prev words cword split
+    _init_completion -s || return
+
+    for (( i = 1; i <= cword; i++ )); do
+        if [[ ${words[i]} != -* ]]; then
+            local root_command=${words[i]}
+            _command_offset "$i"
+            return
+        fi
+    done
+
+    $split && return
+
+    if [[ $cur == -* ]]; then
+        COMPREPLY=(--dlsym)
+        return
+    fi
+} &&
+    complete -F _mangohud mangohud

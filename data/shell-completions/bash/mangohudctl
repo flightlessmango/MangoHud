@@ -1,0 +1,17 @@
+# bash completion for mangohudctl(1)                       -*- shell-script -*-
+
+_mangohudctl() {
+    local cur prev words cword split
+    _init_completion -s || return
+
+    $split && return
+
+    if [[ $cword == 1 ]]; then
+        COMPREPLY=( $(compgen -W "set toggle" -- $cur) )
+    elif [[ $cword == 2 ]]; then
+        COMPREPLY=( $(compgen -W "$(mangohudctl 2>&1 | sed -n '/^Usage/d;/Attributes:/d;/Accepted/q;s/\s\+//;s/\s\+.*$//;p')" -- $cur) )
+    elif [[ $cword == 3 && ${words[1]} == set ]]; then
+        COMPREPLY=( $(compgen -W "true false" -- $cur) )
+    fi
+} &&
+    complete -F _mangohudctl mangohudctl
