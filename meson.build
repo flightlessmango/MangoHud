@@ -238,14 +238,15 @@ imgui_options = [
 sizeof_ptr = cc.sizeof('void*')
 if sizeof_ptr == 8
   pre_args += '-DMANGOHUD_ARCH="64bit"'
-  if get_option('mangoapp')
-    imgui_options += [
-      'opengl=enabled',
-      'glfw=enabled',
-    ]
-  endif
 elif sizeof_ptr == 4
   pre_args += '-DMANGOHUD_ARCH="32bit"'
+endif
+
+if get_option('mangoapp')
+  imgui_options += [
+    'opengl=enabled',
+    'glfw=enabled',
+  ]
 endif
 
 dearimgui_sp = subproject('imgui', default_options: imgui_options)

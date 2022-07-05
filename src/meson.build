@@ -215,7 +215,7 @@ if is_unixy
   )
 endif
 
-if get_option('mangoapp') and sizeof_ptr == 8
+if get_option('mangoapp')
   pre_args += '-DIMGUI_IMPL_OPENGL_LOADER_GLEW'
   pre_args += '-DMANGOAPP'
   mangoapp = executable(
@@ -254,7 +254,7 @@ if get_option('mangoapp') and sizeof_ptr == 8
   )
 endif
 
-if get_option('mangohudctl') and sizeof_ptr == 8
+if get_option('mangohudctl')
 mangoapp = executable(
   'mangohudctl',
   files('app/control.cpp'),
