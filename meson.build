@@ -276,8 +276,7 @@ endif
 
 if get_option('mangoapp') or get_option('mangoapp_layer')
   glfw3_dep = dependency('glfw3')
-  json_sp = subproject('nlohmann_json')
-  json_dep = json_sp.get_variable('nlohmann_json_dep')
+  json_dep = dependency('nlohmann_json')
 endif
 
 subdir('src')
