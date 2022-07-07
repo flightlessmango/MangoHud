@@ -136,7 +136,7 @@ static void msg_read_thread(){
     }
     int key = ftok("mangoapp", 65);
     msgid = msgget(key, 0666 | IPC_CREAT);
-    uint32_t previous_pid = 0;
+    // uint32_t previous_pid = 0;
     const struct mangoapp_msg_header *hdr = (const struct mangoapp_msg_header*) raw_msg;
     const struct mangoapp_msg_v1 *mangoapp_v1 = (const struct mangoapp_msg_v1*) raw_msg;
     while (1){
