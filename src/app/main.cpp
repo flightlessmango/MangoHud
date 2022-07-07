@@ -227,7 +227,9 @@ static bool render(GLFWwindow* window) {
     position_layer(sw_stats, params, window_size);
     render_imgui(sw_stats, params, window_size, true);
     overlay_end_frame();
-    glfwSetWindowSize(window, window_size.x + 45.f, window_size.y + 325.f);
+    if (!params.enabled[OVERLAY_PARAM_ENABLED_fps_only])
+        glfwSetWindowSize(window, window_size.x + 45.f, window_size.y + 325.f);
+
     ImGui::EndFrame();
     return last_window_size.x != window_size.x || last_window_size.y != window_size.y;
 }
