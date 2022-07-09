@@ -101,7 +101,7 @@ EXPORT_C_(int) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
 
     if (!is_blacklisted()) {
         if (ret) {
-            imgui_set_context(ctx);
+            imgui_set_context(ctx, gl_platform::GLX);
             SPDLOG_DEBUG("GL ref count: {}", refcnt);
         }
 
@@ -125,7 +125,7 @@ static void do_imgui_swap(void *dpy, void *drawable)
 {
     GLint vp[4];
     if (!is_blacklisted()) {
-        imgui_create(glx.GetCurrentContext());
+        imgui_create(glx.GetCurrentContext(), gl_platform::GLX);
 
         unsigned int width = -1, height = -1;
 

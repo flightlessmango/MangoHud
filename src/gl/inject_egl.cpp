@@ -59,7 +59,7 @@ EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf)
         if (!pfn_eglQuerySurface)
             pfn_eglQuerySurface = reinterpret_cast<decltype(pfn_eglQuerySurface)>(get_egl_proc_address("eglQuerySurface"));
 
-        imgui_create(surf);
+        imgui_create(surf, gl_platform::EGL);
 
         int width=0, height=0;
         if (pfn_eglQuerySurface(dpy, surf, 0x3056, &height) &&
