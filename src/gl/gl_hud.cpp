@@ -16,6 +16,11 @@
 #include <glad/glad.h>
 
 
+#define GLX_RENDERER_VENDOR_ID_MESA                      0x8183
+#define GLX_RENDERER_DEVICE_ID_MESA                      0x8184
+
+bool glx_mesa_queryInteger(int attrib, unsigned int *value);
+
 namespace MangoHud { namespace GL {
 
 struct GLVec
@@ -93,7 +98,7 @@ void imgui_init()
 }
 
 //static
-void imgui_create(void *ctx)
+void imgui_create(void *ctx, const gl_wsi plat)
 {
     if (inited)
         return;
@@ -134,7 +139,13 @@ void imgui_create(void *ctx)
     }
     if (deviceName.find("zink") != std::string::npos)
         sw_stats.engine = EngineTypes::ZINK;
-    init_gpu_stats(vendorID, 0, params);
+
+    uint32_t device_id = 0;
+    if (plat == gl_wsi::GL_WSI_GLX)
+        glx_mesa_queryInteger(GLX_RENDERER_DEVICE_ID_MESA, &device_id);
+
+    SPDLOG_DEBUG("GL device id: {:04X}", device_id);
+    init_gpu_stats(vendorID, device_id, params);
     sw_stats.gpuName = gpu = get_device_name(vendorID, deviceID);
     SPDLOG_DEBUG("gpu: {}", gpu);
     // Setup Dear ImGui context
@@ -176,11 +187,11 @@ void imgui_shutdown()
     inited = false;
 }
 
-void imgui_set_context(void *ctx)
+void imgui_set_context(void *ctx, const gl_wsi plat)
 {
     if (!ctx)
         return;
-    imgui_create(ctx);
+    imgui_create(ctx, plat);
 }
 
 void imgui_render(unsigned int width, unsigned int height)

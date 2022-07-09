@@ -51,6 +51,17 @@ static void* get_glx_proc_address(const char* name) {
     return func;
 }
 
+bool glx_mesa_queryInteger(int attrib, unsigned int *value);
+bool glx_mesa_queryInteger(int attrib, unsigned int *value)
+{
+    static int (*pfn_queryInteger)(int attribute, unsigned int *value) =
+        reinterpret_cast<decltype(pfn_queryInteger)>(get_glx_proc_address(
+                    "glXQueryCurrentRendererIntegerMESA"));
+    if (pfn_queryInteger)
+        return !!pfn_queryInteger(attrib, value);
+    return false;
+}
+
 EXPORT_C_(void *) glXCreateContext(void *dpy, void *vis, void *shareList, int direct)
 {
     glx.Load();
@@ -99,7 +110,7 @@ EXPORT_C_(int) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
 
     if (!is_blacklisted()) {
         if (ret) {
-            imgui_set_context(ctx);
+            imgui_set_context(ctx, gl_wsi::GL_WSI_GLX);
             SPDLOG_DEBUG("GL ref count: {}", refcnt);
         }
 
@@ -123,7 +134,7 @@ static void do_imgui_swap(void *dpy, void *drawable)
 {
     GLint vp[4];
     if (!is_blacklisted()) {
-        imgui_create(glx.GetCurrentContext());
+        imgui_create(glx.GetCurrentContext(), gl_wsi::GL_WSI_GLX);
 
         unsigned int width = -1, height = -1;
 
