@@ -139,7 +139,7 @@ void ImguiNextColumnOrNewRow(int column = -1)
 
 void ImGuiTableSetColumnIndex(int column)
 {
-    ImGui::TableSetColumnIndex(std::min(column, ImGui::TableGetColumnCount() - 1));
+    ImGui::TableSetColumnIndex(std::max(0, std::min(column, ImGui::TableGetColumnCount() - 1)));
 }
 
 void HudElements::time(){
@@ -579,7 +579,6 @@ void HudElements::frame_timing(){
         ImGui::TableSetColumnIndex(ImGui::TableGetColumnCount() - 1);
         ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
         right_aligned_text(HUDElements.colors.text, ImGui::GetContentRegionAvail().x, "min: %.1fms, max: %.1fms", min_frametime, max_frametime);
-        ImGui::PopFont();
         ImGui::TableNextRow(); ImGui::TableNextColumn();
         char hash[40];
         snprintf(hash, sizeof(hash), "##%s", overlay_param_names[OVERLAY_PARAM_ENABLED_frame_timing]);
@@ -589,9 +588,10 @@ void HudElements::frame_timing(){
         double min_time = 0.0f;
         double max_time = 50.0f;
 #ifdef MANGOAPP
-        int width = ImGui::GetWindowContentRegionWidth() - 30;
+        const ImVec2 sz = ImGui::CalcTextSize("1000.0ms");
+        float width = ImGui::GetWindowContentRegionWidth() - sz.x;
 #else
-        int width = ImGui::GetWindowContentRegionWidth();
+        float width = ImGui::GetWindowContentRegionWidth();
 #endif
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_histogram]){
             ImGui::PlotHistogram(hash, get_time_stat, HUDElements.sw_stats,
@@ -603,13 +603,13 @@ void HudElements::frame_timing(){
                             ARRAY_SIZE(HUDElements.sw_stats->frames_stats), 0,
                             NULL, min_time, max_time,
                             ImVec2(width, 50));
-#ifdef MANGOAPP
-            ImGui::SameLine();
-            ImGui::PushFont(HUDElements.sw_stats->font1);
-            ImGui::Text("%.1fms", frametime / 1000.f);
-            ImGui::PopFont();
-#endif
         }
+#ifdef MANGOAPP
+        ImGui::SameLine();
+        ImGuiTableSetColumnIndex(ImGui::TableGetColumnCount() - 1);
+        right_aligned_text(HUDElements.colors.text, ImGui::GetContentRegionAvail().x, "%.1fms", frametime / 1000.f);
+#endif
+        ImGui::PopFont();
         ImGui::PopStyleColor();
     }
 }
