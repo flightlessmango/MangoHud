@@ -163,7 +163,7 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
    if (graph_data.size() >= kMaxGraphEntries)
       graph_data.pop_front();
    graph_data.push_back(currentLogData);
-   logger->notify_data_valid();
+   if (logger) logger->notify_data_valid();
    HUDElements.update_exec();
 }
 
