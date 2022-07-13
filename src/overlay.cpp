@@ -571,13 +571,14 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
 
    if (!params.no_display && !steam_focused){
       ImGui::Begin("Main", &gui_open, ImGuiWindowFlags_NoDecoration);
-      ImGui::BeginTable("hud", params.table_columns, ImGuiTableFlags_NoClip);
-      HUDElements.place = 0;
-      for (auto& func : HUDElements.ordered_functions){
-         func.first();
-         HUDElements.place += 1;
+      if (ImGui::BeginTable("hud", params.table_columns, ImGuiTableFlags_NoClip)) {
+         HUDElements.place = 0;
+         for (auto& func : HUDElements.ordered_functions){
+            func.first();
+            HUDElements.place += 1;
+         }
+         ImGui::EndTable();
       }
-      ImGui::EndTable();
 
       if(logger->is_active())
          ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(data.main_window_pos.x + window_size.x - 15, data.main_window_pos.y + 15), 10, params.engine_color, 20);
