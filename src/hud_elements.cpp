@@ -194,9 +194,6 @@ void HudElements::gpu_stats(){
             ImGui::SameLine(0, 1.0f);
             ImGui::Text("°C");
         }
-        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock] || HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power]){
-            ImGui::TableNextRow(); ImGui::TableNextColumn();
-        }
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]){
             ImguiNextColumnOrNewRow();
             right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.CoreClock);
