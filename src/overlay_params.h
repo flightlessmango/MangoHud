@@ -63,6 +63,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(legacy_layout)                 \
    OVERLAY_PARAM_BOOL(cpu_mhz)                       \
    OVERLAY_PARAM_BOOL(frametime)                     \
+   OVERLAY_PARAM_BOOL(frame_count)                   \
    OVERLAY_PARAM_BOOL(resolution)                    \
    OVERLAY_PARAM_BOOL(show_fps_limit)                \
    OVERLAY_PARAM_BOOL(fps_color_change)              \
@@ -73,7 +74,16 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(gamemode)                      \
    OVERLAY_PARAM_BOOL(battery)                       \
    OVERLAY_PARAM_BOOL(battery_icon)                  \
-   OVERLAY_PARAM_BOOL(force_amdgpu_hwmon)            \
+   OVERLAY_PARAM_BOOL(fps_only)                      \
+   OVERLAY_PARAM_BOOL(fsr)                           \
+   OVERLAY_PARAM_BOOL(mangoapp_steam)                \
+   OVERLAY_PARAM_BOOL(debug)                         \
+   OVERLAY_PARAM_BOOL(gamepad_battery)               \
+   OVERLAY_PARAM_BOOL(gamepad_battery_icon)          \
+   OVERLAY_PARAM_BOOL(hide_fsr_sharpness)            \
+   OVERLAY_PARAM_BOOL(fan)                           \
+   OVERLAY_PARAM_BOOL(throttling_status)             \
+   OVERLAY_PARAM_BOOL(fcat)                          \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
@@ -142,7 +152,9 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(blacklist)                   \
    OVERLAY_PARAM_CUSTOM(autostart_log)               \
    OVERLAY_PARAM_CUSTOM(round_corners)               \
-
+   OVERLAY_PARAM_CUSTOM(fsr_steam_sharpness)         \
+   OVERLAY_PARAM_CUSTOM(fcat_screen_edge)            \
+   OVERLAY_PARAM_CUSTOM(fcat_overlay_width)          \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -242,14 +254,15 @@ struct overlay_params {
    std::string config_file_path;
    std::unordered_map<std::string,std::string> options;
    int permit_upload;
+   int fsr_steam_sharpness;
+   unsigned short fcat_screen_edge;
+   unsigned short fcat_overlay_width;
 
    size_t font_params_hash;
 };
 
 const extern char *overlay_param_names[];
 
-void parse_overlay_env(struct overlay_params *params,
-                       const char *env);
 void parse_overlay_config(struct overlay_params *params,
                        const char *env);
 

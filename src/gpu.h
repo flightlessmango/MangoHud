@@ -4,16 +4,19 @@
 
 #include <cstdio>
 #include <cstdint>
+#include "overlay_params.h"
 
 struct amdgpu_files
 {
-    FILE *busy;
-    FILE *temp;
     FILE *vram_total;
     FILE *vram_used;
+    /* The following can be NULL, in that case we're using the gpu_metrics node */
+    FILE *busy;
+    FILE *temp;
     FILE *core_clock;
     FILE *memory_clock;
     FILE *power_usage;
+    FILE *gtt_used;
 };
 
 extern amdgpu_files amdgpu;
@@ -25,19 +28,20 @@ struct gpuInfo{
     float memoryTotal;
     int MemClock;
     int CoreClock;
-    int powerUsage;
+    float powerUsage;
+    float apu_cpu_power;
+    int apu_cpu_temp;
+    bool is_power_throttled;
+    bool is_current_throttled;
+    bool is_temp_throttled;
+    bool is_other_throttled;
+    float gtt_used;
 };
 
 extern struct gpuInfo gpu_info;
 
-void getNvidiaGpuInfo(void);
+void getNvidiaGpuInfo(const struct overlay_params& params);
 void getAmdGpuInfo(void);
-#ifdef HAVE_LIBDRM_AMDGPU
-void getAmdGpuInfo_libdrm();
-bool amdgpu_open(const char *path);
-void amdgpu_set_sampling_period(uint32_t period);
-#endif
-extern decltype(&getAmdGpuInfo) getAmdGpuInfo_actual;
 bool checkNvidia(const char *pci_dev);
 extern void nvapi_util();
 extern bool checkNVAPI();

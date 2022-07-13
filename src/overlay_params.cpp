@@ -18,8 +18,6 @@
 #include <array>
 #include <functional>
 #include <spdlog/spdlog.h>
-#include <spdlog/cfg/env.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
 
 #include "overlay_params.h"
 #include "overlay.h"
@@ -36,6 +34,10 @@
 
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
+#endif
+
+#ifdef MANGOAPP
+#include "app/mangoapp.h"
 #endif
 
 #if __cplusplus >= 201703L
@@ -94,9 +96,15 @@ parse_position(const char *str)
 static int
 parse_control(const char *str)
 {
-   int ret = os_socket_listen_abstract(str, 1);
+   std::string path(str);
+   size_t npos = path.find("%p");
+   if (npos != std::string::npos)
+      path.replace(npos, 2, std::to_string(getpid()));
+   SPDLOG_DEBUG("Socket: {}", path);
+
+   int ret = os_socket_listen_abstract(path.c_str(), 1);
    if (ret < 0) {
-      SPDLOG_ERROR("Couldn't create socket pipe at '{}'\n", str);
+      SPDLOG_ERROR("Couldn't create socket pipe at '{}'", path);
       SPDLOG_ERROR("ERROR: '{}'", strerror(errno));
       return ret;
    }
@@ -400,6 +408,8 @@ parse_gl_size_query(const char *str)
 #define parse_gl_bind_framebuffer(s) parse_unsigned(s)
 #define parse_gl_dont_flip(s) parse_unsigned(s) != 0
 #define parse_round_corners(s) parse_unsigned(s)
+#define parse_fcat_overlay_width(s) parse_unsigned(s)
+#define parse_fcat_screen_edge(s) parse_unsigned(s)
 
 #define parse_cpu_color(s) parse_color(s)
 #define parse_gpu_color(s) parse_color(s)
@@ -423,6 +433,7 @@ parse_gl_size_query(const char *str)
 #define parse_fps_color(s) parse_load_color(s)
 #define parse_battery_color(s) parse_color(s)
 #define parse_media_player_format(s) parse_str_tokenize(s, ";", false)
+#define parse_fsr_steam_sharpness(s) parse_float(s)
 
 static bool
 parse_help(const char *str)
@@ -496,7 +507,7 @@ const char *overlay_param_names[] = {
 #undef OVERLAY_PARAM_CUSTOM
 };
 
-void
+static void
 parse_overlay_env(struct overlay_params *params,
                   const char *env)
 {
@@ -516,7 +527,15 @@ parse_overlay_env(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_histogram] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_gpu_load_change] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_cpu_load_change] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_fps_only] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_fps_color_change] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_core_load_change] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_battery_icon] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_hide_fsr_sharpness] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_throttling_status] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = read_cfg;
+         params->enabled[OVERLAY_PARAM_ENABLED_fcat] = 0;
       }
 #define OVERLAY_PARAM_BOOL(name)                                       \
       if (!strcmp(#name, key)) {                                       \
@@ -540,13 +559,6 @@ void
 parse_overlay_config(struct overlay_params *params,
                   const char *env)
 {
-   if (!spdlog::get("MANGOHUD"))
-      spdlog::set_default_logger(spdlog::stderr_color_mt("MANGOHUD")); // Just to get the name in log
-#ifndef NDEBUG
-   spdlog::set_level(spdlog::level::level_enum::debug);
-#endif
-   spdlog::cfg::load_env_levels();
-
    *params = {};
 
    /* Visible by default */
@@ -571,6 +583,11 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_core_load_change] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_frametime] = true;
+   params->enabled[OVERLAY_PARAM_ENABLED_fps_only] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_gamepad_battery] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_gamepad_battery_icon] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_throttling_status] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_fcat] = false;
    params->fps_sampling_period = 500000000; /* 500ms */
    params->width = 0;
    params->height = 140;
@@ -582,6 +599,8 @@ parse_overlay_config(struct overlay_params *params,
    params->offset_y = 0;
    params->background_alpha = 0.5;
    params->alpha = 1.0;
+   params->fcat_screen_edge = 0;
+   params->fcat_overlay_width = 24;
    params->time_format = "%T";
    params->gpu_color = 0x2e9762;
    params->cpu_color = 0x2e97cb;
@@ -602,7 +621,7 @@ parse_overlay_config(struct overlay_params *params,
    params->log_interval = 100;
    params->media_player_format = { "{title}", "{artist}", "{album}" };
    params->permit_upload = 0;
-   params->benchmark_percentiles = { "97", "AVG", "1", "0.1" };
+   params->benchmark_percentiles = { "97", "AVG"};
    params->gpu_load_value = { 60, 90 };
    params->cpu_load_value = { 60, 90 };
    params->cellpadding_y = -0.085;
@@ -610,8 +629,7 @@ parse_overlay_config(struct overlay_params *params,
    params->fps_value = { 30, 60 };
    params->round_corners = 0;
    params->battery_color =0xff9078;
-
-
+   params->fsr_steam_sharpness = -1;
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_Shift_R, XK_F12 };
@@ -658,6 +676,12 @@ parse_overlay_config(struct overlay_params *params,
 #undef OVERLAY_PARAM_BOOL
 #undef OVERLAY_PARAM_CUSTOM
          params->enabled[OVERLAY_PARAM_ENABLED_histogram] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_fps_only] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_battery_icon] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_hide_fsr_sharpness] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_throttling_status] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_fcat] = 0;
          params->options.erase("full");
       }
       for (auto& it : params->options) {
@@ -687,6 +711,10 @@ parse_overlay_config(struct overlay_params *params,
       HUDElements.ordered_functions.clear();
       parse_overlay_env(params, env);
    }
+
+   // If fps_only param is enabled disable legacy_layout
+   if (params->enabled[OVERLAY_PARAM_ENABLED_fps_only])
+      params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout] = false;
 
    if (is_blacklisted())
       return;
@@ -730,17 +758,20 @@ parse_overlay_config(struct overlay_params *params,
    if (!params->table_columns)
       params->table_columns = 3;
 
+   params->table_columns = std::max(1u, std::min(64u, params->table_columns));
+
    if (!params->font_size) {
       params->font_size = 24;
    }
 
    //increase hud width if io read and write
    if (!params->width) {
+      params->width = params->font_size * params->font_scale * params->table_columns * 4;
+
       if ((params->enabled[OVERLAY_PARAM_ENABLED_io_read] || params->enabled[OVERLAY_PARAM_ENABLED_io_write])) {
-         params->width = 13 * params->font_size * params->font_scale;
-      } else {
-         params->width = params->font_size * params->font_scale * 11.7;
+         params->width += 2 * params->font_size * params->font_scale;
       }
+
       // Treat it like hud would need to be ~7 characters wider with default font.
       if (params->no_small_font)
          params->width += 7 * params->font_size * params->font_scale;
@@ -770,13 +801,13 @@ parse_overlay_config(struct overlay_params *params,
       main_metadata.meta.valid = false;
    }
 
-   if (params->enabled[OVERLAY_PARAM_ENABLED_gamemode])
-   {
-      if (dbusmgr::dbus_mgr.init(dbusmgr::SRV_GAMEMODE))
-         HUDElements.gamemode_bol = dbusmgr::dbus_mgr.gamemode_enabled(getpid());
-   }
-   else
-      dbusmgr::dbus_mgr.deinit(dbusmgr::SRV_GAMEMODE);
+   // if (params->enabled[OVERLAY_PARAM_ENABLED_gamemode])
+   // {
+   //    if (dbusmgr::dbus_mgr.init(dbusmgr::SRV_GAMEMODE))
+   //       HUDElements.gamemode_bol = dbusmgr::dbus_mgr.gamemode_enabled(getpid());
+   // }
+   // else
+   //    dbusmgr::dbus_mgr.deinit(dbusmgr::SRV_GAMEMODE);
 
 #endif
 
@@ -786,6 +817,9 @@ parse_overlay_config(struct overlay_params *params,
 
    auto real_size = params->font_size * params->font_scale;
    real_font_size = ImVec2(real_size, real_size / 2);
+#ifdef MANGOAPP
+   params->log_interval = 0;
+#endif
    HUDElements.params = params;
    if (params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout]){
         HUDElements.legacy_elements();
@@ -796,8 +830,23 @@ parse_overlay_config(struct overlay_params *params,
 
    // Needs ImGui context but it is null here for OpenGL so just note it and update somewhere else
    HUDElements.colors.update = true;
+   if (params->no_small_font)
+      HUDElements.text_column = 2;
+   else
+      HUDElements.text_column = 1;
 
-   if(!logger) logger = std::make_unique<Logger>(params);
+   if(logger && logger->m_params == nullptr) logger.reset();
+   if(!logger) logger = std::make_unique<Logger>(HUDElements.params);
    if(params->autostart_log && !logger->is_active())
       std::thread(autostart_log, params->autostart_log).detach();
+#ifdef MANGOAPP
+   {
+      extern bool new_frame;
+      std::lock_guard<std::mutex> lk(mangoapp_m);
+      params->no_display = params->no_display;
+      new_frame = true; // we probably changed how we look.
+   }
+   mangoapp_cv.notify_one();
+   g_fsrSharpness = params->fsr_steam_sharpness;
+#endif
 }

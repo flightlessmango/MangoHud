@@ -66,7 +66,7 @@
 
 #include <spdlog/spdlog.h>
 #include <imgui.h>
-#include "imgui_impl_opengl3.h"
+#include "gl_renderer.h"
 #include <stdio.h>
 #include <stdint.h>     // intptr_t
 #include <sstream>
@@ -285,9 +285,8 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "    Out_Color = Frag_Color * vec4(1, 1, 1, texture(Texture, Frag_UV.st).r);\n"
         "}\n";
 
-#ifndef NDEBUG
-    fprintf(stderr, "glsl_version: %d\n", glsl_version);
-#endif
+    SPDLOG_DEBUG("glsl_version: {}", glsl_version);
+
     // Select shaders matching our GLSL versions
     const GLchar* vertex_shader = NULL;
     const GLchar* fragment_shader = NULL;
@@ -364,9 +363,6 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
 
 static void    ImGui_ImplOpenGL3_DestroyDeviceObjects()
 {
-#ifndef NDEBUG
-    fprintf(stderr, "%s\n", __func__);
-#endif
     if (g_VboHandle)        { glDeleteBuffers(1, &g_VboHandle); g_VboHandle = 0; }
     if (g_ElementsHandle)   { glDeleteBuffers(1, &g_ElementsHandle); g_ElementsHandle = 0; }
     if (g_ShaderHandle && g_VertHandle) { glDetachShader(g_ShaderHandle, g_VertHandle); }
@@ -447,7 +443,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
 
     // Setup back-end capabilities flags
     ImGuiIO& io = ImGui::GetIO();
-    io.BackendRendererName = "imgui_impl_opengl3";
+    io.BackendRendererName = "mangohud_opengl3";
     //#if IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
     if (g_GlVersion >= 320) // GL/GLES 3.2+
         io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.

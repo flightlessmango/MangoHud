@@ -6,6 +6,7 @@
 #include "dbus_helpers.h"
 #include "dbus_info.h"
 #include "string_utils.h"
+#include "file_utils.h"
 
 using ms = std::chrono::milliseconds;
 using namespace DBus_helpers;
@@ -268,7 +269,7 @@ void dbus_manager::deinit(Service srv) {
     }
 }
 
-dbus_manager::~dbus_manager() { deinit(SRV_ALL); }
+dbus_manager::~dbus_manager() { deinit(static_cast<Service>(m_active_srvs)); }
 
 DBusHandlerResult dbus_manager::filter_signals(DBusConnection* conn,
                                                DBusMessage* msg,
@@ -341,14 +342,33 @@ bool dbus_manager::handle_name_owner_changed(DBusMessage* _msg,
     return true;
 }
 
-bool dbus_manager::gamemode_enabled(int32_t pid) {
+bool dbus_manager::gamemode_enabled(pid_t pid) {
     if (!m_inited)
         return false;
 
+    static int isvc = file_exists("/.flatpak-info") ? 1 : 0;
+    const struct dbus_ep
+    {
+        const char *name;
+        const char *path;
+        const char *iface;
+    } svc[] {
+        {
+            "com.feralinteractive.GameMode",
+            "/com/feralinteractive/GameMode",
+            "com.feralinteractive.GameMode"
+        },
+        {
+            "org.freedesktop.portal.Desktop",
+            "/org/freedesktop/portal/desktop",
+            "org.freedesktop.portal.GameMode"
+        }
+    };
+
     auto reply =
         DBusMessage_wrap::new_method_call(
-            "com.feralinteractive.GameMode", "/com/feralinteractive/GameMode",
-            "com.feralinteractive.GameMode", "QueryStatus", &dbus_mgr.dbus())
+            svc[isvc].name, svc[isvc].path, svc[isvc].iface,
+            "QueryStatus", &dbus_mgr.dbus())
             .argument(pid)
             .send_with_reply_and_block(dbus_mgr.get_conn(), DBUS_TIMEOUT);
     if (!reply) return false;
@@ -397,7 +417,11 @@ void dbus_manager::disconnect_from_signals(Service srv) {
         auto signal = format_signal(kv);
         m_dbus_ldr.bus_remove_match(m_dbus_conn, signal.c_str(), &m_error);
         if (m_dbus_ldr.error_is_set(&m_error)) {
-            SPDLOG_ERROR("{}: {}", m_error.name, m_error.message);
+#ifndef NDEBUG
+            // spdlog might be destroyed by now
+            std::cerr << "[MANGOHUD] [debug] " << __func__ << " "
+            << m_error.name << ": " << m_error.message << std::endl;
+#endif
             m_dbus_ldr.error_free(&m_error);
         }
     }

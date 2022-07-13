@@ -4,24 +4,26 @@
 #include <thread>
 #include <condition_variable>
 #include <spdlog/spdlog.h>
+#include <spdlog/cfg/env.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/sinks/rotating_file_sink.h>
 #include <filesystem.h>
+#include <sys/stat.h>
 #include "overlay.h"
-#include "logging.h"
 #include "cpu.h"
 #include "gpu.h"
 #include "memory.h"
 #include "timing.hpp"
+#include "fcat.h"
 #include "mesa/util/macros.h"
-#include "string_utils.h"
 #include "battery.h"
+#include "gamepad.h"
 #include "string_utils.h"
 #include "file_utils.h"
-#include "gpu.h"
-#include "logging.h"
-#include "cpu.h"
-#include "memory.h"
 #include "pci_ids.h"
-#include "timing.hpp"
+#include "iostats.h"
+#include "amdgpu.h"
+
 
 #ifdef __linux__
 #include <libgen.h>
@@ -29,23 +31,82 @@
 #endif
 
 namespace fs = ghc::filesystem;
+using namespace std;
 
 #ifdef HAVE_DBUS
 float g_overflow = 50.f /* 3333ms * 0.5 / 16.6667 / 2 (to edge and back) */;
 #endif
 
 string gpuString,wineVersion,wineProcess;
-int32_t deviceID;
+uint32_t deviceID;
 bool gui_open = false;
+bool fcat_open = false;
 struct benchmark_stats benchmark;
 struct fps_limit fps_limit_stats {};
 ImVec2 real_font_size;
-std::vector<logData> graph_data;
+std::deque<logData> graph_data;
 const char* engines[] = {"Unknown", "OpenGL", "VULKAN", "DXVK", "VKD3D", "DAMAVAND", "ZINK", "WINED3D", "Feral3D", "ToGL", "GAMESCOPE"};
 overlay_params *_params {};
+double min_frametime, max_frametime;
+bool gpu_metrics_exists = false;
+bool steam_focused = false;
+vector<float> frametime_data(200,0.f);
+int fan_speed;
+fcatoverlay fcatstatus;
 
-void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID)
+void init_spdlog()
 {
+   if (spdlog::get("MANGOHUD"))
+      return;
+
+   spdlog::set_default_logger(spdlog::stderr_color_mt("MANGOHUD")); // Just to get the name in log
+   if (getenv("MANGOHUD_USE_LOGFILE"))
+   {
+      try
+      {
+         // Not rotating when opening log as proton/wine create multiple (sub)processes
+         auto log = std::make_shared<spdlog::sinks::rotating_file_sink_mt> (get_config_dir() + "/MangoHud/MangoHud.log", 10*1024*1024, 5, false);
+         spdlog::get("MANGOHUD")->sinks().push_back(log);
+      }
+      catch (const spdlog::spdlog_ex &ex)
+      {
+         SPDLOG_ERROR("{}", ex.what());
+      }
+   }
+#ifndef NDEBUG
+   spdlog::set_level(spdlog::level::level_enum::debug);
+#endif
+   spdlog::cfg::load_env_levels();
+
+   // Use MANGOHUD_LOG_LEVEL to correspond to SPDLOG_LEVEL
+   if (getenv("MANGOHUD_LOG_LEVEL")) {
+      std::string log_level = getenv("MANGOHUD_LOG_LEVEL");
+      vector<string> levels;
+      levels = {"off","info","err","debug"};
+      for (auto & element : levels) {
+         transform(log_level.begin(), log_level.end(), log_level.begin(), ::tolower);
+         if(log_level == element ) {
+            spdlog::set_level(spdlog::level::from_str(log_level));
+         }
+      }
+   }
+
+}
+
+void FpsLimiter(struct fps_limit& stats){
+   stats.sleepTime = stats.targetFrameTime - (stats.frameStart - stats.frameEnd);
+   if (stats.sleepTime > stats.frameOverhead) {
+      auto adjustedSleep = stats.sleepTime - stats.frameOverhead;
+      this_thread::sleep_for(adjustedSleep);
+      stats.frameOverhead = ((Clock::now() - stats.frameStart) - adjustedSleep);
+      if (stats.frameOverhead > stats.targetFrameTime / 2)
+         stats.frameOverhead = Clock::duration(0);
+   }
+}
+
+void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
+{
+   update_fan();
    if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
       cpuStats.UpdateCPUData();
 
@@ -59,22 +120,31 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
 #endif
    }
    if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || logger->is_active()) {
-      if (vendorID == 0x1002 && getAmdGpuInfo_actual)
-         getAmdGpuInfo_actual();
+      if (vendorID == 0x1002)
+         getAmdGpuInfo();
+
+      if (gpu_metrics_exists)
+         amdgpu_get_metrics();
 
       if (vendorID == 0x10de)
-         getNvidiaGpuInfo();
+         getNvidiaGpuInfo(params);
    }
 
 #ifdef __linux__
    if (params.enabled[OVERLAY_PARAM_ENABLED_battery])
       Battery_Stats.update();
+   if (params.enabled[OVERLAY_PARAM_ENABLED_gamepad_battery]) {
+      gamepad_update();
+      if (gamepad_found) {
+            gamepad_info();
+      }
+   }
    if (params.enabled[OVERLAY_PARAM_ENABLED_ram] || params.enabled[OVERLAY_PARAM_ENABLED_swap] || logger->is_active())
       update_meminfo();
    if (params.enabled[OVERLAY_PARAM_ENABLED_procmem])
       update_procmem();
    if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])
-      getIoStats(&sw_stats.io);
+      getIoStats(g_io_stats);
 #endif
 
    currentLogData.gpu_load = gpu_info.load;
@@ -90,10 +160,10 @@ void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& par
    currentLogData.cpu_load = cpuStats.GetCPUDataTotal().percent;
    currentLogData.cpu_temp = cpuStats.GetCPUDataTotal().temp;
    // Save data for graphs
-   if (graph_data.size() > 50)
-      graph_data.erase(graph_data.begin());
+   if (graph_data.size() >= kMaxGraphEntries)
+      graph_data.pop_front();
    graph_data.push_back(currentLogData);
-   logger->notify_data_valid();
+   if (logger) logger->notify_data_valid();
    HUDElements.update_exec();
 }
 
@@ -101,8 +171,7 @@ struct hw_info_updater
 {
    bool quit = false;
    std::thread thread {};
-   struct swapchain_stats* sw_stats = nullptr;
-   struct overlay_params* params = nullptr;
+   const struct overlay_params* params = nullptr;
    uint32_t vendorID;
    bool update_hw_info_thread = false;
 
@@ -122,12 +191,11 @@ struct hw_info_updater
          thread.join();
    }
 
-   void update(struct swapchain_stats* sw_stats_, struct overlay_params* params_, uint32_t vendorID_)
+   void update(const struct overlay_params* params_, uint32_t vendorID_)
    {
       std::unique_lock<std::mutex> lk_hw_updating(m_hw_updating, std::try_to_lock);
       if (lk_hw_updating.owns_lock())
       {
-         sw_stats = sw_stats_;
          params = params_;
          vendorID = vendorID_;
          update_hw_info_thread = true;
@@ -141,10 +209,10 @@ struct hw_info_updater
          cv_hwupdate.wait(lk_cv_hwupdate, [&]{ return update_hw_info_thread || quit; });
          if (quit) break;
 
-         if (sw_stats && params)
+         if (params)
          {
             std::unique_lock<std::mutex> lk_hw_updating(m_hw_updating);
-            update_hw_info(*sw_stats, *params, vendorID);
+            update_hw_info(*params, vendorID);
          }
          update_hw_info_thread = false;
       }
@@ -159,27 +227,26 @@ void stop_hw_updater()
       hw_update_thread.reset();
 }
 
-void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID){
+void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const struct overlay_params& params, uint32_t vendorID, uint64_t frametime_ns){
    uint32_t f_idx = sw_stats.n_frames % ARRAY_SIZE(sw_stats.frames_stats);
    uint64_t now = os_time_get_nano(); /* ns */
-   double elapsed = (double)(now - sw_stats.last_fps_update); /* ns */
-   fps = 1000000000.0 * sw_stats.n_frames_since_update / elapsed;
-   if (logger->is_active())
-      benchmark.fps_data.push_back(fps);
+   auto elapsed = now - sw_stats.last_fps_update; /* ns */
+   float frametime_ms = frametime_ns / 1000000.f;
 
    if (sw_stats.last_present_time) {
         sw_stats.frames_stats[f_idx].stats[OVERLAY_PLOTS_frame_timing] =
-            now - sw_stats.last_present_time;
+            frametime_ns;
+      frametime_data[f_idx] = frametime_ms;
    }
 
-   frametime = (now - sw_stats.last_present_time) / 1000;
+   frametime = frametime_ns / 1000;
 
    if (elapsed >= params.fps_sampling_period) {
       if (!hw_update_thread)
          hw_update_thread = std::make_unique<hw_info_updater>();
-      hw_update_thread->update(&sw_stats, &params, vendorID);
+      hw_update_thread->update(&params, vendorID);
 
-      sw_stats.fps = fps;
+      sw_stats.fps = 1000000000.0 * sw_stats.n_frames_since_update / elapsed;
 
       if (params.enabled[OVERLAY_PARAM_ENABLED_time]) {
          std::time_t t = std::time(nullptr);
@@ -192,7 +259,17 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
       sw_stats.last_fps_update = now;
 
    }
-
+   auto min = std::min_element(frametime_data.begin(), frametime_data.end());
+   auto max = std::max_element(frametime_data.begin(), frametime_data.end());
+   min_frametime = min[0];
+   max_frametime = max[0];
+   // double min_time = UINT64_MAX, max_time = 0;
+   // for (auto& stat : sw_stats.frames_stats ){
+   //    min_time = MIN2(stat.stats[0], min_time);
+   //    max_time = MAX2(stat.stats[0], min_time);
+   // }
+   // min_frametime = min_time / sw_stats.time_dividor;
+   // max_frametime = max_time / sw_stats.time_dividor;
    if (params.log_interval == 0){
       logger->try_log();
    }
@@ -202,43 +279,11 @@ void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& pa
    sw_stats.n_frames_since_update++;
 }
 
-void calculate_benchmark_data(){
-   vector<float> sorted = benchmark.fps_data;
-   std::sort(sorted.begin(), sorted.end());
-   benchmark.percentile_data.clear();
-
-   benchmark.total = 0.f;
-   for (auto fps_ : sorted){
-      benchmark.total = benchmark.total + fps_;
-   }
-
-   size_t max_label_size = 0;
-
-   for (std::string percentile : _params->benchmark_percentiles) {
-      float result;
-
-      // special case handling for a mean-based average
-      if (percentile == "AVG") {
-         result = benchmark.total / sorted.size();
-      } else {
-         // the percentiles are already validated when they're parsed from the config.
-         float fraction = parse_float(percentile) / 100;
-
-         result = sorted[(fraction * sorted.size()) - 1];
-         percentile += "%";
-      }
-
-      if (percentile.length() > max_label_size)
-         max_label_size = percentile.length();
-
-      benchmark.percentile_data.push_back({percentile, result});
-   }
-
-   for (auto& entry : benchmark.percentile_data) {
-      entry.first.append(max_label_size - entry.first.length(), ' ');
-   }
+void update_hud_info(struct swapchain_stats& sw_stats, const struct overlay_params& params, uint32_t vendorID){
+   uint64_t now = os_time_get_nano(); /* ns */
+   uint64_t frametime_ns = now - sw_stats.last_present_time;
+   update_hud_info_with_frametime(sw_stats, params, vendorID, frametime_ns);
 }
-
 
 float get_time_stat(void *_data, int _idx)
 {
@@ -254,7 +299,19 @@ float get_time_stat(void *_data, int _idx)
    return data->frames_stats[idx].stats[data->stat_selector] / data->time_dividor;
 }
 
-void position_layer(struct swapchain_stats& data, struct overlay_params& params, ImVec2 window_size)
+void overlay_new_frame(const struct overlay_params& params)
+{
+   ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+   ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,-3));
+   ImGui::PushStyleVar(ImGuiStyleVar_Alpha, params.alpha);
+}
+
+void overlay_end_frame()
+{
+   ImGui::PopStyleVar(3);
+}
+
+void position_layer(struct swapchain_stats& data, const struct overlay_params& params, const ImVec2& window_size)
 {
    unsigned width = ImGui::GetIO().DisplaySize.x;
    unsigned height = ImGui::GetIO().DisplaySize.y;
@@ -264,9 +321,6 @@ void position_layer(struct swapchain_stats& data, struct overlay_params& params,
 
    ImGui::SetNextWindowBgAlpha(params.background_alpha);
    ImGui::SetNextWindowSize(window_size, ImGuiCond_Always);
-   ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-   ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,-3));
-   ImGui::PushStyleVar(ImGuiStyleVar_Alpha, params.alpha);
    switch (params.position) {
    case LAYER_POSITION_TOP_LEFT:
       data.main_window_pos = ImVec2(margin + params.offset_x, margin + params.offset_y);
@@ -342,7 +396,7 @@ float get_ticker_limited_pos(float pos, float tw, float& left_limit, float& righ
 }
 
 #ifdef HAVE_DBUS
-void render_mpris_metadata(struct overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing)
+void render_mpris_metadata(const struct overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing)
 {
    if (meta.meta.valid) {
       auto color = ImGui::ColorConvertU32ToFloat4(params.media_player_color);
@@ -405,7 +459,7 @@ void render_mpris_metadata(struct overlay_params& params, mutexed_metadata& meta
 }
 #endif
 
-void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, unsigned height, Clock::time_point now){
+static void render_benchmark(swapchain_stats& data, const struct overlay_params& params, const ImVec2& window_size, unsigned height, Clock::time_point now){
    // TODO, FIX LOG_DURATION FOR BENCHMARK
    int benchHeight = (2 + benchmark.percentile_data.size()) * real_font_size.x + 10.0f + 58;
    ImGui::SetNextWindowSize(ImVec2(window_size.x, benchHeight), ImGuiCond_Always);
@@ -413,7 +467,9 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
       ImGui::SetNextWindowPos(ImVec2(data.main_window_pos.x, data.main_window_pos.y - benchHeight - 5), ImGuiCond_Always);
    else
       ImGui::SetNextWindowPos(ImVec2(data.main_window_pos.x, data.main_window_pos.y + window_size.y + 5), ImGuiCond_Always);
-
+#ifdef MANGOAPP
+   ImGui::SetNextWindowPos(ImVec2(data.main_window_pos.x, data.main_window_pos.y + window_size.y + 5), ImGuiCond_Always);
+#endif
    float display_time = std::chrono::duration<float>(now - logger->last_log_end()).count();
    static float display_for = 10.0f;
    float alpha;
@@ -460,7 +516,7 @@ void render_benchmark(swapchain_stats& data, struct overlay_params& params, ImVe
       ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), "%s %.1f", data_.first.c_str(), data_.second);
    }
 
-   float max = *max_element(benchmark.fps_data.begin(), benchmark.fps_data.end());
+   float max = benchmark.fps_data.empty() ? 0.0f : *max_element(benchmark.fps_data.begin(), benchmark.fps_data.end());
    ImVec4 plotColor = HUDElements.colors.frametime;
    plotColor.w = alpha / params.background_alpha;
    ImGui::PushStyleColor(ImGuiCol_PlotLines, plotColor);
@@ -499,9 +555,12 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    HUDElements.sw_stats = &data; HUDElements.params = &params;
    HUDElements.is_vulkan = is_vulkan;
    ImGui::GetIO().FontGlobalScale = params.font_scale;
-   if(!logger) logger = std::make_unique<Logger>(&params);
    static float ralign_width = 0, old_scale = 0;
-   window_size = ImVec2(params.width, params.height);
+   if (params.enabled[OVERLAY_PARAM_ENABLED_fps_only]){
+      window_size = ImVec2((to_string(int(HUDElements.sw_stats->fps)).length() * ImGui::CalcTextSize("A").x) + 15.f, params.height);
+   } else {
+      window_size = ImVec2(params.width, params.height);
+   }
    unsigned height = ImGui::GetIO().DisplaySize.y;
    auto now = Clock::now();
 
@@ -510,23 +569,40 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       old_scale = params.font_scale;
    }
 
-   if (!params.no_display){
+   if (!params.no_display && !steam_focused){
       ImGui::Begin("Main", &gui_open, ImGuiWindowFlags_NoDecoration);
-      ImGui::BeginTable("hud", params.table_columns, ImGuiTableFlags_NoClip);
-      HUDElements.place = 0;
-      for (auto& func : HUDElements.ordered_functions){
-         func.first();
-         HUDElements.place += 1;
+      if (ImGui::BeginTable("hud", params.table_columns, ImGuiTableFlags_NoClip)) {
+         HUDElements.place = 0;
+         for (auto& func : HUDElements.ordered_functions){
+            func.first();
+            HUDElements.place += 1;
+         }
+         ImGui::EndTable();
       }
-      ImGui::EndTable();
 
       if(logger->is_active())
          ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(data.main_window_pos.x + window_size.x - 15, data.main_window_pos.y + 15), 10, params.engine_color, 20);
       window_size = ImVec2(window_size.x, ImGui::GetCursorPosY() + 10.0f);
       ImGui::End();
-      if((now - logger->last_log_end()) < 12s)
+      if((now - logger->last_log_end()) < 12s && !logger->is_active())
          render_benchmark(data, params, window_size, height, now);
    }
+
+   if(params.enabled[OVERLAY_PARAM_ENABLED_fcat])
+     {
+       fcatstatus.update(&params);
+       auto window_corners = fcatstatus.get_overlay_corners();
+       auto p_min=window_corners[0];
+       auto p_max=window_corners[1];
+       auto window_size= window_corners[2];
+       ImGui::SetNextWindowPos(p_min, ImGuiCond_Always);
+       ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0));
+       ImGui::SetNextWindowSize(window_size);
+       ImGui::Begin("FCAT", &fcat_open, ImGuiWindowFlags_NoDecoration| ImGuiWindowFlags_NoBackground);
+       ImGui::GetWindowDrawList()->AddRectFilled(p_min,p_max,fcatstatus.get_next_color(data),0.0);
+       ImGui::End();
+       ImGui::PopStyleVar();
+     }
 }
 
 void init_cpu_stats(overlay_params& params)
@@ -549,7 +625,7 @@ struct pci_bus {
    int func;
 };
 
-void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
+void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_params& params)
 {
    //if (!params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
    //   return;
@@ -599,22 +675,12 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
        || gpu.find("AMD") != std::string::npos) {
       string path;
       string drm = "/sys/class/drm/";
-      getAmdGpuInfo_actual = getAmdGpuInfo;
-      bool using_libdrm = false;
 
       auto dirs = ls(drm.c_str(), "card");
       for (auto& dir : dirs) {
          path = drm + dir;
 
-         SPDLOG_DEBUG("amdgpu path check: {}/device/vendor", path);
-
-         string device = read_line(path + "/device/device");
-         deviceID = strtol(device.c_str(), NULL, 16);
-         string line = read_line(path + "/device/vendor");
-         trim(line);
-         if (line != "0x1002" || !file_exists(path + "/device/gpu_busy_percent"))
-            continue;
-
+         SPDLOG_DEBUG("amdgpu path check: {}", path);
          if (pci_bus_parsed && pci_dev) {
             string pci_device = read_symlink((path + "/device").c_str());
             SPDLOG_DEBUG("PCI device symlink: '{}'", pci_device);
@@ -624,55 +690,76 @@ void init_gpu_stats(uint32_t& vendorID, overlay_params& params)
             }
          }
 
-         SPDLOG_DEBUG("using amdgpu path: {}", path);
-
-#ifdef HAVE_LIBDRM_AMDGPU
-         int idx = -1;
-         //TODO make neater
-         int res = sscanf(path.c_str(), "/sys/class/drm/card%d", &idx);
-         std::string dri_path = "/dev/dri/card" + std::to_string(idx);
-
-         if (!params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon] && res == 1 && amdgpu_open(dri_path.c_str())) {
-            vendorID = 0x1002;
-            using_libdrm = true;
-            getAmdGpuInfo_actual = getAmdGpuInfo_libdrm;
-            amdgpu_set_sampling_period(params.fps_sampling_period);
-
-            SPDLOG_DEBUG("Using libdrm");
-
-            // fall through and open sysfs handles for fallback or check DRM version beforehand
-         } else if (!params.enabled[OVERLAY_PARAM_ENABLED_force_amdgpu_hwmon]) {
-            SPDLOG_ERROR("Failed to open device '/dev/dri/card{}' with libdrm, falling back to using hwmon sysfs.", idx);
+         FILE *fp;
+         string device = path + "/device/device";
+         if ((fp = fopen(device.c_str(), "r"))){
+            uint32_t temp = 0;
+            if (fscanf(fp, "%x", &temp) == 1) {
+               if (reported_deviceID && temp != reported_deviceID){
+                  fclose(fp);
+                  SPDLOG_DEBUG("DeviceID does not match vulkan report {}", reported_deviceID);
+                  continue;
+               }
+               deviceID = temp;
+            }
+            fclose(fp);
          }
-#endif
 
-         path += "/device";
-         if (!amdgpu.busy)
-            amdgpu.busy = fopen((path + "/gpu_busy_percent").c_str(), "r");
+         string vendor = path + "/device/vendor";
+         if ((fp = fopen(vendor.c_str(), "r"))){
+            uint32_t temp = 0;
+            if (fscanf(fp, "%x", &temp) != 1 || temp != 0x1002) {
+               fclose(fp);
+               continue;
+            }
+            fclose(fp);
+         }
+
+         const std::string device_path = path + "/device";
+         const std::string gpu_metrics_path = device_path + "/gpu_metrics";
+         if (amdgpu_check_metrics(gpu_metrics_path)) {
+            gpu_metrics_exists = true;
+            metrics_path = gpu_metrics_path;
+            SPDLOG_DEBUG("Using gpu_metrics of {}", gpu_metrics_path);
+         }
+
          if (!amdgpu.vram_total)
-            amdgpu.vram_total = fopen((path + "/mem_info_vram_total").c_str(), "r");
+            amdgpu.vram_total = fopen((device_path + "/mem_info_vram_total").c_str(), "r");
          if (!amdgpu.vram_used)
-            amdgpu.vram_used = fopen((path + "/mem_info_vram_used").c_str(), "r");
+            amdgpu.vram_used = fopen((device_path + "/mem_info_vram_used").c_str(), "r");
+         if (!amdgpu.gtt_used)
+            amdgpu.gtt_used = fopen((device_path + "/mem_info_gtt_used").c_str(), "r");
 
-         path += "/hwmon/";
-         string tempFolder;
-         if (find_folder(path, "hwmon", tempFolder)) {
-            if (!amdgpu.core_clock)
-               amdgpu.core_clock = fopen((path + tempFolder + "/freq1_input").c_str(), "r");
-            if (!amdgpu.memory_clock)
-               amdgpu.memory_clock = fopen((path + tempFolder + "/freq2_input").c_str(), "r");
+         const std::string hwmon_path = device_path + "/hwmon/";
+         const auto dirs = ls(hwmon_path.c_str(), "hwmon", LS_DIRS);
+         for (const auto& dir : dirs)
             if (!amdgpu.temp)
-               amdgpu.temp = fopen((path + tempFolder + "/temp1_input").c_str(), "r");
-            if (!amdgpu.power_usage)
-               amdgpu.power_usage = fopen((path + tempFolder + "/power1_average").c_str(), "r");
+               amdgpu.temp = fopen((hwmon_path + dir + "/temp1_input").c_str(), "r");
 
-            vendorID = 0x1002;
+         if (!metrics_path.empty())
             break;
+
+         // The card output nodes - cardX-output, will point to the card node
+         // As such the actual metrics nodes will be missing.
+         amdgpu.busy = fopen((device_path + "/gpu_busy_percent").c_str(), "r");
+         if (!amdgpu.busy)
+            continue;
+
+         SPDLOG_DEBUG("using amdgpu path: {}", device_path);
+
+         for (const auto& dir : dirs) {
+            if (!amdgpu.core_clock)
+               amdgpu.core_clock = fopen((hwmon_path + dir + "/freq1_input").c_str(), "r");
+            if (!amdgpu.memory_clock)
+               amdgpu.memory_clock = fopen((hwmon_path + dir + "/freq2_input").c_str(), "r");
+            if (!amdgpu.power_usage)
+               amdgpu.power_usage = fopen((hwmon_path + dir + "/power1_average").c_str(), "r");
          }
+         break;
       }
 
       // don't bother then
-      if (!using_libdrm && !amdgpu.busy && !amdgpu.temp && !amdgpu.vram_total && !amdgpu.vram_used) {
+      if (metrics_path.empty() && !amdgpu.busy) {
          params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
       }
    }
@@ -687,13 +774,13 @@ void init_system_info(){
       if (ld_preload)
          unsetenv("LD_PRELOAD");
 
-      ram =  exec("cat /proc/meminfo | grep 'MemTotal' | awk '{print $2}'");
+      ram =  exec("sed -n 's/^MemTotal: *\\([0-9]*\\).*/\\1/p' /proc/meminfo");
       trim(ram);
-      cpu =  exec("cat /proc/cpuinfo | grep 'model name' | tail -n1 | sed 's/^.*: //' | sed 's/([^)]*)/()/g' | tr -d '(/)'");
+      cpu =  exec("sed -n 's/^model name.*: \\(.*\\)/\\1/p' /proc/cpuinfo | sed 's/([^)]*)//g' | tail -n1");
       trim(cpu);
       kernel = exec("uname -r");
       trim(kernel);
-      os = exec("cat /etc/*-release | grep 'PRETTY_NAME' | cut -d '=' -f 2-");
+      os = exec("sed -n 's/PRETTY_NAME=\\(.*\\)/\\1/p' /etc/*-release");
       os.erase(remove(os.begin(), os.end(), '\"' ), os.end());
       trim(os);
       cpusched = read_line("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
@@ -701,7 +788,7 @@ void init_system_info(){
       const char* mangohud_recursion = getenv("MANGOHUD_RECURSION");
       if (!mangohud_recursion) {
          setenv("MANGOHUD_RECURSION", "1", 1);
-         driver = exec("glxinfo -B | grep 'OpenGL version' | sed 's/^.*: //' | sed 's/([^()]*)//g' | tr -s ' '");
+         driver = exec("glxinfo -B | sed -n 's/^OpenGL version.*: \\(.*\\)/\\1/p' | sed 's/([^)]*)//g;s/  / /g'");
          trim(driver);
          unsetenv("MANGOHUD_RECURSION");
       } else {
@@ -743,7 +830,8 @@ void init_system_info(){
             if (wine_env)
                unsetenv("WINELOADERNOEXEC");
             wineVersion = exec(findVersion.str());
-            std::cout << "WINE VERSION = " << wineVersion << "\n";
+            trim(wineVersion);
+            SPDLOG_DEBUG("WINE version: {}", wineVersion);
             if (wine_env)
                setenv("WINELOADERNOEXEC", wine_env, 1);
          }
@@ -771,19 +859,19 @@ void init_system_info(){
       SPDLOG_DEBUG("Cpu:{}", cpu);
       SPDLOG_DEBUG("Kernel:{}", kernel);
       SPDLOG_DEBUG("Os:{}", os);
-      SPDLOG_DEBUG("Gpu:{}", gpu);
       SPDLOG_DEBUG("Driver:{}", driver);
       SPDLOG_DEBUG("CPU Scheduler:{}", cpusched);
 #endif
 }
 
-void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats)
+std::string get_device_name(uint32_t vendorID, uint32_t deviceID)
 {
+   string desc;
 #ifdef __linux__
    if (pci_ids.find(vendorID) == pci_ids.end())
       parse_pciids();
 
-   string desc = pci_ids[vendorID].second[deviceID].desc;
+   desc = pci_ids[vendorID].second[deviceID].desc;
    size_t position = desc.find("[");
    if (position != std::string::npos) {
       desc = desc.substr(position);
@@ -791,7 +879,26 @@ void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats&
       for (char c: chars)
          desc.erase(remove(desc.begin(), desc.end(), c), desc.end());
    }
-   gpu = sw_stats.gpuName = desc;
-   trim(sw_stats.gpuName); trim(gpu);
+   trim(desc);
 #endif
+   return desc;
+}
+
+void update_fan(){
+   // This just handles steam deck fan for now
+   string hwmon_path;
+   string path = "/sys/class/hwmon/";
+   auto dirs = ls(path.c_str(), "hwmon", LS_DIRS);
+   for (auto& dir : dirs) {
+      string full_path = (path + dir + "/name").c_str();
+      if (read_line(full_path).find("jupiter") != string::npos){
+         hwmon_path = path + dir + "/fan1_input";
+         break;
+      }
+   }
+
+   if (!hwmon_path.empty())
+      fan_speed = stoi(read_line(hwmon_path));
+   else
+      fan_speed = -1;
 }

@@ -13,7 +13,6 @@
 
 #include "overlay_params.h"
 
-using namespace std;
 struct logData{
   double fps;
   uint64_t frametime;
@@ -32,10 +31,11 @@ struct logData{
 
 class Logger {
 public:
-  Logger(overlay_params* in_params);
+  Logger(const overlay_params* in_params);
 
   void start_logging();
   void stop_logging();
+  void logging();
 
   void try_log();
 
@@ -52,6 +52,9 @@ public:
 
   void upload_last_log();
   void upload_last_logs();
+  void calculate_benchmark_data();
+  const overlay_params* m_params;
+
 private:
   std::vector<logData> m_log_array;
   std::vector<std::string> m_log_files;
@@ -62,19 +65,17 @@ private:
   std::mutex m_values_valid_mtx;
   std::condition_variable m_values_valid_cv;
   bool m_values_valid;
-
-  overlay_params* m_params;
 };
 
 extern std::unique_ptr<Logger> logger;
 
-extern string os, cpu, gpu, ram, kernel, driver, cpusched;
+extern std::string os, cpu, gpu, ram, kernel, driver, cpusched;
 extern bool sysInfoFetched;
 extern double fps;
 extern uint64_t frametime;
 extern logData currentLogData;
 
-string exec(string command);
+std::string exec(std::string command);
 void autostart_log(int sleep);
 
 #endif //MANGOHUD_LOGGING_H

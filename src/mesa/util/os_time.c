@@ -28,7 +28,7 @@
 /**
  * @file
  * OS independent time-manipulation functions.
- * 
+ *
  * @author Jose Fonseca <jfonseca@vmware.com>
  */
 
@@ -187,7 +187,7 @@ os_wait_until_zero_abs_timeout(volatile int *var, int64_t timeout)
    if (!p_atomic_read(var))
       return true;
 
-   if (timeout == OS_TIMEOUT_INFINITE)
+   if (timeout == (int64_t)OS_TIMEOUT_INFINITE)
       return os_wait_until_zero(var, OS_TIMEOUT_INFINITE);
 
    while (p_atomic_read(var)) {

@@ -11,6 +11,7 @@
 #include <inttypes.h>
 #include <spdlog/spdlog.h>
 #include "string_utils.h"
+#include "gpu.h"
 
 #ifndef PROCDIR
 #define PROCDIR "/proc"
@@ -22,10 +23,6 @@
 
 #ifndef PROCMEMINFOFILE
 #define PROCMEMINFOFILE PROCDIR "/meminfo"
-#endif
-
-#ifndef PROCCPUINFOFILE
-#define PROCCPUINFOFILE PROCDIR "/cpuinfo"
 #endif
 
 #include "file_utils.h"
@@ -134,6 +131,7 @@ bool CPUStats::Init()
             CPUData cpu = {};
             cpu.totalTime = 1;
             cpu.totalPeriod = 1;
+            sscanf(line.c_str(), "cpu%4d ", &cpu.cpu_id);
             m_cpuData.push_back(cpu);
 
         } else if (starts_with(line, "btime ")) {
@@ -202,12 +200,12 @@ bool CPUStats::UpdateCPUData()
                 return false;
             }
 
-            if ((size_t)cpuid >= m_cpuData.size()) {
-                SPDLOG_DEBUG("Cpu id '{}' is out of bounds, reiniting", cpuid);
+            if (cpu_count + 1 > m_cpuData.size() || m_cpuData[cpu_count].cpu_id != cpuid) {
+                SPDLOG_DEBUG("Cpu id '{}' is out of bounds or wrong index, reiniting", cpuid);
                 return Reinit();
             }
 
-            CPUData& cpuData = m_cpuData[cpuid];
+            CPUData& cpuData = m_cpuData[cpu_count];
             calculateCPUData(cpuData, usertime, nicetime, systemtime, idletime, ioWait, irq, softIrq, steal, guest, guestnice);
             cpuid = -1;
             cpu_count++;
@@ -227,42 +225,46 @@ bool CPUStats::UpdateCPUData()
 
 bool CPUStats::UpdateCoreMhz() {
     m_coreMhz.clear();
-    std::ifstream cpuInfo(PROCCPUINFOFILE);
-    std::string row;
-    size_t i = 0;
-    while (std::getline(cpuInfo, row) && i < m_cpuData.size()) {
-        if (row.find("MHz") != std::string::npos){
-            row = std::regex_replace(row, std::regex(R"([^0-9.])"), "");
-            if (!try_stoi(m_cpuData[i].mhz, row))
-                m_cpuData[i].mhz = 0;
-            i++;
+    FILE *fp;
+    for (auto& cpu : m_cpuData)
+    {
+        std::string path = "/sys/devices/system/cpu/cpu" + std::to_string(cpu.cpu_id) + "/cpufreq/scaling_cur_freq";
+        if ((fp = fopen(path.c_str(), "r"))){
+            int64_t temp;
+            if (fscanf(fp, "%" PRId64, &temp) != 1)
+                temp = 0;
+            cpu.mhz = temp / 1000;
+            fclose(fp);
         }
     }
-    m_cpuDataTotal.cpu_mhz = 0;
-    // rewrite this less clunkily?
-    int max = 0;
-    for (auto data : m_cpuData)
-        if (data.mhz > max)
-            max = data.mhz;
 
-    m_cpuDataTotal.cpu_mhz = max;
+    m_cpuDataTotal.cpu_mhz = 0;
+    for (auto data : m_cpuData)
+        if (data.mhz > m_cpuDataTotal.cpu_mhz)
+            m_cpuDataTotal.cpu_mhz = data.mhz;
+
     return true;
 }
 
 bool CPUStats::UpdateCpuTemp() {
-    if (!m_cpuTempFile)
-        return false;
+    if (cpu_type == "APU"){
+        m_cpuDataTotal.temp = gpu_info.apu_cpu_temp;
+        return true;
+    } else {
+        if (!m_cpuTempFile)
+            return false;
 
-    int temp = 0;
-    rewind(m_cpuTempFile);
-    fflush(m_cpuTempFile);
-    bool ret = (fscanf(m_cpuTempFile, "%d", &temp) == 1);
-    m_cpuDataTotal.temp = temp / 1000;
+        int temp = 0;
+        rewind(m_cpuTempFile);
+        fflush(m_cpuTempFile);
+        bool ret = (fscanf(m_cpuTempFile, "%d", &temp) == 1);
+        m_cpuDataTotal.temp = temp / 1000;
 
-    return ret;
+        return ret;
+    }
 }
 
-static bool get_cpu_power_k10temp(CPUPowerData* cpuPowerData, int& power) {
+static bool get_cpu_power_k10temp(CPUPowerData* cpuPowerData, float& power) {
     CPUPowerData_k10temp* powerData_k10temp = (CPUPowerData_k10temp*)cpuPowerData;
 
     if (!powerData_k10temp->coreVoltageFile || !powerData_k10temp->coreCurrentFile || !powerData_k10temp->socVoltageFile || !powerData_k10temp->socCurrentFile)
@@ -295,7 +297,7 @@ static bool get_cpu_power_k10temp(CPUPowerData* cpuPowerData, int& power) {
     return true;
 }
 
-static bool get_cpu_power_zenpower(CPUPowerData* cpuPowerData, int& power) {
+static bool get_cpu_power_zenpower(CPUPowerData* cpuPowerData, float& power) {
     CPUPowerData_zenpower* powerData_zenpower = (CPUPowerData_zenpower*)cpuPowerData;
 
     if (!powerData_zenpower->corePowerFile || !powerData_zenpower->socPowerFile)
@@ -319,7 +321,7 @@ static bool get_cpu_power_zenpower(CPUPowerData* cpuPowerData, int& power) {
     return true;
 }
 
-static bool get_cpu_power_rapl(CPUPowerData* cpuPowerData, int& power) {
+static bool get_cpu_power_rapl(CPUPowerData* cpuPowerData, float& power) {
     CPUPowerData_rapl* powerData_rapl = (CPUPowerData_rapl*)cpuPowerData;
 
     if (!powerData_rapl->energyCounterFile)
@@ -346,11 +348,16 @@ static bool get_cpu_power_rapl(CPUPowerData* cpuPowerData, int& power) {
     return true;
 }
 
+static bool get_cpu_power_amdgpu(float& power) {
+    power = gpu_info.apu_cpu_power;
+    return true;
+}
+
 bool CPUStats::UpdateCpuPower() {
     if(!m_cpuPowerData)
         return false;
 
-    int power = 0;
+    float power = 0;
 
     switch(m_cpuPowerData->source) {
         case CPU_POWER_K10TEMP:
@@ -361,6 +368,9 @@ bool CPUStats::UpdateCpuPower() {
             break;
         case CPU_POWER_RAPL:
             if (!get_cpu_power_rapl(m_cpuPowerData.get(), power)) return false;
+            break;
+        case CPU_POWER_AMDGPU:
+            if (!get_cpu_power_amdgpu(power)) return false;
             break;
         default:
             return false;
@@ -436,12 +446,10 @@ bool CPUStats::GetCpuFile() {
             path.clear();
         }
     }
-
     if (path.empty() || (!file_exists(input) && !find_fallback_temp_input(path, input))) {
         SPDLOG_ERROR("Could not find cpu temp sensor location");
         return false;
     } else {
-
         SPDLOG_DEBUG("hwmon: using input: {}", input);
         m_cpuTempFile = fopen(input.c_str(), "r");
     }
@@ -527,6 +535,7 @@ bool CPUStats::InitCpuPowerData() {
 
     std::string name, path;
     std::string hwmon = "/sys/class/hwmon/";
+    bool intel = false;
 
     CPUPowerData* cpuPowerData = nullptr;
 
@@ -542,10 +551,12 @@ bool CPUStats::InitCpuPowerData() {
         } else if (name == "zenpower") {
             cpuPowerData = (CPUPowerData*)init_cpu_power_data_zenpower(path);
             break;
+        } else if (name == "coretemp") {
+            intel = true;
         }
     }
 
-    if (!cpuPowerData) {
+    if (!cpuPowerData && intel) {
         std::string powercap = "/sys/class/powercap/";
         auto powercap_dirs = ls(powercap.c_str());
         for (auto& dir : powercap_dirs) {
@@ -557,6 +568,10 @@ bool CPUStats::InitCpuPowerData() {
                 break;
             }
         }
+    }
+    if (!cpuPowerData && !intel) {
+        auto powerData = std::make_unique<CPUPowerData_amdgpu>();
+        cpuPowerData = (CPUPowerData*)powerData.release();
     }
 
     if(cpuPowerData == nullptr) {

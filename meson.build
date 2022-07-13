@@ -1,9 +1,9 @@
 project('MangoHud',
   ['c', 'cpp'],
-  version : 'v0.6.6',
+  version : 'v0.6.7',
   license : 'MIT',
   meson_version: '>=0.54.0',
-  default_options : ['buildtype=release', 'c_std=c99', 'cpp_std=c++14']
+  default_options : ['buildtype=release', 'c_std=c99', 'cpp_std=c++14', 'warning_level=2']
 )
 
 cc = meson.get_compiler('c')
@@ -88,14 +88,10 @@ if is_unixy
   dep_wayland_client = dependency('wayland-client',
       required: get_option('with_wayland'), version : '>=1.11')
   dbus_dep = dependency('dbus-1', required: get_option('with_dbus')).partial_dependency(compile_args : true, includes : true)
-  dep_libdrm = dependency('libdrm', required: get_option('with_libdrm_amdgpu')).partial_dependency(compile_args : true, includes : true)
-#  dep_libdrm_amdgpu = dependency('libdrm_amdgpu', version : '>=2.4.79', required: get_option('with_libdrm_amdgpu')).partial_dependency(compile_args : true, includes : true)
 else
   dep_x11 = null_dep
   dep_wayland_client = null_dep
   dbus_dep = null_dep
-  dep_libdrm = null_dep
-#  dep_libdrm_amdgpu = null_dep
 endif
 
 if dep_x11.found()
@@ -123,8 +119,8 @@ c_args = []
 foreach a : ['-Werror=implicit-function-declaration',
              '-Werror=missing-prototypes', '-Werror=return-type',
              '-Werror=incompatible-pointer-types',
-             '-fno-math-errno',
-             '-fno-trapping-math', '-Qunused-arguments']
+             '-Wno-unused-parameter', '-Qunused-arguments',
+             '-fno-math-errno', '-fno-trapping-math']
   if cc.has_argument(a)
     c_args += a
   endif
@@ -139,8 +135,8 @@ endforeach
 # Check for generic C++ arguments
 cpp_args = []
 foreach a : ['-Werror=return-type',
-             '-fno-math-errno', '-fno-trapping-math',
-             '-Qunused-arguments']
+             '-Wno-unused-parameter', '-Qunused-arguments',
+             '-fno-math-errno', '-fno-trapping-math']
   if cpp.has_argument(a)
     cpp_args += a
   endif
@@ -222,6 +218,7 @@ util_files = files(
 
 imgui_options = [
   'default_library=static',
+  'werror=false',
   # use 'auto_features=disabled' once available: https://github.com/mesonbuild/meson/issues/5320
   'dx9=disabled',
   'dx10=disabled',
@@ -259,6 +256,8 @@ if not spdlog_dep.found()
   spdlog_sp = subproject('spdlog', default_options: [
     'default_library=static',
     'compile_library=true',
+    'werror=false',
+    'tests=false',
   ])
   spdlog_dep = spdlog_sp.get_variable('spdlog_dep')
 else
@@ -275,8 +274,9 @@ else
   windows_deps = null_dep
 endif
 
-if get_option('mangoapp')
+if get_option('mangoapp') or get_option('mangoapp_layer')
   glfw3_dep = dependency('glfw3')
+  json_dep = dependency('nlohmann_json')
 endif
 
 subdir('src')

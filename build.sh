@@ -100,7 +100,7 @@ dependencies() {
 
                 MANAGER_QUERY="rpm -q"
                 MANAGER_INSTALL="zypper install"
-                DEPS="{gcc-c++,gcc-c++-32bit,libpkgconf-devel,ninja,python3-pip,python3-Mako,libX11-devel,glslang-devel,glibc-devel,glibc-devel-32bit,libstdc++-devel,libstdc++-devel-32bit,Mesa-libGL-devel,dbus-1-devel,libdrm-devel,${PACKMAN_PKGS}}"
+                DEPS="{gcc-c++,gcc-c++-32bit,libpkgconf-devel,ninja,python3-pip,python3-Mako,libX11-devel,glslang-devel,glibc-devel,glibc-devel-32bit,libstdc++-devel,libstdc++-devel-32bit,Mesa-libGL-devel,dbus-1-devel,${PACKMAN_PKGS}}"
                 dep_install
 
                 if [[ $(pip3 show meson; echo $?) == 1 ]]; then
@@ -143,6 +143,7 @@ dependencies() {
 configure() {
     dependencies
     git submodule update --init --depth 50
+    CONFIGURE_OPTS="-Dwerror=true"
     if [[ ! -f "build/meson64/build.ninja" ]]; then
         meson build/meson64 --libdir lib/mangohud/lib64 --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_prefix=true -Dld_libdir_abs=true $@ ${CONFIGURE_OPTS}
     fi

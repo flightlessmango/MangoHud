@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <memory>
+#include <string>
 
 #include "timing.hpp"
 
@@ -35,17 +36,20 @@ typedef struct CPUData_ {
    unsigned long long int softIrqPeriod;
    unsigned long long int stealPeriod;
    unsigned long long int guestPeriod;
+
+   int cpu_id;
    float percent;
    int mhz;
    int temp;
    int cpu_mhz;
-   int power;
+   float power;
 } CPUData;
 
 enum {
    CPU_POWER_K10TEMP,
    CPU_POWER_ZENPOWER,
-   CPU_POWER_RAPL
+   CPU_POWER_RAPL,
+   CPU_POWER_AMDGPU
 };
 
 struct CPUPowerData {
@@ -107,6 +111,12 @@ struct CPUPowerData_rapl : public CPUPowerData {
    Clock::time_point lastCounterValueTime;
 };
 
+struct CPUPowerData_amdgpu : public CPUPowerData {
+   CPUPowerData_amdgpu() {
+      this->source = CPU_POWER_AMDGPU;
+   };
+};
+
 class CPUStats
 {
 public:
@@ -133,6 +143,7 @@ public:
    const CPUData& GetCPUDataTotal() const {
       return m_cpuDataTotal;
    }
+   std::string cpu_type = "CPU";
 private:
    unsigned long long int m_boottime = 0;
    std::vector<CPUData> m_cpuData;

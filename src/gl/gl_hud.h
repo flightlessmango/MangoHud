@@ -3,7 +3,7 @@
 #define MANGOHUD_GL_IMGUI_HUD_H
 
 #include "overlay.h"
-#include "imgui_impl_opengl3.h"
+#include "gl_renderer.h"
 
 namespace MangoHud { namespace GL {
 

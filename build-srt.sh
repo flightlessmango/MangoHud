@@ -28,7 +28,7 @@ dependencies() {
         }
 
         echo "# Checking Dependencies"
-        DEPS=(${LOCAL_CC}-multilib ${LOCAL_CXX}-multilib unzip libdrm-dev)
+        DEPS=(${LOCAL_CC}-multilib ${LOCAL_CXX}-multilib unzip)
         install
 
 

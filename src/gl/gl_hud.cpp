@@ -7,14 +7,12 @@
 #include <memory>
 #include <unistd.h>
 #include <filesystem.h>
+#include <spdlog/spdlog.h>
 #include <imgui.h>
-#include "font_default.h"
-#include "cpu.h"
+#include "gl_hud.h"
 #include "file_utils.h"
-#include "imgui_hud.h"
 #include "notify.h"
 #include "blacklist.h"
-#include "overlay.h"
 
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
@@ -74,6 +72,7 @@ void imgui_init()
     if (cfg_inited)
         return;
 
+    init_spdlog();
     parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
     _params = &params;
 
@@ -128,6 +127,7 @@ void imgui_create(void *ctx)
         sw_stats.version_gl.is_gles);
 
     deviceName = (char*)glGetString(GL_RENDERER);
+    SPDLOG_DEBUG("deviceName: {}", deviceName);
     sw_stats.deviceName = deviceName;
     if (deviceName.find("Radeon") != std::string::npos
     || deviceName.find("AMD") != std::string::npos){
@@ -135,8 +135,11 @@ void imgui_create(void *ctx)
     } else {
         vendorID = 0x10de;
     }
-    init_gpu_stats(vendorID, params);
-    get_device_name(vendorID, deviceID, sw_stats);
+    if (deviceName.find("zink") != std::string::npos)
+        sw_stats.engine = EngineTypes::ZINK;
+    init_gpu_stats(vendorID, 0, params);
+    sw_stats.gpuName = gpu = get_device_name(vendorID, deviceID);
+    SPDLOG_DEBUG("gpu: {}", gpu);
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGuiContext *saved_ctx = ImGui::GetCurrentContext();
@@ -188,7 +191,13 @@ void imgui_render(unsigned int width, unsigned int height)
     if (!state.imgui_ctx)
         return;
 
-    check_keybinds(sw_stats, params, vendorID);
+    static int control_client = -1;
+    if (params.control >= 0) {
+        control_client_check(params.control, control_client, deviceName);
+        process_control_socket(control_client, params);
+    }
+
+    check_keybinds(params, vendorID);
     update_hud_info(sw_stats, params, vendorID);
 
     ImGuiContext *saved_ctx = ImGui::GetCurrentContext();
@@ -208,10 +217,11 @@ void imgui_render(unsigned int width, unsigned int height)
     ImGui::NewFrame();
     {
         std::lock_guard<std::mutex> lk(notifier.mutex);
+        overlay_new_frame(params);
         position_layer(sw_stats, params, window_size);
         render_imgui(sw_stats, params, window_size, false);
+        overlay_end_frame();
     }
-    ImGui::PopStyleVar(3);
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

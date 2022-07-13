@@ -20,6 +20,7 @@ class HudElements{
         float res_width, res_height;
         bool is_vulkan, gamemode_bol = false, vkbasalt_bol = false;
         int place;
+        int text_column = 1;
         Clock::time_point last_exec;
         std::vector<std::pair<std::string, std::string>> options;
         std::vector<std::pair<void(*)(), std::string >> ordered_functions;
@@ -58,9 +59,16 @@ class HudElements{
         static void graphs();
         static void _exec();
         static void battery();
+        static void fps_only();
+        static void gamescope_fsr();
+        static void gamescope_frame_timing();
+        static void gamepad_battery();
+        static void frame_count();
+        static void fan();
+        static void throttling_status();
 
-        void convert_colors(struct overlay_params& params);
-        void convert_colors(bool do_conv, struct overlay_params& params);
+        void convert_colors(const struct overlay_params& params);
+        void convert_colors(bool do_conv, const struct overlay_params& params);
         struct hud_colors {
             bool convert, update;
             ImVec4 cpu,

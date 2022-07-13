@@ -22,7 +22,7 @@ fi
 # Preload using the plain filenames of the libs, the dynamic linker will
 # figure out whether the 32 or 64 bit version should be used, and will search
 # for it in the correct directory
-LD_PRELOAD="${LD_PRELOAD}:${MANGOHUD_LIB_NAME}"
-LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:@ld_libdir_mangohud@"
+LD_PRELOAD="${LD_PRELOAD}${LD_PRELOAD:+:}${MANGOHUD_LIB_NAME}"
+LD_LIBRARY_PATH="${LD_LIBRARY_PATH}${LD_LIBRARY_PATH:+:}@ld_libdir_mangohud@"
 
 exec env MANGOHUD=1 LD_LIBRARY_PATH="${LD_LIBRARY_PATH}" LD_PRELOAD="${LD_PRELOAD}" "$@"

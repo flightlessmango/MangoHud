@@ -5,45 +5,24 @@
 #include <string>
 #include <stdint.h>
 #include <vector>
+#include <deque>
 #include <imgui.h>
-#include "overlay_params.h"
-#include "iostats.h"
-#include "timing.hpp"
-#include "hud_elements.h"
 #include "version.h"
-#include "gpu.h"
-#include "logging.h"
-#include "vk_enum_to_str.h"
-#include "notify.h"
-#include <vulkan/vk_layer.h>
+#include "overlay_params.h"
+#include "hud_elements.h"
+#include "engine_types.h"
+
 #ifdef HAVE_DBUS
 #include "dbus_info.h"
 extern float g_overflow;
 #endif
+#include "logging.h"
+
 struct frame_stat {
    uint64_t stats[OVERLAY_PLOTS_MAX];
 };
 
-enum EngineTypes
-{
-   UNKNOWN,
-
-   OPENGL,
-   VULKAN,
-
-   DXVK,
-   VKD3D,
-   DAMAVAND,
-   ZINK,
-
-   WINED3D,
-   FERAL3D,
-   TOGL,
-
-   GAMESCOPE
-};
-
-extern const char* engines[];
+static const int kMaxGraphEntries = 50;
 
 struct swapchain_stats {
    uint64_t n_frames;
@@ -57,7 +36,6 @@ struct swapchain_stats {
    size_t font_params_hash = 0;
    std::string time;
    double fps;
-   struct iostats io;
    uint64_t last_present_time;
    unsigned n_frames_since_update;
    uint64_t last_fps_update;
@@ -103,67 +81,43 @@ struct LOAD_DATA {
    unsigned high_load;
 };
 
-/* Mapped from VkInstace/VkPhysicalDevice */
-struct instance_data {
-   struct vk_instance_dispatch_table vtable;
-   VkInstance instance;
-   struct overlay_params params;
-   uint32_t api_version;
-   string engineName, engineVersion;
-   enum EngineTypes engine;
-   notify_thread notifier;
-   int control_client;
-};
-
-/* Mapped from VkDevice */
-struct queue_data;
-struct device_data {
-   struct instance_data *instance;
-
-   PFN_vkSetDeviceLoaderData set_device_loader_data;
-
-   struct vk_device_dispatch_table vtable;
-   VkPhysicalDevice physical_device;
-   VkDevice device;
-
-   VkPhysicalDeviceProperties properties;
-
-   struct queue_data *graphic_queue;
-
-   std::vector<struct queue_data *> queues;
-};
-
 extern struct fps_limit fps_limit_stats;
-extern int32_t deviceID;
+extern uint32_t deviceID;
 
 extern struct benchmark_stats benchmark;
 extern ImVec2 real_font_size;
 extern std::string wineVersion;
-extern std::vector<logData> graph_data;
+extern std::deque<logData> graph_data;
 extern overlay_params *_params;
+extern double min_frametime, max_frametime;
+extern bool steam_focused;
+extern int fan_speed;
 
-void position_layer(struct swapchain_stats& data, struct overlay_params& params, ImVec2 window_size);
+void init_spdlog();
+void overlay_new_frame(const struct overlay_params& params);
+void overlay_end_frame();
+void position_layer(struct swapchain_stats& data, const struct overlay_params& params, const ImVec2& window_size);
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan);
-void update_hud_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID);
-void update_hw_info(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID);
-void init_gpu_stats(uint32_t& vendorID, overlay_params& params);
+void update_hud_info(struct swapchain_stats& sw_stats, const struct overlay_params& params, uint32_t vendorID);
+void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const struct overlay_params& params, uint32_t vendorID, uint64_t frametime_ns);
+void update_hw_info(const struct overlay_params& params, uint32_t vendorID);
+void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_params& params);
 void init_cpu_stats(overlay_params& params);
-void check_keybinds(struct swapchain_stats& sw_stats, struct overlay_params& params, uint32_t vendorID);
+void check_keybinds(overlay_params& params, uint32_t vendorID);
 void init_system_info(void);
 void FpsLimiter(struct fps_limit& stats);
-void get_device_name(int32_t vendorID, int32_t deviceID, struct swapchain_stats& sw_stats);
-void calculate_benchmark_data();
+std::string get_device_name(uint32_t vendorID, uint32_t deviceID);
 void create_fonts(const overlay_params& params, ImFont*& small_font, ImFont*& text_font);
 void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...);
 void center_text(const std::string& text);
 ImVec4 change_on_load_temp(LOAD_DATA& data, unsigned current);
 float get_time_stat(void *_data, int _idx);
 void stop_hw_updater();
-extern void control_client_check(struct device_data *device_data);
-extern void process_control_socket(struct instance_data *instance_data);
-
+extern void control_client_check(int control, int& control_client, const std::string& deviceName);
+extern void process_control_socket(int& control_client, overlay_params &params);
 #ifdef HAVE_DBUS
-void render_mpris_metadata(overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing);
+void render_mpris_metadata(const overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing);
 #endif
+void update_fan();
 
 #endif //MANGOHUD_OVERLAY_H

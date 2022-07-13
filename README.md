@@ -49,7 +49,6 @@ Install necessary development packages.
 - vulkan headers if using `-Duse_system_vulkan=enabled` option with `meson`
 - libGL/libEGL (libglvnd, mesa-common-dev, mesa-libGL-devel etc)
 - X11 (libx11-dev)
-- libdrm (libdrm-dev)
 - XNVCtrl (libxnvctrl-dev), optional, use `-Dwith_xnvctrl=disabled` option with `meson` to disable
 - D-Bus (libdbus-1-dev), optional, use `-Dwith_dbus=disabled` option with `meson` to disable
 
@@ -255,9 +254,13 @@ MangoHud comes with a config file which can be used to set configuration options
 
 1. `/path/to/application/dir/MangoHud.conf`
 2. Per-application configuration in ~/.config/MangoHud:
-    1. `$HOME/.config/MangoHud/application_name.conf`
-    2. `$HOME/.config/MangoHud/wine-application_name.conf` for wine/proton apps
-3. `$HOME/.config/MangoHud/MangoHud.conf`
+    1. `~/.config/MangoHud/<application_name>.conf` for native applications, where `<application_name>` is the case sensitive name of the executable
+    2. `~/.config/MangoHud/wine-<application_name>.conf` for wine/proton apps, where `<application_name>` is the case sensitive name of the executable without the `.exe` ending
+3. `~/.config/MangoHud/MangoHud.conf`
+
+Example: For Overwatch, this would be `wine-Overwatch.conf` (even though the executable you run from Lutris is `Battle.net.exe`, the actual game executable name is `Overwatch.exe`).
+
+If you start the game from the terminal with MangoHud enabled (for example by starting Lutris from the terminal), MangoHud will print the config file names it is looking for.
 
 You can find an example config in /usr/share/doc/mangohud
 
@@ -272,7 +275,7 @@ You can also customize the hud by using the `MANGOHUD_CONFIG` environment variab
 You can also specify configuration file with `MANGOHUD_CONFIGFILE=/path/to/config` for applications whose names are hard to guess (java, python etc).
 
 A partial list of parameters are below. See the config file for a complete list.
-Parameters that are enabled by default have to be explicitly disabled. These (currently) are `fps`, `frame_timing`, `cpu_stats` (cpu load), `gpu_stats` (gpu load).
+Parameters that are enabled by default have to be explicitly disabled. These (currently) are `fps`, `frame_timing`, `cpu_stats` (cpu load), `gpu_stats` (gpu load), and each can be disabled by setting the corresponding variable to 0 (e.g., fps=0).
 
 | Variable                           | Description                                                                           |
 |------------------------------------|---------------------------------------------------------------------------------------|
@@ -336,20 +339,23 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `core_load_change`                 | Changes the colors of cpu core loads, uses the same data from `cpu_load_value` and `cpu_load_change`       |
 | `cellpadding_y`                    | Set the vertical cellpadding, default is `-0.085` |
 | `frametime`                        | Display frametime next to fps text                                                    |
+| `frame_count`                      | Display frame count                                                                   |
 | `table_columns`                    | Set the number of table columns for ImGui, defaults to 3                              |
 | `blacklist`                        | Add a program to the blacklist. e.g `blacklist=vkcube,WatchDogs2.exe`                 |
 | `resolution`                       | Display the current resolution                                                        |
 | `show_fps_limit`                   | Display the current fps limit                                                         |
 | `custom_text_center`               | Display a custom text centered useful for a header e.g `custom_text_center=FlightLessMango Benchmarks`     |
 | `custom_text`                      | Display a custom text e.g `custom_text=Fsync enabled`                                 |
+| `exec`                             | Display output of bash command in next column, e.g `custom_text=/home` , `exec=df -h /home \| tail -n 1`. Only works with legacy_layout=false  |
 | `round_corners`                    | Change the amount of roundness of the corners have e.g `round_corners=10.0`           |
 | `vkbasalt`                         | Shows if vkbasalt is on                                                               |
 | `gamemode`                         | Shows if gamemode is on                                                               |
 | `battery`                          | Display current battery percent and energy consumption                                |
 | `battery_icon`                     | Display battery icon instead of percent                                               |
 | `battery_color`                    | Change the BATT text color                                                            |
-| `force_amdgpu_hwmon`               | Use hwmon sysfs instead of libdrm for amdgpu stats                                    |
-
+| `fps_only`                         | Show FPS only. ***Not meant to be used with other display params***                   |
+| `gamepad_battery`                  | Display battey of wireless gamepads (xone,xpadneo,ds4)                                |
+| `gamepad_battery_icon`             | Display gamepad battery percent with icon. *enabled by default                        |
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 Because comma is also used as option delimiter and needs to be escaped for values with a backslash, you can use `+` like `MANGOHUD_CONFIG=fps_limit=60+30+0` instead.
 
