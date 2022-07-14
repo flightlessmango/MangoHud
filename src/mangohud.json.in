@@ -3,7 +3,7 @@
     "layer" : {
       "name": "VK_LAYER_@PROJECT_NAME@_overlay",
       "type": "GLOBAL",
-      "api_version": "1.3.213",
+      "api_version": "1.3.0",
       "library_path": "@ld_libdir_mangohud@libMangoHud.so",
       "implementation_version": "1",
       "description": "Vulkan Hud Overlay",
