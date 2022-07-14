@@ -18,13 +18,15 @@ endif
 # Install metainfo file
 install_data(
   metainfo_file,
-  install_dir: join_paths(datadir, 'metainfo')
+  install_dir: join_paths(datadir, 'metainfo'),
+  install_tag : 'doc',
 )
 
 # Install icon for metainfo
 install_data(
   icon_file,
   install_dir: join_paths(datadir, 'icons', 'hicolor', 'scalable', 'apps'),
+  install_tag : 'doc',
 )
 
 # Install man pages
@@ -42,5 +44,6 @@ endif
 install_data(
   files('MangoHud.conf'),
   install_dir : join_paths(get_option('datadir'), 'doc', 'mangohud'),
-  rename : ['MangoHud.conf.example']
+  rename : ['MangoHud.conf.example'],
+  install_tag : 'doc',
 )

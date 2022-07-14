@@ -248,6 +248,7 @@ if get_option('mangoapp') and sizeof_ptr == 8
       json_dep,
     ],
     include_directories : [inc_common],
+    install_tag : 'mangoapp',
     link_args : link_args,
     install : true
   )
@@ -257,6 +258,7 @@ if get_option('mangohudctl') and sizeof_ptr == 8
 mangoapp = executable(
   'mangohudctl',
   files('app/control.cpp'),
+  install_tag : 'mangoapp', #TODO MangoHud layer itself currently doesn't support it
   install : true
 )
 endif
@@ -282,6 +284,7 @@ if get_option('mangoapp_layer')
     gnu_symbol_visibility : 'hidden',
     include_directories : [inc_common],
     link_args : link_args,
+    install_tag : 'mangoapp',
     install_dir : libdir_mangohud,
     install : true
   )
@@ -289,21 +292,24 @@ endif
 
 configure_file(input : 'mangohud.json.in',
   output : '@0@.json'.format(meson.project_name()),
-  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud_vk,
+  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud_vk.replace('\$', '$'),
                   'PROJECT_NAME' : meson.project_name().to_upper()},
   install : true,
   install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
+  install_tag : 'runtime',
 )
 
 configure_file(input : '../bin/mangohud.in',
   output : 'mangohud',
   configuration : conf_data,
   install_dir : get_option('bindir'),
+  install_tag : 'scripts',
 )
 
 configure_file(input : 'app/layer.json.in',
   output : 'libMangoApp.json',
-  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud_vk},
+  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud_vk.replace('\$', '$')},
   install : true,
   install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
+  install_tag : 'mangoapp',
 )
