@@ -301,14 +301,6 @@ configure_file(input : '../bin/mangohud.in',
   install_dir : get_option('bindir'),
 )
 
-if get_option('include_doc')
-  install_data(
-    files('../bin/MangoHud.conf'),
-    install_dir : join_paths(get_option('datadir'), 'doc', 'mangohud'),
-    rename : ['MangoHud.conf.example']
-  )
-endif
-
 configure_file(input : 'app/layer.json.in',
   output : 'libMangoApp.json',
   configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud_vk},

@@ -38,3 +38,9 @@ if get_option('mangoapp')
     install_dir: man1dir,
   )
 endif
+
+install_data(
+  files('MangoHud.conf'),
+  install_dir : join_paths(get_option('datadir'), 'doc', 'mangohud'),
+  rename : ['MangoHud.conf.example']
+)

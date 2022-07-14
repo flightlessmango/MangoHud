@@ -6,7 +6,7 @@ option('append_libdir_mangohud', type : 'boolean', value : true, description: 'A
 option('ld_libdir_prefix', type : 'boolean', value : false, description: 'Set ld libdir to "$prefix/lib/mangohud/\$LIB"')
 option('ld_libdir_abs', type : 'boolean', value : false, description: 'Use absolute path in LD_PRELOAD')
 option('prepend_libdir_vk', type : 'boolean', value : true, description: 'Prepend libdir to library path in vulkan manifest')
-option('include_doc', type : 'boolean', value : true, description: 'Include the example config')
+option('include_doc', type : 'boolean', value : true, description: 'Include the example config, man pages, appstream files etc.')
 option('with_nvml', type : 'combo', value : 'enabled', choices: ['enabled', 'system', 'disabled'], description: 'Enable NVML support')
 option('with_xnvctrl', type : 'feature', value : 'enabled', description: 'Enable XNVCtrl support')
 option('with_x11', type : 'feature', value : 'enabled')

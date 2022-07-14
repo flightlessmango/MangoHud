@@ -280,4 +280,7 @@ if get_option('mangoapp') or get_option('mangoapp_layer')
 endif
 
 subdir('src')
-subdir('data')
+
+if get_option('include_doc')
+  subdir('data')
+endif
