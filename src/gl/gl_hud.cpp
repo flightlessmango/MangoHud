@@ -175,7 +175,7 @@ void imgui_create(void *ctx, GL_SESSION gl_session)
 
     if (gl_session == GL_SESSION_X11)
         wsi_conn.keys_are_pressed = keys_are_pressed;
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+#if !defined(MANGOAPP) && defined(VK_USE_PLATFORM_WAYLAND_KHR)
     if (gl_session == GL_SESSION_WL)
     {
         wsi_conn.keys_are_pressed = wl_keys_are_pressed;
@@ -216,7 +216,7 @@ void imgui_render(unsigned int width, unsigned int height)
         process_control_socket(control_client, params);
     }
 
-    check_keybinds(wsi_conn, params);
+    check_keybinds(wsi_conn.keys_are_pressed, params);
     update_hud_info(sw_stats, params, vendorID);
 
     ImGuiContext *saved_ctx = ImGui::GetCurrentContext();

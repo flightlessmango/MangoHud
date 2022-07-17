@@ -133,6 +133,7 @@ parse_string_to_keysym_vec(const char *str)
    for (auto& ks : keyStrings) {
       trim(ks);
       auto xk = xkb_keysym_from_name(ks.c_str(), XKB_KEYSYM_NO_FLAGS);
+      SPDLOG_DEBUG("KeySym: {}, {:08X}", ks, xk);
       if (xk)
          keys.push_back(xk);
       else

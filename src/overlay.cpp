@@ -252,7 +252,7 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
 
 #ifndef MANGOAPP
       window_has_focus(sw_stats.wsi);
-      SPDLOG_DEBUG("lost focus: {}", sw_stats.lost_focus);
+//       SPDLOG_DEBUG("lost focus: {}", sw_stats.lost_focus);
 #endif
 
       sw_stats.fps = 1000000000.0 * sw_stats.n_frames_since_update / elapsed;

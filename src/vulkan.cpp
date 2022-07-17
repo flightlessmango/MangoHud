@@ -479,6 +479,10 @@ static void overlay_DestroySurfaceKHR(VkInstance instance, VkSurfaceKHR surface,
 {
    struct instance_data *instance_data = FIND(struct instance_data, instance);
    struct surface_data *surface_data = FIND(struct surface_data, surface);
+
+   if (surface_data->wsi.wl.display)
+      wsi_wayland_deinit(surface_data->wsi);
+
    destroy_surface_data(surface_data);
    instance_data->vtable.DestroySurfaceKHR(instance, surface, pAllocator);
 }
@@ -536,7 +540,7 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
    struct device_data *device_data = data->device;
    struct instance_data *instance_data = device_data->instance;
    update_hud_info(data->sw_stats, instance_data->params, device_data->properties.vendorID);
-   check_keybinds(data->surface_data->wsi, instance_data->params);
+   check_keybinds(data->surface_data->wsi.keys_are_pressed, instance_data->params);
 #ifdef __linux__
    if (instance_data->params.control >= 0) {
       control_client_check(instance_data->params.control, instance_data->control_client, gpu.c_str());

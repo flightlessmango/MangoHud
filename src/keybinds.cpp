@@ -13,28 +13,6 @@
 
 Clock::time_point last_f2_press, toggle_fps_limit_press , last_f12_press, reload_cfg_press, last_upload_press;
 
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-std::map<xkb_keysym_t, bool> xkb_state;
-void wl_key_pressed(const xkb_keysym_t key, uint32_t state)
-{
-   xkb_state[key] = !!state;
-}
-
-bool wl_keys_are_pressed(const std::vector<xkb_keysym_t>& keys) {
-    size_t pressed = 0;
-    for (KeySym ks : keys) {
-        if (xkb_state[ks])
-            pressed++;
-    }
-
-    if (pressed > 0 && pressed == keys.size()) {
-        return true;
-    }
-
-    return false;
-}
-#endif
-
 #if defined(HAVE_X11)
 bool keys_are_pressed(const std::vector<xkb_keysym_t>& keys) {
 
@@ -83,7 +61,7 @@ bool keys_are_pressed(const std::vector<xkb_keysym_t>& keys) {
 }
 #endif
 
-void check_keybinds(wsi_connection& wsi, struct overlay_params& params){
+void check_keybinds(fun_keys_are_pressed keys_are_pressed, struct overlay_params& params){
    using namespace std::chrono_literals;
    auto now = Clock::now(); /* us */
    auto elapsedF2 = now - last_f2_press;
@@ -99,14 +77,14 @@ void check_keybinds(wsi_connection& wsi, struct overlay_params& params){
 
    auto keyPressDelay = 400ms;
 
-   if (!wsi.keys_are_pressed)
+   if (!keys_are_pressed)
    {
-      SPDLOG_DEBUG("wsi.keys_are_pressed is not set!");
+      SPDLOG_DEBUG("keys_are_pressed is not set!");
       return;
    }
 
    if (elapsedF2 >= keyPressDelay &&
-       wsi.keys_are_pressed(params.toggle_logging)) {
+       keys_are_pressed(params.toggle_logging)) {
       last_f2_press = now;
       if (logger->is_active()) {
          logger->stop_logging();
@@ -117,7 +95,7 @@ void check_keybinds(wsi_connection& wsi, struct overlay_params& params){
    }
 
    if (elapsedFpsLimitToggle >= keyPressDelay &&
-       wsi.keys_are_pressed(params.toggle_fps_limit)) {
+       keys_are_pressed(params.toggle_fps_limit)) {
       toggle_fps_limit_press = now;
       for (size_t i = 0; i < params.fps_limit.size(); i++){
          uint32_t fps_limit = params.fps_limit[i];
@@ -136,26 +114,26 @@ void check_keybinds(wsi_connection& wsi, struct overlay_params& params){
    }
 
    if (elapsedF12 >= keyPressDelay &&
-       wsi.keys_are_pressed(params.toggle_hud)) {
+       keys_are_pressed(params.toggle_hud)) {
       last_f12_press = now;
       params.no_display = !params.no_display;
    }
 
    if (elapsedReloadCfg >= keyPressDelay &&
-       wsi.keys_are_pressed(params.reload_cfg)) {
+       keys_are_pressed(params.reload_cfg)) {
       parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
       _params = &params;
       reload_cfg_press = now;
    }
 
    if (params.permit_upload && elapsedUpload >= keyPressDelay &&
-       wsi.keys_are_pressed(params.upload_log)) {
+       keys_are_pressed(params.upload_log)) {
       last_upload_press = now;
       logger->upload_last_log();
    }
 
    if (params.permit_upload && elapsedUpload >= keyPressDelay &&
-       wsi.keys_are_pressed(params.upload_logs)) {
+       keys_are_pressed(params.upload_logs)) {
       last_upload_press = now;
       logger->upload_last_logs();
    }

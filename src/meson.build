@@ -249,6 +249,7 @@ if get_option('mangoapp') and sizeof_ptr == 8
       spdlog_dep,
       dbus_dep,
       dep_x11,
+      dep_xkb,
       glfw3_dep,
       json_dep,
     ],

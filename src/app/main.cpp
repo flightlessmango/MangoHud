@@ -12,6 +12,8 @@
 #include "../overlay.h"
 #include "notify.h"
 #include "mangoapp.h"
+#include "wsi_helpers.h"
+#include "keybinds.h"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
@@ -303,7 +305,7 @@ int main(int, char**)
                 new_frame = false;
             }
 
-            check_keybinds(params, vendorID);
+            check_keybinds(keys_are_pressed, params);
             // Start the Dear ImGui frame
             {
                 if (render(window)) {
