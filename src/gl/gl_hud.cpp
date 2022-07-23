@@ -120,7 +120,8 @@ void imgui_create(void *ctx)
     imgui_init();
     inited = true;
 
-    gladLoadGL();
+    if (!gladLoadGL())
+        spdlog::error("Failed to initialize OpenGL context, crash incoming");
 
     GetOpenGLVersion(sw_stats.version_gl.major,
         sw_stats.version_gl.minor,
