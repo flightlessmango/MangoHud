@@ -217,7 +217,7 @@ struct overlay_params {
    int gl_bind_framebuffer {-1};
    enum gl_size_query gl_size_query {GL_SIZE_DRAWABLE};
    bool gl_dont_flip {false};
-   uint64_t log_duration;
+   int64_t log_duration, log_interval;
    unsigned cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color, wine_color, battery_color;
    std::vector<unsigned> gpu_load_color;
    std::vector<unsigned> cpu_load_color;
@@ -244,7 +244,7 @@ struct overlay_params {
    std::string media_player_name;
    std::string cpu_text, gpu_text;
    std::vector<std::string> blacklist;
-   unsigned log_interval, autostart_log;
+   unsigned autostart_log;
    std::vector<std::string> media_player_format;
    std::vector<std::string> benchmark_percentiles;
    std::string font_file, font_file_text;

@@ -835,7 +835,6 @@ parse_overlay_config(struct overlay_params *params,
    else
       HUDElements.text_column = 1;
 
-   if(logger && logger->m_params == nullptr) logger.reset();
    if(!logger) logger = std::make_unique<Logger>(HUDElements.params);
    if(params->autostart_log && !logger->is_active())
       std::thread(autostart_log, params->autostart_log).detach();

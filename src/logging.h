@@ -53,7 +53,9 @@ public:
   void upload_last_log();
   void upload_last_logs();
   void calculate_benchmark_data();
-  const overlay_params* m_params;
+  const std::string output_folder;
+  const int64_t log_interval;
+  const int64_t log_duration;
 
 private:
   std::vector<logData> m_log_array;
