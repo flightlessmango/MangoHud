@@ -10,6 +10,7 @@
 #include "file_utils.h"
 #include "string_utils.h"
 #include "hud_elements.h"
+#include "blacklist.h"
 
 static void parseConfigLine(std::string line, std::unordered_map<std::string, std::string>& options) {
     std::string param, value;
@@ -75,6 +76,11 @@ static void enumerate_config_files(std::vector<std::string>& paths) {
     }
 
     paths.push_back(config_dir + mangohud_dir + "MangoHud.conf");
+
+    if (is_blacklisted()) {
+        // Don't bother looking for conf file
+        return;
+    }
 
     if (!program_name.empty()) {
         paths.push_back(config_dir + mangohud_dir + program_name + ".conf");
