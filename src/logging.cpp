@@ -157,7 +157,9 @@ string get_log_suffix(){
 }
 
 Logger::Logger(const overlay_params* in_params)
-  : m_params(in_params),
+  : output_folder(in_params->output_folder),
+	log_interval(in_params->log_interval),
+	log_duration(in_params->log_duration),
     m_logging_on(false),
     m_values_valid(false)
 {
@@ -170,7 +172,7 @@ void Logger::start_logging() {
   m_values_valid = false;
   m_logging_on = true;
   m_log_start = Clock::now();
-  if(m_params->log_interval != 0){
+  if(log_interval != 0){
     std::thread(&Logger::logging, this).detach();
   }
 }
@@ -182,12 +184,11 @@ void Logger::stop_logging() {
 
   calculate_benchmark_data();
 
-  if(!m_params->output_folder.empty()) {
+  if(!output_folder.empty()) {
     std::string program = get_wine_exe_name();
     if (program.empty())
         program = get_program_name();
-
-    m_log_files.emplace_back(HUDElements.params->output_folder + "/" + program + "_" + get_log_suffix());
+    m_log_files.emplace_back(output_folder + "/" + program + "_" + get_log_suffix());
     std::thread writefile (writeFile, m_log_files.back());
     std::thread writesummary (writeSummary, m_log_files.back());
     writefile.join();
@@ -210,7 +211,7 @@ void Logger::logging(){
   wait_until_data_valid();
   while (is_active()){
       try_log();
-      this_thread::sleep_for(chrono::milliseconds(m_params->log_interval));
+      this_thread::sleep_for(std::chrono::milliseconds(log_interval));
   }
 }
 
@@ -225,7 +226,7 @@ void Logger::try_log() {
   currentLogData.frametime = frametime;
   m_log_array.push_back(currentLogData);
 
-  if(m_params->log_duration && (elapsedLog >= std::chrono::seconds(m_params->log_duration))){
+  if(log_duration && (elapsedLog >= std::chrono::seconds(log_duration))){
     stop_logging();
   }
 }
