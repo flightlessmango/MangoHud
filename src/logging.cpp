@@ -111,24 +111,35 @@ void writeFile(string filename){
   SPDLOG_DEBUG("Writing log file [{}], {} entries", filename, logArray.size());
   std::ofstream out(filename, ios::out | ios::app);
   if (out){
-  out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver," << "cpuscheduler" << endl;
-  out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << "," << cpusched << endl;
-  out << "fps," << "frametime," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "gpu_power," << "ram_used," << "elapsed" << endl;
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_log_versioning]){
+      printf("log versioning");
+      out << "v1" << endl;
+      out << MANGOHUD_VERSION << endl;
+      out << "---------------------SYSTEM INFO---------------------" << endl;
+    }
 
-  for (size_t i = 0; i < logArray.size(); i++){
-    out << logArray[i].fps << ",";
-    out << logArray[i].frametime << ",";
-    out << logArray[i].cpu_load << ",";
-    out << logArray[i].gpu_load << ",";
-    out << logArray[i].cpu_temp << ",";
-    out << logArray[i].gpu_temp << ",";
-    out << logArray[i].gpu_core_clock << ",";
-    out << logArray[i].gpu_mem_clock << ",";
-    out << logArray[i].gpu_vram_used << ",";
-    out << logArray[i].gpu_power << ",";
-    out << logArray[i].ram_used << ",";
-    out << std::chrono::duration_cast<std::chrono::nanoseconds>(logArray[i].previous).count() << "\n";
-  }
+    out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver," << "cpuscheduler" << endl;
+    out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << "," << cpusched << endl;
+
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_log_versioning])
+      out << "--------------------FRAME METRICS--------------------" << endl;
+
+    out << "fps," << "frametime," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "gpu_power," << "ram_used," << "elapsed" << endl;
+
+    for (size_t i = 0; i < logArray.size(); i++){
+      out << logArray[i].fps << ",";
+      out << logArray[i].frametime << ",";
+      out << logArray[i].cpu_load << ",";
+      out << logArray[i].gpu_load << ",";
+      out << logArray[i].cpu_temp << ",";
+      out << logArray[i].gpu_temp << ",";
+      out << logArray[i].gpu_core_clock << ",";
+      out << logArray[i].gpu_mem_clock << ",";
+      out << logArray[i].gpu_vram_used << ",";
+      out << logArray[i].gpu_power << ",";
+      out << logArray[i].ram_used << ",";
+      out << std::chrono::duration_cast<std::chrono::nanoseconds>(logArray[i].previous).count() << "\n";
+    }
   } else {
     SPDLOG_ERROR("Failed to write log file");
   }
