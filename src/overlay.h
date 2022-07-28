@@ -115,6 +115,8 @@ float get_time_stat(void *_data, int _idx);
 void stop_hw_updater();
 extern void control_client_check(int control, int& control_client, const std::string& deviceName);
 extern void process_control_socket(int& control_client, overlay_params &params);
+extern void control_send(int control_client, const char *cmd, unsigned cmdlen, const char *param, unsigned paramlen);
+extern int global_control_client;
 #ifdef HAVE_DBUS
 void render_mpris_metadata(const overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing);
 #endif

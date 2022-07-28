@@ -104,6 +104,7 @@ void writeSummary(string filename){
   } else {
     SPDLOG_ERROR("Failed to write log file");
   }
+  out.close();
 }
 
 void writeFile(string filename){
@@ -143,6 +144,7 @@ void writeFile(string filename){
   } else {
     SPDLOG_ERROR("Failed to write log file");
   }
+  out.close();
 }
 
 string get_log_suffix(){
@@ -199,6 +201,9 @@ void Logger::stop_logging() {
 #endif
   }
   clear_log_data();
+  control_client_check(m_params->control, global_control_client, gpu.c_str());
+  const char * cmd = "LoggingFinished";
+  control_send(global_control_client, cmd, strlen(cmd), 0, 0);
 }
 
 void Logger::logging(){

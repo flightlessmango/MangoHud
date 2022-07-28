@@ -184,8 +184,20 @@ def control(args):
         conn.send(bytearray(':logging;', 'utf-8'))
     elif args.cmd == 'start-logging':
         conn.send(bytearray(':logging=1;', 'utf-8'))
+
     elif args.cmd == 'stop-logging':
         conn.send(bytearray(':logging=0;', 'utf-8'))
+        now = time.monotonic()
+        while True:
+            msg = str(conn.recv(3))
+            if "LoggingFinished" in msg:
+                print("Logging has stopped")
+                exit(0)
+            elapsed = time.monotonic() - now
+            if elapsed > 3:
+                print("Stop logging timed out")
+                exit(1)
+
     elif args.cmd == 'toggle-hud':
         conn.send(bytearray(':hud;', 'utf-8'))
     elif args.cmd == 'toggle-fcat':

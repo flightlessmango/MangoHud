@@ -9,6 +9,8 @@
 #include "app/mangoapp.h"
 #endif
 
+int global_control_client;
+
 using namespace std;
 static void parse_command(overlay_params &params,
                           const char *cmd, unsigned cmdlen,
@@ -112,7 +114,7 @@ static void process_char(const int control_client, overlay_params &params, char 
    }
 }
 
-static void control_send(int control_client,
+void control_send(int control_client,
                          const char *cmd, unsigned cmdlen,
                          const char *param, unsigned paramlen)
 {
@@ -160,8 +162,10 @@ static void control_send_connection_string(int control_client, const std::string
 void control_client_check(int control, int& control_client, const std::string& deviceName)
 {
    /* Already connected, just return. */
-   if (control_client >= 0)
+   if (control_client >= 0){
+      global_control_client = control_client;
       return;
+   }
 
    int socket = os_socket_accept(control);
    if (socket == -1) {
