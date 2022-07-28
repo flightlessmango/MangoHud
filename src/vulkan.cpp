@@ -165,6 +165,7 @@ struct swapchain_data {
 
    /**/
    ImGuiContext* imgui_context;
+   ImFontAtlas* font_atlas;
    ImVec2 window_size;
 
    struct swapchain_stats sw_stats;
@@ -388,6 +389,7 @@ static struct swapchain_data *new_swapchain_data(VkSwapchainKHR swapchain,
    data->device = device_data;
    data->swapchain = swapchain;
    data->window_size = ImVec2(instance_data->params.width, instance_data->params.height);
+   data->font_atlas = IM_NEW(ImFontAtlas);
    map_object(HKEY(data->swapchain), data);
    return data;
 }
@@ -702,16 +704,15 @@ static void check_fonts(struct swapchain_data* data)
    struct device_data *device_data = data->device;
    struct instance_data *instance_data = device_data->instance;
    auto& params = instance_data->params;
-   ImGuiIO& io = ImGui::GetIO();
 
    if (params.font_params_hash != data->sw_stats.font_params_hash)
    {
       SPDLOG_DEBUG("Recreating font image");
-      VkDescriptorSet desc_set = (VkDescriptorSet)io.Fonts->TexID;
-      create_fonts(instance_data->params, data->sw_stats.font1, data->sw_stats.font_text);
+      VkDescriptorSet desc_set = (VkDescriptorSet)data->font_atlas->TexID;
+      create_fonts(data->font_atlas, instance_data->params, data->sw_stats.font1, data->sw_stats.font_text);
       unsigned char* pixels;
       int width, height;
-      io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
+      data->font_atlas->GetTexDataAsAlpha8(&pixels, &width, &height);
 
       // wait for rendering to complete, if any
       device_data->vtable.DeviceWaitIdle(device_data->device);
@@ -722,7 +723,7 @@ static void check_fonts(struct swapchain_data* data)
       else
          desc_set = create_image_with_desc(data, width, height, VK_FORMAT_R8_UNORM, data->font_image, data->font_mem, data->font_image_view);
 
-      io.Fonts->SetTexID((ImTextureID)desc_set);
+      data->font_atlas->SetTexID((ImTextureID)desc_set);
       data->font_uploaded = false;
       data->sw_stats.font_params_hash = params.font_params_hash;
       SPDLOG_DEBUG("Default font tex size: {}x{}px", width, height);
@@ -740,10 +741,9 @@ static void ensure_swapchain_fonts(struct swapchain_data *data,
       return;
 
    data->font_uploaded = true;
-   ImGuiIO& io = ImGui::GetIO();
    unsigned char* pixels;
    int width, height;
-   io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
+   data->font_atlas->GetTexDataAsAlpha8(&pixels, &width, &height);
    size_t upload_size = width * height * 1 * sizeof(char);
    upload_image_data(device_data, command_buffer, pixels, upload_size, width, height, data->upload_font_buffer, data->upload_font_buffer_mem, data->font_image);
 }
@@ -894,7 +894,7 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
 #if 1 // disable if using >1 font textures
    VkDescriptorSet desc_set[1] = {
       //data->descriptor_set
-      reinterpret_cast<VkDescriptorSet>(ImGui::GetIO().Fonts->Fonts[0]->ContainerAtlas->TexID)
+      reinterpret_cast<VkDescriptorSet>(data->font_atlas->TexID)
    };
    device_data->vtable.CmdBindDescriptorSets(draw->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                              data->pipeline_layout, 0, 1, desc_set, 0, NULL);
@@ -1308,7 +1308,7 @@ static void setup_swapchain_data(struct swapchain_data *data,
    data->height = pCreateInfo->imageExtent.height;
    data->format = pCreateInfo->imageFormat;
 
-   data->imgui_context = ImGui::CreateContext();
+   data->imgui_context = ImGui::CreateContext(data->font_atlas);
    ImGui::SetCurrentContext(data->imgui_context);
 
    ImGui::GetIO().IniFilename = NULL;
@@ -1465,6 +1465,7 @@ static void shutdown_swapchain_data(struct swapchain_data *data)
    device_data->vtable.DestroySampler(device_data->device, data->font_sampler, NULL);
    shutdown_swapchain_font(data);
 
+   IM_FREE(data->font_atlas);
    ImGui::DestroyContext(data->imgui_context);
 }
 
