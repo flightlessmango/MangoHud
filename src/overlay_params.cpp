@@ -835,7 +835,11 @@ parse_overlay_config(struct overlay_params *params,
    else
       HUDElements.text_column = 1;
 
-   if(!logger) logger = std::make_unique<Logger>(HUDElements.params);
+   if(logger && logger->is_active()){
+      SPDLOG_DEBUG("Stopped logging because config reloaded");
+      logger->stop_logging();
+   }
+   logger = std::make_unique<Logger>(params);
    if(params->autostart_log && !logger->is_active())
       std::thread(autostart_log, params->autostart_log).detach();
 #ifdef MANGOAPP
