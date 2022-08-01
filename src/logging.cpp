@@ -202,7 +202,7 @@ void Logger::stop_logging() {
 #endif
   }
   clear_log_data();
-  control_client_check(m_params->control, global_control_client, gpu.c_str());
+  control_client_check(HUDElements.params->control, global_control_client, gpu.c_str());
   const char * cmd = "LoggingFinished";
   control_send(global_control_client, cmd, strlen(cmd), 0, 0);
 }
