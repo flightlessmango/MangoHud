@@ -7,12 +7,12 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="73.101814mm"
-   height="86.038353mm"
-   viewBox="0 0 73.101814 86.038353"
+   width="86.038002mm"
+   height="86.038002mm"
+   viewBox="-6.468 0 86.038221 86.038221"
    version="1.1"
    id="svg3290"
-   inkscape:version="1.0.1 (3bc2e813f5, 2020-09-07)"
+   inkscape:version="1.2.1 (9c6d41e410, 2022-07-14)"
    sodipodi:docname="io.github.flightlessmango.mangohud.svg">
   <title
      id="title5515">FlightlessMango Icon</title>
@@ -43,11 +43,11 @@
      pagecolor="#ffffff"
      bordercolor="#666666"
      borderopacity="1.0"
-     inkscape:pageopacity="0.0"
+     inkscape:pageopacity="1"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.49497475"
-     inkscape:cx="-313.85759"
-     inkscape:cy="470.82412"
+     inkscape:zoom="2.2547806"
+     inkscape:cx="98.679223"
+     inkscape:cy="162.32178"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      inkscape:document-rotation="0"
@@ -57,11 +57,14 @@
      fit-margin-left="0"
      fit-margin-right="0"
      fit-margin-bottom="0"
-     inkscape:window-width="1274"
-     inkscape:window-height="1056"
-     inkscape:window-x="1280"
-     inkscape:window-y="0"
-     inkscape:window-maximized="0" />
+     inkscape:window-width="1920"
+     inkscape:window-height="1010"
+     inkscape:window-x="0"
+     inkscape:window-y="393"
+     inkscape:window-maximized="1"
+     inkscape:showpageshadow="2"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1" />
   <metadata
      id="metadata3287">
     <rdf:RDF>
@@ -100,6 +103,13 @@
      inkscape:groupmode="layer"
      id="layer1"
      transform="translate(-0.06554034,-0.07012108)">
+    <rect
+       style="display:inline;fill:#fffae3;fill-opacity:1;stroke-width:0.265336"
+       id="rect235"
+       width="86.038216"
+       height="86.038216"
+       x="-6.4024596"
+       y="0.07012108" />
     <g
        id="g2338"
        clip-path="url(#clipPath2486)"
