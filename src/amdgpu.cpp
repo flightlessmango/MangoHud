@@ -100,7 +100,7 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 
 		metrics->average_gfx_power_w = amdgpu_metrics->average_socket_power;
 
-		metrics->current_gfxclk_mhz = amdgpu_metrics->average_gfxclk_frequency;
+		metrics->current_gfxclk_mhz = amdgpu_metrics->current_gfxclk;
 		metrics->current_uclk_mhz = amdgpu_metrics->current_uclk;
 
 		metrics->gpu_temp_c = amdgpu_metrics->temperature_edge;
@@ -151,7 +151,7 @@ void amdgpu_metrics_polling_thread() {
 		gpu_load_needs_dividing = true;
 		amdgpu_common_metrics.gpu_load_percent /= 100;
 	}
-	
+
 	// Set all the fields to 0 by default. Only done once as we're just replacing previous values after
 	memset(metrics_buffer, 0, sizeof(metrics_buffer));
 
@@ -168,7 +168,7 @@ void amdgpu_metrics_polling_thread() {
 
 			usleep(METRICS_POLLING_PERIOD_MS * 1000);
 		}
-		
+
 		// Copy the results from the different metrics to amdgpu_common_metrics
 		amdgpu_common_metrics_m.lock();
 		UPDATE_METRIC_AVERAGE(gpu_load_percent);
