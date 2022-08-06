@@ -8,6 +8,7 @@
 #define METRICS_UPDATE_PERIOD_MS 500
 #define METRICS_POLLING_PERIOD_MS 5
 #define METRICS_SAMPLE_COUNT (METRICS_UPDATE_PERIOD_MS/METRICS_POLLING_PERIOD_MS)
+#define METRICS_GFXCLK_MHZ_THRESHOLD 500
 
 std::string metrics_path = "";
 
@@ -138,6 +139,8 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 
 #define UPDATE_METRIC_AVERAGE(FIELD) do { int value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer[s].FIELD; } amdgpu_common_metrics.FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
 #define UPDATE_METRIC_AVERAGE_FLOAT(FIELD) do { float value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer[s].FIELD; } amdgpu_common_metrics.FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
+#define UPDATE_METRIC_AVERAGE_CLAMP(FIELD, THRESHOLD) do { int value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer[s].FIELD >= THRESHOLD ? metrics_buffer[s].FIELD : THRESHOLD; } amdgpu_common_metrics.FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
+#define UPDATE_METRIC_AVERAGE_FILTER(FIELD, THRESHOLD) do { int value_sum = 0; int filtered_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { if (metrics_buffer[s].FIELD < THRESHOLD) { filtered_sum++; continue; } value_sum += metrics_buffer[s].FIELD; } amdgpu_common_metrics.FIELD = value_sum / (METRICS_SAMPLE_COUNT - filtered_sum); } while(0)
 #define UPDATE_METRIC_MAX(FIELD) do { int cur_max = metrics_buffer[0].FIELD; for (size_t s=1; s < METRICS_SAMPLE_COUNT; s++) { cur_max = MAX(cur_max, metrics_buffer[s].FIELD); }; amdgpu_common_metrics.FIELD = cur_max; } while(0)
 #define UPDATE_METRIC_LAST(FIELD) do { amdgpu_common_metrics.FIELD = metrics_buffer[METRICS_SAMPLE_COUNT - 1].FIELD; } while(0)
 
@@ -175,7 +178,7 @@ void amdgpu_metrics_polling_thread() {
 		UPDATE_METRIC_AVERAGE_FLOAT(average_gfx_power_w);
 		UPDATE_METRIC_AVERAGE_FLOAT(average_cpu_power_w);
 
-		UPDATE_METRIC_AVERAGE(current_gfxclk_mhz);
+		UPDATE_METRIC_AVERAGE_FILTER(current_gfxclk_mhz, METRICS_GFXCLK_MHZ_THRESHOLD);
 		UPDATE_METRIC_AVERAGE(current_uclk_mhz);
 
 		UPDATE_METRIC_MAX(soc_temp_c);
