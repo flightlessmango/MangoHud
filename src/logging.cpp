@@ -19,7 +19,7 @@ std::unique_ptr<Logger> logger;
 
 string exec(string command) {
 #ifndef _WIN32
-    command = "env -u LD_PRELOAD " + command;
+    command = "unset LD_PRELOAD; " + command;
 #endif
     std::array<char, 128> buffer;
     std::string result;
