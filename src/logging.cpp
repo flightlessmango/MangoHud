@@ -19,8 +19,7 @@ std::unique_ptr<Logger> logger;
 
 string exec(string command) {
 #ifndef _WIN32
-    if (getenv("LD_PRELOAD"))
-        unsetenv("LD_PRELOAD");
+    command = "env -u LD_PRELOAD " + command;
 #endif
     std::array<char, 128> buffer;
     std::string result;
