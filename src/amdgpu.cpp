@@ -16,27 +16,29 @@ std::string metrics_path = "";
  */
 struct amdgpu_common_metrics {
 	/* Load level: averaged across the sampling period */
-	uint16_t gpu_load_percent;
+	uint16_t gpu_load_percent[METRICS_SAMPLE_COUNT];
 	// uint16_t mem_load_percent;
 
 	/* Power usage: averaged across the sampling period */
-	float average_gfx_power_w;
-	float average_cpu_power_w;
+	float average_gfx_power_w[METRICS_SAMPLE_COUNT];
+	float average_cpu_power_w[METRICS_SAMPLE_COUNT];
 
 	/* Clocks: latest value of the clock */
-	uint16_t current_gfxclk_mhz;
-	uint16_t current_uclk_mhz;
+	uint16_t current_gfxclk_mhz[METRICS_SAMPLE_COUNT];
+	uint16_t current_uclk_mhz[METRICS_SAMPLE_COUNT];
 
 	/* Temperatures: maximum values over the sampling period */
-	uint16_t soc_temp_c;
-	uint16_t gpu_temp_c;
-	uint16_t apu_cpu_temp_c;
+#ifdef AMG_GPU_TEMP_MONITORING
+	uint16_t soc_temp_c[METRICS_SAMPLE_COUNT];
+#endif
+	uint16_t gpu_temp_c[METRICS_SAMPLE_COUNT];
+	uint16_t apu_cpu_temp_c[METRICS_SAMPLE_COUNT];
 
 	/* throttling status */
-	bool is_power_throttled;
-	bool is_current_throttled;
-	bool is_temp_throttled;
-	bool is_other_throttled;
+	bool is_power_throttled[METRICS_SAMPLE_COUNT];
+	bool is_current_throttled[METRICS_SAMPLE_COUNT];
+	bool is_temp_throttled[METRICS_SAMPLE_COUNT];
+	bool is_other_throttled[METRICS_SAMPLE_COUNT];
 } amdgpu_common_metrics;
 
 std::mutex amdgpu_common_metrics_m;
@@ -74,7 +76,7 @@ bool amdgpu_check_metrics(const std::string& path)
 }
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
-void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
+void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics, size_t index) {
 	FILE *f;
 	void *buf[MAX(sizeof(struct gpu_metrics_v1_3), sizeof(struct gpu_metrics_v2_2))];
 	struct metrics_table_header* header = (metrics_table_header*)buf;
@@ -96,74 +98,78 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		// Desktop GPUs
 		cpuStats.cpu_type = "GPU";
 		struct gpu_metrics_v1_3 *amdgpu_metrics = (struct gpu_metrics_v1_3 *) buf;
-		metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
+		metrics->gpu_load_percent[index] = amdgpu_metrics->average_gfx_activity;
 
-		metrics->average_gfx_power_w = amdgpu_metrics->average_socket_power;
+		metrics->average_gfx_power_w[index] = amdgpu_metrics->average_socket_power;
 
-		metrics->current_gfxclk_mhz = amdgpu_metrics->current_gfxclk;
-		metrics->current_uclk_mhz = amdgpu_metrics->current_uclk;
+		metrics->current_gfxclk_mhz[index] = amdgpu_metrics->current_gfxclk;
+		metrics->current_uclk_mhz[index] = amdgpu_metrics->current_uclk;
 
-		metrics->gpu_temp_c = amdgpu_metrics->temperature_edge;
+		metrics->gpu_temp_c[index] = amdgpu_metrics->temperature_edge;
 		indep_throttle_status = amdgpu_metrics->indep_throttle_status;
 	} else if (header->format_revision == 2) {
 		// APUs
 		cpuStats.cpu_type = "APU";
 		struct gpu_metrics_v2_2 *amdgpu_metrics = (struct gpu_metrics_v2_2 *) buf;
 
-		metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
+		metrics->gpu_load_percent[index] = amdgpu_metrics->average_gfx_activity;
 
-		metrics->average_gfx_power_w = amdgpu_metrics->average_gfx_power / 1000.f;
-		metrics->average_cpu_power_w = amdgpu_metrics->average_cpu_power / 1000.f;
+		metrics->average_gfx_power_w[index] = amdgpu_metrics->average_gfx_power / 1000.f;
+		metrics->average_cpu_power_w[index] = amdgpu_metrics->average_cpu_power / 1000.f;
 
-		metrics->current_gfxclk_mhz = amdgpu_metrics->current_gfxclk;
-		metrics->current_uclk_mhz = amdgpu_metrics->current_uclk;
+		metrics->current_gfxclk_mhz[index] = amdgpu_metrics->current_gfxclk;
+		metrics->current_uclk_mhz[index] = amdgpu_metrics->current_uclk;
 
-		metrics->soc_temp_c = amdgpu_metrics->temperature_soc / 100;
-		metrics->gpu_temp_c = amdgpu_metrics->temperature_gfx / 100;
+#ifdef AMD_GPU_MONITORING
+		metrics->soc_temp_c[index] = amdgpu_metrics->temperature_soc / 100;
+#endif
+		metrics->gpu_temp_c[index] = amdgpu_metrics->temperature_gfx / 100;
 		int cpu_temp = 0;
 		for (unsigned i = 0; i < cpuStats.GetCPUData().size() / 2; i++)
 			cpu_temp = MAX(cpu_temp, amdgpu_metrics->temperature_core[i]);
-		metrics->apu_cpu_temp_c = cpu_temp / 100;
+		metrics->apu_cpu_temp_c[index] = cpu_temp / 100;
 		indep_throttle_status = amdgpu_metrics->indep_throttle_status;
 	}
 
 	/* Throttling: See
 	https://elixir.bootlin.com/linux/latest/source/drivers/gpu/drm/amd/pm/inc/amdgpu_smu.h
 	for the offsets */
-	metrics->is_power_throttled = ((indep_throttle_status >> 0) & 0xFF) != 0;
-	metrics->is_current_throttled = ((indep_throttle_status >> 16) & 0xFF) != 0;
-	metrics->is_temp_throttled = ((indep_throttle_status >> 32) & 0xFFFF) != 0;
-	metrics->is_other_throttled = ((indep_throttle_status >> 56) & 0xFF) != 0;
+	metrics->is_power_throttled[index] = ((indep_throttle_status >> 0) & 0xFF) != 0;
+	metrics->is_current_throttled[index] = ((indep_throttle_status >> 16) & 0xFF) != 0;
+	metrics->is_temp_throttled[index] = ((indep_throttle_status >> 32) & 0xFFFF) != 0;
+	metrics->is_other_throttled[index] = ((indep_throttle_status >> 56) & 0xFF) != 0;
 }
 
-#define UPDATE_METRIC_AVERAGE(FIELD) do { int value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer[s].FIELD; } amdgpu_common_metrics.FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
-#define UPDATE_METRIC_AVERAGE_FLOAT(FIELD) do { float value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer[s].FIELD; } amdgpu_common_metrics.FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
-#define UPDATE_METRIC_MAX(FIELD) do { int cur_max = metrics_buffer[0].FIELD; for (size_t s=1; s < METRICS_SAMPLE_COUNT; s++) { cur_max = MAX(cur_max, metrics_buffer[s].FIELD); }; amdgpu_common_metrics.FIELD = cur_max; } while(0)
-#define UPDATE_METRIC_LAST(FIELD) do { amdgpu_common_metrics.FIELD = metrics_buffer[METRICS_SAMPLE_COUNT - 1].FIELD; } while(0)
+#define UPDATE_METRIC_AVERAGE(FIELD,GPU_INFO_FIELD) do { int value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer.FIELD[s]; } scratchInfo.GPU_INFO_FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
+#define UPDATE_METRIC_AVERAGE_FLOAT(FIELD,GPU_INFO_FIELD) do { float value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer.FIELD[s]; } scratchInfo.GPU_INFO_FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
+#define UPDATE_METRIC_MAX(FIELD,GPU_INFO_FIELD) do { int cur_max = metrics_buffer.FIELD[0]; for (size_t s=1; s < METRICS_SAMPLE_COUNT; s++) { cur_max = MAX(cur_max, metrics_buffer.FIELD[s]); }; scratchInfo.GPU_INFO_FIELD = cur_max; } while(0)
+
+static struct gpuInfo scratchInfo = {};
 
 void amdgpu_metrics_polling_thread() {
-	struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT];
+	struct amdgpu_common_metrics metrics_buffer;
 	bool gpu_load_needs_dividing = false;  //some GPUs report load as centipercent
 
-	// Initial poll of the metrics, so that we have values to display as fast as possible
-	amdgpu_get_instant_metrics(&amdgpu_common_metrics);
-	if (amdgpu_common_metrics.gpu_load_percent > 100){
-		gpu_load_needs_dividing = true;
-		amdgpu_common_metrics.gpu_load_percent /= 100;
-	}
-
 	// Set all the fields to 0 by default. Only done once as we're just replacing previous values after
-	memset(metrics_buffer, 0, sizeof(metrics_buffer));
+	memset(&metrics_buffer, 0, sizeof(metrics_buffer));
+
+	// Initial poll of the metrics, so that we have values to display as fast as possible
+	amdgpu_get_instant_metrics(&metrics_buffer, 0);
+
+	if (metrics_buffer.gpu_load_percent[0] > 100){
+		gpu_load_needs_dividing = true;
+		metrics_buffer.gpu_load_percent[0] /= 100;
+	}
 
 	while (1) {
 		// Get all the samples
 		for (size_t cur_sample_id=0; cur_sample_id < METRICS_SAMPLE_COUNT; cur_sample_id++) {
-			amdgpu_get_instant_metrics(&metrics_buffer[cur_sample_id]);
+			amdgpu_get_instant_metrics(&metrics_buffer, cur_sample_id);
 
 			// Detect and fix if the gpu load is reported in centipercent
-			if (gpu_load_needs_dividing || metrics_buffer[cur_sample_id].gpu_load_percent > 100){
+			if (gpu_load_needs_dividing || metrics_buffer.gpu_load_percent[cur_sample_id] > 100){
 				gpu_load_needs_dividing = true;
-				metrics_buffer[cur_sample_id].gpu_load_percent /= 100;
+				metrics_buffer.gpu_load_percent[cur_sample_id] /= 100;
 			}
 
 			usleep(METRICS_POLLING_PERIOD_MS * 1000);
@@ -171,20 +177,23 @@ void amdgpu_metrics_polling_thread() {
 
 		// Copy the results from the different metrics to amdgpu_common_metrics
 		amdgpu_common_metrics_m.lock();
-		UPDATE_METRIC_AVERAGE(gpu_load_percent);
-		UPDATE_METRIC_AVERAGE_FLOAT(average_gfx_power_w);
-		UPDATE_METRIC_AVERAGE_FLOAT(average_cpu_power_w);
+		UPDATE_METRIC_AVERAGE(gpu_load_percent, load);
+		UPDATE_METRIC_AVERAGE_FLOAT(average_gfx_power_w, powerUsage);
+		UPDATE_METRIC_AVERAGE_FLOAT(average_cpu_power_w, apu_cpu_power);
 
-		UPDATE_METRIC_AVERAGE(current_gfxclk_mhz);
-		UPDATE_METRIC_AVERAGE(current_uclk_mhz);
+		UPDATE_METRIC_AVERAGE(current_gfxclk_mhz, CoreClock);
+		UPDATE_METRIC_AVERAGE(current_uclk_mhz, MemClock);
 
-		UPDATE_METRIC_MAX(soc_temp_c);
-		UPDATE_METRIC_MAX(gpu_temp_c);
-		UPDATE_METRIC_MAX(apu_cpu_temp_c);
-		UPDATE_METRIC_MAX(is_power_throttled);
-		UPDATE_METRIC_MAX(is_current_throttled);
-		UPDATE_METRIC_MAX(is_temp_throttled);
-		UPDATE_METRIC_MAX(is_other_throttled);
+#ifdef AMD_GPU_MONITORING
+		UPDATE_METRIC_MAX(soc_temp_c); // FIXME: unusued
+#endif
+		// Use hwmon instead, see gpu.cpp
+		// UPDATE_METRIC_MAX(gpu_temp_c, temp);
+		UPDATE_METRIC_MAX(apu_cpu_temp_c, apu_cpu_temp);
+		UPDATE_METRIC_MAX(is_power_throttled, is_power_throttled);
+		UPDATE_METRIC_MAX(is_current_throttled, is_current_throttled);
+		UPDATE_METRIC_MAX(is_temp_throttled, is_temp_throttled);
+		UPDATE_METRIC_MAX(is_other_throttled, is_other_throttled);
 		amdgpu_common_metrics_m.unlock();
 	}
 }
@@ -197,21 +206,8 @@ void amdgpu_get_metrics(){
 	}
 
 	amdgpu_common_metrics_m.lock();
-	gpu_info.load = amdgpu_common_metrics.gpu_load_percent;
 
-	gpu_info.powerUsage = amdgpu_common_metrics.average_gfx_power_w;
-	gpu_info.CoreClock = amdgpu_common_metrics.current_gfxclk_mhz;
-	gpu_info.MemClock = amdgpu_common_metrics.current_uclk_mhz;
-
-	// Use hwmon instead, see gpu.cpp
-	// gpu_info.temp = amdgpu_common_metrics.gpu_temp_c;
-	gpu_info.apu_cpu_power = amdgpu_common_metrics.average_cpu_power_w;
-	gpu_info.apu_cpu_temp = amdgpu_common_metrics.apu_cpu_temp_c;
-
-	gpu_info.is_power_throttled = amdgpu_common_metrics.is_power_throttled;
-	gpu_info.is_current_throttled = amdgpu_common_metrics.is_current_throttled;
-	gpu_info.is_temp_throttled = amdgpu_common_metrics.is_temp_throttled;
-	gpu_info.is_other_throttled = amdgpu_common_metrics.is_other_throttled;
+  memcpy(&gpu_info, &scratchInfo, sizeof (struct gpuInfo));
 
 	amdgpu_common_metrics_m.unlock();
 }
