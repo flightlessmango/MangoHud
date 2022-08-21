@@ -5,6 +5,10 @@
 #include "cpu.h"
 #include "overlay.h"
 
+#ifdef USE_SSE2
+#include <emmintrin.h>
+#endif
+
 #define METRICS_UPDATE_PERIOD_MS 500
 #define METRICS_POLLING_PERIOD_MS 5
 #define METRICS_SAMPLE_COUNT (METRICS_UPDATE_PERIOD_MS/METRICS_POLLING_PERIOD_MS)
@@ -141,8 +145,51 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics, size_t in
 }
 
 #define UPDATE_METRIC_AVERAGE(FIELD,GPU_INFO_FIELD) do { int value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer.FIELD[s]; } scratchInfo.GPU_INFO_FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
-#define UPDATE_METRIC_AVERAGE_FLOAT(FIELD,GPU_INFO_FIELD) do { float value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer.FIELD[s]; } scratchInfo.GPU_INFO_FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
+
+#ifdef USE_SSE2
+  static_assert(METRICS_SAMPLE_COUNT % 4 == 0, "SSE2 support requires a multiple of 4 samples");
+  #define UPDATE_METRIC_AVERAGE_FLOAT(FIELD,GPU_INFO_FIELD) do { \
+    __m128 value_sum = _mm_set1_ps(0.0f); /* initialize the accumulator */ \
+    for (size_t s = 0; s < METRICS_SAMPLE_COUNT; s+=4) { \
+      __m128 v = _mm_load_ps(&metrics_buffer.FIELD[s]); /* load 4 values in to add */ \
+      value_sum = _mm_add_ps(value_sum, v); /* add the values */ \
+    } \
+    float sum[4]; /* scratch to add the values horizontally */ \
+    _mm_store_ps(sum, value_sum); \
+    /* no horizontal add until SSE 3, so just accumulate the last results in a loop */ \
+    for (size_t s = 1; s < 4; s++) { \
+      sum[0] += sum[1]; \
+    } \
+    scratchInfo.GPU_INFO_FIELD = sum[0] / METRICS_SAMPLE_COUNT; \
+  } while(0)
+#else
+  #define UPDATE_METRIC_AVERAGE_FLOAT(FIELD,GPU_INFO_FIELD) do { float value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer.FIELD[s]; } scratchInfo.GPU_INFO_FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
+#endif
+
 #define UPDATE_METRIC_MAX(FIELD,GPU_INFO_FIELD) do { int cur_max = metrics_buffer.FIELD[0]; for (size_t s=1; s < METRICS_SAMPLE_COUNT; s++) { cur_max = MAX(cur_max, metrics_buffer.FIELD[s]); }; scratchInfo.GPU_INFO_FIELD = cur_max; } while(0)
+
+#ifdef USE_SSE2
+  #define UPDATE_METRIC_BOOL_SET(FIELD,GPU_INFO_FIELD) do { \
+    __m128i accumulator = _mm_set1_epi8(0); \
+    size_t s; \
+    for (s = 0; s < METRICS_SAMPLE_COUNT - 16; s += 16) { \
+      __m128i v = _mm_load_si128((__m128i *)&metrics_buffer.FIELD[s]); \
+      accumulator = _mm_or_si128(accumulator, v); \
+    }; \
+    bool cumulative_results[16]; \
+    _mm_store_si128((__m128i *)cumulative_results, accumulator); \
+    bool result = false; \
+    for (size_t i = 0; i < 16; i++) { \
+      result |= cumulative_results[i]; \
+    } \
+    for ( ; s < METRICS_SAMPLE_COUNT; s++) { \
+      result |= metrics_buffer.FIELD[s]; \
+    } \
+    scratchInfo.GPU_INFO_FIELD = result; \
+  } while(0)
+#else
+  #define UPDATE_METRIC_BOOL_SET(FIELD,GPU_INFO_FIELD) UPDATE_METRIC_MAX(FIELD,GPU_INFO_FIELD)
+#endif
 
 static struct gpuInfo scratchInfo = {};
 
@@ -190,10 +237,10 @@ void amdgpu_metrics_polling_thread() {
 		// Use hwmon instead, see gpu.cpp
 		// UPDATE_METRIC_MAX(gpu_temp_c, temp);
 		UPDATE_METRIC_MAX(apu_cpu_temp_c, apu_cpu_temp);
-		UPDATE_METRIC_MAX(is_power_throttled, is_power_throttled);
-		UPDATE_METRIC_MAX(is_current_throttled, is_current_throttled);
-		UPDATE_METRIC_MAX(is_temp_throttled, is_temp_throttled);
-		UPDATE_METRIC_MAX(is_other_throttled, is_other_throttled);
+		UPDATE_METRIC_BOOL_SET(is_power_throttled, is_power_throttled);
+		UPDATE_METRIC_BOOL_SET(is_current_throttled, is_current_throttled);
+		UPDATE_METRIC_BOOL_SET(is_temp_throttled, is_temp_throttled);
+		UPDATE_METRIC_BOOL_SET(is_other_throttled, is_other_throttled);
 		amdgpu_common_metrics_m.unlock();
 	}
 }
