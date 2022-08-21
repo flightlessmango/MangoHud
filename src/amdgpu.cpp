@@ -191,6 +191,18 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics, size_t in
   #define UPDATE_METRIC_BOOL_SET(FIELD,GPU_INFO_FIELD) UPDATE_METRIC_MAX(FIELD,GPU_INFO_FIELD)
 #endif
 
+#define TIME_START timespec start, end; clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
+#define TIME_END clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end); \
+    timespec temp; \
+    if ((end.tv_nsec-start.tv_nsec)<0) { \
+        temp.tv_sec = end.tv_sec-start.tv_sec-1; \
+        temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec; \
+    } else { \
+        temp.tv_sec = end.tv_sec-start.tv_sec; \
+        temp.tv_nsec = end.tv_nsec-start.tv_nsec; \
+    } \
+    SPDLOG_INFO("Debugging at {} {}", temp.tv_sec, temp.tv_nsec);
+
 static struct gpuInfo scratchInfo = {};
 
 void amdgpu_metrics_polling_thread() {
@@ -224,6 +236,7 @@ void amdgpu_metrics_polling_thread() {
 
 		// Copy the results from the different metrics to amdgpu_common_metrics
 		amdgpu_common_metrics_m.lock();
+    TIME_START
 		UPDATE_METRIC_AVERAGE(gpu_load_percent, load);
 		UPDATE_METRIC_AVERAGE_FLOAT(average_gfx_power_w, powerUsage);
 		UPDATE_METRIC_AVERAGE_FLOAT(average_cpu_power_w, apu_cpu_power);
@@ -241,6 +254,7 @@ void amdgpu_metrics_polling_thread() {
 		UPDATE_METRIC_BOOL_SET(is_current_throttled, is_current_throttled);
 		UPDATE_METRIC_BOOL_SET(is_temp_throttled, is_temp_throttled);
 		UPDATE_METRIC_BOOL_SET(is_other_throttled, is_other_throttled);
+    TIME_END
 		amdgpu_common_metrics_m.unlock();
 	}
 }
