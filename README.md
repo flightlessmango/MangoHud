@@ -5,6 +5,27 @@ A Vulkan and OpenGL overlay for monitoring FPS, temperatures, CPU/GPU load and m
 #### Example:
 ![](assets/overlay_example.gif)
 
+# Navigation
+- [Installation](#installation)
+  - [Build](#build)
+    - [Dependencies](#dependencies)
+    - [Building with build script](#building-with-build-script)
+  - [Pre-packaged binaries](#pre-packaged-binaries)
+    - [GitHub releases](#github-releases)
+    - [Arch-based distributions](#arch-based-distributions)
+    - [Debian 11 (Bullseye)](#debian-11-bullseye)
+    - [Fedora](#fedora)
+    - [Solus](#solus)
+    - [openSUSE](#opensuse)
+    - [Flatpak](#flatpak)
+- [Normal usage](#normal-usage)
+  - [OpenGL](#opengl)
+  - [Hud configuration](#hud-configuration)
+  - [Vsync](#vsync)
+  - [Keybindings](#keybindings)
+  - [Workarounds](#workarounds)
+  - [MangoHud FPS logging](#mangohud-fps-logging)
+
 # Installation
 
 ## Build
