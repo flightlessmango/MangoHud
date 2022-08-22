@@ -1,5 +1,6 @@
 #include <sstream>
 #include <iomanip>
+#include <array>
 #include <spdlog/spdlog.h>
 #include "logging.h"
 #include "overlay.h"
