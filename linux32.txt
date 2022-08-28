@@ -1,0 +1,22 @@
+[host_machine]
+system = 'linux'
+cpu_family = 'x86'
+cpu = 'x86'
+endian = 'little'
+
+[binaries]
+c = '/usr/bin/gcc'
+cpp = '/usr/bin/g++'
+ar = '/usr/bin/gcc-ar'
+strip = '/usr/bin/strip'
+pkgconfig = '/usr/bin/i686-pc-linux-gnu-pkg-config'
+llvm-config = '/usr/bin/i686-pc-linux-gnu-llvm-config'
+
+[built-in options]
+c_args = ['-m32']
+c_link_args = ['-m32']
+cpp_args = ['-m32']
+cpp_link_args = ['-m32']
+
+[properties]
+needs_exe_wrapper = true
