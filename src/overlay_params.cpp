@@ -536,6 +536,7 @@ parse_overlay_env(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_throttling_status] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = read_cfg;
          params->enabled[OVERLAY_PARAM_ENABLED_fcat] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_horizontal] = 0;
       }
 #define OVERLAY_PARAM_BOOL(name)                                       \
       if (!strcmp(#name, key)) {                                       \
@@ -682,6 +683,7 @@ parse_overlay_config(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_hide_fsr_sharpness] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_throttling_status] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_fcat] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_horizontal] = 0;
          params->options.erase("full");
       }
       for (auto& it : params->options) {
@@ -765,7 +767,7 @@ parse_overlay_config(struct overlay_params *params,
    }
 
    //increase hud width if io read and write
-   if (!params->width) {
+   if (!params->width && !params->enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
       params->width = params->font_size * params->font_scale * params->table_columns * 4;
 
       if ((params->enabled[OVERLAY_PARAM_ENABLED_io_read] || params->enabled[OVERLAY_PARAM_ENABLED_io_write])) {

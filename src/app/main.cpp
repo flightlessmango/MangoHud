@@ -189,7 +189,7 @@ static void msg_read_thread(){
 static const char *GamescopeOverlayProperty = "GAMESCOPE_EXTERNAL_OVERLAY";
 
 static GLFWwindow* init(const char* glsl_version){
-    GLFWwindow *window = glfwCreateWindow(1280, 720, "mangoapp overlay window", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(1280, 800, "mangoapp overlay window", NULL, NULL);
     Display *x11_display = glfwGetX11Display();
     Window x11_window = glfwGetX11Window(window);
     if (x11_window && x11_display)
@@ -227,9 +227,7 @@ static bool render(GLFWwindow* window) {
     position_layer(sw_stats, params, window_size);
     render_imgui(sw_stats, params, window_size, true);
     overlay_end_frame();
-    if (!params.enabled[OVERLAY_PARAM_ENABLED_fps_only])
-        glfwSetWindowSize(window, window_size.x + 45.f, window_size.y + 325.f);
-
+    glfwSetWindowSize(window, 1280, 800);
     ImGui::EndFrame();
     return last_window_size.x != window_size.x || last_window_size.y != window_size.y;
 }

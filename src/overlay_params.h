@@ -85,6 +85,8 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(throttling_status)             \
    OVERLAY_PARAM_BOOL(fcat)                          \
    OVERLAY_PARAM_BOOL(log_versioning)                \
+   OVERLAY_PARAM_BOOL(horizontal)                    \
+   OVERLAY_PARAM_BOOL(hud_no_margin)                 \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \

@@ -316,7 +316,7 @@ void position_layer(struct swapchain_stats& data, const struct overlay_params& p
    unsigned width = ImGui::GetIO().DisplaySize.x;
    unsigned height = ImGui::GetIO().DisplaySize.y;
    float margin = 10.0f;
-   if (params.offset_x > 0 || params.offset_y > 0)
+   if (params.offset_x > 0 || params.offset_y > 0 || params.enabled[OVERLAY_PARAM_ENABLED_hud_no_margin])
       margin = 0.0f;
 
    ImGui::SetNextWindowBgAlpha(params.background_alpha);
@@ -552,6 +552,7 @@ ImVec4 change_on_load_temp(LOAD_DATA& data, unsigned current)
 
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan)
 {
+   // data.engine = EngineTypes::GAMESCOPE;
    HUDElements.sw_stats = &data; HUDElements.params = &params;
    HUDElements.is_vulkan = is_vulkan;
    ImGui::GetIO().FontGlobalScale = params.font_scale;
@@ -568,14 +569,29 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       HUDElements.ralign_width = ralign_width = ImGui::CalcTextSize("A").x * 4 /* characters */;
       old_scale = params.font_scale;
    }
+   ImGuiTableFlags table_flags = ImGuiTableFlags_NoClip;
+   if(params.enabled[OVERLAY_PARAM_ENABLED_horizontal])
+      table_flags = ImGuiTableFlags_NoClip | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_NoHostExtendX;
 
    if (!params.no_display && !steam_focused){
       ImGui::Begin("Main", &gui_open, ImGuiWindowFlags_NoDecoration);
-      if (ImGui::BeginTable("hud", params.table_columns, ImGuiTableFlags_NoClip)) {
+      if (ImGui::BeginTable("hud", params.table_columns, table_flags )) {
          HUDElements.place = 0;
          for (auto& func : HUDElements.ordered_functions){
+            ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(-3,-3));
+            if(!params.enabled[OVERLAY_PARAM_ENABLED_horizontal])
+               ImGui::TableNextRow();
             func.first();
             HUDElements.place += 1;
+            ImGui::PopStyleVar();
+            if(params.enabled[OVERLAY_PARAM_ENABLED_horizontal] && func != HUDElements.ordered_functions.back()){
+               ImGui::SameLine();
+               ImGui::Spacing();
+               ImGui::SameLine();
+               ImGui::GetWindowDrawList()->AddLine(ImVec2(ImGui::GetCursorPosX() - 5, ImGui::GetCursorPosY() + 2), ImVec2(ImGui::GetCursorPosX() - 5, ImGui::GetCursorPosY() + params.font_size * 0.85), params.vram_color, 2);
+               ImGui::SameLine();
+               ImGui::Spacing();
+            }
          }
          ImGui::EndTable();
       }
