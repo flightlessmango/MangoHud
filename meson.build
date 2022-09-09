@@ -59,6 +59,22 @@ if cc.compiles('''#include <stdint.h>
   pre_args += '-DUSE_GCC_ATOMIC_BUILTINS'
 endif
 
+# Check for SSE2
+if cc.compiles('''#include <emmintrin.h>
+                  int main() {
+                    __m128 v1 = _mm_set1_ps(-1.0f);
+                    __m128 v2 = _mm_set1_ps(1.0f);
+                    v1 = _mm_add_ps(v1, v2);
+                    float sum[4];
+                    _mm_store_ps(sum, v1);
+                    return (int)sum[0];
+                  }''',
+               name : 'SSE2 support',
+               args : '-msse2')
+  pre_args += '-DUSE_SSE2'
+  pre_args += '-msse2'
+endif
+
 # Not in C99, needs POSIX
 if cc.compiles('''
                  #define _GNU_SOURCE
