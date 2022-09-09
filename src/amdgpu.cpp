@@ -178,9 +178,10 @@ void amdgpu_metrics_polling_thread() {
 		UPDATE_METRIC_AVERAGE(current_gfxclk_mhz);
 		UPDATE_METRIC_AVERAGE(current_uclk_mhz);
 
-		UPDATE_METRIC_MAX(soc_temp_c);
-		UPDATE_METRIC_MAX(gpu_temp_c);
-		UPDATE_METRIC_MAX(apu_cpu_temp_c);
+		UPDATE_METRIC_AVERAGE(soc_temp_c);
+		UPDATE_METRIC_AVERAGE(gpu_temp_c);
+		UPDATE_METRIC_AVERAGE(apu_cpu_temp_c);
+
 		UPDATE_METRIC_MAX(is_power_throttled);
 		UPDATE_METRIC_MAX(is_current_throttled);
 		UPDATE_METRIC_MAX(is_temp_throttled);
