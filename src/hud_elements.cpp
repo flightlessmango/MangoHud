@@ -588,8 +588,13 @@ void HudElements::frame_timing(){
         double max_time = 50.0f;
         float width, height = 0;
 #ifdef MANGOAPP
-        const ImVec2 sz = ImGui::CalcTextSize("1000.0ms");
-        width = ImGui::GetWindowContentRegionWidth() - sz.x;
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal]){
+            width = 150;
+            height = 24;
+        } else {
+            const ImVec2 sz = ImGui::CalcTextSize("1000.0ms");
+            width = ImGui::GetWindowContentRegionWidth() - sz.x;
+        }
 #else
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal]){
             width = 150;
@@ -611,9 +616,11 @@ void HudElements::frame_timing(){
                             ImVec2(width, height));
         }
 #ifdef MANGOAPP
-        ImGui::SameLine();
-        ImGuiTableSetColumnIndex(ImGui::TableGetColumnCount() - 1);
-        right_aligned_text(HUDElements.colors.text, ImGui::GetContentRegionAvail().x, "%.1fms", frametime / 1000.f);
+        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal]){
+            ImGui::SameLine();
+            ImGuiTableSetColumnIndex(ImGui::TableGetColumnCount() - 1);
+            right_aligned_text(HUDElements.colors.text, ImGui::GetContentRegionAvail().x, "%.1fms", frametime / 1000.f);
+        }
 #endif
         ImGui::PopFont();
         ImGui::PopStyleColor();
