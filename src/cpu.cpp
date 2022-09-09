@@ -442,6 +442,9 @@ bool CPUStats::GetCpuFile() {
         } else if (name == "atk0110") {
             find_temp_input(path, input, "CPU Temperature");
             break;
+        } else if (name == "it8603") {
+            find_temp_input(path, input, "temp1");
+            break;
         } else {
             path.clear();
         }
