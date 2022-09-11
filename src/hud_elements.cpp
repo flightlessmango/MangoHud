@@ -754,33 +754,30 @@ void HudElements::battery(){
                 ImGui::SameLine(0,1.0f);
                 ImGui::Text("%%");
             }
-            if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
-                if (Battery_Stats.current_watt != 0) {
-                    ImguiNextColumnOrNewRow();
-                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", Battery_Stats.current_watt);
-                    ImGui::SameLine(0,1.0f);
-                    ImGui::PushFont(HUDElements.sw_stats->font1);
-                    ImGui::Text("W");
-                    ImGui::PopFont();
-                    ImGui::TableNextColumn();
+            if (Battery_Stats.current_watt != 0) {
+                ImguiNextColumnOrNewRow();
+                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", Battery_Stats.current_watt);
+                ImGui::SameLine(0,1.0f);
+                ImGui::PushFont(HUDElements.sw_stats->font1);
+                ImGui::Text("W");
+                ImGui::PopFont();
+                if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
                     float hours;
                     float minutes;
-                    // float seconds;
                     minutes = std::modf(Battery_Stats.remaining_time, &hours);
                     minutes *= 60;
-                    // seconds = std::modf(minutes, &minutes);
-                    // seconds *= 60;
+                    ImGui::TableNextRow();
+                    ImGui::NextColumn();
                     ImGui::PushFont(HUDElements.sw_stats->font1);
+                    ImGuiTableSetColumnIndex(0);
                     ImGui::TextColored(HUDElements.colors.text, "%s", "Remaining Time");
                     ImGui::PopFont();
                     ImGuiTableSetColumnIndex(2);
-                    // ImGui::TextColored(HUDElements.colors.text, "%02.0f:%02.0f:%02.0f", hours, minutes, seconds);
                     right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%02.0f:%02.0f", hours, minutes);
                 }
-                else {
-                    ImguiNextColumnOrNewRow();
-                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_PLUG);
-                }
+            }else {
+                ImguiNextColumnOrNewRow();
+                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_PLUG);
             }
         }
     }
