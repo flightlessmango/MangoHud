@@ -259,7 +259,9 @@ Some Linux native OpenGL games overrides LD_PRELOAD and stops MangoHud from work
 
 ## Hud configuration
 
-MangoHud comes with a config file which can be used to set configuration options globally or per application. The priorities of different config files are:
+MangoHud comes with a config file which can be used to set configuration options globally or per application. Usually it is installed as `/usr/share/doc/mangohud/MangoHud.conf.example` or [get a copy from here](https://raw.githubusercontent.com/flightlessmango/MangoHud/master/data/MangoHud.conf).
+
+The priorities of different config files are:
 
 1. `/path/to/application/dir/MangoHud.conf`
 2. Per-application configuration in ~/.config/MangoHud:
