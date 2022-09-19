@@ -537,6 +537,8 @@ parse_overlay_env(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = read_cfg;
          params->enabled[OVERLAY_PARAM_ENABLED_fcat] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_horizontal] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_hud_no_margin] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_log_versioning] = 0;
       }
 #define OVERLAY_PARAM_BOOL(name)                                       \
       if (!strcmp(#name, key)) {                                       \
@@ -684,6 +686,8 @@ parse_overlay_config(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_throttling_status] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_fcat] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_horizontal] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_hud_no_margin] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_log_versioning] = 0;
          params->options.erase("full");
       }
       for (auto& it : params->options) {
