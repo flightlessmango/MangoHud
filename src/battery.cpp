@@ -138,6 +138,7 @@ float BatteryStats::getTimeRemaining(){
         string syspath = battPath[i];
         string current_now = syspath + "/current_now";
         string charge_now = syspath + "/charge_now";
+        string energy_now = syspath + "/energy_now";
         string voltage_now = syspath + "/voltage_now";
         string power_now = syspath + "/power_now";
 
@@ -151,7 +152,7 @@ float BatteryStats::getTimeRemaining(){
             float voltage = 0;
             float power = 0;
             std::ifstream input_power(power_now);
-            std::ifstream input_voltage(power_now);
+            std::ifstream input_voltage(voltage_now);
             std::string line;
             if(std::getline(input_voltage, line)){
                 voltage = stof(line);
@@ -167,6 +168,20 @@ float BatteryStats::getTimeRemaining(){
             if(std::getline(input, line)){
                 charge += stof(line);
             }
+        }
+        else if (fs::exists(energy_now)) {
+            float energy = 0;
+            float voltage = 0;
+            std::string line;
+            std::ifstream input_energy(energy_now);
+            std::ifstream input_voltage(voltage_now);
+            if(std::getline(input_energy, line)){
+                energy = stof(line);
+            }
+            if(std::getline(input_voltage, line)){
+                voltage = stof(line);
+            }
+            charge += energy / voltage;
         }
         if (current_now_vec.size() > 25)
             current_now_vec.erase(current_now_vec.begin());
