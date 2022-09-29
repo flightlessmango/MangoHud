@@ -127,7 +127,7 @@ void getAmdGpuInfo(){
         gpu_info.memoryUsed = float(value) / (1024 * 1024 * 1024);
     }
     // On some GPUs SMU can sometimes return the wrong temperature.
-    // As HWMON is way more visible than the SMU metrics, let's always trust it as it is the most likely to work 
+    // As HWMON is way more visible than the SMU metrics, let's always trust it as it is the most likely to work
     if (amdgpu.temp){
         rewind(amdgpu.temp);
         fflush(amdgpu.temp);
@@ -135,6 +135,15 @@ void getAmdGpuInfo(){
         if (fscanf(amdgpu.temp, "%d", &value) != 1)
             value = 0;
         gpu_info.temp = value / 1000;
+    }
+
+    if (amdgpu.temp_j){
+        rewind(amdgpu.temp_j);
+        fflush(amdgpu.temp_j);
+        int value = 0;
+        if (fscanf(amdgpu.temp_j, "%d", &value) != 1)
+            value = 0;
+        gpu_info.temp_j = value / 1000;
     }
 
     if (amdgpu.gtt_used) {
