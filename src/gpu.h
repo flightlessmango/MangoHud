@@ -14,6 +14,7 @@ struct amdgpu_files
     FILE *busy;
     FILE *temp;
     FILE *temp_j;
+    FILE *temp_mem;
     FILE *core_clock;
     FILE *memory_clock;
     FILE *power_usage;
@@ -26,6 +27,7 @@ struct gpuInfo{
     int load;
     int temp;
     int temp_j {-1};
+    int temp_mem {-1};
     float memoryUsed;
     float memoryTotal;
     int MemClock;

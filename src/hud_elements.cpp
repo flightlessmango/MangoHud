@@ -206,6 +206,16 @@ void HudElements::gpu_stats(){
                 ImGui::Text("Tj");
                 ImGui::PopFont();
             }
+            if (gpu_info.temp_mem > -1) {
+                ImguiNextColumnOrNewRow();
+                right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.temp_mem);
+                ImGui::SameLine(0, 1.0f);
+                ImGui::Text("°C");
+                ImGui::SameLine(0, 1.0f);
+                ImGui::PushFont(HUDElements.sw_stats->font1);
+                ImGui::Text("Tmem");
+                ImGui::PopFont();
+            }
         }
 
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]){

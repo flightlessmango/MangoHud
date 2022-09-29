@@ -146,6 +146,15 @@ void getAmdGpuInfo(){
         gpu_info.temp_j = value / 1000;
     }
 
+    if (amdgpu.temp_mem){
+        rewind(amdgpu.temp_mem);
+        fflush(amdgpu.temp_mem);
+        int value = 0;
+        if (fscanf(amdgpu.temp_mem, "%d", &value) != 1)
+            value = 0;
+        gpu_info.temp_mem = value / 1000;
+    }
+
     if (amdgpu.gtt_used) {
         rewind(amdgpu.gtt_used);
         fflush(amdgpu.gtt_used);
