@@ -318,7 +318,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `cpu_load_value`                   | Set the values for medium and high load e.g `cpu_load_value=50,90`                    |
 | `cpu_mhz`                          | Show the CPUs current MHz                                                             |
 | `cpu_power`<br>`gpu_power`         | Display CPU/GPU draw in watts                                                         |
-| `cpu_temp`<br>`gpu_temp`           | Display current CPU/GPU temperature                                                   |
+| `cpu_temp`<br>`gpu_temp`<br>`gpu_junction_temp`<br>`gpu_mem_temp`           | Display current CPU/GPU temperature                                                  |
 | `cpu_text`<br>`gpu_text`           | Override CPU and GPU text                                                             |
 | `custom_text_center`               | Display a custom text centered useful for a header e.g `custom_text_center=FlightLessMango Benchmarks` |
 | `custom_text`                      | Display a custom text e.g `custom_text=Fsync enabled`                                 |

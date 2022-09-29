@@ -13,6 +13,8 @@ struct amdgpu_files
     /* The following can be NULL, in that case we're using the gpu_metrics node */
     FILE *busy;
     FILE *temp;
+    FILE *junction_temp;
+    FILE *memory_temp;
     FILE *core_clock;
     FILE *memory_clock;
     FILE *power_usage;
@@ -25,6 +27,8 @@ extern amdgpu_files amdgpu;
 struct gpuInfo{
     int load;
     int temp;
+    int junction_temp {-1};
+    int memory_temp {-1};
     float memoryUsed;
     float memoryTotal;
     int MemClock;

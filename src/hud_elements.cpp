@@ -172,6 +172,7 @@ void HudElements::gpu_stats(){
             // ImGui::SameLine(150);
             // ImGui::Text("%s", "%");
         }
+
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp]){
             ImguiNextColumnOrNewRow();
             right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.temp);
@@ -181,6 +182,18 @@ void HudElements::gpu_stats(){
             else
                 ImGui::Text("°C");
         }
+
+        if (gpu_info.junction_temp > -1 && HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_junction_temp]) {
+            ImguiNextColumnOrNewRow();
+            right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.junction_temp);
+            ImGui::SameLine(0, 1.0f);
+            ImGui::Text("°C");
+            ImGui::SameLine(0, 1.0f);
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            ImGui::Text("Jnc");
+            ImGui::PopFont();
+        }
+
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_fan] && cpuStats.cpu_type != "APU"){
             ImguiNextColumnOrNewRow();
             right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.fan_speed);
@@ -189,6 +202,7 @@ void HudElements::gpu_stats(){
             ImGui::Text("RPM");
             ImGui::PopFont();
         }
+
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]){
             ImguiNextColumnOrNewRow();
             right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.CoreClock);
@@ -197,6 +211,7 @@ void HudElements::gpu_stats(){
             ImGui::Text("MHz");
             ImGui::PopFont();
         }
+
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power]) {
             ImguiNextColumnOrNewRow();
             char str[16];
@@ -370,6 +385,14 @@ void HudElements::vram(){
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::Text("GiB");
         ImGui::PopFont();
+
+        if (gpu_info.memory_temp > -1 && HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_mem_temp]) {
+            ImguiNextColumnOrNewRow();
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", gpu_info.memory_temp);
+            ImGui::SameLine(0, 1.0f);
+            ImGui::Text("°C");
+        }
+
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_mem_clock]){
             ImguiNextColumnOrNewRow();
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", gpu_info.MemClock);
