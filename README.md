@@ -13,7 +13,7 @@ A Vulkan and OpenGL overlay for monitoring FPS, temperatures, CPU/GPU load and m
   - [Pre-packaged binaries](#pre-packaged-binaries)
     - [GitHub releases](#github-releases)
     - [Arch-based distributions](#arch-based-distributions)
-    - [Debian 11 (Bullseye)](#debian-11-bullseye)
+    - [Debian, Ubuntu](#debian-ubuntu)
     - [Fedora](#fedora)
     - [Solus](#solus)
     - [openSUSE](#opensuse)
@@ -165,9 +165,9 @@ then save the file and execute:
 sudo pacman -Syy
 ```
 
-#### Debian 11 (Bullseye)
+#### Debian, Ubuntu
 
-If you are using Debian 11 or later, to install the [MangoHud](https://tracker.debian.org/pkg/mangohud) package, execute:
+If you are using Debian 11 (Bullseye) or later, Ubuntu 21.10 (Impish) or later, or distro derived from them, to install the [MangoHud](https://tracker.debian.org/pkg/mangohud) package, execute:
 
 ```
 sudo apt install mangohud
