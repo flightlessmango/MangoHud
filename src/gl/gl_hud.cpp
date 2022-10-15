@@ -131,7 +131,8 @@ void imgui_create(void *ctx)
     SPDLOG_DEBUG("deviceName: {}", deviceName);
     sw_stats.deviceName = deviceName;
     if (deviceName.find("Radeon") != std::string::npos
-    || deviceName.find("AMD") != std::string::npos){
+    || deviceName.find("AMD") != std::string::npos
+    || deviceName.find("NAVI") != std::string::npos) {
         vendorID = 0x1002;
     } else {
         vendorID = 0x10de;
