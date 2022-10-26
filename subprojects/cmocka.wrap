@@ -1,0 +1,5 @@
+[wrap-git]
+url = https://gitlab.com/cmocka/cmocka.git
+revision = 59dc0013f9f29fcf212fe4911c78e734263ce24c
+depth = 1
+branch = master

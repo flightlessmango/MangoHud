@@ -285,3 +285,9 @@ subdir('src')
 if get_option('include_doc')
   subdir('data')
 endif
+
+if get_option('tests').enabled()
+  cmocka = subproject('cmocka')
+  cmocka_dep = cmocka.get_variable('cmocka_dep')
+endif
+
