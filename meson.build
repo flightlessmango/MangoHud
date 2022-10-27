@@ -290,7 +290,7 @@ if get_option('tests').enabled()
   cmocka = subproject('cmocka')
   cmocka_dep = cmocka.get_variable('cmocka_dep')
 
-  e = executable('amdgpu', 'tests/amdgpu.cpp',
+  e = executable('amdgpu', 'tests/test_amdgpu.cpp',
     files(
       'src/amdgpu.cpp',
       'src/cpu.cpp',
