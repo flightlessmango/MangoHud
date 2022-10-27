@@ -1,47 +1,16 @@
 #include <spdlog/spdlog.h>
 #include <thread>
+#include <sys/sysinfo.h>
 #include "amdgpu.h"
 #include "gpu.h"
 #include "cpu.h"
 #include "overlay.h"
 
-#define METRICS_UPDATE_PERIOD_MS 500
-#define METRICS_POLLING_PERIOD_MS 5
-#define METRICS_SAMPLE_COUNT (METRICS_UPDATE_PERIOD_MS/METRICS_POLLING_PERIOD_MS)
-
 std::string metrics_path = "";
-
-/* This structure is used to communicate the latest values of the amdgpu metrics.
- * The direction of communication is amdgpu_polling_thread -> amdgpu_get_metrics().
- */
-struct amdgpu_common_metrics {
-	/* Load level: averaged across the sampling period */
-	uint16_t gpu_load_percent;
-	// uint16_t mem_load_percent;
-
-	/* Power usage: averaged across the sampling period */
-	float average_gfx_power_w;
-	float average_cpu_power_w;
-
-	/* Clocks: latest value of the clock */
-	uint16_t current_gfxclk_mhz;
-	uint16_t current_uclk_mhz;
-
-	/* Temperatures: maximum values over the sampling period */
-	uint16_t soc_temp_c;
-	uint16_t gpu_temp_c;
-	uint16_t apu_cpu_temp_c;
-
-	/* throttling status */
-	bool is_power_throttled;
-	bool is_current_throttled;
-	bool is_temp_throttled;
-	bool is_other_throttled;
-} amdgpu_common_metrics;
-
+struct amdgpu_common_metrics amdgpu_common_metrics;
 std::mutex amdgpu_common_metrics_m;
 
-bool amdgpu_check_metrics(const std::string& path)
+bool amdgpu_verify_metrics(const std::string& path)
 {
     metrics_table_header header {};
 	FILE *f;
@@ -141,22 +110,8 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 #define UPDATE_METRIC_MAX(FIELD) do { int cur_max = metrics_buffer[0].FIELD; for (size_t s=1; s < METRICS_SAMPLE_COUNT; s++) { cur_max = MAX(cur_max, metrics_buffer[s].FIELD); }; amdgpu_common_metrics.FIELD = cur_max; } while(0)
 #define UPDATE_METRIC_LAST(FIELD) do { amdgpu_common_metrics.FIELD = metrics_buffer[METRICS_SAMPLE_COUNT - 1].FIELD; } while(0)
 
-void amdgpu_metrics_polling_thread() {
-	struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT];
-	bool gpu_load_needs_dividing = false;  //some GPUs report load as centipercent
-
-	// Initial poll of the metrics, so that we have values to display as fast as possible
-	amdgpu_get_instant_metrics(&amdgpu_common_metrics);
-	if (amdgpu_common_metrics.gpu_load_percent > 100){
-		gpu_load_needs_dividing = true;
-		amdgpu_common_metrics.gpu_load_percent /= 100;
-	}
-
-	// Set all the fields to 0 by default. Only done once as we're just replacing previous values after
-	memset(metrics_buffer, 0, sizeof(metrics_buffer));
-
-	while (1) {
-		// Get all the samples
+void amdgpu_get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT], bool gpu_load_needs_dividing) {
+			// Get all the samples
 		for (size_t cur_sample_id=0; cur_sample_id < METRICS_SAMPLE_COUNT; cur_sample_id++) {
 			amdgpu_get_instant_metrics(&metrics_buffer[cur_sample_id]);
 
@@ -187,6 +142,24 @@ void amdgpu_metrics_polling_thread() {
 		UPDATE_METRIC_MAX(is_temp_throttled);
 		UPDATE_METRIC_MAX(is_other_throttled);
 		amdgpu_common_metrics_m.unlock();
+}
+
+void amdgpu_metrics_polling_thread() {
+	struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT];
+	bool gpu_load_needs_dividing = false;  //some GPUs report load as centipercent
+
+	// Initial poll of the metrics, so that we have values to display as fast as possible
+	amdgpu_get_instant_metrics(&amdgpu_common_metrics);
+	if (amdgpu_common_metrics.gpu_load_percent > 100){
+		gpu_load_needs_dividing = true;
+		amdgpu_common_metrics.gpu_load_percent /= 100;
+	}
+
+	// Set all the fields to 0 by default. Only done once as we're just replacing previous values after
+	memset(metrics_buffer, 0, sizeof(metrics_buffer));
+
+	while (1) {
+		amdgpu_get_samples_and_copy(metrics_buffer, gpu_load_needs_dividing);
 	}
 }
 

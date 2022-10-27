@@ -289,5 +289,22 @@ endif
 if get_option('tests').enabled()
   cmocka = subproject('cmocka')
   cmocka_dep = cmocka.get_variable('cmocka_dep')
+
+  e = executable('amdgpu', 'tests/amdgpu.cpp',
+    files(
+      'src/amdgpu.cpp',
+      'src/cpu.cpp',
+      'src/gpu.cpp',
+      'src/mesa/util/os_time.c',
+      'src/file_utils.cpp',
+    ),
+    dependencies: [
+      cmocka_dep,
+      spdlog_dep,
+      dearimgui_dep
+    ])
+
+  test('test amdgpu', e, workdir : meson.project_source_root() + '/tests')
+
 endif
 
