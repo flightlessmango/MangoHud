@@ -111,11 +111,17 @@ bool ImGui_ImplOpenGL3_CreateFontsTexture()
     int width, height;
     io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
 
+    GLint last_texture, last_unpack_buffer;
+
     // Upload texture to graphics system
-    GLint last_texture;
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
     glGenTextures(1, &g_FontTexture);
     glBindTexture(GL_TEXTURE_2D, g_FontTexture);
+    if ((g_IsGLES && g_GlVersion >= 300) || (!g_IsGLES && g_GlVersion >= 210))
+    {
+        glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &last_unpack_buffer);
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     //#ifdef GL_UNPACK_ROW_LENGTH
@@ -129,6 +135,8 @@ bool ImGui_ImplOpenGL3_CreateFontsTexture()
 
     // Restore state
     glBindTexture(GL_TEXTURE_2D, last_texture);
+    if ((g_IsGLES && g_GlVersion >= 300) || (!g_IsGLES && g_GlVersion >= 210))
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, last_unpack_buffer);
 
     return true;
 }
