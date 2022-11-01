@@ -134,7 +134,9 @@ void imgui_create(void *ctx)
     || deviceName.find("AMD") != std::string::npos
     || deviceName.find("NAVI") != std::string::npos) {
         vendorID = 0x1002;
-    } else {
+    } else if (deviceName.find("Intel") != std::string::npos) {
+        vendorID = 0x8086;
+    }  else {
         vendorID = 0x10de;
     }
     if (deviceName.find("zink") != std::string::npos)

@@ -128,6 +128,9 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
 
       if (vendorID == 0x10de)
          getNvidiaGpuInfo(params);
+
+      if (vendorID== 0x8086)
+         getIntelGpuInfo();
    }
 
 #ifdef __linux__
@@ -681,12 +684,10 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
 
       if(checkNvidia(pci_dev))
          vendorID = 0x10de;
-      else
-         params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
    }
 
 #ifdef __linux__
-   if (vendorID == 0x8086 || vendorID == 0x1002
+   if (vendorID == 0x1002
        || gpu.find("Radeon") != std::string::npos
        || gpu.find("AMD") != std::string::npos) {
       string path;

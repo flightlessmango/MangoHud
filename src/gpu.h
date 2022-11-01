@@ -42,6 +42,7 @@ extern struct gpuInfo gpu_info;
 
 void getNvidiaGpuInfo(const struct overlay_params& params);
 void getAmdGpuInfo(void);
+void getIntelGpuInfo();
 bool checkNvidia(const char *pci_dev);
 extern void nvapi_util();
 extern bool checkNVAPI();
