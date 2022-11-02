@@ -233,6 +233,10 @@ To enable MangoHud for all Steam games:
 ```
 flatpak override --user --env=MANGOHUD=1 com.valvesoftware.Steam
 ```
+To allow Flatpaks to share system MangoHud config:
+```
+flatpak override --user --filesystem=xdg-config/MangoHud:ro
+```
 
 # Normal usage
 
