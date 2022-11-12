@@ -390,10 +390,12 @@ void HudElements::ram(){
         ImGui::TextColored(HUDElements.colors.ram, "RAM");
         ImGui::TableNextColumn();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", memused);
-        ImGui::SameLine(0,1.0f);
-        ImGui::PushFont(HUDElements.sw_stats->font1);
-        ImGui::Text("GiB");
-        ImGui::PopFont();
+        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
+            ImGui::SameLine(0,1.0f);
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            ImGui::Text("GiB");
+            ImGui::PopFont();
+        }
     }
 
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram] && HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_swap]){
@@ -446,7 +448,10 @@ void HudElements::procmem()
 void HudElements::fps(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_only]){
         ImGui::TableNextColumn();
-        ImGui::TextColored(HUDElements.colors.engine, "%s", engines[HUDElements.sw_stats->engine]);
+        if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact])
+            ImGui::TextColored(HUDElements.colors.engine, "%s", "FPS");
+        else
+            ImGui::TextColored(HUDElements.colors.engine, "%s", engines[HUDElements.sw_stats->engine]);
         ImGui::TableNextColumn();
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_color_change]){
             int fps = int(HUDElements.sw_stats->fps);
@@ -464,9 +469,11 @@ void HudElements::fps(){
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", HUDElements.sw_stats->fps);
         }
         ImGui::SameLine(0, 1.0f);
-        ImGui::PushFont(HUDElements.sw_stats->font1);
-        ImGui::Text("FPS");
-        ImGui::PopFont();
+        if(!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            ImGui::Text("FPS");
+            ImGui::PopFont();
+        }
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_frametime]){
             ImguiNextColumnOrNewRow();
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", 1000 / HUDElements.sw_stats->fps);
@@ -571,7 +578,7 @@ void HudElements::frame_timing(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
         ImGui::TableNextColumn();
         ImGui::PushFont(HUDElements.sw_stats->font1);
-        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal]){
+        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
             ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
             ImGui::TextColored(HUDElements.colors.engine, "%s", "Frametime");
             ImGui::TableSetColumnIndex(ImGui::TableGetColumnCount() - 1);
@@ -588,7 +595,7 @@ void HudElements::frame_timing(){
         double max_time = 50.0f;
         float width, height = 0;
 #ifdef MANGOAPP
-        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal]){
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] || HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
             width = 150;
             height = 24;
         } else {
@@ -616,7 +623,7 @@ void HudElements::frame_timing(){
                             ImVec2(width, height));
         }
 #ifdef MANGOAPP
-        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal]){
+        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
             ImGui::SameLine();
             ImGuiTableSetColumnIndex(ImGui::TableGetColumnCount() - 1);
             right_aligned_text(HUDElements.colors.text, ImGui::GetContentRegionAvail().x, "%.1fms", frametime / 1000.f);
@@ -754,32 +761,35 @@ void HudElements::battery(){
                 ImGui::SameLine(0,1.0f);
                 ImGui::Text("%%");
             }
-            if (Battery_Stats.current_watt != 0) {
-                ImguiNextColumnOrNewRow();
-                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", Battery_Stats.current_watt);
-                ImGui::SameLine(0,1.0f);
-                ImGui::PushFont(HUDElements.sw_stats->font1);
-                ImGui::Text("W");
-                ImGui::PopFont();
-                if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
-                    float hours;
-                    float minutes;
-                    minutes = std::modf(Battery_Stats.remaining_time, &hours);
-                    minutes *= 60;
-                    ImGui::TableNextRow();
-                    ImGui::NextColumn();
+            if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
+                if (Battery_Stats.current_watt != 0) {
+                    ImguiNextColumnOrNewRow();
+                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", Battery_Stats.current_watt);
+                    ImGui::SameLine(0,1.0f);
                     ImGui::PushFont(HUDElements.sw_stats->font1);
-                    ImGuiTableSetColumnIndex(0);
-                    ImGui::TextColored(HUDElements.colors.text, "%s", "Remaining Time");
+                    ImGui::Text("W");
                     ImGui::PopFont();
-                    ImGuiTableSetColumnIndex(2);
-                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%02.0f:%02.0f", hours, minutes);
+                    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]) {
+                        float hours;
+                        float minutes;
+                        minutes = std::modf(Battery_Stats.remaining_time, &hours);
+                        minutes *= 60;
+                        ImGui::TableNextRow();
+                        ImGui::NextColumn();
+                        ImGui::PushFont(HUDElements.sw_stats->font1);
+                        ImGuiTableSetColumnIndex(0);
+                        ImGui::TextColored(HUDElements.colors.text, "%s", "Remaining Time");
+                        ImGui::PopFont();
+                        ImGuiTableSetColumnIndex(2);
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%02.0f:%02.0f", hours, minutes);
+                    }
+                } else { 
+                    ImguiNextColumnOrNewRow();
+                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_PLUG);
                 }
-            }else {
-                ImguiNextColumnOrNewRow();
-                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_PLUG);
             }
         }
+        
     }
 #endif
 }

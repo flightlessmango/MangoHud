@@ -307,11 +307,12 @@ void overlay_new_frame(const struct overlay_params& params)
    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,-3));
    ImGui::PushStyleVar(ImGuiStyleVar_Alpha, params.alpha);
+   ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0));
 }
 
 void overlay_end_frame()
 {
-   ImGui::PopStyleVar(3);
+   ImGui::PopStyleVar(4);
 }
 
 void position_layer(struct swapchain_stats& data, const struct overlay_params& params, const ImVec2& window_size)
@@ -366,10 +367,12 @@ void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...)
    vsnprintf(buffer, sizeof(buffer), fmt, args);
    va_end(args);
 
-   ImVec2 sz = ImGui::CalcTextSize(buffer);
-   ImGui::SetCursorPosX(pos.x + off_x - sz.x);
-   //ImGui::Text("%s", buffer);
-   ImGui::TextColored(col,"%s",buffer);
+   if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
+      ImVec2 sz = ImGui::CalcTextSize(buffer);
+      ImGui::SetCursorPosX(pos.x + off_x - sz.x);
+   }
+
+   ImGui::TextColored(col,"%s", buffer);
 }
 
 void center_text(const std::string& text)
