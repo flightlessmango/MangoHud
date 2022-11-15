@@ -195,6 +195,7 @@ uninstall() {
     rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json"
     rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json"
     rm -fv "/usr/bin/mangohud"
+    rm -fv "/usr/bin/mangoplot"
     rm -fv "/usr/bin/mangohud.x86"
 }
 
@@ -235,6 +236,7 @@ install() {
     /usr/bin/install -Dvm644 ./build/release/usr/share/man/man1/mangohud.1 /usr/share/man/man1/mangohud.1
     /usr/bin/install -Dvm644 ./build/release/usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
     /usr/bin/install -vm755  ./build/release/usr/bin/mangohud /usr/bin/mangohud
+    /usr/bin/install -vm755  ./build/release/usr/bin/mangoplot /usr/bin/mangoplot
 
     ln -sv $DEFAULTLIB /usr/lib/mangohud/lib
 

@@ -8,6 +8,7 @@ project('MangoHud',
 
 cc = meson.get_compiler('c')
 cpp = meson.get_compiler('cpp')
+
 prog_python = import('python').find_installation('python3', modules: ['mako'])
 null_dep = dependency('', required : false)
 
@@ -272,3 +273,5 @@ if get_option('tests').enabled()
 
 endif
 
+# install helper sripts
+subdir('bin')
