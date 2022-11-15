@@ -8,7 +8,13 @@ project('MangoHud',
 
 cc = meson.get_compiler('c')
 cpp = meson.get_compiler('cpp')
-prog_python = import('python').find_installation('python3', modules: ['mako'])
+
+python_deps = ['mako']
+if get_option('mangoplot')
+  python_deps += ['matplotlib', 'PyQt5']
+endif
+
+prog_python = import('python').find_installation('python3', modules: python_deps)
 null_dep = dependency('', required : false)
 
 mangohud_version = vcs_tag(
@@ -309,3 +315,5 @@ if get_option('tests').enabled()
 
 endif
 
+# install helper sripts
+subdir('bin')

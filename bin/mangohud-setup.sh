@@ -38,6 +38,7 @@ mangohud_uninstall() {
     rm -frv "/usr/share/doc/mangohud"
     rm -fv "/usr/share/man/man1/mangohud.1"
     rm -fv "/usr/bin/mangohud"
+    rm -fv "/usr/bin/mangoplot"
     rm -fv "/usr/bin/mangohud.x86"
 }
 
@@ -69,6 +70,7 @@ mangohud_install() {
     /usr/bin/install -Dvm644 ./usr/share/man/man1/mangohud.1 /usr/share/man/man1/mangohud.1
     /usr/bin/install -Dvm644 ./usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
     /usr/bin/install -vm755  ./usr/bin/mangohud /usr/bin/mangohud
+    /usr/bin/install -vm755  ./usr/bin/mangoplot /usr/bin/mangoplot
 
     ln -sv $DEFAULTLIB /usr/lib/mangohud/lib
 
