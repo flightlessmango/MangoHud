@@ -277,9 +277,9 @@ endif
 
 if get_option('mangoapp') or get_option('mangoapp_layer')
   glfw3_dep = dependency('glfw3')
-  json_dep = dependency('nlohmann_json')
 endif
 
+json_dep = dependency('nlohmann_json')
 subdir('src')
 
 if get_option('include_doc')
