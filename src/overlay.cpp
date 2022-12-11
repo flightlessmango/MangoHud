@@ -307,7 +307,12 @@ void overlay_new_frame(const struct overlay_params& params)
    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,-3));
    ImGui::PushStyleVar(ImGuiStyleVar_Alpha, params.alpha);
-   ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0));
+   if (!params.enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
+      ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(5,5));
+   }
+   else {
+      ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0));
+   }
 }
 
 void overlay_end_frame()
