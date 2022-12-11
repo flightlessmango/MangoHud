@@ -55,7 +55,7 @@ dependencies() {
         for i in $DISTRO; do
         echo "# Checking dependencies for \"$i\""
         case $i in
-            *arch*|*manjaro*)
+            *arch*|*manjaro*|*artix*)
                 MANAGER_QUERY="pacman -Q"
                 MANAGER_INSTALL="pacman -S"
                 DEPS="{gcc,meson,pkgconf,python-mako,glslang,libglvnd,lib32-libglvnd,libxnvctrl,libdrm}"
