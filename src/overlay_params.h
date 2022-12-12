@@ -111,6 +111,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(gl_bind_framebuffer)         \
    OVERLAY_PARAM_CUSTOM(gl_dont_flip)                \
    OVERLAY_PARAM_CUSTOM(toggle_hud)                  \
+   OVERLAY_PARAM_CUSTOM(toggle_hud_position)         \
    OVERLAY_PARAM_CUSTOM(toggle_fps_limit)            \
    OVERLAY_PARAM_CUSTOM(toggle_logging)              \
    OVERLAY_PARAM_CUSTOM(reload_cfg)                  \
@@ -162,12 +163,14 @@ typedef unsigned long KeySym;
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
+   LAYER_POSITION_TOP_CENTER,
    LAYER_POSITION_TOP_RIGHT,
    LAYER_POSITION_MIDDLE_LEFT,
    LAYER_POSITION_MIDDLE_RIGHT,
    LAYER_POSITION_BOTTOM_LEFT,
    LAYER_POSITION_BOTTOM_RIGHT,
-   LAYER_POSITION_TOP_CENTER,
+   // Count must always be the last entry
+   LAYER_POSITION_COUNT,
 };
 
 enum overlay_plots {
@@ -243,6 +246,7 @@ struct overlay_params {
    std::vector<KeySym> reload_cfg;
    std::vector<KeySym> upload_log;
    std::vector<KeySym> upload_logs;
+   std::vector<KeySym> toggle_hud_position;
    std::string time_format, output_folder, output_file;
    std::string pci_dev;
    std::string media_player_name;

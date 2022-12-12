@@ -73,4 +73,10 @@ void check_keybinds(struct overlay_params& params, uint32_t vendorID){
       last_upload_press = now;
       logger->upload_last_logs();
    }
+
+   if (elapsedF12 >= keyPressDelay &&
+       keys_are_pressed(params.toggle_hud_position)) {
+      next_hud_position(params);
+      last_f12_press = now;
+   }
 }

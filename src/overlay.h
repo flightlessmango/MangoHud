@@ -121,5 +121,6 @@ extern int global_control_client;
 void render_mpris_metadata(const overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing);
 #endif
 void update_fan();
+void next_hud_position(struct overlay_params& params);
 
 #endif //MANGOHUD_OVERLAY_H

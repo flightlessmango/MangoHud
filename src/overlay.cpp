@@ -359,6 +359,8 @@ void position_layer(struct swapchain_stats& data, const struct overlay_params& p
       data.main_window_pos = ImVec2((width / 2) - (window_size.x / 2), margin + params.offset_y);
       ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
       break;
+   case LAYER_POSITION_COUNT:
+      break;
    }
 }
 
@@ -926,4 +928,12 @@ void update_fan(){
       fan_speed = stoi(read_line(hwmon_path));
    else
       fan_speed = -1;
+}
+
+void next_hud_position(struct overlay_params& params){
+   if (params.position < (overlay_param_position::LAYER_POSITION_COUNT - 1)){
+      params.position = static_cast<overlay_param_position>(params.position + 1);
+   } else {
+      params.position = static_cast<overlay_param_position>(0);
+   }
 }

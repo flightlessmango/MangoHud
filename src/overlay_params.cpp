@@ -144,20 +144,22 @@ parse_string_to_keysym_vec(const char *str)
    return keys;
 }
 
-#define parse_toggle_hud         parse_string_to_keysym_vec
-#define parse_toggle_logging     parse_string_to_keysym_vec
-#define parse_reload_cfg         parse_string_to_keysym_vec
-#define parse_upload_log         parse_string_to_keysym_vec
-#define parse_upload_logs        parse_string_to_keysym_vec
-#define parse_toggle_fps_limit   parse_string_to_keysym_vec
+#define parse_toggle_hud            parse_string_to_keysym_vec
+#define parse_toggle_hud_position   parse_string_to_keysym_vec
+#define parse_toggle_logging        parse_string_to_keysym_vec
+#define parse_reload_cfg            parse_string_to_keysym_vec
+#define parse_upload_log            parse_string_to_keysym_vec
+#define parse_upload_logs           parse_string_to_keysym_vec
+#define parse_toggle_fps_limit      parse_string_to_keysym_vec
 
 #else
-#define parse_toggle_hud(x)      {}
-#define parse_toggle_logging(x)  {}
-#define parse_reload_cfg(x)      {}
-#define parse_upload_log(x)      {}
-#define parse_upload_logs(x)     {}
-#define parse_toggle_fps_limit(x)    {}
+#define parse_toggle_hud(x)            {}
+#define parse_toggle_hud_position(x)   {}
+#define parse_toggle_logging(x)        {}
+#define parse_reload_cfg(x)            {}
+#define parse_upload_log(x)            {}
+#define parse_upload_logs(x)           {}
+#define parse_toggle_fps_limit(x)      {}
 #endif
 
 static uint32_t
@@ -637,6 +639,7 @@ parse_overlay_config(struct overlay_params *params,
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_Shift_R, XK_F12 };
+   params->toggle_hud_position = { XK_Shift_R, XK_F11 };
    params->toggle_fps_limit = { XK_Shift_L, XK_F1 };
    params->toggle_logging = { XK_Shift_L, XK_F2 };
    params->reload_cfg = { XK_Shift_L, XK_F4 };
