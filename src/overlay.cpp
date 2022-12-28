@@ -697,7 +697,7 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
    }
 
 #ifdef __linux__
-   if (vendorID == 0x1002
+   if (vendorID == 0x1002 || vendorID==0x8086
        || gpu.find("Radeon") != std::string::npos
        || gpu.find("AMD") != std::string::npos) {
       string path;
@@ -705,9 +705,12 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
 
       auto dirs = ls(drm.c_str(), "card");
       for (auto& dir : dirs) {
+         if (dir.find("-") != std::string::npos) {
+             continue; // filter display adapters
+         }
          path = drm + dir;
 
-         SPDLOG_DEBUG("amdgpu path check: {}", path);
+         SPDLOG_DEBUG("drm path check: {}", path);
          if (pci_bus_parsed && pci_dev) {
             string pci_device = read_symlink((path + "/device").c_str());
             SPDLOG_DEBUG("PCI device symlink: '{}'", pci_device);
@@ -786,7 +789,7 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
       }
 
       // don't bother then
-      if (metrics_path.empty() && !amdgpu.busy) {
+      if (metrics_path.empty() && !amdgpu.busy && vendorID != 0x8086) {
          params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
       }
    }
