@@ -276,6 +276,8 @@ int main(int, char**)
     if (deviceName.find("Radeon") != std::string::npos
     || deviceName.find("AMD") != std::string::npos){
         vendorID = 0x1002;
+    } else if (deviceName.find("Intel") != std::string::npos) {
+        vendorID = 0x8086;
     } else {
         vendorID = 0x10de;
     }
