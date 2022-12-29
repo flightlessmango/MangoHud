@@ -127,8 +127,9 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
       if (vendorID == 0x10de)
          getNvidiaGpuInfo(params);
 
-      if (vendorID== 0x8086)
-         getIntelGpuInfo();
+      if (vendorID== 0x8086) {
+         getIntelGpuInfo(drm_dev.c_str());
+      }
    }
 
 #ifdef __linux__
@@ -824,6 +825,7 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
              continue; // filter display adapters
          }
          path = drm + dir;
+         drm_dev = dir;
 
          SPDLOG_DEBUG("drm path check: {}", path);
          if (pci_bus_parsed && pci_dev) {

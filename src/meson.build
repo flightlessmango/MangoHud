@@ -255,6 +255,18 @@ mangoapp = executable(
 )
 endif
 
+if get_option('mango_intel_stats').enabled() and is_unixy
+  drm_dep = cc.find_library('libdrm')
+  warning('The mango_intel_stats binary must have CAP_PERFMON or setuid to be useful')
+  warning('You must do this manually post-install: setcap cap_perfmon=+ep /path/to/mango_intel_stats')
+  mangointel = executable(
+    'mango_intel_stats',
+    files('app/intel.cpp'),
+    install : true,
+    dependencies : [drm_dep, json_dep],
+  )
+endif
+
 if get_option('mangoapp_layer')
   mangoapp_layer = shared_library(
     'MangoApp',
