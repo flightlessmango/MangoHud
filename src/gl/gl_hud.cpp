@@ -6,7 +6,6 @@
 #include <sstream>
 #include <memory>
 #include <unistd.h>
-#include <filesystem.h>
 #include <spdlog/spdlog.h>
 #include <imgui.h>
 #include "gl_hud.h"
@@ -20,7 +19,6 @@
 
 #include <glad/glad.h>
 
-namespace fs = ghc::filesystem;
 
 namespace MangoHud { namespace GL {
 
@@ -83,19 +81,10 @@ void imgui_init()
 
     if (sw_stats.engine != EngineTypes::ZINK){
         sw_stats.engine = OPENGL;
-
-        fs::path path("/proc/self/map_files/");
-        for (auto& p : fs::directory_iterator(path)) {
-            auto file = p.path().string();
-            auto sym = read_symlink(file.c_str());
-            if (sym.find("wined3d") != std::string::npos) {
-                sw_stats.engine = WINED3D;
-                break;
-            } else if (sym.find("libtogl.so") != std::string::npos || sym.find("libtogl_client.so") != std::string::npos) {
-                sw_stats.engine = TOGL;
-                break;
-            }
-        }
+        if (lib_loaded("wined3d"))
+            sw_stats.engine = WINED3D;
+        if (lib_loaded("libtogl.so") || lib_loaded("libtogl_client.so"))
+            sw_stats.engine = TOGL;
     }
 
     is_blacklisted(true);
@@ -119,6 +108,11 @@ void imgui_create(void *ctx)
     imgui_shutdown();
     imgui_init();
     inited = true;
+        // if using vulkan return, fixes issues with ZINK and multiple games using DXVK
+    if (lib_loaded("libvulkan.so")) {
+        SPDLOG_INFO("libvulkan is loaded, skipping OPENGL");
+        return;
+    }
 
     if (!gladLoadGL())
         spdlog::error("Failed to initialize OpenGL context, crash incoming");
