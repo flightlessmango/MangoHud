@@ -9,6 +9,9 @@
 #include <cstring>
 #include <string>
 #include <spdlog/spdlog.h>
+#include <filesystem.h>
+
+namespace fs = ghc::filesystem;
 
 std::string read_line(const std::string& filename)
 {
@@ -179,6 +182,20 @@ std::string get_config_dir()
     if (!path.empty())
         path += "/.config";
     return path;
+}
+
+bool lib_loaded(const std::string& lib) {
+    fs::path path("/proc/self/map_files/");
+    for (auto& p : fs::directory_iterator(path)) {
+        auto file = p.path().string();
+        auto sym = read_symlink(file.c_str());
+        if (sym.find(lib) != std::string::npos) {
+            return true;
+            break;
+        }
+    }
+    return false;
+
 }
 
 #endif // __linux__
