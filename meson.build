@@ -302,7 +302,8 @@ if get_option('tests').enabled()
       cmocka_dep,
       spdlog_dep,
       dearimgui_dep
-    ])
+    ],
+    include_directories: inc_common)
 
   test('test amdgpu', e, workdir : meson.project_source_root() + '/tests')
 
