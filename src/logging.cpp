@@ -7,6 +7,7 @@
 #include "config.h"
 #include "file_utils.h"
 #include "string_utils.h"
+#include "version.h"
 
 using namespace std;
 

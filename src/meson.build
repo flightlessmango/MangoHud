@@ -159,7 +159,7 @@ link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z
 # meson fails to check version-script so just force add
 link_args += '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version'))
 
-vklayer_mesa_overlay = shared_library(
+mangohud_library = both_libraries(
   'MangoHud',
   mangohud_version,
   util_files,
@@ -193,6 +193,7 @@ vklayer_mesa_overlay = shared_library(
   install_dir : libdir_mangohud,
   install : true
 )
+
 if is_unixy
   mangohud_dlsym = shared_library(
     'MangoHud_dlsym',
@@ -222,11 +223,6 @@ if get_option('mangoapp')
   pre_args += '-DMANGOAPP'
   mangoapp = executable(
     'mangoapp',
-    mangohud_version,
-    util_files,
-    vk_enum_to_str,
-    vklayer_files,
-    opengl_files,
     files(
       'app/main.cpp',
     ),
@@ -247,10 +243,11 @@ if get_option('mangoapp')
       dbus_dep,
       dep_x11,
       glfw3_dep,
-      json_dep,
+      json_dep
     ],
     include_directories : [inc_common],
     install_tag : 'mangoapp',
+    link_with: mangohud_library.get_static_lib(),
     link_args : link_args,
     install : true
   )

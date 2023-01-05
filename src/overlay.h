@@ -7,7 +7,6 @@
 #include <vector>
 #include <deque>
 #include <imgui.h>
-#include "version.h"
 #include "overlay_params.h"
 #include "hud_elements.h"
 #include "engine_types.h"

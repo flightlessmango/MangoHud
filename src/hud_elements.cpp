@@ -17,6 +17,7 @@
 #include "string_utils.h"
 #include "app/mangoapp.h"
 #include <IconsForkAwesome.h>
+#include "version.h"
 
 #define CHAR_CELSIUS    "\xe2\x84\x83"
 #define CHAR_FAHRENHEIT "\xe2\x84\x89"
