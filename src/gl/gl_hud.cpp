@@ -108,8 +108,8 @@ void imgui_create(void *ctx)
     imgui_shutdown();
     imgui_init();
     inited = true;
-        // if using vulkan return, fixes issues with ZINK and multiple games using DXVK
-    if (lib_loaded("libvulkan.so")) {
+    // if using vulkan skip OpenGL impl, fixes issues with ZINK and multiple games using DXVK
+    if (lib_loaded("libvulkan.so") && (sw_stats.engine == ZINK || sw_stats.engine == WINED3D)) {
         SPDLOG_INFO("libvulkan is loaded, skipping OPENGL");
         return;
     }
