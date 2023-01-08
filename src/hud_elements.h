@@ -66,6 +66,7 @@ class HudElements{
         static void frame_count();
         static void fan();
         static void throttling_status();
+        static void exec_name();
 
         void convert_colors(const struct overlay_params& params);
         void convert_colors(bool do_conv, const struct overlay_params& params);

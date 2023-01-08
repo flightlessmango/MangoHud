@@ -7,6 +7,8 @@
 #include "string_utils.h"
 #include "file_utils.h"
 
+std::string global_proc_name;
+
 static std::string get_proc_name() {
    // Note: It is possible to use GNU program_invocation_short_name.
    const std::string proc_name = get_wine_exe_name(/*keep_ext=*/true);
@@ -43,6 +45,7 @@ static  std::vector<std::string> blacklist {
 
 static bool check_blacklisted() {
     std::string proc_name = get_proc_name();
+    global_proc_name = proc_name;
     bool blacklisted = std::find(blacklist.begin(), blacklist.end(), proc_name) != blacklist.end();
 
     if(blacklisted) {

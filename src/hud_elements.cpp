@@ -18,6 +18,7 @@
 #include "app/mangoapp.h"
 #include <IconsForkAwesome.h>
 #include "version.h"
+#include "blacklist.h"
 
 #define CHAR_CELSIUS    "\xe2\x84\x83"
 #define CHAR_FAHRENHEIT "\xe2\x84\x89"
@@ -1100,6 +1101,15 @@ void HudElements::graphs(){
     ImGui::PopStyleColor(1);
 }
 
+void HudElements::exec_name(){
+    ImGui::PushFont(HUDElements.sw_stats->font1);
+    ImGui::TableNextColumn();
+    ImGui::TextColored(HUDElements.colors.engine, "%s", "Executable name");
+    ImGui::TableNextColumn();
+    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, global_proc_name.c_str());
+    ImGui::PopFont();
+}
+
 void HudElements::sort_elements(const std::pair<std::string, std::string>& option){
     const auto& param = option.first;
     const auto& value = option.second;
@@ -1142,6 +1152,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
     if (param == "frame_count")     { ordered_functions.push_back({frame_count, value});            }
     if (param == "fan")             { ordered_functions.push_back({fan, value});                    }
     if (param == "throttling_status")        { ordered_functions.push_back({throttling_status, value});               }
+    if (param == "exec_name")        { ordered_functions.push_back({exec_name, value});               }
     if (param == "graphs"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs])
             HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs] = true;
@@ -1197,6 +1208,7 @@ void HudElements::legacy_elements(){
 #endif
     ordered_functions.push_back({gamepad_battery,    value});
     ordered_functions.push_back({media_player,       value});
+    ordered_functions.push_back({exec_name,          value});
 }
 
 void HudElements::update_exec(){

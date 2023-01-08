@@ -88,6 +88,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(horizontal)                    \
    OVERLAY_PARAM_BOOL(hud_no_margin)                 \
    OVERLAY_PARAM_BOOL(hud_compact)                   \
+   OVERLAY_PARAM_BOOL(exec_name)                     \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
