@@ -218,39 +218,41 @@ if is_unixy
   )
 endif
 
-if get_option('mangoapp')
-  pre_args += '-DIMGUI_IMPL_OPENGL_LOADER_GLEW'
-  pre_args += '-DMANGOAPP'
-  mangoapp = executable(
-    'mangoapp',
-    files(
-      'app/main.cpp',
-    ),
-    c_args : [
-      pre_args,
-      no_override_init_args,
-      vulkan_wsi_args
+if sizeof_ptr != 4 or get_option('mangoapp_32bit')
+  if get_option('mangoapp')
+    pre_args += '-DIMGUI_IMPL_OPENGL_LOADER_GLEW'
+    pre_args += '-DMANGOAPP'
+    mangoapp = executable(
+      'mangoapp',
+      files(
+        'app/main.cpp',
+      ),
+      c_args : [
+        pre_args,
+        no_override_init_args,
+        vulkan_wsi_args
+        ],
+      cpp_args : [
+        pre_args,
+        vulkan_wsi_args
+        ],
+      gnu_symbol_visibility : 'hidden',
+      dependencies : [
+        dearimgui_dep,
+        dep_dl,
+        spdlog_dep,
+        dbus_dep,
+        dep_x11,
+        glfw3_dep,
+        json_dep,
       ],
-    cpp_args : [
-      pre_args,
-      vulkan_wsi_args
-      ],
-    gnu_symbol_visibility : 'hidden',
-    dependencies : [
-      dearimgui_dep,
-      dep_dl,
-      spdlog_dep,
-      dbus_dep,
-      dep_x11,
-      glfw3_dep,
-      json_dep
-    ],
-    include_directories : [inc_common],
-    install_tag : 'mangoapp',
-    link_with: mangohud_library.get_static_lib(),
-    link_args : link_args,
-    install : true
-  )
+      include_directories : [inc_common],
+      install_tag : 'mangoapp',
+      link_with: mangohud_library.get_static_lib(),
+      link_args : link_args,
+      install : true
+    )
+  endif
 endif
 
 if get_option('mangohudctl')
