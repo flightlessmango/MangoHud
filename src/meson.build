@@ -159,7 +159,7 @@ link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z
 # meson fails to check version-script so just force add
 link_args += '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version'))
 
-mangohud_library = both_libraries(
+mangohud_static_lib = static_library(
   'MangoHud',
   mangohud_version,
   util_files,
@@ -191,7 +191,14 @@ mangohud_library = both_libraries(
   include_directories : [inc_common],
   link_args : link_args,
   install_dir : libdir_mangohud,
-  install : true
+  install : false
+)
+
+mangohud_shared_lib = shared_library(
+  'MangoHud',
+  objects: mangohud_static_lib.extract_all_objects(),
+  link_with: mangohud_static_lib,
+  install: true
 )
 
 if is_unixy
@@ -248,7 +255,7 @@ if sizeof_ptr != 4 or get_option('mangoapp_32bit')
       ],
       include_directories : [inc_common],
       install_tag : 'mangoapp',
-      link_with: mangohud_library.get_static_lib(),
+      link_with: mangohud_static_lib,
       link_args : link_args,
       install : true
     )
