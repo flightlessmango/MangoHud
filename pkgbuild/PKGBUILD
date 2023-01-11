@@ -60,6 +60,8 @@ build() {
 
   arch-meson mangohud build32 \
     --libdir=lib32 \
+    -Dmangoapp=false \
+    -Dmangohudctl=false \
     ${_build_args}
 
   ninja -C build32
