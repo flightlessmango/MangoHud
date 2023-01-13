@@ -40,6 +40,7 @@ static  std::vector<std::string> blacklist {
     "EALauncher.exe",
     "StarCitizen_Launcher.exe",
     "InsurgencyEAC.exe",
+    "GalaxyClient.exe",
 };
 
 
