@@ -86,7 +86,6 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(fcat)                          \
    OVERLAY_PARAM_BOOL(log_versioning)                \
    OVERLAY_PARAM_BOOL(horizontal)                    \
-   OVERLAY_PARAM_BOOL(hud_no_margin)                 \
    OVERLAY_PARAM_BOOL(hud_compact)                   \
    OVERLAY_PARAM_BOOL(exec_name)                     \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
@@ -118,6 +117,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(reload_cfg)                  \
    OVERLAY_PARAM_CUSTOM(upload_log)                  \
    OVERLAY_PARAM_CUSTOM(upload_logs)                 \
+   OVERLAY_PARAM_CUSTOM(margin)                      \
    OVERLAY_PARAM_CUSTOM(offset_x)                    \
    OVERLAY_PARAM_CUSTOM(offset_y)                    \
    OVERLAY_PARAM_CUSTOM(background_alpha)            \
@@ -218,7 +218,7 @@ struct overlay_params {
    bool io_read, io_write, io_stats;
    unsigned width;
    unsigned height;
-   int offset_x, offset_y;
+   int margin, offset_x, offset_y;
    float round_corners;
    unsigned vsync;
    int gl_vsync;

@@ -381,8 +381,9 @@ parse_gl_size_query(const char *str)
 #define parse_height(s) parse_unsigned(s)
 #define parse_vsync(s) parse_unsigned(s)
 #define parse_gl_vsync(s) parse_signed(s)
-#define parse_offset_x(s) parse_unsigned(s)
-#define parse_offset_y(s) parse_unsigned(s)
+#define parse_margin(s) parse_unsigned(s)
+#define parse_offset_x(s) parse_signed(s)
+#define parse_offset_y(s) parse_signed(s)
 #define parse_log_duration(s) parse_unsigned(s)
 #define parse_time_format(s) parse_str(s)
 #define parse_output_folder(s) parse_path(s)
@@ -539,7 +540,6 @@ parse_overlay_env(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = read_cfg;
          params->enabled[OVERLAY_PARAM_ENABLED_fcat] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_horizontal] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_hud_no_margin] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_log_versioning] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_hud_compact] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_exec_name] = 0;
@@ -602,6 +602,7 @@ parse_overlay_config(struct overlay_params *params,
    params->fps_limit = { 0 };
    params->vsync = -1;
    params->gl_vsync = -2;
+   params->margin = 10;
    params->offset_x = 0;
    params->offset_y = 0;
    params->background_alpha = 0.5;
@@ -691,7 +692,6 @@ parse_overlay_config(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_throttling_status] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_fcat] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_horizontal] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_hud_no_margin] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_log_versioning] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_hud_compact] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_exec_name] = 0;
