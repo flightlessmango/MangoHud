@@ -306,6 +306,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `no_small_font`                    | Use primary font size for smaller text like units                                     |
 | `width=`<br>`height=`              | Customizeable hud dimensions (in pixels)                                              |
 | `position=`                        | Location of the hud: `top-left` (default), `top-right`, `middle-left`, `middle-right`, `bottom-left`, `bottom-right`, `top-center` |
+| `margin`                           | Hud margin, in pixels (default=10)                                                    |
 | `offset_x` `offset_y`              | Hud position offsets                                                                  |
 | `no_display`                       | Hide the hud by default                                                               |
 | `toggle_hud=`<br>`toggle_logging=` | Modifiable toggle hotkeys. Default are `Shift_R+F12` and `Shift_L+F2`, respectively.      |
