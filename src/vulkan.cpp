@@ -1574,6 +1574,13 @@ static VkResult overlay_QueuePresentKHR(
     VkQueue                                     queue,
     const VkPresentInfoKHR*                     pPresentInfo)
 {
+   using namespace std::chrono_literals;
+   if (fps_limit_stats.targetFrameTime > 0s){
+      fps_limit_stats.frameStart = Clock::now();
+      FpsLimiter(fps_limit_stats);
+      fps_limit_stats.frameEnd = Clock::now();
+   }
+
    struct queue_data *queue_data = FIND(struct queue_data, queue);
 
    /* Otherwise we need to add our overlay drawing semaphore to the list of
@@ -1614,14 +1621,6 @@ static VkResult overlay_QueuePresentKHR(
          pPresentInfo->pResults[i] = chain_result;
       if (chain_result != VK_SUCCESS && result == VK_SUCCESS)
          result = chain_result;
-   }
-
-   using namespace std::chrono_literals;
-
-   if (fps_limit_stats.targetFrameTime > 0s){
-      fps_limit_stats.frameStart = Clock::now();
-      FpsLimiter(fps_limit_stats);
-      fps_limit_stats.frameEnd = Clock::now();
    }
 
    return result;
