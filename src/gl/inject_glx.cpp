@@ -156,14 +156,13 @@ EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
     glx.Load();
 
     do_imgui_swap(dpy, drawable);
-    glx.SwapBuffers(dpy, drawable);
-
     using namespace std::chrono_literals;
     if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s){
         fps_limit_stats.frameStart = Clock::now();
         FpsLimiter(fps_limit_stats);
         fps_limit_stats.frameEnd = Clock::now();
     }
+    glx.SwapBuffers(dpy, drawable);
 }
 
 EXPORT_C_(int64_t) glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t target_msc, int64_t divisor, int64_t remainder)
@@ -173,14 +172,14 @@ EXPORT_C_(int64_t) glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t targe
         return -1;
 
     do_imgui_swap(dpy, drawable);
-    int64_t ret = glx.SwapBuffersMscOML(dpy, drawable, target_msc, divisor, remainder);
-
     using namespace std::chrono_literals;
     if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s){
         fps_limit_stats.frameStart = Clock::now();
         FpsLimiter(fps_limit_stats);
         fps_limit_stats.frameEnd = Clock::now();
     }
+    int64_t ret = glx.SwapBuffersMscOML(dpy, drawable, target_msc, divisor, remainder);
+
     return ret;
 }
 
