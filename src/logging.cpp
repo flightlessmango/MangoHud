@@ -254,7 +254,8 @@ void Logger::upload_last_logs() {
 }
 
 void autostart_log(int sleep) {
-  os_time_sleep(sleep * 1000000);
+  // os_time_sleep() causes freezes with zink + autologging :frog_donut:
+  this_thread::sleep_for(chrono::seconds(sleep));
   logger->start_logging();
 }
 
