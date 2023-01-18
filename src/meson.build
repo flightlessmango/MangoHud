@@ -314,10 +314,12 @@ configure_file(input : '../bin/mangohud.in',
   install_tag : 'scripts',
 )
 
-configure_file(input : 'app/layer.json.in',
-  output : 'libMangoApp.json',
-  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud_vk.replace('\$', '$')},
-  install : true,
-  install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
-  install_tag : 'mangoapp',
-)
+if get_option('mangoapp_layer')
+  configure_file(input : 'app/layer.json.in',
+    output : 'libMangoApp.json',
+    configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud_vk.replace('\$', '$')},
+    install : true,
+    install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
+    install_tag : 'mangoapp',
+  )
+endif
