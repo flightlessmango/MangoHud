@@ -1102,12 +1102,15 @@ void HudElements::graphs(){
 }
 
 void HudElements::exec_name(){
-    ImGui::PushFont(HUDElements.sw_stats->font1);
-    ImGui::TableNextColumn();
-    ImGui::TextColored(HUDElements.colors.engine, "%s", "Executable name");
-    ImGui::TableNextColumn();
-    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, global_proc_name.c_str());
-    ImGui::PopFont();
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_exec_name]){
+        ImGui::PushFont(HUDElements.sw_stats->font1);
+        ImGui::TableNextColumn();
+        ImGui::TextColored(HUDElements.colors.engine, "%s", "Executable name");
+        ImGui::TableNextColumn();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, global_proc_name.c_str());
+        ImGui::PopFont();
+    }
+}
 }
 
 void HudElements::sort_elements(const std::pair<std::string, std::string>& option){
