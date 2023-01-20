@@ -855,7 +855,10 @@ void init_system_info(){
          else {
             char *dir = dirname((char*)wineProcess.c_str());
             stringstream findVersion;
-            findVersion << "\"" << dir << "/wine\" --version";
+            if (preloader == "wine-preloader")
+               findVersion << "\"" << dir << "/wine\" --version";
+            else
+               findVersion << "\"" << dir << "/wine64\" --version";
             const char *wine_env = getenv("WINELOADERNOEXEC");
             if (wine_env)
                unsetenv("WINELOADERNOEXEC");
