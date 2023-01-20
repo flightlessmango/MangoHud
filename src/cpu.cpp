@@ -437,8 +437,7 @@ bool CPUStats::GetCpuFile() {
             break;
         }
         else if ((name == "zenpower" || name == "k10temp")) {
-            if  (!find_temp_input(path, input, "Tdie"))
-                find_temp_input(path, input, "Tctl");
+            find_temp_input(path, input, "Tdie");
             break;
         } else if (name == "atk0110") {
             find_temp_input(path, input, "CPU Temperature");
