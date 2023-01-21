@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
+# Import the variables for dependencies
+source ./build_deps.sh
+
 OS_RELEASE_FILES=("/etc/os-release" "/usr/lib/os-release")
 XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
@@ -58,14 +61,14 @@ dependencies() {
             *arch*|*manjaro*|*artix*)
                 MANAGER_QUERY="pacman -Q"
                 MANAGER_INSTALL="pacman -S"
-                DEPS="{gcc,meson,pkgconf,python-mako,glslang,libglvnd,lib32-libglvnd,libxnvctrl,libdrm}"
+                DEPS="{${DEPS_ARCH}}"
                 dep_install
                 break
             ;;
             *fedora*|*nobara*)
                 MANAGER_QUERY="dnf list installed"
                 MANAGER_INSTALL="dnf install"
-                DEPS="{meson,gcc,gcc-c++,libX11-devel,glslang,python3-mako,mesa-libGL-devel,libXNVCtrl-devel,dbus-devel}"
+                DEPS="{${DEPS_FEDORA}}"
                 dep_install
 
                 unset INSTALL
@@ -77,7 +80,7 @@ dependencies() {
             *debian*|*ubuntu*|*deepin*)
                 MANAGER_QUERY="dpkg-query -s"
                 MANAGER_INSTALL="apt install"
-                DEPS="{gcc,g++,gcc-multilib,g++-multilib,ninja-build,python3-pip,python3-setuptools,python3-wheel,pkg-config,mesa-common-dev,libx11-dev,libxnvctrl-dev,libdbus-1-dev}"
+                DEPS="{${DEPS_DEBIAN}}"
                 dep_install
 
                 if [[ $(pip3 show meson; echo $?) == 1 || $(pip3 show mako; echo $?) == 1 ]]; then
@@ -92,15 +95,13 @@ dependencies() {
                 break
             ;;
             *suse*)
-
-                PACKMAN_PKGS="libXNVCtrl-devel"
-                echo "You may have to enable packman repository for some extra packages: ${PACKMAN_PKGS}"
+                echo "You may have to enable packman repository for some extra packages: ${DEPS_SUSE_EXTRA}"
                 echo "Leap:       zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Leap_15.1/ packman"
                 echo "Tumbleweed: zypper ar -cfp 90 http://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/ packman"
 
                 MANAGER_QUERY="rpm -q"
                 MANAGER_INSTALL="zypper install"
-                DEPS="{gcc-c++,gcc-c++-32bit,libpkgconf-devel,ninja,python3-pip,python3-Mako,libX11-devel,glslang-devel,glibc-devel,glibc-devel-32bit,libstdc++-devel,libstdc++-devel-32bit,Mesa-libGL-devel,dbus-1-devel,${PACKMAN_PKGS}}"
+                DEPS="{${DEPS_SUSE},${DEPS_SUSE_EXTRA}}"
                 dep_install
 
                 if [[ $(pip3 show meson; echo $?) == 1 ]]; then
@@ -113,7 +114,7 @@ dependencies() {
                 unset DEPS
                 MANAGER_INSTALL="eopkg it"
 
-                local packages=("mesalib-32bit-devel" "glslang" "libstdc++-32bit" "glibc-32bit-devel" "mako")
+                local packages=(${DEPS_SOLUS//,/ })
 
                 # eopkg doesn't emit exit codes properly, so use the python API to find if a package is installed.
                 for package in ${packages[@]}; do
