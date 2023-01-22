@@ -381,84 +381,6 @@ bool CPUStats::UpdateCpuPower() {
     return true;
 }
 
-static bool find_temp_input(const std::string path, std::string& input, const std::string& name)
-{
-    auto files = ls(path.c_str(), "temp", LS_FILES);
-    for (auto& file : files) {
-        if (!ends_with(file, "_label"))
-            continue;
-
-        auto label = read_line(path + "/" + file);
-        if (label != name)
-            continue;
-
-        auto uscore = file.find_first_of("_");
-        if (uscore != std::string::npos) {
-            file.erase(uscore, std::string::npos);
-            input = path + "/" + file + "_input";
-            return true;
-        }
-    }
-    return false;
-}
-
-static bool find_fallback_temp_input(const std::string path, std::string& input)
-{
-    auto files = ls(path.c_str(), "temp", LS_FILES);
-    if (!files.size())
-        return false;
-
-    std::sort(files.begin(), files.end());
-    for (auto& file : files) {
-        if (!ends_with(file, "_input"))
-            continue;
-        input = path + "/" + file;
-        SPDLOG_DEBUG("fallback cpu temp input: {}", input);
-        return true;
-    }
-    return false;
-}
-
-bool CPUStats::GetCpuFile() {
-    if (m_cpuTempFile)
-        return true;
-
-    std::string name, path, input;
-    std::string hwmon = "/sys/class/hwmon/";
-
-    auto dirs = ls(hwmon.c_str());
-    for (auto& dir : dirs) {
-        path = hwmon + dir;
-        name = read_line(path + "/name");
-        SPDLOG_DEBUG("hwmon: sensor name: {}", name);
-
-        if (name == "coretemp") {
-            find_temp_input(path, input, "Package id 0");
-            break;
-        }
-        else if ((name == "zenpower" || name == "k10temp")) {
-            find_temp_input(path, input, "Tdie");
-            break;
-        } else if (name == "atk0110") {
-            find_temp_input(path, input, "CPU Temperature");
-            break;
-        } else if (name == "it8603") {
-            find_temp_input(path, input, "temp1");
-            break;
-        } else {
-            path.clear();
-        }
-    }
-    if (path.empty() || (!file_exists(input) && !find_fallback_temp_input(path, input))) {
-        SPDLOG_ERROR("Could not find cpu temp sensor location");
-        return false;
-    } else {
-        SPDLOG_DEBUG("hwmon: using input: {}", input);
-        m_cpuTempFile = fopen(input.c_str(), "r");
-    }
-    return true;
-}
-
 static bool find_input(const std::string& path, const char* input_prefix, std::string& input, const std::string& name)
 {
     auto files = ls(path.c_str(), input_prefix, LS_FILES);
@@ -478,6 +400,64 @@ static bool find_input(const std::string& path, const char* input_prefix, std::s
         }
     }
     return false;
+}
+
+static bool find_fallback_input(const std::string& path, const char* input_prefix, std::string& input)
+{
+    auto files = ls(path.c_str(), input_prefix, LS_FILES);
+    if (!files.size())
+        return false;
+
+    std::sort(files.begin(), files.end());
+    for (auto& file : files) {
+        if (!ends_with(file, "_input"))
+            continue;
+        input = path + "/" + file;
+		SPDLOG_DEBUG("fallback cpu {} input: {}", input_prefix, input);
+        return true;
+    }
+    return false;
+}
+
+bool CPUStats::GetCpuFile() {
+    if (m_cpuTempFile)
+        return true;
+
+    std::string name, path, input;
+    std::string hwmon = "/sys/class/hwmon/";
+
+    auto dirs = ls(hwmon.c_str());
+    for (auto& dir : dirs) {
+        path = hwmon + dir;
+        name = read_line(path + "/name");
+        SPDLOG_DEBUG("hwmon: sensor name: {}", name);
+
+        if (name == "coretemp") {
+            find_input(path, "temp", input, "Package id 0");
+            break;
+        }
+        else if ((name == "zenpower" || name == "k10temp")) {
+            if (!find_input(path, "temp", input, "Tdie"))
+                find_input(path, "temp", input, "Tctl");
+            break;
+        } else if (name == "atk0110") {
+            find_input(path, "temp", input, "CPU Temperature");
+            break;
+        } else if (name == "it8603") {
+            find_input(path, "temp", input, "temp1");
+            break;
+        } else {
+            path.clear();
+        }
+    }
+    if (path.empty() || (!file_exists(input) && !find_fallback_input(path, "temp", input))) {
+        SPDLOG_ERROR("Could not find cpu temp sensor location");
+        return false;
+    } else {
+        SPDLOG_DEBUG("hwmon: using input: {}", input);
+        m_cpuTempFile = fopen(input.c_str(), "r");
+    }
+    return true;
 }
 
 static CPUPowerData_k10temp* init_cpu_power_data_k10temp(const std::string path) {
