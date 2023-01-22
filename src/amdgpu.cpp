@@ -28,17 +28,21 @@ bool amdgpu_verify_metrics(const std::string& path)
         return false;
     }
 
-    switch (header.format_revision)
-    {
-		case 1:
+	switch (header.format_revision)
+	{
+		case 1: // v1_1, v1_2, v1_3
+			if(header.content_revision<=0 || header.content_revision>3)// v1_0, not naturally aligned
+				break;
 			cpuStats.cpu_type = "GPU";
 			return true;
-		case 2:
+		case 2: // v2_1, v2_2, v2_3
+			if(header.content_revision<=0 || header.content_revision>3)// v2_0, not naturally aligned
+				break;
 			cpuStats.cpu_type = "APU";
 			return true;
-		default: 
+		default:
 			break;
-    }
+	}
 
     SPDLOG_WARN("Unsupported gpu_metrics version: {}.{}", header.format_revision, header.content_revision);
     return false;
@@ -47,7 +51,7 @@ bool amdgpu_verify_metrics(const std::string& path)
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	FILE *f;
-	void *buf[MAX(sizeof(struct gpu_metrics_v1_3), sizeof(struct gpu_metrics_v2_3))];
+	void *buf[MAX(sizeof(struct gpu_metrics_v1_3), sizeof(struct gpu_metrics_v2_3))/sizeof(void*)+1];
 	struct metrics_table_header* header = (metrics_table_header*)buf;
 
 	f = fopen(metrics_path.c_str(), "rb");
@@ -55,8 +59,8 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		return;
 
 	// Read the whole file
-	if (!fread(buf, sizeof(buf), 1, f) == 0) {
-		SPDLOG_DEBUG("Failed to read amdgpu metrics file '{}'", metrics_path.c_str());
+	if (fread(buf, sizeof(buf), 1, f) != 0) {
+		SPDLOG_DEBUG("amdgpu metrics file '{}' is larger than the buffer", metrics_path.c_str());
 		fclose(f);
 		return;
 	}
@@ -83,6 +87,12 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 
 		metrics->average_gfx_power_w = amdgpu_metrics->average_gfx_power / 1000.f;
 		metrics->average_cpu_power_w = amdgpu_metrics->average_cpu_power / 1000.f;
+		// Use cpu + soc power similar to 'get_cpu_power_k10temp' in 'cpu.cpp' ?
+		//metrics->average_cpu_power_w = amdgpu_metrics->average_cpu_power / 1000.f + amdgpu_metrics->average_soc_power / 1000.f;
+
+		// average_cpu_power_w fallback ?
+		//if(!( amdgpu_metrics->average_cpu_power ^ 0xffff && amdgpu_metrics->average_soc_power ^ 0xffff ))
+		//    metrics->average_cpu_power_w = amdgpu_metrics->average_socket_power / 1000.f - amdgpu_metrics->average_gfx_power / 1000.f;
 
 		metrics->current_gfxclk_mhz = amdgpu_metrics->current_gfxclk;
 		metrics->current_uclk_mhz = amdgpu_metrics->current_uclk;
