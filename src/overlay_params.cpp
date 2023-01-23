@@ -625,7 +625,7 @@ parse_overlay_config(struct overlay_params *params,
    params->gpu_load_color = { 0x39f900, 0xfdfd09, 0xb22222 };
    params->cpu_load_color = { 0x39f900, 0xfdfd09, 0xb22222 };
    params->font_scale_media_player = 0.55f;
-   params->log_interval = 100;
+   params->log_interval = 0;
    params->media_player_format = { "{title}", "{artist}", "{album}" };
    params->permit_upload = 0;
    params->benchmark_percentiles = { "97", "AVG"};
@@ -830,9 +830,6 @@ parse_overlay_config(struct overlay_params *params,
 
    auto real_size = params->font_size * params->font_scale;
    real_font_size = ImVec2(real_size, real_size / 2);
-#ifdef MANGOAPP
-   params->log_interval = 0;
-#endif
    HUDElements.params = params;
    if (params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout]){
         HUDElements.legacy_elements();
