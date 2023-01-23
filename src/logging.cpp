@@ -16,8 +16,9 @@ bool sysInfoFetched = false;
 double fps;
 uint64_t frametime;
 logData currentLogData = {};
-
 std::unique_ptr<Logger> logger;
+ofstream output_file;
+std::thread log_thread;
 
 string exec(string command) {
 #ifndef _WIN32
@@ -108,12 +109,8 @@ void writeSummary(string filename){
   out.close();
 }
 
-void writeFile(string filename){
-  auto& logArray = logger->get_log_data();
-  SPDLOG_DEBUG("Writing log file [{}], {} entries", filename, logArray.size());
-  std::ofstream out(filename, ios::out | ios::app);
-  if (out){
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_log_versioning]){
+void writeFileHeaders(ofstream& out){
+      if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_log_versioning]){
       printf("log versioning");
       out << "v1" << endl;
       out << MANGOHUD_VERSION << endl;
@@ -127,25 +124,31 @@ void writeFile(string filename){
       out << "--------------------FRAME METRICS--------------------" << endl;
 
     out << "fps," << "frametime," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "gpu_power," << "ram_used," << "elapsed" << endl;
+}
 
-    for (size_t i = 0; i < logArray.size(); i++){
-      out << logArray[i].fps << ",";
-      out << logArray[i].frametime << ",";
-      out << logArray[i].cpu_load << ",";
-      out << logArray[i].gpu_load << ",";
-      out << logArray[i].cpu_temp << ",";
-      out << logArray[i].gpu_temp << ",";
-      out << logArray[i].gpu_core_clock << ",";
-      out << logArray[i].gpu_mem_clock << ",";
-      out << logArray[i].gpu_vram_used << ",";
-      out << logArray[i].gpu_power << ",";
-      out << logArray[i].ram_used << ",";
-      out << std::chrono::duration_cast<std::chrono::nanoseconds>(logArray[i].previous).count() << "\n";
-    }
-  } else {
-    SPDLOG_ERROR("Failed to write log file");
+void Logger::writeToFile(){
+  if (!output_file){
+    output_file.open(m_log_files.back(), ios::out | ios::app);
+    writeFileHeaders(output_file);
   }
-  out.close();
+
+  auto& logArray = logger->get_log_data();
+  if (output_file && !logArray.empty()){
+    output_file << logArray.back().fps << ",";
+    output_file << logArray.back().frametime / 1000.f << ",";
+    output_file << logArray.back().cpu_load << ",";
+    output_file << logArray.back().gpu_load << ",";
+    output_file << logArray.back().cpu_temp << ",";
+    output_file << logArray.back().gpu_temp << ",";
+    output_file << logArray.back().gpu_core_clock << ",";
+    output_file << logArray.back().gpu_mem_clock << ",";
+    output_file << logArray.back().gpu_vram_used << ",";
+    output_file << logArray.back().gpu_power << ",";
+    output_file << logArray.back().ram_used << ",";
+    output_file << std::chrono::duration_cast<std::chrono::nanoseconds>(logArray.back().previous).count() << "\n";
+  } else {
+    printf("MANGOHUD: Failed to write log file\n");
+  }
 }
 
 string get_log_suffix(){
@@ -164,6 +167,7 @@ Logger::Logger(const overlay_params* in_params)
     m_logging_on(false),
     m_values_valid(false)
 {
+  if(output_folder.empty()) output_folder = std::getenv("HOME");
   m_log_end = Clock::now() - 15s;
   SPDLOG_DEBUG("Logger constructed!");
 }
@@ -173,8 +177,21 @@ void Logger::start_logging() {
   m_values_valid = false;
   m_logging_on = true;
   m_log_start = Clock::now();
+
+  std::string program = get_wine_exe_name();
+  printf("%s\n", output_folder.c_str());
+  if (program.empty())
+      program = get_program_name();
+
+#ifdef MANGOAPP
+  m_log_files.emplace_back(output_folder + "/mangoapp_" + program + "_" + get_log_suffix());
+#else
+  m_log_files.emplace_back(output_folder + "/" + program + "_" + get_log_suffix());
+#endif
+
   if(log_interval != 0){
-    std::thread(&Logger::logging, this).detach();
+    std::thread log_thread(&Logger::logging, this);
+    log_thread.detach();
   }
 }
 
@@ -182,26 +199,11 @@ void Logger::stop_logging() {
   if(!m_logging_on) return;
   m_logging_on = false;
   m_log_end = Clock::now();
+  if (log_thread.joinable()) log_thread.join();
 
   calculate_benchmark_data();
-
-  if(!output_folder.empty()) {
-    std::string program = get_wine_exe_name();
-    if (program.empty())
-        program = get_program_name();
-    m_log_files.emplace_back(output_folder + "/" + program + "_" + get_log_suffix());
-    std::thread writefile (writeFile, m_log_files.back());
-    std::thread writesummary (writeSummary, m_log_files.back());
-    writefile.join();
-    writesummary.join();
-  } else {
-#ifdef MANGOAPP
-    string path = std::getenv("HOME");
-    std::string logName = path + "/mangoapp_" + get_log_suffix();
-    writeSummary(logName);
-    writeFile(logName);
-#endif
-  }
+  output_file.close();
+  writeSummary(m_log_files.back());
   clear_log_data();
   control_client_check(HUDElements.params->control, global_control_client, gpu.c_str());
   const char * cmd = "LoggingFinished";
@@ -214,6 +216,7 @@ void Logger::logging(){
       try_log();
       this_thread::sleep_for(std::chrono::milliseconds(log_interval));
   }
+  clear_log_data();
 }
 
 void Logger::try_log() {
@@ -223,9 +226,10 @@ void Logger::try_log() {
   auto elapsedLog = now - m_log_start;
 
   currentLogData.previous = elapsedLog;
-  currentLogData.fps = 1000.f / (frametime / 1000.f);
+  currentLogData.fps = fps;
   currentLogData.frametime = frametime;
   m_log_array.push_back(currentLogData);
+  writeToFile();
 
   if(log_duration && (elapsedLog >= std::chrono::seconds(log_duration))){
     stop_logging();

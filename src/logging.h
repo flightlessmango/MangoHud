@@ -50,10 +50,12 @@ public:
   const std::vector<logData>& get_log_data() const noexcept { return m_log_array; }
   void clear_log_data() noexcept { m_log_array.clear(); }
 
+  void writeToFile();
+
   void upload_last_log();
   void upload_last_logs();
   void calculate_benchmark_data();
-  const std::string output_folder;
+  std::string output_folder;
   const int64_t log_interval;
   const int64_t log_duration;
 

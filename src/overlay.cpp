@@ -242,7 +242,8 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
       frametime_data[f_idx] = frametime_ms;
    }
 
-   frametime = frametime_ns / 1000;
+   frametime = frametime_ms;
+   fps = double(1000 / frametime_ms);
 
    if (elapsed >= params.fps_sampling_period) {
       if (!hw_update_thread)
