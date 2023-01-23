@@ -14,7 +14,7 @@ using namespace std;
 string os, cpu, gpu, ram, kernel, driver, cpusched;
 bool sysInfoFetched = false;
 double fps;
-uint64_t frametime;
+float frametime;
 logData currentLogData = {};
 std::unique_ptr<Logger> logger;
 ofstream output_file;
@@ -134,8 +134,9 @@ void Logger::writeToFile(){
 
   auto& logArray = logger->get_log_data();
   if (output_file && !logArray.empty()){
+    printf("%f\n", logArray.back().frametime);
     output_file << logArray.back().fps << ",";
-    output_file << logArray.back().frametime / 1000.f << ",";
+    output_file << logArray.back().frametime << ",";
     output_file << logArray.back().cpu_load << ",";
     output_file << logArray.back().gpu_load << ",";
     output_file << logArray.back().cpu_temp << ",";
