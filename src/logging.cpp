@@ -134,7 +134,6 @@ void Logger::writeToFile(){
 
   auto& logArray = logger->get_log_data();
   if (output_file && !logArray.empty()){
-    printf("%f\n", logArray.back().frametime);
     output_file << logArray.back().fps << ",";
     output_file << logArray.back().frametime << ",";
     output_file << logArray.back().cpu_load << ",";
@@ -147,6 +146,7 @@ void Logger::writeToFile(){
     output_file << logArray.back().gpu_power << ",";
     output_file << logArray.back().ram_used << ",";
     output_file << std::chrono::duration_cast<std::chrono::nanoseconds>(logArray.back().previous).count() << "\n";
+    output_file.flush();
   } else {
     printf("MANGOHUD: Failed to write log file\n");
   }
