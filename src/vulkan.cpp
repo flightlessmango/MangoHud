@@ -1749,11 +1749,10 @@ static VkResult overlay_CreateDevice(
    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
 
    VkPhysicalDeviceFeatures device_features = {};
-   VkDeviceCreateInfo device_info = *pCreateInfo;
 
-   std::vector<const char*> enabled_extensions(device_info.ppEnabledExtensionNames,
-                                               device_info.ppEnabledExtensionNames +
-                                               device_info.enabledExtensionCount);
+   std::vector<const char*> enabled_extensions(pCreateInfo->ppEnabledExtensionNames,
+                                               pCreateInfo->ppEnabledExtensionNames +
+                                               pCreateInfo->enabledExtensionCount);
 
    uint32_t extension_count;
    instance_data->vtable.EnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extension_count, nullptr);
@@ -1781,15 +1780,7 @@ static VkResult overlay_CreateDevice(
       FOUND:;
    }
 
-   device_info.enabledExtensionCount = enabled_extensions.size();
-   device_info.ppEnabledExtensionNames = enabled_extensions.data();
-
-   if (pCreateInfo->pEnabledFeatures)
-      device_features = *(pCreateInfo->pEnabledFeatures);
-   device_info.pEnabledFeatures = &device_features;
-
-
-   VkResult result = fpCreateDevice(physicalDevice, &device_info, pAllocator, pDevice);
+   VkResult result = fpCreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
    if (result != VK_SUCCESS) return result;
 
    struct device_data *device_data = new_device_data(*pDevice, instance_data);
