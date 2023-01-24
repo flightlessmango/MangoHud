@@ -246,19 +246,26 @@ bool CPUStats::UpdateCoreMhz() {
     return true;
 }
 
+bool CPUStats::ReadcpuTempFile(int& temp) {
+	if (!m_cpuTempFile)
+		return false;
+
+	rewind(m_cpuTempFile);
+	fflush(m_cpuTempFile);
+	bool ret = (fscanf(m_cpuTempFile, "%d", &temp) == 1);
+	temp = temp / 1000;
+
+	return ret;
+}
+
 bool CPUStats::UpdateCpuTemp() {
-    if (cpu_type == "APU"){
+	if (cpu_type == "APU"){
         m_cpuDataTotal.temp = gpu_info.apu_cpu_temp;
         return true;
     } else {
-        if (!m_cpuTempFile)
-            return false;
-
         int temp = 0;
-        rewind(m_cpuTempFile);
-        fflush(m_cpuTempFile);
-        bool ret = (fscanf(m_cpuTempFile, "%d", &temp) == 1);
-        m_cpuDataTotal.temp = temp / 1000;
+		bool ret = ReadcpuTempFile(temp);
+		m_cpuDataTotal.temp = temp;
 
         return ret;
     }

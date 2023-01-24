@@ -49,6 +49,7 @@ bool amdgpu_verify_metrics(const std::string& path)
 }
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define IS_VALID_METRIC(FIELD) (FIELD != 0xffff)
 void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	FILE *f;
 	void *buf[MAX(sizeof(struct gpu_metrics_v1_3), sizeof(struct gpu_metrics_v2_3))/sizeof(void*)+1];
@@ -86,23 +87,87 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
 
 		metrics->average_gfx_power_w = amdgpu_metrics->average_gfx_power / 1000.f;
-		metrics->average_cpu_power_w = amdgpu_metrics->average_cpu_power / 1000.f;
-		// Use cpu + soc power similar to 'get_cpu_power_k10temp' in 'cpu.cpp' ?
-		//metrics->average_cpu_power_w = amdgpu_metrics->average_cpu_power / 1000.f + amdgpu_metrics->average_soc_power / 1000.f;
 
-		// average_cpu_power_w fallback ?
-		//if(!( amdgpu_metrics->average_cpu_power ^ 0xffff && amdgpu_metrics->average_soc_power ^ 0xffff ))
-		//    metrics->average_cpu_power_w = amdgpu_metrics->average_socket_power / 1000.f - amdgpu_metrics->average_gfx_power / 1000.f;
+		if( IS_VALID_METRIC(amdgpu_metrics->average_cpu_power) && IS_VALID_METRIC(amdgpu_metrics->average_soc_power) ) {
+			// Use 'cpu power' + 'soc power' similar to 'get_cpu_power_k10temp' in 'cpu.cpp'
+			metrics->average_cpu_power_w = amdgpu_metrics->average_cpu_power / 1000.f + amdgpu_metrics->average_soc_power / 1000.f;
+		} else if( IS_VALID_METRIC(amdgpu_metrics->average_core_power[0]) ) {
+			// fallback 1: sum of core power
+			metrics->average_cpu_power_w = 0;
+			for (unsigned i = 0; i < cpuStats.GetCPUData().size() / 2; i++)
+				metrics->average_cpu_power_w = metrics->average_cpu_power_w + amdgpu_metrics->average_core_power[i];
+		} else if( IS_VALID_METRIC(amdgpu_metrics->average_socket_power) && IS_VALID_METRIC(amdgpu_metrics->average_gfx_power) ) {
+			// fallback 2: estimate cpu power from total socket power
+			metrics->average_cpu_power_w = amdgpu_metrics->average_socket_power / 1000.f - amdgpu_metrics->average_gfx_power / 1000.f;
+		} else if( IS_VALID_METRIC(amdgpu_metrics->average_cpu_power) ) {
+			// fallback 3: Ignore 'soc power' if not available
+			metrics->average_cpu_power_w = amdgpu_metrics->average_cpu_power / 1000.f;
+		} else {
+			// giving up
+			metrics->average_cpu_power_w = 0;
+		}
 
-		metrics->current_gfxclk_mhz = amdgpu_metrics->current_gfxclk;
-		metrics->current_uclk_mhz = amdgpu_metrics->current_uclk;
+		if( IS_VALID_METRIC(amdgpu_metrics->current_gfxclk) ) {
+			// prefered method
+			metrics->current_gfxclk_mhz = amdgpu_metrics->current_gfxclk;
+		} else if( IS_VALID_METRIC(amdgpu_metrics->average_gfxclk_frequency) ) {
+			// fallback 1
+			metrics->current_gfxclk_mhz = amdgpu_metrics->average_gfxclk_frequency;
+		} else {
+			// giving up
+			metrics->current_gfxclk_mhz = 0;
+		}
+		if( IS_VALID_METRIC(amdgpu_metrics->current_uclk) ) {
+			// prefered method
+			metrics->current_uclk_mhz = amdgpu_metrics->current_uclk;
+		} else if( IS_VALID_METRIC(amdgpu_metrics->average_uclk_frequency) ) {
+			// fallback 1
+			metrics->current_uclk_mhz = amdgpu_metrics->average_uclk_frequency;
+		} else {
+			// giving up
+			metrics->current_uclk_mhz = 0;
+		}
 
-		metrics->soc_temp_c = amdgpu_metrics->temperature_soc / 100;
-		metrics->gpu_temp_c = amdgpu_metrics->temperature_gfx / 100;
+		if( IS_VALID_METRIC(amdgpu_metrics->temperature_soc) ) {
+			// prefered method
+			metrics->soc_temp_c = amdgpu_metrics->temperature_soc / 100;
+		} else if( header->content_revision >= 3 && IS_VALID_METRIC(amdgpu_metrics->average_temperature_soc) ) {
+			// fallback 1
+			metrics->soc_temp_c = amdgpu_metrics->average_temperature_soc / 100;
+		} else {
+			// giving up
+			metrics->soc_temp_c = 0;
+		}
+		if( IS_VALID_METRIC(amdgpu_metrics->temperature_gfx) ) {
+			// prefered method
+			metrics->gpu_temp_c = amdgpu_metrics->temperature_gfx / 100;
+		} else if( header->content_revision >= 3 && IS_VALID_METRIC(amdgpu_metrics->average_temperature_gfx) ) {
+			// fallback 1
+			metrics->gpu_temp_c = amdgpu_metrics->average_temperature_gfx / 100;
+		} else {
+			// giving up
+			metrics->gpu_temp_c = 0;
+		}
+
 		int cpu_temp = 0;
-		for (unsigned i = 0; i < cpuStats.GetCPUData().size() / 2; i++)
-			cpu_temp = MAX(cpu_temp, amdgpu_metrics->temperature_core[i]);
-		metrics->apu_cpu_temp_c = cpu_temp / 100;
+		if( IS_VALID_METRIC(amdgpu_metrics->temperature_core[0]) ) {
+			// prefered method
+			for (unsigned i = 0; i < cpuStats.GetCPUData().size() / 2; i++)
+				cpu_temp = MAX(cpu_temp, amdgpu_metrics->temperature_core[i]);
+			metrics->apu_cpu_temp_c = cpu_temp / 100;
+		} else if( header->content_revision >= 3 && IS_VALID_METRIC(amdgpu_metrics->average_temperature_core[0]) ) {
+			// fallback 1
+			for (unsigned i = 0; i < cpuStats.GetCPUData().size() / 2; i++)
+				cpu_temp = MAX(cpu_temp, amdgpu_metrics->average_temperature_core[i]);
+			metrics->apu_cpu_temp_c = cpu_temp / 100;
+		} else if( cpuStats.ReadcpuTempFile(cpu_temp) ) {
+			// fallback 2: Try temp from file 'm_cpuTempFile' of 'cpu.cpp'
+			metrics->apu_cpu_temp_c = cpu_temp;
+		} else {
+			// giving up
+			metrics->apu_cpu_temp_c = 0;
+		}
+
 		indep_throttle_status = amdgpu_metrics->indep_throttle_status;
 	}
 
