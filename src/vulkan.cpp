@@ -34,6 +34,7 @@
 #include <list>
 #include <array>
 #include <iomanip>
+#include <sstream>
 #include <inttypes.h>
 #include <spdlog/spdlog.h>
 #include <imgui.h>
