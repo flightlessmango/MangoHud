@@ -191,7 +191,6 @@ bool lib_loaded(const std::string& lib) {
         auto sym = read_symlink(file.c_str());
         if (sym.find(lib) != std::string::npos) {
             return true;
-            break;
         }
     }
     return false;
