@@ -1749,7 +1749,6 @@ static VkResult overlay_CreateDevice(
    // Advance the link info for the next element on the chain
    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
 
-   VkPhysicalDeviceFeatures device_features = {};
 
    std::vector<const char*> enabled_extensions(pCreateInfo->ppEnabledExtensionNames,
                                                pCreateInfo->ppEnabledExtensionNames +
