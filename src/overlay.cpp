@@ -766,10 +766,10 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
          for (const auto& dir : dirs) {
             if (!amdgpu.temp)
                amdgpu.temp = fopen((hwmon_path + dir + "/temp1_input").c_str(), "r");
-            if (!amdgpu.temp_j)
-               amdgpu.temp_j = fopen((hwmon_path + dir + "/temp2_input").c_str(), "r");
-            if (!amdgpu.temp_mem)
-               amdgpu.temp_mem = fopen((hwmon_path + dir + "/temp3_input").c_str(), "r");
+            if (!amdgpu.junction_temp)
+               amdgpu.junction_temp = fopen((hwmon_path + dir + "/temp2_input").c_str(), "r");
+            if (!amdgpu.memory_temp)
+               amdgpu.memory_temp = fopen((hwmon_path + dir + "/temp3_input").c_str(), "r");
          }
 
          if (!metrics_path.empty())

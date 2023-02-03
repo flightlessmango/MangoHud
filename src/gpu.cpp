@@ -137,22 +137,22 @@ void getAmdGpuInfo(){
         gpu_info.temp = value / 1000;
     }
 
-    if (amdgpu.temp_j){
-        rewind(amdgpu.temp_j);
-        fflush(amdgpu.temp_j);
+    if (amdgpu.junction_temp){
+        rewind(amdgpu.junction_temp);
+        fflush(amdgpu.junction_temp);
         int value = 0;
-        if (fscanf(amdgpu.temp_j, "%d", &value) != 1)
+        if (fscanf(amdgpu.junction_temp, "%d", &value) != 1)
             value = 0;
-        gpu_info.temp_j = value / 1000;
+        gpu_info.junction_temp = value / 1000;
     }
 
-    if (amdgpu.temp_mem){
-        rewind(amdgpu.temp_mem);
-        fflush(amdgpu.temp_mem);
+    if (amdgpu.memory_temp){
+        rewind(amdgpu.memory_temp);
+        fflush(amdgpu.memory_temp);
         int value = 0;
-        if (fscanf(amdgpu.temp_mem, "%d", &value) != 1)
+        if (fscanf(amdgpu.memory_temp, "%d", &value) != 1)
             value = 0;
-        gpu_info.temp_mem = value / 1000;
+        gpu_info.memory_temp = value / 1000;
     }
 
     if (amdgpu.gtt_used) {

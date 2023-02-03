@@ -196,26 +196,17 @@ void HudElements::gpu_stats(){
             right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.temp);
             ImGui::SameLine(0, 1.0f);
             ImGui::Text("°C");
-            if (gpu_info.temp_j > -1) {
-                ImguiNextColumnOrNewRow();
-                right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.temp_j);
-                ImGui::SameLine(0, 1.0f);
-                ImGui::Text("°C");
-                ImGui::SameLine(0, 1.0f);
-                ImGui::PushFont(HUDElements.sw_stats->font1);
-                ImGui::Text("Tj");
-                ImGui::PopFont();
-            }
-            if (gpu_info.temp_mem > -1) {
-                ImguiNextColumnOrNewRow();
-                right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.temp_mem);
-                ImGui::SameLine(0, 1.0f);
-                ImGui::Text("°C");
-                ImGui::SameLine(0, 1.0f);
-                ImGui::PushFont(HUDElements.sw_stats->font1);
-                ImGui::Text("Tmem");
-                ImGui::PopFont();
-            }
+        }
+
+        if (gpu_info.junction_temp > -1 && HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_junction_temp]) {
+            ImguiNextColumnOrNewRow();
+            right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.junction_temp);
+            ImGui::SameLine(0, 1.0f);
+            ImGui::Text("°C");
+            ImGui::SameLine(0, 1.0f);
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            ImGui::Text("Jnc");
+            ImGui::PopFont();
         }
 
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]){
@@ -396,6 +387,13 @@ void HudElements::vram(){
         ImGui::Text("GiB");
         ImGui::PopFont();
 #ifndef MANGOAPP
+        if (gpu_info.memory_temp > -1 && HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_mem_temp]) {
+            ImguiNextColumnOrNewRow();
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", gpu_info.memory_temp);
+            ImGui::SameLine(0, 1.0f);
+            ImGui::Text("°C");
+        }
+
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_mem_clock]){
             ImguiNextColumnOrNewRow();
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", gpu_info.MemClock);

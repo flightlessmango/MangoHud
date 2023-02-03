@@ -290,7 +290,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 
 | Variable                           | Description                                                                           |
 |------------------------------------|---------------------------------------------------------------------------------------|
-| `cpu_temp`<br>`gpu_temp`           | Displays current CPU/GPU temperature                                                  |
+| `cpu_temp`<br>`gpu_temp`<br>`gpu_junction_temp`<br>`gpu_mem_temp`           | Displays current CPU/GPU temperature                                                  |
 | `core_load`                        | Displays load & frequency per core                                                    |
 | `gpu_core_clock`<br>`gpu_mem_clock`| Displays GPU core/memory frequency                                                    |
 | `ram`<br>`vram`                    | Displays system RAM/VRAM usage                                                        |
