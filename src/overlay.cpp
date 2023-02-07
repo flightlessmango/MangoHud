@@ -286,7 +286,8 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
 void update_hud_info(struct swapchain_stats& sw_stats, const struct overlay_params& params, uint32_t vendorID){
    uint64_t now = os_time_get_nano(); /* ns */
    uint64_t frametime_ns = now - sw_stats.last_present_time;
-   update_hud_info_with_frametime(sw_stats, params, vendorID, frametime_ns);
+   if (!params.no_display || logger->is_active())
+      update_hud_info_with_frametime(sw_stats, params, vendorID, frametime_ns);
 }
 
 float get_time_stat(void *_data, int _idx)

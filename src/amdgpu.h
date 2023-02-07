@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <unistd.h>
 #include <string>
+#include "overlay_params.h"
 // #include <vector>
 
 #define METRICS_UPDATE_PERIOD_MS 500

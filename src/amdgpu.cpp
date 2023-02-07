@@ -5,6 +5,8 @@
 #include "gpu.h"
 #include "cpu.h"
 #include "overlay.h"
+#include "hud_elements.h"
+#include "logging.h"
 
 std::string metrics_path = "";
 struct amdgpu_common_metrics amdgpu_common_metrics;
@@ -154,7 +156,10 @@ void amdgpu_metrics_polling_thread() {
 	memset(metrics_buffer, 0, sizeof(metrics_buffer));
 
 	while (1) {
-		amdgpu_get_samples_and_copy(metrics_buffer, gpu_load_needs_dividing);
+		if (HUDElements.params->no_display && !logger->is_active())
+			usleep(100000);
+		else
+			amdgpu_get_samples_and_copy(metrics_buffer, gpu_load_needs_dividing);
 	}
 }
 

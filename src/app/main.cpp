@@ -145,7 +145,9 @@ static void msg_read_thread(){
         size_t msg_size = msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 1, 0) + sizeof(long);
         if (hdr->version == 1){
             if (msg_size > offsetof(struct mangoapp_msg_v1, visible_frametime_ns)){
-                update_hud_info_with_frametime(sw_stats, params, vendorID, mangoapp_v1->visible_frametime_ns);
+                if (!params.no_display || logger->is_active())
+                    update_hud_info_with_frametime(sw_stats, params, vendorID, mangoapp_v1->visible_frametime_ns);
+
                 if (msg_size > offsetof(mangoapp_msg_v1, fsrUpscale)){
                     g_fsrUpscale = mangoapp_v1->fsrUpscale;
                     if (params.fsr_steam_sharpness < 0)
