@@ -28,6 +28,7 @@ static  std::vector<std::string> blacklist {
     "OriginThinSetupInternal.exe",
     "steam",
     "steamwebhelper",
+    "vrcompositor",
     "gldriverquery",
     "vulkandriverquery",
     "Steam.exe",
