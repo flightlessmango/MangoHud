@@ -43,7 +43,8 @@ static  std::vector<std::string> blacklist {
     "GalaxyClient.exe",
     "REDprelauncher.exe",
     "REDlauncher.exe",
-    "gamescope"
+    "gamescope",
+    "RSI Launcher.exe"
 };
 
 
