@@ -147,6 +147,19 @@ if is_unixy
     )
   endif
 
+  if get_option('with_libdrm_sampling').enabled()
+    libdrm_amdgpu_h_found = cc.has_header('libdrm/amdgpu.h')
+    if not libdrm_amdgpu_h_found
+      error('libdrm/amdgpu.h was not found. Disable with \'-Dwith_libdrm_sampling\' if libdrm sampling is not needed (it probably isn\'t)')
+    endif
+
+    pre_args += '-DHAVE_LIBDRM_SAMPLING'
+
+    vklayer_files += files(
+      'amdgpu_libdrm.cpp'
+    )
+  endif
+
   if dbus_dep.found() and get_option('with_dbus').enabled()
     pre_args += '-DHAVE_DBUS'
     vklayer_files += files(
@@ -187,7 +200,9 @@ mangohud_static_lib = static_library(
     dep_pthread,
     dep_vulkan,
     windows_deps,
-    json_dep],
+    json_dep,
+    libdrm_amdgpu_dep
+    ],
   include_directories : [inc_common],
   link_args : link_args,
   install_dir : libdir_mangohud,
@@ -234,12 +249,13 @@ if get_option('mangoapp')
     ),
     c_args : [
       pre_args,
+      no_override_init_args,
       vulkan_wsi_args
-    ],
+      ],
     cpp_args : [
       pre_args,
       vulkan_wsi_args
-    ],
+      ],
     gnu_symbol_visibility : 'hidden',
     dependencies : [
       dearimgui_dep,
@@ -249,6 +265,7 @@ if get_option('mangoapp')
       dep_x11,
       glfw3_dep,
       json_dep,
+      libdrm_amdgpu_dep
     ],
     include_directories : [inc_common],
     install_tag : 'mangoapp',
