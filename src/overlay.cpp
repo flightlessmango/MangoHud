@@ -23,6 +23,7 @@
 #include "pci_ids.h"
 #include "iostats.h"
 #include "amdgpu.h"
+#include "amdgpu_libdrm.h"
 
 
 #ifdef __linux__
@@ -121,6 +122,10 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
 
       if (gpu_metrics_exists)
          amdgpu_get_metrics();
+
+#if defined(__linux__) && defined(HAVE_LIBDRM_SAMPLING)
+      libdrm_get_info();
+#endif
 
       if (vendorID == 0x10de)
          getNvidiaGpuInfo(params);
