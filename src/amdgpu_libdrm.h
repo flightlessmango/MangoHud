@@ -17,6 +17,9 @@ struct libdrm_stats {
     int busy;
 };
 
+extern std::string dri_device_path;
+
 void libdrm_do_sample();
 void libdrm_thread();
 void libdrm_get_info();
+int libdrm_initialize();

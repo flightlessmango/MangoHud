@@ -793,6 +793,12 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
          break;
       }
 
+#ifdef HAVE_LIBDRM_SAMPLING
+      dri_device_path = string("/dev/dri") + path.substr(path.find_last_of("/"));
+      SPDLOG_INFO("Using DRI device for libdrm sampling: '{}'", dri_device_path);
+      // TODO: handle case in which /dev/dri/cardX does not exist
+#endif
+
       // don't bother then
       if (metrics_path.empty() && !amdgpu.busy && vendorID != 0x8086) {
          params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
