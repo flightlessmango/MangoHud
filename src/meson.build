@@ -148,11 +148,6 @@ if is_unixy
   endif
 
   if get_option('with_libdrm_sampling').enabled()
-    libdrm_amdgpu_h_found = cc.has_header('libdrm/amdgpu.h')
-    if not libdrm_amdgpu_h_found
-      error('libdrm/amdgpu.h was not found. Disable with \'-Dwith_libdrm_sampling\' if libdrm sampling is not needed (it probably isn\'t)')
-    endif
-
     pre_args += '-DHAVE_LIBDRM_SAMPLING'
 
     vklayer_files += files(
