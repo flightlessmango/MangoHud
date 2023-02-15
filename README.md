@@ -417,6 +417,7 @@ Options starting with "gl_*" are for OpenGL.
 - `gl_size_query = viewport` : Specify what to use for getting display size. Options are "viewport", "scissorbox" or disabled. Defaults to using glXQueryDrawable.
 - `gl_bind_framebuffer = 0..N` : (Re)bind given framebuffer before MangoHud gets drawn. Helps with Crusader Kings III.
 - `gl_dont_flip = 1` : Don't swap origin if using GL_UPPER_LEFT. Helps with Ryujinx.
+- `libdrm_sampling` : Use libdrm_amdgpu to calculate GPU utilization. Helps with some problematic Vega GPUs.
 
 ## MangoHud FPS logging
 
