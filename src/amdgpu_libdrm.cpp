@@ -10,6 +10,7 @@
 #include "amdgpu_libdrm.h"
 
 std::string dri_device_path;
+bool libdrm_sampling_possible = true;
 
 std::deque<struct libdrm_sample> sample_buf(LIBDRM_SAMPLE_BUF_SIZE, {0});
 std::mutex sample_buf_m;
@@ -41,7 +42,7 @@ void libdrm_get_info() {
     static bool init = false;
     if (!init) {
         if (libdrm_initialize()) {
-            // TODO: handle error
+            libdrm_sampling_possible = false;
             SPDLOG_ERROR("Could not initialize libdrm");
             return;
         }
