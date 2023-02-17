@@ -18,7 +18,7 @@ struct libdrm_stats {
 };
 
 extern std::string dri_device_path;
-extern bool libdrm_sampling_possible;
+extern bool do_libdrm_sampling;
 
 void libdrm_do_sample();
 void libdrm_thread();
