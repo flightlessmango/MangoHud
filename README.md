@@ -37,14 +37,14 @@ A Vulkan and OpenGL overlay for monitoring FPS, temperatures, CPU/GPU load and m
 
 If you wish to compile MangoHud to keep up to date with any changes - first clone this repository and cd into it:
 
-```bash
+```
 git clone --recurse-submodules https://github.com/flightlessmango/MangoHud.git
 cd MangoHud
 ```
 
 Using `meson` to install "manually":
 
-```bash
+```
 meson build
 ninja -C build install
 ```
@@ -55,7 +55,7 @@ Add `-Dappend_libdir_mangohud=false` option to meson to not append `mangohud` to
 To install 32-bit build on 64-bit distro, specify proper `libdir`: `lib32` for Arch, `lib/i386-linux-gnu` on Debian-based distros. RPM-based distros usually install 32-bit libraries to `/usr/lib` and 64-bit to `/usr/lib64`.
 You may have to change `PKG_CONFIG_PATH` to point to correct folders for your distro.
 
-```bash
+```
 CC="gcc -m32" \
 CXX="g++ -m32" \
 PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig" \
@@ -90,13 +90,13 @@ You can also use `build.sh` script to do some things automatically like install 
 
 To just build it, execute:
 
-```bash
+```
 ./build.sh build
 ```
 
 You can also pass arguments to meson:
 
-```bash
+```
 ./build.sh build -Dwith_xnvctrl=disabled
 ```
 
@@ -104,31 +104,31 @@ Resulting files will be install to `./build/release` folder.
 
 If you have compiled MangoHud from source, to install it, execute:
 
-```bash
+```
 ./build.sh install
 ```
 
 You can then subsequently uninstall MangoHud via the following command
 
-```bash
+```
 ./build.sh uninstall
 ```
 
 To tar up the resulting binaries into a package and create a release tar with installer script, execute:
 
-```bash
+```
 ./build.sh package release
 ```
 
 or combine the commands, although `package` should also call `build` if it doesn't find the built libs:
 
-```bash
+```
 ./build.sh build package release
 ```
 
 If you have built MangoHud before and suddenly it fails, you can try cleaning the `build` folder, execute:
 
-```bash
+```
 ./build.sh clean
 ```
 
@@ -144,7 +144,7 @@ __NOTE: If you are running an Ubuntu-based, Arch-based, Fedora-based, or openSUS
 
 If you do not wish to compile anything, simply download the file under [Releases](https://github.com/flightlessmango/MangoHud/releases), extract it, and from within the extracted folder in terminal, execute:
 
-```bash
+```
 ./mangohud-setup.sh install
 ```
 
@@ -154,7 +154,7 @@ If you are using an Arch-based distribution, install [`mangohud`](https://aur.ar
 
 If you are building it by yourself, you need to enable multilib repository, by editing pacman config:
 
-```bash
+```
 sudo nano /etc/pacman.conf
 ```
 
@@ -167,7 +167,7 @@ and uncomment:
 
 then save the file and execute:
 
-```bash
+```
 sudo pacman -Syy
 ```
 
@@ -175,13 +175,13 @@ sudo pacman -Syy
 
 If you are using Debian 11 (Bullseye) or later, Ubuntu 21.10 (Impish) or later, or distro derived from them, to install the [MangoHud](https://tracker.debian.org/pkg/mangohud) package, execute:
 
-```bash
+```
 sudo apt install mangohud
 ```
 
 Optionally, if you also need MangoHud for 32-bit applications, execute:
 
-```bash
+```
 sudo apt install mangohud:i386
 ```
 
@@ -189,7 +189,7 @@ sudo apt install mangohud:i386
 
 If you are using Fedora, to install the [MangoHud](https://src.fedoraproject.org/rpms/mangohud) package, execute:
 
-```bash
+```
 sudo dnf install mangohud
 ```
 
@@ -197,7 +197,7 @@ sudo dnf install mangohud
 
 If you are using Solus, to install [MangoHud](https://dev.getsol.us/source/mangohud/) simply execute:
 
-```bash
+```
 sudo eopkg it mangohud
 ```
 
@@ -207,7 +207,7 @@ If you run openSUSE Leap or Tumbleweed you can get Mangohud from the official re
 There are two packages, [mangohud](https://software.opensuse.org/package/mangohud) for 64bit and [mangohud-32bit](https://software.opensuse.org/package/mangohud-32bit) for 32bit application support.
 To have Mangohud working for both 32bit and 64bit applications you need to install both packages even on a 64bit operating system.
 
-```bash
+```
 sudo zypper in mangohud mangohud-32bit
 ```
 
@@ -215,14 +215,14 @@ Leap doesn't seem to have the 32bit package.
 
 Leap 15.2
 
-```bash
+```
 sudo zypper addrepo -f https://download.opensuse.org/repositories/games:tools/openSUSE_Leap_15.2/games:tools.repo
 sudo zypper install mangohud
 ```
 
 Leap 15.3
 
-```bash
+```
 sudo zypper addrepo -f https://download.opensuse.org/repositories/games:tools/openSUSE_Leap_15.3/games:tools.repo
 sudo zypper install mangohud
 ```
@@ -233,13 +233,13 @@ If you are using Flatpaks, you will have to add the [Flathub repository](https:/
 
 For flatpak:
 
-```bash
+```
 flatpak install org.freedesktop.Platform.VulkanLayer.MangoHud
 ```
 
 To enable MangoHud for all Steam games:
 
-```bash
+```
 flatpak override --user --env=MANGOHUD=1 com.valvesoftware.Steam
 ```
 
