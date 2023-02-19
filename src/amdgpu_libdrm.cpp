@@ -26,6 +26,8 @@ void libdrm_do_sample(libdrm_sample *sample) {
 
 void libdrm_thread() {
     while (true) {
+        auto start_time = std::chrono::system_clock::now().time_since_epoch();
+
         struct libdrm_sample sample {0};
         libdrm_do_sample(&sample);
         
@@ -34,7 +36,11 @@ void libdrm_thread() {
         sample_buf.push_back(sample);
         sample_buf_m.unlock();
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(LIBDRM_SAMPLE_DELAY));
+        auto end_time = std::chrono::system_clock::now().time_since_epoch();
+        auto sleep_duration = std::chrono::microseconds(LIBDRM_SAMPLE_DELAY) - (end_time - start_time);
+        if (sleep_duration > std::chrono::nanoseconds(0)) {
+            std::this_thread::sleep_for(sleep_duration);
+        }
     }
 }
 
