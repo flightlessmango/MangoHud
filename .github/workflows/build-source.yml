@@ -15,7 +15,7 @@ jobs:
           set -x
           sudo apt update
           sudo apt install gcc g++ ninja-build python3-pip python3-setuptools python3-wheel pkg-config mesa-common-dev libx11-dev libxnvctrl-dev libdbus-1-dev glslang-tools
-          sudo pip3 install 'meson>=0.54' mako
+          sudo pip3 install 'meson>=0.60' mako
           ./build-source.sh
           assets=()
           for asset in ./MangoHud-*-Source*.tar.*; do
