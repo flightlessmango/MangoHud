@@ -8,7 +8,8 @@ extern "C" {
 #include "stdio.h"
 #include "../src/amdgpu.h"
 #include "../src/cpu.h"
-#include "tests.h"
+
+#define UNUSED(x) (void)(x)
 
 static void test_amdgpu_verify_metrics(void **state) {
     UNUSED(state);
