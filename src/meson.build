@@ -281,6 +281,7 @@ if get_option('mangoapp_layer')
       pre_args,
       ],
     dependencies : [
+      dep_vulkan,
       json_dep
     ],
     gnu_symbol_visibility : 'hidden',

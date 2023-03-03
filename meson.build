@@ -111,7 +111,6 @@ inc_common = [
     include_directories('include'),
 ]
 
-dep_vulkan = dependency('vulkan', required: get_option('use_system_vulkan'))
 dep_pthread = dependency('threads')
 
 add_project_arguments(
@@ -164,7 +163,8 @@ else
   dep_rt = null_dep
 endif
 
-if dep_vulkan.found()
+dep_vulkan = dependency('vulkan', required: get_option('use_system_vulkan'))
+if dep_vulkan.found() and not get_option('use_system_vulkan').disabled()
   datadir = get_option('vulkan_datadir')
   if datadir == ''
     datadir = get_option('datadir')
