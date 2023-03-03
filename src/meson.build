@@ -165,7 +165,6 @@ mangohud_static_lib = static_library(
   overlay_spv,
   c_args : [
     pre_args,
-    no_override_init_args,
     vulkan_wsi_args
     ],
   cpp_args : [
@@ -207,7 +206,6 @@ if is_unixy
     ),
     c_args : [
       pre_args,
-      no_override_init_args,
       ],
     cpp_args : [
       pre_args,
@@ -232,7 +230,6 @@ if sizeof_ptr != 4 or get_option('mangoapp_32bit')
       ),
       c_args : [
         pre_args,
-        no_override_init_args,
         vulkan_wsi_args
         ],
       cpp_args : [
@@ -276,7 +273,6 @@ if get_option('mangoapp_layer')
     ),
     c_args : [
       pre_args,
-      no_override_init_args,
       ],
     cpp_args : [
       pre_args,
