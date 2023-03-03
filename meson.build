@@ -126,7 +126,7 @@ foreach a : ['-Werror=implicit-function-declaration',
   endif
 endforeach
 
-foreach a : ['missing-field-initializers', 'format-truncation']
+foreach a : ['missing-field-initializers']
   if cc.has_argument('-W' + a)
     c_args += '-Wno-' + a
   endif
@@ -145,7 +145,7 @@ endforeach
 # For some reason, the test for -Wno-foo always succeeds with gcc, even if the
 # option is not supported. Hence, check for -Wfoo instead.
 
-foreach a : ['non-virtual-dtor', 'missing-field-initializers', 'format-truncation']
+foreach a : ['non-virtual-dtor', 'missing-field-initializers',]
   if cpp.has_argument('-W' + a)
     cpp_args += '-Wno-' + a
   endif
