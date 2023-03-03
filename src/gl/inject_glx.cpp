@@ -22,9 +22,6 @@
 
 using namespace MangoHud::GL;
 
-EXPORT_C_(void *) glXGetProcAddress(const unsigned char* procName);
-EXPORT_C_(void *) glXGetProcAddressARB(const unsigned char* procName);
-
 #ifndef GLX_WIDTH
 #define GLX_WIDTH   0x801D
 #define GLX_HEIGHT  0x801E
