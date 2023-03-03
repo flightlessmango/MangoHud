@@ -156,9 +156,11 @@ void amdgpu_metrics_polling_thread() {
 	memset(metrics_buffer, 0, sizeof(metrics_buffer));
 
 	while (1) {
+#ifndef TEST_ONLY
 		if (HUDElements.params->no_display && !logger->is_active())
 			usleep(100000);
 		else
+#endif
 			amdgpu_get_samples_and_copy(metrics_buffer, gpu_load_needs_dividing);
 	}
 }

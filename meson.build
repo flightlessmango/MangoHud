@@ -271,6 +271,7 @@ if get_option('tests').enabled()
       'src/mesa/util/os_time.c',
       'src/file_utils.cpp',
     ),
+    cpp_args: ['-DTEST_ONLY'],
     dependencies: [
       cmocka_dep,
       spdlog_dep,
