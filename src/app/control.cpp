@@ -1,6 +1,10 @@
+#include <sys/ipc.h>
+#include <sys/msg.h>
 #include <string.h>
 #include <stdio.h>
-#include "mangoapp.h"
+#include <stdlib.h>
+
+#include "mangoapp_proto.h"
 
 void help_and_quit() {
     fprintf(stderr, "Usage: mangohudctl [set|toggle] attribute [value]\n");
