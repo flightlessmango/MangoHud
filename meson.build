@@ -151,13 +151,6 @@ foreach a : ['non-virtual-dtor', 'missing-field-initializers', 'format-truncatio
   endif
 endforeach
 
-no_override_init_args = []
-foreach a : ['override-init', 'initializer-overrides']
-  if cc.has_argument('-W' + a)
-    no_override_init_args += '-Wno-' + a
-  endif
-endforeach
-
 foreach a : pre_args
   add_project_arguments(a, language : ['c', 'cpp'])
 endforeach
