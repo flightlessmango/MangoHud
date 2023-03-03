@@ -261,7 +261,7 @@ endif
 if get_option('mangohudctl')
 mangoapp = executable(
   'mangohudctl',
-  files('app/control.cpp'),
+  files('app/control.c'),
   install_tag : 'mangoapp', #TODO MangoHud layer itself currently doesn't support it
   install : true
 )
