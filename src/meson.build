@@ -272,7 +272,6 @@ mangoapp = executable(
 endif
 
 if get_option('mangoapp_layer')
-  pre_args += '-DMANGOAPP_LAYER'
   mangoapp_layer = shared_library(
     'MangoApp',
     vk_enum_to_str,
