@@ -35,29 +35,11 @@ float SRGBToLinear(float in)
         return powf((in + 0.055f) / 1.055f, 2.4f);
 }
 
-float LinearToSRGB(float in)
-{
-    if (in <= 0.0031308f)
-        return in * 12.92f;
-    else
-        return 1.055f * powf(in, 1.0f / 2.4f) - 0.055f;
-}
-
 ImVec4 SRGBToLinear(ImVec4 col)
 {
     col.x = SRGBToLinear(col.x);
     col.y = SRGBToLinear(col.y);
     col.z = SRGBToLinear(col.z);
-    // Alpha component is already linear
-
-    return col;
-}
-
-ImVec4 LinearToSRGB(ImVec4 col)
-{
-    col.x = LinearToSRGB(col.x);
-    col.y = LinearToSRGB(col.y);
-    col.z = LinearToSRGB(col.z);
     // Alpha component is already linear
 
     return col;
