@@ -187,11 +187,6 @@ vk_enum_to_str = custom_target(
   ],
 )
 
-util_files = files(
-  'src/mesa/util/os_socket.c',
-  'src/mesa/util/os_time.c',
-)
-
 imgui_options = [
   'default_library=static',
   'werror=false',
