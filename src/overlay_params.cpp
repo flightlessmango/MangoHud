@@ -36,9 +36,7 @@
 #include "dbus_info.h"
 #endif
 
-#ifdef MANGOAPP
 #include "app/mangoapp.h"
-#endif
 
 #if __cplusplus >= 201703L
 

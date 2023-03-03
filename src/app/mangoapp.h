@@ -1,3 +1,5 @@
+#ifdef MANGOAPP
+
 #include <stdint.h>
 #include <mutex>
 #include <condition_variable>
@@ -10,3 +12,5 @@ extern uint8_t g_fsrUpscale;
 extern uint8_t g_fsrSharpness;
 extern std::vector<float> gamescope_debug_latency;
 extern std::vector<float> gamescope_debug_app;
+
+#endif
