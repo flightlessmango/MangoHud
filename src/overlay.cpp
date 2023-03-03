@@ -33,10 +33,6 @@
 namespace fs = ghc::filesystem;
 using namespace std;
 
-#ifdef HAVE_DBUS
-float g_overflow = 50.f /* 3333ms * 0.5 / 16.6667 / 2 (to edge and back) */;
-#endif
-
 string gpuString,wineVersion,wineProcess;
 uint32_t deviceID;
 bool gui_open = false;
@@ -413,6 +409,8 @@ float get_ticker_limited_pos(float pos, float tw, float& left_limit, float& righ
 #ifdef HAVE_DBUS
 void render_mpris_metadata(const struct overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing)
 {
+   static const float overflow = 50.f /* 3333ms * 0.5 / 16.6667 / 2 (to edge and back) */;
+
    if (meta.meta.valid) {
       auto color = ImGui::ColorConvertU32ToFloat4(params.media_player_color);
       ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,0));
@@ -446,12 +444,12 @@ void render_mpris_metadata(const struct overlay_params& params, mutexed_metadata
       float new_pos, left_limit = 0, right_limit = 0;
       get_ticker_limited_pos(meta.ticker.pos, meta.ticker.longest, left_limit, right_limit);
 
-      if (meta.ticker.pos < left_limit - g_overflow * .5f) {
+      if (meta.ticker.pos < left_limit - overflow * .5f) {
          meta.ticker.dir = -1;
-         meta.ticker.pos = (left_limit - g_overflow * .5f) + 1.f /* random */;
-      } else if (meta.ticker.pos > right_limit + g_overflow) {
+         meta.ticker.pos = (left_limit - overflow * .5f) + 1.f /* random */;
+      } else if (meta.ticker.pos > right_limit + overflow) {
          meta.ticker.dir = 1;
-         meta.ticker.pos = (right_limit + g_overflow) - 1.f /* random */;
+         meta.ticker.pos = (right_limit + overflow) - 1.f /* random */;
       }
 
       meta.ticker.pos -= .5f * (frame_timing / 16666666.7f /* ns */) * meta.ticker.dir;
