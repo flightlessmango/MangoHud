@@ -32,9 +32,7 @@
 #include "loaders/loader_x11.h"
 #endif
 
-#ifdef HAVE_DBUS
 #include "dbus_info.h"
-#endif
 
 #include "app/mangoapp.h"
 

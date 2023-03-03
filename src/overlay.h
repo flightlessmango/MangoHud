@@ -11,10 +11,7 @@
 #include "hud_elements.h"
 #include "engine_types.h"
 
-#ifdef HAVE_DBUS
 #include "dbus_info.h"
-extern float g_overflow;
-#endif
 #include "logging.h"
 
 struct frame_stat {

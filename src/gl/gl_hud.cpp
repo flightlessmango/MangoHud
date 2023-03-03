@@ -13,10 +13,6 @@
 #include "notify.h"
 #include "blacklist.h"
 
-#ifdef HAVE_DBUS
-#include "dbus_info.h"
-#endif
-
 #include <glad/glad.h>
 
 

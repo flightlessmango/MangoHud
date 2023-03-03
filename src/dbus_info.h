@@ -2,6 +2,8 @@
 #ifndef MANGOHUD_DBUS_INFO_H
 #define MANGOHUD_DBUS_INFO_H
 
+#ifdef HAVE_DBUS
+
 #include <array>
 #include <functional>
 #include <map>
@@ -142,4 +144,5 @@ extern dbus_manager dbus_mgr;
 }  // namespace dbusmgr
 bool get_media_player_metadata(dbusmgr::dbus_manager& dbus, const std::string& name, metadata& meta);
 
+#endif // HAVE_DBUS
 #endif //MANGOHUD_DBUS_INFO_H
