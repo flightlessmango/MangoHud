@@ -41,13 +41,6 @@ void* get_egl_proc_address(const char* name) {
     return func;
 }
 
-//EGLBoolean eglMakeCurrent(EGLDisplay dpy, EGLSurface draw, EGLSurface read, EGLContext ctx);
-EXPORT_C_(int) eglMakeCurrent_OFF(void *dpy, void *draw, void *read,void *ctx) {
-    SPDLOG_TRACE("{}: draw: {}, ctx: {}", __func__, draw, ctx);
-    int ret = 0;
-    return ret;
-}
-
 EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf)
 {
     static int (*pfn_eglSwapBuffers)(void*, void*) = nullptr;
