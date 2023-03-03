@@ -27,7 +27,7 @@ using namespace std;
 
 // Cut from https://github.com/ocornut/imgui/pull/2943
 // Probably move to ImGui
-float SRGBToLinear(float in)
+static float SRGBToLinear(float in)
 {
     if (in <= 0.04045f)
         return in / 12.92f;
@@ -35,7 +35,7 @@ float SRGBToLinear(float in)
         return powf((in + 0.055f) / 1.055f, 2.4f);
 }
 
-ImVec4 SRGBToLinear(ImVec4 col)
+static ImVec4 SRGBToLinear(ImVec4 col)
 {
     col.x = SRGBToLinear(col.x);
     col.y = SRGBToLinear(col.y);
@@ -109,7 +109,7 @@ void HudElements::convert_colors(bool do_conv, const struct overlay_params& para
 /**
 * Go to next column or second column on new row
 */
-void ImguiNextColumnOrNewRow(int column = -1)
+static void ImguiNextColumnOrNewRow(int column = -1)
 {
     if (column > -1 && column < ImGui::TableGetColumnCount())
         ImGui::TableSetColumnIndex(column);
@@ -121,7 +121,7 @@ void ImguiNextColumnOrNewRow(int column = -1)
     }
 }
 
-void ImGuiTableSetColumnIndex(int column)
+static void ImGuiTableSetColumnIndex(int column)
 {
     ImGui::TableSetColumnIndex(std::max(0, std::min(column, ImGui::TableGetColumnCount() - 1)));
 }
@@ -767,13 +767,13 @@ void HudElements::battery(){
                         ImGuiTableSetColumnIndex(2);
                         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%02.0f:%02.0f", hours, minutes);
                     }
-                } else { 
+                } else {
                     ImguiNextColumnOrNewRow();
                     right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_PLUG);
                 }
             }
         }
-        
+
     }
 #endif
 }

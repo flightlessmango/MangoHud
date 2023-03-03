@@ -17,7 +17,7 @@ int switch_count = 0;
 int bitdo_count = 0;
 std::string  xbox_paths [2]{"gip","xpadneo"};
 
-bool operator<(const gamepad& a, const gamepad& b)
+static bool operator<(const gamepad& a, const gamepad& b)
 {
     return a.name < b.name;
 }

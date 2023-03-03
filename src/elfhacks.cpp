@@ -44,6 +44,7 @@ int eh_set_rel_plt(eh_obj_t *obj, int p, const char *sym, void *val);
 
 int eh_iterate_rela_plt(eh_obj_t *obj, int p, eh_iterate_rel_callback_func callback, void *arg);
 int eh_iterate_rel_plt(eh_obj_t *obj, int p, eh_iterate_rel_callback_func callback, void *arg);
+int eh_iterate_callback(struct dl_phdr_info *info, size_t size, void *argptr);
 
 int eh_find_sym_hash(eh_obj_t *obj, const char *name, eh_sym_t *sym);
 int eh_find_sym_gnu_hash(eh_obj_t *obj, const char *name, eh_sym_t *sym);

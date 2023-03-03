@@ -45,14 +45,14 @@ static void assign_metadata_value(metadata& meta, const std::string& key,
     }
 }
 
-std::string format_signal(const dbusmgr::DBusSignal& s) {
+static std::string format_signal(const dbusmgr::DBusSignal& s) {
     std::stringstream ss;
     ss << "type='signal',interface='" << s.intf << "'";
     ss << ",member='" << s.signal << "'";
     return ss.str();
 }
 
-void parse_song_data(DBusMessageIter_wrap iter, metadata& meta){
+static void parse_song_data(DBusMessageIter_wrap iter, metadata& meta){
     iter.string_map_for_each([&meta](const std::string& key,
                                        DBusMessageIter_wrap it) {
         std::string val;
@@ -100,7 +100,7 @@ static void parse_mpris_properties(libdbus_loader& dbus, DBusMessage* msg,
     meta.valid = (meta.artists.size() || !meta.title.empty());
 }
 
-bool dbus_get_name_owner(dbusmgr::dbus_manager& dbus_mgr,
+static bool dbus_get_name_owner(dbusmgr::dbus_manager& dbus_mgr,
                          std::string& name_owner, const char* name) {
     auto reply =
         DBusMessage_wrap::new_method_call(
@@ -116,7 +116,7 @@ bool dbus_get_name_owner(dbusmgr::dbus_manager& dbus_mgr,
     return true;
 }
 
-bool dbus_get_player_property(dbusmgr::dbus_manager& dbus_mgr, metadata& meta,
+static bool dbus_get_player_property(dbusmgr::dbus_manager& dbus_mgr, metadata& meta,
                               const char* dest, const char* prop) {
     auto reply =
         DBusMessage_wrap::new_method_call(dest, "/org/mpris/MediaPlayer2",

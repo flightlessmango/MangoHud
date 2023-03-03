@@ -117,6 +117,7 @@ dep_pthread = dependency('threads')
 add_project_arguments(
   cc.get_supported_arguments([
     '-Werror=implicit-function-declaration',
+    '-Werror=missing-declarations',
     '-Werror=missing-prototypes',
     '-Werror=return-type',
     '-Werror=incompatible-pointer-types',
@@ -130,6 +131,7 @@ add_project_arguments(
 
 add_project_arguments(
   cpp.get_supported_arguments([
+    '-Werror=missing-declarations',
     '-Werror=return-type',
     '-Wno-unused-parameter',
     '-Qunused-arguments',

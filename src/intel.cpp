@@ -8,7 +8,7 @@ using json = nlohmann::json;
 static bool init_intel = false;
 struct gpuInfo gpu_info_intel {};
 
-void intelGpuThread(){
+static void intelGpuThread(){
     init_intel = true;
     static char stdout_buffer[1024];
     FILE* intel_gpu_top = popen("intel_gpu_top -J -s 500", "r");
@@ -56,7 +56,7 @@ void intelGpuThread(){
 
         if (exitcode == 1)
         SPDLOG_INFO("Missing permissions for '{}'", "intel_gpu_top");
-        
+
         SPDLOG_INFO("Disabling gpu_stats");
         _params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
     }

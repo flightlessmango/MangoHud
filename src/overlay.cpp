@@ -389,7 +389,7 @@ void center_text(const std::string& text)
    ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2 )- (ImGui::CalcTextSize(text.c_str()).x / 2));
 }
 
-float get_ticker_limited_pos(float pos, float tw, float& left_limit, float& right_limit)
+static float get_ticker_limited_pos(float pos, float tw, float& left_limit, float& right_limit)
 {
    //float cw = ImGui::GetContentRegionAvailWidth() * 3; // only table cell worth of width
    float cw = ImGui::GetWindowContentRegionMax().x - ImGui::GetStyle().WindowPadding.x;

@@ -36,7 +36,7 @@ string exec(string command) {
     return result;
 }
 
-void upload_file(std::string logFile){
+static void upload_file(std::string logFile){
   std::string command = "curl --include --request POST https://flightlessmango.com/logs -F 'log[game_id]=26506' -F 'log[user_id]=176' -F 'attachment=true' -A 'mangohud' ";
   command += " -F 'log[uploads][]=@" + logFile + "'";
 
@@ -45,7 +45,7 @@ void upload_file(std::string logFile){
   exec("xdg-open " + url);
 }
 
-void upload_files(const std::vector<std::string>& logFiles){
+static void upload_files(const std::vector<std::string>& logFiles){
   std::string command = "curl --include --request POST https://flightlessmango.com/logs -F 'log[game_id]=26506' -F 'log[user_id]=176' -F 'attachment=true' -A 'mangohud' ";
   for (auto& file : logFiles)
     command += " -F 'log[uploads][]=@" + file + "'";
@@ -55,12 +55,12 @@ void upload_files(const std::vector<std::string>& logFiles){
   exec("xdg-open " + url);
 }
 
-bool compareByFps(const logData &a, const logData &b)
+static bool compareByFps(const logData &a, const logData &b)
 {
     return a.fps < b.fps;
 }
 
-void writeSummary(string filename){
+static void writeSummary(string filename){
   auto& logArray = logger->get_log_data();
   filename = filename.substr(0, filename.size() - 4);
   filename += "_summary.csv";
@@ -109,7 +109,7 @@ void writeSummary(string filename){
   out.close();
 }
 
-void writeFileHeaders(ofstream& out){
+static void writeFileHeaders(ofstream& out){
       if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_log_versioning]){
       printf("log versioning");
       out << "v1" << endl;
@@ -152,7 +152,7 @@ void Logger::writeToFile(){
   }
 }
 
-string get_log_suffix(){
+static string get_log_suffix(){
   time_t now_log = time(0);
   tm *log_time = localtime(&now_log);
   std::ostringstream buffer;

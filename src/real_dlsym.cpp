@@ -15,7 +15,7 @@ void *(*__dlsym)(void *, const char *) = nullptr;
 static bool print_dlopen = getenv("MANGOHUD_DEBUG_DLOPEN") != nullptr;
 static bool print_dlsym = getenv("MANGOHUD_DEBUG_DLSYM") != nullptr;
 
-void get_real_functions()
+static void get_real_functions()
 {
     eh_obj_t libdl;
     int ret;

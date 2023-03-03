@@ -9,7 +9,7 @@
 
 std::map<uint32_t /*vendor id*/, std::pair<std::string /*vendor desc*/, std::map<uint32_t /*device id*/, device>>> pci_ids;
 
-std::istream& get_uncommented_line(std::istream& is, std::string &line)
+static std::istream& get_uncommented_line(std::istream& is, std::string &line)
 {
     while (std::getline(is, line)) {
         auto c = line.find("#");

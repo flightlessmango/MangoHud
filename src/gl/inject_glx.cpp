@@ -31,7 +31,7 @@ static glx_loader glx;
 
 static std::atomic<int> refcnt (0);
 
-void* get_glx_proc_address(const char* name) {
+static void* get_glx_proc_address(const char* name) {
     glx.Load();
 
     void *func = nullptr;
@@ -61,6 +61,7 @@ EXPORT_C_(void *) glXCreateContext(void *dpy, void *vis, void *shareList, int di
     return ctx;
 }
 
+EXPORT_C_(void *) glXCreateContextAttribs(void *dpy, void *config,void *share_context, int direct, const int *attrib_list);
 EXPORT_C_(void *) glXCreateContextAttribs(void *dpy, void *config,void *share_context, int direct, const int *attrib_list)
 {
     glx.Load();
@@ -263,6 +264,7 @@ static std::array<const func_ptr, 13> name_to_funcptr_map = {{
 #undef ADD_HOOK
 }};
 
+EXPORT_C_(void *) mangohud_find_glx_ptr(const char *name);
 EXPORT_C_(void *) mangohud_find_glx_ptr(const char *name)
 {
   if (is_blacklisted())
