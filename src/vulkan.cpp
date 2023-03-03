@@ -401,7 +401,7 @@ static void destroy_swapchain_data(struct swapchain_data *data)
    delete data;
 }
 
-struct overlay_draw *get_overlay_draw(struct swapchain_data *data)
+static struct overlay_draw *get_overlay_draw(struct swapchain_data *data)
 {
    struct device_data *device_data = data->device;
    struct overlay_draw *draw = data->draws.empty() ?

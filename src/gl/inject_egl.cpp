@@ -15,7 +15,7 @@ using namespace MangoHud::GL;
 
 EXPORT_C_(void *) eglGetProcAddress(const char* procName);
 
-void* get_egl_proc_address(const char* name) {
+static void* get_egl_proc_address(const char* name) {
 
     void *func = nullptr;
     static void *(*pfn_eglGetProcAddress)(const char*) = nullptr;
@@ -41,6 +41,7 @@ void* get_egl_proc_address(const char* name) {
     return func;
 }
 
+EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf);
 EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf)
 {
     static int (*pfn_eglSwapBuffers)(void*, void*) = nullptr;
@@ -82,6 +83,7 @@ static std::array<const func_ptr, 2> name_to_funcptr_map = {{
 #undef ADD_HOOK
 }};
 
+EXPORT_C_(void *) mangohud_find_egl_ptr(const char *name);
 EXPORT_C_(void *) mangohud_find_egl_ptr(const char *name)
 {
   if (is_blacklisted())
