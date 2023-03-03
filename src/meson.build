@@ -41,6 +41,11 @@ foreach s : ['overlay.frag', 'overlay.vert']
     command : [glslang, '-V', '-x', '-o', '@OUTPUT@', '@INPUT@'])
 endforeach
 
+util_files = files(
+  'mesa/util/os_socket.c',
+  'mesa/util/os_time.c',
+)
+
 vklayer_files = files(
   'hud_elements.cpp',
   'overlay.cpp',
