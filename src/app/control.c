@@ -3,10 +3,11 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "mangoapp_proto.h"
 
-void help_and_quit() {
+static void help_and_quit() {
     fprintf(stderr, "Usage: mangohudctl [set|toggle] attribute [value]\n");
     fprintf(stderr, "Attributes:\n");
     fprintf(stderr, "   no_display      hides or shows hud\n");
@@ -19,7 +20,7 @@ void help_and_quit() {
     exit(1);
 }
 
-bool str_to_bool(const char *value)
+static bool str_to_bool(const char *value)
 {
     if (strcasecmp(value, "true") == 0 || strcmp(value, "1") == 0)
         return true;
@@ -37,10 +38,11 @@ int main(int argc, char *argv[])
     int key = ftok("mangoapp", 65);
     int msgid = msgget(key, 0666 | IPC_CREAT);
     /* Create the message that we will send to mangohud */
-    struct mangoapp_ctrl_msgid1_v1 ctrl_msg = {0};
-    ctrl_msg.hdr.msg_type = 2;
-    ctrl_msg.hdr.ctrl_msg_type = 1;
-    ctrl_msg.hdr.version = 1;
+    struct mangoapp_ctrl_msgid1_v1 ctrl_msg = {
+        .hdr.msg_type = 2,
+        .hdr.ctrl_msg_type = 1,
+        .hdr.version = 1,
+    };
     uint8_t value;
 
     if (argc <= 2)
@@ -67,7 +69,7 @@ int main(int argc, char *argv[])
     else
         help_and_quit();
 
-    msgsnd(msgid, &ctrl_msg, sizeof(mangoapp_ctrl_msgid1_v1), IPC_NOWAIT);
+    msgsnd(msgid, &ctrl_msg, sizeof(struct mangoapp_ctrl_msgid1_v1), IPC_NOWAIT);
 
     return 0;
 }
