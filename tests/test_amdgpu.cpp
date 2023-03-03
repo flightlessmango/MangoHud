@@ -4,7 +4,7 @@
 #include <stdint.h>
 extern "C" {
 #include <cmocka.h>
-} 
+}
 #include "stdio.h"
 #include "../src/amdgpu.h"
 #include "../src/cpu.h"
@@ -19,7 +19,7 @@ static void test_amdgpu_verify_metrics(void **state) {
     assert_true (amdgpu_verify_metrics("./gpu_metrics"));
 }
 
-static void test_amdgpu_get_instant_metrics(void **state){
+static void test_amdgpu_get_instant_metrics(void **state) {
     UNUSED(state);
     struct amdgpu_common_metrics metrics;
 
@@ -67,17 +67,17 @@ static void test_amdgpu_get_instant_metrics(void **state){
     // amdgpu binary with everything throttled
 }
 
-static void test_amdgpu_get_samples_and_copy(void **state){
+static void test_amdgpu_get_samples_and_copy(void **state) {
     UNUSED(state);
 
-    struct amdgpu_common_metrics metrics_buffer[100];  
-	bool gpu_load_needs_dividing = false;  //some GPUs report load as centipercent
+    struct amdgpu_common_metrics metrics_buffer[100];
+    bool gpu_load_needs_dividing = false;  //some GPUs report load as centipercent
     amdgpu_get_samples_and_copy(metrics_buffer, gpu_load_needs_dividing);
     gpu_load_needs_dividing = true;
     amdgpu_get_samples_and_copy(metrics_buffer, gpu_load_needs_dividing);
 }
 
-static void test_amdgpu_get_metrics(void **state){
+static void test_amdgpu_get_metrics(void **state) {
     UNUSED(state);
 
     amdgpu_get_metrics();
