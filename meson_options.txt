@@ -12,7 +12,6 @@ option('with_xnvctrl', type : 'feature', value : 'enabled', description: 'Enable
 option('with_x11', type : 'feature', value : 'enabled')
 option('with_wayland', type : 'feature', value : 'disabled')
 option('with_dbus', type : 'feature', value : 'enabled')
-option('with_dlsym', type : 'feature', value : 'disabled')
 option('loglevel', type: 'combo', choices : ['trace', 'debug', 'info', 'warn', 'err', 'critical', 'off'], value : 'info', description: 'Max log level in non-debug build')
 option('mangoapp', type: 'boolean', value : false)
 option('mangoapp_32bit', type: 'boolean', value : false)

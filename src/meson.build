@@ -93,10 +93,6 @@ if is_unixy
     'gl/inject_egl.cpp',
   )
 
-  if get_option('with_dlsym').enabled()
-      pre_args += '-DHOOK_DLSYM'
-  endif
-
   nvml_h_found = get_option('with_nvml') == 'enabled'
   if get_option('with_nvml') == 'system'
     nvml_h_found = cc.has_header('nvml.h')
