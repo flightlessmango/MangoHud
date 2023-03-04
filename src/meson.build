@@ -288,7 +288,7 @@ if get_option('mangoapp_layer')
 endif
 
 configure_file(input : 'mangohud.json.in',
-  output : '@0@.json'.format(meson.project_name()),
+  output : '@0@.@1@.json'.format(meson.project_name(), host_machine.cpu_family()),
   configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud_vk.replace('\$', '$')},
   install : true,
   install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
@@ -304,7 +304,7 @@ configure_file(input : '../bin/mangohud.in',
 
 if get_option('mangoapp_layer')
   configure_file(input : 'app/layer.json.in',
-    output : 'libMangoApp.json',
+    output : 'libMangoApp.@0@.json'.format(host_machine.cpu_family()),
     configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud_vk.replace('\$', '$')},
     install : true,
     install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
