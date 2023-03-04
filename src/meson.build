@@ -289,8 +289,7 @@ endif
 
 configure_file(input : 'mangohud.json.in',
   output : '@0@.json'.format(meson.project_name()),
-  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud_vk.replace('\$', '$'),
-                  'PROJECT_NAME' : meson.project_name().to_upper()},
+  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud_vk.replace('\$', '$')},
   install : true,
   install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
   install_tag : 'runtime',
