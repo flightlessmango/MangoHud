@@ -19,11 +19,6 @@ else
   conf_data.set('ld_libdir_mangohud', ld_libdir_mangohud)
 endif
 
-ld_libdir_mangohud_vk = ''
-if get_option('prepend_libdir_vk')
-  ld_libdir_mangohud_vk = ld_libdir_mangohud
-endif
-
 overlay_shaders = [
   'overlay.frag',
   'overlay.vert',
@@ -289,7 +284,7 @@ endif
 
 configure_file(input : 'mangohud.json.in',
   output : '@0@.@1@.json'.format(meson.project_name(), host_machine.cpu_family()),
-  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud_vk.replace('\$', '$')},
+  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud.replace('\$', '$')},
   install : true,
   install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
   install_tag : 'runtime',
@@ -305,7 +300,7 @@ configure_file(input : '../bin/mangohud.in',
 if get_option('mangoapp_layer')
   configure_file(input : 'app/layer.json.in',
     output : 'libMangoApp.@0@.json'.format(host_machine.cpu_family()),
-    configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud_vk.replace('\$', '$')},
+    configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud.replace('\$', '$')},
     install : true,
     install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
     install_tag : 'mangoapp',
