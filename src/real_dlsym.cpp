@@ -103,29 +103,3 @@ void* get_proc_address(const char* name) {
     void (*func)() = (void (*)())real_dlsym(RTLD_NEXT, name);
     return (void*)func;
 }
-
-#ifdef HOOK_DLSYM
-EXPORT_C_(void *) mangohud_find_glx_ptr(const char *name);
-EXPORT_C_(void *) mangohud_find_egl_ptr(const char *name);
-
-EXPORT_C_(void*) dlsym(void * handle, const char * name)
-{
-    void* func = nullptr;
-#ifdef HAVE_X11
-    func = mangohud_find_glx_ptr(name);
-    if (func) {
-        //fprintf(stderr,"%s: local: %s\n",  __func__ , name);
-        return func;
-    }
-#endif
-
-    func = mangohud_find_egl_ptr(name);
-    if (func) {
-        //fprintf(stderr,"%s: local: %s\n",  __func__ , name);
-        return func;
-    }
-
-    //fprintf(stderr,"%s: foreign: %s\n",  __func__ , name);
-    return real_dlsym(handle, name);
-}
-#endif
