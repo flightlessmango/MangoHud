@@ -7,11 +7,7 @@ source ./build_deps.sh
 OS_RELEASE_FILES=("/etc/os-release" "/usr/lib/os-release")
 XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-DATA_DIR="$XDG_DATA_HOME/MangoHud"
 CONFIG_DIR="$XDG_CONFIG_HOME/MangoHud"
-LAYER="build/release/usr/share/vulkan/implicit_layer.d/mangohud.json"
-INSTALL_DIR="build/package/"
-IMPLICIT_LAYER_DIR="$XDG_DATA_HOME/vulkan/implicit_layer.d"
 VERSION=$(git describe --long --tags --always | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/^v//')
 SU_CMD=$(command -v sudo || command -v doas || echo)
 MACHINE=$(uname -m || echo)
@@ -152,7 +148,6 @@ configure() {
         export CC="gcc -m32"
         export CXX="g++ -m32"
         export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH_32}"
-        export LLVM_CONFIG="/usr/bin/llvm-config32"
         meson build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_prefix=true -Dld_libdir_abs=true $@ ${CONFIGURE_OPTS}
     fi
 }
