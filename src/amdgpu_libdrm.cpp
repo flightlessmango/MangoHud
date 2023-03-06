@@ -46,16 +46,41 @@ static void libdrm_thread() {
 }
 
 static int libdrm_initialize() {
-    int fd = open(dri_device_path.c_str(), O_RDWR);
-    if (fd < 0) {
-        SPDLOG_ERROR("DRI device open failed");       
+    drmDevicePtr devices[LIBDRM_MAX_DEVICES];
+    int device_count = drmGetDevices2(0, devices, LIBDRM_MAX_DEVICES);
+    if (device_count < 0) {
+        SPDLOG_ERROR("drmGetDevices2 failed");       
         return -1;
     }
 
-    char *renderD = drmGetRenderDeviceNameFromFd(fd);
-    fd = open(renderD, O_RDWR);
+    char *renderd_node = nullptr;
+    for (int i = 0; i < device_count; i++) {
+        bool use_this_device = false;
+
+        for (int j = 0; j < DRM_NODE_MAX; j++) {
+            if (devices[i]->nodes[j] == dri_device_path) {
+                use_this_device = true;
+            }
+
+            if (strstr(devices[i]->nodes[j], "renderD") != NULL) {
+                renderd_node = devices[i]->nodes[j];
+            }
+        }
+
+        if (use_this_device) {
+            break;
+        }
+        renderd_node = nullptr;
+    }
+
+    if (renderd_node == nullptr) {
+        SPDLOG_ERROR("No renderD node found for '{}'", dri_device_path);
+        return -1;
+    }
+
+    int fd = open(renderd_node, O_RDWR);
     if (fd < 0) {
-        SPDLOG_ERROR("Render device open failed");       
+        SPDLOG_ERROR("renderD node open failed: '{}'", dri_device_path);
         return -1;
     }
 

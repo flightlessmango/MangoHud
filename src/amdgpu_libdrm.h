@@ -1,5 +1,7 @@
 #pragma once
 
+#define LIBDRM_MAX_DEVICES 32
+
 #define LIBDRM_SAMPLE_DELAY 3500
 #define LIBDRM_SAMPLE_BUF_SIZE 512
 
