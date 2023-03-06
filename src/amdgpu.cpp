@@ -173,13 +173,9 @@ void amdgpu_get_metrics(){
 
 	amdgpu_common_metrics_m.lock();
 
-#ifdef HAVE_LIBDRM_SAMPLING
 	if (!do_libdrm_sampling) {
-#endif
 		gpu_info.load = amdgpu_common_metrics.gpu_load_percent;
-#ifdef HAVE_LIBDRM_SAMPLING
 	}
-#endif
 
 	gpu_info.powerUsage = amdgpu_common_metrics.average_gfx_power_w;
 	gpu_info.CoreClock = amdgpu_common_metrics.current_gfxclk_mhz;

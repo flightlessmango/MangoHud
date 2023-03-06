@@ -89,6 +89,7 @@ if is_unixy
     'battery.cpp',
     'control.cpp',
     'gamepad.cpp',
+    'amdgpu_libdrm.cpp'
   )
 
   opengl_files = files(
@@ -144,14 +145,6 @@ if is_unixy
     opengl_files += files(
       'loaders/loader_glx.cpp',
       'gl/inject_glx.cpp',
-    )
-  endif
-
-  if get_option('with_libdrm_sampling').enabled()
-    pre_args += '-DHAVE_LIBDRM_SAMPLING'
-
-    vklayer_files += files(
-      'amdgpu_libdrm.cpp'
     )
   endif
 

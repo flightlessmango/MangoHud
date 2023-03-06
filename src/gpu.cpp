@@ -75,20 +75,14 @@ nvapi_util();
 void getAmdGpuInfo(){
     int64_t value = 0;
     if (metrics_path.empty()){
-#ifdef HAVE_LIBDRM_SAMPLING
-        if (!do_libdrm_sampling) {
-#endif
-            if (amdgpu.busy) {
-                rewind(amdgpu.busy);
-                fflush(amdgpu.busy);
-                int value = 0;
-                if (fscanf(amdgpu.busy, "%d", &value) != 1)
-                    value = 0;
-                gpu_info.load = value;
-            }
-#ifdef HAVE_LIBDRM_SAMPLING
+        if (!do_libdrm_sampling && amdgpu.busy) {
+            rewind(amdgpu.busy);
+            fflush(amdgpu.busy);
+            int value = 0;
+            if (fscanf(amdgpu.busy, "%d", &value) != 1)
+                value = 0;
+            gpu_info.load = value;
         }
-#endif
 
         if (amdgpu.core_clock) {
             rewind(amdgpu.core_clock);

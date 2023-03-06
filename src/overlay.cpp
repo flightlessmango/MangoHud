@@ -123,10 +123,8 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
       if (gpu_metrics_exists)
          amdgpu_get_metrics();
 
-#if defined(__linux__) && defined(HAVE_LIBDRM_SAMPLING)
       if (do_libdrm_sampling)
          libdrm_get_info();
-#endif
 
       if (vendorID == 0x10de)
          getNvidiaGpuInfo(params);
@@ -794,13 +792,11 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
          break;
       }
 
-#ifdef HAVE_LIBDRM_SAMPLING
       if (params.enabled[OVERLAY_PARAM_ENABLED_libdrm_sampling]) {
          do_libdrm_sampling = true;
          dri_device_path = string("/dev/dri") + path.substr(path.find_last_of("/"));
          SPDLOG_INFO("Using DRI device for libdrm sampling: '{}'", dri_device_path);
       }
-#endif
 
       // don't bother then
       if (metrics_path.empty() && !amdgpu.busy && vendorID != 0x8086) {
