@@ -189,6 +189,7 @@ mangohud_static_lib = static_library(
     dep_vulkan,
     windows_deps,
     json_dep,
+    libdrm_dep,
     libdrm_amdgpu_dep
     ],
   include_directories : [inc_common],
@@ -253,6 +254,7 @@ if get_option('mangoapp')
       dep_x11,
       glfw3_dep,
       json_dep,
+      libdrm_dep,
       libdrm_amdgpu_dep
     ],
     include_directories : [inc_common],

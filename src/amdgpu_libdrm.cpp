@@ -2,6 +2,7 @@
 #include <mutex>
 #include <thread>
 #include <chrono>
+#include <xf86drm.h>
 #include <libdrm/amdgpu.h>
 #include <spdlog/spdlog.h>
 #include <fcntl.h>
@@ -48,6 +49,13 @@ static int libdrm_initialize() {
     int fd = open(dri_device_path.c_str(), O_RDWR);
     if (fd < 0) {
         SPDLOG_ERROR("DRI device open failed");       
+        return -1;
+    }
+
+    char *renderD = drmGetRenderDeviceNameFromFd(fd);
+    fd = open(renderD, O_RDWR);
+    if (fd < 0) {
+        SPDLOG_ERROR("Render device open failed");       
         return -1;
     }
 
