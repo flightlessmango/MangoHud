@@ -172,7 +172,6 @@ void amdgpu_get_metrics(){
 
 	amdgpu_common_metrics_m.lock();
 	gpu_info.load = amdgpu_common_metrics.gpu_load_percent;
-	
 	gpu_info.powerUsage = amdgpu_common_metrics.average_gfx_power_w;
 	gpu_info.CoreClock = amdgpu_common_metrics.current_gfxclk_mhz;
 	gpu_info.MemClock = amdgpu_common_metrics.current_uclk_mhz;
