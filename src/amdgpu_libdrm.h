@@ -20,7 +20,4 @@ struct libdrm_stats {
 extern std::string dri_device_path;
 extern bool do_libdrm_sampling;
 
-void libdrm_do_sample();
-void libdrm_thread();
 void libdrm_get_info();
-int libdrm_initialize();

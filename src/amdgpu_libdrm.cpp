@@ -17,14 +17,14 @@ std::mutex sample_buf_m;
 
 amdgpu_device_handle amdgpu_handle;
 
-void libdrm_do_sample(libdrm_sample *sample) {
+static void libdrm_do_sample(libdrm_sample *sample) {
     uint32_t registers;
     amdgpu_read_mm_registers(amdgpu_handle, LIBDRM_GRBM_STATUS / 4, 1, 0xffffffff, 0, &registers);
 
     if (registers & LIBDRM_GRBM_BUSY_BIT) sample->busy_bit = true;
 }
 
-void libdrm_thread() {
+static void libdrm_thread() {
     while (true) {
         auto start_time = std::chrono::system_clock::now().time_since_epoch();
 
@@ -42,6 +42,22 @@ void libdrm_thread() {
             std::this_thread::sleep_for(sleep_duration);
         }
     }
+}
+
+static int libdrm_initialize() {
+    int fd = open(dri_device_path.c_str(), O_RDWR);
+    if (fd < 0) {
+        SPDLOG_ERROR("DRI device open failed");       
+        return -1;
+    }
+
+    uint32_t libdrm_minor, libdrm_major;
+    if (amdgpu_device_initialize(fd, &libdrm_major, &libdrm_minor, &amdgpu_handle)) {
+        SPDLOG_ERROR("amdgpu_device_initialize failed");
+        return -1;
+    }
+
+    return 0;
 }
 
 void libdrm_get_info() {
@@ -66,20 +82,4 @@ void libdrm_get_info() {
     sample_buf_m.unlock();
 
     gpu_info.load = (int)(((double)stats.busy / LIBDRM_SAMPLE_BUF_SIZE) * 100);
-}
-
-int libdrm_initialize() {
-    int fd = open(dri_device_path.c_str(), O_RDWR);
-    if (fd < 0) {
-        SPDLOG_ERROR("DRI device open failed");       
-        return -1;
-    }
-
-    uint32_t libdrm_minor, libdrm_major;
-    if (amdgpu_device_initialize(fd, &libdrm_major, &libdrm_minor, &amdgpu_handle)) {
-        SPDLOG_ERROR("amdgpu_device_initialize failed");
-        return -1;
-    }
-
-    return 0;
 }
