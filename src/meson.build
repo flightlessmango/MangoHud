@@ -89,7 +89,7 @@ if is_unixy
     'battery.cpp',
     'control.cpp',
     'gamepad.cpp',
-    'amdgpu_libdrm.cpp'
+    'amdgpu_libdrm.cpp',
   )
 
   opengl_files = files(
@@ -190,7 +190,7 @@ mangohud_static_lib = static_library(
     windows_deps,
     json_dep,
     libdrm_dep,
-    libdrm_amdgpu_dep
+    libdrm_amdgpu_dep,
     ],
   include_directories : [inc_common],
   link_args : link_args,
@@ -255,7 +255,7 @@ if get_option('mangoapp')
       glfw3_dep,
       json_dep,
       libdrm_dep,
-      libdrm_amdgpu_dep
+      libdrm_amdgpu_dep,
     ],
     include_directories : [inc_common],
     install_tag : 'mangoapp',

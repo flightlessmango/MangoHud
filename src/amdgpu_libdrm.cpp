@@ -82,8 +82,6 @@ static int libdrm_initialize() {
         return -1;
     }
 
-    
-
     return 0;
 }
 
