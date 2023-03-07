@@ -55,7 +55,7 @@ static int libdrm_initialize() {
 
     char *renderd_node = nullptr;
     for (int i = 0; i < device_count; i++) {
-        if (devices[i]->available_nodes & 0b101 != 0b101) {
+        if ((devices[i]->available_nodes & 0b101) != 0b101) {
             continue;
         }
 
