@@ -9,9 +9,11 @@
 
 static void help_and_quit() {
     fprintf(stderr, "Usage: mangohudctl [set|toggle] attribute [value]\n");
+    fprintf(stderr, "       mangohudctl reload-cfg\n");
     fprintf(stderr, "Attributes:\n");
     fprintf(stderr, "   no_display      hides or shows hud\n");
     fprintf(stderr, "   log_session     handles logging status\n");
+    fprintf(stderr, "   reload_config   reloads the config\n");
     fprintf(stderr, "Accepted values:\n");
     fprintf(stderr, "   true\n");
     fprintf(stderr, "   false\n");
@@ -66,6 +68,8 @@ int main(int argc, char *argv[])
         ctrl_msg.no_display = value;
     else if (strcmp(argv[2], "log_session") == 0)
         ctrl_msg.log_session = value;
+    else if (strcmp(argv[2], "reload_config") == 0)
+        ctrl_msg.reload_config = value;
     else
         help_and_quit();
 

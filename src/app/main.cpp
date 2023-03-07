@@ -96,6 +96,18 @@ static void ctrl_thread(){
                 logger->is_active() ? logger->stop_logging() : logger->start_logging();
                 break;
         }
+        switch (mangoapp_ctrl_v1->reload_config) {
+            case 0:
+                break;
+            case 1:
+                parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
+                break;
+            case 2:
+                break;
+            case 3:
+                parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
+                break;
+        }
         {
             std::lock_guard<std::mutex> lk(mangoapp_m);
             switch (mangoapp_ctrl_v1->no_display){
