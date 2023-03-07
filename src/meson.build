@@ -238,13 +238,12 @@ if get_option('mangoapp')
     ),
     c_args : [
       pre_args,
-      no_override_init_args,
       vulkan_wsi_args
-      ],
+    ],
     cpp_args : [
       pre_args,
       vulkan_wsi_args
-      ],
+    ],
     gnu_symbol_visibility : 'hidden',
     dependencies : [
       dearimgui_dep,
