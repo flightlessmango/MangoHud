@@ -59,7 +59,7 @@ vklayer_files = files(
   'vulkan.cpp',
   'blacklist.cpp',
   'file_utils.cpp',
-  'amdgpu.cpp',
+  'amdgpu_metrics.cpp',
   'intel.cpp'
 )
 opengl_files  = []

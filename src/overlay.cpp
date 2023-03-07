@@ -22,7 +22,7 @@
 #include "file_utils.h"
 #include "pci_ids.h"
 #include "iostats.h"
-#include "amdgpu.h"
+#include "amdgpu_metrics.h"
 #include "amdgpu_libdrm.h"
 
 

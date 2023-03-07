@@ -1,7 +1,7 @@
 #include <spdlog/spdlog.h>
 #include <thread>
 #include <sys/sysinfo.h>
-#include "amdgpu.h"
+#include "amdgpu_metrics.h"
 #include "gpu.h"
 #include "cpu.h"
 #include "overlay.h"

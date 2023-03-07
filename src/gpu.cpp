@@ -12,7 +12,7 @@
 #include "nvidia_info.h"
 #endif
 
-#include "amdgpu.h"
+#include "amdgpu_metrics.h"
 
 using namespace std::chrono_literals;
 
