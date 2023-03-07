@@ -6,6 +6,7 @@
 #include <libdrm/amdgpu.h>
 #include <spdlog/spdlog.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include "gpu.h"
 
 #include "amdgpu_libdrm.h"
@@ -86,18 +87,22 @@ static int libdrm_initialize() {
 
     if (renderd_node == nullptr) {
         SPDLOG_ERROR("No renderD node found for '{}'", dri_device_path);
+        drmFreeDevices(devices, device_count);
         return -1;
     }
 
     int fd = open(renderd_node, O_RDWR);
     if (fd < 0) {
         SPDLOG_ERROR("renderD node open failed: '{}'", dri_device_path);
+        drmFreeDevices(devices, device_count);
         return -1;
     }
 
     uint32_t libdrm_minor, libdrm_major;
     if (amdgpu_device_initialize(fd, &libdrm_major, &libdrm_minor, &amdgpu_handle)) {
         SPDLOG_ERROR("amdgpu_device_initialize failed");
+        drmFreeDevices(devices, device_count);
+        close(fd);
         return -1;
     }
 
