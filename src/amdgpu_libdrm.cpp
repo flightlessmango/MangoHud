@@ -55,22 +55,14 @@ static int libdrm_initialize() {
 
     char *renderd_node = nullptr;
     for (int i = 0; i < device_count; i++) {
-        bool use_this_device = false;
-
-        for (int j = 0; j < DRM_NODE_MAX; j++) {
-            if (devices[i]->nodes[j] == dri_device_path) {
-                use_this_device = true;
-            }
-
-            if (strstr(devices[i]->nodes[j], "renderD") != NULL) {
-                renderd_node = devices[i]->nodes[j];
-            }
+        if (!(devices[i]->available_nodes & 0b101)) {
+            continue;
         }
 
-        if (use_this_device) {
+        if (devices[i]->nodes[DRM_NODE_PRIMARY] == dri_device_path) {
+            renderd_node = devices[i]->nodes[DRM_NODE_RENDER];
             break;
         }
-        renderd_node = nullptr;
     }
 
     if (renderd_node == nullptr) {
@@ -89,6 +81,8 @@ static int libdrm_initialize() {
         SPDLOG_ERROR("amdgpu_device_initialize failed");
         return -1;
     }
+
+    
 
     return 0;
 }
