@@ -3,7 +3,7 @@
 #include <thread>
 #include <chrono>
 #include <xf86drm.h>
-#include <libdrm/amdgpu.h>
+#include <amdgpu.h>
 #include <spdlog/spdlog.h>
 #include <fcntl.h>
 #include <unistd.h>
