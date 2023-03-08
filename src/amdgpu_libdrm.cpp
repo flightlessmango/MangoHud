@@ -93,20 +93,20 @@ static int libdrm_initialize() {
     }
 
     int fd = open(renderd_node, O_RDWR);
+    drmFreeDevices(devices, device_count);
     if (fd < 0) {
         SPDLOG_ERROR("renderD node open failed: '{}'", dri_device_path);
-        drmFreeDevices(devices, device_count);
         return -1;
     }
 
     uint32_t libdrm_minor, libdrm_major;
     if (amdgpu_device_initialize(fd, &libdrm_major, &libdrm_minor, &amdgpu_handle)) {
         SPDLOG_ERROR("amdgpu_device_initialize failed");
-        drmFreeDevices(devices, device_count);
         close(fd);
         return -1;
     }
 
+    close(fd); // amdgpu_device_initialize should F_DUPFD it internally, so there is no need to keep fd open
     return 0;
 }
 
