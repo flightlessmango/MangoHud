@@ -178,6 +178,7 @@ mangohud_static_lib = static_library(
     ],
   gnu_symbol_visibility : 'hidden',
   dependencies : [
+    mangohud_version_dep,
     vulkan_wsi_deps,
     dearimgui_dep,
     spdlog_dep,

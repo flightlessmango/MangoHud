@@ -16,6 +16,8 @@ mangohud_version = vcs_tag(
   input:  'version.h.in',
   output: 'version.h')
 
+mangohud_version_dep = declare_dependency(sources : mangohud_version)
+
 pre_args = [
   '-D__STDC_CONSTANT_MACROS',
   '-D__STDC_FORMAT_MACROS',
