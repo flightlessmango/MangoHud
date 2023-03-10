@@ -9,12 +9,6 @@ else
   ld_libdir_mangohud = get_option('prefix') + '/\$LIB/'
 endif
 
-# For build.sh
-if get_option('ld_libdir_prefix')
-  # FIXME derive from libdir
-  ld_libdir_mangohud = get_option('prefix') + '/lib/mangohud/\$LIB/'
-endif
-
 conf_data = configuration_data()
 
 if get_option('ld_libdir_abs')
