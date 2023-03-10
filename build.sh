@@ -142,13 +142,13 @@ configure() {
     git submodule update --init --depth 50
     CONFIGURE_OPTS="-Dwerror=true"
     if [[ ! -f "build/meson64/build.ninja" ]]; then
-        meson build/meson64 --libdir lib/mangohud/lib64 --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_prefix=true -Dld_libdir_abs=true $@ ${CONFIGURE_OPTS}
+        meson build/meson64 --libdir lib/mangohud/lib64 --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_abs=true $@ ${CONFIGURE_OPTS}
     fi
     if [[ ! -f "build/meson32/build.ninja" && "$MACHINE" = "x86_64" ]]; then
         export CC="gcc -m32"
         export CXX="g++ -m32"
         export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH_32}"
-        meson build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_prefix=true -Dld_libdir_abs=true $@ ${CONFIGURE_OPTS}
+        meson build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_abs=true $@ ${CONFIGURE_OPTS}
     fi
 }
 

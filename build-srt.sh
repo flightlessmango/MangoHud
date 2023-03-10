@@ -69,13 +69,13 @@ configure() {
     if [[ ! -f "build-srt/meson64/build.ninja" ]]; then
         export CC="${LOCAL_CC}"
         export CXX="${LOCAL_CXX}"
-        meson build-srt/meson64 --libdir lib/mangohud/lib --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_prefix=true $@ ${CONFIGURE_OPTS}
+        meson build-srt/meson64 --libdir lib/mangohud/lib --prefix /usr -Dappend_libdir_mangohud=false $@ ${CONFIGURE_OPTS}
     fi
     if [[ ! -f "build-srt/meson32/build.ninja" ]]; then
         export CC="${LOCAL_CC} -m32"
         export CXX="${LOCAL_CXX} -m32"
         export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH_32}"
-        meson build-srt/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_prefix=true $@ ${CONFIGURE_OPTS}
+        meson build-srt/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false $@ ${CONFIGURE_OPTS}
     fi
 }
 
