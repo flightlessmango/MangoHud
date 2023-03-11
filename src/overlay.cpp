@@ -357,6 +357,10 @@ void position_layer(struct swapchain_stats& data, const struct overlay_params& p
       data.main_window_pos = ImVec2((width / 2) - (window_size.x / 2), margin + params.offset_y);
       ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
       break;
+   case LAYER_POSITION_BOTTOM_CENTER:
+      data.main_window_pos = ImVec2((width / 2) - (window_size.x / 2), height - window_size.y - margin + params.offset_y);
+      ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
+      break;
    case LAYER_POSITION_COUNT:
       break;
    }
