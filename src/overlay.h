@@ -118,5 +118,5 @@ void render_mpris_metadata(const overlay_params& params, mutexed_metadata& meta,
 #endif
 void update_fan();
 void next_hud_position(struct overlay_params& params);
-
+void horizontal_separator(struct overlay_params& params);
 #endif //MANGOHUD_OVERLAY_H

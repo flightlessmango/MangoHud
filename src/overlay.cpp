@@ -563,6 +563,15 @@ ImVec4 change_on_load_temp(LOAD_DATA& data, unsigned current)
    }
 }
 
+void horizontal_separator(struct overlay_params& params){
+   ImGui::SameLine();
+   ImGui::Spacing();
+   ImGui::SameLine();
+   ImGui::GetWindowDrawList()->AddLine(ImVec2(ImGui::GetCursorPosX() - 5, ImGui::GetCursorPosY() + 2), ImVec2(ImGui::GetCursorPosX() - 5, ImGui::GetCursorPosY() + params.font_size * 0.85), params.vram_color, 2);
+   ImGui::SameLine();
+   ImGui::Spacing();
+}
+
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan)
 {
    // data.engine = EngineTypes::GAMESCOPE;
@@ -597,14 +606,8 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             func.first();
             HUDElements.place += 1;
             ImGui::PopStyleVar();
-            if(params.enabled[OVERLAY_PARAM_ENABLED_horizontal] && func != HUDElements.ordered_functions.back()){
-               ImGui::SameLine();
-               ImGui::Spacing();
-               ImGui::SameLine();
-               ImGui::GetWindowDrawList()->AddLine(ImVec2(ImGui::GetCursorPosX() - 5, ImGui::GetCursorPosY() + 2), ImVec2(ImGui::GetCursorPosX() - 5, ImGui::GetCursorPosY() + params.font_size * 0.85), params.vram_color, 2);
-               ImGui::SameLine();
-               ImGui::Spacing();
-            }
+            if(params.enabled[OVERLAY_PARAM_ENABLED_horizontal] && func != HUDElements.ordered_functions.back())
+               horizontal_separator(params);
          }
          ImGui::EndTable();
       }
