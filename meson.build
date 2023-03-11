@@ -88,10 +88,14 @@ if is_unixy
   dep_wayland_client = dependency('wayland-client',
       required: get_option('with_wayland'), version : '>=1.11')
   dbus_dep = dependency('dbus-1', required: get_option('with_dbus')).partial_dependency(compile_args : true, includes : true)
+  libdrm_dep = dependency('libdrm')
+  libdrm_amdgpu_dep = dependency('libdrm_amdgpu')
 else
   dep_x11 = null_dep
   dep_wayland_client = null_dep
   dbus_dep = null_dep
+  libdrm_dep = null_dep
+  libdrm_amdgpu_dep = null_dep
 endif
 
 if dep_x11.found()

@@ -7,11 +7,12 @@
 #include <spdlog/spdlog.h>
 #include "nvctrl.h"
 #include "timing.hpp"
+#include "amdgpu_libdrm.h"
 #ifdef HAVE_NVML
 #include "nvidia_info.h"
 #endif
 
-#include "amdgpu.h"
+#include "amdgpu_metrics.h"
 
 using namespace std::chrono_literals;
 
@@ -74,7 +75,7 @@ nvapi_util();
 void getAmdGpuInfo(){
     int64_t value = 0;
     if (metrics_path.empty()){
-        if (amdgpu.busy) {
+        if (!do_libdrm_sampling && amdgpu.busy) {
             rewind(amdgpu.busy);
             fflush(amdgpu.busy);
             int value = 0;

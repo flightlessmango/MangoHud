@@ -59,7 +59,7 @@ vklayer_files = files(
   'vulkan.cpp',
   'blacklist.cpp',
   'file_utils.cpp',
-  'amdgpu.cpp',
+  'amdgpu_metrics.cpp',
   'intel.cpp'
 )
 opengl_files  = []
@@ -89,6 +89,7 @@ if is_unixy
     'battery.cpp',
     'control.cpp',
     'gamepad.cpp',
+    'amdgpu_libdrm.cpp',
   )
 
   opengl_files = files(
@@ -187,7 +188,10 @@ mangohud_static_lib = static_library(
     dep_pthread,
     dep_vulkan,
     windows_deps,
-    json_dep],
+    json_dep,
+    libdrm_dep,
+    libdrm_amdgpu_dep,
+    ],
   include_directories : [inc_common],
   link_args : link_args,
   install_dir : libdir_mangohud,
@@ -249,6 +253,8 @@ if get_option('mangoapp')
       dep_x11,
       glfw3_dep,
       json_dep,
+      libdrm_dep,
+      libdrm_amdgpu_dep,
     ],
     include_directories : [inc_common],
     install_tag : 'mangoapp',
