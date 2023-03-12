@@ -1,70 +1,101 @@
 #include <thread>
+#include <unistd.h>
+#include <stdlib.h>
 #include "overlay.h"
 #include "gpu.h"
 #include "spdlog/spdlog.h"
-#include <nlohmann/json.hpp>
+#include "nlohmann/json.hpp"
+#include <inttypes.h>
 using json = nlohmann::json;
 
 static bool init_intel = false;
 struct gpuInfo gpu_info_intel {};
+static char pid[10];
+static FILE *fp;
 
-static void intelGpuThread(){
-    init_intel = true;
-    static char stdout_buffer[1024];
-    FILE* intel_gpu_top = popen("intel_gpu_top -J -s 500", "r");
-    int num_line = 0;
-    std::string buf;
-    int num_iterations = 0;
-    while (fgets(stdout_buffer, sizeof(stdout_buffer), intel_gpu_top)) {
-        if (num_line > 0)
-            buf += stdout_buffer;
+// static void intelGpuThread(){
+//     init_intel = true;
+//     static char stdout_buffer[1024];
+//     FILE* intel_gpu_top = popen("intel_gpu_top -J -s 500", "r");
+//     int num_line = 0;
+//     std::string buf;
+//     int num_iterations = 0;
+//     while (fgets(stdout_buffer, sizeof(stdout_buffer), intel_gpu_top)) {
+//         if (num_line > 0)
+//             buf += stdout_buffer;
 
-        num_line++;
-        if (strlen(stdout_buffer) < 4 && !strchr(stdout_buffer, '{') && !strchr(stdout_buffer, ',')) {
-            if (buf[0] != '{')
-                buf = "{\n" + buf;
+//         num_line++;
+//         if (strlen(stdout_buffer) < 4 && !strchr(stdout_buffer, '{') && !strchr(stdout_buffer, ',')) {
+//             if (buf[0] != '{')
+//                 buf = "{\n" + buf;
 
-            if (num_iterations > 0){
-                buf += "\n}";
-                json j = json::parse(buf);
-                if  (j.contains("engines"))
-                    if (j["engines"].contains("Render/3D/0"))
-                        if (j["engines"]["Render/3D/0"].contains("busy"))
-                            gpu_info_intel.load = j["engines"]["Render/3D/0"]["busy"].get<int>();
+//             if (num_iterations > 0){
+//                 buf += "\n}";
+//                 json j = json::parse(buf);
+//                 if  (j.contains("engines"))
+//                     if (j["engines"].contains("Render/3D/0"))
+//                         if (j["engines"]["Render/3D/0"].contains("busy"))
+//                             gpu_info_intel.load = j["engines"]["Render/3D/0"]["busy"].get<int>();
 
-                if (j.contains("frequency"))
-                    if (j["frequency"].contains("actual"))
-                        gpu_info_intel.CoreClock = j["frequency"]["actual"].get<int>();
-                if (j.contains("power")){
-                    if (j["power"].contains("GPU"))
-                        gpu_info_intel.powerUsage = j["power"]["GPU"].get<float>();
-                    if (j["power"].contains("Package"))
-                        gpu_info_intel.apu_cpu_power = j["power"]["Package"].get<float>();
-                }
+//                 if (j.contains("frequency"))
+//                     if (j["frequency"].contains("actual"))
+//                         gpu_info_intel.CoreClock = j["frequency"]["actual"].get<int>();
+//                 if (j.contains("power")){
+//                     if (j["power"].contains("GPU"))
+//                         gpu_info_intel.powerUsage = j["power"]["GPU"].get<float>();
+//                     if (j["power"].contains("Package"))
+//                         gpu_info_intel.apu_cpu_power = j["power"]["Package"].get<float>();
+//                 }
 
-            }
-            buf = "";
-            num_line = 0;
-        }
-        num_iterations++;
-    }
+//             }
+//             buf = "";
+//             num_line = 0;
+//         }
+//         num_iterations++;
+//     }
 
-    int exitcode = pclose(intel_gpu_top) / 256;
-    if (exitcode > 0){
-        if (exitcode == 127)
-        SPDLOG_INFO("Failed to open '{}'", "intel_gpu_top");
+//     int exitcode = pclose(intel_gpu_top) / 256;
+//     if (exitcode > 0){
+//         if (exitcode == 127)
+//         SPDLOG_INFO("Failed to open '{}'", "intel_gpu_top");
 
-        if (exitcode == 1)
-        SPDLOG_INFO("Missing permissions for '{}'", "intel_gpu_top");
+//         if (exitcode == 1)
+//         SPDLOG_INFO("Missing permissions for '{}'", "intel_gpu_top");
 
-        SPDLOG_INFO("Disabling gpu_stats");
-        _params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
-    }
-}
+//         SPDLOG_INFO("Disabling gpu_stats");
+//         _params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
+//     }
+// }
 
 void getIntelGpuInfo(){
-    if (!init_intel)
-        std::thread(intelGpuThread).detach();
+    static char path[100] = "/proc/";
+    if (!init_intel){
+        sprintf(pid, "%i", getpid());
+        strcat(path, pid);
+        strcat(path, "/fdinfo/8");
+        fp = fopen(path, "r");
+        init_intel = true;
+    }
 
+    fp = fopen(path, "r");
+    static char line[100];
+    static uint64_t busy_ns;
+    static uint64_t prev_ns;
+    static uint64_t busy_percent;
+    while (fgets(line, sizeof(line), fp))
+        sscanf(line, "drm-engine-render: %" PRId64 " ns", &busy_ns);
+
+    if (busy_ns < prev_ns){
+        fclose(fp);
+        return; 
+    }
+
+    uint64_t busy_time_ns = busy_ns - prev_ns;
+    busy_percent = busy_time_ns / 5000000;
+
+    prev_ns = busy_ns;
+    if (busy_percent > 100) busy_percent = 100;
+    gpu_info_intel.load = busy_percent;
     gpu_info = gpu_info_intel;
+    fclose(fp);
 }
