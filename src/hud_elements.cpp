@@ -176,7 +176,10 @@ void HudElements::gpu_stats(){
             ImguiNextColumnOrNewRow();
             right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.temp);
             ImGui::SameLine(0, 1.0f);
-            ImGui::Text("°C");
+            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact])
+                ImGui::Text("°");
+            else
+                ImGui::Text("°C");
         }
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]){
             ImguiNextColumnOrNewRow();
@@ -238,7 +241,10 @@ void HudElements::cpu_stats(){
             ImguiNextColumnOrNewRow();
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", cpuStats.GetCPUDataTotal().temp);
             ImGui::SameLine(0, 1.0f);
-            ImGui::Text("°C");
+            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact])
+                ImGui::Text("°");
+            else
+                ImGui::Text("°C");
         }
 
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_mhz]){
@@ -432,7 +438,7 @@ void HudElements::procmem()
 void HudElements::fps(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_only]){
         ImGui::TableNextColumn();
-        if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact])
+        if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact] || HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
             ImGui::TextColored(HUDElements.colors.engine, "%s", "FPS");
         else
             ImGui::TextColored(HUDElements.colors.engine, "%s", engines[HUDElements.sw_stats->engine]);
@@ -453,7 +459,7 @@ void HudElements::fps(){
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", HUDElements.sw_stats->fps);
         }
         ImGui::SameLine(0, 1.0f);
-        if(!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
+        if(!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal]){
             ImGui::PushFont(HUDElements.sw_stats->font1);
             ImGui::Text("FPS");
             ImGui::PopFont();
@@ -722,7 +728,10 @@ void HudElements::battery(){
     if (Battery_Stats.batt_count > 0) {
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery]) {
             ImGui::TableNextColumn();
-            ImGui::TextColored(HUDElements.colors.battery, "BATT");
+            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact])
+                ImGui::TextColored(HUDElements.colors.battery, "BAT");
+            else
+                ImGui::TextColored(HUDElements.colors.battery, "BATT");
             ImGui::TableNextColumn();
             if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_icon]) {
                 switch(int(Battery_Stats.current_percent)){
@@ -745,19 +754,22 @@ void HudElements::battery(){
                 ImGui::SameLine(0,1.0f);
                 ImGui::Text("%%");
             }
-            if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
-                if (Battery_Stats.current_watt != 0) {
+            if (Battery_Stats.current_watt != 0) {
+                printf("%i\n", HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_watt]);
+                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_watt]){
                     ImguiNextColumnOrNewRow();
                     right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", Battery_Stats.current_watt);
                     ImGui::SameLine(0,1.0f);
                     ImGui::PushFont(HUDElements.sw_stats->font1);
                     ImGui::Text("W");
                     ImGui::PopFont();
-                    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]) {
-                        float hours;
-                        float minutes;
-                        minutes = std::modf(Battery_Stats.remaining_time, &hours);
-                        minutes *= 60;
+                }
+                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_time]) {
+                    float hours;
+                    float minutes;
+                    minutes = std::modf(Battery_Stats.remaining_time, &hours);
+                    minutes *= 60;
+                    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
                         ImGui::TableNextRow();
                         ImGui::NextColumn();
                         ImGui::PushFont(HUDElements.sw_stats->font1);
@@ -765,12 +777,17 @@ void HudElements::battery(){
                         ImGui::TextColored(HUDElements.colors.text, "%s", "Remaining Time");
                         ImGui::PopFont();
                         ImGuiTableSetColumnIndex(2);
-                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%02.0f:%02.0f", hours, minutes);
+                    } else {
+                        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
+                            ImguiNextColumnOrNewRow();
+
+                        ImguiNextColumnOrNewRow();
                     }
-                } else {
-                    ImguiNextColumnOrNewRow();
-                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_PLUG);
+                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%02.0f:%02.0f", hours, minutes);
                 }
+            } else { 
+                ImguiNextColumnOrNewRow();
+                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_PLUG);
             }
         }
 
