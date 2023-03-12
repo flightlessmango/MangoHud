@@ -57,7 +57,7 @@ jobs:
           hub release edit "${assets[@]}" -m "" "$tag_name"
           #hub release create "${assets[@]}" -m "$tag_name" "$tag_name"
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         continue-on-error: true
         with:
           name: MangoHud-${{steps.git-vars.outputs.artifact-metadata}}
