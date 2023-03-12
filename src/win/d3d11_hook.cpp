@@ -3,7 +3,6 @@
 #if KIERO_INCLUDE_D3D11
 
 #include "d3d11_hook.h"
-#include <d3d11.h>
 #include <assert.h>
 #include <intrin.h>
 

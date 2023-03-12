@@ -1,8 +1,8 @@
 #include "kiero.h"
 #include "windows.h"
 #include <dxgi.h>
-#include "kiero.h"
 #include <cstdio>
+#include "dxgi.h"
 
 #ifdef _UNICODE
 # define KIERO_TEXT(text) L##text

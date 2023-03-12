@@ -1,3 +1,4 @@
+#pragma once
 #include <dxgi.h>
 #include <dxgi1_5.h>
 #include <dxgi1_4.h>
@@ -16,6 +17,6 @@ namespace impl
 		void init();
 	}
 }
-
+long __fastcall hkPresent12(IDXGISwapChain3* pSwapChain, UINT SyncInterval, UINT Flags);
 
 #endif // __D3D12_IMPL_H__

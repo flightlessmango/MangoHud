@@ -206,9 +206,11 @@ void Logger::stop_logging() {
   output_file.close();
   writeSummary(m_log_files.back());
   clear_log_data();
+#ifdef __linux__
   control_client_check(HUDElements.params->control, global_control_client, gpu.c_str());
   const char * cmd = "LoggingFinished";
   control_send(global_control_client, cmd, strlen(cmd), 0, 0);
+#endif
 }
 
 void Logger::logging(){

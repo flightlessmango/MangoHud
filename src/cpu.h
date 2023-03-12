@@ -7,7 +7,9 @@
 #include <cstdio>
 #include <memory>
 #include <string>
-
+#ifdef WIN32
+#include <windows.h>
+#endif
 #include "timing.hpp"
 
 typedef struct CPUData_ {
@@ -157,5 +159,7 @@ private:
 };
 
 extern CPUStats cpuStats;
-
+#ifdef WIN32
+uint64_t FileTimeToInt64( const FILETIME& ft );
+#endif
 #endif //MANGOHUD_CPU_H
