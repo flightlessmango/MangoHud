@@ -15,6 +15,8 @@ IMPLICIT_LAYER_DIR="$XDG_DATA_HOME/vulkan/implicit_layer.d"
 VERSION=$(git describe --long --tags --always | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/^v//')
 SU_CMD=$(command -v sudo || command -v doas || echo)
 MACHINE=$(uname -m || echo)
+INSTALL_LIST_NATIVE="$MACHINE-installed-files.txt"
+INSTALL_LIST_MULTILIB="x86-installed-files.txt"
 
 # doas requires a double dash if the command it runs will include any dashes,
 # so append a double dash to the command
@@ -145,43 +147,54 @@ configure() {
     dependencies
     git submodule update --init --depth 50
     CONFIGURE_OPTS="-Dwerror=true"
-    if [[ ! -f "build/meson64/build.ninja" ]]; then
-        meson build/meson64 --libdir lib/mangohud/lib64 --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_prefix=true -Dld_libdir_abs=true $@ ${CONFIGURE_OPTS}
-    fi
-    if [[ ! -f "build/meson32/build.ninja" && "$MACHINE" = "x86_64" ]]; then
-        export CC="gcc -m32"
-        export CXX="g++ -m32"
-        export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH_32}"
-        export LLVM_CONFIG="/usr/bin/llvm-config32"
-        meson build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_prefix=true -Dld_libdir_abs=true $@ ${CONFIGURE_OPTS}
+
+    [[ -e build/meson-$MACHINE ]] && rm -r build/meson-$MACHINE
+    meson setup build/meson-$MACHINE -Dprefix=/usr $@ ${CONFIGURE_OPTS}
+
+    if [[ "$MACHINE" = "x86_64" ]]; then
+        [[ -e build/meson-x86 ]] && rm -r build/meson-x86
+        meson setup build/meson-x86 -Dprefix=/usr --cross-file linux32.txt $@ ${CONFIGURE_OPTS}
     fi
 }
 
 build() {
-    if [[ ! -f "build/meson64/build.ninja" ]]; then
+    if [[ ! -f "build/meson-$MACHINE/build.ninja" ]]; then
         configure $@
     fi
-    DESTDIR="$PWD/build/release" ninja -C build/meson64 install
+
+    echo "####################################"
+    echo "Building native $MACHINE library"
+    ninja -C build/meson-$MACHINE
 
     if [ "$MACHINE" = "x86_64" ]; then
-        DESTDIR="$PWD/build/release" ninja -C build/meson32 install
+        echo "####################################"
+        echo "Building x86 library"
+        ninja -C build/meson-x86
     fi
 }
 
 package() {
-    LIB="build/release/usr/lib/mangohud/lib64/libMangoHud.so"
-    LIB32="build/release/usr/lib/mangohud/lib32/libMangoHud.so"
-    if [[ ! -f "$LIB" || "$LIB" -ot "build/meson64/src/libMangoHud.so" ]]; then
+    if [[ ! -f "build/meson-$MACHINE/build.ninja" ]]; then
+        configure $@
         build
     fi
+
+    DESTDIR="$PWD/build/release" ninja -C build/meson-$MACHINE install
+
+    if [ "$MACHINE" = "x86_64" ]; then
+        DESTDIR="$PWD/build/release" ninja -C build/meson-x86 install
+    fi
+
     tar --numeric-owner --owner=0 --group=0 \
         -C build/release -cvf "build/MangoHud-package.tar" .
+
+    echo "The 'MangoHud-package.tar' has been created in the build/ folder"
 }
 
 release() {
-    rm build/MangoHud-package.tar
+    [[ -e build/MangoHud-package.tar ]] && rm build/MangoHud-package.tar
     mkdir -p build/MangoHud
-    package
+    package $@
     cp --preserve=mode bin/mangohud-setup.sh build/MangoHud/mangohud-setup.sh
     cp build/MangoHud-package.tar build/MangoHud/MangoHud-package.tar
     tar --numeric-owner --owner=0 --group=0 \
@@ -189,89 +202,51 @@ release() {
 }
 
 uninstall() {
-    [ "$UID" -eq 0 ] || exec $SU_CMD bash "$0" uninstall
-    rm -rfv "/usr/lib/mangohud"
-    rm -rfv "/usr/share/doc/mangohud"
-    rm -fv "/usr/share/man/man1/mangohud.1"
-    rm -fv "/usr/share/vulkan/implicit_layer.d/mangohud.json"
-    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.json"
-    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json"
-    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json"
-    rm -fv "/usr/bin/mangohud"
-    rm -fv "/usr/bin/mangohud.x86"
+    echo "#############################"
+    echo "Uninstalling old MangoHud install (if it exists)"
+
+    # The file build/meson-$MACHINE/install-log.txt contains all the files installed by meson
+    if [[ -f $INSTALL_LIST_NATIVE ]]; then
+        $SU_CMD xargs --arg-file=$INSTALL_LIST_NATIVE --verbose rm -rf
+        rm $INSTALL_LIST_NATIVE
+    fi
+
+    if [[ -f $INSTALL_LIST_MULTILIB ]]; then
+        $SU_CMD xargs --arg-file=$INSTALL_LIST_MULTILIB --verbose rm -rf
+        rm $INSTALL_LIST_MULTILIB
+    fi
 }
 
 install() {
-    rm -rf "$HOME/.local/share/MangoHud/"
-    rm -f "$HOME/.local/share/vulkan/implicit_layer.d/"{mangohud32.json,mangohud64.json}
-
-    [ "$UID" -eq 0 ] || mkdir -pv "${CONFIG_DIR}"
-    [ "$UID" -eq 0 ] || build
-    [ "$UID" -eq 0 ] || exec $SU_CMD bash "$0" install
-
     uninstall
 
-    DEFAULTLIB=lib32
-    for i in $DISTRO; do
-        case $i in
-            *arch*)
-            DEFAULTLIB=lib64
-            ;;
-        esac
-    done
+    mkdir -pv "${CONFIG_DIR}"
+    build $@
 
-    if [ "$MACHINE" != "x86_64" ]; then
-        # Native libs
-        DEFAULTLIB=lib64
-    fi
+    echo "####################################"
+    echo "Installing $MACHINE MangoHud"
 
-    echo DEFAULTLIB: $DEFAULTLIB
-    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud.so /usr/lib/mangohud/lib64/libMangoHud.so
-    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud_dlsym.so /usr/lib/mangohud/lib64/libMangoHud_dlsym.so
+    pushd build/meson-$MACHINE
+    $SU_CMD meson install
+    popd
+
+    # Copy install list outside of the meson folder so it doesn't get overwritten
+    mv "build/meson-$MACHINE/meson-logs/install-log.txt" $INSTALL_LIST_NATIVE
+
+    # Remove comments from file
+    sed -i 's:#.*$::g' $INSTALL_LIST_NATIVE
+
     if [ "$MACHINE" = "x86_64" ]; then
-      /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud.so /usr/lib/mangohud/lib32/libMangoHud.so
-      /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud_dlsym.so /usr/lib/mangohud/lib32/libMangoHud_dlsym.so
+        echo "####################################"
+        echo "Installing x86 MangoHud"
+        pushd build/meson-x86
+        $SU_CMD meson install
+        popd
+        mv "build/meson-x86/meson-logs/install-log.txt" $INSTALL_LIST_MULTILIB
+        sed -i 's:#.*$::g' $INSTALL_LIST_MULTILIB
     fi
 
-    /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.json /usr/share/vulkan/implicit_layer.d/MangoHud.json
-    /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.json /usr/share/vulkan/implicit_layer.d/MangoHud.json
-    /usr/bin/install -Dvm644 ./build/release/usr/share/man/man1/mangohud.1 /usr/share/man/man1/mangohud.1
-    /usr/bin/install -Dvm644 ./build/release/usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
-    /usr/bin/install -vm755  ./build/release/usr/bin/mangohud /usr/bin/mangohud
-
-    ln -sv $DEFAULTLIB /usr/lib/mangohud/lib
-
-    # FIXME get the triplet somehow
-    ln -sv lib64 /usr/lib/mangohud/x86_64
-    ln -sv lib64 /usr/lib/mangohud/x86_64-linux-gnu
-    ln -sv . /usr/lib/mangohud/lib64/x86_64
-    ln -sv . /usr/lib/mangohud/lib64/x86_64-linux-gnu
-
-    ln -sv lib32 /usr/lib/mangohud/i686
-    ln -sv lib32 /usr/lib/mangohud/i386-linux-gnu
-    ln -sv lib32 /usr/lib/mangohud/i686-linux-gnu
-
-    mkdir -p /usr/lib/mangohud/tls
-    ln -sv ../lib64 /usr/lib/mangohud/tls/x86_64
-    ln -sv ../lib32 /usr/lib/mangohud/tls/i686
-
-    # Some distros search in $prefix/x86_64-linux-gnu/tls/x86_64 etc instead
-    if [ ! -e /usr/lib/mangohud/lib/i386-linux-gnu ]; then
-        ln -sv ../lib32 /usr/lib/mangohud/lib/i386-linux-gnu
-    fi
-    if [ ! -e /usr/lib/mangohud/lib/i686-linux-gnu ]; then
-        ln -sv ../lib32 /usr/lib/mangohud/lib/i686-linux-gnu
-    fi
-    if [ ! -e /usr/lib/mangohud/lib/x86_64-linux-gnu ]; then
-        ln -sv ../lib64 /usr/lib/mangohud/lib/x86_64-linux-gnu
-    fi
-
-    # $LIB can be "lib/tls/x86_64"?
-    ln -sv ../tls /usr/lib/mangohud/lib/tls
-
-    #ln -sv lib64 /usr/lib/mangohud/aarch64-linux-gnu
-    #ln -sv lib64 /usr/lib/mangohud/arm-linux-gnueabihf
-
+    echo "####################################"
     echo "MangoHud Installed"
 }
 
@@ -333,11 +308,11 @@ while [ $# -gt 0 ]; do
         "build") build ${OPTS[@]};;
         "build_dbg") build --buildtype=debug -Dglibcxx_asserts=true ${OPTS[@]};;
         "package") package;;
-        "install") install;;
+        "install") install ${OPTS[@]};;
         "reinstall") reinstall;;
         "clean") clean;;
         "uninstall") uninstall;;
-        "release") release;;
+        "release") release ${OPTS[@]};;
         *)
             usage
     esac
