@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <assert.h>
 #include <cerrno>
 #include <cstring>

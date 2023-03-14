@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "overlay.h"
 #include "timing.hpp"
 #include "logging.h"
