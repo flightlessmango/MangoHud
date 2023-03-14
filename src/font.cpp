@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "overlay.h"
 #include "file_utils.h"
 #include "font_default.h"
