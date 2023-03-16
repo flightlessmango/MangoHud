@@ -108,6 +108,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(no_display)                  \
    OVERLAY_PARAM_CUSTOM(control)                     \
    OVERLAY_PARAM_CUSTOM(fps_limit)                   \
+   OVERLAY_PARAM_CUSTOM(fps_limit_method)            \
    OVERLAY_PARAM_CUSTOM(vsync)                       \
    OVERLAY_PARAM_CUSTOM(gl_vsync)                    \
    OVERLAY_PARAM_CUSTOM(gl_size_query)               \
@@ -200,6 +201,11 @@ enum gl_size_query {
    GL_SIZE_SCISSORBOX, // needed?
 };
 
+enum fps_limit_method {
+   FPS_LIMIT_METHOD_EARLY,
+   FPS_LIMIT_METHOD_LATE
+};
+
 enum overlay_param_enabled {
 #define OVERLAY_PARAM_BOOL(name) OVERLAY_PARAM_ENABLED_##name,
 #define OVERLAY_PARAM_CUSTOM(name)
@@ -215,6 +221,7 @@ struct overlay_params {
    int control;
    uint32_t fps_sampling_period; /* ns */
    std::vector<std::uint32_t> fps_limit;
+   enum fps_limit_method fps_limit_method;
    bool help;
    bool no_display;
    bool full;

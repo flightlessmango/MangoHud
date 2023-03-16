@@ -331,6 +331,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `font_size=`                       | Customizeable font size (default=24)                                                  |
 | `font_size_text=`                  | Customizeable font size for other text like media metadata (default=24)               |
 | `fps_limit`                        | Limit the apps framerate. Comma-separated list of one or more FPS values. `0` means unlimited. |
+| `fps_limit_method`                 | If FPS limiter should wait before or after presenting a frame. Choose `late` (default) for the lowest latency or `early` for the smoothest frametimes. |
 | `fps_only`                         | Show FPS only. ***Not meant to be used with other display params***                   |
 | `frame_count`                      | Display frame count                                                                   |
 | `frametime`                        | Display frametime next to FPS text                                                    |

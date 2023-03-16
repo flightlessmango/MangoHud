@@ -61,6 +61,7 @@ struct fps_limit {
    Clock::duration targetFrameTime;
    Clock::duration frameOverhead;
    Clock::duration sleepTime;
+   enum fps_limit_method method;
 };
 
 struct benchmark_stats {

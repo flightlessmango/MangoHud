@@ -188,6 +188,16 @@ parse_fps_limit(const char *str)
    return fps_limit;
 }
 
+static enum fps_limit_method
+parse_fps_limit_method(const char *str)
+{
+   if (!strcmp(str, "early")) {
+      return FPS_LIMIT_METHOD_EARLY;
+   }
+
+   return FPS_LIMIT_METHOD_LATE;
+}
+
 static bool
 parse_no_display(const char *str)
 {
@@ -597,6 +607,7 @@ parse_overlay_config(struct overlay_params *params,
    params->height = 140;
    params->control = -1;
    params->fps_limit = { 0 };
+   params->fps_limit_method = FPS_LIMIT_METHOD_LATE;
    params->vsync = -1;
    params->gl_vsync = -2;
    params->offset_x = 0;
@@ -801,6 +812,8 @@ parse_overlay_config(struct overlay_params *params,
       fps_limit_stats.targetFrameTime = duration_cast<Clock::duration>(duration<double>(1) / params->fps_limit[0]);
    else
       fps_limit_stats.targetFrameTime = {};
+
+   fps_limit_stats.method = params->fps_limit_method;
 
 #ifdef HAVE_DBUS
    if (params->enabled[OVERLAY_PARAM_ENABLED_media_player]) {
