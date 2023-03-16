@@ -61,14 +61,25 @@ EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf)
             imgui_render(width, height);
 
         using namespace std::chrono_literals;
-        if (fps_limit_stats.targetFrameTime > 0s){
+        if (fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_EARLY){
             fps_limit_stats.frameStart = Clock::now();
             FpsLimiter(fps_limit_stats);
             fps_limit_stats.frameEnd = Clock::now();
         }
     }
 
-    return pfn_eglSwapBuffers(dpy, surf);
+    int res = pfn_eglSwapBuffers(dpy, surf);
+
+    if (!is_blacklisted()) {
+        using namespace std::chrono_literals;
+        if (fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_LATE){
+            fps_limit_stats.frameStart = Clock::now();
+            FpsLimiter(fps_limit_stats);
+            fps_limit_stats.frameEnd = Clock::now();
+        }
+    }
+
+    return res;
 }
 
 struct func_ptr {

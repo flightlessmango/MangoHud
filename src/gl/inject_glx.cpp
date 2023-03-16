@@ -155,12 +155,17 @@ EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
 
     do_imgui_swap(dpy, drawable);
     using namespace std::chrono_literals;
-    if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s){
+    if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_EARLY){
         fps_limit_stats.frameStart = Clock::now();
         FpsLimiter(fps_limit_stats);
         fps_limit_stats.frameEnd = Clock::now();
     }
     glx.SwapBuffers(dpy, drawable);
+    if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_LATE){
+        fps_limit_stats.frameStart = Clock::now();
+        FpsLimiter(fps_limit_stats);
+        fps_limit_stats.frameEnd = Clock::now();
+    }
 }
 
 EXPORT_C_(int64_t) glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t target_msc, int64_t divisor, int64_t remainder)
@@ -171,12 +176,19 @@ EXPORT_C_(int64_t) glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t targe
 
     do_imgui_swap(dpy, drawable);
     using namespace std::chrono_literals;
-    if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s){
+    if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_EARLY){
         fps_limit_stats.frameStart = Clock::now();
         FpsLimiter(fps_limit_stats);
         fps_limit_stats.frameEnd = Clock::now();
     }
+
     int64_t ret = glx.SwapBuffersMscOML(dpy, drawable, target_msc, divisor, remainder);
+
+    if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_LATE){
+        fps_limit_stats.frameStart = Clock::now();
+        FpsLimiter(fps_limit_stats);
+        fps_limit_stats.frameEnd = Clock::now();
+    }
 
     return ret;
 }
