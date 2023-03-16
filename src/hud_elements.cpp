@@ -665,7 +665,8 @@ void HudElements::show_fps_limit(){
             fps = 1000000000 / fps_limit_stats.targetFrameTime.count();
         ImGui::TableNextColumn();
         ImGui::PushFont(HUDElements.sw_stats->font1);
-        ImGui::TextColored(HUDElements.colors.engine, "%s","FPS limit");
+        const char* method = fps_limit_stats.method == FPS_LIMIT_METHOD_EARLY ? "early" : "late";
+        ImGui::TextColored(HUDElements.colors.engine, "%s (%s)","FPS limit",method);
         ImGuiTableSetColumnIndex(HUDElements.text_column);
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", fps);
         ImGui::PopFont();
