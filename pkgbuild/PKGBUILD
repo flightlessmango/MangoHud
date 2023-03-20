@@ -78,4 +78,5 @@ package_lib32-mangohud() {
   DESTDIR="${pkgdir}" ninja -C build32 install
   rm -rf "$pkgdir/usr/bin"
   rm -rf "$pkgdir/usr/share"
+  install -m644 -Dt "$pkgdir/usr/share/vulkan/implicit_layer.d" "$srcdir/build32/src/MangoHud.x86.json"
 }
