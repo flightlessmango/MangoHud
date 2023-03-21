@@ -25,7 +25,7 @@ sha256sums=('SKIP'
             '3c38f275d5792b1286391102594329e98b17737924b344f98312ab09929b74be'
             'b94997df68856753b72f0d7a3703b7d484d4745c567f3584ef97c96c25a5798e')
 
-_build_args="-Dappend_libdir_mangohud=false -Dwith_xnvctrl=disabled -Duse_system_vulkan=enabled -Dmangoapp_layer=true"
+_build_args="-Dappend_libdir_mangohud=false -Dwith_xnvctrl=disabled -Duse_system_vulkan=enabled -Dmangoapp_layer=true -Dtests=disabled"
 
 pkgver() {
   cd "$srcdir/mangohud"
