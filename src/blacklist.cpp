@@ -19,6 +19,7 @@ static std::string get_proc_name() {
 }
 
 static  std::vector<std::string> blacklist {
+    "Amazon Games UI.exe",
     "Battle.net.exe",
     "BethesdaNetLauncher.exe",
     "EpicGamesLauncher.exe",
