@@ -929,14 +929,18 @@ std::string get_device_name(uint32_t vendorID, uint32_t deviceID)
 
 void update_fan(){
    // This just handles steam deck fan for now
+   static bool init;
    string hwmon_path;
-   string path = "/sys/class/hwmon/";
-   auto dirs = ls(path.c_str(), "hwmon", LS_DIRS);
-   for (auto& dir : dirs) {
-      string full_path = (path + dir + "/name").c_str();
-      if (read_line(full_path).find("jupiter") != string::npos){
-         hwmon_path = path + dir + "/fan1_input";
-         break;
+
+   if (!init){
+      string path = "/sys/class/hwmon/";
+      auto dirs = ls(path.c_str(), "hwmon", LS_DIRS);
+      for (auto& dir : dirs) {
+         string full_path = (path + dir + "/name").c_str();
+         if (read_line(full_path).find("steamdeck_hwmon") != string::npos){
+            hwmon_path = path + dir + "/fan1_input";
+            break;
+         }
       }
    }
 
