@@ -28,18 +28,16 @@ bool amdgpu_verify_metrics(const std::string& path)
         return false;
     }
 
-    switch (header.structure_size)
+    switch (header.format_revision)
     {
-        case 80: // v1_0, not naturally aligned
-			return false;
-        case 96: // v1_1
-        case 104: // v1_2
-        case sizeof(gpu_metrics_v1_3): // v2.0, v2.1
-        case sizeof(gpu_metrics_v2_2):
-            if (header.format_revision == 1 || header.format_revision == 2)
-                return true;
-        default:
-            break;
+		case 1:
+			cpuStats.cpu_type = "GPU";
+			return true;
+		case 2:
+			cpuStats.cpu_type = "APU";
+			return true;
+		default: 
+			break;
     }
 
     SPDLOG_WARN("Unsupported gpu_metrics version: {}.{}", header.format_revision, header.content_revision);
@@ -49,7 +47,7 @@ bool amdgpu_verify_metrics(const std::string& path)
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	FILE *f;
-	void *buf[MAX(sizeof(struct gpu_metrics_v1_3), sizeof(struct gpu_metrics_v2_2))];
+	void *buf[MAX(sizeof(struct gpu_metrics_v1_3), sizeof(struct gpu_metrics_v2_3))];
 	struct metrics_table_header* header = (metrics_table_header*)buf;
 
 	f = fopen(metrics_path.c_str(), "rb");
@@ -67,7 +65,6 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	int64_t indep_throttle_status = 0;
 	if (header->format_revision == 1) {
 		// Desktop GPUs
-		cpuStats.cpu_type = "GPU";
 		struct gpu_metrics_v1_3 *amdgpu_metrics = (struct gpu_metrics_v1_3 *) buf;
 		metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
 
@@ -80,8 +77,7 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		indep_throttle_status = amdgpu_metrics->indep_throttle_status;
 	} else if (header->format_revision == 2) {
 		// APUs
-		cpuStats.cpu_type = "APU";
-		struct gpu_metrics_v2_2 *amdgpu_metrics = (struct gpu_metrics_v2_2 *) buf;
+		struct gpu_metrics_v2_3 *amdgpu_metrics = (struct gpu_metrics_v2_3 *) buf;
 
 		metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
 
