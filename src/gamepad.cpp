@@ -17,7 +17,7 @@ int switch_count = 0;
 int bitdo_count = 0;
 std::string  xbox_paths [2]{"gip","xpadneo"};
 
-bool operator<(const gamepad& a, const gamepad& b)
+static bool operator<(const gamepad& a, const gamepad& b)
 {
     return a.name < b.name;
 }
@@ -106,11 +106,12 @@ void gamepad_info () {
             ds4_counter++;
         }
         //DualSense 5 devices
+        //Dual Shock 4 added to hid-playstation in Linux 6.2
         if (path.find("ps-controller") != std::string::npos) {
             if (ds5_count == 1)
-                gamepad_data[gamepad_count].name = "DS5 PAD";
+                gamepad_data[gamepad_count].name = "DS4/5 PAD";
             else
-                gamepad_data[gamepad_count].name = "DS5 PAD-" + to_string(ds5_counter + 1);
+                gamepad_data[gamepad_count].name = "DS4/5 PAD-" + to_string(ds5_counter + 1);
             ds5_counter++;
         }
         //Nintendo Switch devices

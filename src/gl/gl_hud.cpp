@@ -13,10 +13,6 @@
 #include "notify.h"
 #include "blacklist.h"
 
-#ifdef HAVE_DBUS
-#include "dbus_info.h"
-#endif
-
 #include <glad/glad.h>
 
 
@@ -121,14 +117,17 @@ void imgui_create(void *ctx)
         sw_stats.version_gl.minor,
         sw_stats.version_gl.is_gles);
 
+    std::string vendor = (char*)glGetString(GL_VENDOR);
     deviceName = (char*)glGetString(GL_RENDERER);
-    SPDLOG_DEBUG("deviceName: {}", deviceName);
+    SPDLOG_DEBUG("vendor: {}, deviceName: {}", vendor, deviceName);
     sw_stats.deviceName = deviceName;
-    if (deviceName.find("Radeon") != std::string::npos
+    if (vendor.find("AMD") != std::string::npos
     || deviceName.find("AMD") != std::string::npos
+    || deviceName.find("Radeon") != std::string::npos
     || deviceName.find("NAVI") != std::string::npos) {
         vendorID = 0x1002;
-    } else if (deviceName.find("Intel") != std::string::npos) {
+    } else if (vendor.find("Intel") != std::string::npos
+    || deviceName.find("Intel") != std::string::npos) {
         vendorID = 0x8086;
     }  else {
         vendorID = 0x10de;

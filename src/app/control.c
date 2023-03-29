@@ -1,12 +1,19 @@
+#include <sys/ipc.h>
+#include <sys/msg.h>
 #include <string.h>
 #include <stdio.h>
-#include "mangoapp.h"
+#include <stdlib.h>
+#include <stdbool.h>
 
-void help_and_quit() {
+#include "mangoapp_proto.h"
+
+static void help_and_quit() {
     fprintf(stderr, "Usage: mangohudctl [set|toggle] attribute [value]\n");
+    fprintf(stderr, "       mangohudctl reload-cfg\n");
     fprintf(stderr, "Attributes:\n");
     fprintf(stderr, "   no_display      hides or shows hud\n");
     fprintf(stderr, "   log_session     handles logging status\n");
+    fprintf(stderr, "   reload_config   reloads the config\n");
     fprintf(stderr, "Accepted values:\n");
     fprintf(stderr, "   true\n");
     fprintf(stderr, "   false\n");
@@ -15,7 +22,7 @@ void help_and_quit() {
     exit(1);
 }
 
-bool str_to_bool(const char *value)
+static bool str_to_bool(const char *value)
 {
     if (strcasecmp(value, "true") == 0 || strcmp(value, "1") == 0)
         return true;
@@ -33,10 +40,11 @@ int main(int argc, char *argv[])
     int key = ftok("mangoapp", 65);
     int msgid = msgget(key, 0666 | IPC_CREAT);
     /* Create the message that we will send to mangohud */
-    struct mangoapp_ctrl_msgid1_v1 ctrl_msg = {0};
-    ctrl_msg.hdr.msg_type = 2;
-    ctrl_msg.hdr.ctrl_msg_type = 1;
-    ctrl_msg.hdr.version = 1;
+    struct mangoapp_ctrl_msgid1_v1 ctrl_msg = {
+        .hdr.msg_type = 2,
+        .hdr.ctrl_msg_type = 1,
+        .hdr.version = 1,
+    };
     uint8_t value;
 
     if (argc <= 2)
@@ -60,10 +68,12 @@ int main(int argc, char *argv[])
         ctrl_msg.no_display = value;
     else if (strcmp(argv[2], "log_session") == 0)
         ctrl_msg.log_session = value;
+    else if (strcmp(argv[2], "reload_config") == 0)
+        ctrl_msg.reload_config = value;
     else
         help_and_quit();
 
-    msgsnd(msgid, &ctrl_msg, sizeof(mangoapp_ctrl_msgid1_v1), IPC_NOWAIT);
+    msgsnd(msgid, &ctrl_msg, sizeof(struct mangoapp_ctrl_msgid1_v1), IPC_NOWAIT);
 
     return 0;
 }

@@ -2,33 +2,17 @@ glslang = find_program('glslangValidator')
 
 # Needs prefix for configure_file()
 if get_option('append_libdir_mangohud')
-  libdir_mangohud = join_paths(get_option('libdir'), 'mangohud')
+  libdir_mangohud = join_paths(get_option('prefix'), get_option('libdir'), 'mangohud')
   ld_libdir_mangohud = get_option('prefix') + '/\$LIB/mangohud/'
 else
-  libdir_mangohud = get_option('libdir')
+  libdir_mangohud = join_paths(get_option('prefix'), get_option('libdir'))
   ld_libdir_mangohud = get_option('prefix') + '/\$LIB/'
-endif
-
-# For build.sh
-if get_option('ld_libdir_prefix')
-  # FIXME derive from libdir
-  ld_libdir_mangohud = get_option('prefix') + '/lib/mangohud/\$LIB/'
 endif
 
 conf_data = configuration_data()
 
-if get_option('ld_libdir_abs')
-  conf_data.set('ld_libdir_mangohud_abs', ld_libdir_mangohud)
-  conf_data.set('ld_libdir_mangohud', '')
-else
-  conf_data.set('ld_libdir_mangohud_abs', '')
-  conf_data.set('ld_libdir_mangohud', ld_libdir_mangohud)
-endif
-
-ld_libdir_mangohud_vk = ''
-if get_option('prepend_libdir_vk')
-  ld_libdir_mangohud_vk = ld_libdir_mangohud
-endif
+conf_data.set('ld_libdir_mangohud_abs', libdir_mangohud)
+conf_data.set('ld_libdir_mangohud', ld_libdir_mangohud)
 
 overlay_shaders = [
   'overlay.frag',
@@ -40,6 +24,11 @@ foreach s : ['overlay.frag', 'overlay.vert']
     s + '.spv.h', input : s, output : s + '.spv.h',
     command : [glslang, '-V', '-x', '-o', '@OUTPUT@', '@INPUT@'])
 endforeach
+
+util_files = files(
+  'mesa/util/os_socket.c',
+  'mesa/util/os_time.c',
+)
 
 vklayer_files = files(
   'hud_elements.cpp',
@@ -92,10 +81,6 @@ if is_unixy
     'gl/gl_hud.cpp',
     'gl/inject_egl.cpp',
   )
-
-  if get_option('with_dlsym').enabled()
-      pre_args += '-DHOOK_DLSYM'
-  endif
 
   nvml_h_found = get_option('with_nvml') == 'enabled'
   if get_option('with_nvml') == 'system'
@@ -169,7 +154,6 @@ mangohud_static_lib = static_library(
   overlay_spv,
   c_args : [
     pre_args,
-    no_override_init_args,
     vulkan_wsi_args
     ],
   cpp_args : [
@@ -178,6 +162,7 @@ mangohud_static_lib = static_library(
     ],
   gnu_symbol_visibility : 'hidden',
   dependencies : [
+    mangohud_version_dep,
     vulkan_wsi_deps,
     dearimgui_dep,
     spdlog_dep,
@@ -211,7 +196,6 @@ if is_unixy
     ),
     c_args : [
       pre_args,
-      no_override_init_args,
       ],
     cpp_args : [
       pre_args,
@@ -225,54 +209,50 @@ if is_unixy
   )
 endif
 
-if sizeof_ptr != 4 or get_option('mangoapp_32bit')
-  if get_option('mangoapp')
-    pre_args += '-DIMGUI_IMPL_OPENGL_LOADER_GLEW'
-    pre_args += '-DMANGOAPP'
-    mangoapp = executable(
-      'mangoapp',
-      files(
-        'app/main.cpp',
-      ),
-      c_args : [
-        pre_args,
-        no_override_init_args,
-        vulkan_wsi_args
-        ],
-      cpp_args : [
-        pre_args,
-        vulkan_wsi_args
-        ],
-      gnu_symbol_visibility : 'hidden',
-      dependencies : [
-        dearimgui_dep,
-        dep_dl,
-        spdlog_dep,
-        dbus_dep,
-        dep_x11,
-        glfw3_dep,
-        json_dep,
-      ],
-      include_directories : [inc_common],
-      install_tag : 'mangoapp',
-      link_with: mangohud_static_lib,
-      link_args : link_args,
-      install : true
-    )
-  endif
+if get_option('mangoapp')
+  pre_args += '-DIMGUI_IMPL_OPENGL_LOADER_GLEW'
+  pre_args += '-DMANGOAPP'
+  mangoapp = executable(
+    'mangoapp',
+    files(
+      'app/main.cpp',
+    ),
+    c_args : [
+      pre_args,
+      vulkan_wsi_args
+    ],
+    cpp_args : [
+      pre_args,
+      vulkan_wsi_args
+    ],
+    gnu_symbol_visibility : 'hidden',
+    dependencies : [
+      dearimgui_dep,
+      dep_dl,
+      spdlog_dep,
+      dbus_dep,
+      dep_x11,
+      glfw3_dep,
+      json_dep,
+    ],
+    include_directories : [inc_common],
+    install_tag : 'mangoapp',
+    link_with: mangohud_static_lib,
+    link_args : link_args,
+    install : true
+  )
 endif
 
 if get_option('mangohudctl')
 mangoapp = executable(
   'mangohudctl',
-  files('app/control.cpp'),
+  files('app/control.c'),
   install_tag : 'mangoapp', #TODO MangoHud layer itself currently doesn't support it
   install : true
 )
 endif
 
 if get_option('mangoapp_layer')
-  pre_args += '-DMANGOAPP_LAYER'
   mangoapp_layer = shared_library(
     'MangoApp',
     vk_enum_to_str,
@@ -281,12 +261,12 @@ if get_option('mangoapp_layer')
     ),
     c_args : [
       pre_args,
-      no_override_init_args,
       ],
     cpp_args : [
       pre_args,
       ],
     dependencies : [
+      dep_vulkan,
       json_dep
     ],
     gnu_symbol_visibility : 'hidden',
@@ -299,9 +279,8 @@ if get_option('mangoapp_layer')
 endif
 
 configure_file(input : 'mangohud.json.in',
-  output : '@0@.json'.format(meson.project_name()),
-  configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud_vk.replace('\$', '$'),
-                  'PROJECT_NAME' : meson.project_name().to_upper()},
+  output : '@0@.@1@.json'.format(meson.project_name(), host_machine.cpu_family()),
+  configuration : conf_data,
   install : true,
   install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
   install_tag : 'runtime',
@@ -316,8 +295,8 @@ configure_file(input : '../bin/mangohud.in',
 
 if get_option('mangoapp_layer')
   configure_file(input : 'app/layer.json.in',
-    output : 'libMangoApp.json',
-    configuration : {'ld_libdir_mangohud' : ld_libdir_mangohud_vk.replace('\$', '$')},
+    output : 'libMangoApp.@0@.json'.format(host_machine.cpu_family()),
+    configuration : conf_data,
     install : true,
     install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
     install_tag : 'mangoapp',

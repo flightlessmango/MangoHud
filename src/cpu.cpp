@@ -27,7 +27,7 @@
 
 #include "file_utils.h"
 
-void calculateCPUData(CPUData& cpuData,
+static void calculateCPUData(CPUData& cpuData,
     unsigned long long int usertime,
     unsigned long long int nicetime,
     unsigned long long int systemtime,
@@ -480,7 +480,7 @@ static bool find_input(const std::string& path, const char* input_prefix, std::s
     return false;
 }
 
-CPUPowerData_k10temp* init_cpu_power_data_k10temp(const std::string path) {
+static CPUPowerData_k10temp* init_cpu_power_data_k10temp(const std::string path) {
     auto powerData = std::make_unique<CPUPowerData_k10temp>();
 
     std::string coreVoltageInput, coreCurrentInput;
@@ -504,7 +504,7 @@ CPUPowerData_k10temp* init_cpu_power_data_k10temp(const std::string path) {
     return powerData.release();
 }
 
-CPUPowerData_zenpower* init_cpu_power_data_zenpower(const std::string path) {
+static CPUPowerData_zenpower* init_cpu_power_data_zenpower(const std::string path) {
     auto powerData = std::make_unique<CPUPowerData_zenpower>();
 
     std::string corePowerInput, socPowerInput;
@@ -521,7 +521,7 @@ CPUPowerData_zenpower* init_cpu_power_data_zenpower(const std::string path) {
     return powerData.release();
 }
 
-CPUPowerData_rapl* init_cpu_power_data_rapl(const std::string path) {
+static CPUPowerData_rapl* init_cpu_power_data_rapl(const std::string path) {
     auto powerData = std::make_unique<CPUPowerData_rapl>();
 
     std::string energyCounterPath = path + "/energy_uj";

@@ -8,21 +8,16 @@ if [ "$#" -eq 0 ]; then
 	exit 1
 fi
 
+MANGOHUD_LIB_NAME="@ld_libdir_mangohud@libMangoHud.so"
+
 if [ "$1" = "--dlsym" ]; then
 	MANGOHUD_DLSYM=1
+	MANGOHUD_LIB_NAME="@ld_libdir_mangohud@libMangoHud_dlsym.so:${MANGOHUD_LIB_NAME}"
 	shift
 fi
 
-MANGOHUD_LIB_NAME="@ld_libdir_mangohud_abs@libMangoHud.so"
-
-if [ "$MANGOHUD_DLSYM" = "1" ]; then
-	MANGOHUD_LIB_NAME="@ld_libdir_mangohud_abs@libMangoHud_dlsym.so:${MANGOHUD_LIB_NAME}"
-fi
-
 # Preload using the plain filenames of the libs, the dynamic linker will
-# figure out whether the 32 or 64 bit version should be used, and will search
-# for it in the correct directory
-LD_PRELOAD="${LD_PRELOAD}${LD_PRELOAD:+:}${MANGOHUD_LIB_NAME}"
-LD_LIBRARY_PATH="${LD_LIBRARY_PATH}${LD_LIBRARY_PATH:+:}@ld_libdir_mangohud@"
+# figure out whether the 32 or 64 bit version should be used
+LD_PRELOAD="${LD_PRELOAD:+$LD_PRELOAD:}${MANGOHUD_LIB_NAME}"
 
-exec env MANGOHUD=1 LD_LIBRARY_PATH="${LD_LIBRARY_PATH}" LD_PRELOAD="${LD_PRELOAD}" "$@"
+exec env MANGOHUD=1 LD_PRELOAD="${LD_PRELOAD}" "$@"

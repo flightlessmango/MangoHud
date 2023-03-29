@@ -89,7 +89,7 @@ static void parse_token(std::string token, string_map& options) {
         options[param] = value;
 }
 
-char* get_attr_target_string(libnvctrl_loader& nvctrl, int attr, int target_type, int target_id) {
+static char* get_attr_target_string(libnvctrl_loader& nvctrl, int attr, int target_type, int target_id) {
     char* c = nullptr;
     if (!nvctrl.XNVCTRLQueryTargetStringAttribute(display.get(), target_type, target_id, 0, attr, &c)) {
         SPDLOG_ERROR("Failed to query attribute '{}'", attr);

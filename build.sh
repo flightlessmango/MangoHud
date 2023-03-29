@@ -7,11 +7,7 @@ source ./build_deps.sh
 OS_RELEASE_FILES=("/etc/os-release" "/usr/lib/os-release")
 XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-DATA_DIR="$XDG_DATA_HOME/MangoHud"
 CONFIG_DIR="$XDG_CONFIG_HOME/MangoHud"
-LAYER="build/release/usr/share/vulkan/implicit_layer.d/mangohud.json"
-INSTALL_DIR="build/package/"
-IMPLICIT_LAYER_DIR="$XDG_DATA_HOME/vulkan/implicit_layer.d"
 VERSION=$(git describe --long --tags --always | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/^v//')
 SU_CMD=$(command -v sudo || command -v doas || echo)
 MACHINE=$(uname -m || echo)
@@ -146,14 +142,13 @@ configure() {
     git submodule update --init --depth 50
     CONFIGURE_OPTS="-Dwerror=true"
     if [[ ! -f "build/meson64/build.ninja" ]]; then
-        meson build/meson64 --libdir lib/mangohud/lib64 --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_prefix=true -Dld_libdir_abs=true $@ ${CONFIGURE_OPTS}
+        meson build/meson64 --libdir lib/mangohud/lib64 --prefix /usr -Dappend_libdir_mangohud=false $@ ${CONFIGURE_OPTS}
     fi
     if [[ ! -f "build/meson32/build.ninja" && "$MACHINE" = "x86_64" ]]; then
         export CC="gcc -m32"
         export CXX="g++ -m32"
         export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH_32}"
-        export LLVM_CONFIG="/usr/bin/llvm-config32"
-        meson build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false -Dld_libdir_prefix=true -Dld_libdir_abs=true $@ ${CONFIGURE_OPTS}
+        meson build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false $@ ${CONFIGURE_OPTS}
     fi
 }
 
@@ -166,6 +161,8 @@ build() {
     if [ "$MACHINE" = "x86_64" ]; then
         DESTDIR="$PWD/build/release" ninja -C build/meson32 install
     fi
+
+    sed -i 's:/usr/\\$LIB:/usr/lib/mangohud/\\$LIB:g' "$PWD/build/release/usr/bin/mangohud"
 }
 
 package() {
@@ -233,8 +230,8 @@ install() {
       /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud_dlsym.so /usr/lib/mangohud/lib32/libMangoHud_dlsym.so
     fi
 
-    /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.json /usr/share/vulkan/implicit_layer.d/MangoHud.json
-    /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.json /usr/share/vulkan/implicit_layer.d/MangoHud.json
+    /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json
+    /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86.json
     /usr/bin/install -Dvm644 ./build/release/usr/share/man/man1/mangohud.1 /usr/share/man/man1/mangohud.1
     /usr/bin/install -Dvm644 ./build/release/usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
     /usr/bin/install -vm755  ./build/release/usr/bin/mangohud /usr/bin/mangohud

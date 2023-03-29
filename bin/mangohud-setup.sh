@@ -65,7 +65,8 @@ mangohud_install() {
     /usr/bin/install -Dvm644 ./usr/lib/mangohud/lib64/libMangoHud_dlsym.so /usr/lib/mangohud/lib64/libMangoHud_dlsym.so
     /usr/bin/install -Dvm644 ./usr/lib/mangohud/lib32/libMangoHud.so /usr/lib/mangohud/lib32/libMangoHud.so
     /usr/bin/install -Dvm644 ./usr/lib/mangohud/lib32/libMangoHud_dlsym.so /usr/lib/mangohud/lib32/libMangoHud_dlsym.so
-    /usr/bin/install -Dvm644 ./usr/share/vulkan/implicit_layer.d/MangoHud.json /usr/share/vulkan/implicit_layer.d/MangoHud.json
+    /usr/bin/install -Dvm644 ./usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json
+    /usr/bin/install -Dvm644 ./usr/share/vulkan/implicit_layer.d/MangoHud.x86.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86.json
     /usr/bin/install -Dvm644 ./usr/share/man/man1/mangohud.1 /usr/share/man/man1/mangohud.1
     /usr/bin/install -Dvm644 ./usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
     /usr/bin/install -vm755  ./usr/bin/mangohud /usr/bin/mangohud

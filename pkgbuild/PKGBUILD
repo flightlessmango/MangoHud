@@ -25,7 +25,7 @@ sha256sums=('SKIP'
             '3c38f275d5792b1286391102594329e98b17737924b344f98312ab09929b74be'
             'b94997df68856753b72f0d7a3703b7d484d4745c567f3584ef97c96c25a5798e')
 
-_build_args="-Dappend_libdir_mangohud=false -Dwith_xnvctrl=disabled -Duse_system_vulkan=enabled -Dmangoapp_layer=true -Dprepend_libdir_vk=false"
+_build_args="-Dappend_libdir_mangohud=false -Dwith_xnvctrl=disabled -Duse_system_vulkan=enabled -Dmangoapp_layer=true -Dtests=disabled"
 
 pkgver() {
   cd "$srcdir/mangohud"
@@ -60,6 +60,8 @@ build() {
 
   arch-meson mangohud build32 \
     --libdir=lib32 \
+    -Dmangoapp=false \
+    -Dmangohudctl=false \
     ${_build_args}
 
   ninja -C build32
@@ -76,4 +78,5 @@ package_lib32-mangohud() {
   DESTDIR="${pkgdir}" ninja -C build32 install
   rm -rf "$pkgdir/usr/bin"
   rm -rf "$pkgdir/usr/share"
+  install -m644 -Dt "$pkgdir/usr/share/vulkan/implicit_layer.d" "$srcdir/build32/src/MangoHud.x86.json"
 }

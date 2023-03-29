@@ -3,6 +3,9 @@
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
+#include <sys/ipc.h>
+#include <sys/msg.h>
+
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -12,6 +15,7 @@
 #include "../overlay.h"
 #include "notify.h"
 #include "mangoapp.h"
+#include "mangoapp_proto.h"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
@@ -92,6 +96,18 @@ static void ctrl_thread(){
                 logger->is_active() ? logger->stop_logging() : logger->start_logging();
                 break;
         }
+        switch (mangoapp_ctrl_v1->reload_config) {
+            case 0:
+                break;
+            case 1:
+                parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
+                break;
+            case 2:
+                break;
+            case 3:
+                parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
+                break;
+        }
         {
             std::lock_guard<std::mutex> lk(mangoapp_m);
             switch (mangoapp_ctrl_v1->no_display){
@@ -145,7 +161,9 @@ static void msg_read_thread(){
         size_t msg_size = msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 1, 0) + sizeof(long);
         if (hdr->version == 1){
             if (msg_size > offsetof(struct mangoapp_msg_v1, visible_frametime_ns)){
-                update_hud_info_with_frametime(sw_stats, params, vendorID, mangoapp_v1->visible_frametime_ns);
+                if (!params.no_display || logger->is_active())
+                    update_hud_info_with_frametime(sw_stats, params, vendorID, mangoapp_v1->visible_frametime_ns);
+
                 if (msg_size > offsetof(mangoapp_msg_v1, fsrUpscale)){
                     g_fsrUpscale = mangoapp_v1->fsrUpscale;
                     if (params.fsr_steam_sharpness < 0)

@@ -33,10 +33,6 @@
 namespace fs = ghc::filesystem;
 using namespace std;
 
-#ifdef HAVE_DBUS
-float g_overflow = 50.f /* 3333ms * 0.5 / 16.6667 / 2 (to edge and back) */;
-#endif
-
 string gpuString,wineVersion,wineProcess;
 uint32_t deviceID;
 bool gui_open = false;
@@ -286,7 +282,8 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
 void update_hud_info(struct swapchain_stats& sw_stats, const struct overlay_params& params, uint32_t vendorID){
    uint64_t now = os_time_get_nano(); /* ns */
    uint64_t frametime_ns = now - sw_stats.last_present_time;
-   update_hud_info_with_frametime(sw_stats, params, vendorID, frametime_ns);
+   if (!params.no_display || logger->is_active())
+      update_hud_info_with_frametime(sw_stats, params, vendorID, frametime_ns);
 }
 
 float get_time_stat(void *_data, int _idx)
@@ -360,6 +357,10 @@ void position_layer(struct swapchain_stats& data, const struct overlay_params& p
       data.main_window_pos = ImVec2((width / 2) - (window_size.x / 2), margin + params.offset_y);
       ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
       break;
+   case LAYER_POSITION_BOTTOM_CENTER:
+      data.main_window_pos = ImVec2((width / 2) - (window_size.x / 2), height - window_size.y - margin + params.offset_y);
+      ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
+      break;
    case LAYER_POSITION_COUNT:
       break;
    }
@@ -388,7 +389,7 @@ void center_text(const std::string& text)
    ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2 )- (ImGui::CalcTextSize(text.c_str()).x / 2));
 }
 
-float get_ticker_limited_pos(float pos, float tw, float& left_limit, float& right_limit)
+static float get_ticker_limited_pos(float pos, float tw, float& left_limit, float& right_limit)
 {
    //float cw = ImGui::GetContentRegionAvailWidth() * 3; // only table cell worth of width
    float cw = ImGui::GetWindowContentRegionMax().x - ImGui::GetStyle().WindowPadding.x;
@@ -412,6 +413,8 @@ float get_ticker_limited_pos(float pos, float tw, float& left_limit, float& righ
 #ifdef HAVE_DBUS
 void render_mpris_metadata(const struct overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing)
 {
+   static const float overflow = 50.f /* 3333ms * 0.5 / 16.6667 / 2 (to edge and back) */;
+
    if (meta.meta.valid) {
       auto color = ImGui::ColorConvertU32ToFloat4(params.media_player_color);
       ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,0));
@@ -445,12 +448,12 @@ void render_mpris_metadata(const struct overlay_params& params, mutexed_metadata
       float new_pos, left_limit = 0, right_limit = 0;
       get_ticker_limited_pos(meta.ticker.pos, meta.ticker.longest, left_limit, right_limit);
 
-      if (meta.ticker.pos < left_limit - g_overflow * .5f) {
+      if (meta.ticker.pos < left_limit - overflow * .5f) {
          meta.ticker.dir = -1;
-         meta.ticker.pos = (left_limit - g_overflow * .5f) + 1.f /* random */;
-      } else if (meta.ticker.pos > right_limit + g_overflow) {
+         meta.ticker.pos = (left_limit - overflow * .5f) + 1.f /* random */;
+      } else if (meta.ticker.pos > right_limit + overflow) {
          meta.ticker.dir = 1;
-         meta.ticker.pos = (right_limit + g_overflow) - 1.f /* random */;
+         meta.ticker.pos = (right_limit + overflow) - 1.f /* random */;
       }
 
       meta.ticker.pos -= .5f * (frame_timing / 16666666.7f /* ns */) * meta.ticker.dir;
@@ -564,6 +567,15 @@ ImVec4 change_on_load_temp(LOAD_DATA& data, unsigned current)
    }
 }
 
+void horizontal_separator(struct overlay_params& params){
+   ImGui::SameLine();
+   ImGui::Spacing();
+   ImGui::SameLine();
+   ImGui::GetWindowDrawList()->AddLine(ImVec2(ImGui::GetCursorPosX() - 5, ImGui::GetCursorPosY() + 2), ImVec2(ImGui::GetCursorPosX() - 5, ImGui::GetCursorPosY() + params.font_size * 0.85), params.vram_color, 2);
+   ImGui::SameLine();
+   ImGui::Spacing();
+}
+
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan)
 {
    // data.engine = EngineTypes::GAMESCOPE;
@@ -571,12 +583,15 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    HUDElements.is_vulkan = is_vulkan;
    ImGui::GetIO().FontGlobalScale = params.font_scale;
    static float ralign_width = 0, old_scale = 0;
+   auto io = ImGui::GetIO();
    if (params.enabled[OVERLAY_PARAM_ENABLED_fps_only]){
       window_size = ImVec2((to_string(int(HUDElements.sw_stats->fps)).length() * ImGui::CalcTextSize("A").x) + 15.f, params.height);
+   } else if (params.enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
+      window_size = ImVec2(io.DisplaySize.x, params.height);
    } else {
       window_size = ImVec2(params.width, params.height);
    }
-   unsigned height = ImGui::GetIO().DisplaySize.y;
+   unsigned height = io.DisplaySize.y;
    auto now = Clock::now();
 
    if (old_scale != params.font_scale) {
@@ -598,14 +613,8 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             func.first();
             HUDElements.place += 1;
             ImGui::PopStyleVar();
-            if(params.enabled[OVERLAY_PARAM_ENABLED_horizontal] && func != HUDElements.ordered_functions.back()){
-               ImGui::SameLine();
-               ImGui::Spacing();
-               ImGui::SameLine();
-               ImGui::GetWindowDrawList()->AddLine(ImVec2(ImGui::GetCursorPosX() - 5, ImGui::GetCursorPosY() + 2), ImVec2(ImGui::GetCursorPosX() - 5, ImGui::GetCursorPosY() + params.font_size * 0.85), params.vram_color, 2);
-               ImGui::SameLine();
-               ImGui::Spacing();
-            }
+            if(params.enabled[OVERLAY_PARAM_ENABLED_horizontal] && func != HUDElements.ordered_functions.back())
+               horizontal_separator(params);
          }
          ImGui::EndTable();
       }
@@ -925,14 +934,18 @@ std::string get_device_name(uint32_t vendorID, uint32_t deviceID)
 
 void update_fan(){
    // This just handles steam deck fan for now
+   static bool init;
    string hwmon_path;
-   string path = "/sys/class/hwmon/";
-   auto dirs = ls(path.c_str(), "hwmon", LS_DIRS);
-   for (auto& dir : dirs) {
-      string full_path = (path + dir + "/name").c_str();
-      if (read_line(full_path).find("jupiter") != string::npos){
-         hwmon_path = path + dir + "/fan1_input";
-         break;
+
+   if (!init){
+      string path = "/sys/class/hwmon/";
+      auto dirs = ls(path.c_str(), "hwmon", LS_DIRS);
+      for (auto& dir : dirs) {
+         string full_path = (path + dir + "/name").c_str();
+         if (read_line(full_path).find("steamdeck_hwmon") != string::npos){
+            hwmon_path = path + dir + "/fan1_input";
+            break;
+         }
       }
    }
 

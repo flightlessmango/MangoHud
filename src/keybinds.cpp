@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "overlay.h"
 #include "timing.hpp"
 #include "logging.h"
@@ -11,11 +12,6 @@ void check_keybinds(struct overlay_params& params, uint32_t vendorID){
    auto elapsedF12 = now - last_f12_press;
    auto elapsedReloadCfg = now - reload_cfg_press;
    auto elapsedUpload = now - last_upload_press;
-
-   static Clock::time_point last_check;
-   if (now - last_check < 100ms)
-      return;
-   last_check = now;
 
    auto keyPressDelay = 400ms;
 

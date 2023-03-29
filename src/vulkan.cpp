@@ -401,7 +401,7 @@ static void destroy_swapchain_data(struct swapchain_data *data)
    delete data;
 }
 
-struct overlay_draw *get_overlay_draw(struct swapchain_data *data)
+static struct overlay_draw *get_overlay_draw(struct swapchain_data *data)
 {
    struct device_data *device_data = data->device;
    struct overlay_draw *draw = data->draws.empty() ?
@@ -1576,7 +1576,7 @@ static VkResult overlay_QueuePresentKHR(
     const VkPresentInfoKHR*                     pPresentInfo)
 {
    using namespace std::chrono_literals;
-   if (fps_limit_stats.targetFrameTime > 0s){
+   if (fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_EARLY){
       fps_limit_stats.frameStart = Clock::now();
       FpsLimiter(fps_limit_stats);
       fps_limit_stats.frameEnd = Clock::now();
@@ -1622,6 +1622,12 @@ static VkResult overlay_QueuePresentKHR(
          pPresentInfo->pResults[i] = chain_result;
       if (chain_result != VK_SUCCESS && result == VK_SUCCESS)
          result = chain_result;
+   }
+
+   if (fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_LATE){
+      fps_limit_stats.frameStart = Clock::now();
+      FpsLimiter(fps_limit_stats);
+      fps_limit_stats.frameEnd = Clock::now();
    }
 
    return result;

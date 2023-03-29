@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <assert.h>
 #include <cerrno>
 #include <cstring>
@@ -5,9 +6,7 @@
 #include "mesa/util/os_socket.h"
 #include "overlay.h"
 #include "version.h"
-#ifdef MANGOAPP
 #include "app/mangoapp.h"
-#endif
 
 int global_control_client;
 

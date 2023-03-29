@@ -16,6 +16,8 @@ mangohud_version = vcs_tag(
   input:  'version.h.in',
   output: 'version.h')
 
+mangohud_version_dep = declare_dependency(sources : mangohud_version)
+
 pre_args = [
   '-D__STDC_CONSTANT_MACROS',
   '-D__STDC_FORMAT_MACROS',
@@ -111,61 +113,38 @@ inc_common = [
     include_directories('include'),
 ]
 
-dep_vulkan = dependency('vulkan', required: get_option('use_system_vulkan'))
 dep_pthread = dependency('threads')
 
-# Check for generic C arguments
-c_args = []
-foreach a : ['-Werror=implicit-function-declaration',
-             '-Werror=missing-prototypes', '-Werror=return-type',
-             '-Werror=incompatible-pointer-types',
-             '-Wno-unused-parameter', '-Qunused-arguments',
-             '-fno-math-errno', '-fno-trapping-math']
-  if cc.has_argument(a)
-    c_args += a
-  endif
-endforeach
+add_project_arguments(
+  cc.get_supported_arguments([
+    '-Werror=implicit-function-declaration',
+    '-Werror=missing-declarations',
+    '-Werror=missing-prototypes',
+    '-Werror=return-type',
+    '-Werror=incompatible-pointer-types',
+    '-Wno-unused-parameter',
+    '-Qunused-arguments',
+    '-fno-math-errno',
+    '-fno-trapping-math',
+    '-Wno-missing-field-initializers',
+  ]), language : ['c'],
+)
 
-foreach a : ['missing-field-initializers', 'format-truncation']
-  if cc.has_argument('-W' + a)
-    c_args += '-Wno-' + a
-  endif
-endforeach
-
-# Check for generic C++ arguments
-cpp_args = []
-foreach a : ['-Werror=return-type',
-             '-Wno-unused-parameter', '-Qunused-arguments',
-             '-fno-math-errno', '-fno-trapping-math']
-  if cpp.has_argument(a)
-    cpp_args += a
-  endif
-endforeach
-
-# For some reason, the test for -Wno-foo always succeeds with gcc, even if the
-# option is not supported. Hence, check for -Wfoo instead.
-
-foreach a : ['non-virtual-dtor', 'missing-field-initializers', 'format-truncation']
-  if cpp.has_argument('-W' + a)
-    cpp_args += '-Wno-' + a
-  endif
-endforeach
-
-no_override_init_args = []
-foreach a : ['override-init', 'initializer-overrides']
-  if cc.has_argument('-W' + a)
-    no_override_init_args += '-Wno-' + a
-  endif
-endforeach
+add_project_arguments(
+  cpp.get_supported_arguments([
+    '-Werror=missing-declarations',
+    '-Werror=return-type',
+    '-Wno-unused-parameter',
+    '-Qunused-arguments',
+    '-fno-math-errno',
+    '-fno-trapping-math',
+    '-Wno-non-virtual-dtor',
+    '-Wno-missing-field-initializers',
+  ]), language : ['cpp'],
+)
 
 foreach a : pre_args
   add_project_arguments(a, language : ['c', 'cpp'])
-endforeach
-foreach a : c_args
-  add_project_arguments(a, language : ['c'])
-endforeach
-foreach a : cpp_args
-  add_project_arguments(a, language : ['cpp'])
 endforeach
 
 # check for dl support
@@ -186,7 +165,8 @@ else
   dep_rt = null_dep
 endif
 
-if dep_vulkan.found()
+dep_vulkan = dependency('vulkan', required: get_option('use_system_vulkan'))
+if dep_vulkan.found() and not get_option('use_system_vulkan').disabled()
   datadir = get_option('vulkan_datadir')
   if datadir == ''
     datadir = get_option('datadir')
@@ -209,11 +189,6 @@ vk_enum_to_str = custom_target(
     prog_python, '@INPUT0@', '--xml', '@INPUT1@',
     '--outdir', meson.current_build_dir()
   ],
-)
-
-util_files = files(
-  'src/mesa/util/os_socket.c',
-  'src/mesa/util/os_time.c',
 )
 
 imgui_options = [
@@ -298,6 +273,7 @@ if get_option('tests').enabled()
       'src/mesa/util/os_time.c',
       'src/file_utils.cpp',
     ),
+    cpp_args: ['-DTEST_ONLY'],
     dependencies: [
       cmocka_dep,
       spdlog_dep,

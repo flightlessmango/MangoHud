@@ -1,8 +1,7 @@
-#include "windows.h"
 #include <cstdio>
 #include "kiero.h"
 #include <vector>
-
+#include "win_shared.h"
 #if KIERO_INCLUDE_D3D11
 # include "d3d11_hook.h"
 #endif

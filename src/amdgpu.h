@@ -5,12 +5,18 @@
 #include <inttypes.h>
 #include <unistd.h>
 #include <string>
+#include "overlay_params.h"
 // #include <vector>
 
 #define METRICS_UPDATE_PERIOD_MS 500
 #define METRICS_POLLING_PERIOD_MS 5
 #define METRICS_SAMPLE_COUNT (METRICS_UPDATE_PERIOD_MS/METRICS_POLLING_PERIOD_MS)
 #define NUM_HBM_INSTANCES 4
+
+#define UPDATE_METRIC_AVERAGE(FIELD) do { int value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer[s].FIELD; } amdgpu_common_metrics.FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
+#define UPDATE_METRIC_AVERAGE_FLOAT(FIELD) do { float value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer[s].FIELD; } amdgpu_common_metrics.FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
+#define UPDATE_METRIC_MAX(FIELD) do { int cur_max = metrics_buffer[0].FIELD; for (size_t s=1; s < METRICS_SAMPLE_COUNT; s++) { cur_max = MAX(cur_max, metrics_buffer[s].FIELD); }; amdgpu_common_metrics.FIELD = cur_max; } while(0)
+#define UPDATE_METRIC_LAST(FIELD) do { amdgpu_common_metrics.FIELD = metrics_buffer[METRICS_SAMPLE_COUNT - 1].FIELD; } while(0)
 
 struct metrics_table_header {
 	uint16_t			structure_size;
@@ -143,6 +149,65 @@ struct gpu_metrics_v2_2 {
 	uint64_t			indep_throttle_status;
 };
 
+struct gpu_metrics_v2_3 {
+	struct metrics_table_header	common_header;
+
+	/* Temperature */
+	uint16_t			temperature_gfx; // gfx temperature on APUs
+	uint16_t			temperature_soc; // soc temperature on APUs
+	uint16_t			temperature_core[8]; // CPU core temperature on APUs
+	uint16_t			temperature_l3[2];
+
+	/* Utilization */
+	uint16_t			average_gfx_activity;
+	uint16_t			average_mm_activity; // UVD or VCN
+
+	/* Driver attached timestamp (in ns) */
+	uint64_t			system_clock_counter;
+
+	/* Power/Energy */
+	uint16_t			average_socket_power; // dGPU + APU power on A + A platform
+	uint16_t			average_cpu_power;
+	uint16_t			average_soc_power;
+	uint16_t			average_gfx_power;
+	uint16_t			average_core_power[8]; // CPU core power on APUs
+
+	/* Average clocks */
+	uint16_t			average_gfxclk_frequency;
+	uint16_t			average_socclk_frequency;
+	uint16_t			average_uclk_frequency;
+	uint16_t			average_fclk_frequency;
+	uint16_t			average_vclk_frequency;
+	uint16_t			average_dclk_frequency;
+
+	/* Current clocks */
+	uint16_t			current_gfxclk;
+	uint16_t			current_socclk;
+	uint16_t			current_uclk;
+	uint16_t			current_fclk;
+	uint16_t			current_vclk;
+	uint16_t			current_dclk;
+	uint16_t			current_coreclk[8]; // CPU core clocks
+	uint16_t			current_l3clk[2];
+
+	/* Throttle status (ASIC dependent) */
+	uint32_t			throttle_status;
+
+	/* Fans */
+	uint16_t			fan_pwm;
+
+	uint16_t			padding[3];
+
+	/* Throttle status (ASIC independent) */
+	uint64_t			indep_throttle_status;
+
+	/* Average Temperature */
+	uint16_t			average_temperature_gfx; // average gfx temperature on APUs
+	uint16_t			average_temperature_soc; // average soc temperature on APUs
+	uint16_t			average_temperature_core[8]; // average CPU core temperature on APUs
+	uint16_t			average_temperature_l3[2];
+};
+
 /* This structure is used to communicate the latest values of the amdgpu metrics.
  * The direction of communication is amdgpu_polling_thread -> amdgpu_get_metrics().
  */
@@ -172,8 +237,8 @@ struct amdgpu_common_metrics {
 };
 
 bool amdgpu_verify_metrics(const std::string& path);
-extern void amdgpu_get_metrics();
+void amdgpu_get_metrics();
 extern std::string metrics_path;
-extern void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics);
-extern void amdgpu_metrics_polling_thread();
-extern void amdgpu_get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT], bool gpu_load_needs_dividing);
+void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics);
+void amdgpu_metrics_polling_thread();
+void amdgpu_get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT], bool &gpu_load_needs_dividing);

@@ -1,10 +1,14 @@
 #include <spdlog/spdlog.h>
 #include <thread>
+#ifdef __linux__
 #include <sys/sysinfo.h>
+#endif
 #include "amdgpu.h"
 #include "gpu.h"
 #include "cpu.h"
 #include "overlay.h"
+#include "hud_elements.h"
+#include "logging.h"
 
 std::string metrics_path = "";
 struct amdgpu_common_metrics amdgpu_common_metrics;
@@ -24,18 +28,16 @@ bool amdgpu_verify_metrics(const std::string& path)
         return false;
     }
 
-    switch (header.structure_size)
+    switch (header.format_revision)
     {
-        case 80: // v1_0, not naturally aligned
-			return false;
-        case 96: // v1_1
-        case 104: // v1_2
-        case sizeof(gpu_metrics_v1_3): // v2.0, v2.1
-        case sizeof(gpu_metrics_v2_2):
-            if (header.format_revision == 1 || header.format_revision == 2)
-                return true;
-        default:
-            break;
+		case 1:
+			cpuStats.cpu_type = "GPU";
+			return true;
+		case 2:
+			cpuStats.cpu_type = "APU";
+			return true;
+		default: 
+			break;
     }
 
     SPDLOG_WARN("Unsupported gpu_metrics version: {}.{}", header.format_revision, header.content_revision);
@@ -45,7 +47,7 @@ bool amdgpu_verify_metrics(const std::string& path)
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	FILE *f;
-	void *buf[MAX(sizeof(struct gpu_metrics_v1_3), sizeof(struct gpu_metrics_v2_2))];
+	void *buf[MAX(sizeof(struct gpu_metrics_v1_3), sizeof(struct gpu_metrics_v2_3))];
 	struct metrics_table_header* header = (metrics_table_header*)buf;
 
 	f = fopen(metrics_path.c_str(), "rb");
@@ -63,7 +65,6 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	int64_t indep_throttle_status = 0;
 	if (header->format_revision == 1) {
 		// Desktop GPUs
-		cpuStats.cpu_type = "GPU";
 		struct gpu_metrics_v1_3 *amdgpu_metrics = (struct gpu_metrics_v1_3 *) buf;
 		metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
 
@@ -76,8 +77,7 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		indep_throttle_status = amdgpu_metrics->indep_throttle_status;
 	} else if (header->format_revision == 2) {
 		// APUs
-		cpuStats.cpu_type = "APU";
-		struct gpu_metrics_v2_2 *amdgpu_metrics = (struct gpu_metrics_v2_2 *) buf;
+		struct gpu_metrics_v2_3 *amdgpu_metrics = (struct gpu_metrics_v2_3 *) buf;
 
 		metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
 
@@ -105,13 +105,8 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	metrics->is_other_throttled = ((indep_throttle_status >> 56) & 0xFF) != 0;
 }
 
-#define UPDATE_METRIC_AVERAGE(FIELD) do { int value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer[s].FIELD; } amdgpu_common_metrics.FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
-#define UPDATE_METRIC_AVERAGE_FLOAT(FIELD) do { float value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer[s].FIELD; } amdgpu_common_metrics.FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
-#define UPDATE_METRIC_MAX(FIELD) do { int cur_max = metrics_buffer[0].FIELD; for (size_t s=1; s < METRICS_SAMPLE_COUNT; s++) { cur_max = MAX(cur_max, metrics_buffer[s].FIELD); }; amdgpu_common_metrics.FIELD = cur_max; } while(0)
-#define UPDATE_METRIC_LAST(FIELD) do { amdgpu_common_metrics.FIELD = metrics_buffer[METRICS_SAMPLE_COUNT - 1].FIELD; } while(0)
-
-void amdgpu_get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT], bool gpu_load_needs_dividing) {
-			// Get all the samples
+void amdgpu_get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT], bool &gpu_load_needs_dividing) {
+		// Get all the samples
 		for (size_t cur_sample_id=0; cur_sample_id < METRICS_SAMPLE_COUNT; cur_sample_id++) {
 			amdgpu_get_instant_metrics(&metrics_buffer[cur_sample_id]);
 
@@ -159,7 +154,12 @@ void amdgpu_metrics_polling_thread() {
 	memset(metrics_buffer, 0, sizeof(metrics_buffer));
 
 	while (1) {
-		amdgpu_get_samples_and_copy(metrics_buffer, gpu_load_needs_dividing);
+#ifndef TEST_ONLY
+		if (HUDElements.params->no_display && !logger->is_active())
+			usleep(100000);
+		else
+#endif
+			amdgpu_get_samples_and_copy(metrics_buffer, gpu_load_needs_dividing);
 	}
 }
 

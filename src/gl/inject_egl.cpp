@@ -15,7 +15,7 @@ using namespace MangoHud::GL;
 
 EXPORT_C_(void *) eglGetProcAddress(const char* procName);
 
-void* get_egl_proc_address(const char* name) {
+static void* get_egl_proc_address(const char* name) {
 
     void *func = nullptr;
     static void *(*pfn_eglGetProcAddress)(const char*) = nullptr;
@@ -41,13 +41,7 @@ void* get_egl_proc_address(const char* name) {
     return func;
 }
 
-//EGLBoolean eglMakeCurrent(EGLDisplay dpy, EGLSurface draw, EGLSurface read, EGLContext ctx);
-EXPORT_C_(int) eglMakeCurrent_OFF(void *dpy, void *draw, void *read,void *ctx) {
-    SPDLOG_TRACE("{}: draw: {}, ctx: {}", __func__, draw, ctx);
-    int ret = 0;
-    return ret;
-}
-
+EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf);
 EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf)
 {
     static int (*pfn_eglSwapBuffers)(void*, void*) = nullptr;
@@ -67,14 +61,25 @@ EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf)
             imgui_render(width, height);
 
         using namespace std::chrono_literals;
-        if (fps_limit_stats.targetFrameTime > 0s){
+        if (fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_EARLY){
             fps_limit_stats.frameStart = Clock::now();
             FpsLimiter(fps_limit_stats);
             fps_limit_stats.frameEnd = Clock::now();
         }
     }
 
-    return pfn_eglSwapBuffers(dpy, surf);
+    int res = pfn_eglSwapBuffers(dpy, surf);
+
+    if (!is_blacklisted()) {
+        using namespace std::chrono_literals;
+        if (fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_LATE){
+            fps_limit_stats.frameStart = Clock::now();
+            FpsLimiter(fps_limit_stats);
+            fps_limit_stats.frameEnd = Clock::now();
+        }
+    }
+
+    return res;
 }
 
 struct func_ptr {
@@ -89,6 +94,7 @@ static std::array<const func_ptr, 2> name_to_funcptr_map = {{
 #undef ADD_HOOK
 }};
 
+EXPORT_C_(void *) mangohud_find_egl_ptr(const char *name);
 EXPORT_C_(void *) mangohud_find_egl_ptr(const char *name)
 {
   if (is_blacklisted())

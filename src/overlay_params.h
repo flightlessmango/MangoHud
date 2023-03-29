@@ -90,6 +90,8 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(horizontal)                    \
    OVERLAY_PARAM_BOOL(hud_no_margin)                 \
    OVERLAY_PARAM_BOOL(hud_compact)                   \
+   OVERLAY_PARAM_BOOL(battery_watt)                  \
+   OVERLAY_PARAM_BOOL(battery_time)                  \
    OVERLAY_PARAM_BOOL(exec_name)                     \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
@@ -108,6 +110,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(no_display)                  \
    OVERLAY_PARAM_CUSTOM(control)                     \
    OVERLAY_PARAM_CUSTOM(fps_limit)                   \
+   OVERLAY_PARAM_CUSTOM(fps_limit_method)            \
    OVERLAY_PARAM_CUSTOM(vsync)                       \
    OVERLAY_PARAM_CUSTOM(gl_vsync)                    \
    OVERLAY_PARAM_CUSTOM(gl_size_query)               \
@@ -171,6 +174,7 @@ enum overlay_param_position {
    LAYER_POSITION_MIDDLE_LEFT,
    LAYER_POSITION_MIDDLE_RIGHT,
    LAYER_POSITION_BOTTOM_LEFT,
+   LAYER_POSITION_BOTTOM_CENTER,
    LAYER_POSITION_BOTTOM_RIGHT,
    // Count must always be the last entry
    LAYER_POSITION_COUNT,
@@ -199,6 +203,11 @@ enum gl_size_query {
    GL_SIZE_SCISSORBOX, // needed?
 };
 
+enum fps_limit_method {
+   FPS_LIMIT_METHOD_EARLY,
+   FPS_LIMIT_METHOD_LATE
+};
+
 enum overlay_param_enabled {
 #define OVERLAY_PARAM_BOOL(name) OVERLAY_PARAM_ENABLED_##name,
 #define OVERLAY_PARAM_CUSTOM(name)
@@ -214,6 +223,7 @@ struct overlay_params {
    int control;
    uint32_t fps_sampling_period; /* ns */
    std::vector<std::uint32_t> fps_limit;
+   enum fps_limit_method fps_limit_method;
    bool help;
    bool no_display;
    bool full;

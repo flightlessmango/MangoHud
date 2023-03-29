@@ -1,0 +1,59 @@
+name: Ubuntu build testing
+
+on: [push, pull_request]
+
+jobs:
+  build-test:
+    strategy:
+      matrix:
+        compiler: [clang, gcc]
+        os: [ubuntu-22.04, ubuntu-20.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: 'Checkout'
+      uses: actions/checkout@v3
+    - name: 'Install prerequisites'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          appstream \
+          glslang-tools \
+          ninja-build \
+          python3-mako \
+          python3-setuptools \
+          python3-wheel \
+          mesa-common-dev \
+          libcmocka-dev \
+          libdbus-1-dev \
+          libglew-dev \
+          libglfw3-dev \
+          libwayland-dev \
+          libxnvctrl-dev
+        sudo pip3 install 'meson>=0.60'
+    - name: 'Install clang'
+      if:  ${{ (matrix.compiler == 'clang') }}
+      run: |
+          sudo apt-get install -y clang
+          echo "CC=clang" >> "$GITHUB_ENV"
+          echo "CXX=clang++" >> "$GITHUB_ENV"
+    - name: 'Install gcc'
+      if:  ${{ (matrix.compiler == 'gcc') }}
+      run: |
+          sudo apt-get install -y gcc g++
+          echo "CC=gcc" >> "$GITHUB_ENV"
+          echo "CXX=g++" >> "$GITHUB_ENV"
+    - name: 'Configure'
+      run: meson setup ./builddir --prefix=/usr
+          -D include_doc=true
+          -D with_xnvctrl=enabled
+          -D with_x11=enabled
+          -D with_wayland=enabled
+          -D with_dbus=enabled
+          -D mangoapp=true
+          -D mangohudctl=true
+          -D mangoapp_layer=true
+          -D tests=enabled
+    - name: 'Build'
+      run: meson compile -C ./builddir || ninja -C ./builddir
+    - name: 'Install'
+      run: sudo meson install -C ./builddir

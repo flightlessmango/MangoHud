@@ -10,16 +10,15 @@ on:
 
 jobs:
   build:
-    #runs-on: ubuntu-latest
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Install build tools
         run: |
           sudo apt update
           sudo apt install gcc-multilib g++-multilib ninja-build python3-setuptools python3-wheel mesa-common-dev libxnvctrl-dev libdbus-1-dev unzip
-          sudo pip3 install 'meson>=0.54' mako
+          sudo pip3 install 'meson>=0.60' mako
           wget https://github.com/KhronosGroup/glslang/releases/download/SDK-candidate-26-Jul-2020/glslang-master-linux-Release.zip
           unzip glslang-master-linux-Release.zip bin/glslangValidator
           sudo install -m755 bin/glslangValidator /usr/local/bin/
@@ -58,7 +57,7 @@ jobs:
           hub release edit "${assets[@]}" -m "" "$tag_name"
           #hub release create "${assets[@]}" -m "$tag_name" "$tag_name"
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         continue-on-error: true
         with:
           name: MangoHud-${{steps.git-vars.outputs.artifact-metadata}}

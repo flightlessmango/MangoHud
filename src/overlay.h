@@ -11,10 +11,7 @@
 #include "hud_elements.h"
 #include "engine_types.h"
 
-#ifdef HAVE_DBUS
 #include "dbus_info.h"
-extern float g_overflow;
-#endif
 #include "logging.h"
 
 struct frame_stat {
@@ -64,6 +61,7 @@ struct fps_limit {
    Clock::duration targetFrameTime;
    Clock::duration frameOverhead;
    Clock::duration sleepTime;
+   enum fps_limit_method method;
 };
 
 struct benchmark_stats {
@@ -121,5 +119,5 @@ void render_mpris_metadata(const overlay_params& params, mutexed_metadata& meta,
 #endif
 void update_fan();
 void next_hud_position(struct overlay_params& params);
-
+void horizontal_separator(struct overlay_params& params);
 #endif //MANGOHUD_OVERLAY_H

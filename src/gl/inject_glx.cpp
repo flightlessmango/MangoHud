@@ -22,9 +22,6 @@
 
 using namespace MangoHud::GL;
 
-EXPORT_C_(void *) glXGetProcAddress(const unsigned char* procName);
-EXPORT_C_(void *) glXGetProcAddressARB(const unsigned char* procName);
-
 #ifndef GLX_WIDTH
 #define GLX_WIDTH   0x801D
 #define GLX_HEIGHT  0x801E
@@ -34,7 +31,7 @@ static glx_loader glx;
 
 static std::atomic<int> refcnt (0);
 
-void* get_glx_proc_address(const char* name) {
+static void* get_glx_proc_address(const char* name) {
     glx.Load();
 
     void *func = nullptr;
@@ -64,6 +61,7 @@ EXPORT_C_(void *) glXCreateContext(void *dpy, void *vis, void *shareList, int di
     return ctx;
 }
 
+EXPORT_C_(void *) glXCreateContextAttribs(void *dpy, void *config,void *share_context, int direct, const int *attrib_list);
 EXPORT_C_(void *) glXCreateContextAttribs(void *dpy, void *config,void *share_context, int direct, const int *attrib_list)
 {
     glx.Load();
@@ -157,12 +155,17 @@ EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
 
     do_imgui_swap(dpy, drawable);
     using namespace std::chrono_literals;
-    if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s){
+    if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_EARLY){
         fps_limit_stats.frameStart = Clock::now();
         FpsLimiter(fps_limit_stats);
         fps_limit_stats.frameEnd = Clock::now();
     }
     glx.SwapBuffers(dpy, drawable);
+    if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_LATE){
+        fps_limit_stats.frameStart = Clock::now();
+        FpsLimiter(fps_limit_stats);
+        fps_limit_stats.frameEnd = Clock::now();
+    }
 }
 
 EXPORT_C_(int64_t) glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t target_msc, int64_t divisor, int64_t remainder)
@@ -173,12 +176,19 @@ EXPORT_C_(int64_t) glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t targe
 
     do_imgui_swap(dpy, drawable);
     using namespace std::chrono_literals;
-    if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s){
+    if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_EARLY){
         fps_limit_stats.frameStart = Clock::now();
         FpsLimiter(fps_limit_stats);
         fps_limit_stats.frameEnd = Clock::now();
     }
+
     int64_t ret = glx.SwapBuffersMscOML(dpy, drawable, target_msc, divisor, remainder);
+
+    if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_LATE){
+        fps_limit_stats.frameStart = Clock::now();
+        FpsLimiter(fps_limit_stats);
+        fps_limit_stats.frameEnd = Clock::now();
+    }
 
     return ret;
 }
@@ -266,6 +276,7 @@ static std::array<const func_ptr, 13> name_to_funcptr_map = {{
 #undef ADD_HOOK
 }};
 
+EXPORT_C_(void *) mangohud_find_glx_ptr(const char *name);
 EXPORT_C_(void *) mangohud_find_glx_ptr(const char *name)
 {
   if (is_blacklisted())

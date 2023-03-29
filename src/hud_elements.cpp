@@ -27,7 +27,7 @@ using namespace std;
 
 // Cut from https://github.com/ocornut/imgui/pull/2943
 // Probably move to ImGui
-float SRGBToLinear(float in)
+static float SRGBToLinear(float in)
 {
     if (in <= 0.04045f)
         return in / 12.92f;
@@ -35,29 +35,11 @@ float SRGBToLinear(float in)
         return powf((in + 0.055f) / 1.055f, 2.4f);
 }
 
-float LinearToSRGB(float in)
-{
-    if (in <= 0.0031308f)
-        return in * 12.92f;
-    else
-        return 1.055f * powf(in, 1.0f / 2.4f) - 0.055f;
-}
-
-ImVec4 SRGBToLinear(ImVec4 col)
+static ImVec4 SRGBToLinear(ImVec4 col)
 {
     col.x = SRGBToLinear(col.x);
     col.y = SRGBToLinear(col.y);
     col.z = SRGBToLinear(col.z);
-    // Alpha component is already linear
-
-    return col;
-}
-
-ImVec4 LinearToSRGB(ImVec4 col)
-{
-    col.x = LinearToSRGB(col.x);
-    col.y = LinearToSRGB(col.y);
-    col.z = LinearToSRGB(col.z);
     // Alpha component is already linear
 
     return col;
@@ -127,7 +109,7 @@ void HudElements::convert_colors(bool do_conv, const struct overlay_params& para
 /**
 * Go to next column or second column on new row
 */
-void ImguiNextColumnOrNewRow(int column = -1)
+static void ImguiNextColumnOrNewRow(int column = -1)
 {
     if (column > -1 && column < ImGui::TableGetColumnCount())
         ImGui::TableSetColumnIndex(column);
@@ -139,7 +121,7 @@ void ImguiNextColumnOrNewRow(int column = -1)
     }
 }
 
-void ImGuiTableSetColumnIndex(int column)
+static void ImGuiTableSetColumnIndex(int column)
 {
     ImGui::TableSetColumnIndex(std::max(0, std::min(column, ImGui::TableGetColumnCount() - 1)));
 }
@@ -195,7 +177,10 @@ void HudElements::gpu_stats(){
             ImguiNextColumnOrNewRow();
             right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.temp);
             ImGui::SameLine(0, 1.0f);
-            ImGui::Text("°C");
+            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact])
+                ImGui::Text("°");
+            else
+                ImGui::Text("°C");
         }
 
         if (gpu_info.junction_temp > -1 && HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_junction_temp]) {
@@ -270,7 +255,10 @@ void HudElements::cpu_stats(){
             ImguiNextColumnOrNewRow();
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", cpuStats.GetCPUDataTotal().temp);
             ImGui::SameLine(0, 1.0f);
-            ImGui::Text("°C");
+            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact])
+                ImGui::Text("°");
+            else
+                ImGui::Text("°C");
         }
 
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_mhz]){
@@ -471,7 +459,7 @@ void HudElements::procmem()
 void HudElements::fps(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_only]){
         ImGui::TableNextColumn();
-        if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact])
+        if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact] || HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
             ImGui::TextColored(HUDElements.colors.engine, "%s", "FPS");
         else
             ImGui::TextColored(HUDElements.colors.engine, "%s", engines[HUDElements.sw_stats->engine]);
@@ -492,7 +480,7 @@ void HudElements::fps(){
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", HUDElements.sw_stats->fps);
         }
         ImGui::SameLine(0, 1.0f);
-        if(!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
+        if(!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal]){
             ImGui::PushFont(HUDElements.sw_stats->font1);
             ImGui::Text("FPS");
             ImGui::PopFont();
@@ -698,7 +686,8 @@ void HudElements::show_fps_limit(){
             fps = 1000000000 / fps_limit_stats.targetFrameTime.count();
         ImGui::TableNextColumn();
         ImGui::PushFont(HUDElements.sw_stats->font1);
-        ImGui::TextColored(HUDElements.colors.engine, "%s","FPS limit");
+        const char* method = fps_limit_stats.method == FPS_LIMIT_METHOD_EARLY ? "early" : "late";
+        ImGui::TextColored(HUDElements.colors.engine, "%s (%s)","FPS limit",method);
         ImGuiTableSetColumnIndex(HUDElements.text_column);
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", fps);
         ImGui::PopFont();
@@ -761,7 +750,10 @@ void HudElements::battery(){
     if (Battery_Stats.batt_count > 0) {
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery]) {
             ImGui::TableNextColumn();
-            ImGui::TextColored(HUDElements.colors.battery, "BATT");
+            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact])
+                ImGui::TextColored(HUDElements.colors.battery, "BAT");
+            else
+                ImGui::TextColored(HUDElements.colors.battery, "BATT");
             ImGui::TableNextColumn();
             if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_icon]) {
                 switch(int(Battery_Stats.current_percent)){
@@ -784,19 +776,22 @@ void HudElements::battery(){
                 ImGui::SameLine(0,1.0f);
                 ImGui::Text("%%");
             }
-            if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
-                if (Battery_Stats.current_watt != 0) {
+            if (Battery_Stats.current_watt != 0) {
+                printf("%i\n", HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_watt]);
+                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_watt]){
                     ImguiNextColumnOrNewRow();
                     right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", Battery_Stats.current_watt);
                     ImGui::SameLine(0,1.0f);
                     ImGui::PushFont(HUDElements.sw_stats->font1);
                     ImGui::Text("W");
                     ImGui::PopFont();
-                    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]) {
-                        float hours;
-                        float minutes;
-                        minutes = std::modf(Battery_Stats.remaining_time, &hours);
-                        minutes *= 60;
+                }
+                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_time]) {
+                    float hours;
+                    float minutes;
+                    minutes = std::modf(Battery_Stats.remaining_time, &hours);
+                    minutes *= 60;
+                    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
                         ImGui::TableNextRow();
                         ImGui::NextColumn();
                         ImGui::PushFont(HUDElements.sw_stats->font1);
@@ -804,15 +799,20 @@ void HudElements::battery(){
                         ImGui::TextColored(HUDElements.colors.text, "%s", "Remaining Time");
                         ImGui::PopFont();
                         ImGuiTableSetColumnIndex(2);
-                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%02.0f:%02.0f", hours, minutes);
+                    } else {
+                        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
+                            ImguiNextColumnOrNewRow();
+
+                        ImguiNextColumnOrNewRow();
                     }
-                } else { 
-                    ImguiNextColumnOrNewRow();
-                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_PLUG);
+                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%02.0f:%02.0f", hours, minutes);
                 }
+            } else { 
+                ImguiNextColumnOrNewRow();
+                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_PLUG);
             }
         }
-        
+
     }
 #endif
 }
