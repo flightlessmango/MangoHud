@@ -1948,6 +1948,12 @@ static VkResult overlay_CreateSampler(
    } else if (params->af == 0)
       sampler.anisotropyEnable = VK_FALSE;
 
+   if (params->enabled[OVERLAY_PARAM_ENABLED_trilinear]){
+      sampler.magFilter = VK_FILTER_LINEAR;
+      sampler.minFilter = VK_FILTER_LINEAR;
+      sampler.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+   }
+
 	struct device_data *device_data = FIND(struct device_data, device);
 	VkResult result = device_data->vtable.CreateSampler(device, &sampler, pAllocator, pSampler);
 

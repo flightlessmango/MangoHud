@@ -380,6 +380,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `wine`                             | Shows current Wine or Proton version in use                                           |
 | `picmip`                           | Mip-map LoD bias. Negative values will increase texture sharpness (and aliasing). Positive values will increase texture blurriness (-16 to 16) |
 | `af`                               | Anisotropic filtering level. Improves sharpness of textures viewed at an angle (0 to 16)        |
+| `trilinear`                        | Force trilinear filtering                                                             |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 Because comma is also used as option delimiter and needs to be escaped for values with a backslash, you can use `+` like `MANGOHUD_CONFIG=fps_limit=60+30+0` instead.

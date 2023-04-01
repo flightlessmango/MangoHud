@@ -91,6 +91,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(battery_watt)                  \
    OVERLAY_PARAM_BOOL(battery_time)                  \
    OVERLAY_PARAM_BOOL(exec_name)                     \
+   OVERLAY_PARAM_BOOL(trilinear)                     \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
