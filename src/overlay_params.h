@@ -164,6 +164,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(fsr_steam_sharpness)         \
    OVERLAY_PARAM_CUSTOM(fcat_screen_edge)            \
    OVERLAY_PARAM_CUSTOM(fcat_overlay_width)          \
+   OVERLAY_PARAM_CUSTOM(picmip)                      \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -276,6 +277,7 @@ struct overlay_params {
    int fsr_steam_sharpness;
    unsigned short fcat_screen_edge;
    unsigned short fcat_overlay_width;
+   int picmip;
 
    size_t font_params_hash;
 };

@@ -1932,6 +1932,22 @@ static VkResult overlay_CreateInstance(
    return result;
 }
 
+static VkResult overlay_CreateSampler(
+	VkDevice                     device,
+	const VkSamplerCreateInfo*   pCreateInfo,
+	const VkAllocationCallbacks* pAllocator,
+	VkSampler*                   pSampler)
+{
+	VkSamplerCreateInfo sampler = *pCreateInfo;
+   sampler.mipLodBias = HUDElements.params->picmip;
+
+	struct device_data *device_data = FIND(struct device_data, device);
+	VkResult result = device_data->vtable.CreateSampler(device, &sampler, pAllocator, pSampler);
+
+	return result;
+}
+
+
 static void overlay_DestroyInstance(
     VkInstance                                  instance,
     const VkAllocationCallbacks*                pAllocator)
@@ -1969,6 +1985,7 @@ static const struct {
    ADD_HOOK(CreateSwapchainKHR),
    ADD_HOOK(QueuePresentKHR),
    ADD_HOOK(DestroySwapchainKHR),
+   ADD_HOOK(CreateSampler),
 
    ADD_HOOK(QueueSubmit),
 

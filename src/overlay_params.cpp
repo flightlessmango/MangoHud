@@ -419,6 +419,7 @@ parse_gl_size_query(const char *str)
 #define parse_round_corners(s) parse_unsigned(s)
 #define parse_fcat_overlay_width(s) parse_unsigned(s)
 #define parse_fcat_screen_edge(s) parse_unsigned(s)
+#define parse_picmip(s) parse_signed(s)
 
 #define parse_cpu_color(s) parse_color(s)
 #define parse_gpu_color(s) parse_color(s)
@@ -645,6 +646,7 @@ parse_overlay_config(struct overlay_params *params,
    params->round_corners = 0;
    params->battery_color =0xff9078;
    params->fsr_steam_sharpness = -1;
+   params->picmip = 0;
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_Shift_R, XK_F12 };
