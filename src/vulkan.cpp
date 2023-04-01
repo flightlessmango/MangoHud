@@ -1938,8 +1938,15 @@ static VkResult overlay_CreateSampler(
 	const VkAllocationCallbacks* pAllocator,
 	VkSampler*                   pSampler)
 {
+   auto params = HUDElements.params;
 	VkSamplerCreateInfo sampler = *pCreateInfo;
-   sampler.mipLodBias = HUDElements.params->picmip;
+   sampler.mipLodBias = params->picmip;
+
+   if (params->af > 0){
+      sampler.anisotropyEnable = VK_TRUE;
+      sampler.maxAnisotropy = params->af;
+   } else if (params->af == 0)
+      sampler.anisotropyEnable = VK_FALSE;
 
 	struct device_data *device_data = FIND(struct device_data, device);
 	VkResult result = device_data->vtable.CreateSampler(device, &sampler, pAllocator, pSampler);
