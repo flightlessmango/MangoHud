@@ -24,8 +24,6 @@ tar -xf ${TAR_NAME} --strip 1 -C ${NAME}
 rm ${NAME}/include/nvml.h
 # minhook not needed
 rm -r ${NAME}/modules/minhook
-# vulkan headers from system
-rm -r ${NAME}/subprojects/Vulkan-Headers-*
 # spdlog from system
 rm -r ${NAME}/subprojects/spdlog-*
 # remove some dear imgui clutter
