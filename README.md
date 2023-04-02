@@ -72,7 +72,6 @@ Install necessary development packages.
 - meson >=0.54
 - ninja (ninja-build)
 - glslang
-- vulkan headers if using `-Duse_system_vulkan=enabled` option with `meson`
 - libGL/libEGL (libglvnd, mesa-common-dev, mesa-libGL-devel etc)
 - X11 (libx11-dev)
 - XNVCtrl (libxnvctrl-dev), optional, use `-Dwith_xnvctrl=disabled` option with `meson` to disable
