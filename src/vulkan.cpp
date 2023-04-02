@@ -1954,6 +1954,12 @@ static VkResult overlay_CreateSampler(
       sampler.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
    }
 
+   if (params->enabled[OVERLAY_PARAM_ENABLED_bicubic]){
+      sampler.magFilter = VK_FILTER_CUBIC_IMG;
+      sampler.minFilter = VK_FILTER_CUBIC_IMG;
+      sampler.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+   }
+
 	struct device_data *device_data = FIND(struct device_data, device);
 	VkResult result = device_data->vtable.CreateSampler(device, &sampler, pAllocator, pSampler);
 
