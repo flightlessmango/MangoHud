@@ -205,9 +205,11 @@ static void msg_read_thread(){
 }
 
 static const char *GamescopeOverlayProperty = "GAMESCOPE_EXTERNAL_OVERLAY";
+static int screen_width  = 1280;
+static int screen_height = 800;
 
 static GLFWwindow* init(const char* glsl_version){
-    GLFWwindow *window = glfwCreateWindow(1280, 800, "mangoapp overlay window", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(screen_width, screen_height, "mangoapp overlay window", NULL, NULL);
     Display *x11_display = glfwGetX11Display();
     Window x11_window = glfwGetX11Window(window);
     if (x11_window && x11_display)
@@ -245,9 +247,24 @@ static bool render(GLFWwindow* window) {
     position_layer(sw_stats, params, window_size);
     render_imgui(sw_stats, params, window_size, true);
     overlay_end_frame();
-    glfwSetWindowSize(window, 1280, 800);
+    glfwSetWindowSize(window, screen_width, screen_height);
     ImGui::EndFrame();
     return last_window_size.x != window_size.x || last_window_size.y != window_size.y;
+}
+
+static void updateScreenInfo(){
+    GLFWmonitor* pMonitor = glfwGetPrimaryMonitor();
+    const GLFWvidmode * mode = glfwGetVideoMode(pMonitor);
+    screen_width = mode->width;
+    screen_height = mode->height;
+}
+
+static void monitor_callback(GLFWmonitor* monitor, int event)
+{
+    if (event == GLFW_CONNECTED || event == GLFW_DISCONNECTED)
+    {
+        updateScreenInfo();
+    }
 }
 
 int main(int, char**)
@@ -263,6 +280,9 @@ int main(int, char**)
 
     glfwWindowHint(GLFW_RESIZABLE, 1);
     glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, 1);
+
+    updateScreenInfo();
+    glfwSetMonitorCallback(monitor_callback);
 
     // Create window with graphics context
     GLFWwindow* window = init(glsl_version);
@@ -289,12 +309,15 @@ int main(int, char**)
     notifier.params = &params;
     start_notifier(notifier);
     window_size = ImVec2(params.width, params.height);
+    std::string vendor = (char*)glGetString(GL_VENDOR);
     deviceName = (char*)glGetString(GL_RENDERER);
     sw_stats.deviceName = deviceName;
-    if (deviceName.find("Radeon") != std::string::npos
+    if (vendor.find("AMD") != std::string::npos
+    || deviceName.find("Radeon") != std::string::npos
     || deviceName.find("AMD") != std::string::npos){
         vendorID = 0x1002;
-    } else if (deviceName.find("Intel") != std::string::npos) {
+    } else if (vendor.find("Intel") != std::string::npos
+    || deviceName.find("Intel") != std::string::npos) {
         vendorID = 0x8086;
     } else {
         vendorID = 0x10de;
