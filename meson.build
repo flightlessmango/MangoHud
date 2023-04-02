@@ -165,21 +165,9 @@ else
   dep_rt = null_dep
 endif
 
-dep_vulkan = dependency('vulkan', required: get_option('use_system_vulkan'))
-if dep_vulkan.found() and not get_option('use_system_vulkan').disabled()
-  datadir = get_option('vulkan_datadir')
-  if datadir == ''
-    datadir = get_option('datadir')
-  endif
-  if not datadir.startswith('/')
-    datadir = get_option('prefix') / datadir
-  endif
-  vk_api_xml = files(datadir / 'vulkan/registry/vk.xml')
-else
-  vkh_sp = subproject('vulkan-headers')
-  vk_api_xml = vkh_sp.get_variable('vulkan_api_xml')
-  dep_vulkan = vkh_sp.get_variable('vulkan_headers_dep')
-endif
+vkh_sp = subproject('vulkan-headers')
+vk_api_xml = vkh_sp.get_variable('vulkan_api_xml')
+dep_vulkan = vkh_sp.get_variable('vulkan_headers_dep')
 
 vk_enum_to_str = custom_target(
   'vk_enum_to_str',
