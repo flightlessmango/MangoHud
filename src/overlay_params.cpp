@@ -554,6 +554,7 @@ parse_overlay_env(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_exec_name] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_trilinear] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_bicubic] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_retro] = 0;
       }
 #define OVERLAY_PARAM_BOOL(name)                                       \
       if (!strcmp(#name, key)) {                                       \
@@ -711,6 +712,7 @@ parse_overlay_config(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_exec_name] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_trilinear] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_bicubic] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_retro] = 0;
          params->options.erase("full");
       }
       for (auto& it : params->options) {
