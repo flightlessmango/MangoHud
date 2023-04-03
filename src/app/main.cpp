@@ -205,8 +205,8 @@ static void msg_read_thread(){
 }
 
 static const char *GamescopeOverlayProperty = "GAMESCOPE_EXTERNAL_OVERLAY";
-static int screen_width  = 1280;
-static int screen_height = 800;
+static int screen_width;
+static int screen_height;
 
 static GLFWwindow* init(const char* glsl_version){
     GLFWwindow *window = glfwCreateWindow(screen_width, screen_height, "mangoapp overlay window", NULL, NULL);
@@ -253,10 +253,17 @@ static bool render(GLFWwindow* window) {
 }
 
 static void updateScreenInfo(){
-    GLFWmonitor* pMonitor = glfwGetPrimaryMonitor();
-    const GLFWvidmode * mode = glfwGetVideoMode(pMonitor);
-    screen_width = mode->width;
-    screen_height = mode->height;
+    int count;
+    GLFWmonitor** monitors = glfwGetMonitors(&count);
+    if(count > 0){
+        const GLFWvidmode * mode = glfwGetVideoMode(monitors[0]);
+        screen_width = mode->width;
+        screen_height = mode->height;
+    }
+    else{
+        screen_width = 1280;
+        screen_height = 800;
+    }
 }
 
 static void monitor_callback(GLFWmonitor* monitor, int event)
@@ -309,15 +316,12 @@ int main(int, char**)
     notifier.params = &params;
     start_notifier(notifier);
     window_size = ImVec2(params.width, params.height);
-    std::string vendor = (char*)glGetString(GL_VENDOR);
     deviceName = (char*)glGetString(GL_RENDERER);
     sw_stats.deviceName = deviceName;
-    if (vendor.find("AMD") != std::string::npos
-    || deviceName.find("Radeon") != std::string::npos
+    if (deviceName.find("Radeon") != std::string::npos
     || deviceName.find("AMD") != std::string::npos){
         vendorID = 0x1002;
-    } else if (vendor.find("Intel") != std::string::npos
-    || deviceName.find("Intel") != std::string::npos) {
+    } else if (deviceName.find("Intel") != std::string::npos) {
         vendorID = 0x8086;
     } else {
         vendorID = 0x10de;
