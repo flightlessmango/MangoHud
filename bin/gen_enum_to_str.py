@@ -28,6 +28,7 @@ import textwrap
 import xml.etree.ElementTree as et
 
 from mako.template import Template
+from vk_extensions import Extension, filter_api, get_all_required
 
 COPYRIGHT = textwrap.dedent(u"""\
     * Copyright © 2017 Intel Corporation
@@ -346,30 +347,45 @@ def parse_xml(cmd_factory, enum_factory, ext_factory, struct_factory, filename):
     """
 
     xml = et.parse(filename)
+    api = 'vulkan'
+
+    required_types = get_all_required(xml, 'type', api)
+    required_commands = get_all_required(xml, 'command', api)
 
     for enum_type in xml.findall('./enums[@type="enum"]'):
-        enum = enum_factory(enum_type.attrib['name'])
+        if not filter_api(enum_type, api):
+            continue
+        type_name = enum_type.attrib['name']
+        if not type_name in required_types:
+            continue
+        enum = enum_factory(type_name)
         for value in enum_type.findall('./enum'):
             enum.add_value_from_xml(value)
 
-    for value in xml.findall('./feature/require/enum[@extends]'):
-        enum = enum_factory.get(value.attrib['extends'])
-        if enum is not None:
-            enum.add_value_from_xml(value)
+    for feature in xml.findall('./feature'):
+        if not api in feature.attrib['api'].split(','):
+            continue
+        for value in feature.findall('./require/enum[@extends]'):
+            enum = enum_factory.get(value.attrib['extends'])
+            if enum is not None:
+                enum.add_value_from_xml(value)
 
     for command in xml.findall('./commands/command'):
-        name = command.find('./proto/name')
-        if name is not None and "ANDROID" in name.text:
+        if not filter_api(command, api):
             continue
+        name = command.find('./proto/name')
         first_arg = command.find('./param/type')
         # Some commands are alias KHR -> nonKHR, ignore those
-        if name is not None:
-            cmd_factory(name.text,
-                        device_entrypoint=(first_arg.text in ('VkDevice', 'VkCommandBuffer', 'VkQueue')))
+        if name is None or name.text not in required_commands:
+            continue
+        cmd_factory(name.text,
+                    device_entrypoint=(first_arg.text in ('VkDevice', 'VkCommandBuffer', 'VkQueue')))
 
     for struct_type in xml.findall('./types/type[@category="struct"]'):
+        if not filter_api(struct_type, api):
+            continue
         name = struct_type.attrib['name']
-        if name is not None and "ANDROID" in name:
+        if name not in required_types:
             continue
         stype = struct_get_stype(struct_type)
         if stype is not None:
@@ -381,7 +397,10 @@ def parse_xml(cmd_factory, enum_factory, ext_factory, struct_factory, filename):
         define = platform.attrib['protect']
         platform_define[name] = define
 
-    for ext_elem in xml.findall('./extensions/extension[@supported="vulkan"]'):
+    for ext_elem in xml.findall('./extensions/extension'):
+        ext = Extension.from_xml(ext_elem)
+        if api not in ext.supported:
+            continue
         define = None
         if "platform" in ext_elem.attrib:
             define = platform_define[ext_elem.attrib['platform']]
@@ -389,14 +408,17 @@ def parse_xml(cmd_factory, enum_factory, ext_factory, struct_factory, filename):
                                 number=int(ext_elem.attrib['number']),
                                 define=define)
 
-        for value in ext_elem.findall('./require/enum[@extends]'):
-            enum = enum_factory.get(value.attrib['extends'])
-            if enum is not None:
-                enum.add_value_from_xml(value, extension)
-        for t in ext_elem.findall('./require/type'):
-            struct = struct_factory.get(t.attrib['name'])
-            if struct is not None:
-                struct.extension = extension
+        for req_elem in ext_elem.findall('./require'):
+            if not filter_api(req_elem, api):
+                continue
+            for value in req_elem.findall('./enum[@extends]'):
+                enum = enum_factory.get(value.attrib['extends'])
+                if enum is not None:
+                    enum.add_value_from_xml(value, extension)
+            for t in req_elem.findall('./type'):
+                struct = struct_factory.get(t.attrib['name'])
+                if struct is not None:
+                    struct.extension = extension
 
         if define:
             for value in ext_elem.findall('./require/type[@name]'):
