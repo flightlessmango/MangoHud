@@ -88,7 +88,7 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 
 		metrics->average_gfx_power_w = amdgpu_metrics->average_gfx_power / 1000.f;
 
-		if( IS_VALID_METRIC(amdgpu_metrics->average_cpu_power) && IS_VALID_METRIC(amdgpu_metrics->average_soc_power) ) {
+        if( IS_VALID_METRIC(amdgpu_metrics->average_cpu_power) ) {
             // prefered method
             metrics->average_cpu_power_w = amdgpu_metrics->average_cpu_power / 1000.f;
 		} else if( IS_VALID_METRIC(amdgpu_metrics->average_core_power[0]) ) {
@@ -99,10 +99,7 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		} else if( IS_VALID_METRIC(amdgpu_metrics->average_socket_power) && IS_VALID_METRIC(amdgpu_metrics->average_gfx_power) ) {
             // fallback 2: estimate cpu power from total socket power
             metrics->average_cpu_power_w = amdgpu_metrics->average_socket_power / 1000.f - amdgpu_metrics->average_gfx_power / 1000.f;
-		} else if( IS_VALID_METRIC(amdgpu_metrics->average_cpu_power) ) {
-			// fallback 3: Ignore 'soc power' if not available
-			metrics->average_cpu_power_w = amdgpu_metrics->average_cpu_power / 1000.f;
-		} else {
+        } else {
 			// giving up
 			metrics->average_cpu_power_w = 0;
 		}
