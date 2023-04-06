@@ -12,7 +12,7 @@
 #include "hud_elements.h"
 #include "blacklist.h"
 
-static void parseConfigLine(std::string line, std::unordered_map<std::string, std::string>& options) {
+void parseConfigLine(std::string line, std::unordered_map<std::string, std::string>& options) {
     std::string param, value;
 
     if (line.find("#") != std::string::npos)

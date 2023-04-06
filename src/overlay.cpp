@@ -613,7 +613,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             func.first();
             HUDElements.place += 1;
             ImGui::PopStyleVar();
-            if(params.enabled[OVERLAY_PARAM_ENABLED_horizontal] && func != HUDElements.ordered_functions.back())
+            if(!HUDElements.ordered_functions.empty() && params.enabled[OVERLAY_PARAM_ENABLED_horizontal] && func != HUDElements.ordered_functions.back())
                horizontal_separator(params);
          }
          ImGui::EndTable();

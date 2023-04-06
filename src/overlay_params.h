@@ -169,6 +169,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(fcat_overlay_width)          \
    OVERLAY_PARAM_CUSTOM(picmip)                      \
    OVERLAY_PARAM_CUSTOM(af)                          \
+   OVERLAY_PARAM_CUSTOM(preset)                      \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -283,6 +284,7 @@ struct overlay_params {
    unsigned short fcat_overlay_width;
    int picmip;
    int af;
+   int preset;
    size_t font_params_hash;
 };
 
@@ -290,6 +292,9 @@ const extern char *overlay_param_names[];
 
 void parse_overlay_config(struct overlay_params *params,
                        const char *env);
+void presets(int preset, struct overlay_params *params);
+bool parse_preset_config(int preset, struct overlay_params *params);
+void add_to_options(struct overlay_params *params, std::string option, std::string value);
 
 #ifdef __cplusplus
 }
