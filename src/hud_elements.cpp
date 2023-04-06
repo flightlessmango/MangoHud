@@ -601,17 +601,20 @@ void HudElements::frame_timing(){
             height = max_time;
         }
 #endif
-        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_histogram]){
-            ImGui::PlotHistogram(hash, get_time_stat, HUDElements.sw_stats,
+        if (ImGui::BeginChild("my_child_window", ImVec2(width, height))) {
+            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_histogram]){
+                ImGui::PlotHistogram(hash, get_time_stat, HUDElements.sw_stats,
+                                    ARRAY_SIZE(HUDElements.sw_stats->frames_stats), 0,
+                                    NULL, min_time, max_time,
+                                    ImVec2(width, height));
+            } else {
+                ImGui::PlotLines(hash, get_time_stat, HUDElements.sw_stats,
                                 ARRAY_SIZE(HUDElements.sw_stats->frames_stats), 0,
                                 NULL, min_time, max_time,
                                 ImVec2(width, height));
-        } else {
-            ImGui::PlotLines(hash, get_time_stat, HUDElements.sw_stats,
-                            ARRAY_SIZE(HUDElements.sw_stats->frames_stats), 0,
-                            NULL, min_time, max_time,
-                            ImVec2(width, height));
+            }
         }
+        ImGui::EndChild();
 #ifdef MANGOAPP
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
             ImGui::SameLine();
