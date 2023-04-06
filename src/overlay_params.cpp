@@ -695,7 +695,7 @@ parse_overlay_config(struct overlay_params *params,
       // Get config options
       parseConfigFile(*params);
 
-      if (params->options.find("preset") != params->options.end() && params->options.find("preset")->second != "0")
+      if (params->options.find("preset") != params->options.end())
          presets(stoi(params->options.find("preset")->second), params);
 
       if (params->options.find("full") != params->options.end() && params->options.find("full")->second != "0") {
@@ -927,9 +927,6 @@ void add_to_options(struct overlay_params *params, std::string option, std::stri
 }
 
 void presets(int preset, struct overlay_params *params) {
-   HUDElements.options.clear();
-   params->options.clear();
-
    if (parse_preset_config(preset, params))
       return;
 
