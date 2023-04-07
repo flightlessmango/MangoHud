@@ -1953,21 +1953,18 @@ parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
       sampler.anisotropyEnable = VK_FALSE;
 
    if (params.enabled[OVERLAY_PARAM_ENABLED_trilinear]){
-      std::cerr << "USING trillear\n";
       sampler.magFilter = VK_FILTER_LINEAR;
       sampler.minFilter = VK_FILTER_LINEAR;
       sampler.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
    }
 
    if (params.enabled[OVERLAY_PARAM_ENABLED_bicubic]){
-      std::cerr << "USING bicubic\n";
       sampler.magFilter = VK_FILTER_CUBIC_IMG;
       sampler.minFilter = VK_FILTER_CUBIC_IMG;
       sampler.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
    }
 
    if (params.enabled[OVERLAY_PARAM_ENABLED_retro]){
-      std::cerr << "USING retro\n";
       sampler.magFilter = VK_FILTER_NEAREST;
       sampler.minFilter = VK_FILTER_NEAREST;
       sampler.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
