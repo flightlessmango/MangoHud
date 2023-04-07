@@ -56,6 +56,7 @@ using namespace std;
 float offset_x, offset_y, hudSpacing;
 int hudFirstRow, hudSecondRow;
 VkPhysicalDeviceDriverProperties driverProps = {};
+overlay_params params {};
 
 #if !defined(_WIN32)
 namespace MangoHud { namespace GL {
@@ -1938,29 +1939,35 @@ static VkResult overlay_CreateSampler(
 	const VkAllocationCallbacks* pAllocator,
 	VkSampler*                   pSampler)
 {
-   auto params = HUDElements.params;
-	VkSamplerCreateInfo sampler = *pCreateInfo;
-   sampler.mipLodBias = params->picmip;
 
-   if (params->af > 0){
+parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
+    _params = &params;
+
+	VkSamplerCreateInfo sampler = *pCreateInfo;
+   sampler.mipLodBias = params.picmip;
+
+   if (params.af > 0){
       sampler.anisotropyEnable = VK_TRUE;
-      sampler.maxAnisotropy = params->af;
-   } else if (params->af == 0)
+      sampler.maxAnisotropy = params.af;
+   } else if (params.af == 0)
       sampler.anisotropyEnable = VK_FALSE;
 
-   if (params->enabled[OVERLAY_PARAM_ENABLED_trilinear]){
+   if (params.enabled[OVERLAY_PARAM_ENABLED_trilinear]){
+      std::cerr << "USING trillear\n";
       sampler.magFilter = VK_FILTER_LINEAR;
       sampler.minFilter = VK_FILTER_LINEAR;
       sampler.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
    }
 
-   if (params->enabled[OVERLAY_PARAM_ENABLED_bicubic]){
+   if (params.enabled[OVERLAY_PARAM_ENABLED_bicubic]){
+      std::cerr << "USING bicubic\n";
       sampler.magFilter = VK_FILTER_CUBIC_IMG;
       sampler.minFilter = VK_FILTER_CUBIC_IMG;
       sampler.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
    }
 
-   if (params->enabled[OVERLAY_PARAM_ENABLED_retro]){
+   if (params.enabled[OVERLAY_PARAM_ENABLED_retro]){
+      std::cerr << "USING retro\n";
       sampler.magFilter = VK_FILTER_NEAREST;
       sampler.minFilter = VK_FILTER_NEAREST;
       sampler.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
