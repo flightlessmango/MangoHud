@@ -229,8 +229,8 @@ else
 endif
 
 if ['windows', 'mingw'].contains(host_machine.system())
-  subdir('modules/minhook')
-  inc_common += ( include_directories('modules/minhook/include'))
+  minhook_sp = subproject('minhook')
+  minhook_dep = minhook_sp.get_variable('minhook_dep')
   windows_deps = [
     minhook_dep,
   ]

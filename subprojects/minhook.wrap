@@ -1,0 +1,5 @@
+[wrap-git]
+url = https://github.com/flightlessmango/minhook.git
+revision = df6622659e366c63dfc9591245fa6a9a10ec4759
+depth = 1
+branch = master
