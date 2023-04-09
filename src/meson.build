@@ -43,7 +43,6 @@ vklayer_files = files(
   'vulkan.cpp',
   'blacklist.cpp',
   'file_utils.cpp',
-  'amdgpu.cpp',
   'intel.cpp'
 )
 opengl_files  = []
@@ -73,6 +72,7 @@ if is_unixy
     'battery.cpp',
     'control.cpp',
     'gamepad.cpp',
+    'amdgpu.cpp'
   )
 
   opengl_files = files(

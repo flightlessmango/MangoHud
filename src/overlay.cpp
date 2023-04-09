@@ -118,10 +118,10 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
    if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || logger->is_active()) {
       if (vendorID == 0x1002)
          getAmdGpuInfo();
-
+#ifdef __linux__
       if (gpu_metrics_exists)
          amdgpu_get_metrics();
-
+#endif
       if (vendorID == 0x10de)
          getNvidiaGpuInfo(params);
 
