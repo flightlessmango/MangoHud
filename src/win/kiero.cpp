@@ -23,7 +23,7 @@
 #ifdef _MSC_VER
     #include <d3d12.h>
 #else
-    #include "/usr/include/wine/windows/d3d12.h"
+    #include "/usr/i686-w64-mingw32/include/d3d12.h"
 #endif
 #endif
 
