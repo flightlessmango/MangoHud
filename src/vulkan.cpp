@@ -56,7 +56,6 @@ using namespace std;
 float offset_x, offset_y, hudSpacing;
 int hudFirstRow, hudSecondRow;
 VkPhysicalDeviceDriverProperties driverProps = {};
-overlay_params params {};
 
 #if !defined(_WIN32)
 namespace MangoHud { namespace GL {
@@ -1939,11 +1938,10 @@ static VkResult overlay_CreateSampler(
 	const VkAllocationCallbacks* pAllocator,
 	VkSampler*                   pSampler)
 {
-
-parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
-    _params = &params;
-
+   struct device_data *device_data = FIND(struct device_data, device);
+   auto params = device_data->instance->params;
 	VkSamplerCreateInfo sampler = *pCreateInfo;
+   
    sampler.mipLodBias = params.picmip;
 
    if (params.af > 0){
@@ -1970,12 +1968,10 @@ parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
       sampler.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
    }
 
-	struct device_data *device_data = FIND(struct device_data, device);
 	VkResult result = device_data->vtable.CreateSampler(device, &sampler, pAllocator, pSampler);
 
 	return result;
 }
-
 
 static void overlay_DestroyInstance(
     VkInstance                                  instance,
