@@ -1,0 +1,37 @@
+name: arch package
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-arch-pkg:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install prerequisites
+        run: |
+          echo "ParallelDownloads = 10" >> /etc/pacman.conf
+          echo "\n" && echo "[multilib]" >> /etc/pacman.conf
+          echo "Include = /etc/pacman.d/mirrorlist" >> /etc/pacman.conf
+          pacman -Syu base-devel sudo meson python-mako glslang git hub --noconfirm
+      - name: makepkg
+        run: |
+          echo "nobody ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+          chown nobody:nobody pkgbuild
+          cd pkgbuild
+          sudo -u nobody -- sh -c "makepkg -fsiCc --noconfirm"
+      - name: Edit release and add files
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -x
+          assets=()
+          for pkg in ${{ join(steps.makepkg.outputs.*, ' ') }};
+            do echo $pkg; 
+            assets+=("-a" "$pkg")
+          done;          
+          tag_name="${GITHUB_REF##*/}"
+          hub release edit "${assets[@]}" -m "" "$tag_name"
