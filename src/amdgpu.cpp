@@ -95,7 +95,7 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 			// fallback 1: sum of core power
 			metrics->average_cpu_power_w = 0;
 			for (unsigned i = 0; i < cpuStats.GetCPUData().size() / 2; i++)
-				metrics->average_cpu_power_w = metrics->average_cpu_power_w + amdgpu_metrics->average_core_power[i];
+				metrics->average_cpu_power_w = metrics->average_cpu_power_w + amdgpu_metrics->average_core_power[i] / 1000.f;
 		} else if( IS_VALID_METRIC(amdgpu_metrics->average_socket_power) && IS_VALID_METRIC(amdgpu_metrics->average_gfx_power) ) {
             // fallback 2: estimate cpu power from total socket power
             metrics->average_cpu_power_w = amdgpu_metrics->average_socket_power / 1000.f - amdgpu_metrics->average_gfx_power / 1000.f;
