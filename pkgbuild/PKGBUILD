@@ -44,7 +44,7 @@ prepare() {
   cd "${srcdir}/mangohud"
   git submodule init
   git config submodule.modules/minhook.url "$srcdir/mangohud-minhook"
-  git submodule update
+  git -c protocol.file.allow=always submodule update
 
   # meson subprojects
   ln -sv "$srcdir/imgui-1.81" subprojects
