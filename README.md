@@ -300,6 +300,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 
 | Variable                           | Description                                                                           |
 |------------------------------------|---------------------------------------------------------------------------------------|
+| `af`                               | Anisotropic filtering level. Improves sharpness of textures viewed at an angle (0 to 16)        |
 | `alpha`                            | Set the opacity of all text and frametime graph `0.0-1.0`                             |
 | `arch`                             | Show if the application is 32- or 64-bit                                              |
 | `background_alpha`                 | Set the opacity of the background `0.0-1.0`                                           |
@@ -307,6 +308,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `battery_icon`                     | Display battery icon instead of percent                                               |
 | `battery`                          | Display current battery percent and energy consumption                                |
 | `benchmark_percentiles`            | Configure which framerate percentiles are shown in the logging summary. Default is `97,AVG,1,0.1`      |
+| `bicubic`                          | Force bicubic filtering                                                               |
 | `blacklist`                        | Add a program to the blacklist. e.g `blacklist=vkcube,WatchDogs2.exe`                 |
 | `cellpadding_y`                    | Set the vertical cellpadding, default is `-0.085` |
 | `core_load_change`                 | Changes the colors of cpu core loads, uses the same data from `cpu_load_value` and `cpu_load_change`   |
@@ -329,8 +331,8 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `font_scale_media_player`          | Change size of media player text relative to font_size                                |
 | `font_size=`                       | Customizeable font size (default=24)                                                  |
 | `font_size_text=`                  | Customizeable font size for other text like media metadata (default=24)               |
-| `fps_limit`                        | Limit the apps framerate. Comma-separated list of one or more FPS values. `0` means unlimited. |
 | `fps_limit_method`                 | If FPS limiter should wait before or after presenting a frame. Choose `late` (default) for the lowest latency or `early` for the smoothest frametimes. |
+| `fps_limit`                        | Limit the apps framerate. Comma-separated list of one or more FPS values. `0` means unlimited. |
 | `fps_only`                         | Show FPS only. ***Not meant to be used with other display params***                   |
 | `frame_count`                      | Display frame count                                                                   |
 | `frametime`                        | Display frametime next to FPS text                                                    |
@@ -357,12 +359,14 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `output_folder`                    | Set location of the output files (Required for logging)                               |
 | `pci_dev`                          | Select GPU device in multi-gpu setups                                                 |
 | `permit_upload`                    | Allow uploading of logs to Flightlessmango.com                                        |
+| `picmip`                           | Mip-map LoD bias. Negative values will increase texture sharpness (and aliasing). Positive values will increase texture blurriness (-16 to 16) |
 | `position=`                        | Location of the HUD: `top-left` (default), `top-right`, `middle-left`, `middle-right`, `bottom-left`, `bottom-right`, `top-center` |
 | `procmem`<br>`procmem_shared`, `procmem_virt`| Displays process' memory usage: resident, shared and/or virtual. `procmem` (resident) also toggles others off if disabled. |
 | `ram`<br>`vram`                    | Displays system RAM/VRAM usage                                                        |
 | `read_cfg`                         | Add to MANGOHUD_CONFIG as first parameter to also load config file. Otherwise only MANGOHUD_CONFIG parameters are used. |
 | `reload_cfg=`                      | Change keybind for reloading the config. Default = `Shift_L+F4`                       |
 | `resolution`                       | Display the current resolution                                                        |
+| `retro`                            | Disables linear texture filtering. Makes textures look blocky                         |
 | `round_corners`                    | Change the amount of roundness of the corners have e.g `round_corners=10.0`           |
 | `show_fps_limit`                   | Display the current FPS limit                                                         |
 | `swap`                             | Displays swap space usage next to system RAM usage                                    |
@@ -370,6 +374,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `time`<br>`time_format=%T`         | Displays local time. See [std::put_time](https://en.cppreference.com/w/cpp/io/manip/put_time) for formatting help. NOTE: Sometimes apps may set `TZ` (timezone) environment variable to UTC/GMT |
 | `toggle_fps_limit`                 | Cycle between FPS limits. Defaults to `Shift_L+F1`.                                   |
 | `toggle_hud=`<br>`toggle_logging=` | Modifiable toggle hotkeys. Default are `Shift_R+F12` and `Shift_L+F2`, respectively.  |
+| `trilinear`                        | Force trilinear filtering                                                             |
 | `upload_log`                       | Change keybind for uploading log                                                      |
 | `version`                          | Shows current MangoHud version                                                        |
 | `vkbasalt`                         | Shows if vkbasalt is on                                                               |
@@ -378,11 +383,6 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `width=`<br>`height=`              | Customizeable HUD dimensions (in pixels)                                              |
 | `wine_color`                       | Change color of the wine/proton text                                                  |
 | `wine`                             | Shows current Wine or Proton version in use                                           |
-| `picmip`                           | Mip-map LoD bias. Negative values will increase texture sharpness (and aliasing). Positive values will increase texture blurriness (-16 to 16) |
-| `af`                               | Anisotropic filtering level. Improves sharpness of textures viewed at an angle (0 to 16)        |
-| `bicubic`                          | Force bicubic filtering                                                               |
-| `trilinear`                        | Force trilinear filtering                                                             |
-| `retro`                            | Disables linear texture filtering. Makes textures look blocky                         |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 Because comma is also used as option delimiter and needs to be escaped for values with a backslash, you can use `+` like `MANGOHUD_CONFIG=fps_limit=60+30+0` instead.
