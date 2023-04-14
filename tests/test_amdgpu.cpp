@@ -34,9 +34,12 @@ static void test_amdgpu_get_instant_metrics(void **state) {
     amdgpu_get_instant_metrics(&metrics);
     assert_int_equal(metrics.gpu_load_percent, 64);
     assert_float_equal(metrics.average_gfx_power_w, 33, 0);
+    assert_float_equal(metrics.average_cpu_power_w, 0, 0);
     assert_int_equal(metrics.current_gfxclk_mhz, 2165);
     assert_int_equal(metrics.current_uclk_mhz, 1000);
     assert_int_equal(metrics.gpu_temp_c, 36);
+    assert_int_equal(metrics.soc_temp_c, 0);
+    assert_int_equal(metrics.apu_cpu_temp_c, 0);
     assert_false(metrics.is_power_throttled);
     assert_false(metrics.is_current_throttled);
     assert_false(metrics.is_temp_throttled);
@@ -56,11 +59,12 @@ static void test_amdgpu_get_instant_metrics(void **state) {
     amdgpu_get_instant_metrics(&metrics);
     assert_int_equal(metrics.gpu_load_percent, 100);
     assert_float_equal(metrics.average_gfx_power_w, 6.161, 0);
+    assert_float_equal(metrics.average_cpu_power_w, 9.235, 0);
     assert_int_equal(metrics.current_gfxclk_mhz, 1040);
     assert_int_equal(metrics.current_uclk_mhz, 687);
     assert_int_equal(metrics.gpu_temp_c, 81);
     assert_int_equal(metrics.soc_temp_c, 71);
-    assert_int_equal(metrics.apu_cpu_temp_c, 655);
+    assert_int_equal(metrics.apu_cpu_temp_c, 80);
     assert_true(metrics.is_power_throttled);
     assert_false(metrics.is_current_throttled);
     assert_false(metrics.is_temp_throttled);
