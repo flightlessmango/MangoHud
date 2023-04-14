@@ -9,6 +9,7 @@
 #include "overlay.h"
 #include "hud_elements.h"
 #include "logging.h"
+#include "mesa/util/macros.h"
 
 std::string metrics_path = "";
 struct amdgpu_common_metrics amdgpu_common_metrics;
@@ -16,17 +17,17 @@ std::mutex amdgpu_common_metrics_m;
 
 bool amdgpu_verify_metrics(const std::string& path)
 {
-    metrics_table_header header {};
+	metrics_table_header header {};
 	FILE *f;
 	f = fopen(path.c_str(), "rb");
 	if (!f)
 		return false;
 
-    if (fread(&header, sizeof(header), 1, f) == 0)
-    {
-        SPDLOG_DEBUG("Failed to read the metrics header of '{}'", path);
-        return false;
-    }
+	if (fread(&header, sizeof(header), 1, f) == 0)
+	{
+		SPDLOG_DEBUG("Failed to read the metrics header of '{}'", path);
+		return false;
+	}
 
 	switch (header.format_revision)
 	{
@@ -44,8 +45,8 @@ bool amdgpu_verify_metrics(const std::string& path)
 			break;
 	}
 
-    SPDLOG_WARN("Unsupported gpu_metrics version: {}.{}", header.format_revision, header.content_revision);
-    return false;
+	SPDLOG_WARN("Unsupported gpu_metrics version: {}.{}", header.format_revision, header.content_revision);
+	return false;
 }
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
@@ -88,18 +89,19 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 
 		metrics->average_gfx_power_w = amdgpu_metrics->average_gfx_power / 1000.f;
 
-        if( IS_VALID_METRIC(amdgpu_metrics->average_cpu_power) ) {
-            // prefered method
-            metrics->average_cpu_power_w = amdgpu_metrics->average_cpu_power / 1000.f;
+		if( IS_VALID_METRIC(amdgpu_metrics->average_cpu_power) ) {
+			// prefered method
+			metrics->average_cpu_power_w = amdgpu_metrics->average_cpu_power / 1000.f;
 		} else if( IS_VALID_METRIC(amdgpu_metrics->average_core_power[0]) ) {
 			// fallback 1: sum of core power
 			metrics->average_cpu_power_w = 0;
-			for (unsigned i = 0; i < cpuStats.GetCPUData().size() / 2; i++)
-				metrics->average_cpu_power_w = metrics->average_cpu_power_w + amdgpu_metrics->average_core_power[i] / 1000.f;
+			unsigned i = 0;
+			do metrics->average_cpu_power_w = metrics->average_cpu_power_w + amdgpu_metrics->average_core_power[i] / 1000.f;
+			while (++i < ARRAY_SIZE(amdgpu_metrics->average_core_power) && IS_VALID_METRIC(amdgpu_metrics->average_core_power[i]));
 		} else if( IS_VALID_METRIC(amdgpu_metrics->average_socket_power) && IS_VALID_METRIC(amdgpu_metrics->average_gfx_power) ) {
-            // fallback 2: estimate cpu power from total socket power
-            metrics->average_cpu_power_w = amdgpu_metrics->average_socket_power / 1000.f - amdgpu_metrics->average_gfx_power / 1000.f;
-        } else {
+			// fallback 2: estimate cpu power from total socket power
+			metrics->average_cpu_power_w = amdgpu_metrics->average_socket_power / 1000.f - amdgpu_metrics->average_gfx_power / 1000.f;
+		} else {
 			// giving up
 			metrics->average_cpu_power_w = 0;
 		}
@@ -149,13 +151,15 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		int cpu_temp = 0;
 		if( IS_VALID_METRIC(amdgpu_metrics->temperature_core[0]) ) {
 			// prefered method
-			for (unsigned i = 0; i < cpuStats.GetCPUData().size() / 2; i++)
-				cpu_temp = MAX(cpu_temp, amdgpu_metrics->temperature_core[i]);
+			unsigned i = 0;
+			do cpu_temp = MAX(cpu_temp, amdgpu_metrics->temperature_core[i]);
+			while (++i < ARRAY_SIZE(amdgpu_metrics->temperature_core) && IS_VALID_METRIC(amdgpu_metrics->temperature_core[i]));
 			metrics->apu_cpu_temp_c = cpu_temp / 100;
 		} else if( header->content_revision >= 3 && IS_VALID_METRIC(amdgpu_metrics->average_temperature_core[0]) ) {
 			// fallback 1
-			for (unsigned i = 0; i < cpuStats.GetCPUData().size() / 2; i++)
-				cpu_temp = MAX(cpu_temp, amdgpu_metrics->average_temperature_core[i]);
+			unsigned i = 0;
+			do cpu_temp = MAX(cpu_temp, amdgpu_metrics->average_temperature_core[i]);
+			while (++i < ARRAY_SIZE(amdgpu_metrics->average_temperature_core) && IS_VALID_METRIC(amdgpu_metrics->average_temperature_core[i]));
 			metrics->apu_cpu_temp_c = cpu_temp / 100;
 		} else if( cpuStats.ReadcpuTempFile(cpu_temp) ) {
 			// fallback 2: Try temp from file 'm_cpuTempFile' of 'cpu.cpp'
