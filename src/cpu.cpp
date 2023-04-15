@@ -533,8 +533,29 @@ bool CPUStats::GetCpuFile() {
         }
     }
     if (path.empty() || (!file_exists(input) && !find_fallback_input(path, "temp", input))) {
-        SPDLOG_ERROR("Could not find cpu temp sensor location");
-        return false;
+        std::string type, path, input;
+        std::string thermal = "/sys/class/thermal/";
+
+        auto dirs = ls(thermal.c_str());
+        for (auto& dir : dirs) {
+            path = thermal + dir;
+            type = read_line(path + "/type");
+            SPDLOG_DEBUG("thermal: sensor type: {}", type);
+
+            if (type == "CPU-therm") {
+                input = path + "/temp";
+                break;
+            } else {
+                path.clear();
+            }
+        }
+        if (path.empty() || (!file_exists(input) && !find_fallback_input(path, "temp", input))) {
+          SPDLOG_ERROR("Could not find cpu temp sensor location");
+          return false;
+        } else {
+          SPDLOG_DEBUG("thermal: using input: {}", input);
+          m_cpuTempFile = fopen(input.c_str(), "r");
+        }
     } else {
         SPDLOG_DEBUG("hwmon: using input: {}", input);
         m_cpuTempFile = fopen(input.c_str(), "r");

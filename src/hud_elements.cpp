@@ -545,6 +545,22 @@ void HudElements::ram(){
         }
     }
 
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram_clock]){
+        ImguiNextColumnOrNewRow();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", memclock);
+        ImGui::SameLine(0, 1.0f);
+        ImGui::PushFont(HUDElements.sw_stats->font1);
+        ImGui::Text("MHz");
+        ImGui::PopFont();
+    }
+
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram_bandwidth]){
+        ImguiNextColumnOrNewRow();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", membandwidth);
+        ImGui::SameLine(0, 1.0f);
+        ImGui::TextColored(HUDElements.colors.text,"%%");
+    }
+
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram] && HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_swap]){
         ImguiNextColumnOrNewRow();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", swapused);

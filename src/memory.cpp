@@ -7,8 +7,11 @@
 #include <thread>
 #include <unistd.h>
 
+#include "file_utils.h"
+
 struct memory_information mem_info;
 float memused, memmax, swapused, swapmax;
+int memclock, membandwidth;
 struct process_mem proc_mem {};
 
 FILE *open_file(const char *file, int *reported) {
@@ -97,7 +100,11 @@ void update_meminfo(void) {
 
   memused = (float(mem_info.memmax) - float(mem_info.memeasyfree)) / (1024 * 1024);
   memmax = float(mem_info.memmax) / (1024 * 1024);
-
+  
+  if (file_exists("/sys/kernel/debug/clk/emc/clk_rate")) {
+    memclock = std::stoi(read_line("/sys/kernel/debug/clk/emc/clk_rate")) / 1000000 ;
+    membandwidth = std::stoi(read_line("/sys/kernel/actmon_avg_activity/mc_all")) / memclock / 10 ;
+  }
   swapused = (float(mem_info.swapmax) - float(mem_info.swapfree)) / (1024 * 1024);
   swapmax = float(mem_info.swapmax) / (1024 * 1024);
 

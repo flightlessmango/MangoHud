@@ -15,6 +15,8 @@
 
 #include "amdgpu.h"
 
+#include "file_utils.h"
+
 using namespace std::chrono_literals;
 
 struct gpuInfo gpu_info {};
@@ -83,6 +85,10 @@ void getNvidiaGpuInfo(const struct overlay_params& params){
 #ifdef _WIN32
 nvapi_util();
 #endif
+gpu_info.load = std::stoi(read_line("/sys/devices/gpu.0/load")) / 10;
+// gpu_info.temp = nvidiaTemp;
+// gpu_info.memoryUsed = nvidiaMemory.used / (1024.f * 1024.f * 1024.f);
+gpu_info.CoreClock = std::stoi(read_line("/sys/devices/gpu.0/devfreq/57000000.gpu/cur_freq")) / 1000000 ;
 }
 
 void getAmdGpuInfo(){
