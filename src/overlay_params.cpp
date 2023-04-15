@@ -652,7 +652,7 @@ parse_overlay_config(struct overlay_params *params,
    params->round_corners = 0;
    params->battery_color =0xff9078;
    params->fsr_steam_sharpness = -1;
-   params->picmip = 0;
+   params->picmip = -17;
    params->af = -1;
    params->preset = -1;
 

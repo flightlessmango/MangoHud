@@ -1941,8 +1941,9 @@ static VkResult overlay_CreateSampler(
    struct device_data *device_data = FIND(struct device_data, device);
    auto params = device_data->instance->params;
 	VkSamplerCreateInfo sampler = *pCreateInfo;
-   
-   sampler.mipLodBias = params.picmip;
+
+   if (params.picmip > -17 && params.picmip < 17)
+      sampler.mipLodBias = params.picmip;
 
    if (params.af > 0){
       sampler.anisotropyEnable = VK_TRUE;
