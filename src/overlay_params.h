@@ -54,6 +54,9 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(io_write)                      \
    OVERLAY_PARAM_BOOL(gpu_mem_clock)                 \
    OVERLAY_PARAM_BOOL(gpu_core_clock)                \
+   OVERLAY_PARAM_BOOL(gpu_nvdec_clock)               \
+   OVERLAY_PARAM_BOOL(gpu_nvenc_clock)               \
+   OVERLAY_PARAM_BOOL(gpu_vic_clock)                 \
    OVERLAY_PARAM_BOOL(gpu_power)                     \
    OVERLAY_PARAM_BOOL(arch)                          \
    OVERLAY_PARAM_BOOL(media_player)                  \

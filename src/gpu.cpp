@@ -89,6 +89,15 @@ gpu_info.load = std::stoi(read_line("/sys/devices/gpu.0/load")) / 10;
 // gpu_info.temp = nvidiaTemp;
 // gpu_info.memoryUsed = nvidiaMemory.used / (1024.f * 1024.f * 1024.f);
 gpu_info.CoreClock = std::stoi(read_line("/sys/devices/gpu.0/devfreq/57000000.gpu/cur_freq")) / 1000000 ;
+if (file_exists("/sys/kernel/debug/clk/nvdec/clk_rate")) {
+  if (read_line("/sys/kernel/debug/clk/nvdec/clk_state") == "1") gpu_info.NVDECClock = std::stoi(read_line("/sys/kernel/debug/clk/nvdec/clk_rate")) / 1000000 ; else gpu_info.NVDECClock = 0 ;
+}
+if (file_exists("/sys/kernel/debug/clk/nvenc/clk_rate")) {
+  if (read_line("/sys/kernel/debug/clk/nvenc/clk_state") == "1") gpu_info.NVENCClock = std::stoi(read_line("/sys/kernel/debug/clk/nvenc/clk_rate")) / 1000000 ; else gpu_info.NVENCClock = 0 ;
+}
+if (file_exists("/sys/kernel/debug/clk/vic03/clk_rate")) {
+  if (read_line("/sys/kernel/debug/clk/vic03/clk_state") == "1") gpu_info.VICClock = std::stoi(read_line("/sys/kernel/debug/clk/vic03/clk_rate")) / 1000000 ; else gpu_info.VICClock = 0 ;
+}
 }
 
 void getAmdGpuInfo(){
