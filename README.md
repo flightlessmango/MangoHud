@@ -300,62 +300,62 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 
 | Variable                           | Description                                                                           |
 |------------------------------------|---------------------------------------------------------------------------------------|
-| `af`                               | Anisotropic filtering level. Improves sharpness of textures viewed at an angle (0 to 16)        |
-| `alpha`                            | Set the opacity of all text and frametime graph `0.0-1.0`                             |
+| `af`                               | Anisotropic filtering level. Improves sharpness of textures viewed at an angle `0`-`16` |
+| `alpha`                            | Set the opacity of all text and frametime graph `0.0`-`1.0`                           |
 | `arch`                             | Show if the application is 32- or 64-bit                                              |
-| `background_alpha`                 | Set the opacity of the background `0.0-1.0`                                           |
+| `background_alpha`                 | Set the opacity of the background `0.0`-`1.0`                                         |
 | `battery_color`                    | Change the battery text color                                                         |
 | `battery_icon`                     | Display battery icon instead of percent                                               |
 | `battery`                          | Display current battery percent and energy consumption                                |
-| `benchmark_percentiles`            | Configure which framerate percentiles are shown in the logging summary. Default is `97,AVG,1,0.1`      |
+| `benchmark_percentiles`            | Configure which framerate percentiles are shown in the logging summary. Default is `97,AVG,1,0.1` |
 | `bicubic`                          | Force bicubic filtering                                                               |
 | `blacklist`                        | Add a program to the blacklist. e.g `blacklist=vkcube,WatchDogs2.exe`                 |
 | `cellpadding_y`                    | Set the vertical cellpadding, default is `-0.085` |
-| `core_load_change`                 | Changes the colors of cpu core loads, uses the same data from `cpu_load_value` and `cpu_load_change`   |
-| `core_load`                        | Displays load & frequency per core                                                    |
-| `cpu_load_change`                  | Changes the color of the CPU load depending on load                                   |
+| `core_load_change`                 | Change the colors of cpu core loads, uses the same data from `cpu_load_value` and `cpu_load_change` |
+| `core_load`                        | Display load & frequency per core                                                     |
+| `cpu_load_change`                  | Change the color of the CPU load depending on load                                    |
 | `cpu_load_color`                   | Set the colors for the gpu load change low, medium and high. e.g `cpu_load_color=0000FF,00FFFF,FF00FF` |
 | `cpu_load_value`                   | Set the values for medium and high load e.g `cpu_load_value=50,90`                    |
-| `cpu_mhz`                          | Shows the CPUs current MHz                                                            |
+| `cpu_mhz`                          | Show the CPUs current MHz                                                             |
 | `cpu_power`<br>`gpu_power`         | Display CPU/GPU draw in watts                                                         |
-| `cpu_temp`<br>`gpu_temp`           | Displays current CPU/GPU temperature                                                  |
+| `cpu_temp`<br>`gpu_temp`           | Display current CPU/GPU temperature                                                   |
 | `cpu_text`<br>`gpu_text`           | Override CPU and GPU text                                                             |
 | `custom_text_center`               | Display a custom text centered useful for a header e.g `custom_text_center=FlightLessMango Benchmarks` |
 | `custom_text`                      | Display a custom text e.g `custom_text=Fsync enabled`                                 |
 | `engine_version`                   | Display OpenGL or vulkan and vulkan-based render engine's version                     |
-| `exec`                             | Display output of bash command in next column, e.g `custom_text=/home` , `exec=df -h /home \| tail -n 1`. Only works with legacy_layout=false  |
+| `exec`                             | Display output of bash command in next column, e.g `custom_text=/home` , `exec=df -h /home \| tail -n 1`. Only works with `legacy_layout=0` |
 | `exec_name`                        | Display current exec name                                                             |
 | `font_file_text`                   | Change text font. Otherwise `font_file` is used                                       |
-| `font_file`                        | Change default font (set location to .TTF/.OTF file )                                 |
-| `font_glyph_ranges`                | Specify extra font glyph ranges, comma separated: `korean`, `chinese`, `chinese_simplified`, `japanese`, `cyrillic`, `thai`, `vietnamese`, `latin_ext_a`, `latin_ext_b`. If you experience crashes or text is just squares, reduce font size or glyph ranges. |
-| `font_scale=`                      | Set global font scale (default=1.0)                                                   |
-| `font_scale_media_player`          | Change size of media player text relative to font_size                                |
-| `font_size=`                       | Customizeable font size (default=24)                                                  |
-| `font_size_text=`                  | Customizeable font size for other text like media metadata (default=24)               |
+| `font_file`                        | Change default font (set location to .TTF/.OTF file)                                  |
+| `font_glyph_ranges`                | Specify extra font glyph ranges, comma separated: `korean`, `chinese`, `chinese_simplified`, `japanese`, `cyrillic`, `thai`, `vietnamese`, `latin_ext_a`, `latin_ext_b`. If you experience crashes or text is just squares, reduce font size or glyph ranges |
+| `font_scale=`                      | Set global font scale. Default is `1.0`                                               |
+| `font_scale_media_player`          | Change size of media player text relative to `font_size`                              |
+| `font_size=`                       | Customizeable font size. Default is `24`                                              |
+| `font_size_text=`                  | Customizeable font size for other text like media metadata. Default is `24`           |
 | `fps_limit_method`                 | If FPS limiter should wait before or after presenting a frame. Choose `late` (default) for the lowest latency or `early` for the smoothest frametimes |
-| `fps_limit`                        | Limit the apps framerate. Comma-separated list of one or more FPS values. `0` means unlimited. |
+| `fps_limit`                        | Limit the apps framerate. Comma-separated list of one or more FPS values. `0` means unlimited |
 | `fps_only`                         | Show FPS only. ***Not meant to be used with other display params***                   |
 | `frame_count`                      | Display frame count                                                                   |
 | `frametime`                        | Display frametime next to FPS text                                                    |
-| `full`                             | Enables most of the toggleable parameters (currently excludes `histogram`)            |
-| `gamemode`                         | Shows if gamemode is on                                                               |
+| `full`                             | Enable most of the toggleable parameters (currently excludes `histogram`)             |
+| `gamemode`                         | Show if GameMode is on                                                                |
 | `gamepad_battery_icon`             | Display gamepad battery percent with icon. *Enabled by default*                       |
 | `gamepad_battery`                  | Display battey of wireless gamepads (xone/xpadneo/ds4)                                |
-| `gpu_color`<br>`cpu_color`<br>`vram_color`<br>`ram_color`<br>`io_color`<br>`engine_color`<br>`frametime_color`<br>`background_color`<br>`text_color`<br>`media_player_color`         | Change default colors: `gpu_color=RRGGBB`|
-| `gpu_core_clock`<br>`gpu_mem_clock`| Displays GPU core/memory frequency                                                    |
-| `gpu_load_change`                  | Changes the color of the GPU load depending on load                                   |
-| `gpu_load_color`                   | Set the colors for the gpu load change low,medium and high. e.g `gpu_load_color=0000FF,00FFFF,FF00FF`  |
+| `gpu_color`<br>`cpu_color`<br>`vram_color`<br>`ram_color`<br>`io_color`<br>`engine_color`<br>`frametime_color`<br>`background_color`<br>`text_color`<br>`media_player_color`         | Change default colors: `gpu_color=RRGGBB` |
+| `gpu_core_clock`<br>`gpu_mem_clock`| Display GPU core/memory frequency                                                     |
+| `gpu_load_change`                  | Change the color of the GPU load depending on load                                    |
+| `gpu_load_color`                   | Set the colors for the gpu load change low,medium and high. e.g `gpu_load_color=0000FF,00FFFF,FF00FF` |
 | `gpu_load_value`                   | Set the values for medium and high load e.g `gpu_load_value=50,90`                    |
-| `gpu_name`                         | Displays GPU name from pci.ids                                                        |
+| `gpu_name`                         | Display GPU name from pci.ids                                                         |
 | `histogram`                        | Change FPS graph to histogram                                                         |
 | `horizontal`                       | Display Mangohud in a horizontal position                                             |
 | `hud_compact`                      | Display compact version of MangoHud                                                   |
 | `hud_no_margin`                    | Remove margins around MangoHud                                                        |
 | `io_read`<br> `io_write`           | Show non-cached IO read/write, in MiB/s                                               |
 | `log_duration`                     | Set amount of time the logging will run for (in seconds)                              |
-| `log_interval`                     | Change the default log interval, `100` is default                                     |
-| `media_player_format`              | Format media player metadata. Add extra text etc. Semi-colon breaks to new line. Defaults to `{title};{artist};{album}`. |
-| `media_player_name`                | Force media player DBus service name without the `org.mpris.MediaPlayer2` part, like `spotify`, `vlc`, `audacious` or `cantata`. If none is set, MangoHud tries to switch between currently playing players. |
+| `log_interval`                     | Change the default log interval. Default is `100`                                     |
+| `media_player_format`              | Format media player metadata. Add extra text etc. Semi-colon breaks to new line. Defaults to `{title};{artist};{album}` |
+| `media_player_name`                | Force media player DBus service name without the `org.mpris.MediaPlayer2` part, like `spotify`, `vlc`, `audacious` or `cantata`. If none is set, MangoHud tries to switch between currently playing players |
 | `media_player`                     | Show media player metadata                                                            |
 | `no_display`                       | Hide the HUD by default                                                               |
 | `no_small_font`                    | Use primary font size for smaller text like units                                     |
@@ -363,31 +363,31 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `output_folder`                    | Set location of the output files (Required for logging)                               |
 | `pci_dev`                          | Select GPU device in multi-gpu setups                                                 |
 | `permit_upload`                    | Allow uploading of logs to Flightlessmango.com                                        |
-| `picmip`                           | Mip-map LoD bias. Negative values will increase texture sharpness (and aliasing). Positive values will increase texture blurriness (-16 to 16) |
+| `picmip`                           | Mip-map LoD bias. Negative values will increase texture sharpness (and aliasing). Positive values will increase texture blurriness `-16`-`16` |
 | `position=`                        | Location of the HUD: `top-left` (default), `top-right`, `middle-left`, `middle-right`, `bottom-left`, `bottom-right`, `top-center`, `bottom_center` |
 | `procmem`<br>`procmem_shared`, `procmem_virt`| Displays process' memory usage: resident, shared and/or virtual. `procmem` (resident) also toggles others off if disabled. |
-| `ram`<br>`vram`                    | Displays system RAM/VRAM usage                                                        |
+| `ram`<br>`vram`                    | Display system RAM/VRAM usage                                                         |
 | `read_cfg`                         | Add to MANGOHUD_CONFIG as first parameter to also load config file. Otherwise only MANGOHUD_CONFIG parameters are used. |
 | `reload_cfg=`                      | Change keybind for reloading the config. Default = `Shift_L+F4`                       |
 | `resolution`                       | Display the current resolution                                                        |
-| `retro`                            | Disables linear texture filtering. Makes textures look blocky                         |
+| `retro`                            | Disable linear texture filtering. Makes textures look blocky                          |
 | `round_corners`                    | Change the amount of roundness of the corners have e.g `round_corners=10.0`           |
 | `show_fps_limit`                   | Display the current FPS limit                                                         |
-| `swap`                             | Displays swap space usage next to system RAM usage                                    |
+| `swap`                             | Display swap space usage next to system RAM usage                                     |
 | `table_columns`                    | Set the number of table columns for ImGui, defaults to 3                              |
-| `throttling_status`                | Shows if GPU is throttling based on Power, current, temp or "other" (Only shows if throttling is currently happening). Currently disabled by default for Nvidia as it causes lag on 3000 series |
-| `time`<br>`time_format=%T`         | Displays local time. See [std::put_time](https://en.cppreference.com/w/cpp/io/manip/put_time) for formatting help. NOTE: Sometimes apps may set `TZ` (timezone) environment variable to UTC/GMT |
+| `throttling_status`                | Show if GPU is throttling based on Power, current, temp or "other" (Only shows if throttling is currently happening). Currently disabled by default for Nvidia as it causes lag on 3000 series |
+| `time`<br>`time_format=%T`         | Display local time. See [std::put_time](https://en.cppreference.com/w/cpp/io/manip/put_time) for formatting help. NOTE: Sometimes apps may set `TZ` (timezone) environment variable to UTC/GMT |
 | `toggle_fps_limit`                 | Cycle between FPS limits. Defaults to `Shift_L+F1`.                                   |
 | `toggle_hud=`<br>`toggle_logging=` | Modifiable toggle hotkeys. Default are `Shift_R+F12` and `Shift_L+F2`, respectively.  |
 | `trilinear`                        | Force trilinear filtering                                                             |
 | `upload_log`                       | Change keybind for uploading log                                                      |
-| `version`                          | Shows current MangoHud version                                                        |
-| `vkbasalt`                         | Shows if vkbasalt is on                                                               |
-| `vsync`<br> `gl_vsync`             | Set vsync for OpenGL or Vulkan                                                        |
-| `vulkan_driver`                    | Displays used vulkan driver (radv/amdgpu-pro/amdvlk)                                  |
+| `version`                          | Show current MangoHud version                                                         |
+| `vkbasalt`                         | Show if vkBasalt is on                                                                |
+| `vsync`<br> `gl_vsync`             | Set Vsync for OpenGL or Vulkan                                                        |
+| `vulkan_driver`                    | Display used Vulkan driver (radv/amdgpu-pro/amdvlk)                                   |
 | `width=`<br>`height=`              | Customizeable HUD dimensions (in pixels)                                              |
 | `wine_color`                       | Change color of the wine/proton text                                                  |
-| `wine`                             | Shows current Wine or Proton version in use                                           |
+| `wine`                             | Show current Wine or Proton version in use                                            |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 Because comma is also used as option delimiter and needs to be escaped for values with a backslash, you can use `+` like `MANGOHUD_CONFIG=fps_limit=60+30+0` instead.
