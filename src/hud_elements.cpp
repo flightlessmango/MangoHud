@@ -655,7 +655,7 @@ void HudElements::resolution(){
         const auto res  = ImGui::GetIO().DisplaySize;
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TextColored(HUDElements.colors.engine, "Resolution");
-        ImGuiTableSetColumnIndex(HUDElements.text_column);
+        ImGui::TableNextColumn();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "%.0fx%.0f", res.x, res.y);
         ImGui::PopFont();
     }
@@ -670,7 +670,7 @@ void HudElements::show_fps_limit(){
         ImGui::PushFont(HUDElements.sw_stats->font1);
         const char* method = fps_limit_stats.method == FPS_LIMIT_METHOD_EARLY ? "early" : "late";
         ImGui::TextColored(HUDElements.colors.engine, "%s (%s)","FPS limit",method);
-        ImGuiTableSetColumnIndex(HUDElements.text_column);
+        ImGui::TableNextColumn();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", fps);
         ImGui::PopFont();
     }
@@ -710,7 +710,7 @@ void HudElements::gamemode(){
         ImGui::TableNextColumn();
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TextColored(HUDElements.colors.engine, "%s", "GAMEMODE");
-        ImGuiTableSetColumnIndex(HUDElements.text_column);
+        ImGui::TableNextColumn();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", HUDElements.gamemode_bol ? "ON" : "OFF");
         ImGui::PopFont();
     }
@@ -721,7 +721,7 @@ void HudElements::vkbasalt(){
         ImGui::TableNextColumn();
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TextColored(HUDElements.colors.engine, "%s", "VKBASALT");
-        ImGuiTableSetColumnIndex(HUDElements.text_column);
+        ImGui::TableNextColumn();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", HUDElements.vkbasalt_bol ? "ON" : "OFF");
         ImGui::PopFont();
     }
@@ -951,7 +951,7 @@ void HudElements::frame_count(){
         ImGui::TableNextColumn();
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TextColored(HUDElements.colors.engine, "Frame Count");
-        ImGuiTableSetColumnIndex(HUDElements.text_column);
+        ImGui::TableNextColumn();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%" PRIu64, HUDElements.sw_stats->n_frames);
         ImGui::PopFont();
     }
