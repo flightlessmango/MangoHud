@@ -1177,43 +1177,72 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
 void HudElements::legacy_elements(){
     string value = "NULL";
     ordered_functions.clear();
-    ordered_functions.push_back({time,               value});
-    ordered_functions.push_back({version,            value});
-    ordered_functions.push_back({gpu_stats,          value});
-    ordered_functions.push_back({cpu_stats,          value});
-    ordered_functions.push_back({core_load,          value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_time])
+        ordered_functions.push_back({time,               value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_version])
+        ordered_functions.push_back({version,            value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
+        ordered_functions.push_back({gpu_stats,          value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats])
+        ordered_functions.push_back({cpu_stats,          value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_core_load])
+        ordered_functions.push_back({core_load,          value});
 #ifndef MANGOAPP
-    ordered_functions.push_back({io_stats,           value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_io_stats])
+        ordered_functions.push_back({io_stats,           value});
 #endif
-    ordered_functions.push_back({vram,               value});
-    ordered_functions.push_back({ram,                value});
-    ordered_functions.push_back({battery,            value});
-    ordered_functions.push_back({fan,                value});
-    ordered_functions.push_back({gamescope_fsr,      value});
-    ordered_functions.push_back({throttling_status,  value});
-    ordered_functions.push_back({fps,                value});
-    ordered_functions.push_back({fps_only,           value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_vram])
+        ordered_functions.push_back({vram,               value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_ram])
+        ordered_functions.push_back({ram,                value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_battery])
+        ordered_functions.push_back({battery,            value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_fan])
+        ordered_functions.push_back({fan,                value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_fsr])
+        ordered_functions.push_back({gamescope_fsr,      value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_throttling_status])
+        ordered_functions.push_back({throttling_status,  value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_fps])
+        ordered_functions.push_back({fps,                value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_fps_only])
+        ordered_functions.push_back({fps_only,           value});
 #ifndef MANGOAPP
-    ordered_functions.push_back({engine_version,     value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_engine_version])
+        ordered_functions.push_back({engine_version,     value});
 #endif
-    ordered_functions.push_back({gpu_name,           value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_name])
+        ordered_functions.push_back({gpu_name,           value});
 #ifndef MANGOAPP
-    ordered_functions.push_back({vulkan_driver,      value});
-    ordered_functions.push_back({arch,               value});
-    ordered_functions.push_back({wine,               value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_vulkan_driver])
+        ordered_functions.push_back({vulkan_driver,      value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_arch])
+        ordered_functions.push_back({arch,               value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_wine])
+        ordered_functions.push_back({wine,               value});
 #endif
-    ordered_functions.push_back({frame_timing,       value});
-    ordered_functions.push_back({frame_count,         value});
-    ordered_functions.push_back({gamescope_frame_timing, value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_frame_timing])
+        ordered_functions.push_back({frame_timing,       value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_frame_count])
+        ordered_functions.push_back({frame_count,         value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_debug])
+        ordered_functions.push_back({gamescope_frame_timing, value});
 #ifndef MANGOAPP
-    ordered_functions.push_back({gamemode,           value});
-    ordered_functions.push_back({vkbasalt,           value});
-    ordered_functions.push_back({show_fps_limit,     value});
-    ordered_functions.push_back({resolution,         value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_gamemode])
+        ordered_functions.push_back({gamemode,           value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_vkbasalt])
+        ordered_functions.push_back({vkbasalt,           value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_show_fps_limit])
+        ordered_functions.push_back({show_fps_limit,     value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_resolution])
+        ordered_functions.push_back({resolution,         value});
 #endif
-    ordered_functions.push_back({gamepad_battery,    value});
-    ordered_functions.push_back({media_player,       value});
-    ordered_functions.push_back({exec_name,          value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_gamepad_battery])
+        ordered_functions.push_back({gamepad_battery,    value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_media_player])
+        ordered_functions.push_back({media_player,       value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_exec_name])
+        ordered_functions.push_back({exec_name,          value});
 }
 
 void HudElements::update_exec(){
