@@ -324,6 +324,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `custom_text`                      | Display a custom text e.g `custom_text=Fsync enabled`                                 |
 | `engine_version`                   | Display OpenGL or vulkan and vulkan-based render engine's version                     |
 | `exec`                             | Display output of bash command in next column, e.g `custom_text=/home` , `exec=df -h /home \| tail -n 1`. Only works with legacy_layout=false  |
+| `exec_name`                        | Display current exec name                                                             |
 | `font_file_text`                   | Change text font. Otherwise `font_file` is used                                       |
 | `font_file`                        | Change default font (set location to .TTF/.OTF file )                                 |
 | `font_glyph_ranges`                | Specify extra font glyph ranges, comma separated: `korean`, `chinese`, `chinese_simplified`, `japanese`, `cyrillic`, `thai`, `vietnamese`, `latin_ext_a`, `latin_ext_b`. If you experience crashes or text is just squares, reduce font size or glyph ranges. |
@@ -331,7 +332,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `font_scale_media_player`          | Change size of media player text relative to font_size                                |
 | `font_size=`                       | Customizeable font size (default=24)                                                  |
 | `font_size_text=`                  | Customizeable font size for other text like media metadata (default=24)               |
-| `fps_limit_method`                 | If FPS limiter should wait before or after presenting a frame. Choose `late` (default) for the lowest latency or `early` for the smoothest frametimes. |
+| `fps_limit_method`                 | If FPS limiter should wait before or after presenting a frame. Choose `late` (default) for the lowest latency or `early` for the smoothest frametimes |
 | `fps_limit`                        | Limit the apps framerate. Comma-separated list of one or more FPS values. `0` means unlimited. |
 | `fps_only`                         | Show FPS only. ***Not meant to be used with other display params***                   |
 | `frame_count`                      | Display frame count                                                                   |
@@ -347,6 +348,9 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `gpu_load_value`                   | Set the values for medium and high load e.g `gpu_load_value=50,90`                    |
 | `gpu_name`                         | Displays GPU name from pci.ids                                                        |
 | `histogram`                        | Change FPS graph to histogram                                                         |
+| `horizontal`                       | Display Mangohud in a horizontal position                                             |
+| `hud_compact`                      | Display compact version of MangoHud                                                   |
+| `hud_no_margin`                    | Remove margins around MangoHud                                                        |
 | `io_read`<br> `io_write`           | Show non-cached IO read/write, in MiB/s                                               |
 | `log_duration`                     | Set amount of time the logging will run for (in seconds)                              |
 | `log_interval`                     | Change the default log interval, `100` is default                                     |
@@ -360,7 +364,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `pci_dev`                          | Select GPU device in multi-gpu setups                                                 |
 | `permit_upload`                    | Allow uploading of logs to Flightlessmango.com                                        |
 | `picmip`                           | Mip-map LoD bias. Negative values will increase texture sharpness (and aliasing). Positive values will increase texture blurriness (-16 to 16) |
-| `position=`                        | Location of the HUD: `top-left` (default), `top-right`, `middle-left`, `middle-right`, `bottom-left`, `bottom-right`, `top-center` |
+| `position=`                        | Location of the HUD: `top-left` (default), `top-right`, `middle-left`, `middle-right`, `bottom-left`, `bottom-right`, `top-center`, `bottom_center` |
 | `procmem`<br>`procmem_shared`, `procmem_virt`| Displays process' memory usage: resident, shared and/or virtual. `procmem` (resident) also toggles others off if disabled. |
 | `ram`<br>`vram`                    | Displays system RAM/VRAM usage                                                        |
 | `read_cfg`                         | Add to MANGOHUD_CONFIG as first parameter to also load config file. Otherwise only MANGOHUD_CONFIG parameters are used. |
