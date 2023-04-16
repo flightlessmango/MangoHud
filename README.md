@@ -375,6 +375,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `show_fps_limit`                   | Display the current FPS limit                                                         |
 | `swap`                             | Displays swap space usage next to system RAM usage                                    |
 | `table_columns`                    | Set the number of table columns for ImGui, defaults to 3                              |
+| `throttling_status`                | Shows if GPU is throttling based on Power, current, temp or "other" (Only shows if throttling is currently happening). Currently disabled by default for Nvidia as it causes lag on 3000 series |
 | `time`<br>`time_format=%T`         | Displays local time. See [std::put_time](https://en.cppreference.com/w/cpp/io/manip/put_time) for formatting help. NOTE: Sometimes apps may set `TZ` (timezone) environment variable to UTC/GMT |
 | `toggle_fps_limit`                 | Cycle between FPS limits. Defaults to `Shift_L+F1`.                                   |
 | `toggle_hud=`<br>`toggle_logging=` | Modifiable toggle hotkeys. Default are `Shift_R+F12` and `Shift_L+F2`, respectively.  |
