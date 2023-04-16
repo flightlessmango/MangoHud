@@ -571,7 +571,7 @@ void horizontal_separator(struct overlay_params& params){
    ImGui::SameLine();
    ImGui::Spacing();
    ImGui::SameLine();
-   ImGui::GetWindowDrawList()->AddLine(ImVec2(ImGui::GetCursorPosX() - 5, ImGui::GetCursorPosY() + 2), ImVec2(ImGui::GetCursorPosX() - 5, ImGui::GetCursorPosY() + params.font_size * 0.85), params.vram_color, 2);
+   ImGui::GetWindowDrawList()->AddLine(ImVec2(ImGui::GetCursorScreenPos().x - 5, ImGui::GetCursorScreenPos().y + 2), ImVec2(ImGui::GetCursorScreenPos().x - 5, ImGui::GetCursorScreenPos().y + params.font_size * 0.85), params.vram_color, 2);
    ImGui::SameLine();
    ImGui::Spacing();
 }
