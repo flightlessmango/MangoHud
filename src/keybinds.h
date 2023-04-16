@@ -12,7 +12,6 @@ typedef unsigned long KeySym;
 #endif
 
 Clock::time_point last_f2_press, toggle_fps_limit_press , last_f12_press, reload_cfg_press, last_upload_press;
-extern char keys_return[32];
 
 #if defined(HAVE_X11)
 static inline bool keys_are_pressed(const std::vector<KeySym>& keys) {
@@ -20,7 +19,10 @@ static inline bool keys_are_pressed(const std::vector<KeySym>& keys) {
     if (!init_x11())
         return false;
 
+    char keys_return[32];
     size_t pressed = 0;
+
+    g_x11->XQueryKeymap(get_xdisplay(), keys_return);
 
     for (KeySym ks : keys) {
         KeyCode kc2 = g_x11->XKeysymToKeycode(get_xdisplay(), ks);
