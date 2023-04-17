@@ -1110,6 +1110,7 @@ void HudElements::exec_name(){
         ImGui::TableNextColumn();
         ImGui::TextColored(HUDElements.colors.engine, "%s", "Executable name");
         ImGui::TableNextColumn();
+        ImGui::TableNextColumn();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, global_proc_name.c_str());
         ImGui::PopFont();
     }
