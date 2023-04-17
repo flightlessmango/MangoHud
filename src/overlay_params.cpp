@@ -561,11 +561,13 @@ parse_overlay_env(struct overlay_params *params,
       if (!strcmp(#name, key)) {                                       \
          params->enabled[OVERLAY_PARAM_ENABLED_##name] =               \
             strtol(value, NULL, 0);                                    \
+         add_to_options(params, key, value);                           \
          continue;                                                     \
       }
 #define OVERLAY_PARAM_CUSTOM(name)                                     \
       if (!strcmp(#name, key)) {                                       \
          params->name = parse_##name(value);                           \
+         add_to_options(params, key, value);                           \
          continue;                                                     \
       }
       OVERLAY_PARAMS
