@@ -324,6 +324,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `custom_text`                      | Display a custom text e.g `custom_text=Fsync enabled`                                 |
 | `engine_version`                   | Display OpenGL or vulkan and vulkan-based render engine's version                     |
 | `exec`                             | Display output of bash command in next column, e.g `custom_text=/home` , `exec=df -h /home \| tail -n 1`. Only works with legacy_layout=false  |
+| `exec_name`                        | Display current exec name                                                             |
 | `font_file_text`                   | Change text font. Otherwise `font_file` is used                                       |
 | `font_file`                        | Change default font (set location to .TTF/.OTF file )                                 |
 | `font_glyph_ranges`                | Specify extra font glyph ranges, comma separated: `korean`, `chinese`, `chinese_simplified`, `japanese`, `cyrillic`, `thai`, `vietnamese`, `latin_ext_a`, `latin_ext_b`. If you experience crashes or text is just squares, reduce font size or glyph ranges. |
@@ -347,6 +348,9 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `gpu_load_value`                   | Set the values for medium and high load e.g `gpu_load_value=50,90`                    |
 | `gpu_name`                         | Displays GPU name from pci.ids                                                        |
 | `histogram`                        | Change FPS graph to histogram                                                         |
+| `horizontal`                       | Display Mangohud in a horizontal position                                             |
+| `hud_compact`                      | Display compact version of MangoHud                                                   |
+| `hud_no_margin`                    | Remove margins around MangoHud                                                        |
 | `io_read`<br> `io_write`           | Show non-cached IO read/write, in MiB/s                                               |
 | `log_duration`                     | Set amount of time the logging will run for (in seconds)                              |
 | `log_interval`                     | Change the default log interval, `100` is default                                     |
@@ -360,7 +364,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `pci_dev`                          | Select GPU device in multi-gpu setups                                                 |
 | `permit_upload`                    | Allow uploading of logs to Flightlessmango.com                                        |
 | `picmip`                           | Mip-map LoD bias. Negative values will increase texture sharpness (and aliasing). Positive values will increase texture blurriness (-16 to 16) |
-| `position=`                        | Location of the HUD: `top-left` (default), `top-right`, `middle-left`, `middle-right`, `bottom-left`, `bottom-right`, `top-center` |
+| `position=`                        | Location of the HUD: `top-left` (default), `top-right`, `middle-left`, `middle-right`, `bottom_center`, `bottom-left`, `bottom-right`, `top-center` |
 | `procmem`<br>`procmem_shared`, `procmem_virt`| Displays process' memory usage: resident, shared and/or virtual. `procmem` (resident) also toggles others off if disabled. |
 | `ram`<br>`vram`                    | Displays system RAM/VRAM usage                                                        |
 | `read_cfg`                         | Add to MANGOHUD_CONFIG as first parameter to also load config file. Otherwise only MANGOHUD_CONFIG parameters are used. |
@@ -374,6 +378,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `time`<br>`time_format=%T`         | Displays local time. See [std::put_time](https://en.cppreference.com/w/cpp/io/manip/put_time) for formatting help. NOTE: Sometimes apps may set `TZ` (timezone) environment variable to UTC/GMT |
 | `toggle_fps_limit`                 | Cycle between FPS limits. Defaults to `Shift_L+F1`.                                   |
 | `toggle_hud=`<br>`toggle_logging=` | Modifiable toggle hotkeys. Default are `Shift_R+F12` and `Shift_L+F2`, respectively.  |
+| `toggle_hud_position`              | Toggle MangoHud postion. Default is `R_Shift+F11`                                     |
 | `trilinear`                        | Force trilinear filtering                                                             |
 | `upload_log`                       | Change keybind for uploading log                                                      |
 | `version`                          | Shows current MangoHud version                                                        |
