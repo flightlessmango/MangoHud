@@ -379,6 +379,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `time`<br>`time_format=%T`         | Display local time. See [std::put_time](https://en.cppreference.com/w/cpp/io/manip/put_time) for formatting help. NOTE: Sometimes apps may set `TZ` (timezone) environment variable to UTC/GMT |
 | `toggle_fps_limit`                 | Cycle between FPS limits. Defaults to `Shift_L+F1`                                    |
 | `toggle_hud=`<br>`toggle_logging=` | Modifiable toggle hotkeys. Default are `Shift_R+F12` and `Shift_L+F2`, respectively   |
+| `toggle_hud_position`              | Toggle MangoHud postion. Default is `R_Shift+F11`                                     |
 | `trilinear`                        | Force trilinear filtering                                                             |
 | `upload_log`                       | Change keybind for uploading log                                                      |
 | `version`                          | Show current MangoHud version                                                         |
