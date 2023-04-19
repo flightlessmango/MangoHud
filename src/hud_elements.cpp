@@ -789,7 +789,7 @@ void HudElements::battery(){
                     }
                     right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%02.0f:%02.0f", hours, minutes);
                 }
-            } else { 
+            } else {
                 ImguiNextColumnOrNewRow();
                 right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_PLUG);
             }
@@ -1108,10 +1108,10 @@ void HudElements::exec_name(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_exec_name]){
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::TableNextColumn();
-        ImGui::TextColored(HUDElements.colors.engine, "%s", "Executable name");
+        ImGui::TextColored(HUDElements.colors.engine, "%s", "Exe name");
         ImGui::TableNextColumn();
-        ImGui::TableNextColumn();
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, global_proc_name.c_str());
+        ImVec2 text_size = ImGui::CalcTextSize(global_proc_name.c_str());
+        right_aligned_text(HUDElements.colors.text, text_size.x, global_proc_name.c_str());
         ImGui::PopFont();
     }
 }
