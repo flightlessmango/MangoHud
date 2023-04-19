@@ -72,6 +72,7 @@ nvapi_util();
 }
 
 void getAmdGpuInfo(){
+#ifdef __linux__
     int64_t value = 0;
     if (metrics_path.empty()){
         if (amdgpu.busy) {
@@ -162,4 +163,5 @@ void getAmdGpuInfo(){
             value = 0;
         gpu_info.gtt_used = float(value) / (1024 * 1024 * 1024);
     }
+#endif
 }

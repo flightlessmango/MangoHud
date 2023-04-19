@@ -118,10 +118,10 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
    if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || logger->is_active()) {
       if (vendorID == 0x1002)
          getAmdGpuInfo();
-
+#ifdef __linux__
       if (gpu_metrics_exists)
          amdgpu_get_metrics();
-
+#endif
       if (vendorID == 0x10de)
          getNvidiaGpuInfo(params);
 
@@ -571,7 +571,7 @@ void horizontal_separator(struct overlay_params& params){
    ImGui::SameLine();
    ImGui::Spacing();
    ImGui::SameLine();
-   ImGui::GetWindowDrawList()->AddLine(ImVec2(ImGui::GetCursorPosX() - 5, ImGui::GetCursorPosY() + 2), ImVec2(ImGui::GetCursorPosX() - 5, ImGui::GetCursorPosY() + params.font_size * 0.85), params.vram_color, 2);
+   ImGui::GetWindowDrawList()->AddLine(ImVec2(ImGui::GetCursorScreenPos().x - 5, ImGui::GetCursorScreenPos().y + 2), ImVec2(ImGui::GetCursorScreenPos().x - 5, ImGui::GetCursorScreenPos().y + params.font_size * 0.85), params.vram_color, 2);
    ImGui::SameLine();
    ImGui::Spacing();
 }
@@ -613,7 +613,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             func.first();
             HUDElements.place += 1;
             ImGui::PopStyleVar();
-            if(params.enabled[OVERLAY_PARAM_ENABLED_horizontal] && func != HUDElements.ordered_functions.back())
+            if(!HUDElements.ordered_functions.empty() && params.enabled[OVERLAY_PARAM_ENABLED_horizontal] && func != HUDElements.ordered_functions.back())
                horizontal_separator(params);
          }
          ImGui::EndTable();

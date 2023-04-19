@@ -135,6 +135,7 @@ public:
    bool UpdateCoreMhz();
    bool UpdateCpuTemp();
    bool UpdateCpuPower();
+   bool ReadcpuTempFile(int& temp);
    bool GetCpuFile();
    bool InitCpuPowerData();
    double GetCPUPeriod() { return m_cpuPeriod; }

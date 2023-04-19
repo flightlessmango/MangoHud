@@ -43,7 +43,6 @@ vklayer_files = files(
   'vulkan.cpp',
   'blacklist.cpp',
   'file_utils.cpp',
-  'amdgpu.cpp',
   'intel.cpp'
 )
 opengl_files  = []
@@ -73,6 +72,7 @@ if is_unixy
     'battery.cpp',
     'control.cpp',
     'gamepad.cpp',
+    'amdgpu.cpp'
   )
 
   opengl_files = files(
@@ -183,6 +183,8 @@ mangohud_shared_lib = shared_library(
   'MangoHud',
   objects: mangohud_static_lib.extract_all_objects(),
   link_with: mangohud_static_lib,
+  link_args : link_args,
+  install_dir : libdir_mangohud,
   install: true
 )
 

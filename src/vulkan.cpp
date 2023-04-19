@@ -1932,6 +1932,48 @@ static VkResult overlay_CreateInstance(
    return result;
 }
 
+static VkResult overlay_CreateSampler(
+	VkDevice                     device,
+	const VkSamplerCreateInfo*   pCreateInfo,
+	const VkAllocationCallbacks* pAllocator,
+	VkSampler*                   pSampler)
+{
+   struct device_data *device_data = FIND(struct device_data, device);
+   auto params = device_data->instance->params;
+	VkSamplerCreateInfo sampler = *pCreateInfo;
+
+   if (params.picmip > -17 && params.picmip < 17)
+      sampler.mipLodBias = params.picmip;
+
+   if (params.af > 0){
+      sampler.anisotropyEnable = VK_TRUE;
+      sampler.maxAnisotropy = params.af;
+   } else if (params.af == 0)
+      sampler.anisotropyEnable = VK_FALSE;
+
+   if (params.enabled[OVERLAY_PARAM_ENABLED_trilinear]){
+      sampler.magFilter = VK_FILTER_LINEAR;
+      sampler.minFilter = VK_FILTER_LINEAR;
+      sampler.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+   }
+
+   if (params.enabled[OVERLAY_PARAM_ENABLED_bicubic]){
+      sampler.magFilter = VK_FILTER_CUBIC_IMG;
+      sampler.minFilter = VK_FILTER_CUBIC_IMG;
+      sampler.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+   }
+
+   if (params.enabled[OVERLAY_PARAM_ENABLED_retro]){
+      sampler.magFilter = VK_FILTER_NEAREST;
+      sampler.minFilter = VK_FILTER_NEAREST;
+      sampler.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+   }
+
+	VkResult result = device_data->vtable.CreateSampler(device, &sampler, pAllocator, pSampler);
+
+	return result;
+}
+
 static void overlay_DestroyInstance(
     VkInstance                                  instance,
     const VkAllocationCallbacks*                pAllocator)
@@ -1969,6 +2011,7 @@ static const struct {
    ADD_HOOK(CreateSwapchainKHR),
    ADD_HOOK(QueuePresentKHR),
    ADD_HOOK(DestroySwapchainKHR),
+   ADD_HOOK(CreateSampler),
 
    ADD_HOOK(QueueSubmit),
 

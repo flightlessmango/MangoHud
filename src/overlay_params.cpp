@@ -27,6 +27,7 @@
 #include "hud_elements.h"
 #include "blacklist.h"
 #include "mesa/util/os_socket.h"
+#include "file_utils.h"
 
 #ifdef HAVE_X11
 #include <X11/keysym.h>
@@ -419,6 +420,9 @@ parse_gl_size_query(const char *str)
 #define parse_round_corners(s) parse_unsigned(s)
 #define parse_fcat_overlay_width(s) parse_unsigned(s)
 #define parse_fcat_screen_edge(s) parse_unsigned(s)
+#define parse_picmip(s) parse_signed(s)
+#define parse_af(s) parse_signed(s)
+#define parse_preset(s) parse_signed(s)
 
 #define parse_cpu_color(s) parse_color(s)
 #define parse_gpu_color(s) parse_color(s)
@@ -524,7 +528,6 @@ parse_overlay_env(struct overlay_params *params,
    char key[256], value[256];
    while ((num = parse_string(env, key, value)) != 0) {
       env += num;
-      HUDElements.sort_elements({key, value});
       if (!strcmp("full", key)) {
          bool read_cfg = params->enabled[OVERLAY_PARAM_ENABLED_read_cfg];
 #define OVERLAY_PARAM_BOOL(name) \
@@ -550,16 +553,21 @@ parse_overlay_env(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_log_versioning] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_hud_compact] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_exec_name] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_trilinear] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_bicubic] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_retro] = 0;
       }
 #define OVERLAY_PARAM_BOOL(name)                                       \
       if (!strcmp(#name, key)) {                                       \
          params->enabled[OVERLAY_PARAM_ENABLED_##name] =               \
             strtol(value, NULL, 0);                                    \
+         add_to_options(params, key, value);                           \
          continue;                                                     \
       }
 #define OVERLAY_PARAM_CUSTOM(name)                                     \
       if (!strcmp(#name, key)) {                                       \
          params->name = parse_##name(value);                           \
+         add_to_options(params, key, value);                           \
          continue;                                                     \
       }
       OVERLAY_PARAMS
@@ -647,6 +655,9 @@ parse_overlay_config(struct overlay_params *params,
    params->round_corners = 0;
    params->battery_color =0xff9078;
    params->fsr_steam_sharpness = -1;
+   params->picmip = -17;
+   params->af = -1;
+   params->preset = -1;
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_Shift_R, XK_F12 };
@@ -686,6 +697,10 @@ parse_overlay_config(struct overlay_params *params,
 
       // Get config options
       parseConfigFile(*params);
+
+      if (params->options.find("preset") != params->options.end())
+         presets(stoi(params->options.find("preset")->second), params);
+
       if (params->options.find("full") != params->options.end() && params->options.find("full")->second != "0") {
 #define OVERLAY_PARAM_BOOL(name) \
             params->enabled[OVERLAY_PARAM_ENABLED_##name] = 1;
@@ -705,6 +720,9 @@ parse_overlay_config(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_log_versioning] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_hud_compact] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_exec_name] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_trilinear] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_bicubic] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_retro] = 0;
          params->options.erase("full");
       }
       for (auto& it : params->options) {
@@ -874,4 +892,108 @@ parse_overlay_config(struct overlay_params *params,
    mangoapp_cv.notify_one();
    g_fsrSharpness = params->fsr_steam_sharpness;
 #endif
+}
+
+bool parse_preset_config(int preset, struct overlay_params *params){
+   const std::string data_dir = get_data_dir();
+   const std::string config_dir = get_config_dir();
+   std::string preset_path = config_dir + "/MangoHud/" + "presets.conf";
+   FILE *preset_file = fopen(preset_path.c_str(), "r");
+   char line[20];
+   char preset_string[20];
+   sprintf(preset_string, "[preset %d]\n", preset);
+   bool found_preset = false;
+   if (preset_file == NULL)
+      return false;
+
+   while (fgets(line, sizeof(line), preset_file)){
+      if (strcmp(line, preset_string) == 0){
+         found_preset = true;
+         continue;
+      }
+
+      if (found_preset){
+         if(strcmp(line, "preset") == 0 || line[0] == '\n' || line[0] == '\0')
+            break;
+
+         parseConfigLine(line, params->options);
+      }
+   }
+
+   fclose(preset_file);
+   return found_preset;
+}
+
+void add_to_options(struct overlay_params *params, std::string option, std::string value){
+   HUDElements.options.push_back({option, value});
+   params->options[option] = value;
+}
+
+void presets(int preset, struct overlay_params *params) {
+   if (parse_preset_config(preset, params))
+      return;
+
+   switch(preset) {
+      case 0:
+         params->no_display = 1;
+         break;
+
+      case 1:
+         params->width = 40;
+         add_to_options(params, "legacy_layout", "0");
+         add_to_options(params, "cpu_stats", "0");
+         add_to_options(params, "gpu_stats", "0");
+         add_to_options(params, "fps", "1");
+         add_to_options(params, "fps_only", "1");
+         add_to_options(params, "frametime", "0");
+         break;
+      
+      case 2:
+         params->table_columns = 20;
+         add_to_options(params, "horizontal", "1");
+         add_to_options(params, "legacy_layout", "0");
+         add_to_options(params, "fps", "1");
+         add_to_options(params, "table_columns", "20");
+         add_to_options(params, "frame_timing", "1");
+         add_to_options(params, "frametime", "0");
+         add_to_options(params, "cpu_stats", "1");
+         add_to_options(params, "gpu_stats", "1");
+         add_to_options(params, "ram", "1");
+         add_to_options(params, "vram", "1");
+         add_to_options(params, "battery", "1");
+         add_to_options(params, "hud_no_margin", "1");
+         add_to_options(params, "gpu_power", "1");
+         add_to_options(params, "cpu_power", "1");
+         add_to_options(params, "battery_watt", "1");
+         add_to_options(params, "battery_time", "1");
+         break;
+      
+      case 3:
+         add_to_options(params, "cpu_temp", "1");
+         add_to_options(params, "gpu_temp", "1");
+         add_to_options(params, "ram", "1");
+         add_to_options(params, "vram", "1");
+         add_to_options(params, "cpu_power", "1");
+         add_to_options(params, "gpu_power", "1");
+         add_to_options(params, "cpu_mhz", "1");
+         add_to_options(params, "gpu_mem_clock", "1");
+         add_to_options(params, "gpu_core_clock", "1");
+         add_to_options(params, "battery", "1");
+         break;
+
+      case 4:
+         add_to_options(params, "full", "1");
+         add_to_options(params, "io_read", "0");
+         add_to_options(params, "io_write", "0");
+         add_to_options(params, "arch", "0");
+         add_to_options(params, "engine_version", "0");
+         add_to_options(params, "battery", "1");
+         add_to_options(params, "gamemode", "0");
+         add_to_options(params, "vkbasalt", "0");
+         add_to_options(params, "frame_count", "0");
+         add_to_options(params, "show_fps_limit", "0");
+         add_to_options(params, "resolution", "0");
+         break;
+
+   }
 }

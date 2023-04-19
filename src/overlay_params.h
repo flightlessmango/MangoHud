@@ -93,6 +93,9 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(battery_watt)                  \
    OVERLAY_PARAM_BOOL(battery_time)                  \
    OVERLAY_PARAM_BOOL(exec_name)                     \
+   OVERLAY_PARAM_BOOL(trilinear)                     \
+   OVERLAY_PARAM_BOOL(bicubic)                       \
+   OVERLAY_PARAM_BOOL(retro)                         \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
@@ -166,6 +169,9 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(fsr_steam_sharpness)         \
    OVERLAY_PARAM_CUSTOM(fcat_screen_edge)            \
    OVERLAY_PARAM_CUSTOM(fcat_overlay_width)          \
+   OVERLAY_PARAM_CUSTOM(picmip)                      \
+   OVERLAY_PARAM_CUSTOM(af)                          \
+   OVERLAY_PARAM_CUSTOM(preset)                      \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -278,7 +284,9 @@ struct overlay_params {
    int fsr_steam_sharpness;
    unsigned short fcat_screen_edge;
    unsigned short fcat_overlay_width;
-
+   int picmip;
+   int af;
+   int preset;
    size_t font_params_hash;
 };
 
@@ -286,6 +294,9 @@ const extern char *overlay_param_names[];
 
 void parse_overlay_config(struct overlay_params *params,
                        const char *env);
+void presets(int preset, struct overlay_params *params);
+bool parse_preset_config(int preset, struct overlay_params *params);
+void add_to_options(struct overlay_params *params, std::string option, std::string value);
 
 #ifdef __cplusplus
 }

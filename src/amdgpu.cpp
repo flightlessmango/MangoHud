@@ -9,6 +9,7 @@
 #include "overlay.h"
 #include "hud_elements.h"
 #include "logging.h"
+#include "mesa/util/macros.h"
 
 std::string metrics_path = "";
 struct amdgpu_common_metrics amdgpu_common_metrics;
@@ -16,38 +17,43 @@ std::mutex amdgpu_common_metrics_m;
 
 bool amdgpu_verify_metrics(const std::string& path)
 {
-    metrics_table_header header {};
+	metrics_table_header header {};
 	FILE *f;
 	f = fopen(path.c_str(), "rb");
 	if (!f)
 		return false;
 
-    if (fread(&header, sizeof(header), 1, f) == 0)
-    {
-        SPDLOG_DEBUG("Failed to read the metrics header of '{}'", path);
-        return false;
-    }
+	if (fread(&header, sizeof(header), 1, f) == 0)
+	{
+		SPDLOG_DEBUG("Failed to read the metrics header of '{}'", path);
+		return false;
+	}
 
-    switch (header.format_revision)
-    {
-		case 1:
+	switch (header.format_revision)
+	{
+		case 1: // v1_1, v1_2, v1_3
+			if(header.content_revision<=0 || header.content_revision>3)// v1_0, not naturally aligned
+				break;
 			cpuStats.cpu_type = "GPU";
 			return true;
-		case 2:
+		case 2: // v2_1, v2_2, v2_3
+			if(header.content_revision<=0 || header.content_revision>3)// v2_0, not naturally aligned
+				break;
 			cpuStats.cpu_type = "APU";
 			return true;
-		default: 
+		default:
 			break;
-    }
+	}
 
-    SPDLOG_WARN("Unsupported gpu_metrics version: {}.{}", header.format_revision, header.content_revision);
-    return false;
+	SPDLOG_WARN("Unsupported gpu_metrics version: {}.{}", header.format_revision, header.content_revision);
+	return false;
 }
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define IS_VALID_METRIC(FIELD) (FIELD != 0xffff)
 void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	FILE *f;
-	void *buf[MAX(sizeof(struct gpu_metrics_v1_3), sizeof(struct gpu_metrics_v2_3))];
+	void *buf[MAX(sizeof(struct gpu_metrics_v1_3), sizeof(struct gpu_metrics_v2_3))/sizeof(void*)+1];
 	struct metrics_table_header* header = (metrics_table_header*)buf;
 
 	f = fopen(metrics_path.c_str(), "rb");
@@ -55,8 +61,8 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		return;
 
 	// Read the whole file
-	if (!fread(buf, sizeof(buf), 1, f) == 0) {
-		SPDLOG_DEBUG("Failed to read amdgpu metrics file '{}'", metrics_path.c_str());
+	if (fread(buf, sizeof(buf), 1, f) != 0) {
+		SPDLOG_DEBUG("amdgpu metrics file '{}' is larger than the buffer", metrics_path.c_str());
 		fclose(f);
 		return;
 	}
@@ -82,17 +88,87 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
 
 		metrics->average_gfx_power_w = amdgpu_metrics->average_gfx_power / 1000.f;
-		metrics->average_cpu_power_w = amdgpu_metrics->average_cpu_power / 1000.f;
 
-		metrics->current_gfxclk_mhz = amdgpu_metrics->current_gfxclk;
-		metrics->current_uclk_mhz = amdgpu_metrics->current_uclk;
+		if( IS_VALID_METRIC(amdgpu_metrics->average_cpu_power) ) {
+			// prefered method
+			metrics->average_cpu_power_w = amdgpu_metrics->average_cpu_power / 1000.f;
+		} else if( IS_VALID_METRIC(amdgpu_metrics->average_core_power[0]) ) {
+			// fallback 1: sum of core power
+			metrics->average_cpu_power_w = 0;
+			unsigned i = 0;
+			do metrics->average_cpu_power_w = metrics->average_cpu_power_w + amdgpu_metrics->average_core_power[i] / 1000.f;
+			while (++i < ARRAY_SIZE(amdgpu_metrics->average_core_power) && IS_VALID_METRIC(amdgpu_metrics->average_core_power[i]));
+		} else if( IS_VALID_METRIC(amdgpu_metrics->average_socket_power) && IS_VALID_METRIC(amdgpu_metrics->average_gfx_power) ) {
+			// fallback 2: estimate cpu power from total socket power
+			metrics->average_cpu_power_w = amdgpu_metrics->average_socket_power / 1000.f - amdgpu_metrics->average_gfx_power / 1000.f;
+		} else {
+			// giving up
+			metrics->average_cpu_power_w = 0;
+		}
 
-		metrics->soc_temp_c = amdgpu_metrics->temperature_soc / 100;
-		metrics->gpu_temp_c = amdgpu_metrics->temperature_gfx / 100;
+		if( IS_VALID_METRIC(amdgpu_metrics->current_gfxclk) ) {
+			// prefered method
+			metrics->current_gfxclk_mhz = amdgpu_metrics->current_gfxclk;
+		} else if( IS_VALID_METRIC(amdgpu_metrics->average_gfxclk_frequency) ) {
+			// fallback 1
+			metrics->current_gfxclk_mhz = amdgpu_metrics->average_gfxclk_frequency;
+		} else {
+			// giving up
+			metrics->current_gfxclk_mhz = 0;
+		}
+		if( IS_VALID_METRIC(amdgpu_metrics->current_uclk) ) {
+			// prefered method
+			metrics->current_uclk_mhz = amdgpu_metrics->current_uclk;
+		} else if( IS_VALID_METRIC(amdgpu_metrics->average_uclk_frequency) ) {
+			// fallback 1
+			metrics->current_uclk_mhz = amdgpu_metrics->average_uclk_frequency;
+		} else {
+			// giving up
+			metrics->current_uclk_mhz = 0;
+		}
+
+		if( IS_VALID_METRIC(amdgpu_metrics->temperature_soc) ) {
+			// prefered method
+			metrics->soc_temp_c = amdgpu_metrics->temperature_soc / 100;
+		} else if( header->content_revision >= 3 && IS_VALID_METRIC(amdgpu_metrics->average_temperature_soc) ) {
+			// fallback 1
+			metrics->soc_temp_c = amdgpu_metrics->average_temperature_soc / 100;
+		} else {
+			// giving up
+			metrics->soc_temp_c = 0;
+		}
+		if( IS_VALID_METRIC(amdgpu_metrics->temperature_gfx) ) {
+			// prefered method
+			metrics->gpu_temp_c = amdgpu_metrics->temperature_gfx / 100;
+		} else if( header->content_revision >= 3 && IS_VALID_METRIC(amdgpu_metrics->average_temperature_gfx) ) {
+			// fallback 1
+			metrics->gpu_temp_c = amdgpu_metrics->average_temperature_gfx / 100;
+		} else {
+			// giving up
+			metrics->gpu_temp_c = 0;
+		}
+
 		int cpu_temp = 0;
-		for (unsigned i = 0; i < cpuStats.GetCPUData().size() / 2; i++)
-			cpu_temp = MAX(cpu_temp, amdgpu_metrics->temperature_core[i]);
-		metrics->apu_cpu_temp_c = cpu_temp / 100;
+		if( IS_VALID_METRIC(amdgpu_metrics->temperature_core[0]) ) {
+			// prefered method
+			unsigned i = 0;
+			do cpu_temp = MAX(cpu_temp, amdgpu_metrics->temperature_core[i]);
+			while (++i < ARRAY_SIZE(amdgpu_metrics->temperature_core) && IS_VALID_METRIC(amdgpu_metrics->temperature_core[i]));
+			metrics->apu_cpu_temp_c = cpu_temp / 100;
+		} else if( header->content_revision >= 3 && IS_VALID_METRIC(amdgpu_metrics->average_temperature_core[0]) ) {
+			// fallback 1
+			unsigned i = 0;
+			do cpu_temp = MAX(cpu_temp, amdgpu_metrics->average_temperature_core[i]);
+			while (++i < ARRAY_SIZE(amdgpu_metrics->average_temperature_core) && IS_VALID_METRIC(amdgpu_metrics->average_temperature_core[i]));
+			metrics->apu_cpu_temp_c = cpu_temp / 100;
+		} else if( cpuStats.ReadcpuTempFile(cpu_temp) ) {
+			// fallback 2: Try temp from file 'm_cpuTempFile' of 'cpu.cpp'
+			metrics->apu_cpu_temp_c = cpu_temp;
+		} else {
+			// giving up
+			metrics->apu_cpu_temp_c = 0;
+		}
+
 		indep_throttle_status = amdgpu_metrics->indep_throttle_status;
 	}
 

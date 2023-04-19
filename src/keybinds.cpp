@@ -13,6 +13,11 @@ void check_keybinds(struct overlay_params& params, uint32_t vendorID){
    auto elapsedReloadCfg = now - reload_cfg_press;
    auto elapsedUpload = now - last_upload_press;
 
+   static Clock::time_point last_check;
+   if (now - last_check < 100ms)
+      return;
+   last_check = now;
+
    auto keyPressDelay = 400ms;
 
    if (elapsedF2 >= keyPressDelay &&

@@ -1,6 +1,6 @@
 project('MangoHud',
   ['c', 'cpp'],
-  version : 'v0.6.8',
+  version : 'v0.6.9',
   license : 'MIT',
   meson_version: '>=0.60.0',
   default_options : ['buildtype=release', 'c_std=c99', 'cpp_std=c++14', 'warning_level=2']
@@ -165,21 +165,9 @@ else
   dep_rt = null_dep
 endif
 
-dep_vulkan = dependency('vulkan', required: get_option('use_system_vulkan'))
-if dep_vulkan.found() and not get_option('use_system_vulkan').disabled()
-  datadir = get_option('vulkan_datadir')
-  if datadir == ''
-    datadir = get_option('datadir')
-  endif
-  if not datadir.startswith('/')
-    datadir = get_option('prefix') / datadir
-  endif
-  vk_api_xml = files(datadir / 'vulkan/registry/vk.xml')
-else
-  vkh_sp = subproject('vulkan-headers')
-  vk_api_xml = vkh_sp.get_variable('vulkan_api_xml')
-  dep_vulkan = vkh_sp.get_variable('vulkan_headers_dep')
-endif
+vkh_sp = subproject('vulkan-headers')
+vk_api_xml = vkh_sp.get_variable('vulkan_api_xml')
+dep_vulkan = vkh_sp.get_variable('vulkan_headers_dep')
 
 vk_enum_to_str = custom_target(
   'vk_enum_to_str',
@@ -241,8 +229,8 @@ else
 endif
 
 if ['windows', 'mingw'].contains(host_machine.system())
-  subdir('modules/minhook')
-  inc_common += ( include_directories('modules/minhook/include'))
+  minhook_sp = subproject('minhook')
+  minhook_dep = minhook_sp.get_variable('minhook_dep')
   windows_deps = [
     minhook_dep,
   ]
