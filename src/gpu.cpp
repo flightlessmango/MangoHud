@@ -116,7 +116,7 @@ void getAmdGpuInfo(){
         if (amdgpu.fan) {
             rewind(amdgpu.fan);
             fflush(amdgpu.fan);
-            if (fscanf(amdgpu.fan, "%d" PRId64, &value) != 1)
+            if (fscanf(amdgpu.fan, "%" PRId64, &value) != 1)
                 value = 0;
             gpu_info.fan_speed = value;
         }
