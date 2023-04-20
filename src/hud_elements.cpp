@@ -194,6 +194,14 @@ void HudElements::gpu_stats(){
             ImGui::PopFont();
         }
 
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_fan]){
+            right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.fan_speed);
+            ImGui::SameLine(0, 1.0f);
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            ImGui::Text("RPM");
+            ImGui::PopFont();
+        }
+
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]){
             ImguiNextColumnOrNewRow();
             right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.CoreClock);
@@ -612,6 +620,7 @@ void HudElements::frame_timing(){
         } else {
             const ImVec2 sz = ImGui::CalcTextSize("1000.0ms");
             width = ImGui::GetWindowContentRegionWidth() - sz.x;
+            height = max_time;
         }
 #else
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal]){

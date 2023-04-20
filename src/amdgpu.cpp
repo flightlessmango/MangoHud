@@ -81,6 +81,7 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 
 		metrics->gpu_temp_c = amdgpu_metrics->temperature_edge;
 		indep_throttle_status = amdgpu_metrics->indep_throttle_status;
+		metrics->fan_speed = amdgpu_metrics->current_fan_speed;
 	} else if (header->format_revision == 2) {
 		// APUs
 		struct gpu_metrics_v2_3 *amdgpu_metrics = (struct gpu_metrics_v2_3 *) buf;
@@ -212,6 +213,8 @@ void amdgpu_get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[MET
 		UPDATE_METRIC_MAX(is_current_throttled);
 		UPDATE_METRIC_MAX(is_temp_throttled);
 		UPDATE_METRIC_MAX(is_other_throttled);
+
+		UPDATE_METRIC_MAX(fan_speed);
 		amdgpu_common_metrics_m.unlock();
 }
 
@@ -262,6 +265,8 @@ void amdgpu_get_metrics(){
 	gpu_info.is_current_throttled = amdgpu_common_metrics.is_current_throttled;
 	gpu_info.is_temp_throttled = amdgpu_common_metrics.is_temp_throttled;
 	gpu_info.is_other_throttled = amdgpu_common_metrics.is_other_throttled;
+
+	gpu_info.fan_speed = amdgpu_common_metrics.fan_speed;
 
 	amdgpu_common_metrics_m.unlock();
 }

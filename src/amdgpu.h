@@ -181,6 +181,8 @@ struct amdgpu_common_metrics {
 	bool is_current_throttled;
 	bool is_temp_throttled;
 	bool is_other_throttled;
+
+	uint16_t fan_speed;
 };
 
 bool amdgpu_verify_metrics(const std::string& path);

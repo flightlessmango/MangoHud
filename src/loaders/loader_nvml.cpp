@@ -214,6 +214,19 @@ bool libnvml_loader::Load(const std::string& library_name) {
     return false;
   }
 
+#if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
+  nvmlDeviceGetFanSpeed =
+      reinterpret_cast<decltype(this->nvmlDeviceGetFanSpeed)>(
+          dlsym(library_, "nvmlDeviceGetPowerUsage"));
+#endif
+#if defined(LIBRARY_LOADER_NVML_H_DT_NEEDED)
+  nvmlDeviceGetFanSpeed = &::nvmlDeviceGetFanSpeed;
+#endif
+  if (!nvmlDeviceGetFanSpeed) {
+    CleanUp(true);
+    return false;
+  }
+
   loaded_ = true;
   return true;
 }
@@ -236,4 +249,5 @@ void libnvml_loader::CleanUp(bool unload) {
   nvmlDeviceGetHandleByIndex_v2 = NULL;
   nvmlDeviceGetHandleByPciBusId_v2 = NULL;
   nvmlDeviceGetCurrentClocksThrottleReasons = NULL;
+  nvmlDeviceGetFanSpeed = NULL;
 }

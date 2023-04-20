@@ -45,6 +45,7 @@ void getNvidiaGpuInfo(const struct overlay_params& params){
         gpu_info.MemClock = nvidiaMemClock;
         gpu_info.powerUsage = nvidiaPowerUsage / 1000;
         gpu_info.memoryTotal = nvidiaMemory.total / (1024.f * 1024.f * 1024.f);
+        gpu_info.fan_speed = NvidiaFanSpeed;
         if (params.enabled[OVERLAY_PARAM_ENABLED_throttling_status]){
             gpu_info.is_temp_throttled = (nvml_throttle_reasons & 0x0000000000000060LL) != 0;
             gpu_info.is_power_throttled = (nvml_throttle_reasons & 0x000000000000008CLL) != 0;
@@ -63,6 +64,7 @@ void getNvidiaGpuInfo(const struct overlay_params& params){
         gpu_info.MemClock = nvctrl_info.MemClock;
         gpu_info.powerUsage = 0;
         gpu_info.memoryTotal = nvctrl_info.memoryTotal;
+        gpu_info.fan_speed = nvctrl_info.fan_speed;
         return;
     }
 #endif
@@ -109,6 +111,14 @@ void getAmdGpuInfo(){
                 value = 0;
 
             gpu_info.powerUsage = value / 1000000;
+        }
+
+        if (amdgpu.fan) {
+            rewind(amdgpu.fan);
+            fflush(amdgpu.fan);
+            if (fscanf(amdgpu.fan, "%" PRId64, &value) != 1)
+                value = 0;
+            gpu_info.fan_speed = value;
         }
     }
 
