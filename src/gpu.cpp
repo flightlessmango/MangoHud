@@ -110,6 +110,14 @@ void getAmdGpuInfo(){
 
             gpu_info.powerUsage = value / 1000000;
         }
+
+        if (amdgpu.fan) {
+            rewind(amdgpu.fan);
+            fflush(amdgpu.fan);
+            if (fscanf(amdgpu.fan, "%d" PRId64, &value) != 1)
+                value = 0;
+            gpu_info.fan_speed = value;
+        }
     }
 
     if (amdgpu.vram_total) {

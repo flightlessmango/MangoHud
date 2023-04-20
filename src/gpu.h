@@ -17,6 +17,7 @@ struct amdgpu_files
     FILE *memory_clock;
     FILE *power_usage;
     FILE *gtt_used;
+    FILE *fan;
 };
 
 extern amdgpu_files amdgpu;
@@ -36,6 +37,7 @@ struct gpuInfo{
     bool is_temp_throttled;
     bool is_other_throttled;
     float gtt_used;
+    int fan_speed;
 };
 
 extern struct gpuInfo gpu_info;
