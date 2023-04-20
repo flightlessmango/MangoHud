@@ -598,6 +598,7 @@ void HudElements::frame_timing(){
         } else {
             const ImVec2 sz = ImGui::CalcTextSize("1000.0ms");
             width = ImGui::GetWindowContentRegionWidth() - sz.x;
+            height = max_time;
         }
 #else
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal]){
