@@ -156,4 +156,13 @@ void getNvctrlInfo(){
                         NV_CTRL_USED_DEDICATED_GPU_MEMORY,
                         &memused);
     nvctrl_info.memoryUsed = memused;
+
+    int64_t fan_speed = 0;
+    nvctrl.XNVCTRLQueryTargetAttribute64(display.get(),
+                    NV_CTRL_TARGET_TYPE_GPU,
+                    0,
+                    0,
+                    NV_CTRL_THERMAL_COOLER_SPEED,
+                    &fan_speed);
+    nvctrl_info.fan_speed = fan_speed;
 }

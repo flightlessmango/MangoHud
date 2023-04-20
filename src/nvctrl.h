@@ -9,6 +9,7 @@ struct nvctrlInfo{
     float memoryTotal;
     int MemClock;
     int CoreClock;
+    int fan_speed;
 };
 
 extern struct nvctrlInfo nvctrl_info;

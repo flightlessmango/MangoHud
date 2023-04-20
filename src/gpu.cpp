@@ -64,6 +64,7 @@ void getNvidiaGpuInfo(const struct overlay_params& params){
         gpu_info.MemClock = nvctrl_info.MemClock;
         gpu_info.powerUsage = 0;
         gpu_info.memoryTotal = nvctrl_info.memoryTotal;
+        gpu_info.fan_speed = nvctrl_info.fan_speed;
         return;
     }
 #endif
