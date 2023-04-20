@@ -9,7 +9,7 @@ nvmlReturn_t result;
 nvmlDevice_t nvidiaDevice;
 nvmlPciInfo_t nvidiaPciInfo;
 bool nvmlSuccess = false;
-unsigned int nvidiaTemp = 0, nvidiaCoreClock = 0, nvidiaMemClock = 0, nvidiaPowerUsage = 0;
+unsigned int nvidiaTemp = 0, nvidiaCoreClock = 0, nvidiaMemClock = 0, nvidiaPowerUsage = 0, NvidiaFanSpeed = 0;
 unsigned long long nvml_throttle_reasons;
 struct nvmlUtilization_st nvidiaUtilization;
 struct nvmlMemory_st nvidiaMemory {};
@@ -55,6 +55,7 @@ bool getNVMLInfo(const struct overlay_params& params){
     nvml.nvmlDeviceGetClockInfo(nvidiaDevice, NVML_CLOCK_GRAPHICS, &nvidiaCoreClock);
     nvml.nvmlDeviceGetClockInfo(nvidiaDevice, NVML_CLOCK_MEM, &nvidiaMemClock);
     nvml.nvmlDeviceGetPowerUsage(nvidiaDevice, &nvidiaPowerUsage);
+    nvml.nvmlDeviceGetFanSpeed(nvidiaDevice, &NvidiaFanSpeed);
     deviceID = nvidiaPciInfo.pciDeviceId >> 16;
     if (params.enabled[OVERLAY_PARAM_ENABLED_throttling_status])
         nvml.nvmlDeviceGetCurrentClocksThrottleReasons(nvidiaDevice, &nvml_throttle_reasons);
