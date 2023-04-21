@@ -198,11 +198,12 @@ void HudElements::gpu_stats(){
         }
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power]) {
             ImguiNextColumnOrNewRow();
-#ifdef MANGOAPP
-            right_aligned_text(text_color, HUDElements.ralign_width, "%.1f", gpu_info.powerUsage);
-#else
-            right_aligned_text(text_color, HUDElements.ralign_width, "%.0f", gpu_info.powerUsage);
-#endif
+            static char str[5];
+            sprintf(str, "%.1f", gpu_info.powerUsage);
+            if (strlen(str) > 4)
+                right_aligned_text(text_color, HUDElements.ralign_width, "%.0f", gpu_info.powerUsage);
+            else
+                right_aligned_text(text_color, HUDElements.ralign_width, "%.1f", gpu_info.powerUsage);
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(HUDElements.sw_stats->font1);
             ImGui::Text("W");
@@ -265,11 +266,12 @@ void HudElements::cpu_stats(){
 
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_power]){
             ImguiNextColumnOrNewRow();
-        #ifdef MANGOAPP
-            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", cpuStats.GetCPUDataTotal().power);
-        #else
-            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", cpuStats.GetCPUDataTotal().power);
-        #endif
+            static char str[5];
+            sprintf(str, "%.1f", gpu_info.powerUsage);
+            if (strlen(str) > 4)
+                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", cpuStats.GetCPUDataTotal().power);
+            else
+                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", cpuStats.GetCPUDataTotal().power);
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(HUDElements.sw_stats->font1);
             ImGui::Text("W");
