@@ -556,6 +556,7 @@ parse_overlay_env(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_trilinear] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_bicubic] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_retro] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_debug] = 0;
       }
 #define OVERLAY_PARAM_BOOL(name)                                       \
       if (!strcmp(#name, key)) {                                       \
@@ -721,6 +722,7 @@ parse_overlay_config(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_trilinear] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_bicubic] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_retro] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_debug] = 0;
          params->options.erase("full");
       }
       for (auto& it : params->options) {
@@ -981,6 +983,7 @@ void presets(int preset, struct overlay_params *params) {
 
       case 4:
          add_to_options(params, "full", "1");
+         add_to_options(params, "debug", "1");
          add_to_options(params, "io_read", "0");
          add_to_options(params, "io_write", "0");
          add_to_options(params, "arch", "0");
@@ -991,6 +994,10 @@ void presets(int preset, struct overlay_params *params) {
          add_to_options(params, "frame_count", "0");
          add_to_options(params, "show_fps_limit", "0");
          add_to_options(params, "resolution", "0");
+         add_to_options(params, "gpu_load_change", "0");
+         add_to_options(params, "core_load_change", "0");
+         add_to_options(params, "cpu_load_change", "0");
+         add_to_options(params, "fps_color_change", "0");
          break;
 
    }
