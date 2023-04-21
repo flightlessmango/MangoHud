@@ -21,9 +21,13 @@ class HudElements{
         bool is_vulkan, gamemode_bol = false, vkbasalt_bol = false;
         int place;
         int text_column = 1;
+        int g_fsrUpscale = -1;
+        int g_fsrSharpness = -1;
         Clock::time_point last_exec;
         std::vector<std::pair<std::string, std::string>> options;
         std::vector<std::pair<void(*)(), std::string >> ordered_functions;
+        std::vector<float> gamescope_debug_latency {};
+        std::vector<float> gamescope_debug_app {};
         int min, max, gpu_core_max, gpu_mem_max, cpu_temp_max, gpu_temp_max;
         const std::vector<std::string> permitted_params = {
             "gpu_load", "cpu_load", "gpu_core_clock", "gpu_mem_clock",

@@ -808,12 +808,11 @@ void HudElements::battery(){
 }
 
 void HudElements::gamescope_fsr(){
-#ifdef MANGOAPP
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fsr]) {
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fsr] && HUDElements.g_fsrUpscale >= 0) {
         ImGui::TableNextColumn();
         string FSR_TEXT;
         ImVec4 FSR_COLOR;
-        if (g_fsrUpscale){
+        if (HUDElements.g_fsrUpscale){
             FSR_TEXT = "ON";
             FSR_COLOR = HUDElements.colors.fps_value_high;
         } else {
@@ -824,10 +823,10 @@ void HudElements::gamescope_fsr(){
         ImGui::TextColored(HUDElements.colors.engine, "%s", "FSR");
         ImGui::TableNextColumn();
         right_aligned_text(FSR_COLOR, HUDElements.ralign_width, "%s", FSR_TEXT.c_str());
-        if (g_fsrUpscale){
+        if (HUDElements.g_fsrUpscale){
             if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hide_fsr_sharpness]) {
                 ImguiNextColumnOrNewRow();
-                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", g_fsrSharpness);
+                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", HUDElements.g_fsrSharpness);
                 ImGui::SameLine(0,1.0f);
                 ImGui::PushFont(HUDElements.sw_stats->font1);
                 ImGui::Text("Sharp");
@@ -835,69 +834,64 @@ void HudElements::gamescope_fsr(){
             }
         }
     }
-#endif
 }
 
 void HudElements::gamescope_frame_timing(){
-#ifdef MANGOAPP
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_debug]) {
-        ImGui::TableNextColumn();
-        ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
-        ImGui::PushFont(HUDElements.sw_stats->font1);
-        ImGui::TextColored(HUDElements.colors.engine, "%s", "App");
-        for (size_t i = 0; i < HUDElements.params->table_columns - 1; i++)
+        static std::vector<float>::iterator min, max;
+        static double min_time = 0.0f;
+        static double max_time = 50.0f;
+        if (HUDElements.gamescope_debug_app.size() > 0){
             ImGui::TableNextColumn();
-        ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
-        auto min = std::min_element(gamescope_debug_app.begin(), gamescope_debug_app.end());
-        auto max = std::max_element(gamescope_debug_app.begin(), gamescope_debug_app.end());
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "min: %.1fms, max: %.1fms", min[0], max[0]);
-        ImGui::PopFont();
-        ImGui::TableNextColumn();
-        char hash[40];
-        snprintf(hash, sizeof(hash), "##%s", overlay_param_names[OVERLAY_PARAM_ENABLED_frame_timing]);
-        HUDElements.sw_stats->stat_selector = OVERLAY_PLOTS_frame_timing;
-        HUDElements.sw_stats->time_dividor = 1000000.0f; /* ns -> ms */
-        double min_time = 0.0f;
-        double max_time = 50.0f;
-
-        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-        ImGui::PlotLines("", gamescope_debug_app.data(),
-                gamescope_debug_app.size(), 0,
-                NULL, min_time, max_time,
-                    ImVec2(ImGui::GetContentRegionAvailWidth() * HUDElements.params->table_columns - 30, 50));
-            ImGui::SameLine();
+            ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
             ImGui::PushFont(HUDElements.sw_stats->font1);
-            ImGui::Text("%.1fms", gamescope_debug_app.back());
+            ImGui::TextColored(HUDElements.colors.engine, "%s", "App");
+            ImGui::TableNextRow();
+            ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
+            auto min = std::min_element(HUDElements.gamescope_debug_app.begin(),
+                                        HUDElements.gamescope_debug_app.end());
+            auto max = std::max_element(HUDElements.gamescope_debug_app.begin(),
+                                        HUDElements.gamescope_debug_app.end());
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "min: %.1fms, max: %.1fms", min[0], max[0]);
             ImGui::PopFont();
-        ImGui::PopStyleColor();
-        if (gamescope_debug_latency.back() > -1){
+            ImGui::TableNextColumn();
+            char hash[40];
+            snprintf(hash, sizeof(hash), "##%s", overlay_param_names[OVERLAY_PARAM_ENABLED_frame_timing]);
+            HUDElements.sw_stats->stat_selector = OVERLAY_PLOTS_frame_timing;
+            HUDElements.sw_stats->time_dividor = 1000000.0f; /* ns -> ms */
+
+
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+            ImGui::PlotLines("", HUDElements.gamescope_debug_app.data(),
+                    HUDElements.gamescope_debug_app.size(), 0,
+                    NULL, min_time, max_time,
+                        ImVec2(ImGui::GetContentRegionAvailWidth() * HUDElements.params->table_columns, 50));
+            ImGui::PopStyleColor();
+        }
+        if (HUDElements.gamescope_debug_latency.size() > 0 && HUDElements.gamescope_debug_latency.back() > -1){
             ImGui::TableNextColumn();
             ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
             ImGui::PushFont(HUDElements.sw_stats->font1);
             ImGui::TextColored(HUDElements.colors.engine, "%s", "Latency");
-            for (size_t i = 0; i < HUDElements.params->table_columns - 1; i++)
-                ImGui::TableNextColumn();
+            ImGui::TableNextRow();
             ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
-            min = std::min_element(gamescope_debug_latency.begin(), gamescope_debug_latency.end());
-            max = std::max_element(gamescope_debug_latency.begin(), gamescope_debug_latency.end());
+            min = std::min_element(HUDElements.gamescope_debug_latency.begin(),
+                                   HUDElements.gamescope_debug_latency.end());
+            max = std::max_element(HUDElements.gamescope_debug_latency.begin(),
+                                   HUDElements.gamescope_debug_latency.end());
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "min: %.1fms, max: %.1fms", min[0], max[0]);
             ImGui::PopFont();
             ImGui::TableNextColumn();
 
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
             ImGui::PushStyleColor(ImGuiCol_PlotLines, ImVec4(0,0,1,1));
-            ImGui::PlotLines("", gamescope_debug_latency.data(),
-                    gamescope_debug_latency.size(), 0,
+            ImGui::PlotLines("", HUDElements.gamescope_debug_latency.data(),
+                    HUDElements.gamescope_debug_latency.size(), 0,
                     NULL, min_time, max_time,
-                    ImVec2(ImGui::GetContentRegionAvailWidth() * HUDElements.params->table_columns - 30, 50));
-            ImGui::SameLine();
-            ImGui::PushFont(HUDElements.sw_stats->font1);
-            ImGui::Text("%.1fms", gamescope_debug_latency.back());
-            ImGui::PopFont();
+                    ImVec2(ImGui::GetContentRegionAvailWidth() * HUDElements.params->table_columns, 50));
             ImGui::PopStyleColor(2);
         }
     }
-#endif
 }
 
 void HudElements::gamepad_battery()

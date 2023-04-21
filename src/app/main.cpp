@@ -43,10 +43,6 @@ static bool mangoapp_paused = false;
 std::mutex mangoapp_m;
 std::condition_variable mangoapp_cv;
 static uint8_t raw_msg[1024] = {0};
-uint8_t g_fsrUpscale = 0;
-uint8_t g_fsrSharpness = 0;
-std::vector<float> gamescope_debug_latency {};
-std::vector<float> gamescope_debug_app {};
 
 static unsigned int get_prop(const char* propName){
     Display *x11_display = glfwGetX11Display();
@@ -133,22 +129,22 @@ bool new_frame = false;
 
 static void gamescope_frametime(uint64_t app_frametime_ns, uint64_t latency_ns){
     float app_frametime_ms = app_frametime_ns / 1000000.f;
-    gamescope_debug_app.push_back(app_frametime_ms);
-    if (gamescope_debug_app.size() > 200)
-        gamescope_debug_app.erase(gamescope_debug_app.begin());
+    HUDElements.gamescope_debug_app.push_back(app_frametime_ms);
+    if (HUDElements.gamescope_debug_app.size() > 200)
+        HUDElements.gamescope_debug_app.erase(HUDElements.gamescope_debug_app.begin());
 
     float latency_ms = latency_ns / 1000000.f;
     if (latency_ns == uint64_t(-1))
         latency_ms = -1;
-    gamescope_debug_latency.push_back(latency_ms);
-    if (gamescope_debug_latency.size() > 200)
-        gamescope_debug_latency.erase(gamescope_debug_latency.begin());
+    HUDElements.gamescope_debug_latency.push_back(latency_ms);
+    if (HUDElements.gamescope_debug_latency.size() > 200)
+        HUDElements.gamescope_debug_latency.erase(HUDElements.gamescope_debug_latency.begin());
 }
 
 static void msg_read_thread(){
     for (size_t i = 0; i < 200; i++){
-        gamescope_debug_app.push_back(0);
-        gamescope_debug_latency.push_back(0);
+        HUDElements.gamescope_debug_app.push_back(0);
+        HUDElements.gamescope_debug_latency.push_back(0);
     }
     int key = ftok("mangoapp", 65);
     msgid = msgget(key, 0666 | IPC_CREAT);
@@ -165,11 +161,11 @@ static void msg_read_thread(){
                     update_hud_info_with_frametime(sw_stats, params, vendorID, mangoapp_v1->visible_frametime_ns);
 
                 if (msg_size > offsetof(mangoapp_msg_v1, fsrUpscale)){
-                    g_fsrUpscale = mangoapp_v1->fsrUpscale;
+                    HUDElements.g_fsrUpscale = mangoapp_v1->fsrUpscale;
                     if (params.fsr_steam_sharpness < 0)
-                        g_fsrSharpness = mangoapp_v1->fsrSharpness;
+                        HUDElements.g_fsrSharpness = mangoapp_v1->fsrSharpness;
                     else
-                        g_fsrSharpness = params.fsr_steam_sharpness - mangoapp_v1->fsrSharpness;
+                       HUDElements.g_fsrSharpness = params.fsr_steam_sharpness - mangoapp_v1->fsrSharpness;
                 }
                 if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam]){
                     steam_focused = get_prop("GAMESCOPE_FOCUSED_APP_GFX") == 769;
