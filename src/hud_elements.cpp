@@ -181,7 +181,8 @@ void HudElements::gpu_stats(){
             else
                 ImGui::Text("°C");
         }
-        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_fan]){
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_fan] && cpuStats.cpu_type != "APU"){
+            ImguiNextColumnOrNewRow();
             right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.fan_speed);
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(HUDElements.sw_stats->font1);
