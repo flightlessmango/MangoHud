@@ -984,6 +984,7 @@ void presets(int preset, struct overlay_params *params) {
       case 4:
          add_to_options(params, "full", "1");
          add_to_options(params, "debug", "1");
+         add_to_options(params, "throttling_status", "1");
          add_to_options(params, "io_read", "0");
          add_to_options(params, "io_write", "0");
          add_to_options(params, "arch", "0");
