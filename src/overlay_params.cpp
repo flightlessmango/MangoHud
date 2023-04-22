@@ -901,7 +901,7 @@ bool parse_preset_config(int preset, struct overlay_params *params){
    FILE *preset_file = fopen(preset_path.c_str(), "r");
    char line[20];
    char preset_string[20];
-   sprintf(preset_string, "[preset %d]\n", preset);
+   snprintf(preset_string, sizeof(preset_string), "[preset %d]\n", preset);
    bool found_preset = false;
    if (preset_file == NULL)
       return false;

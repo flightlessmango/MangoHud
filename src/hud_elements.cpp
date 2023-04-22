@@ -199,8 +199,8 @@ void HudElements::gpu_stats(){
         }
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power]) {
             ImguiNextColumnOrNewRow();
-            static char str[5];
-            sprintf(str, "%.1f", gpu_info.powerUsage);
+            char str[16];
+            snprintf(str, sizeof(str), "%.1f", gpu_info.powerUsage);
             if (strlen(str) > 4)
                 right_aligned_text(text_color, HUDElements.ralign_width, "%.0f", gpu_info.powerUsage);
             else
@@ -267,8 +267,8 @@ void HudElements::cpu_stats(){
 
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_power]){
             ImguiNextColumnOrNewRow();
-            static char str[5];
-            sprintf(str, "%.1f", gpu_info.powerUsage);
+            char str[16];
+            snprintf(str, sizeof(str), "%.1f", gpu_info.powerUsage);
             if (strlen(str) > 4)
                 right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", cpuStats.GetCPUDataTotal().power);
             else
