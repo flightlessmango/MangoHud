@@ -184,11 +184,7 @@ void Logger::start_logging() {
   if (program.empty())
       program = get_program_name();
 
-#ifdef MANGOAPP
-  m_log_files.emplace_back(output_folder + "/mangoapp_" + program + "_" + get_log_suffix());
-#else
   m_log_files.emplace_back(output_folder + "/" + program + "_" + get_log_suffix());
-#endif
 
   if(log_interval != 0){
     std::thread log_thread(&Logger::logging, this);

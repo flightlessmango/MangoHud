@@ -16,15 +16,7 @@ static void parse_command(overlay_params &params,
                           const char *param, unsigned paramlen)
 {
    if (!strncmp(cmd, "hud", cmdlen)) {
-#ifdef MANGOAPP
-      {
-         std::lock_guard<std::mutex> lk(mangoapp_m);
-         params.no_display = !params.no_display;
-      }
-      mangoapp_cv.notify_one();
-#else
       params.no_display = !params.no_display;
-#endif
    } else if (!strncmp(cmd, "logging", cmdlen)) {
       if (param && param[0])
       {

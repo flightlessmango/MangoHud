@@ -370,7 +370,6 @@ void HudElements::vram(){
         ImGui::PushFont(HUDElements.sw_stats->font1);
         ImGui::Text("GiB");
         ImGui::PopFont();
-#ifndef MANGOAPP
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_mem_clock]){
             ImguiNextColumnOrNewRow();
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", gpu_info.MemClock);
@@ -379,7 +378,6 @@ void HudElements::vram(){
             ImGui::Text("MHz");
             ImGui::PopFont();
         }
-#endif
     }
 }
 
@@ -594,16 +592,6 @@ void HudElements::frame_timing(){
         double min_time = 0.0f;
         double max_time = 50.0f;
         float width, height = 0;
-#ifdef MANGOAPP
-        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] || HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
-            width = 150;
-            height = 24;
-        } else {
-            const ImVec2 sz = ImGui::CalcTextSize("1000.0ms");
-            width = ImGui::GetWindowContentRegionWidth() - sz.x;
-            height = max_time;
-        }
-#else
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal]){
             width = 150;
             height = 24;
@@ -611,7 +599,6 @@ void HudElements::frame_timing(){
             width = ImGui::GetWindowContentRegionWidth();
             height = max_time;
         }
-#endif
         if (ImGui::BeginChild("my_child_window", ImVec2(width, height))) {
             if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_histogram]){
                 ImGui::PlotHistogram(hash, get_time_stat, HUDElements.sw_stats,
@@ -626,13 +613,6 @@ void HudElements::frame_timing(){
             }
         }
         ImGui::EndChild();
-#ifdef MANGOAPP
-        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
-            ImGui::SameLine();
-            ImGuiTableSetColumnIndex(ImGui::TableGetColumnCount() - 1);
-            right_aligned_text(HUDElements.colors.text, ImGui::GetContentRegionAvail().x, "%.1fms", frametime / 1000.f);
-        }
-#endif
         ImGui::PopFont();
         ImGui::PopStyleColor();
     }
@@ -1133,7 +1113,6 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
     if (param == "gpu_stats")       { ordered_functions.push_back({gpu_stats, value});              }
     if (param == "cpu_stats")       { ordered_functions.push_back({cpu_stats, value});              }
     if (param == "core_load")       { ordered_functions.push_back({core_load, value});              }
-#ifndef MANGOAPP
     if (param == "io_stats")        { ordered_functions.push_back({io_stats, value});               }
     if (param == "arch")            { ordered_functions.push_back({arch, value});                   }
     if (param == "wine")            { ordered_functions.push_back({wine, value});                   }
@@ -1144,7 +1123,6 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
     if (param == "vulkan_driver")   { ordered_functions.push_back({vulkan_driver, value});          }
     if (param == "resolution")      { ordered_functions.push_back({resolution, value});             }
     if (param == "show_fps_limit")  { ordered_functions.push_back({show_fps_limit, value});         }
-#endif
     if (param == "vram")            { ordered_functions.push_back({vram, value});                   }
     if (param == "ram")             { ordered_functions.push_back({ram, value});                    }
     if (param == "fps")             { ordered_functions.push_back({fps, value});                    }
@@ -1193,10 +1171,8 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({cpu_stats,          value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_core_load])
         ordered_functions.push_back({core_load,          value});
-#ifndef MANGOAPP
     if (params->enabled[OVERLAY_PARAM_ENABLED_io_stats])
         ordered_functions.push_back({io_stats,           value});
-#endif
     if (params->enabled[OVERLAY_PARAM_ENABLED_vram])
         ordered_functions.push_back({vram,               value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_ram])
@@ -1213,27 +1189,22 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({fps,                value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_fps_only])
         ordered_functions.push_back({fps_only,           value});
-#ifndef MANGOAPP
     if (params->enabled[OVERLAY_PARAM_ENABLED_engine_version])
         ordered_functions.push_back({engine_version,     value});
-#endif
     if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_name])
         ordered_functions.push_back({gpu_name,           value});
-#ifndef MANGOAPP
     if (params->enabled[OVERLAY_PARAM_ENABLED_vulkan_driver])
         ordered_functions.push_back({vulkan_driver,      value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_arch])
         ordered_functions.push_back({arch,               value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_wine])
         ordered_functions.push_back({wine,               value});
-#endif
     if (params->enabled[OVERLAY_PARAM_ENABLED_frame_timing])
         ordered_functions.push_back({frame_timing,       value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_frame_count])
         ordered_functions.push_back({frame_count,         value});
-    if (params->enabled[OVERLAY_PARAM_ENABLED_debug])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_debug] && !params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
         ordered_functions.push_back({gamescope_frame_timing, value});
-#ifndef MANGOAPP
     if (params->enabled[OVERLAY_PARAM_ENABLED_gamemode])
         ordered_functions.push_back({gamemode,           value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_vkbasalt])
@@ -1242,7 +1213,6 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({show_fps_limit,     value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_resolution])
         ordered_functions.push_back({resolution,         value});
-#endif
     if (params->enabled[OVERLAY_PARAM_ENABLED_gamepad_battery])
         ordered_functions.push_back({gamepad_battery,    value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_media_player])
