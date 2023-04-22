@@ -257,14 +257,24 @@ endif
 
 if get_option('mango_intel_stats').enabled() and is_unixy
   drm_dep = cc.find_library('libdrm')
-  warning('The mango_intel_stats binary must have CAP_PERFMON or setuid to be useful')
-  warning('You must do this manually post-install: setcap cap_perfmon=+ep /path/to/mango_intel_stats')
+  setcap = find_program('setcap', '/usr/sbin/setcap', '/sbin/setcap', required : false)
   mangointel = executable(
     'mango_intel_stats',
     files('app/intel.cpp'),
     install : true,
     dependencies : [drm_dep, json_dep],
   )
+  if setcap.found()
+    meson.add_install_script('app/setcap-helper.sh',
+      setcap.full_path(),
+      get_option('bindir'),
+      mangointel.name(),
+      )
+  else
+    warning('The mango_intel_stats binary must have CAP_PERFMON or setuid to be useful')
+    warning('Install setcap to have CAP_PERFMON set automatically, or')
+    warning('You must do this manually post-install: setcap cap_perfmon=+ep /path/to/mango_intel_stats')
+  endif
 endif
 
 if get_option('mangoapp_layer')
