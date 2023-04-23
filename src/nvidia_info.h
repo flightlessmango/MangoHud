@@ -6,7 +6,7 @@
 #include "overlay_params.h"
 
 extern nvmlReturn_t result;
-extern unsigned int nvidiaTemp, processSamplesCount, *vgpuInstanceSamplesCount, nvidiaCoreClock, nvidiaMemClock, nvidiaPowerUsage, NvidiaFanSpeed;
+extern unsigned int nvidiaTemp, processSamplesCount, *vgpuInstanceSamplesCount, nvidiaCoreClock, nvidiaMemClock, nvidiaPowerUsage, nvidiaFanSpeed;
 extern nvmlDevice_t nvidiaDevice;
 extern struct nvmlUtilization_st nvidiaUtilization;
 extern struct nvmlMemory_st nvidiaMemory;

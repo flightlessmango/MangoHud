@@ -45,7 +45,7 @@ void getNvidiaGpuInfo(const struct overlay_params& params){
         gpu_info.MemClock = nvidiaMemClock;
         gpu_info.powerUsage = nvidiaPowerUsage / 1000;
         gpu_info.memoryTotal = nvidiaMemory.total / (1024.f * 1024.f * 1024.f);
-        gpu_info.fan_speed = NvidiaFanSpeed;
+        gpu_info.fan_speed = nvidiaFanSpeed;
         if (params.enabled[OVERLAY_PARAM_ENABLED_throttling_status]){
             gpu_info.is_temp_throttled = (nvml_throttle_reasons & 0x0000000000000060LL) != 0;
             gpu_info.is_power_throttled = (nvml_throttle_reasons & 0x000000000000008CLL) != 0;

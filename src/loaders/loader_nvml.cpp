@@ -215,14 +215,27 @@ bool libnvml_loader::Load(const std::string& library_name) {
   }
 
 #if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
-  nvmlDeviceGetFanSpeed =
-      reinterpret_cast<decltype(this->nvmlDeviceGetFanSpeed)>(
-          dlsym(library_, "nvmlDeviceGetPowerUsage"));
+  nvmlUnitGetFanSpeedInfo =
+      reinterpret_cast<decltype(this->nvmlUnitGetFanSpeedInfo)>(
+          dlsym(library_, "nvmlUnitGetFanSpeedInfo"));
 #endif
 #if defined(LIBRARY_LOADER_NVML_H_DT_NEEDED)
-  nvmlDeviceGetFanSpeed = &::nvmlDeviceGetFanSpeed;
+  nvmlUnitGetFanSpeedInfo = &::nvmlUnitGetFanSpeedInfo;
 #endif
-  if (!nvmlDeviceGetFanSpeed) {
+  if (!nvmlUnitGetFanSpeedInfo) {
+    CleanUp(true);
+    return false;
+  }
+
+#if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
+  nvmlUnitGetHandleByIndex =
+      reinterpret_cast<decltype(this->nvmlUnitGetHandleByIndex)>(
+          dlsym(library_, "nvmlUnitGetHandleByIndex"));
+#endif
+#if defined(LIBRARY_LOADER_NVML_H_DT_NEEDED)
+  nvmlUnitGetHandleByIndex = &::nvmlUnitGetHandleByIndex;
+#endif
+  if (!nvmlUnitGetHandleByIndex) {
     CleanUp(true);
     return false;
   }
@@ -249,5 +262,6 @@ void libnvml_loader::CleanUp(bool unload) {
   nvmlDeviceGetHandleByIndex_v2 = NULL;
   nvmlDeviceGetHandleByPciBusId_v2 = NULL;
   nvmlDeviceGetCurrentClocksThrottleReasons = NULL;
-  nvmlDeviceGetFanSpeed = NULL;
+  nvmlUnitGetFanSpeedInfo = NULL;
+  nvmlUnitGetHandleByIndex = NULL;
 }
