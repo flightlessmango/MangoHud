@@ -15,7 +15,7 @@ MangoHud can be enabled for Vulkan applications by setting \fBMANGOHUD=1\fR as e
 .br
 To load MangoHud for any application, including OpenGL applications, the \fBmangohud\fR executable can be used. It preloads a library via ld into the application.
 .br
-Note: some OpenGL applications may also need dlsym hooking. This can be done by passing option \fB--dlsym\fR or by setting \fBMANGOHUD_DLSYM=1\fR as environment variable.
+Note: some OpenGL applications may also need dlsym hooking. This can be done by passing option \fB--dlsym\fR.
 
 .SH CONFIG
 MangoHud comes with a config file which can be used to set configuration options globally or per application. The priorities of different config files are:
@@ -43,7 +43,7 @@ Steam: set your launch option to \fBmangohud %command%\fR
 .br
 Lutris: add \fBmangohud\fR to the Command prefix setting
 .br
-OpenGL with dlsym: \fBMANGOHUD_DLSYM=1 mangohud glxgears\fR
+OpenGL with dlsym: \fBmangohud --dlsym glxgears\fR
 .br
 Custom config options: \fBMANGOHUD_CONFIG="gpu_stats=0,font_size=12" mangohud glxgears\fR
 
