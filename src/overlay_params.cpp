@@ -601,7 +601,6 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_io_read] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_io_write] = false;
-   params->enabled[OVERLAY_PARAM_ENABLED_io_stats] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_wine] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_load_change] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_cpu_load_change] = false;

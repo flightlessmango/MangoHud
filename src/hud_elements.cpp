@@ -1136,7 +1136,12 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
     if (param == "gpu_stats")       { ordered_functions.push_back({gpu_stats, value});              }
     if (param == "cpu_stats")       { ordered_functions.push_back({cpu_stats, value});              }
     if (param == "core_load")       { ordered_functions.push_back({core_load, value});              }
-    if (param == "io_stats")        { ordered_functions.push_back({io_stats, value});               }
+    if (param == "io_read" || param == "io_write") {
+        // Don't add twice
+        if (std::find_if(ordered_functions.begin(), ordered_functions.end(), [](const auto& a) -> bool { return a.first == io_stats; }) != ordered_functions.end())
+            return;
+        ordered_functions.push_back({io_stats, value});
+    }
     if (param == "arch")            { ordered_functions.push_back({arch, value});                   }
     if (param == "wine")            { ordered_functions.push_back({wine, value});                   }
     if (param == "procmem")         { ordered_functions.push_back({procmem, value});                }
@@ -1194,7 +1199,7 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({cpu_stats,          value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_core_load])
         ordered_functions.push_back({core_load,          value});
-    if (params->enabled[OVERLAY_PARAM_ENABLED_io_stats])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_io_read] || params->enabled[OVERLAY_PARAM_ENABLED_io_write])
         ordered_functions.push_back({io_stats,           value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_vram])
         ordered_functions.push_back({vram,               value});
