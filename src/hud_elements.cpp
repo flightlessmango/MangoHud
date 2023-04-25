@@ -868,11 +868,14 @@ void HudElements::gamescope_frame_timing(){
 
 
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-            ImGui::PlotLines("", HUDElements.gamescope_debug_app.data(),
-                    HUDElements.gamescope_debug_app.size(), 0,
-                    NULL, min_time, max_time,
-                        ImVec2(ImGui::GetContentRegionAvailWidth() * HUDElements.params->table_columns, 50));
+            if (ImGui::BeginChild("gamescope_app_window", ImVec2(ImGui::GetWindowContentRegionWidth(), 50))) {
+                ImGui::PlotLines("", HUDElements.gamescope_debug_app.data(),
+                        HUDElements.gamescope_debug_app.size(), 0,
+                        NULL, min_time, max_time,
+                            ImVec2(ImGui::GetWindowContentRegionWidth(), 50));
+            }
             ImGui::PopStyleColor();
+            ImGui::EndChild();
         }
         if (HUDElements.gamescope_debug_latency.size() > 0 && HUDElements.gamescope_debug_latency.back() > -1){
             ImGui::TableNextColumn();
@@ -891,11 +894,14 @@ void HudElements::gamescope_frame_timing(){
 
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
             ImGui::PushStyleColor(ImGuiCol_PlotLines, ImVec4(0,0,1,1));
-            ImGui::PlotLines("", HUDElements.gamescope_debug_latency.data(),
-                    HUDElements.gamescope_debug_latency.size(), 0,
-                    NULL, min_time, max_time,
-                    ImVec2(ImGui::GetContentRegionAvailWidth() * HUDElements.params->table_columns, 50));
+            if (ImGui::BeginChild("gamescope_latency_window", ImVec2(ImGui::GetWindowContentRegionWidth(), 50))) {
+                ImGui::PlotLines("", HUDElements.gamescope_debug_latency.data(),
+                        HUDElements.gamescope_debug_latency.size(), 0,
+                        NULL, min_time, max_time,
+                        ImVec2(ImGui::GetWindowContentRegionWidth(), 50));
+            }
             ImGui::PopStyleColor(2);
+            ImGui::EndChild();
         }
     }
 }
