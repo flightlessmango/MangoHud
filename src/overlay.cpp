@@ -49,6 +49,7 @@ bool steam_focused = false;
 vector<float> frametime_data(200,0.f);
 int fan_speed;
 fcatoverlay fcatstatus;
+static char drm_dev[10];
 
 void init_spdlog()
 {
@@ -698,16 +699,48 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
       }
    }
 
-   // NVIDIA or Intel but maybe has Optimus
-   if (vendorID == 0x8086
-      || vendorID == 0x10de) {
+#ifdef __linux__
+   string path;
+   string drm = "/sys/class/drm/";
 
-      if(checkNvidia(pci_dev))
-         vendorID = 0x10de;
+   if (vendorID==0x8086){
+      auto dirs = ls(drm.c_str(), "card");
+      for (auto& dir : dirs) {
+         if (dir.find("-") != std::string::npos)
+             continue; // filter display adapters
+
+         FILE *fp;
+         string device = path + "/device/device";
+         if ((fp = fopen(device.c_str(), "r"))){
+            uint32_t temp = 0;
+            if (fscanf(fp, "%x", &temp) == 1) {
+               if (temp != reported_deviceID){
+                  fclose(fp);
+                  SPDLOG_DEBUG("DeviceID does not match vulkan report {:X}", reported_deviceID);
+                  continue;
+               }
+               deviceID = temp;
+            }
+            fclose(fp);
+         }
+
+         string vendor = path + "/device/vendor";
+         if ((fp = fopen(vendor.c_str(), "r"))){
+            uint32_t temp = 0;
+            if (fscanf(fp, "%x", &temp) != 1 || temp != 0x8086) {
+               fclose(fp);
+               continue;
+            }
+            fclose(fp);
+         }
+         path = drm + dir;
+         strcpy(drm_dev, dir.c_str());
+         printf("drm dev: %s\n", drm_dev);
+         break;
+      }
    }
 
-#ifdef __linux__
-   if (vendorID == 0x1002 || vendorID==0x8086
+   if (vendorID == 0x1002
        || gpu.find("Radeon") != std::string::npos
        || gpu.find("AMD") != std::string::npos) {
       string path;
