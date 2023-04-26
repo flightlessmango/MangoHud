@@ -735,7 +735,7 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
          }
          path = drm + dir;
          strcpy(drm_dev, dir.c_str());
-         printf("drm dev: %s\n", drm_dev);
+         SPDLOG_DEBUG("Intel: using drm device {}", drm_dev);
          break;
       }
    }
