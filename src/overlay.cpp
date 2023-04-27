@@ -8,7 +8,7 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <filesystem.h>
-#include <sys/stat.h>
+// #include <sys/stat.h>
 #include "overlay.h"
 #include "cpu.h"
 #include "gpu.h"
