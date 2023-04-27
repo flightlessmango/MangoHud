@@ -49,7 +49,7 @@ bool steam_focused = false;
 vector<float> frametime_data(200,0.f);
 int fan_speed;
 fcatoverlay fcatstatus;
-static char drm_dev[10];
+std::string drm_dev;
 
 void init_spdlog()
 {
@@ -739,7 +739,7 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
             fclose(fp);
          }
          path = drm + dir;
-         strcpy(drm_dev, dir.c_str());
+         drm_dev = dir;
          SPDLOG_DEBUG("Intel: using drm device {}", drm_dev);
          break;
       }
