@@ -21,6 +21,7 @@ class HudElements{
         bool is_vulkan, gamemode_bol = false, vkbasalt_bol = false;
         int place;
         int text_column = 1;
+        int table_columns_count = 0;
         int g_fsrUpscale = -1;
         int g_fsrSharpness = -1;
         Clock::time_point last_exec;
