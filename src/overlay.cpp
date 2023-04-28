@@ -617,7 +617,13 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             if(!HUDElements.ordered_functions.empty() && params.enabled[OVERLAY_PARAM_ENABLED_horizontal] && func != HUDElements.ordered_functions.back())
                horizontal_separator(params);
          }
+
+         if (params.enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
+            if (HUDElements.table_columns_count > 0 && HUDElements.table_columns_count < 65 )
+               params.table_columns = HUDElements.table_columns_count;
+         }
          ImGui::EndTable();
+         HUDElements.table_columns_count = 0;
       }
 
       if(logger->is_active())
