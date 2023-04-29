@@ -309,7 +309,7 @@ void HudElements::core_load(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_core_load]){
          for (const CPUData &cpuData : cpuStats.GetCPUData())
          {
-            ImguiNextColumnOrNewRow();
+            ImguiNextColumnFirstItem();
             ImGui::TextColored(HUDElements.colors.cpu, "CPU");
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(HUDElements.sw_stats->font1);
