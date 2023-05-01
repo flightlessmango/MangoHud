@@ -869,7 +869,7 @@ void HudElements::gamescope_frame_timing(){
                                         HUDElements.gamescope_debug_app.end());
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "min: %.1fms, max: %.1fms", min[0], max[0]);
             ImGui::PopFont();
-            ImguiNextColumnOrNewRow();
+            ImguiNextColumnFirstItem();
             char hash[40];
             snprintf(hash, sizeof(hash), "##%s", overlay_param_names[OVERLAY_PARAM_ENABLED_frame_timing]);
             HUDElements.sw_stats->stat_selector = OVERLAY_PLOTS_frame_timing;
@@ -899,8 +899,7 @@ void HudElements::gamescope_frame_timing(){
                                    HUDElements.gamescope_debug_latency.end());
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "min: %.1fms, max: %.1fms", min[0], max[0]);
             ImGui::PopFont();
-            ImguiNextColumnOrNewRow();
-
+            ImguiNextColumnFirstItem();
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
             ImGui::PushStyleColor(ImGuiCol_PlotLines, ImVec4(0,0,1,1));
             if (ImGui::BeginChild("gamescope_latency_window", ImVec2(ImGui::GetWindowContentRegionWidth(), 50))) {
