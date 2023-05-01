@@ -14,6 +14,9 @@
 std::string metrics_path = "";
 struct amdgpu_common_metrics amdgpu_common_metrics;
 std::mutex amdgpu_common_metrics_m;
+std::mutex amdgpu_m;
+std::condition_variable amdgpu_c;
+bool amdgpu_run_thread = false;
 
 bool amdgpu_verify_metrics(const std::string& path)
 {
@@ -233,6 +236,9 @@ void amdgpu_metrics_polling_thread() {
 	memset(metrics_buffer, 0, sizeof(metrics_buffer));
 
 	while (1) {
+		std::unique_lock<std::mutex> lock(amdgpu_m);
+		amdgpu_c.wait(lock, []{return amdgpu_run_thread;});
+		lock.unlock();
 #ifndef TEST_ONLY
 		if (HUDElements.params->no_display && !logger->is_active())
 			usleep(100000);

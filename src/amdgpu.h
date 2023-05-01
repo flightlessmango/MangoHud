@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <string>
 #include "overlay_params.h"
+#include <mutex>
+#include <condition_variable>
 // #include <vector>
 
 #define METRICS_UPDATE_PERIOD_MS 500
@@ -188,6 +190,8 @@ struct amdgpu_common_metrics {
 bool amdgpu_verify_metrics(const std::string& path);
 void amdgpu_get_metrics();
 extern std::string metrics_path;
+extern std::condition_variable amdgpu_c;
+extern bool amdgpu_run_thread;
 void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics);
 void amdgpu_metrics_polling_thread();
 void amdgpu_get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT], bool &gpu_load_needs_dividing);

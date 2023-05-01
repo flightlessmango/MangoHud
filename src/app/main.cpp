@@ -18,6 +18,7 @@
 #include "mangoapp_proto.h"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include "amdgpu.h"
 
 #define GLFW_EXPOSE_NATIVE_X11
 #include <GLFW/glfw3native.h>
@@ -310,6 +311,10 @@ int main(int, char**)
                 XChangeProperty(x11_display, x11_window, overlay_atom, XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&value, 1);
                 XSync(x11_display, 0);
                 mangoapp_paused = false;
+                {
+                    amdgpu_run_thread = true;
+                    amdgpu_c.notify_one();
+                }
             }
             {
                 std::unique_lock<std::mutex> lk(mangoapp_m);
@@ -349,6 +354,10 @@ int main(int, char**)
             XChangeProperty(x11_display, x11_window, overlay_atom, XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&value, 1);
             XSync(x11_display, 0);
             mangoapp_paused = true;
+            {
+                amdgpu_run_thread = false;
+                amdgpu_c.notify_one();
+            }
             std::unique_lock<std::mutex> lk(mangoapp_m);
             mangoapp_cv.wait(lk, []{return !params.no_display;});
         }
