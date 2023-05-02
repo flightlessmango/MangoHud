@@ -16,7 +16,7 @@ struct amdgpu_common_metrics amdgpu_common_metrics;
 std::mutex amdgpu_common_metrics_m;
 std::mutex amdgpu_m;
 std::condition_variable amdgpu_c;
-bool amdgpu_run_thread = false;
+bool amdgpu_run_thread = true;
 
 bool amdgpu_verify_metrics(const std::string& path)
 {
