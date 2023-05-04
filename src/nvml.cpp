@@ -4,6 +4,7 @@
 #include <iostream>
 #include "overlay.h"
 #include "overlay_params.h"
+#include "nvctrl.h"
 
 nvmlReturn_t result;
 nvmlDevice_t nvidiaDevice;
@@ -57,9 +58,6 @@ bool getNVMLInfo(const struct overlay_params& params){
     nvml.nvmlDeviceGetClockInfo(nvidiaDevice, NVML_CLOCK_GRAPHICS, &nvidiaCoreClock);
     nvml.nvmlDeviceGetClockInfo(nvidiaDevice, NVML_CLOCK_MEM, &nvidiaMemClock);
     nvml.nvmlDeviceGetPowerUsage(nvidiaDevice, &nvidiaPowerUsage);
-    nvml.nvmlUnitGetHandleByIndex(0, &nvidiaUnit);
-    nvml.nvmlUnitGetFanSpeedInfo(nvidiaUnit, &nvidiaFanSpeeds);
-    nvidiaFanSpeed = nvidiaFanSpeeds.fans[0].speed;
     deviceID = nvidiaPciInfo.pciDeviceId >> 16;
     if (params.enabled[OVERLAY_PARAM_ENABLED_throttling_status])
         nvml.nvmlDeviceGetCurrentClocksThrottleReasons(nvidiaDevice, &nvml_throttle_reasons);

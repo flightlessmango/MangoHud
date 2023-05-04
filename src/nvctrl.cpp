@@ -24,7 +24,7 @@ static bool find_nv_x11(libnvctrl_loader& nvctrl, Display*& dpy)
         snprintf(buf, sizeof(buf), ":%d", i);
         Display *d = g_x11->XOpenDisplay(buf);
         if (d) {
-            if (nvctrl.XNVCTRLIsNvScreen(d, 0)) {
+            if (nvctrl.XNVCTRLIsNvScreen(d, i)) {
                 dpy = d;
                 SPDLOG_DEBUG("XNVCtrl is using display {}", buf);
                 return true;
@@ -157,12 +157,17 @@ void getNvctrlInfo(){
                         &memused);
     nvctrl_info.memoryUsed = memused;
 
+    nvctrl_info.fan_speed = getNvctrlFanSpeed();
+}
+
+int64_t getNvctrlFanSpeed(){
+    auto& nvctrl = get_libnvctrl_loader();
     int64_t fan_speed = 0;
     nvctrl.XNVCTRLQueryTargetAttribute64(display.get(),
-                    NV_CTRL_TARGET_TYPE_GPU,
-                    0,
-                    0,
-                    NV_CTRL_THERMAL_COOLER_SPEED,
-                    &fan_speed);
-    nvctrl_info.fan_speed = fan_speed;
+                        NV_CTRL_TARGET_TYPE_COOLER,
+                        0,
+                        0,
+                        NV_CTRL_THERMAL_COOLER_SPEED,
+                        &fan_speed);
+    return fan_speed;
 }

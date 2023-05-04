@@ -16,5 +16,6 @@ extern struct nvctrlInfo nvctrl_info;
 extern bool nvctrlSuccess;
 bool checkXNVCtrl(void);
 void getNvctrlInfo(void);
+int64_t getNvctrlFanSpeed();
 
 #endif //MANGOHUD_NVCTRL_H
