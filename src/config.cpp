@@ -76,6 +76,7 @@ static void enumerate_config_files(std::vector<std::string>& paths) {
     }
 
     paths.push_back(config_dir + mangohud_dir + "MangoHud.conf");
+    paths.push_back("/etc/MangoHud.conf");
 
     if (is_blacklisted()) {
         // Don't bother looking for conf file
