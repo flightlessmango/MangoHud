@@ -25,6 +25,10 @@
 #define PROCMEMINFOFILE PROCDIR "/meminfo"
 #endif
 
+#ifndef PROCCPUINFOFILE
+#define PROCCPUINFOFILE PROCDIR "/cpuinfo"
+#endif
+
 #include "file_utils.h"
 
 static void calculateCPUData(CPUData& cpuData,
@@ -226,15 +230,33 @@ bool CPUStats::UpdateCPUData()
 bool CPUStats::UpdateCoreMhz() {
     m_coreMhz.clear();
     FILE *fp;
-    for (auto& cpu : m_cpuData)
-    {
-        std::string path = "/sys/devices/system/cpu/cpu" + std::to_string(cpu.cpu_id) + "/cpufreq/scaling_cur_freq";
-        if ((fp = fopen(path.c_str(), "r"))){
-            int64_t temp;
-            if (fscanf(fp, "%" PRId64, &temp) != 1)
-                temp = 0;
-            cpu.mhz = temp / 1000;
-            fclose(fp);
+    static bool scaling_freq = true;
+    if (scaling_freq){
+        for (auto& cpu : m_cpuData){
+            std::string path = "/sys/devices/system/cpu/cpu" + std::to_string(cpu.cpu_id) + "/cpufreq/scaling_cur_freq";
+            if ((fp = fopen(path.c_str(), "r"))){
+                int64_t temp;
+                if (fscanf(fp, "%" PRId64, &temp) != 1)
+                    temp = 0;
+                cpu.mhz = temp / 1000;
+                fclose(fp);
+                scaling_freq = true;
+            } else {
+                scaling_freq = false;
+                break;
+            }
+        }
+    } else {
+        static std::ifstream cpuInfo(PROCCPUINFOFILE);
+        static std::string row;
+        size_t i = 0;
+        while (std::getline(cpuInfo, row) && i < m_cpuData.size()) {
+            if (row.find("MHz") != std::string::npos){
+                row = std::regex_replace(row, std::regex(R"([^0-9.])"), "");
+                if (!try_stoi(m_cpuData[i].mhz, row))
+                    m_cpuData[i].mhz = 0;
+                i++;
+            }
         }
     }
 
