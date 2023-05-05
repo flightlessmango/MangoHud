@@ -5,7 +5,9 @@
 #include <thread>
 #include <cstring>
 #include <spdlog/spdlog.h>
+#ifdef HAVE_XNVCTRL
 #include "nvctrl.h"
+#endif
 #include "timing.hpp"
 #ifdef HAVE_NVML
 #include "nvidia_info.h"
