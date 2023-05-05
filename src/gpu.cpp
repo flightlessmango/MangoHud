@@ -5,7 +5,9 @@
 #include <thread>
 #include <cstring>
 #include <spdlog/spdlog.h>
+#ifdef HAVE_XNVCTRL
 #include "nvctrl.h"
+#endif
 #include "timing.hpp"
 #ifdef HAVE_NVML
 #include "nvidia_info.h"
@@ -51,10 +53,11 @@ void getNvidiaGpuInfo(const struct overlay_params& params){
             gpu_info.is_power_throttled = (nvml_throttle_reasons & 0x000000000000008CLL) != 0;
             gpu_info.is_other_throttled = (nvml_throttle_reasons & 0x0000000000000112LL) != 0;
         }
+#ifdef HAVE_XNVCTRL
         static bool nvctrl_available = checkXNVCtrl();
         if (nvctrl_available)
             gpu_info.fan_speed = getNvctrlFanSpeed();
-
+#endif
         return;
     }
 #endif
