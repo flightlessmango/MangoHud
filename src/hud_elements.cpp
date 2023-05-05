@@ -479,9 +479,16 @@ void HudElements::fps(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_only]){
         ImguiNextColumnFirstItem();
         if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact] || HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
-            ImGui::TextColored(HUDElements.colors.engine, "%s", "FPS");
+            if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names])
+                ImGui::TextColored(HUDElements.colors.engine, "%s", engines_short[HUDElements.sw_stats->engine]);
+            else
+                ImGui::TextColored(HUDElements.colors.engine, "%s", "FPS");
         else
-            ImGui::TextColored(HUDElements.colors.engine, "%s", engines[HUDElements.sw_stats->engine]);
+            if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names])
+                ImGui::TextColored(HUDElements.colors.engine, "%s", engines_short[HUDElements.sw_stats->engine]);
+            else
+                ImGui::TextColored(HUDElements.colors.engine, "%s", engines[HUDElements.sw_stats->engine]);
+
         ImguiNextColumnOrNewRow();
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_color_change]){
             int fps = int(HUDElements.sw_stats->fps);

@@ -42,6 +42,7 @@ struct fps_limit fps_limit_stats {};
 ImVec2 real_font_size;
 std::deque<logData> graph_data;
 const char* engines[] = {"Unknown", "OpenGL", "VULKAN", "DXVK", "VKD3D", "DAMAVAND", "ZINK", "WINED3D", "Feral3D", "ToGL", "GAMESCOPE"};
+const char* engines_short[] = {"Unknown", "OGL", "VK", "DXVK", "VKD3D", "DV", "ZINK", "WD3D", "Feral3D", "ToGL", "GS"};
 overlay_params *_params {};
 double min_frametime, max_frametime;
 bool gpu_metrics_exists = false;

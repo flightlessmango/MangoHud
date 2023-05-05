@@ -19,3 +19,4 @@ enum EngineTypes
 };
 
 extern const char* engines[];
+extern const char* engines_short[];
