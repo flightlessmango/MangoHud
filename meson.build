@@ -250,8 +250,7 @@ if get_option('include_doc')
 endif
 
 if get_option('tests').enabled()
-  cmocka = subproject('cmocka')
-  cmocka_dep = cmocka.get_variable('cmocka_dep')
+  cmocka_dep = dependency('cmocka', fallback: ['cmocka', 'cmocka_dep'])
 
   e = executable('amdgpu', 'tests/test_amdgpu.cpp',
     files(
