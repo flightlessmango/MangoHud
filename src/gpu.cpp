@@ -51,9 +51,11 @@ void getNvidiaGpuInfo(const struct overlay_params& params){
             gpu_info.is_power_throttled = (nvml_throttle_reasons & 0x000000000000008CLL) != 0;
             gpu_info.is_other_throttled = (nvml_throttle_reasons & 0x0000000000000112LL) != 0;
         }
-        static bool nvctrl_available = checkXNVCtrl();
-        if (nvctrl_available)
-            gpu_info.fan_speed = getNvctrlFanSpeed();
+        #ifdef HAVE_XNVCTRL
+            static bool nvctrl_available = checkXNVCtrl();
+            if (nvctrl_available)
+                gpu_info.fan_speed = getNvctrlFanSpeed();
+        #endif
 
         return;
     }
