@@ -622,6 +622,11 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          if (params.enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
             if (HUDElements.table_columns_count > 0 && HUDElements.table_columns_count < 65 )
                params.table_columns = HUDElements.table_columns_count;
+            if(!params.enabled[OVERLAY_PARAM_ENABLED_horizontal_stretch]) {
+               ImVec2 pos = ImGui::GetCursorScreenPos();
+               ImVec2 size = ImGui::GetItemRectSize();
+               window_size = ImVec2(pos.x + size.x, params.height);
+            }
          }
          ImGui::EndTable();
          HUDElements.table_columns_count = 0;

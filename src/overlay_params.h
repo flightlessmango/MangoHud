@@ -87,6 +87,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(fcat)                          \
    OVERLAY_PARAM_BOOL(log_versioning)                \
    OVERLAY_PARAM_BOOL(horizontal)                    \
+   OVERLAY_PARAM_BOOL(horizontal_stretch)            \
    OVERLAY_PARAM_BOOL(hud_no_margin)                 \
    OVERLAY_PARAM_BOOL(hud_compact)                   \
    OVERLAY_PARAM_BOOL(battery_watt)                  \

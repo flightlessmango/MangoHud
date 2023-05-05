@@ -549,6 +549,7 @@ parse_overlay_env(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = read_cfg;
          params->enabled[OVERLAY_PARAM_ENABLED_fcat] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_horizontal] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_horizontal_stretch] = 1;
          params->enabled[OVERLAY_PARAM_ENABLED_hud_no_margin] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_log_versioning] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_hud_compact] = 0;
@@ -612,6 +613,7 @@ parse_overlay_config(struct overlay_params *params,
    params->enabled[OVERLAY_PARAM_ENABLED_gamepad_battery_icon] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_throttling_status] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_fcat] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_horizontal_stretch] = true;
    params->fps_sampling_period = 500000000; /* 500ms */
    params->width = 0;
    params->height = 140;
@@ -948,7 +950,7 @@ void presets(int preset, struct overlay_params *params) {
          add_to_options(params, "fps_only", "1");
          add_to_options(params, "frametime", "0");
          break;
-      
+
       case 2:
          params->table_columns = 20;
          add_to_options(params, "horizontal", "1");
@@ -968,7 +970,7 @@ void presets(int preset, struct overlay_params *params) {
          add_to_options(params, "battery_watt", "1");
          add_to_options(params, "battery_time", "1");
          break;
-      
+
       case 3:
          add_to_options(params, "cpu_temp", "1");
          add_to_options(params, "gpu_temp", "1");
