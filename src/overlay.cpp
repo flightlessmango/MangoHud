@@ -625,7 +625,10 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             if(!params.enabled[OVERLAY_PARAM_ENABLED_horizontal_stretch]) {
                ImVec2 pos = ImGui::GetCursorScreenPos();
                ImVec2 size = ImGui::GetItemRectSize();
-               window_size = ImVec2(pos.x + size.x, params.height);
+               float available_width = ImGui::GetContentRegionAvailWidth();
+               ImVec2 content_max = ImGui::GetContentRegionMax();
+               float total_width = content_max.x - (pos.x + size.x) - available_width;
+               window_size = ImVec2(total_width, params.height);
             }
          }
          ImGui::EndTable();
