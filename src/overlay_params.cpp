@@ -581,13 +581,7 @@ parse_overlay_env(struct overlay_params *params,
    }
 }
 
-void
-parse_overlay_config(struct overlay_params *params,
-                  const char *env)
-{
-   *params = {};
-
-   /* Visible by default */
+static void set_param_defaults(struct overlay_params *params){
    params->enabled[OVERLAY_PARAM_ENABLED_fps] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_frame_timing] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_core_load] = false;
@@ -662,6 +656,14 @@ parse_overlay_config(struct overlay_params *params,
    params->picmip = -17;
    params->af = -1;
    params->preset = -1;
+}
+
+void
+parse_overlay_config(struct overlay_params *params,
+                  const char *env)
+{
+   *params = {};
+   set_param_defaults(params);
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_Shift_R, XK_F12 };
