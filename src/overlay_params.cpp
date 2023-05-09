@@ -656,6 +656,8 @@ static void set_param_defaults(struct overlay_params *params){
    params->picmip = -17;
    params->af = -1;
    params->preset = -1;
+   params->font_size = 24;
+   params->table_columns = 3;
 }
 
 void
@@ -803,14 +805,7 @@ parse_overlay_config(struct overlay_params *params,
                255);
    }
 
-   if (!params->table_columns)
-      params->table_columns = 3;
-
    params->table_columns = std::max(1u, std::min(64u, params->table_columns));
-
-   if (!params->font_size) {
-      params->font_size = 24;
-   }
 
    //increase hud width if io read and write
    if (!params->width && !params->enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
