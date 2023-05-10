@@ -623,10 +623,8 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             if (HUDElements.table_columns_count > 0 && HUDElements.table_columns_count < 65 )
                params.table_columns = HUDElements.table_columns_count;
             if(!params.enabled[OVERLAY_PARAM_ENABLED_horizontal_stretch]) {
-               float content_width = ImGui::GetContentRegionAvailWidth();
-               float item_width = ImGui::CalcItemWidth() * params.table_columns;
-               float window_width = content_width - item_width;
-               window_size = ImVec2(window_width, params.height);
+               float content_width = ImGui::GetContentRegionAvailWidth() - (params.table_columns * 64);
+               window_size = ImVec2(content_width, params.height);
             }
          }
          ImGui::EndTable();
