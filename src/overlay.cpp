@@ -356,11 +356,21 @@ void position_layer(struct swapchain_stats& data, const struct overlay_params& p
       ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
       break;
    case LAYER_POSITION_TOP_CENTER:
-      data.main_window_pos = ImVec2((width / 2) - (window_size.x / 2), margin + params.offset_y);
+      if (params.enabled[OVERLAY_PARAM_ENABLED_horizontal] && !params.enabled[OVERLAY_PARAM_ENABLED_horizontal_stretch]) {
+         float content_width = (params.table_columns  * 64);
+         data.main_window_pos = ImVec2((width / 2) - (window_size.x / 2) - content_width, margin + params.offset_y);
+      }
+      else
+         data.main_window_pos = ImVec2((width / 2) - (window_size.x / 2), margin + params.offset_y);
       ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
       break;
    case LAYER_POSITION_BOTTOM_CENTER:
-      data.main_window_pos = ImVec2((width / 2) - (window_size.x / 2), height - window_size.y - margin + params.offset_y);
+      if (params.enabled[OVERLAY_PARAM_ENABLED_horizontal] && !params.enabled[OVERLAY_PARAM_ENABLED_horizontal_stretch]) {
+         float content_width = (params.table_columns  * 64);
+         data.main_window_pos = ImVec2((width / 2) - (window_size.x / 2) - content_width,  height - window_size.y - margin + params.offset_y);
+      }
+      else
+         data.main_window_pos = ImVec2((width / 2) - (window_size.x / 2), height - window_size.y - margin + params.offset_y);
       ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
       break;
    case LAYER_POSITION_COUNT:
