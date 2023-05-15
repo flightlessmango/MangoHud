@@ -1,0 +1,23 @@
+name: param check
+
+on:
+  push:
+    paths:
+      - 'src/overlay_params.h'
+      - 'README.md'
+      - 'data/MangoHud.conf'
+
+jobs:
+  param-check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.11.2' # Replace with the version of Python you want to use
+    - name: Run Python script
+      run: |
+        cd tests
+        python params.py
