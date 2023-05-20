@@ -871,7 +871,7 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
    }
 #endif
    if (!params.permit_upload)
-      SPDLOG_INFO("Uploading is disabled (permit_upload = 0)");
+      SPDLOG_DEBUG("Uploading is disabled (permit_upload = 0)");
 }
 
 void init_system_info(){
