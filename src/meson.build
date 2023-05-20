@@ -13,6 +13,7 @@ conf_data = configuration_data()
 
 conf_data.set('ld_libdir_mangohud_abs', libdir_mangohud)
 conf_data.set('ld_libdir_mangohud', ld_libdir_mangohud)
+conf_data.set('cpu_family', host_machine.cpu_family())
 
 overlay_shaders = [
   'overlay.frag',
