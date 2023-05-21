@@ -894,8 +894,8 @@ void init_system_info(){
       const char* mangohud_recursion = getenv("MANGOHUD_RECURSION");
       if (!mangohud_recursion) {
          setenv("MANGOHUD_RECURSION", "1", 1);
-         driver = exec("glxinfo -B | sed -n 's/^OpenGL version.*: \\(.*\\)/\\1/p' | sed 's/([^)]*)//g;s/  / /g'");
-         trim(driver);
+         // driver = exec("glxinfo -B | sed -n 's/^OpenGL version.*: \\(.*\\)/\\1/p' | sed 's/([^)]*)//g;s/  / /g'");
+         // trim(driver);
          unsetenv("MANGOHUD_RECURSION");
       } else {
          driver = "MangoHud glxinfo recursion detected";
