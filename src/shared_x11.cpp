@@ -16,7 +16,9 @@ bool init_x11() {
     if (display)
         return true;
 
-    if (!g_x11->IsLoaded()) {
+    auto libx11 = get_libx11();
+
+    if (!libx11->IsLoaded()) {
         SPDLOG_ERROR("X11 loader failed to load");
         failed = true;
         return false;
@@ -24,11 +26,10 @@ bool init_x11() {
 
     const char *displayid = getenv("DISPLAY");
     if (displayid) {
-        auto local_x11 = g_x11;
-        display = { g_x11->XOpenDisplay(displayid),
-            [local_x11](Display* dpy) {
+        display = { libx11->XOpenDisplay(displayid),
+            [libx11](Display* dpy) {
                 if (dpy)
-                    local_x11->XCloseDisplay(dpy);
+                    libx11->XCloseDisplay(dpy);
             }
         };
     }

@@ -22,10 +22,11 @@ static inline bool keys_are_pressed(const std::vector<KeySym>& keys) {
     char keys_return[32];
     size_t pressed = 0;
 
-    g_x11->XQueryKeymap(get_xdisplay(), keys_return);
+    auto libx11 = get_libx11();
+    libx11->XQueryKeymap(get_xdisplay(), keys_return);
 
     for (KeySym ks : keys) {
-        KeyCode kc2 = g_x11->XKeysymToKeycode(get_xdisplay(), ks);
+        KeyCode kc2 = libx11->XKeysymToKeycode(get_xdisplay(), ks);
 
         bool isPressed = !!(keys_return[kc2 >> 3] & (1 << (kc2 & 7)));
 

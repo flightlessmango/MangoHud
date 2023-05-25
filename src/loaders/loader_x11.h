@@ -33,4 +33,4 @@ class libx11_loader {
   void operator=(const libx11_loader&);
 };
 
-extern std::shared_ptr<libx11_loader> g_x11;
+std::shared_ptr<libx11_loader> get_libx11();

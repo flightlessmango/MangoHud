@@ -129,12 +129,12 @@ static std::vector<KeySym>
 parse_string_to_keysym_vec(const char *str)
 {
    std::vector<KeySym> keys;
-   if(g_x11->IsLoaded())
+   if(get_libx11()->IsLoaded())
    {
       auto keyStrings = str_tokenize(str);
       for (auto& ks : keyStrings) {
          trim(ks);
-         KeySym xk = g_x11->XStringToKeysym(ks.c_str());
+         KeySym xk = get_libx11()->XStringToKeysym(ks.c_str());
          if (xk)
             keys.push_back(xk);
          else

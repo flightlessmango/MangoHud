@@ -20,16 +20,17 @@ bool nvctrlSuccess = false;
 static bool find_nv_x11(libnvctrl_loader& nvctrl, Display*& dpy)
 {
     char buf[8] {};
+    auto libx11 = get_libx11();
     for (int i = 0; i < 16; i++) {
         snprintf(buf, sizeof(buf), ":%d", i);
-        Display *d = g_x11->XOpenDisplay(buf);
+        Display *d = libx11->XOpenDisplay(buf);
         if (d) {
             if (nvctrl.XNVCTRLIsNvScreen(d, i)) {
                 dpy = d;
                 SPDLOG_DEBUG("XNVCtrl is using display {}", buf);
                 return true;
             }
-            g_x11->XCloseDisplay(d);
+            libx11->XCloseDisplay(d);
         }
     }
     return false;
@@ -37,7 +38,7 @@ static bool find_nv_x11(libnvctrl_loader& nvctrl, Display*& dpy)
 
 bool checkXNVCtrl()
 {
-    if (!g_x11->IsLoaded())
+    if (!get_libx11()->IsLoaded())
         return false;
 
     auto& nvctrl = get_libnvctrl_loader();
@@ -54,7 +55,7 @@ bool checkXNVCtrl()
         return false;
     }
 
-    auto local_x11 = g_x11;
+    auto local_x11 = get_libx11();
     display = { dpy,
         [local_x11](Display *dpy) {
             local_x11->XCloseDisplay(dpy);
