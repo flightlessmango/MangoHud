@@ -101,6 +101,7 @@ class HudElements{
                 fps_value_high;
         } colors {};
 
+        void TextColored(ImVec4 col, const char *fmt, ...);
 };
 
 extern HudElements HUDElements;

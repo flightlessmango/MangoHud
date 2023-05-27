@@ -99,6 +99,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(retro)                         \
    OVERLAY_PARAM_BOOL(gpu_fan)                       \
    OVERLAY_PARAM_BOOL(engine_short_names)            \
+   OVERLAY_PARAM_BOOL(text_outline)                  \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
@@ -175,6 +176,8 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(picmip)                      \
    OVERLAY_PARAM_CUSTOM(af)                          \
    OVERLAY_PARAM_CUSTOM(preset)                      \
+   OVERLAY_PARAM_CUSTOM(text_outline_color)          \
+   OVERLAY_PARAM_CUSTOM(text_outline_thickness)      \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -291,6 +294,8 @@ struct overlay_params {
    int af;
    int preset;
    size_t font_params_hash;
+   unsigned text_outline_color;
+   float text_outline_thickness;
 };
 
 const extern char *overlay_param_names[];

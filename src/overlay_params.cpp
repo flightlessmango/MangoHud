@@ -449,6 +449,8 @@ parse_gl_size_query(const char *str)
 #define parse_battery_color(s) parse_color(s)
 #define parse_media_player_format(s) parse_str_tokenize(s, ";", false)
 #define parse_fsr_steam_sharpness(s) parse_float(s)
+#define parse_text_outline_color(s) parse_color(s)
+#define parse_text_outline_thickness(s) parse_float(s)
 
 static bool
 parse_help(const char *str)
@@ -612,6 +614,7 @@ static void set_param_defaults(struct overlay_params *params){
    params->enabled[OVERLAY_PARAM_ENABLED_fcat] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_horizontal_stretch] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_text_outline] = true;
    params->fps_sampling_period = 500000000; /* 500ms */
    params->width = 0;
    params->height = 140;
@@ -660,6 +663,8 @@ static void set_param_defaults(struct overlay_params *params){
    params->preset = -1;
    params->font_size = 24;
    params->table_columns = 3;
+   params->text_outline_color = 0x000000;
+   params->text_outline_thickness = 1.5;
 }
 
 void
