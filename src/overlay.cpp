@@ -378,6 +378,30 @@ void position_layer(struct swapchain_stats& data, const struct overlay_params& p
    }
 }
 
+void RenderOutlinedText(const char* text, ImU32 textColor, float outlineThickness) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    ImGuiContext& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+
+    ImVec2 textSize = ImGui::CalcTextSize(text);
+    ImU32 outlineColor = IM_COL32(0, 0, 0, 255);
+
+    ImVec2 pos = window->DC.CursorPos;
+
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_text_outline] && outlineThickness > 0.0f) {
+        drawList->AddText(ImGui::GetFont(), ImGui::GetFontSize(), ImVec2(pos.x - outlineThickness, pos.y), outlineColor, text);
+        drawList->AddText(ImGui::GetFont(), ImGui::GetFontSize(), ImVec2(pos.x + outlineThickness, pos.y), outlineColor, text);
+        drawList->AddText(ImGui::GetFont(), ImGui::GetFontSize(), ImVec2(pos.x, pos.y - outlineThickness), outlineColor, text);
+        drawList->AddText(ImGui::GetFont(), ImGui::GetFontSize(), ImVec2(pos.x, pos.y + outlineThickness), outlineColor, text);
+    }
+
+    drawList->AddText(ImGui::GetFont(), ImGui::GetFontSize(), pos, textColor, text);
+
+    ImGui::ItemSize(textSize, style.FramePadding.y);
+}
+
 void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...)
 {
    ImVec2 pos = ImGui::GetCursorPos();
@@ -392,8 +416,8 @@ void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...)
       ImVec2 sz = ImGui::CalcTextSize(buffer);
       ImGui::SetCursorPosX(pos.x + off_x - sz.x);
    }
-
-   ImGui::TextColored(col,"%s", buffer);
+   RenderOutlinedText(buffer, ImGui::ColorConvertFloat4ToU32(col), 1.5f);
+   // ImGui::TextColored(col,"%s", buffer);
 }
 
 void center_text(const std::string& text)
@@ -475,11 +499,11 @@ void render_mpris_metadata(const struct overlay_params& params, mutexed_metadata
          if (fmt.text.empty()) continue;
          new_pos = get_ticker_limited_pos(meta.ticker.pos, fmt.width, left_limit, right_limit);
          ImGui::SetCursorPosX(new_pos);
-         ImGui::TextColored(color, "%s", fmt.text.c_str());
+         HUDElements.TextColored(color, "%s", fmt.text.c_str());
       }
 
       if (!meta.meta.playing) {
-         ImGui::TextColored(color, "(paused)");
+         HUDElements.TextColored(color, "(paused)");
       }
 
       //ImGui::PopFont();
@@ -579,13 +603,33 @@ ImVec4 change_on_load_temp(LOAD_DATA& data, unsigned current)
    }
 }
 
-void horizontal_separator(struct overlay_params& params){
-   ImGui::SameLine();
-   ImGui::Spacing();
-   ImGui::SameLine();
-   ImGui::GetWindowDrawList()->AddLine(ImVec2(ImGui::GetCursorScreenPos().x - 5, ImGui::GetCursorScreenPos().y + 2), ImVec2(ImGui::GetCursorScreenPos().x - 5, ImGui::GetCursorScreenPos().y + params.font_size * 0.85), params.vram_color, 2);
-   ImGui::SameLine();
-   ImGui::Spacing();
+void horizontal_separator(struct overlay_params& params) {
+    ImGui::SameLine();
+    ImGui::Spacing();
+    ImGui::SameLine();
+
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    ImVec2 cursorPos = ImGui::GetCursorScreenPos();
+    ImVec2 startPos(cursorPos.x - 5, cursorPos.y + 2);
+    ImVec2 endPos(startPos.x, cursorPos.y + params.font_size * 0.85);
+
+    float outlineThickness = 1.0f;
+
+   if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_text_outline]){
+      // Draw the black outline
+      drawList->AddLine(ImVec2(startPos.x - outlineThickness, startPos.y), ImVec2(startPos.x - outlineThickness, endPos.y), IM_COL32_BLACK, outlineThickness + 2);
+      drawList->AddLine(ImVec2(startPos.x + outlineThickness, startPos.y), ImVec2(startPos.x + outlineThickness, endPos.y), IM_COL32_BLACK, outlineThickness + 2);
+      drawList->AddLine(ImVec2(startPos.x - outlineThickness, startPos.y - outlineThickness/2), ImVec2(startPos.x + outlineThickness, startPos.y - outlineThickness/2), IM_COL32_BLACK, outlineThickness + 2);
+      drawList->AddLine(ImVec2(startPos.x - outlineThickness, endPos.y + outlineThickness/2), ImVec2(startPos.x + outlineThickness, endPos.y + outlineThickness/2), IM_COL32_BLACK, outlineThickness + 2);
+   } else {
+      outlineThickness *= 2;
+   }
+
+    // Draw the separator line
+    drawList->AddLine(startPos, endPos, params.vram_color, outlineThickness);
+
+    ImGui::SameLine();
+    ImGui::Spacing();
 }
 
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan)

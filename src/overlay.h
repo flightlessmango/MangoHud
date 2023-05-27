@@ -7,6 +7,7 @@
 #include <vector>
 #include <deque>
 #include <imgui.h>
+#include "imgui_internal.h"
 #include "overlay_params.h"
 #include "hud_elements.h"
 #include "engine_types.h"
@@ -120,4 +121,5 @@ void render_mpris_metadata(const overlay_params& params, mutexed_metadata& meta,
 void update_fan();
 void next_hud_position(struct overlay_params& params);
 void horizontal_separator(struct overlay_params& params);
+void RenderOutlinedText(const char* text, ImU32 textColor, float outlineThickness);
 #endif //MANGOHUD_OVERLAY_H

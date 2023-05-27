@@ -610,6 +610,7 @@ static void set_param_defaults(struct overlay_params *params){
    params->enabled[OVERLAY_PARAM_ENABLED_throttling_status] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_fcat] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_horizontal_stretch] = true;
+   params->enabled[OVERLAY_PARAM_ENABLED_text_outline] = true;
    params->fps_sampling_period = 500000000; /* 500ms */
    params->width = 0;
    params->height = 140;
