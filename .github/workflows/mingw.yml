@@ -10,7 +10,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: Install prerequisites
         run: |
-          pacman -Syu mingw-w64-gcc meson python-mako glslang mingw-w64-headers git --noconfirm
+          pacman -Syu mingw-w64-gcc meson python-mako glslang mingw-w64-headers git python-numpy python-matplotlib --noconfirm
       - name: configure
         run: meson setup --cross-file mingw64.txt build64
       - name: build

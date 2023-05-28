@@ -28,7 +28,9 @@ jobs:
           libglew-dev \
           libglfw3-dev \
           libwayland-dev \
-          libxnvctrl-dev
+          libxnvctrl-dev \
+          numpy \
+          matplotlib
         sudo pip3 install 'meson>=0.60'
     - name: 'Install clang'
       if:  ${{ (matrix.compiler == 'clang') }}
