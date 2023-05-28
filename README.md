@@ -149,7 +149,7 @@ If you do not wish to compile anything, simply download the file under [Releases
 
 ### Arch-based distributions
 
-If you are using an Arch-based distribution, install [`mangohud`](https://aur.archlinux.org/packages/mangohud/) and [`lib32-mangohud`](https://aur.archlinux.org/packages/lib32-mangohud/) with your favourite AUR helper. [`mangohud-git`](https://aur.archlinux.org/packages/mangohud-git/) and [`lib32-mangohud-git`](https://aur.archlinux.org/packages/lib32-mangohud-git/) are also available on the AUR if you want the up-to-date version of MangoHud. These can help fix issues with the hud not activating when using older releases from pacman!
+If you are using an Arch-based distribution, install [`mangohud`](https://archlinux.org/packages/extra/x86_64/mangohud/) and [`lib32-mangohud`](https://archlinux.org/packages/multilib/x86_64/lib32-mangohud/) from the `extra`/`multilib` repository. [`mangohud-git`](https://aur.archlinux.org/packages/mangohud-git/) and [`lib32-mangohud-git`](https://aur.archlinux.org/packages/lib32-mangohud-git/) are available on the AUR to be installed via your favourite AUR helper. These can help fix issues with the hud not activating when using stable releases from pacman!
 
 If you are building it by yourself, you need to enable multilib repository, by editing pacman config:
 
