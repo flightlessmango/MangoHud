@@ -9,7 +9,7 @@ project('MangoHud',
 cc = meson.get_compiler('c')
 cpp = meson.get_compiler('cpp')
 
-prog_python = import('python').find_installation('python3', modules: ['mako'])
+prog_python = import('python').find_installation('python3', modules: ['mako', 'numpy', 'matplotlib'])
 null_dep = dependency('', required : false)
 
 mangohud_version = vcs_tag(
