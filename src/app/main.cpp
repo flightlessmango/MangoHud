@@ -44,6 +44,7 @@ static bool mangoapp_paused = false;
 std::mutex mangoapp_m;
 std::condition_variable mangoapp_cv;
 static uint8_t raw_msg[1024] = {0};
+static uint32_t screenWidth, screenHeight;
 
 static unsigned int get_prop(const char* propName){
     Display *x11_display = glfwGetX11Display();
@@ -193,6 +194,8 @@ static void msg_read_thread(){
                     new_frame = true;
                 }
                 mangoapp_cv.notify_one();
+                screenWidth = mangoapp_v1->outputWidth;
+                screenHeight = mangoapp_v1->outputHeight;
             }
         } else {
             printf("Unsupported mangoapp struct version: %i\n", hdr->version);
@@ -242,7 +245,8 @@ static bool render(GLFWwindow* window) {
     position_layer(sw_stats, params, window_size);
     render_imgui(sw_stats, params, window_size, true);
     overlay_end_frame();
-    glfwSetWindowSize(window, 1280, 800);
+    if (screenWidth && screenHeight)
+        glfwSetWindowSize(window, screenWidth, screenHeight);
     ImGui::EndFrame();
     return last_window_size.x != window_size.x || last_window_size.y != window_size.y;
 }
