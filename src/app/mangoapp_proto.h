@@ -15,6 +15,8 @@ struct mangoapp_msg_v1 {
     // For debugging
     uint64_t app_frametime_ns;
     uint64_t latency_ns;
+    uint32_t outputWidth;
+    uint32_t outputHeight;
     // WARNING: Always ADD fields, never remove or repurpose fields
 } __attribute__((packed));
 
