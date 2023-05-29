@@ -353,7 +353,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `hud_no_margin`                    | Remove margins around MangoHud                                                        |
 | `io_read`<br> `io_write`           | Show non-cached IO read/write, in MiB/s                                               |
 | `log_duration`                     | Set amount of time the logging will run for (in seconds)                              |
-| `log_interval`                     | Change the default log interval. Default is `100`                                     |
+| `log_interval`                     | Change the default log interval in milliseconds. Default is `0`                       |
 | `media_player_format`              | Format media player metadata. Add extra text etc. Semi-colon breaks to new line. Defaults to `{title};{artist};{album}` |
 | `media_player_name`                | Force media player DBus service name without the `org.mpris.MediaPlayer2` part, like `spotify`, `vlc`, `audacious` or `cantata`. If none is set, MangoHud tries to switch between currently playing players |
 | `media_player`                     | Show media player metadata                                                            |
