@@ -27,9 +27,9 @@ A Vulkan and OpenGL overlay for monitoring FPS, temperatures, CPU/GPU load and m
     - [Vulkan Vsync](#vulkan-vsync)
   - [Keybindings](#keybindings)
   - [Workarounds](#workarounds)
-  - [MangoHud FPS logging](#mangohud-fps-logging)
-    - [Multiple log files](#multiple-log-files)
-    - [Log uploading walkthrough](#log-uploading-walkthrough)
+  - [FPS logging](#fps-logging)
+    - [Online viualization: FlightlessMango.com](#online-viualization-flightlessmangocom)
+    - [Local visualization: `mangoplot`](#local-visualization-mangoplot)
 
 ## Installation - Build From Source
 
@@ -430,21 +430,28 @@ Options starting with "gl_*" are for OpenGL.
 - `gl_bind_framebuffer = 0..N` : (Re)bind given framebuffer before MangoHud gets drawn. Helps with Crusader Kings III.
 - `gl_dont_flip = 1` : Don't swap origin if using GL_UPPER_LEFT. Helps with Ryujinx.
 
-## MangoHud FPS logging
+## FPS logging
 
 You must set a valid path for `output_folder` in your configuration to store logs in.
 
-When you toggle logging (using the keybind `Shift_L+F2`), a file is created with the game name plus a date & timestamp in your `output_folder`.
+When you toggle logging (default keybind is `Shift_L+F2`), a file is created with the game name plus a date & timestamp in your `output_folder`.
 
-Log files can be uploaded to [Flightlessmango.com](https://flightlessmango.com/games/user_benchmarks) to create graphs automatically.
+Log files can be visualized with two different tools: online and locally.
 
-You can share the created page with others, just link it.
+### Online viualization: FlightlessMango.com
+Log files can be (batch) uploaded to [FlightlessMango.com](https://flightlessmango.com/games/user_benchmarks), which will then take care of creating a frametime graph and a summary with 1% min / average framerate / 97th percentile in a table form and a horizontal bar chart form.
 
-### Multiple log files
-
-It's possible to upload multiple files when using [Flightlessmango.com](https://flightlessmango.com/games/user_benchmarks). You can rename them to your preferred names and upload them in a batch.
-These filenames will be used as the legend in the graph.
-
-### Log uploading walkthrough
+Notes:
+- Uploaded benchmarks are public: you can share them with anyone by simply giving them the link.
+- Benchmark filenames are used as legend in the produced tables and graphs, they can be renamed after the upload.
 
 ![Gif illustrating the log uploading process](assets/log_upload_example.gif)
+
+### Local visualization: `mangoplot`
+`mangoplot` is a plotting script that is shipped with `MangoHud`: on a given folder, it takes each log file, makes a 1D heatmap of its framerates, then stacks the heats maps vertically to form a 2D graph for easy visual comparison between benchmarks.
+
+Example output:
+
+![Overwatch 2 windows 11 vs linux](assets/Overwatch2-w11-vs-linux.svg)
+
+<sub><sup>Overwatch 2, 5950X + 5700XT, low graphics preset, FHD, 50% render scale</sup></sub>
