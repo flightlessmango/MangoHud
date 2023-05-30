@@ -13,9 +13,20 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Cursor
-
+from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.ticker import EngFormatter
 
+plt.rcParams['font.family'] = "Lato,serif"
+plt.rcParams['font.weight'] = "600"
+
+background_color = "#1A1C1D"
+legend_facecolor = "#585f63"
+legend_textcolor = "#cccbc9"
+text_color = "#e8e6e3"
+mango_color = "#BB770A"
+graphbox_linewidth = 1.5
+
+mango_cmap = LinearSegmentedColormap.from_list("mango_heat", [background_color, mango_color])
 
 def identity(val):
     r"""
@@ -373,12 +384,20 @@ if __name__ == '__main__':
         x_labels.append(str(fps_subdivs * i))
 
     fig, ax = plt.subplots()
+
+    # change color of the graph box to the same color as the text
+    for spine in ['left', 'right', 'bottom', 'top']:
+      ax.spines[spine].set_color(text_color)
+      ax.spines[spine].set_linewidth(graphbox_linewidth)
+
     im = ax.imshow(distributions,
                    aspect="auto",
-                   extent=[0, max_size*fps_subdivs, 0, num_benchs])
+                   extent=[0, max_size*fps_subdivs, 0, num_benchs],
+                   cmap=mango_cmap)
 
+    # draw thick line that separates each benchmark
     for i in range(len(y_labels)+1):
-        ax.axhline(float(i), color='white', lw=2)
+        ax.axhline(float(i), color=text_color, lw=graphbox_linewidth)
 
     i = 0
     for datafile in database.datafiles:
@@ -388,24 +407,28 @@ if __name__ == '__main__':
                           lw=3)
 
             ax.axvline(datafile.get_variable("0.1%"),
-                       color='#f45d7bff',
+                       color='#35260f',
                        label=("0.1%" if i == 0 else None), **kwargs)
 
             ax.axvline(datafile.get_variable("1%"),
-                       color='#c879c1ff',
+                       color='#6E4503',
                        label=("1%" if i == 0 else None), **kwargs)
 
             ax.axvline(datafile.get_variable("50%"),
-                       color='#7b4182ff',
+                       color='#0967BA',
                        label=("50%" if i == 0 else None), **kwargs)
 
             ax.axvline(datafile.get_variable("average fps"),
-                       color='#336f74ff',
+                       color='#003A6E',
                        label=("Average" if i == 0 else None), **kwargs)
             i += 1
 
+    ax.tick_params(axis='y', colors=text_color)
+    ax.tick_params(axis='x', colors=text_color)
     ax.set_yticks(np.arange(len(y_labels)-0.5, 0, -1), labels=y_labels)
     ax.grid(False)
+
+    fig.set_facecolor(background_color)
 
     ax.ticklabel_format(axis='x', style='plain')
 
@@ -413,7 +436,7 @@ if __name__ == '__main__':
     ax.xaxis.set_major_formatter(formatter0)
 
     plt.tight_layout()
-    plt.legend()
+    plt.legend(facecolor=legend_facecolor, labelcolor=legend_textcolor)
 
     cursor = Cursor(ax,
                     horizOn=False,
