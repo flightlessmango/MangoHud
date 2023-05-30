@@ -5,6 +5,7 @@ class Test:
     def __init__(self):
         self.options = {}
         self.error_count = 0
+        self.ignore_params = ["pci_dev", "mangoapp_steam", "fsr_steam_sharpness"]
         # self.files_changed()
         self.get_options()
         self.get_param_defaults()
@@ -22,7 +23,7 @@ class Test:
                 if ("OVERLAY_PARAM_BOOL" in line or "OVERLAY_PARAM_CUSTOM"
                     in line) and not "#" in line:
                     match = re.search(regex, line)
-                    if match:
+                    if match and match.group(1) not in self.ignore_params:
                         self.options[match.group(1)] = None
 
     def find_options_in_readme(self):
@@ -37,9 +38,13 @@ class Test:
         with open("../data/MangoHud.conf") as f:
             file = f.read()
             for option, val in self.options.items():
+                if option in self.ignore_params:
+                    return
+
                 if not option in file:
                     self.error_count += 1
                     print(f"Option: {option} is not found in MangoHud.conf")
+
                 if option in file:
                     option = "# " + option
                     for line in file.splitlines():
@@ -109,8 +114,11 @@ class Test:
                         if "fps_sampling_period" in key:
                             value = re.sub(r';\s*/\*.*?\*/', '', value)
                             value = str(int(int(value) / 1000000))
-                        # FIXME sometimes we get a string inside a string
-                        # which breaks comparisons
+
+                        # if value is a list, make sure we don't store str in str
+                        if type(value) == list:
+                            value = [element.strip('"') for element in value]
+
                         self.options[key] = value
 
 Test()
