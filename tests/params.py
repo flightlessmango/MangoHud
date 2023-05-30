@@ -11,6 +11,7 @@ class Test:
         self.get_param_defaults()
         self.find_options_in_readme()
         self.find_options_in_conf()
+        # print(self.options)
 
         if self.error_count > 0:
             print(f"number of errors: {self.error_count}")
@@ -23,8 +24,12 @@ class Test:
                 if ("OVERLAY_PARAM_BOOL" in line or "OVERLAY_PARAM_CUSTOM"
                     in line) and not "#" in line:
                     match = re.search(regex, line)
-                    if match and match.group(1) not in self.ignore_params:
-                        self.options[match.group(1)] = None
+                    if match:
+                        key = match.group(1)
+                        if key in self.ignore_params:
+                            continue
+                        else:
+                            self.options[key] = None
 
     def find_options_in_readme(self):
         with open("../README.md") as f:
@@ -38,8 +43,6 @@ class Test:
         with open("../data/MangoHud.conf") as f:
             file = f.read()
             for option, val in self.options.items():
-                if option in self.ignore_params:
-                    return
 
                 if not option in file:
                     self.error_count += 1
@@ -86,6 +89,10 @@ class Test:
                 # Extract the contents of the function
                 function_contents = match.group(2)
                 for line in function_contents.splitlines():
+                    for option in self.options:
+                        if line.find(option) != -1:
+                            return
+
                     # FIXME: Some variables get stored as string in a string
                     if not "enabled" in line:
                         line = line.replace("params->", "")
