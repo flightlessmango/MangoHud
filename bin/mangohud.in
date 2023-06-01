@@ -15,8 +15,16 @@ if [ "$1" = "--dlsym" ]; then
 	shift
 fi
 
-# Preload using the plain filenames of the libs, the dynamic linker will
-# figure out whether the 32 or 64 bit version should be used
-LD_PRELOAD="${LD_PRELOAD:+$LD_PRELOAD:}${MANGOHUD_LIB_NAME}"
+# Make sure we don't append mangohud lib multiple times
+# otherwise this could cause issues with steam runtime
+case ":${LD_PRELOAD-}:" in
+    (*:$MANGOHUD_LIB_NAME:*)
+        ;;
+    (*)
+	# Preload using the plain filenames of the libs, the dynamic linker will
+	# figure out whether the 32 or 64 bit version should be used
+        LD_PRELOAD="${LD_PRELOAD:+$LD_PRELOAD:}${MANGOHUD_LIB_NAME}"
+esac
+
 
 exec env MANGOHUD=1 LD_PRELOAD="${LD_PRELOAD}" "$@"
