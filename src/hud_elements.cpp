@@ -849,7 +849,7 @@ void HudElements::gamescope_scaler(){
     HUDElements.TextColored(HUDElements.colors.engine, "%s", "SCALER");
     ImguiNextColumnOrNewRow();
 
-    if (HUDElements.g_scaler >= 0 && HUDElements.g_scaler < (int)ARRAY_SIZE(gamescope_upscale_scaler))
+    if (ARRAY_CHECK_BOUNDS(gamescope_upscale_scaler, HUDElements.g_scaler))
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", gamescope_upscale_scaler[HUDElements.g_scaler]);
     else
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", "UNKNOWN");
@@ -865,7 +865,7 @@ void HudElements::gamescope_scaler_filter(){
     HUDElements.TextColored(HUDElements.colors.engine, "%s", "FILTER");
     ImguiNextColumnOrNewRow();
 
-    if (HUDElements.g_scaler_filter >= 0 && HUDElements.g_scaler_filter < (int)ARRAY_SIZE(gamescope_upscale_filter))
+    if (ARRAY_CHECK_BOUNDS(gamescope_upscale_filter, HUDElements.g_scaler_filter))
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", gamescope_upscale_filter[HUDElements.g_scaler_filter]);
     else
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", "UNKNOWN");
