@@ -8,10 +8,15 @@ using json = nlohmann::json;
 static bool init_intel = false;
 struct gpuInfo gpu_info_intel {};
 
-static void intelGpuThread(){
+static void intelGpuThread(bool runtime){
     init_intel = true;
     static char stdout_buffer[1024];
-    FILE* intel_gpu_top = popen("intel_gpu_top -J -s 500", "r");
+    static FILE* intel_gpu_top;
+    if (runtime)
+        intel_gpu_top = popen("steam-runtime-launch-client --alongside-steam --host -- intel_gpu_top -J -s 500", "r");
+    else
+        intel_gpu_top = popen("intel_gpu_top -J -s 500", "r");
+
     int num_line = 0;
     std::string buf;
     int num_iterations = 0;
@@ -63,8 +68,29 @@ static void intelGpuThread(){
 }
 
 void getIntelGpuInfo(){
-    if (!init_intel)
-        std::thread(intelGpuThread).detach();
+    if (!init_intel){
+        static bool runtime = false;
+        int pressure_vessel = system("steam-runtime-launch-client --alongside-steam --host >/dev/null 2>&1");
+        pressure_vessel /= 256;
+        switch (pressure_vessel){
+            case 127:
+                SPDLOG_DEBUG("We're not inside the steam runtime container, run mango_intel_stats normally.");
+                break;
+
+            case 125:
+                SPDLOG_DEBUG("We're inside the steam runtime container, but --alongside-steam is not implemented yet.");
+                SPDLOG_DEBUG("Disabling gpu stats");
+                _params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
+                break;
+
+            case 0:
+                SPDLOG_DEBUG("We're inside the steam runtime container, run mango_intel_stats through steam-runtime-launch-client");
+                runtime = true;
+                break;
+        }
+
+        std::thread(intelGpuThread, runtime).detach();
+    }
 
     gpu_info = gpu_info_intel;
 }

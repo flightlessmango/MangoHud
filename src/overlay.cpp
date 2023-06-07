@@ -767,8 +767,8 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
    }
 
 #ifdef __linux__
-   // NVIDIA or Intel but maybe has Optimus
-   if (vendorID == 0x8086 || vendorID == 0x10de)
+   // NVIDIA
+   if (vendorID == 0x10de)
       if(checkNvidia(pci_dev))
          vendorID = 0x10de;
 
