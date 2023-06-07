@@ -870,16 +870,27 @@ void HudElements::gamescope_scaler_filter(){
     else
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", "UNKNOWN");
 
-    // Additional parameters
-    if (HUDElements.g_scaler_filter == 2) { // FSR
-        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hide_fsr_sharpness]) {
+    // Additional hud elements
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hide_scaler_additional])
+        return;
+
+    switch (HUDElements.g_scaler_filter) {
+        case 2: // FSR
             ImguiNextColumnOrNewRow();
-            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", HUDElements.g_fsrSharpness);
-            ImGui::SameLine(0,1.0f);
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", HUDElements.g_scaler_sharpness);
+            ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(HUDElements.sw_stats->font1);
             HUDElements.TextColored(HUDElements.colors.text, "Sharp");
             ImGui::PopFont();
-        }
+            break;
+
+        case 3: // NIS
+            ImguiNextColumnOrNewRow();
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f",
+                (20 - HUDElements.g_scaler_sharpness) / 20.0f * 100.0f);
+            ImGui::SameLine(0, 1.0f);
+            HUDElements.TextColored(HUDElements.colors.text, "%%");
+            break;
     }
 }
 

@@ -24,7 +24,7 @@ class HudElements{
         int table_columns_count = 0;
         int g_scaler_filter = -1;
         int g_scaler = -1;
-        int g_fsrSharpness = -1;
+        int g_scaler_sharpness = -1;
         Clock::time_point last_exec;
         std::vector<std::pair<std::string, std::string>> options;
         std::vector<std::pair<void(*)(), std::string >> ordered_functions;

@@ -11,7 +11,7 @@ struct mangoapp_msg_v1 {
     uint32_t pid;
     uint64_t visible_frametime_ns;
     uint8_t scaler_filter;
-    uint8_t fsrSharpness;
+    uint8_t scaler_sharpness;
     // For debugging
     uint64_t app_frametime_ns;
     uint64_t latency_ns;

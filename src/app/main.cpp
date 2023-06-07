@@ -166,9 +166,9 @@ static void msg_read_thread(){
                     HUDElements.g_scaler = mangoapp_v1->scaler;
                     HUDElements.g_scaler_filter = mangoapp_v1->scaler_filter;
                     if (params.fsr_steam_sharpness < 0)
-                        HUDElements.g_fsrSharpness = mangoapp_v1->fsrSharpness;
+                        HUDElements.g_scaler_sharpness = mangoapp_v1->scaler_sharpness;
                     else
-                       HUDElements.g_fsrSharpness = params.fsr_steam_sharpness - mangoapp_v1->fsrSharpness;
+                        HUDElements.g_scaler_sharpness = params.fsr_steam_sharpness - mangoapp_v1->scaler_sharpness;
                 }
                 if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam]){
                     steam_focused = get_prop("GAMESCOPE_FOCUSED_APP_GFX") == 769;
