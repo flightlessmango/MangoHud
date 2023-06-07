@@ -163,6 +163,7 @@ static void msg_read_thread(){
                     update_hud_info_with_frametime(sw_stats, params, vendorID, mangoapp_v1->visible_frametime_ns);
 
                 if (msg_size > offsetof(mangoapp_msg_v1, scaler_filter)){
+                    HUDElements.g_scaler = mangoapp_v1->scaler;
                     HUDElements.g_scaler_filter = mangoapp_v1->scaler_filter;
                     if (params.fsr_steam_sharpness < 0)
                         HUDElements.g_fsrSharpness = mangoapp_v1->fsrSharpness;

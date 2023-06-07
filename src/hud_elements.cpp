@@ -839,6 +839,20 @@ void HudElements::battery(){
 #endif
 }
 
+void HudElements::gamescope_scaler(){
+    static const char* const gamescope_upscale_scaler[] = {"AUTO", "INTEGER", "FIT", "FILL", "STRETCH"};
+    if (HUDElements.g_scaler < 0 || HUDElements.g_scaler > (int)ARRAY_SIZE(gamescope_upscale_scaler))
+        return;
+
+    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_scaler])
+        return;
+
+    ImguiNextColumnFirstItem();
+    HUDElements.TextColored(HUDElements.colors.engine, "%s", "SCALER");
+    ImguiNextColumnOrNewRow();
+    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", gamescope_upscale_scaler[HUDElements.g_scaler]);
+}
+
 void HudElements::gamescope_scaler_filter(){
     static const char* const gamescope_upscale_filter[] = {"LINEAR", "NEAREST", "FSR", "NIS"};
     if (HUDElements.g_scaler_filter < 0 || HUDElements.g_scaler_filter > (int)ARRAY_SIZE(gamescope_upscale_filter))
@@ -1191,6 +1205,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
                                       exec_list.push_back({int(ordered_functions.size() - 1), value});       }
     if (param == "battery")         { ordered_functions.push_back({battery, value});                }
     if (param == "fps_only")        { ordered_functions.push_back({fps_only, value});               }
+    if (param == "scaler")          { ordered_functions.push_back({gamescope_scaler, value});       }
     if (param == "filter")          { ordered_functions.push_back({gamescope_scaler_filter, value});}
     if (param == "debug")           { ordered_functions.push_back({gamescope_frame_timing, value}); }
     if (param == "gamepad_battery") { ordered_functions.push_back({gamepad_battery, value});        }
@@ -1237,6 +1252,8 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({battery,            value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_fan])
         ordered_functions.push_back({fan,                value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_scaler])
+        ordered_functions.push_back({gamescope_scaler,   value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_filter])
         ordered_functions.push_back({gamescope_scaler_filter, value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_throttling_status])
@@ -1258,7 +1275,7 @@ void HudElements::legacy_elements(){
     if (params->enabled[OVERLAY_PARAM_ENABLED_frame_timing])
         ordered_functions.push_back({frame_timing,       value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_frame_count])
-        ordered_functions.push_back({frame_count,         value});
+        ordered_functions.push_back({frame_count,        value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_debug] && !params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
         ordered_functions.push_back({gamescope_frame_timing, value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_gamemode])

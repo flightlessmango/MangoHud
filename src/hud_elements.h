@@ -23,6 +23,7 @@ class HudElements{
         int text_column = 1;
         int table_columns_count = 0;
         int g_scaler_filter = -1;
+        int g_scaler = -1;
         int g_fsrSharpness = -1;
         Clock::time_point last_exec;
         std::vector<std::pair<std::string, std::string>> options;
@@ -65,6 +66,7 @@ class HudElements{
         static void _exec();
         static void battery();
         static void fps_only();
+        static void gamescope_scaler();
         static void gamescope_scaler_filter();
         static void gamescope_frame_timing();
         static void gamepad_battery();
