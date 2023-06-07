@@ -841,8 +841,6 @@ void HudElements::battery(){
 
 void HudElements::gamescope_scaler(){
     static const char* const gamescope_upscale_scaler[] = {"AUTO", "INTEGER", "FIT", "FILL", "STRETCH"};
-    if (HUDElements.g_scaler < 0 || HUDElements.g_scaler > (int)ARRAY_SIZE(gamescope_upscale_scaler))
-        return;
 
     if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_scaler])
         return;
@@ -850,21 +848,27 @@ void HudElements::gamescope_scaler(){
     ImguiNextColumnFirstItem();
     HUDElements.TextColored(HUDElements.colors.engine, "%s", "SCALER");
     ImguiNextColumnOrNewRow();
-    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", gamescope_upscale_scaler[HUDElements.g_scaler]);
+
+    if (HUDElements.g_scaler >= 0 && HUDElements.g_scaler < (int)ARRAY_SIZE(gamescope_upscale_scaler))
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", gamescope_upscale_scaler[HUDElements.g_scaler]);
+    else
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", "UNKNOWN");
 }
 
 void HudElements::gamescope_scaler_filter(){
     static const char* const gamescope_upscale_filter[] = {"LINEAR", "NEAREST", "FSR", "NIS"};
-    if (HUDElements.g_scaler_filter < 0 || HUDElements.g_scaler_filter > (int)ARRAY_SIZE(gamescope_upscale_filter))
-        return;
-
+    
     if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_filter])
         return;
 
     ImguiNextColumnFirstItem();
     HUDElements.TextColored(HUDElements.colors.engine, "%s", "FILTER");
     ImguiNextColumnOrNewRow();
-    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", gamescope_upscale_filter[HUDElements.g_scaler_filter]);
+
+    if (HUDElements.g_scaler_filter >= 0 && HUDElements.g_scaler_filter < (int)ARRAY_SIZE(gamescope_upscale_filter))
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", gamescope_upscale_filter[HUDElements.g_scaler_filter]);
+    else
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", "UNKNOWN");
 
     // Additional parameters
     if (HUDElements.g_scaler_filter == 2) { // FSR
