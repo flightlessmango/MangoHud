@@ -839,31 +839,28 @@ void HudElements::battery(){
 #endif
 }
 
-void HudElements::gamescope_fsr(){
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fsr] && HUDElements.g_fsrUpscale >= 0) {
-        ImguiNextColumnFirstItem();
-        string FSR_TEXT;
-        ImVec4 FSR_COLOR;
-        if (HUDElements.g_fsrUpscale){
-            FSR_TEXT = "ON";
-            FSR_COLOR = HUDElements.colors.fps_value_high;
-        } else {
-            FSR_TEXT = "OFF";
-            FSR_COLOR = HUDElements.colors.fps_value_low;
-        }
+void HudElements::gamescope_scaler_filter(){
+    static const char* const gamescope_upscale_filter[] = {"LINEAR", "NEAREST", "FSR", "NIS"};
+    if (HUDElements.g_scaler_filter < 0 || HUDElements.g_scaler_filter > (int)ARRAY_SIZE(gamescope_upscale_filter))
+        return;
 
-        HUDElements.TextColored(HUDElements.colors.engine, "%s", "FSR");
-        ImguiNextColumnOrNewRow();
-        right_aligned_text(FSR_COLOR, HUDElements.ralign_width, "%s", FSR_TEXT.c_str());
-        if (HUDElements.g_fsrUpscale){
-            if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hide_fsr_sharpness]) {
-                ImguiNextColumnOrNewRow();
-                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", HUDElements.g_fsrSharpness);
-                ImGui::SameLine(0,1.0f);
-                ImGui::PushFont(HUDElements.sw_stats->font1);
-                HUDElements.TextColored(HUDElements.colors.text, "Sharp");
-                ImGui::PopFont();
-            }
+    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_filter])
+        return;
+
+    ImguiNextColumnFirstItem();
+    HUDElements.TextColored(HUDElements.colors.engine, "%s", "FILTER");
+    ImguiNextColumnOrNewRow();
+    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", gamescope_upscale_filter[HUDElements.g_scaler_filter]);
+
+    // Additional parameters
+    if (HUDElements.g_scaler_filter == 2) { // FSR
+        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hide_fsr_sharpness]) {
+            ImguiNextColumnOrNewRow();
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", HUDElements.g_fsrSharpness);
+            ImGui::SameLine(0,1.0f);
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            HUDElements.TextColored(HUDElements.colors.text, "Sharp");
+            ImGui::PopFont();
         }
     }
 }
@@ -1194,7 +1191,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
                                       exec_list.push_back({int(ordered_functions.size() - 1), value});       }
     if (param == "battery")         { ordered_functions.push_back({battery, value});                }
     if (param == "fps_only")        { ordered_functions.push_back({fps_only, value});               }
-    if (param == "fsr")             { ordered_functions.push_back({gamescope_fsr, value});          }
+    if (param == "filter")          { ordered_functions.push_back({gamescope_scaler_filter, value});}
     if (param == "debug")           { ordered_functions.push_back({gamescope_frame_timing, value}); }
     if (param == "gamepad_battery") { ordered_functions.push_back({gamepad_battery, value});        }
     if (param == "frame_count")     { ordered_functions.push_back({frame_count, value});            }
@@ -1240,8 +1237,8 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({battery,            value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_fan])
         ordered_functions.push_back({fan,                value});
-    if (params->enabled[OVERLAY_PARAM_ENABLED_fsr])
-        ordered_functions.push_back({gamescope_fsr,      value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_filter])
+        ordered_functions.push_back({gamescope_scaler_filter, value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_throttling_status])
         ordered_functions.push_back({throttling_status,  value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_fps])
