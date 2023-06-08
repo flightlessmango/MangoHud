@@ -3,6 +3,7 @@
 #include "gpu.h"
 #include "spdlog/spdlog.h"
 #include <nlohmann/json.hpp>
+#include <sys/stat.h>
 using json = nlohmann::json;
 
 static bool init_intel = false;
@@ -70,24 +71,9 @@ static void intelGpuThread(bool runtime){
 void getIntelGpuInfo(){
     if (!init_intel){
         static bool runtime = false;
-        int pressure_vessel = system("steam-runtime-launch-client --alongside-steam --host >/dev/null 2>&1");
-        pressure_vessel /= 256;
-        switch (pressure_vessel){
-            case 127:
-                SPDLOG_DEBUG("We're not inside the steam runtime container, run mango_intel_stats normally.");
-                break;
-
-            case 125:
-                SPDLOG_DEBUG("We're inside the steam runtime container, but --alongside-steam is not implemented yet.");
-                SPDLOG_DEBUG("Disabling gpu stats");
-                _params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
-                break;
-
-            case 0:
-                SPDLOG_DEBUG("We're inside the steam runtime container, run mango_intel_stats through steam-runtime-launch-client");
-                runtime = true;
-                break;
-        }
+        static struct stat buffer;
+        if (stat("/run/pressure-vessel", &buffer) == 0)
+            runtime = true;
 
         std::thread(intelGpuThread, runtime).detach();
     }
