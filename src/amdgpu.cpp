@@ -259,10 +259,10 @@ void amdgpu_get_metrics(){
 	gpu_info.load = amdgpu_common_metrics.gpu_load_percent;
 
 	gpu_info.powerUsage = amdgpu_common_metrics.average_gfx_power_w;
-	gpu_info.CoreClock = amdgpu_common_metrics.current_gfxclk_mhz;
 	gpu_info.MemClock = amdgpu_common_metrics.current_uclk_mhz;
 
 	// Use hwmon instead, see gpu.cpp
+	// gpu_info.CoreClock = amdgpu_common_metrics.current_gfxclk_mhz;
 	// gpu_info.temp = amdgpu_common_metrics.gpu_temp_c;
 	gpu_info.apu_cpu_power = amdgpu_common_metrics.average_cpu_power_w;
 	gpu_info.apu_cpu_temp = amdgpu_common_metrics.apu_cpu_temp_c;

@@ -94,14 +94,6 @@ void getAmdGpuInfo(){
             gpu_info.load = value;
         }
 
-        if (amdgpu.core_clock) {
-            rewind(amdgpu.core_clock);
-            fflush(amdgpu.core_clock);
-            if (fscanf(amdgpu.core_clock, "%" PRId64, &value) != 1)
-                value = 0;
-
-            gpu_info.CoreClock = value / 1000000;
-        }
 
         if (amdgpu.memory_clock) {
             rewind(amdgpu.memory_clock);
@@ -147,6 +139,15 @@ void getAmdGpuInfo(){
     }
     // On some GPUs SMU can sometimes return the wrong temperature.
     // As HWMON is way more visible than the SMU metrics, let's always trust it as it is the most likely to work
+    if (amdgpu.core_clock) {
+        rewind(amdgpu.core_clock);
+        fflush(amdgpu.core_clock);
+        if (fscanf(amdgpu.core_clock, "%" PRId64, &value) != 1)
+            value = 0;
+
+        gpu_info.CoreClock = value / 1000000;
+    }
+
     if (amdgpu.temp){
         rewind(amdgpu.temp);
         fflush(amdgpu.temp);

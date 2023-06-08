@@ -884,6 +884,8 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
                amdgpu.junction_temp = fopen((hwmon_path + dir + "/temp2_input").c_str(), "r");
             if (!amdgpu.memory_temp)
                amdgpu.memory_temp = fopen((hwmon_path + dir + "/temp3_input").c_str(), "r");
+            if (!amdgpu.core_clock)
+               amdgpu.core_clock = fopen((hwmon_path + dir + "/freq1_input").c_str(), "r");
          }
 
          if (!metrics_path.empty())
@@ -898,8 +900,6 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
          SPDLOG_DEBUG("using amdgpu path: {}", device_path);
 
          for (const auto& dir : dirs) {
-            if (!amdgpu.core_clock)
-               amdgpu.core_clock = fopen((hwmon_path + dir + "/freq1_input").c_str(), "r");
             if (!amdgpu.memory_clock)
                amdgpu.memory_clock = fopen((hwmon_path + dir + "/freq2_input").c_str(), "r");
             if (!amdgpu.power_usage)
