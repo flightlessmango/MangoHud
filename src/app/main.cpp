@@ -237,6 +237,9 @@ static void shutdown(GLFWwindow* window){
 }
 
 static bool render(GLFWwindow* window) {
+    if (HUDElements.colors.update)
+        HUDElements.convert_colors(params);
+
     ImVec2 last_window_size = window_size;
     ImGui_ImplGlfw_NewFrame();
     ImGui_ImplOpenGL3_NewFrame();
