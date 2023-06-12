@@ -677,6 +677,12 @@ void HudElements::frame_timing(){
             width = ImGui::GetWindowContentRegionWidth();
             height = max_time;
         }
+
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_dynamic_frame_timing]){
+            min_time = min_frametime;
+            max_time = max_frametime;
+        }
+
         if (ImGui::BeginChild("my_child_window", ImVec2(width, height))) {
             if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_histogram]){
                 ImGui::PlotHistogram(hash, get_time_stat, HUDElements.sw_stats,
