@@ -563,6 +563,8 @@ parse_overlay_env(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_retro] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_debug] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_dynamic_frame_timing] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit] = 0;
       }
 #define OVERLAY_PARAM_BOOL(name)                                       \
       if (!strcmp(#name, key)) {                                       \
@@ -615,6 +617,8 @@ static void set_param_defaults(struct overlay_params *params){
    params->enabled[OVERLAY_PARAM_ENABLED_horizontal_stretch] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_text_outline] = true;
+   params->enabled[OVERLAY_PARAM_ENABLED_dynamic_frame_timing] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit] = false;
    params->fps_sampling_period = 500000000; /* 500ms */
    params->width = 0;
    params->height = 140;
@@ -740,6 +744,8 @@ parse_overlay_config(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_retro] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_debug] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_dynamic_frame_timing] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit] = 0;
          params->options.erase("full");
       }
       for (auto& it : params->options) {
