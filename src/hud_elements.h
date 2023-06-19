@@ -35,6 +35,8 @@ class HudElements{
             "vram", "ram", "cpu_temp", "gpu_temp"
         };
         std::vector<exec_entry> exec_list;
+        std::chrono::steady_clock::time_point overlay_start = std::chrono::steady_clock::now();
+
         void sort_elements(const std::pair<std::string, std::string>& option);
         void legacy_elements();
         void update_exec();
@@ -73,6 +75,7 @@ class HudElements{
         static void fan();
         static void throttling_status();
         static void exec_name();
+        static void duration();
 
         void convert_colors(const struct overlay_params& params);
         void convert_colors(bool do_conv, const struct overlay_params& params);

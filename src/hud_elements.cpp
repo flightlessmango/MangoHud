@@ -1063,6 +1063,25 @@ void HudElements::throttling_status(){
     }
 }
 
+void HudElements::duration(){
+    ImGui::PushFont(HUDElements.sw_stats->font1);
+    ImguiNextColumnFirstItem();
+    HUDElements.TextColored(HUDElements.colors.engine, "%s", "Duration");
+    ImguiNextColumnOrNewRow();
+    std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsedTime = currentTime - HUDElements.overlay_start;
+    int hours = std::chrono::duration_cast<std::chrono::hours>(elapsedTime).count();
+    int minutes = std::chrono::duration_cast<std::chrono::minutes>(elapsedTime).count() % 60;
+    int seconds = std::chrono::duration_cast<std::chrono::seconds>(elapsedTime).count() % 60;
+    if (hours > 0)
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i:%i:%i", hours, minutes, seconds);
+    else if (minutes > 0)
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i:%i", minutes, seconds);
+    else
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", seconds);
+    ImGui::PopFont();
+}
+
 void HudElements::graphs(){
     ImguiNextColumnFirstItem();
     ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
@@ -1235,7 +1254,8 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
     if (param == "frame_count")     { ordered_functions.push_back({frame_count, value});            }
     if (param == "fan")             { ordered_functions.push_back({fan, value});                    }
     if (param == "throttling_status")        { ordered_functions.push_back({throttling_status, value});               }
-    if (param == "exec_name")        { ordered_functions.push_back({exec_name, value});               }
+    if (param == "exec_name")        { ordered_functions.push_back({exec_name, value});             }
+    if (param == "duration")        { ordered_functions.push_back({duration, value});               }
     if (param == "graphs"){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs])
             HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs] = true;
@@ -1313,6 +1333,8 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({media_player,       value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_exec_name])
         ordered_functions.push_back({exec_name,          value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_duration])
+        ordered_functions.push_back({duration,          value});
 }
 
 void HudElements::update_exec(){

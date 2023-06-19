@@ -102,6 +102,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(text_outline)                  \
    OVERLAY_PARAM_BOOL(temp_fahrenheit)               \
    OVERLAY_PARAM_BOOL(dynamic_frame_timing)          \
+   OVERLAY_PARAM_BOOL(duration)                      \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
