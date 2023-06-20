@@ -1074,11 +1074,11 @@ void HudElements::duration(){
     int minutes = std::chrono::duration_cast<std::chrono::minutes>(elapsedTime).count() % 60;
     int seconds = std::chrono::duration_cast<std::chrono::seconds>(elapsedTime).count() % 60;
     if (hours > 0)
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i:%i:%i", hours, minutes, seconds);
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%02d:%02d:%02d", hours, minutes, seconds);
     else if (minutes > 0)
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i:%i", minutes, seconds);
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%02d:%02d", minutes, seconds);
     else
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", seconds);
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%02d", seconds);
     ImGui::PopFont();
 }
 
