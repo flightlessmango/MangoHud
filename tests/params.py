@@ -5,13 +5,13 @@ class Test:
     def __init__(self):
         self.options = {}
         self.error_count = 0
-        self.ignore_params = ["pci_dev", "mangoapp_steam", "fsr_steam_sharpness"]
+        self.ignore_params = ["pci_dev", "mangoapp_steam", "fsr_steam_sharpness",
+                              "blacklist", "media_player_format"]
         # self.files_changed()
         self.get_options()
         self.get_param_defaults()
         self.find_options_in_readme()
         self.find_options_in_conf()
-        # print(self.options)
 
         if self.error_count > 0:
             print(f"number of errors: {self.error_count}")
@@ -57,6 +57,9 @@ class Test:
                                 continue
 
                             key = line[0].strip("#").strip()
+                            if key not in self.options:
+                                continue
+
                             value = line[1].strip()
                             if "," in value:
                                 value = value.split(",")
@@ -89,9 +92,6 @@ class Test:
                 # Extract the contents of the function
                 function_contents = match.group(2)
                 for line in function_contents.splitlines():
-                    for option in self.options:
-                        if line.find(option) != -1:
-                            return
 
                     # FIXME: Some variables get stored as string in a string
                     if not "enabled" in line:
@@ -102,6 +102,9 @@ class Test:
 
                         key = line[0].strip()
                         value = line[1].strip()
+                        if key not in self.options:
+                            continue
+
                         # convert to a list if it contains curly bracket
                         if "{" in value:
                             value = value.replace("{", "").replace("}", "").strip().split(", ")
