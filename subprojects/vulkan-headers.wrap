@@ -1,9 +1,6 @@
 [wrap-file]
-directory = Vulkan-Headers-1.2.158
-source_url = https://github.com/KhronosGroup/Vulkan-Headers/archive/v1.2.158.tar.gz
-source_filename = vulkan-headers-1.2.158.tar.gz
-source_hash = 53361271cfe274df8782e1e47bdc9e61b7af432ba30acbfe31723f9df2c257f3
-patch_url = https://wrapdb.mesonbuild.com/v2/vulkan-headers_1.2.158-2/get_patch
-patch_filename = vulkan-headers-1.2.158-2-wrap.zip
-patch_hash = 860358cf5e73f458cd1e88f8c38116d123ab421d5ce2e4129ec38eaedd820e17
-
+directory = Vulkan-Headers-1.2.203
+source_url = https://github.com/KhronosGroup/Vulkan-Headers/archive/v1.2.203.tar.gz
+source_filename = vulkan-headers-1.2.203.tar.gz
+source_hash = 7239108c372f1fbe365bd8d1610ca2bb4e72b73b2151f2551bf9df54dd539639
+patch_directory = vulkan-headers
