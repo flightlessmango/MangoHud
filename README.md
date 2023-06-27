@@ -327,6 +327,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `custom_text_center`               | Display a custom text centered useful for a header e.g `custom_text_center=FlightLessMango Benchmarks` |
 | `custom_text`                      | Display a custom text e.g `custom_text=Fsync enabled`                                 |
 | `debug`                            | Shows the graph of gamescope app frametimes and latency (only on gamescope obviously) |
+| `dynamic_frame_timing`             | This changes frame_timing y-axis to correspond with the current maximum and minimum frametime instead of being a static 0-50 |
 | `engine_short_names`               | Display a short version of the used engine (e.g. `OGL` instead of `OpenGL`)           |
 | `engine_version`                   | Display OpenGL or vulkan and vulkan-based render engine's version                     |
 | `exec`                             | Display output of bash command in next column, e.g `custom_text=/home` , `exec=df -h /home \| tail -n 1`. Only works with `legacy_layout=0` |
@@ -396,6 +397,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `show_fps_limit`                   | Display the current FPS limit                                                         |
 | `swap`                             | Display swap space usage next to system RAM usage                                     |
 | `table_columns`                    | Set the number of table columns for ImGui, defaults to 3                              |
+| `temp_fahrenheit`                  | Show temperature in Fahrenheit                                                        |
 | `text_outline`                     | Draw an outline around text for better readability. Enabled by default.               |
 | `text_outline_color=`              | Set the color of `text_outline`. Default = `000000`                                   |
 | `text_outline_thickness=`          | Set the thickness of `text_outline`. Default = `1.5`                                  |
