@@ -834,7 +834,6 @@ void HudElements::battery(){
                 HUDElements.TextColored(HUDElements.colors.text, "%%");
             }
             if (Battery_Stats.current_watt != 0) {
-                printf("%i\n", HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_watt]);
                 if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_watt]){
                     ImguiNextColumnOrNewRow();
                     right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", Battery_Stats.current_watt);
