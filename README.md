@@ -387,7 +387,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `permit_upload`                    | Allow uploading of logs to Flightlessmango.com                                        |
 | `picmip`                           | Mip-map LoD bias. Negative values will increase texture sharpness (and aliasing). Positive values will increase texture blurriness `-16`-`16` |
 | `position=`                        | Location of the HUD: `top-left` (default), `top-right`, `middle-left`, `middle-right`, `bottom-left`, `bottom-right`, `top-center`, `bottom-center` |
-| `preset=`                           | Set a pre-defined preset to be used, default is `-1`. Available presets:<br>`0` (No Hud)<br> `1` (FPS Only)<br> `2` (Horizontal)<br> `3` (Extended)<br> `4` (Detailed)<br>Own presets can be defined by creating a [presets.conf](data/presets.conf) file in `~/.config/MangoHud/`.                      |
+| `preset=`                          | Comma separated list of one or more presets. Default is `-1,0,1,2,3,4`. Available presets:<br>`0` (No Hud)<br> `1` (FPS Only)<br> `2` (Horizontal)<br> `3` (Extended)<br> `4` (Detailed)<br>User defined presets can be created by using a [presets.conf](data/presets.conf) file in `~/.config/MangoHud/`.                      |
 | `procmem`<br>`procmem_shared`, `procmem_virt`| Displays process' memory usage: resident, shared and/or virtual. `procmem` (resident) also toggles others off if disabled |
 | `ram`<br>`vram`                    | Display system RAM/VRAM usage                                                         |
 | `read_cfg`                         | Add to MANGOHUD_CONFIG as first parameter to also load config file. Otherwise only `MANGOHUD_CONFIG` parameters are used |
@@ -405,6 +405,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `throttling_status`                | Show if GPU is throttling based on Power, current, temp or "other" (Only shows if throttling is currently happening). Currently disabled by default for Nvidia as it causes lag on 3000 series |
 | `time`<br>`time_format=%T`         | Display local time. See [std::put_time](https://en.cppreference.com/w/cpp/io/manip/put_time) for formatting help. NOTE: Sometimes apps may set `TZ` (timezone) environment variable to UTC/GMT |
 | `toggle_fps_limit`                 | Cycle between FPS limits. Defaults to `Shift_L+F1`                                    |
+| `toggle_preset`                    | Cycle between Presets. Defaults to `Shift_R+F10`                                      |
 | `toggle_hud=`<br>`toggle_logging=` | Modifiable toggle hotkeys. Default are `Shift_R+F12` and `Shift_L+F2`, respectively   |
 | `toggle_hud_position`              | Toggle MangoHud postion. Default is `R_Shift+F11`                                     |
 | `trilinear`                        | Force trilinear filtering                                                             |
