@@ -75,7 +75,7 @@ void imgui_init()
     if (is_blacklisted())
         return;
 
-    parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
+    parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"), false);
     _params = &params;
 
    //check for blacklist item in the config file

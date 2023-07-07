@@ -151,6 +151,7 @@ parse_string_to_keysym_vec(const char *str)
 #define parse_upload_log            parse_string_to_keysym_vec
 #define parse_upload_logs           parse_string_to_keysym_vec
 #define parse_toggle_fps_limit      parse_string_to_keysym_vec
+#define parse_toggle_preset         parse_string_to_keysym_vec
 
 #else
 #define parse_toggle_hud(x)            {}
@@ -160,7 +161,32 @@ parse_string_to_keysym_vec(const char *str)
 #define parse_upload_log(x)            {}
 #define parse_upload_logs(x)           {}
 #define parse_toggle_fps_limit(x)      {}
+#define parse_toggle_preset(x)         {}
 #endif
+
+// NOTE: This is NOT defined as an OVERLAY_PARAM and will be called manually
+static std::vector<int>
+parse_preset(const char *str)
+{
+  std::vector<int> presets;
+  auto preset_strings = str_tokenize(str);
+
+  for (auto& value : preset_strings) {
+    trim(value);
+
+    uint32_t as_int;
+    try {
+      as_int = static_cast<int>(std::stoi(value));
+    } catch (const std::invalid_argument&) {
+      SPDLOG_ERROR("invalid preset value: '{}'", value);
+      continue;
+    }
+
+    presets.push_back(as_int);
+  }
+
+  return presets;
+}
 
 static uint32_t
 parse_fps_sampling_period(const char *str)
@@ -425,7 +451,6 @@ parse_gl_size_query(const char *str)
 #define parse_fcat_screen_edge(s) parse_unsigned(s)
 #define parse_picmip(s) parse_signed(s)
 #define parse_af(s) parse_signed(s)
-#define parse_preset(s) parse_signed(s)
 
 #define parse_cpu_color(s) parse_color(s)
 #define parse_gpu_color(s) parse_color(s)
@@ -667,7 +692,6 @@ static void set_param_defaults(struct overlay_params *params){
    params->fsr_steam_sharpness = -1;
    params->picmip = -17;
    params->af = -1;
-   params->preset = -1;
    params->font_size = 24;
    params->table_columns = 3;
    params->text_outline_color = 0x000000;
@@ -676,14 +700,18 @@ static void set_param_defaults(struct overlay_params *params){
 
 void
 parse_overlay_config(struct overlay_params *params,
-                  const char *env)
+                  const char *env, bool use_existing_preset)
 {
-   *params = {};
+   std::vector<int> default_preset = {-1, 0, 1, 2, 3, 4};
+   *params = {
+     .preset = use_existing_preset ? params->preset : default_preset
+   };
    set_param_defaults(params);
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_Shift_R, XK_F12 };
    params->toggle_hud_position = { XK_Shift_R, XK_F11 };
+   params->toggle_preset = { XK_Shift_R, XK_F10 };
    params->toggle_fps_limit = { XK_Shift_L, XK_F1 };
    params->toggle_logging = { XK_Shift_L, XK_F2 };
    params->reload_cfg = { XK_Shift_L, XK_F4 };
@@ -693,16 +721,19 @@ parse_overlay_config(struct overlay_params *params,
 
 #ifdef _WIN32
    params->toggle_hud = { VK_F12 };
+   params->toggle_preset = { VK_F10 };
    params->toggle_fps_limit = { VK_F3 };
    params->toggle_logging = { VK_F2 };
    params->reload_cfg = { VK_F4 };
 
    #undef parse_toggle_hud
    #undef parse_toggle_fps_limit
+   #undef parse_toggle_preset
    #undef parse_toggle_logging
    #undef parse_reload_cfg
 
    #define parse_toggle_hud(x)         params->toggle_hud
+   #define parse_toggle_preset(x)      params->toggle_preset
    #define parse_toggle_fps_limit(x)   params->toggle_fps_limit
    #define parse_toggle_logging(x)     params->toggle_logging
    #define parse_reload_cfg(x)         params->reload_cfg
@@ -720,8 +751,14 @@ parse_overlay_config(struct overlay_params *params,
       // Get config options
       parseConfigFile(*params);
 
-      if (params->options.find("preset") != params->options.end())
-         presets(stoi(params->options.find("preset")->second), params);
+      if (!use_existing_preset && params->options.find("preset") != params->options.end()) {
+        auto presets = parse_preset(params->options.find("preset")->second.c_str());
+        if (!presets.empty())
+          params->preset = presets;
+        current_preset = params->preset[0];
+      }
+
+      presets(current_preset, params);
 
       if (params->options.find("full") != params->options.end() && params->options.find("full")->second != "0") {
 #define OVERLAY_PARAM_BOOL(name) \
@@ -767,9 +804,11 @@ parse_overlay_config(struct overlay_params *params,
          OVERLAY_PARAMS
 #undef OVERLAY_PARAM_BOOL
 #undef OVERLAY_PARAM_CUSTOM
+         if (it.first == "preset") {
+            continue;
+         }
          SPDLOG_ERROR("Unknown option '{}'", it.first.c_str());
       }
-
    }
 
    // TODO decide what to do for legacy_layout=0

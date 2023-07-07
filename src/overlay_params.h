@@ -129,6 +129,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(gl_dont_flip)                \
    OVERLAY_PARAM_CUSTOM(toggle_hud)                  \
    OVERLAY_PARAM_CUSTOM(toggle_hud_position)         \
+   OVERLAY_PARAM_CUSTOM(toggle_preset)               \
    OVERLAY_PARAM_CUSTOM(toggle_fps_limit)            \
    OVERLAY_PARAM_CUSTOM(toggle_logging)              \
    OVERLAY_PARAM_CUSTOM(reload_cfg)                  \
@@ -179,7 +180,6 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(fcat_overlay_width)          \
    OVERLAY_PARAM_CUSTOM(picmip)                      \
    OVERLAY_PARAM_CUSTOM(af)                          \
-   OVERLAY_PARAM_CUSTOM(preset)                      \
    OVERLAY_PARAM_CUSTOM(text_outline_color)          \
    OVERLAY_PARAM_CUSTOM(text_outline_thickness)      \
    OVERLAY_PARAM_CUSTOM(fps_text)                    \
@@ -271,6 +271,7 @@ struct overlay_params {
    float background_alpha, alpha;
    float cellpadding_y;
    std::vector<KeySym> toggle_hud;
+   std::vector<KeySym> toggle_preset;
    std::vector<KeySym> toggle_fps_limit;
    std::vector<KeySym> toggle_logging;
    std::vector<KeySym> reload_cfg;
@@ -297,7 +298,7 @@ struct overlay_params {
    unsigned short fcat_overlay_width;
    int picmip;
    int af;
-   int preset;
+   std::vector<int> preset;
    size_t font_params_hash;
    unsigned text_outline_color;
    float text_outline_thickness;
@@ -306,7 +307,7 @@ struct overlay_params {
 const extern char *overlay_param_names[];
 
 void parse_overlay_config(struct overlay_params *params,
-                       const char *env);
+                       const char *env, bool ignore_preset);
 void presets(int preset, struct overlay_params *params);
 bool parse_preset_config(int preset, struct overlay_params *params);
 void add_to_options(struct overlay_params *params, std::string option, std::string value);

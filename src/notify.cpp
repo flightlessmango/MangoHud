@@ -25,7 +25,7 @@ static void fileChanged(notify_thread *nt) {
                 // In the case of IN_DELETE_SELF, some editors may do a save-to-temp-file/delete-original/move-temp-file
                 // so sleep a little to let file to be replaced
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                parse_overlay_config(&local_params, getenv("MANGOHUD_CONFIG"));
+                parse_overlay_config(&local_params, getenv("MANGOHUD_CONFIG"), false);
                 if ((event->mask & IN_DELETE_SELF) || (nt->params->config_file_path != local_params.config_file_path)) {
                     SPDLOG_DEBUG("Watching config file: {}", local_params.config_file_path.c_str());
                     inotify_rm_watch(nt->fd, nt->wd);
