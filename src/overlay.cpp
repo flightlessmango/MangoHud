@@ -51,6 +51,7 @@ vector<float> frametime_data(200,0.f);
 int fan_speed;
 fcatoverlay fcatstatus;
 std::string drm_dev;
+int current_preset;
 
 void init_spdlog()
 {

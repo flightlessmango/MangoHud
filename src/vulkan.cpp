@@ -1896,7 +1896,7 @@ static VkResult overlay_CreateInstance(
    if (is_blacklisted())
       return result;
 
-   parse_overlay_config(&instance_data->params, getenv("MANGOHUD_CONFIG"));
+   parse_overlay_config(&instance_data->params, getenv("MANGOHUD_CONFIG"), false);
    _params = &instance_data->params;
 
    //check for blacklist item in the config file

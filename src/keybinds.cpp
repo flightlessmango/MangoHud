@@ -9,6 +9,7 @@ void check_keybinds(struct overlay_params& params, uint32_t vendorID){
    auto now = Clock::now(); /* us */
    auto elapsedF2 = now - last_f2_press;
    auto elapsedFpsLimitToggle = now - toggle_fps_limit_press;
+   auto elapsedPresetToggle = now - toggle_preset_press;
    auto elapsedF12 = now - last_f12_press;
    auto elapsedReloadCfg = now - reload_cfg_press;
    auto elapsedUpload = now - last_upload_press;
@@ -50,6 +51,19 @@ void check_keybinds(struct overlay_params& params, uint32_t vendorID){
       }
    }
 
+   if (elapsedPresetToggle >= keyPressDelay &&
+       keys_are_pressed(params.toggle_preset)) {
+     toggle_preset_press = now;
+     size_t size = params.preset.size();
+     for (size_t i = 0; i < size; i++){
+       if(params.preset[i] == current_preset) {
+         current_preset = params.preset[++i%size];
+         parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"), true);
+         break;
+       }
+     }
+   }
+
    if (elapsedF12 >= keyPressDelay &&
        keys_are_pressed(params.toggle_hud)) {
       last_f12_press = now;
@@ -58,7 +72,7 @@ void check_keybinds(struct overlay_params& params, uint32_t vendorID){
 
    if (elapsedReloadCfg >= keyPressDelay &&
        keys_are_pressed(params.reload_cfg)) {
-      parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
+      parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"), false);
       _params = &params;
       reload_cfg_press = now;
    }
