@@ -12,7 +12,7 @@ rm -f ${TAR_NAME}
 rm -f ${DFSG_TAR_NAME}
 
 # create tarball with meson
-meson sourcedir
+meson setup sourcedir
 meson dist --formats=xztar --include-subprojects --no-tests -C sourcedir
 mv sourcedir/meson-dist/*.tar.xz ${TAR_NAME}
 
@@ -26,6 +26,10 @@ rm ${NAME}/include/nvml.h
 rm -r ${NAME}/modules/minhook
 # spdlog from system
 rm -r ${NAME}/subprojects/spdlog-*
+# nlohmann_json from system
+rm -r ${NAME}/subprojects/nlohmann_json-*
+# remove some vulkan clutter
+rm -r ${NAME}/subprojects/Vulkan-Headers-*/cmake ${NAME}/subprojects/Vulkan-Headers-*/BUILD.gn
 # remove some dear imgui clutter
 rm -rf ${NAME}/subprojects/imgui-*/examples ${NAME}/subprojects/imgui-*/misc
 # compress new sources
