@@ -261,6 +261,15 @@ void HudElements::gpu_stats(){
             HUDElements.TextColored(HUDElements.colors.text, "W");
             ImGui::PopFont();
         }
+
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_voltage]) {
+            ImguiNextColumnOrNewRow();
+            right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.voltage);
+            ImGui::SameLine(0, 1.0f);
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            HUDElements.TextColored(HUDElements.colors.text, "mV");
+            ImGui::PopFont();
+        }
     }
 }
 

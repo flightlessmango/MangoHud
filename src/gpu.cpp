@@ -182,5 +182,13 @@ void getAmdGpuInfo(){
             value = 0;
         gpu_info.gtt_used = float(value) / (1024 * 1024 * 1024);
     }
+
+    if (amdgpu.gpu_voltage_soc) {
+        rewind(amdgpu.gpu_voltage_soc);
+        fflush(amdgpu.gpu_voltage_soc);
+        if (fscanf(amdgpu.gpu_voltage_soc, "%" PRId64, &value) != 1)
+            value = 0;
+        gpu_info.voltage = value;
+    }
 #endif
 }

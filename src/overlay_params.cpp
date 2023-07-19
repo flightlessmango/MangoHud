@@ -607,6 +607,7 @@ static void set_param_defaults(struct overlay_params *params){
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_load_change] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_cpu_load_change] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_core_load_change] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_gpu_voltage] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_frametime] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_fps_only] = false;
