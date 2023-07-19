@@ -847,6 +847,9 @@ void HudElements::battery(){
                     float minutes;
                     minutes = std::modf(Battery_Stats.remaining_time, &hours);
                     minutes *= 60;
+                    char time_buffer[32];
+                    snprintf(time_buffer, sizeof(time_buffer), "%02d:%02d", static_cast<int>(hours), static_cast<int>(minutes));
+
                     if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
                         ImGui::TableNextRow();
                         ImGui::NextColumn();
@@ -861,7 +864,10 @@ void HudElements::battery(){
 
                         ImguiNextColumnOrNewRow();
                     }
-                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%02.0f:%02.0f", hours, minutes);
+                    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact])
+                        ImGuiTableSetColumnIndex(0);
+
+                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", time_buffer);
                 }
             } else {
                 ImguiNextColumnOrNewRow();
