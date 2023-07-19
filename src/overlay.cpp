@@ -886,6 +886,8 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
                amdgpu.memory_temp = fopen((hwmon_path + dir + "/temp3_input").c_str(), "r");
             if (!amdgpu.core_clock)
                amdgpu.core_clock = fopen((hwmon_path + dir + "/freq1_input").c_str(), "r");
+            if (!amdgpu.gpu_voltage_soc)
+               amdgpu.gpu_voltage_soc = fopen((hwmon_path + dir + "/in0_input").c_str(), "r"); 
          }
 
          if (!metrics_path.empty())
