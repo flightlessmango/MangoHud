@@ -226,9 +226,11 @@ install() {
     echo DEFAULTLIB: $DEFAULTLIB
     /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud.so /usr/lib/mangohud/lib64/libMangoHud.so
     /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud_dlsym.so /usr/lib/mangohud/lib64/libMangoHud_dlsym.so
+    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud_opengl.so /usr/lib/mangohud/lib64/libMangoHud_opengl.so
     if [ "$MACHINE" = "x86_64" ]; then
       /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud.so /usr/lib/mangohud/lib32/libMangoHud.so
       /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud_dlsym.so /usr/lib/mangohud/lib32/libMangoHud_dlsym.so
+      /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud_opengl.so /usr/lib/mangohud/lib32/libMangoHud_opengl.so
     fi
 
     /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json

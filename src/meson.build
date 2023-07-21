@@ -41,7 +41,6 @@ vklayer_files = files(
   'logging.cpp',
   'config.cpp',
   'gpu.cpp',
-  'vulkan.cpp',
   'blacklist.cpp',
   'file_utils.cpp',
   'intel.cpp'
@@ -148,10 +147,10 @@ link_args += '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_d
 mangohud_static_lib = static_library(
   'MangoHud',
   mangohud_version,
+  files('vulkan.cpp'),
   util_files,
   vk_enum_to_str,
   vklayer_files,
-  opengl_files,
   overlay_spv,
   c_args : [
     pre_args,
@@ -184,6 +183,38 @@ mangohud_shared_lib = shared_library(
   'MangoHud',
   objects: mangohud_static_lib.extract_all_objects(),
   link_with: mangohud_static_lib,
+  link_args : link_args,
+  install_dir : libdir_mangohud,
+  install: true
+)
+
+mangohud_opengl_shared_lib = shared_library(
+  'MangoHud_opengl',
+  mangohud_version,
+  opengl_files,
+  vklayer_files,
+  util_files,
+  c_args : [
+    pre_args,
+    vulkan_wsi_args
+    ],
+  cpp_args : [
+    pre_args,
+    vulkan_wsi_args
+    ],
+  dependencies : [
+    mangohud_version_dep,
+    vulkan_wsi_deps,
+    dearimgui_dep,
+    spdlog_dep,
+    dbus_dep,
+    dep_dl,
+    dep_rt,
+    dep_pthread,
+    dep_vulkan,
+    windows_deps,
+    json_dep],
+  include_directories : [inc_common],
   link_args : link_args,
   install_dir : libdir_mangohud,
   install: true

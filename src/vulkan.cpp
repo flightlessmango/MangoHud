@@ -1859,9 +1859,6 @@ static VkResult overlay_CreateInstance(
 
       else if(engineName == "mesa zink") {
          engine = ZINK;
-#if !defined(_WIN32)
-         MangoHud::GL::sw_stats.engine = ZINK;
-#endif
       }
 
       else if (engineName == "Damavand")

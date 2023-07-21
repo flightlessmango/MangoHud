@@ -109,21 +109,20 @@ void imgui_create(void *ctx, const gl_wsi plat)
     imgui_shutdown();
     imgui_init();
     inited = true;
-    // if using vulkan skip OpenGL impl, fixes issues with ZINK and multiple games using DXVK
-    if (lib_loaded("libvulkan.so") && (sw_stats.engine == ZINK || sw_stats.engine == WINED3D)) {
-        SPDLOG_INFO("libvulkan is loaded, skipping OPENGL");
-        return;
-    }
 
     if (!gladLoadGL())
         spdlog::error("Failed to initialize OpenGL context, crash incoming");
+
+    deviceName = (char*)glGetString(GL_RENDERER);
+    // If we're running zink we want to rely on the vulkan loader for the hud instead.
+    if (deviceName.find("zink") != std::string::npos)
+        return;
 
     GetOpenGLVersion(sw_stats.version_gl.major,
         sw_stats.version_gl.minor,
         sw_stats.version_gl.is_gles);
 
     std::string vendor = (char*)glGetString(GL_VENDOR);
-    deviceName = (char*)glGetString(GL_RENDERER);
     SPDLOG_DEBUG("vendor: {}, deviceName: {}", vendor, deviceName);
     sw_stats.deviceName = deviceName;
     if (vendor.find("AMD") != std::string::npos
@@ -137,8 +136,6 @@ void imgui_create(void *ctx, const gl_wsi plat)
     }  else {
         vendorID = 0x10de;
     }
-    if (deviceName.find("zink") != std::string::npos)
-        sw_stats.engine = EngineTypes::ZINK;
 
     uint32_t device_id = 0;
     if (plat == gl_wsi::GL_WSI_GLX)
