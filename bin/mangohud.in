@@ -8,7 +8,7 @@ if [ "$#" -eq 0 ]; then
 	exit 1
 fi
 
-MANGOHUD_LIB_NAME="@ld_libdir_mangohud@libMangoHud.so"
+MANGOHUD_LIB_NAME="@ld_libdir_mangohud@libMangoHud_opengl.so"
 
 if [ "$1" = "--dlsym" ]; then
 	MANGOHUD_LIB_NAME="@ld_libdir_mangohud@libMangoHud_dlsym.so:${MANGOHUD_LIB_NAME}"
