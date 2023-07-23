@@ -38,6 +38,11 @@ static void intelGpuThread(bool runtime){
                         if (j["engines"]["Render/3D/0"].contains("busy"))
                             gpu_info_intel.load = j["engines"]["Render/3D/0"]["busy"].get<int>();
 
+                if  (j.contains("engines"))
+                    if (j["engines"].contains("Render/3D"))
+                        if (j["engines"]["Render/3D"].contains("busy"))
+                            gpu_info_intel.load = j["engines"]["Render/3D/0"]["busy"].get<int>();
+
                 if (j.contains("frequency"))
                     if (j["frequency"].contains("actual"))
                         gpu_info_intel.CoreClock = j["frequency"]["actual"].get<int>();
