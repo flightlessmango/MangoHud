@@ -508,6 +508,15 @@ static CPUPowerData_k10temp* init_cpu_power_data_k10temp(const std::string path)
 
     std::string coreVoltageInput, coreCurrentInput;
     std::string socVoltageInput, socCurrentInput;
+    std::string socPowerInput, corePowerInput;
+
+    if(find_input(path, "power", corePowerInput, "Pcore") && find_input(path, "power", socPowerInput, "Psoc")) {
+        powerData->corePowerFile = fopen(corePowerInput.c_str(), "r");
+        powerData->socPowerFile = fopen(socPowerInput.c_str(), "r");
+        SPDLOG_DEBUG("hwmon: using input: {}", corePowerInput);
+        SPDLOG_DEBUG("hwmon: using input: {}", socPowerInput);
+        return powerData.release();
+    }
 
     if(!find_input(path, "in", coreVoltageInput, "Vcore")) return nullptr;
     if(!find_input(path, "curr", coreCurrentInput, "Icore")) return nullptr;
