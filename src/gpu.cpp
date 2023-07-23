@@ -81,6 +81,7 @@ nvapi_util();
 #endif
 }
 
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
 void getAmdGpuInfo(){
 #ifdef __linux__
     int64_t value = 0;
@@ -157,22 +158,22 @@ void getAmdGpuInfo(){
         gpu_info.temp = value / 1000;
     }
 
-    if (amdgpu.junction_temp){
-        rewind(amdgpu.junction_temp);
-        fflush(amdgpu.junction_temp);
+    if (amdgpu.temp2){
+        rewind(amdgpu.temp2);
+        fflush(amdgpu.temp2);
         int value = 0;
-        if (fscanf(amdgpu.junction_temp, "%d", &value) != 1)
+        if (fscanf(amdgpu.temp2, "%d", &value) != 1)
             value = 0;
-        gpu_info.junction_temp = value / 1000;
+        gpu_info.temp = MAX(gpu_info.temp, value / 1000);
     }
 
-    if (amdgpu.memory_temp){
-        rewind(amdgpu.memory_temp);
-        fflush(amdgpu.memory_temp);
+    if (amdgpu.temp3){
+        rewind(amdgpu.temp3);
+        fflush(amdgpu.temp3);
         int value = 0;
-        if (fscanf(amdgpu.memory_temp, "%d", &value) != 1)
+        if (fscanf(amdgpu.temp3, "%d", &value) != 1)
             value = 0;
-        gpu_info.memory_temp = value / 1000;
+        gpu_info.temp = MAX(gpu_info.temp, value / 1000);
     }
 
     if (amdgpu.gtt_used) {
