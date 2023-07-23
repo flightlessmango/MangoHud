@@ -72,12 +72,18 @@ struct CPUPowerData_k10temp : public CPUPowerData {
          fclose(this->socVoltageFile);
       if(this->socCurrentFile)
          fclose(this->socCurrentFile);
+      if(this->corePowerFile)
+         fclose(this->corePowerFile);
+      if(this->socPowerFile)
+         fclose(this->socPowerFile);
    };
 
    FILE* coreVoltageFile {nullptr};
    FILE* coreCurrentFile {nullptr};
    FILE* socVoltageFile {nullptr};
    FILE* socCurrentFile {nullptr};
+   FILE* corePowerFile {nullptr};
+   FILE* socPowerFile {nullptr};
 };
 
 struct CPUPowerData_zenpower : public CPUPowerData {

@@ -296,9 +296,23 @@ bool CPUStats::UpdateCpuTemp() {
 static bool get_cpu_power_k10temp(CPUPowerData* cpuPowerData, float& power) {
     CPUPowerData_k10temp* powerData_k10temp = (CPUPowerData_k10temp*)cpuPowerData;
 
+    if(powerData_k10temp->corePowerFile || powerData_k10temp->socPowerFile)
+    {
+        rewind(powerData_k10temp->corePowerFile);
+        rewind(powerData_k10temp->socPowerFile);
+        fflush(powerData_k10temp->corePowerFile);
+        fflush(powerData_k10temp->socPowerFile);
+        int corePower, socPower;
+        if (fscanf(powerData_k10temp->corePowerFile, "%d", &corePower) != 1)
+            goto voltagebased;
+        if (fscanf(powerData_k10temp->socPowerFile, "%d", &socPower) != 1)
+            goto voltagebased;
+        power = (corePower + socPower) / 1000000;
+        return true;
+    }
+    voltagebased:
     if (!powerData_k10temp->coreVoltageFile || !powerData_k10temp->coreCurrentFile || !powerData_k10temp->socVoltageFile || !powerData_k10temp->socCurrentFile)
         return false;
-
     rewind(powerData_k10temp->coreVoltageFile);
     rewind(powerData_k10temp->coreCurrentFile);
     rewind(powerData_k10temp->socVoltageFile);
