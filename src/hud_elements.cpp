@@ -62,8 +62,9 @@ R format_units(T value, const char*& unit)
 void HudElements::convert_colors(const struct overlay_params& params)
 {
     HUDElements.colors.update = false;
-    auto convert = [](unsigned color) -> ImVec4 {
+    auto convert = [&params](unsigned color) -> ImVec4 {
         ImVec4 fc = ImGui::ColorConvertU32ToFloat4(color);
+        fc.w = params.alpha;
         if (HUDElements.colors.convert)
             return SRGBToLinear(fc);
         return fc;
