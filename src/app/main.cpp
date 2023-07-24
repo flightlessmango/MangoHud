@@ -295,13 +295,20 @@ int main(int, char**)
     window_size = ImVec2(params.width, params.height);
     deviceName = (char*)glGetString(GL_RENDERER);
     sw_stats.deviceName = deviceName;
-    if (deviceName.find("Radeon") != std::string::npos
-    || deviceName.find("AMD") != std::string::npos){
-        vendorID = 0x1002;
-    } else if (deviceName.find("Intel") != std::string::npos) {
-        vendorID = 0x8086;
+
+    #define GLX_RENDERER_VENDOR_ID_MESA 0x8183
+    auto pfn_glXQueryCurrentRendererIntegerMESA = (Bool (*)(int, unsigned int*)) (glfwGetProcAddress("glXQueryCurrentRendererIntegerMESA"));
+    if (pfn_glXQueryCurrentRendererIntegerMESA) {
+        pfn_glXQueryCurrentRendererIntegerMESA(GLX_RENDERER_VENDOR_ID_MESA, &vendorID);
     } else {
-        vendorID = 0x10de;
+        if (deviceName.find("Radeon") != std::string::npos
+        || deviceName.find("AMD") != std::string::npos){
+            vendorID = 0x1002;
+        } else if (deviceName.find("Intel") != std::string::npos) {
+            vendorID = 0x8086;
+        } else {
+            vendorID = 0x10de;
+        }
     }
     init_gpu_stats(vendorID, 0, params);
     init_system_info();
