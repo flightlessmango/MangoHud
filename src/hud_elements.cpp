@@ -927,7 +927,7 @@ void HudElements::gamescope_frame_timing(){
         static std::vector<float>::iterator min, max;
         static double min_time = 0.0f;
         static double max_time = 50.0f;
-        if (HUDElements.gamescope_debug_app.size() > 0){
+        if (HUDElements.gamescope_debug_app.size() > 0 && HUDElements.gamescope_debug_app.back() > -1){
             ImguiNextColumnFirstItem();
             ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
             ImGui::PushFont(HUDElements.sw_stats->font1);
