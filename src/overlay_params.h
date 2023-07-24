@@ -182,6 +182,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(preset)                      \
    OVERLAY_PARAM_CUSTOM(text_outline_color)          \
    OVERLAY_PARAM_CUSTOM(text_outline_thickness)      \
+   OVERLAY_PARAM_CUSTOM(fps_text)                    \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -279,7 +280,7 @@ struct overlay_params {
    std::string time_format, output_folder, output_file;
    std::string pci_dev;
    std::string media_player_name;
-   std::string cpu_text, gpu_text;
+   std::string cpu_text, gpu_text, fps_text;
    std::vector<std::string> blacklist;
    unsigned autostart_log;
    std::vector<std::string> media_player_format;

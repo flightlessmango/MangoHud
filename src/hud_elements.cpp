@@ -527,16 +527,20 @@ void HudElements::procmem()
 void HudElements::fps(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_only]){
         ImguiNextColumnFirstItem();
-        if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact] || HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
-            if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names])
-                HUDElements.TextColored(HUDElements.colors.engine, "%s", engines_short[HUDElements.sw_stats->engine]);
+        if (HUDElements.params->fps_text.empty()){
+            if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact] || HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
+                if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names])
+                    HUDElements.TextColored(HUDElements.colors.engine, "%s", engines_short[HUDElements.sw_stats->engine]);
+                else
+                    HUDElements.TextColored(HUDElements.colors.engine, "%s", "FPS");
             else
-                HUDElements.TextColored(HUDElements.colors.engine, "%s", "FPS");
-        else
-            if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names])
-                HUDElements.TextColored(HUDElements.colors.engine, "%s", engines_short[HUDElements.sw_stats->engine]);
-            else
-                HUDElements.TextColored(HUDElements.colors.engine, "%s", engines[HUDElements.sw_stats->engine]);
+                if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names])
+                    HUDElements.TextColored(HUDElements.colors.engine, "%s", engines_short[HUDElements.sw_stats->engine]);
+                else
+                    HUDElements.TextColored(HUDElements.colors.engine, "%s", engines[HUDElements.sw_stats->engine]);
+        } else {
+            HUDElements.TextColored(HUDElements.colors.engine, "%s", HUDElements.params->fps_text.c_str());
+        }
 
         ImguiNextColumnOrNewRow();
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_color_change]){
