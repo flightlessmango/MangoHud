@@ -15,6 +15,11 @@ if [ "$1" = "--dlsym" ]; then
 	shift
 fi
 
+if [ "$1" = "--version" ]; then
+	echo @version@
+	exit 0
+fi
+
 # Make sure we don't append mangohud lib multiple times
 # otherwise this could cause issues with steam runtime
 case ":${LD_PRELOAD-}:" in
