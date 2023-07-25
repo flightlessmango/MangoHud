@@ -13,6 +13,10 @@
 
 namespace fs = ghc::filesystem;
 
+#ifndef PROCDIR
+#define PROCDIR "/proc"
+#endif
+
 std::string read_line(const std::string& filename)
 {
     std::string line;
@@ -111,7 +115,7 @@ std::string read_symlink(const std::string&& link)
 
 std::string get_exe_path()
 {
-    return read_symlink("/proc/self/exe");
+    return read_symlink(PROCDIR "/self/exe");
 }
 
 std::string get_wine_exe_name(bool keep_ext)
@@ -121,14 +125,14 @@ std::string get_wine_exe_name(bool keep_ext)
         return std::string();
     }
 
-    std::string line = read_line("/proc/self/comm"); // max 16 characters though
+    std::string line = read_line(PROCDIR "/self/comm"); // max 16 characters though
     if (ends_with(line, ".exe", true))
     {
         auto dot = keep_ext ? std::string::npos : line.find_last_of('.');
         return line.substr(0, dot);
     }
 
-    std::ifstream cmdline("/proc/self/cmdline");
+    std::ifstream cmdline(PROCDIR "/self/cmdline");
     // Iterate over arguments (separated by NUL byte).
     while (std::getline(cmdline, line, '\0')) {
         auto n = std::string::npos;
@@ -185,7 +189,7 @@ std::string get_config_dir()
 }
 
 bool lib_loaded(const std::string& lib) {
-    fs::path path("/proc/self/map_files/");
+    fs::path path(PROCDIR "/self/map_files/");
     for (auto& p : fs::directory_iterator(path)) {
         auto file = p.path().string();
         auto sym = read_symlink(file.c_str());
