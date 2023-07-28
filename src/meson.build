@@ -1,4 +1,4 @@
-glslang = find_program('glslangValidator')
+glslang = find_program('glslang', 'glslangValidator')
 
 # Needs prefix for configure_file()
 if get_option('append_libdir_mangohud')
