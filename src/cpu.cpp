@@ -364,6 +364,33 @@ static bool get_cpu_power_zenpower(CPUPowerData* cpuPowerData, float& power) {
     return true;
 }
 
+static bool get_cpu_power_zenergy(CPUPowerData* cpuPowerData, float& power) {
+    CPUPowerData_zenergy* powerData_zenergy = (CPUPowerData_zenergy*)cpuPowerData;
+    if (!powerData_zenergy->energyCounterFile)
+        return false;
+
+    rewind(powerData_zenergy->energyCounterFile);
+    fflush(powerData_zenergy->energyCounterFile);
+
+    uint64_t energyCounterValue = 0;
+    if (fscanf(powerData_zenergy->energyCounterFile, "%" SCNu64, &energyCounterValue) != 1)
+        return false;
+
+    Clock::time_point now = Clock::now();
+    Clock::duration timeDiff = now - powerData_zenergy->lastCounterValueTime;
+    int64_t timeDiffMicro = std::chrono::duration_cast<std::chrono::microseconds>(timeDiff).count();
+    uint64_t energyCounterDiff = energyCounterValue - powerData_zenergy->lastCounterValue;
+
+
+    if (powerData_zenergy->lastCounterValue > 0 && energyCounterValue > powerData_zenergy->lastCounterValue)
+        power = (float) energyCounterDiff / (float) timeDiffMicro;
+
+    powerData_zenergy->lastCounterValue = energyCounterValue;
+    powerData_zenergy->lastCounterValueTime = now;
+
+    return true;
+}
+
 static bool get_cpu_power_rapl(CPUPowerData* cpuPowerData, float& power) {
     CPUPowerData_rapl* powerData_rapl = (CPUPowerData_rapl*)cpuPowerData;
 
@@ -408,6 +435,9 @@ bool CPUStats::UpdateCpuPower() {
             break;
         case CPU_POWER_ZENPOWER:
             if (!get_cpu_power_zenpower(m_cpuPowerData.get(), power)) return false;
+            break;
+        case CPU_POWER_ZENERGY:
+            if (!get_cpu_power_zenergy(m_cpuPowerData.get(), power)) return false;
             break;
         case CPU_POWER_RAPL:
             if (!get_cpu_power_rapl(m_cpuPowerData.get(), power)) return false;
@@ -553,6 +583,18 @@ static CPUPowerData_zenpower* init_cpu_power_data_zenpower(const std::string pat
     return powerData.release();
 }
 
+static CPUPowerData_zenergy* init_cpu_power_data_zenergy(const std::string path) {
+    auto powerData = std::make_unique<CPUPowerData_zenergy>();
+    std::string energyCounterPath;
+
+    if(!find_input(path, "energy", energyCounterPath, "Esocket0")) return nullptr;
+
+    SPDLOG_DEBUG("hwmon: using input: {}", energyCounterPath);
+    powerData->energyCounterFile = fopen(energyCounterPath.c_str(), "r");
+
+    return powerData.release();
+}
+
 static CPUPowerData_rapl* init_cpu_power_data_rapl(const std::string path) {
     auto powerData = std::make_unique<CPUPowerData_rapl>();
 
@@ -585,6 +627,9 @@ bool CPUStats::InitCpuPowerData() {
             break;
         } else if (name == "zenpower") {
             cpuPowerData = (CPUPowerData*)init_cpu_power_data_zenpower(path);
+            break;
+        } else if (name == "zenergy") {
+            cpuPowerData = (CPUPowerData*)init_cpu_power_data_zenergy(path);
             break;
         } else if (name == "coretemp") {
             intel = true;
