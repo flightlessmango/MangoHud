@@ -50,6 +50,7 @@ typedef struct CPUData_ {
 enum {
    CPU_POWER_K10TEMP,
    CPU_POWER_ZENPOWER,
+   CPU_POWER_ZENERGY,
    CPU_POWER_RAPL,
    CPU_POWER_AMDGPU
 };
@@ -100,6 +101,23 @@ struct CPUPowerData_zenpower : public CPUPowerData {
 
    FILE* corePowerFile {nullptr};
    FILE* socPowerFile {nullptr};
+};
+
+struct CPUPowerData_zenergy : public CPUPowerData {
+   CPUPowerData_zenergy() {
+      this->source = CPU_POWER_ZENERGY;
+      this->lastCounterValue = 0;
+      this->lastCounterValueTime = Clock::now();
+   };
+
+   ~CPUPowerData_zenergy() {
+      if(this->energyCounterFile)
+         fclose(this->energyCounterFile);
+   };
+
+   FILE* energyCounterFile {nullptr};
+   uint64_t lastCounterValue;
+   Clock::time_point lastCounterValueTime;
 };
 
 struct CPUPowerData_rapl : public CPUPowerData {
