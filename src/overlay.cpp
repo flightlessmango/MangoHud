@@ -876,18 +876,20 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
             amdgpu.gtt_used = fopen((device_path + "/mem_info_gtt_used").c_str(), "r");
 
          const std::string hwmon_path = device_path + "/hwmon/";
-         const auto dirs = ls(hwmon_path.c_str(), "hwmon", LS_DIRS);
-         for (const auto& dir : dirs) {
-            if (!amdgpu.temp)
-               amdgpu.temp = fopen((hwmon_path + dir + "/temp1_input").c_str(), "r");
-            if (!amdgpu.junction_temp)
-               amdgpu.junction_temp = fopen((hwmon_path + dir + "/temp2_input").c_str(), "r");
-            if (!amdgpu.memory_temp)
-               amdgpu.memory_temp = fopen((hwmon_path + dir + "/temp3_input").c_str(), "r");
-            if (!amdgpu.core_clock)
-               amdgpu.core_clock = fopen((hwmon_path + dir + "/freq1_input").c_str(), "r");
-            if (!amdgpu.gpu_voltage_soc)
-               amdgpu.gpu_voltage_soc = fopen((hwmon_path + dir + "/in0_input").c_str(), "r"); 
+         if (fs::exists(hwmon_path)){
+            const auto dirs = ls(hwmon_path.c_str(), "hwmon", LS_DIRS);
+            for (const auto& dir : dirs) {
+               if (!amdgpu.temp)
+                  amdgpu.temp = fopen((hwmon_path + dir + "/temp1_input").c_str(), "r");
+               if (!amdgpu.junction_temp)
+                  amdgpu.junction_temp = fopen((hwmon_path + dir + "/temp2_input").c_str(), "r");
+               if (!amdgpu.memory_temp)
+                  amdgpu.memory_temp = fopen((hwmon_path + dir + "/temp3_input").c_str(), "r");
+               if (!amdgpu.core_clock)
+                  amdgpu.core_clock = fopen((hwmon_path + dir + "/freq1_input").c_str(), "r");
+               if (!amdgpu.gpu_voltage_soc)
+                  amdgpu.gpu_voltage_soc = fopen((hwmon_path + dir + "/in0_input").c_str(), "r");
+            }
          }
 
          if (!metrics_path.empty())
