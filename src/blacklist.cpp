@@ -55,7 +55,9 @@ static bool check_blacklisted() {
     global_proc_name = proc_name;
     bool blacklisted = std::find(blacklist.begin(), blacklist.end(), proc_name) != blacklist.end();
 
-    if(blacklisted) {
+    static bool printed = false;
+    if(blacklisted && !printed) {
+        printed = true;
         SPDLOG_INFO("process '{}' is blacklisted in MangoHud", proc_name);
     }
 
