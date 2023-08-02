@@ -1893,6 +1893,9 @@ static VkResult overlay_CreateInstance(
                              &instance_data->vtable);
    instance_data_map_physical_devices(instance_data, true);
 
+   if (is_blacklisted())
+      return result;
+
    parse_overlay_config(&instance_data->params, getenv("MANGOHUD_CONFIG"));
    _params = &instance_data->params;
 

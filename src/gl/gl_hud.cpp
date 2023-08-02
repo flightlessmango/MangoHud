@@ -72,6 +72,9 @@ void imgui_init()
         return;
 
     init_spdlog();
+    if (is_blacklisted())
+        return;
+
     parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"));
     _params = &params;
 
