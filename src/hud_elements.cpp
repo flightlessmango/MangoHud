@@ -335,7 +335,7 @@ void HudElements::cpu_stats(){
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_power]){
             ImguiNextColumnOrNewRow();
             char str[16];
-            snprintf(str, sizeof(str), "%.1f", gpu_info.powerUsage);
+            snprintf(str, sizeof(str), "%.1f", cpuStats.GetCPUDataTotal().power);
             if (strlen(str) > 4)
                 right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", cpuStats.GetCPUDataTotal().power);
             else
