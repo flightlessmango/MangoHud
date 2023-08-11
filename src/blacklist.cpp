@@ -46,7 +46,14 @@ static  std::vector<std::string> blacklist {
     "REDprelauncher.exe",
     "REDlauncher.exe",
     "gamescope",
-    "RSI Launcher.exe"
+    "RSI Launcher.exe",
+    "tabtip.exe",
+    "steam.exe",
+    "wine64-preloader",
+    "explorer.exe",
+    "wine-preloader",
+    "iexplore.exe",
+    "rundll32.exe",
 };
 
 
