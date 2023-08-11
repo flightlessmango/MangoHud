@@ -348,10 +348,50 @@ void HudElements::cpu_stats(){
     }
 }
 
+
+static float get_core_load_stat(void*,int);
+static float get_core_load_stat(void *data, int idx){
+    return ((CPUStats *)data)->GetCPUData().at(idx).percent;
+}
+
 void HudElements::core_load(){
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_core_load]){
-         for (const CPUData &cpuData : cpuStats.GetCPUData())
-         {
+    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_core_load])
+        return;
+
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_core_bars]){
+        ImguiNextColumnFirstItem();
+        ImGui::PushFont(HUDElements.sw_stats->font1);
+        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
+            ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
+            HUDElements.TextColored(HUDElements.colors.cpu, "CPU Cores");
+            ImGui::TableSetColumnIndex(ImGui::TableGetColumnCount() - 1);
+            ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
+            ImguiNextColumnFirstItem();
+        }
+        char hash[40];
+        snprintf(hash, sizeof(hash), "##%s", overlay_param_names[OVERLAY_PARAM_ENABLED_core_bars]);
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+        float width, height = 0;
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal]){
+            width = 150;
+            height = HUDElements.params->font_size;
+        } else {
+            width = ImGui::GetWindowContentRegionWidth();
+            height = 50;
+        }
+
+        if (ImGui::BeginChild("core_bars_window", ImVec2(width, height))) {
+            ImGui::PlotHistogram(hash, get_core_load_stat, &cpuStats,
+                                cpuStats.GetCPUData().size(), 0,
+                                NULL, 0.0, 100.0,
+                                ImVec2(width, height));
+        }
+        ImGui::EndChild();
+        ImGui::PopFont();
+        ImGui::PopStyleColor();
+    } else {
+        for (const CPUData &cpuData : cpuStats.GetCPUData())
+        {
             ImguiNextColumnFirstItem();
             HUDElements.TextColored(HUDElements.colors.cpu, "CPU");
             ImGui::SameLine(0, 1.0f);
@@ -386,7 +426,7 @@ void HudElements::core_load(){
             ImGui::PushFont(HUDElements.sw_stats->font1);
             HUDElements.TextColored(HUDElements.colors.text, "MHz");
             ImGui::PopFont();
-         }
+        }
     }
 }
 
