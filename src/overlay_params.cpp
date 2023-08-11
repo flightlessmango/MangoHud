@@ -591,6 +591,7 @@ parse_overlay_env(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_dynamic_frame_timing] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_core_bars] = false;
       }
 #define OVERLAY_PARAM_BOOL(name)                                       \
       if (!strcmp(#name, key)) {                                       \
@@ -616,6 +617,7 @@ static void set_param_defaults(struct overlay_params *params){
    params->enabled[OVERLAY_PARAM_ENABLED_fps] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_frame_timing] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_core_load] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_core_bars] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_cpu_power] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp] = false;
@@ -787,6 +789,7 @@ parse_overlay_config(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_dynamic_frame_timing] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_duration] = false;
+         params->enabled[OVERLAY_PARAM_ENABLED_core_bars] = false;
          params->options.erase("full");
       }
       for (auto& it : params->options) {
