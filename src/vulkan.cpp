@@ -38,6 +38,8 @@
 #include <inttypes.h>
 #include <spdlog/spdlog.h>
 #include <imgui.h>
+#include <unistd.h>
+#include <numeric>
 
 #include "mesa/util/macros.h" // defines "restrict" for vk_util.h
 #include "mesa/util/os_socket.h"
@@ -50,6 +52,7 @@
 #include "notify.h"
 #include "blacklist.h"
 #include "pci_ids.h"
+#include "gpu.h"
 
 using namespace std;
 
@@ -1571,10 +1574,50 @@ static void overlay_DestroySwapchainKHR(
    destroy_swapchain_data(swapchain_data);
 }
 
+static unsigned long long getProcessCpuTimeTicks() {
+   std::ifstream stat_file("/proc/self/stat");
+   std::string stat_data;
+
+   if (!stat_file) {
+      std::cerr << "Failed to open /proc/self/stat" << std::endl;
+      return 0;
+   }
+
+   getline(stat_file, stat_data);
+   stat_file.close();
+
+   unsigned long long utime, stime;
+   std::istringstream iss(stat_data);
+   for (int i = 1; i <= 13; ++i) {
+      iss.ignore(std::numeric_limits<std::streamsize>::max(), ' ');
+   }
+   iss >> utime >> stime; // The 14th and 15th fields in /proc/self/stat
+
+   return utime + stime;
+}
+
+static uint64_t getGpuTime() {
+   rewind(amdgpu.fdinfo);
+   fflush(amdgpu.fdinfo);
+   char line[256];
+   uint64_t val;
+   while (fgets(line, sizeof(line), amdgpu.fdinfo))
+      if(strstr(line, "drm-engine-gfx"))
+         sscanf(line, "drm-engine-gfx: %" SCNu64 " ns", &val);
+
+   return val;
+}
+
 static VkResult overlay_QueuePresentKHR(
     VkQueue                                     queue,
     const VkPresentInfoKHR*                     pPresentInfo)
 {
+   unsigned long long startCpuTime = getProcessCpuTimeTicks();
+   static bool gpu_keep_last = false;
+   static uint64_t startGpuTime;
+   if (!gpu_keep_last)
+      startGpuTime = getGpuTime();
+
    using namespace std::chrono_literals;
    if (fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_EARLY){
       fps_limit_stats.frameStart = Clock::now();
@@ -1629,6 +1672,26 @@ static VkResult overlay_QueuePresentKHR(
       FpsLimiter(fps_limit_stats);
       fps_limit_stats.frameEnd = Clock::now();
    }
+   // Calculate the GPU time used for this frame in milliseconds
+   uint64_t endGpuTime = getGpuTime();
+   if (endGpuTime > startGpuTime){
+      double gpuTime = static_cast<double>(endGpuTime - startGpuTime) / 1000000.0;
+      HUDElements.gputimes_data.push_back(gpuTime);
+      if (HUDElements.gputimes_data.size() > 199)
+         HUDElements.gputimes_data.erase(HUDElements.gputimes_data.begin());
+
+      gpu_keep_last = false;
+   } else {
+      gpu_keep_last = true;
+   }
+
+   // Calculate the CPU time used for this frame in milliseconds
+   unsigned long long endCpuTime = getProcessCpuTimeTicks();
+   unsigned long long cpuTimeTicks = endCpuTime - startCpuTime;
+   double cpuTime = static_cast<double>(cpuTimeTicks) * 1000.0 / sysconf(_SC_CLK_TCK);
+   HUDElements.cputimes_data.push_back(cpuTime);
+   if (HUDElements.cputimes_data.size() > 199)
+      HUDElements.cputimes_data.erase(HUDElements.cputimes_data.begin());
 
    return result;
 }

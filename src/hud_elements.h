@@ -29,6 +29,8 @@ class HudElements{
         std::vector<std::pair<void(*)(), std::string >> ordered_functions;
         std::vector<float> gamescope_debug_latency {};
         std::vector<float> gamescope_debug_app {};
+        std::vector<float> cputimes_data;
+        std::vector<float> gputimes_data;
         int min, max, gpu_core_max, gpu_mem_max, cpu_temp_max, gpu_temp_max;
         const std::vector<std::string> permitted_params = {
             "gpu_load", "cpu_load", "gpu_core_clock", "gpu_mem_clock",

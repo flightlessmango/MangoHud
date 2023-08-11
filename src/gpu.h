@@ -21,6 +21,7 @@ struct amdgpu_files
     FILE *gtt_used;
     FILE *fan;
     FILE *gpu_voltage_soc;
+    FILE *fdinfo;
 };
 
 extern amdgpu_files amdgpu;
@@ -44,6 +45,7 @@ struct gpuInfo{
     float gtt_used;
     int fan_speed;
     int voltage;
+    uint64_t app_busy_ns;
 };
 
 extern struct gpuInfo gpu_info;

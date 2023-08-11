@@ -892,6 +892,15 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
             }
          }
 
+         for (const auto& file : fs::directory_iterator("/proc/self/fdinfo")){
+            std::ifstream f(file.path().string());
+            std::string line;
+            if (f)
+               while (std::getline(f, line))
+                  if (line.find("amdgpu") != std::string::npos)
+                     amdgpu.fdinfo = fopen(file.path().string().c_str(), "r");
+         }
+
          if (!metrics_path.empty())
             break;
 

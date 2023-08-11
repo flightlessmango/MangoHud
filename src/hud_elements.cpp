@@ -3,6 +3,7 @@
 #include <functional>
 #include <sstream>
 #include <cmath>
+#include <numeric>
 #include "overlay.h"
 #include "overlay_params.h"
 #include "hud_elements.h"
@@ -271,6 +272,17 @@ void HudElements::gpu_stats(){
             HUDElements.TextColored(HUDElements.colors.text, "mV");
             ImGui::PopFont();
         }
+
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_ms]){
+            ImguiNextColumnOrNewRow();
+            double sum = std::accumulate(HUDElements.gputimes_data.begin(), HUDElements.gputimes_data.end(), 0.000);
+            double gputimes_avg = sum / HUDElements.gputimes_data.size();
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", gputimes_avg);
+            ImGui::SameLine(0, 1.0f);
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            HUDElements.TextColored(HUDElements.colors.text, "ms");
+            ImGui::PopFont();
+        }
     }
 }
 
@@ -345,6 +357,17 @@ void HudElements::cpu_stats(){
             HUDElements.TextColored(HUDElements.colors.text, "W");
             ImGui::PopFont();
         }
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_ms]){
+            ImguiNextColumnOrNewRow();
+            double sum = std::accumulate(HUDElements.cputimes_data.begin(), HUDElements.cputimes_data.end(), 0.000);
+            double cputimes_avg = sum / HUDElements.cputimes_data.size();
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", cputimes_avg);
+            ImGui::SameLine(0, 1.0f);
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            HUDElements.TextColored(HUDElements.colors.text, "ms");
+            ImGui::PopFont();
+        }
+
     }
 }
 

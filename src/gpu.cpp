@@ -190,5 +190,17 @@ void getAmdGpuInfo(){
             value = 0;
         gpu_info.voltage = value;
     }
+
+    if (amdgpu.fdinfo){
+        rewind(amdgpu.fdinfo);
+        fflush(amdgpu.fdinfo);
+        char line[256];
+        while (fgets(line, sizeof(line), amdgpu.fdinfo))
+            if(strstr(line, "drm-engine-gfx"))
+                sscanf(line, "drm-engine-gfx: %" SCNu64 " ns", &value);
+
+        gpu_info.app_busy_ns = value;
+    }
+
 #endif
 }
