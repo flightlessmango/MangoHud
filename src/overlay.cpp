@@ -1023,26 +1023,6 @@ void init_system_info(){
 #endif
 }
 
-std::string get_device_name(uint32_t vendorID, uint32_t deviceID)
-{
-   string desc;
-#ifdef __linux__
-   if (pci_ids.find(vendorID) == pci_ids.end())
-      parse_pciids();
-
-   desc = pci_ids[vendorID].second[deviceID].desc;
-   size_t position = desc.find("[");
-   if (position != std::string::npos) {
-      desc = desc.substr(position);
-      string chars = "[]";
-      for (char c: chars)
-         desc.erase(remove(desc.begin(), desc.end(), c), desc.end());
-   }
-   trim(desc);
-#endif
-   return desc;
-}
-
 void update_fan(){
    // This just handles steam deck fan for now
    static bool init;
