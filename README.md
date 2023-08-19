@@ -317,6 +317,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `control=`                         | Sets up a unix socket with a specific name that can be connected to with mangohud-control.<br>I.e. `control=mangohud` or `control=mangohud-%p` (`%p` will be replaced by process id)    |
 | `core_load_change`                 | Change the colors of cpu core loads, uses the same data from `cpu_load_value` and `cpu_load_change` |
 | `core_load`                        | Display load & frequency per core                                                     |
+| `core_bars`                        | Change the display of `core_load` from numbers to vertical bars                       |
 | `cpu_load_change`                  | Change the color of the CPU load depending on load                                    |
 | `cpu_load_color`                   | Set the colors for the gpu load change low, medium and high. e.g `cpu_load_color=0000FF,00FFFF,FF00FF` |
 | `cpu_load_value`                   | Set the values for medium and high load e.g `cpu_load_value=50,90`                    |
