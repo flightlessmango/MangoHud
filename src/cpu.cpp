@@ -624,7 +624,6 @@ bool CPUStats::InitCpuPowerData() {
 
         if (name == "k10temp") {
             cpuPowerData = (CPUPowerData*)init_cpu_power_data_k10temp(path);
-            break;
         } else if (name == "zenpower") {
             cpuPowerData = (CPUPowerData*)init_cpu_power_data_zenpower(path);
             break;
