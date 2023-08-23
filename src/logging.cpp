@@ -82,22 +82,22 @@ static void writeSummary(string filename){
       total = 0;
       size_t idx = ceil(sorted.size() * percent);
       for (size_t i = 0; i < idx; i++){
-        total = total + sorted[i].fps;
+        total = total + sorted[i].frametime;
       }
-      result = total / idx;
+      result = 1000 / (total / idx);
       out << fixed << setprecision(1) << result << ",";
     }
     // 97th percentile
-    result = sorted.empty() ? 0.0f : sorted[floor(0.97 * (sorted.size() - 1))].fps;
+    result = sorted.empty() ? 0.0f : sorted[floor(0.97 * (sorted.size() - 1))].frametime;
     out << fixed << setprecision(1) << result << ",";
     // avg
     total = 0;
     for (auto input : sorted){
-      total = total + input.fps;
+      total = total + input.frametime;
       total_cpu = total_cpu + input.cpu_load;
       total_gpu = total_gpu + input.gpu_load;
     }
-    result = total / sorted.size();
+    result = 1000 / (total / sorted.size());
     out << fixed << setprecision(1) << result << ",";
     // GPU
     result = total_gpu / sorted.size();
@@ -182,7 +182,7 @@ void Logger::start_logging() {
   m_log_start = Clock::now();
 
   std::string program = get_wine_exe_name();
-  printf("%s\n", output_folder.c_str());
+
   if (program.empty())
       program = get_program_name();
 
@@ -267,14 +267,14 @@ void autostart_log(int sleep) {
 void Logger::calculate_benchmark_data(){
   vector<float> sorted {};
   for (auto& point : m_log_array)
-    sorted.push_back(point.fps);
+    sorted.push_back(point.frametime);
 
   std::sort(sorted.begin(), sorted.end());
   benchmark.percentile_data.clear();
 
   benchmark.total = 0.f;
-  for (auto fps_ : sorted){
-    benchmark.total = benchmark.total + fps_;
+  for (auto frametime_ : sorted){
+    benchmark.total = benchmark.total + frametime_;
   }
 
   size_t max_label_size = 0;
@@ -295,7 +295,7 @@ void Logger::calculate_benchmark_data(){
       if (percentile.length() > max_label_size)
         max_label_size = percentile.length();
 
-      benchmark.percentile_data.push_back({percentile, result});
+      benchmark.percentile_data.push_back({percentile, (1000 / result)});
   }
   string label;
   float mins[2] = {0.01f, 0.001f}, total;
@@ -305,7 +305,7 @@ void Logger::calculate_benchmark_data(){
     for (size_t i = 0; i < idx; i++){
       total = total + sorted[i];
     }
-    result = total / idx;
+    result = 1000 / (total / idx);
 
     if (percent == 0.001f)
       label = "0.1%";
