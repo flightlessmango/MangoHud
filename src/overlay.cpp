@@ -126,9 +126,10 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
 #endif
       if (vendorID == 0x10de)
          getNvidiaGpuInfo(params);
-
+#ifdef __linux__
       if (vendorID== 0x8086)
          getIntelGpuInfo();
+#endif
    }
 
 #ifdef __linux__
