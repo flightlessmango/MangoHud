@@ -4,10 +4,15 @@
 #include "spdlog/spdlog.h"
 #include <nlohmann/json.hpp>
 #include <sys/stat.h>
+#include <filesystem.h>
+#include <inttypes.h>
+
 using json = nlohmann::json;
+namespace fs = ghc::filesystem;
 
 static bool init_intel = false;
 struct gpuInfo gpu_info_intel {};
+FILE* fdinfo;
 
 static void intelGpuThread(bool runtime){
     init_intel = true;
@@ -73,14 +78,82 @@ static void intelGpuThread(bool runtime){
     }
 }
 
+static uint64_t get_gpu_time() {
+    rewind(fdinfo);
+    fflush(fdinfo);
+    char line[256];
+    uint64_t val;
+    while (fgets(line, sizeof(line), fdinfo)){
+        if(strstr(line, "drm-engine-render"))
+            sscanf(line, "drm-engine-render: %" SCNu64 " ns", &val);
+    }
+
+    return val;
+}
+
+static FILE* find_fd() {
+    DIR* dir = opendir("/proc/self/fdinfo");
+    if (!dir) {
+        perror("Failed to open directory");
+        return NULL;
+    }
+
+    static uint64_t val;
+    static bool found_driver;
+
+    for (const auto& entry : fs::directory_iterator("/proc/self/fdinfo")){
+        FILE* file = fopen(entry.path().string().c_str(), "r");
+        if (file) {
+            char line[256];
+            while (fgets(line, sizeof(line), file)) {
+                if (strstr(line, "i915") != NULL)
+                    found_driver = true;
+
+                if (found_driver){
+                    if(strstr(line, "drm-engine-render")){
+                        sscanf(line, "drm-engine-render: %" SCNu64 " ns", &val);
+                        if (val > 0)
+                            return file;
+                    }
+                }
+            }
+        }
+        fclose(file);
+    }
+
+    return NULL;  // Return NULL if no matching file is found
+}
+
 void getIntelGpuInfo(){
     if (!init_intel){
+        fdinfo = find_fd();
         static bool runtime = false;
         static struct stat buffer;
         if (stat("/run/pressure-vessel", &buffer) == 0)
             runtime = true;
 
         std::thread(intelGpuThread, runtime).detach();
+    }
+
+    if (fdinfo){
+        static uint64_t previous_gpu_time, previous_time, now, gpu_time_now;
+        gpu_time_now = get_gpu_time();
+        now = os_time_get_nano();
+
+        if (previous_time && previous_gpu_time && gpu_time_now > previous_gpu_time){
+            float time_since_last = now - previous_time;
+            float gpu_since_last = gpu_time_now - previous_gpu_time;
+            auto result = int((gpu_since_last / time_since_last) * 100);
+            if (result > 100)
+                result = 100;
+
+            gpu_info_intel.load = result;
+            previous_gpu_time = gpu_time_now;
+            previous_time = now;
+        } else {
+            previous_gpu_time = gpu_time_now;
+            previous_time = now;
+        }
     }
 
     gpu_info = gpu_info_intel;
