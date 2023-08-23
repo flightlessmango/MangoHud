@@ -44,8 +44,8 @@ vklayer_files = files(
   'gpu.cpp',
   'blacklist.cpp',
   'file_utils.cpp',
-  'intel.cpp'
 )
+
 opengl_files  = []
 if ['windows', 'mingw'].contains(host_machine.system())
   vklayer_files += files(
@@ -73,7 +73,8 @@ if is_unixy
     'battery.cpp',
     'control.cpp',
     'gamepad.cpp',
-    'amdgpu.cpp'
+    'amdgpu.cpp',
+    'intel.cpp'
   )
 
   opengl_files = files(
