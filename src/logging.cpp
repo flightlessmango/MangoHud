@@ -88,7 +88,7 @@ static void writeSummary(string filename){
       out << fixed << setprecision(1) << result << ",";
     }
     // 97th percentile
-    result = sorted.empty() ? 0.0f : sorted[floor(0.97 * (sorted.size() - 1))].frametime;
+    result = sorted.empty() ? 0.0f : 1000 / sorted[floor(0.97 * (sorted.size() - 1))].frametime;
     out << fixed << setprecision(1) << result << ",";
     // avg
     total = 0;
