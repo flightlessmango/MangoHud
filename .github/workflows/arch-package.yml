@@ -14,7 +14,7 @@ jobs:
         run: |
           pacman -Syu git --noconfirm
           git config --global --add safe.directory $(realpath .)
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install prerequisites
         run: |
           echo "ParallelDownloads = 10" >> /etc/pacman.conf

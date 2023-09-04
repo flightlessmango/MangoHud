@@ -7,7 +7,7 @@ jobs:
     container:
       image: archlinux:latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install prerequisites
         run: |
           pacman -Syu mingw-w64-gcc meson python-mako glslang mingw-w64-headers git --noconfirm
