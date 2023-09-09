@@ -25,7 +25,7 @@ static void get_real_functions()
         "*libdl.so*",
 #endif
         "*libc.so*",
-        "*libc.*.so*",
+        "*libc*.so*",
     };
 
     for (size_t i = 0; i < sizeof(libs) / sizeof(*libs); i++)
