@@ -24,7 +24,6 @@ static void get_real_functions()
 #if defined(__GLIBC__)
         "*libdl.so*",
 #endif
-        "*libc.so*",
         "*libc*.so*",
     };
 
