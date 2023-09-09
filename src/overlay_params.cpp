@@ -698,6 +698,7 @@ static void set_param_defaults(struct overlay_params *params){
    params->table_columns = 3;
    params->text_outline_color = 0x000000;
    params->text_outline_thickness = 1.5;
+   current_preset = -1;
 }
 
 void
@@ -992,6 +993,10 @@ void add_to_options(struct overlay_params *params, std::string option, std::stri
 }
 
 void presets(int preset, struct overlay_params *params) {
+   printf("preset: %i\n", preset);
+   if (preset == -1)
+      return;
+
    if (parse_preset_config(preset, params))
       return;
 
