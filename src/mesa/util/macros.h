@@ -34,6 +34,11 @@
 #  define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #endif
 
+/* Check if index is in array's bounds */
+#ifndef ARRAY_CHECK_BOUNDS
+#  define ARRAY_CHECK_BOUNDS(array, index) (index >= 0 && index < (int)ARRAY_SIZE(array))
+#endif
+
 /* For compatibility with Clang's __has_builtin() */
 #ifndef __has_builtin
 #  define __has_builtin(x) 0

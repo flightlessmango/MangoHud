@@ -574,7 +574,7 @@ parse_overlay_env(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_core_load_change] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_battery_icon] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_hide_fsr_sharpness] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_hide_scaler_additional] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_throttling_status] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = read_cfg;
          params->enabled[OVERLAY_PARAM_ENABLED_fcat] = 0;
@@ -775,7 +775,7 @@ parse_overlay_config(struct overlay_params *params,
          params->enabled[OVERLAY_PARAM_ENABLED_fps_only] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_battery_icon] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_hide_fsr_sharpness] = 0;
+         params->enabled[OVERLAY_PARAM_ENABLED_hide_scaler_additional] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_throttling_status] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_fcat] = 0;
          params->enabled[OVERLAY_PARAM_ENABLED_horizontal] = 0;
@@ -954,7 +954,7 @@ parse_overlay_config(struct overlay_params *params,
       new_frame = true; // we probably changed how we look.
    }
    mangoapp_cv.notify_one();
-   g_fsrSharpness = params->fsr_steam_sharpness;
+   g_scaler_sharpness = params->fsr_steam_sharpness;
 #endif
 }
 
