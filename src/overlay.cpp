@@ -668,7 +668,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          HUDElements.place = 0;
          for (auto& func : HUDElements.ordered_functions){
             ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(-3,-3));
-            if(!params.enabled[OVERLAY_PARAM_ENABLED_horizontal])
+            if(!params.enabled[OVERLAY_PARAM_ENABLED_horizontal] && func.first != HudElements::_exec)
                ImGui::TableNextRow();
             func.first();
             HUDElements.place += 1;

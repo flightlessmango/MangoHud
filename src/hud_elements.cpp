@@ -818,8 +818,12 @@ void HudElements::custom_text_center(){
 void HudElements::custom_text(){
     ImguiNextColumnFirstItem();
     ImGui::PushFont(HUDElements.sw_stats->font1);
-    const std::string& value = HUDElements.ordered_functions[HUDElements.place].second;
-    HUDElements.TextColored(HUDElements.colors.text, "%s",value.c_str());
+    const char* value;
+    if (size_t(HUDElements.place) < HUDElements.ordered_functions.size())
+        value = HUDElements.ordered_functions[HUDElements.place].second.c_str();
+    else
+        return;
+    HUDElements.TextColored(HUDElements.colors.text, "%s",value);
     ImGui::PopFont();
 }
 
