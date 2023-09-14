@@ -81,8 +81,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(fsr)                           \
    OVERLAY_PARAM_BOOL(mangoapp_steam)                \
    OVERLAY_PARAM_BOOL(debug)                         \
-   OVERLAY_PARAM_BOOL(gamepad_battery)               \
-   OVERLAY_PARAM_BOOL(gamepad_battery_icon)          \
+   OVERLAY_PARAM_BOOL(device_battery_icon)           \
    OVERLAY_PARAM_BOOL(hide_fsr_sharpness)            \
    OVERLAY_PARAM_BOOL(fan)                           \
    OVERLAY_PARAM_BOOL(throttling_status)             \
@@ -184,6 +183,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(text_outline_color)          \
    OVERLAY_PARAM_CUSTOM(text_outline_thickness)      \
    OVERLAY_PARAM_CUSTOM(fps_text)                    \
+   OVERLAY_PARAM_CUSTOM(device_battery)              \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -303,6 +303,7 @@ struct overlay_params {
    size_t font_params_hash;
    unsigned text_outline_color;
    float text_outline_thickness;
+   std::vector<std::string> device_battery;
 };
 
 const extern char *overlay_param_names[];

@@ -8,7 +8,7 @@
 #include "hud_elements.h"
 #include "logging.h"
 #include "battery.h"
-#include "gamepad.h"
+#include "device.h"
 #include "cpu.h"
 #include "gpu.h"
 #include "memory.h"
@@ -1029,23 +1029,23 @@ void HudElements::gamescope_frame_timing(){
     }
 }
 
-void HudElements::gamepad_battery()
+void HudElements::device_battery()
 {
 #ifdef __linux__
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gamepad_battery]) {
-        if (gamepad_found) {
-            for (int i = 0; i < gamepad_count; i++) {
-                std::string battery = gamepad_data[i].battery;
-                std::string name = gamepad_data[i].name;
-                std::string battery_percent = gamepad_data[i].battery_percent;
-                bool report_percent = gamepad_data[i].report_percent;
-                bool charging = gamepad_data[i].is_charging;
+    if (!HUDElements.params->device_battery.empty()) {
+        if (device_found) {
+            for (int i = 0; i < device_count; i++) {
+                std::string battery = device_data[i].battery;
+                std::string name = device_data[i].name;
+                std::string battery_percent = device_data[i].battery_percent;
+                bool report_percent = device_data[i].report_percent;
+                bool charging = device_data[i].is_charging;
 
                 ImguiNextColumnFirstItem();
                 ImGui::PushFont(HUDElements.sw_stats->font1);
                 HUDElements.TextColored(HUDElements.colors.engine, "%s", name.c_str());
                 ImguiNextColumnOrNewRow();
-                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gamepad_battery_icon]) {
+                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_device_battery_icon]) {
                     if (charging)
                         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_USB);
                     else {
@@ -1313,7 +1313,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
     if (param == "fps_only")        { ordered_functions.push_back({fps_only, value});               }
     if (param == "fsr")             { ordered_functions.push_back({gamescope_fsr, value});          }
     if (param == "debug")           { ordered_functions.push_back({gamescope_frame_timing, value}); }
-    if (param == "gamepad_battery") { ordered_functions.push_back({gamepad_battery, value});        }
+    if (param == "device_battery")  { ordered_functions.push_back({device_battery, value});         }
     if (param == "frame_count")     { ordered_functions.push_back({frame_count, value});            }
     if (param == "fan")             { ordered_functions.push_back({fan, value});                    }
     if (param == "throttling_status")        { ordered_functions.push_back({throttling_status, value});               }
@@ -1390,8 +1390,8 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({show_fps_limit,     value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_resolution])
         ordered_functions.push_back({resolution,         value});
-    if (params->enabled[OVERLAY_PARAM_ENABLED_gamepad_battery])
-        ordered_functions.push_back({gamepad_battery,    value});
+    if (!params->device_battery.empty() )
+        ordered_functions.push_back({device_battery,    value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_media_player])
         ordered_functions.push_back({media_player,       value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_exec_name])

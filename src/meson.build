@@ -72,7 +72,7 @@ if is_unixy
     'pci_ids.cpp',
     'battery.cpp',
     'control.cpp',
-    'gamepad.cpp',
+    'device.cpp',
     'amdgpu.cpp',
     'intel.cpp'
   )

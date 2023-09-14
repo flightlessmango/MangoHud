@@ -477,6 +477,7 @@ parse_gl_size_query(const char *str)
 #define parse_fsr_steam_sharpness(s) parse_float(s)
 #define parse_text_outline_color(s) parse_color(s)
 #define parse_text_outline_thickness(s) parse_float(s)
+#define parse_device_battery(s) parse_str_tokenize(s)
 
 static bool
 parse_help(const char *str)
@@ -639,8 +640,7 @@ static void set_param_defaults(struct overlay_params *params){
    params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_frametime] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_fps_only] = false;
-   params->enabled[OVERLAY_PARAM_ENABLED_gamepad_battery] = false;
-   params->enabled[OVERLAY_PARAM_ENABLED_gamepad_battery_icon] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_device_battery_icon] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_throttling_status] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_fcat] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_horizontal_stretch] = true;
