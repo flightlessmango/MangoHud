@@ -892,26 +892,26 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
                if (!amdgpu.gpu_voltage_soc)
                   amdgpu.gpu_voltage_soc = fopen((hwmon_path + dir + "/in0_input").c_str(), "r");
             }
-         }
 
-         if (!metrics_path.empty())
-            break;
+            if (!metrics_path.empty())
+               break;
 
-         // The card output nodes - cardX-output, will point to the card node
-         // As such the actual metrics nodes will be missing.
-         amdgpu.busy = fopen((device_path + "/gpu_busy_percent").c_str(), "r");
-         if (!amdgpu.busy)
-            continue;
+            // The card output nodes - cardX-output, will point to the card node
+            // As such the actual metrics nodes will be missing.
+            amdgpu.busy = fopen((device_path + "/gpu_busy_percent").c_str(), "r");
+            if (!amdgpu.busy)
+               continue;
 
-         SPDLOG_DEBUG("using amdgpu path: {}", device_path);
+            SPDLOG_DEBUG("using amdgpu path: {}", device_path);
 
-         for (const auto& dir : dirs) {
-            if (!amdgpu.memory_clock)
-               amdgpu.memory_clock = fopen((hwmon_path + dir + "/freq2_input").c_str(), "r");
-            if (!amdgpu.power_usage)
-               amdgpu.power_usage = fopen((hwmon_path + dir + "/power1_average").c_str(), "r");
-            if (!amdgpu.fan)
-               amdgpu.fan = fopen((hwmon_path + dir + "/fan1_input").c_str(), "r");
+            for (const auto& dir : dirs) {
+               if (!amdgpu.memory_clock)
+                  amdgpu.memory_clock = fopen((hwmon_path + dir + "/freq2_input").c_str(), "r");
+               if (!amdgpu.power_usage)
+                  amdgpu.power_usage = fopen((hwmon_path + dir + "/power1_average").c_str(), "r");
+               if (!amdgpu.fan)
+                  amdgpu.fan = fopen((hwmon_path + dir + "/fan1_input").c_str(), "r");
+            }
          }
          break;
       }
