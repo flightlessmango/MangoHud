@@ -967,6 +967,7 @@ bool parse_preset_config(int preset, struct overlay_params *params){
    char preset_string[20];
    snprintf(preset_string, sizeof(preset_string), "[preset %d]\n", preset);
    bool found_preset = false;
+
    if (preset_file == NULL)
       return false;
 
@@ -979,6 +980,14 @@ bool parse_preset_config(int preset, struct overlay_params *params){
       if (found_preset){
          if(strcmp(line, "preset") == 0 || line[0] == '\n' || line[0] == '\0')
             break;
+
+         printf("line: %s\n", line);
+         std::string s;
+         s = line;
+         trim(s);
+
+         if (strcmp(s.c_str(), "inherit") == 0)
+            presets(preset, params, true);
 
          parseConfigLine(line, params->options);
       }
@@ -993,9 +1002,10 @@ void add_to_options(struct overlay_params *params, std::string option, std::stri
    params->options[option] = value;
 }
 
-void presets(int preset, struct overlay_params *params) {
-   if (parse_preset_config(preset, params))
-      return;
+int i = 0;
+void presets(int preset, struct overlay_params *params, bool inherit) {
+   if (!inherit && parse_preset_config(preset, params))
+         return;
 
    switch(preset) {
       case 0:

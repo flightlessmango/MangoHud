@@ -104,6 +104,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(temp_fahrenheit)               \
    OVERLAY_PARAM_BOOL(dynamic_frame_timing)          \
    OVERLAY_PARAM_BOOL(duration)                      \
+   OVERLAY_PARAM_BOOL(inherit)                       \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
@@ -310,7 +311,7 @@ const extern char *overlay_param_names[];
 
 void parse_overlay_config(struct overlay_params *params,
                        const char *env, bool ignore_preset);
-void presets(int preset, struct overlay_params *params);
+void presets(int preset, struct overlay_params *params, bool inherit=false);
 bool parse_preset_config(int preset, struct overlay_params *params);
 void add_to_options(struct overlay_params *params, std::string option, std::string value);
 
