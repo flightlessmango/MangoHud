@@ -125,7 +125,7 @@ static void writeFileHeaders(ofstream& out){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_log_versioning])
       out << "--------------------FRAME METRICS--------------------" << endl;
 
-    out << "fps," << "frametime," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "gpu_power," << "ram_used," << "swap_used," << "elapsed" << endl;
+    out << "fps," << "frametime," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "gpu_power," << "ram_used," << "swap_used," << "process_rss," << "elapsed" << endl;
 
 }
 
@@ -149,6 +149,7 @@ void Logger::writeToFile(){
     output_file << logArray.back().gpu_power << ",";
     output_file << logArray.back().ram_used << ",";
     output_file << logArray.back().swap_used << ",";
+    output_file << logArray.back().process_rss << ",";
     output_file << std::chrono::duration_cast<std::chrono::nanoseconds>(logArray.back().previous).count() << "\n";
     output_file.flush();
   } else {
