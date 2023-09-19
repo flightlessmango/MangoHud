@@ -158,6 +158,7 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
    currentLogData.gpu_power = gpu_info.powerUsage;
 #ifdef __linux__
    currentLogData.ram_used = memused;
+   currentLogData.swap_used = swapused;
 #endif
 
    currentLogData.cpu_load = cpuStats.GetCPUDataTotal().percent;

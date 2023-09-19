@@ -25,6 +25,7 @@ struct logData{
   int gpu_power;
   float gpu_vram_used;
   float ram_used;
+  float swap_used;
 
   Clock::duration previous;
 };
