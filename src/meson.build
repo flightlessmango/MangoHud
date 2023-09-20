@@ -76,7 +76,6 @@ if is_unixy or cpp.get_id() == 'emscripten'
     'cpu.cpp',
     'memory.cpp',
     'iostats.cpp',
-    'notify.cpp',
     'elfhacks.cpp',
     'real_dlsym.cpp',
     'pci_ids.cpp',
@@ -86,6 +85,10 @@ if is_unixy or cpp.get_id() == 'emscripten'
     'amdgpu.cpp',
     'intel.cpp'
   )
+
+  if get_option('with_notify').enabled()
+    vklayer_files += 'notify.cpp'
+  endif
 
   opengl_files = files(
     'gl/glad.c',
