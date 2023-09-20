@@ -50,6 +50,8 @@
 #  include <errno.h>
 #elif DETECT_OS_WINDOWS
 #  include <windows.h>
+#elif __EMSCRIPTEN__
+
 #else
 #  error Unsupported OS
 #endif
@@ -93,6 +95,8 @@ os_time_get_nano(void)
       / frequency.QuadPart;
    return secs*INT64_C(1000000000) + nanosecs;
 
+#elif __EMSCRIPTEN__
+   return 0;
 #else
 
 #error Unsupported OS
@@ -120,6 +124,8 @@ os_time_sleep(int64_t usecs)
    if (dwMilliseconds) {
       Sleep(dwMilliseconds);
    }
+#elif __EMSCRIPTEN__
+
 #else
 #  error Unsupported OS
 #endif

@@ -77,7 +77,6 @@ if is_unixy or cpp.get_id() == 'emscripten'
     'memory.cpp',
     'iostats.cpp',
     'elfhacks.cpp',
-    'real_dlsym.cpp',
     'pci_ids.cpp',
     'battery.cpp',
     'control.cpp',
@@ -85,6 +84,10 @@ if is_unixy or cpp.get_id() == 'emscripten'
     'amdgpu.cpp',
     'intel.cpp'
   )
+
+  if cpp.get_id() != 'emscripten'
+    vklayer_files += 'real_dlsym.cpp'
+  endif
 
   if get_option('with_notify').enabled()
     vklayer_files += 'notify.cpp'
