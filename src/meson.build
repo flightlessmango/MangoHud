@@ -71,7 +71,7 @@ if ['windows', 'mingw'].contains(host_machine.system())
   )
 endif
 
-if is_unixy
+if is_unixy or cpp.get_id() == 'emscripten'
   vklayer_files += files(
     'cpu.cpp',
     'memory.cpp',
