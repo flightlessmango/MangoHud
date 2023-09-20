@@ -156,6 +156,7 @@ link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z
 # meson fails to check version-script so just force add
 link_args += '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version'))
 
+inc_common += [include_directories('.')]
 mangohud_static_lib = static_library(
   'MangoHud',
   mangohud_version,
@@ -192,6 +193,7 @@ mangohud_static_lib = static_library(
   install : false
 )
 
+if not meson.is_subproject()
 mangohud_shared_lib = shared_library(
   'MangoHud',
   objects: mangohud_static_lib.extract_all_objects(),
@@ -234,8 +236,9 @@ mangohud_opengl_shared_lib = shared_library(
   install_dir : libdir_mangohud,
   install: true
 )
+endif
 
-if is_unixy
+if is_unixy and not meson.is_subproject()
   mangohud_dlsym = shared_library(
     'MangoHud_dlsym',
     files(
