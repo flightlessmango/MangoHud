@@ -8,6 +8,9 @@
 #include <unistd.h>
 #include <spdlog/spdlog.h>
 #include <imgui.h>
+#ifdef __linux__
+#include <implot.h>
+#endif
 #include "gl_hud.h"
 #include "file_utils.h"
 #include "notify.h"
@@ -152,6 +155,9 @@ void imgui_create(void *ctx, const gl_wsi plat)
     IMGUI_CHECKVERSION();
     ImGuiContext *saved_ctx = ImGui::GetCurrentContext();
     state.imgui_ctx = ImGui::CreateContext();
+#ifdef __linux__
+    ImPlot::CreateContext();
+#endif
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls

@@ -50,6 +50,9 @@
 #include "notify.h"
 #include "blacklist.h"
 #include "pci_ids.h"
+#ifdef __linux__
+#include "implot.h"
+#endif
 
 using namespace std;
 
@@ -1310,6 +1313,9 @@ static void setup_swapchain_data(struct swapchain_data *data,
    data->format = pCreateInfo->imageFormat;
 
    data->imgui_context = ImGui::CreateContext(data->font_atlas);
+#ifdef __linux__
+   ImPlot::CreateContext();
+#endif
    ImGui::SetCurrentContext(data->imgui_context);
 
    ImGui::GetIO().IniFilename = NULL;
