@@ -195,7 +195,6 @@ imgui_options = [
   'sdl2=disabled',
   'osx=disabled',
   'win=disabled',
-  'marmalade=disabled',
   'allegro5=disabled',
 ]
 
@@ -241,6 +240,7 @@ endif
 
 if get_option('mangoapp') or get_option('mangoapp_layer')
   glfw3_dep = dependency('glfw3')
+  glew_dep = dependency('glew')
 endif
 
 json_dep = dependency('nlohmann_json')
