@@ -42,6 +42,7 @@ subprojects/Vulkan-Headers-*/
 subprojects/imgui-*/
 subprojects/spdlog-*/
 subprojects/nlohmann_json-*/
+subprojects/implot-*/
 
 #GNU Global Metadata
 **/GPATH

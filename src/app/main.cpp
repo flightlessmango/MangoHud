@@ -19,6 +19,9 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include "amdgpu.h"
+#ifdef __linux__
+#include "implot.h"
+#endif
 
 #define GLFW_EXPOSE_NATIVE_X11
 #include <GLFW/glfw3native.h>
@@ -221,6 +224,9 @@ static GLFWwindow* init(const char* glsl_version){
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
     ImGui::CreateContext();
+#ifdef __linux__
+    ImPlot::CreateContext();
+#endif
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.IniFilename = NULL;
     ImGui::StyleColorsDark();
