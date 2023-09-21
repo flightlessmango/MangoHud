@@ -85,6 +85,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(hide_fsr_sharpness)            \
    OVERLAY_PARAM_BOOL(fan)                           \
    OVERLAY_PARAM_BOOL(throttling_status)             \
+   OVERLAY_PARAM_BOOL(throttling_status_graph)       \
    OVERLAY_PARAM_BOOL(fcat)                          \
    OVERLAY_PARAM_BOOL(log_versioning)                \
    OVERLAY_PARAM_BOOL(horizontal)                    \

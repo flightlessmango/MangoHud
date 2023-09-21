@@ -673,12 +673,10 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       if (ImGui::BeginTable("hud", params.table_columns, table_flags )) {
          HUDElements.place = 0;
          for (auto& func : HUDElements.ordered_functions){
-            ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(-3,-3));
             if(!params.enabled[OVERLAY_PARAM_ENABLED_horizontal] && func.first != HudElements::_exec)
                ImGui::TableNextRow();
             func.first();
             HUDElements.place += 1;
-            ImGui::PopStyleVar();
             if(!HUDElements.ordered_functions.empty() && params.enabled[OVERLAY_PARAM_ENABLED_horizontal] && func != HUDElements.ordered_functions.back())
                horizontal_separator(params);
          }
