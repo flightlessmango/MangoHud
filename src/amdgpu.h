@@ -10,6 +10,7 @@
 #include <condition_variable>
 #include <vector>
 #include <sys/param.h>
+#include <algorithm>
 
 #define METRICS_UPDATE_PERIOD_MS 500
 #define METRICS_POLLING_PERIOD_MS 25
@@ -227,6 +228,13 @@ class Throttling {
 			thermal.erase(thermal.begin());
 		}
 
+		bool power_throttling(){
+			return std::find(power.begin(), power.end(), 0.1f) != power.end();
+		}
+
+		bool thermal_throttling(){
+			return std::find(thermal.begin(), thermal.end(), 0.1f) != thermal.end();
+		}
 };
 
 extern std::unique_ptr<Throttling> throttling;
