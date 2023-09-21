@@ -1466,7 +1466,7 @@ static void shutdown_swapchain_data(struct swapchain_data *data)
    device_data->vtable.DestroySampler(device_data->device, data->font_sampler, NULL);
    shutdown_swapchain_font(data);
 
-   IM_FREE(data->font_atlas);
+   IM_DELETE(data->font_atlas);
    ImGui::DestroyContext(data->imgui_context);
 }
 
