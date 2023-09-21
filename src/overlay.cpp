@@ -241,9 +241,13 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
    if (sw_stats.last_present_time) {
         sw_stats.frames_stats[f_idx].stats[OVERLAY_PLOTS_frame_timing] =
             frametime_ns;
-      frametime_data[f_idx] = frametime_ms;
+      frametime_data.push_back(frametime_ms);
+      frametime_data.erase(frametime_data.begin());
    }
-
+#ifdef __linux__
+   if (throttling)
+      throttling->update();
+#endif
    frametime = frametime_ms;
    fps = double(1000 / frametime_ms);
 
@@ -869,6 +873,7 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
          if (amdgpu_verify_metrics(gpu_metrics_path)) {
             gpu_metrics_exists = true;
             metrics_path = gpu_metrics_path;
+            throttling = std::make_unique<Throttling>();
             SPDLOG_DEBUG("Using gpu_metrics of {}", gpu_metrics_path);
          }
 
