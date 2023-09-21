@@ -17,6 +17,7 @@ std::mutex amdgpu_common_metrics_m;
 std::mutex amdgpu_m;
 std::condition_variable amdgpu_c;
 bool amdgpu_run_thread = true;
+std::unique_ptr<Throttling> throttling;
 
 bool amdgpu_verify_metrics(const std::string& path)
 {
@@ -52,7 +53,6 @@ bool amdgpu_verify_metrics(const std::string& path)
 	return false;
 }
 
-#define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define IS_VALID_METRIC(FIELD) (FIELD != 0xffff)
 void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	FILE *f;
@@ -183,6 +183,8 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	metrics->is_current_throttled = ((indep_throttle_status >> 16) & 0xFF) != 0;
 	metrics->is_temp_throttled = ((indep_throttle_status >> 32) & 0xFFFF) != 0;
 	metrics->is_other_throttled = ((indep_throttle_status >> 56) & 0xFF) != 0;
+	if (throttling)
+		throttling->indep_throttle_status = indep_throttle_status;
 }
 
 void amdgpu_get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT], bool &gpu_load_needs_dividing) {

@@ -8,7 +8,8 @@
 #include "overlay_params.h"
 #include <mutex>
 #include <condition_variable>
-// #include <vector>
+#include <vector>
+#include <sys/param.h>
 
 #define METRICS_UPDATE_PERIOD_MS 500
 #define METRICS_POLLING_PERIOD_MS 25
@@ -19,6 +20,9 @@
 #define UPDATE_METRIC_AVERAGE_FLOAT(FIELD) do { float value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer[s].FIELD; } amdgpu_common_metrics.FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
 #define UPDATE_METRIC_MAX(FIELD) do { int cur_max = metrics_buffer[0].FIELD; for (size_t s=1; s < METRICS_SAMPLE_COUNT; s++) { cur_max = MAX(cur_max, metrics_buffer[s].FIELD); }; amdgpu_common_metrics.FIELD = cur_max; } while(0)
 #define UPDATE_METRIC_LAST(FIELD) do { amdgpu_common_metrics.FIELD = metrics_buffer[METRICS_SAMPLE_COUNT - 1].FIELD; } while(0)
+#ifdef _WIN32
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#endif
 
 struct metrics_table_header {
 	uint16_t			structure_size;
@@ -195,3 +199,34 @@ extern bool amdgpu_run_thread;
 void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics);
 void amdgpu_metrics_polling_thread();
 void amdgpu_get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT], bool &gpu_load_needs_dividing);
+void amdgpu_trottling_thread(std::vector<float> &power, std::vector<float> &thermal);
+
+class Throttling {
+	public:
+		std::vector<float> power;
+		std::vector<float> thermal;
+		int64_t indep_throttle_status;
+
+		Throttling()
+			: power(200, 0.0f),
+			thermal(200, 0.0f) {}
+
+		void update(){
+			if (((indep_throttle_status >> 0) & 0xFF) != 0)
+				power.push_back(0.1);
+			else
+				power.push_back(0);
+
+
+			if (((indep_throttle_status >> 32) & 0xFFFF) != 0)
+				thermal.push_back(0.1);
+			else
+				thermal.push_back(0);
+
+			power.erase(power.begin());
+			thermal.erase(thermal.begin());
+		}
+
+};
+
+extern std::unique_ptr<Throttling> throttling;
