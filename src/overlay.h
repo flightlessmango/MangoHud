@@ -91,6 +91,7 @@ extern double min_frametime, max_frametime;
 extern bool steam_focused;
 extern int fan_speed;
 extern int current_preset;
+extern std::vector<float> frametime_data;
 
 void init_spdlog();
 void overlay_new_frame(const struct overlay_params& params);
