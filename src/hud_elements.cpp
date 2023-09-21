@@ -19,6 +19,10 @@
 #include <IconsForkAwesome.h>
 #include "version.h"
 #include "blacklist.h"
+#ifdef __linux__
+#include "implot.h"
+#endif
+#include "amdgpu.h"
 
 #define CHAR_CELSIUS    "\xe2\x84\x83"
 #define CHAR_FAHRENHEIT "\xe2\x84\x89"
@@ -704,6 +708,17 @@ void HudElements::wine(){
     }
 }
 
+static inline double TransformForward_Custom(double v, void*) {
+    if (v > 50)
+        v = 49.9;
+
+    return v;
+}
+
+static inline double TransformInverse_Custom(double v, void*) {
+   return v;
+}
+
 void HudElements::frame_timing(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
         ImguiNextColumnFirstItem();
@@ -726,7 +741,7 @@ void HudElements::frame_timing(){
         float width, height = 0;
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal]){
             width = 150;
-            height = HUDElements.params->font_size;
+            height = HUDElements.params->font_size * 0.85;
         } else {
             width = ImGui::GetWindowContentRegionWidth();
             height = max_time;
@@ -737,17 +752,38 @@ void HudElements::frame_timing(){
             max_time = max_frametime;
         }
 
-        if (ImGui::BeginChild("my_child_window", ImVec2(width, height))) {
+        if (ImGui::BeginChild("my_child_window", ImVec2(width, height), false, ImGuiWindowFlags_NoDecoration)) {
             if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_histogram]){
                 ImGui::PlotHistogram(hash, get_time_stat, HUDElements.sw_stats,
                                     ARRAY_SIZE(HUDElements.sw_stats->frames_stats), 0,
                                     NULL, min_time, max_time,
                                     ImVec2(width, height));
             } else {
+#ifndef __linux__
                 ImGui::PlotLines(hash, get_time_stat, HUDElements.sw_stats,
                                 ARRAY_SIZE(HUDElements.sw_stats->frames_stats), 0,
                                 NULL, min_time, max_time,
                                 ImVec2(width, height));
+#else
+                if (ImPlot::BeginPlot("My Plot", ImVec2(width, height), ImPlotFlags_CanvasOnly | ImPlotFlags_NoInputs)) {
+                    ImPlotStyle& style = ImPlot::GetStyle();
+                    style.Colors[ImPlotCol_PlotBg] = ImVec4(0.92f, 0.92f, 0.95f, 0.00f);
+                    ImPlotAxisFlags ax_flags = ImPlotAxisFlags_NoDecorations;
+                    ImPlot::SetupAxes(nullptr, nullptr, ax_flags,ax_flags);
+                    ImPlot::SetupAxisScale(ImAxis_Y1, TransformForward_Custom, TransformInverse_Custom);
+                    ImPlot::SetupAxesLimits(0, 200, min_time, max_time);
+                    ImPlot::PushStyleVar(ImPlotStyleVar_PlotPadding, ImVec2(0,0));
+                    ImPlot::SetNextLineStyle(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), 1.5);
+                    ImPlot::PlotLine("frametime line", frametime_data.data(), frametime_data.size());
+                    if (throttling){
+                        ImPlot::SetNextLineStyle(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), 1.5);
+                        ImPlot::PlotLine("power line", throttling->power.data(), throttling->power.size());
+                        ImPlot::SetNextLineStyle(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), 1.5);
+                        ImPlot::PlotLine("thermal line", throttling->thermal.data(), throttling->thermal.size());
+                    }
+                    ImPlot::EndPlot();
+                }
+#endif
             }
         }
         ImGui::EndChild();
