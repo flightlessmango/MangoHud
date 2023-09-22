@@ -14,6 +14,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <fstream>
 #include <algorithm>
 #include <cctype>
 #include <array>
@@ -962,38 +963,39 @@ bool parse_preset_config(int preset, struct overlay_params *params){
    const std::string data_dir = get_data_dir();
    const std::string config_dir = get_config_dir();
    std::string preset_path = config_dir + "/MangoHud/" + "presets.conf";
-   FILE *preset_file = fopen(preset_path.c_str(), "r");
-   char line[20];
+
    char preset_string[20];
-   snprintf(preset_string, sizeof(preset_string), "[preset %d]\n", preset);
+   snprintf(preset_string, sizeof(preset_string), "[preset %d]", preset);
+
+   std::ifstream stream(preset_path);
+   stream.imbue(std::locale::classic());
+
+   if (!stream.good()) {
+      return false;
+   }
+
+   std::string line;
    bool found_preset = false;
 
-   if (preset_file == NULL)
-      return false;
+   while (std::getline(stream, line)) {
+      trim(line);
 
-   while (fgets(line, sizeof(line), preset_file)){
-      if (strcmp(line, preset_string) == 0){
+      if (line == preset_string) {
          found_preset = true;
          continue;
       }
 
-      if (found_preset){
-         if(strcmp(line, "preset") == 0 || line[0] == '\n' || line[0] == '\0')
+      if (found_preset) {
+         if (line.front() == '[' && line.back() == ']')
             break;
 
-         printf("line: %s\n", line);
-         std::string s;
-         s = line;
-         trim(s);
-
-         if (strcmp(s.c_str(), "inherit") == 0)
+         if (line == "inherit")
             presets(preset, params, true);
 
          parseConfigLine(line, params->options);
       }
    }
 
-   fclose(preset_file);
    return found_preset;
 }
 
