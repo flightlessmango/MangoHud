@@ -117,7 +117,7 @@ void imgui_create(void *ctx, const gl_wsi plat)
     inited = true;
 
     if (!gladLoadGL())
-        spdlog::error("Failed to initialize OpenGL context, crash incoming");
+        SPDLOG_ERROR("Failed to initialize OpenGL context, crash incoming");
 
     deviceName = (char*)glGetString(GL_RENDERER);
     // If we're running zink we want to rely on the vulkan loader for the hud instead.

@@ -87,9 +87,6 @@ if is_unixy or cpp.get_id() == 'emscripten'
 
   if cpp.get_id() != 'emscripten'
     vklayer_files += 'real_dlsym.cpp'
-  endif
-
-  if get_option('with_notify').enabled()
     vklayer_files += 'notify.cpp'
   endif
 

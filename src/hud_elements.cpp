@@ -1413,7 +1413,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
                 ordered_functions.push_back({graphs, value});
             else
             {
-                spdlog::error("Unrecognized graph type: {}", value);
+                SPDLOG_ERROR("Unrecognized graph type: {}", value);
             }
         }
     }
