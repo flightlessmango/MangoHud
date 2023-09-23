@@ -4,9 +4,12 @@
 #include <thread>
 #include <condition_variable>
 #include <spdlog/spdlog.h>
+// This will be set if we are not using the spdlog library
+#ifndef SPDLOG_OFF
 #include <spdlog/cfg/env.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/rotating_file_sink.h>
+#endif
 #include <filesystem.h>
 // #include <sys/stat.h>
 #include "overlay.h"
@@ -55,6 +58,7 @@ int current_preset;
 
 void init_spdlog()
 {
+#ifndef SPDLOG_OFF
    if (spdlog::get("MANGOHUD"))
       return;
 
@@ -89,7 +93,7 @@ void init_spdlog()
          }
       }
    }
-
+#endif
 }
 
 void FpsLimiter(struct fps_limit& stats){
@@ -459,6 +463,7 @@ static float get_ticker_limited_pos(float pos, float tw, float& left_limit, floa
 #ifdef HAVE_DBUS
 void render_mpris_metadata(const struct overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing)
 {
+#ifndef SPDLOG_OFF
    static const float overflow = 50.f /* 3333ms * 0.5 / 16.6667 / 2 (to edge and back) */;
 
    if (meta.meta.valid) {
@@ -519,6 +524,7 @@ void render_mpris_metadata(const struct overlay_params& params, mutexed_metadata
       //ImGui::PopFont();
       ImGui::PopStyleVar();
    }
+#endif
 }
 #endif
 
