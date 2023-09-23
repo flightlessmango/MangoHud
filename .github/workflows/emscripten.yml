@@ -1,0 +1,19 @@
+name: emscripten build testing
+
+on: [push, pull_request]
+jobs:
+  build-emscripten:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install prerequisites
+        run: |
+          pacman -Syu meson emscripten git glew glfw-x11 pkg-config python-mako glslang --noconfirm
+      - name: configure
+        working-directory: ./mangoconfig
+        run: meson setup --cross-file emscripten.cross build64
+      - name: build
+        working-directory: ./mangoconfig
+        run: ninja -C build64
