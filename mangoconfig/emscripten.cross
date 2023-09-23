@@ -1,0 +1,15 @@
+[binaries]
+c = '/usr/lib/emscripten/emcc'
+cpp = '/usr/lib/emscripten/em++'
+ar = '/usr/lib/emscripten/emar'
+strip = '/usr/lib/emscripten/emstrip'
+pkgconfig = ['/usr/lib/emscripten/emconfigure', 'pkg-config']
+
+[properties]
+needs_exe_wrapper = true
+
+[host_machine]
+system = 'emscripten'
+cpu_family = 'wasm32'
+cpu = 'wasm32'
+endian = 'little'

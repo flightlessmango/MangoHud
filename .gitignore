@@ -43,6 +43,15 @@ subprojects/imgui-*/
 subprojects/spdlog-*/
 subprojects/nlohmann_json-*/
 subprojects/implot-*/
+mangoconfig/subprojects/packagecache/
+mangoconfig/subprojects/Vulkan-Headers-*/
+mangoconfig/subprojects/imgui-*/
+mangoconfig/subprojects/spdlog-*/
+mangoconfig/subprojects/nlohmann_json-*/
+mangoconfig/subprojects/implot-*/
+mangoconfig/subprojects/nlohmann_json.wrap
+mangoconfig/subprojects/spdlog.wrap
+mangoconfig/subprojects/vulkan-headers.wrap
 
 #GNU Global Metadata
 **/GPATH
