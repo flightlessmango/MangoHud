@@ -26,7 +26,7 @@
 #include "pci_ids.h"
 #include "iostats.h"
 #include "amdgpu.h"
-
+#include "faker.h"
 
 #ifdef __linux__
 #include <libgen.h>
@@ -55,6 +55,7 @@ int fan_speed;
 fcatoverlay fcatstatus;
 std::string drm_dev;
 int current_preset;
+std::unique_ptr<Faker> faker = nullptr;
 
 void init_spdlog()
 {
@@ -135,6 +136,7 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
       if (vendorID== 0x8086)
          getIntelGpuInfo();
 #endif
+      faker->update();
    }
 
 #ifdef __linux__
@@ -238,7 +240,10 @@ void stop_hw_updater()
 
 void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const struct overlay_params& params, uint32_t vendorID, uint64_t frametime_ns){
    uint32_t f_idx = sw_stats.n_frames % ARRAY_SIZE(sw_stats.frames_stats);
-   uint64_t now = os_time_get_nano(); /* ns */
+   uint64_t now;
+   // now = os_time_get_nano(); /* ns */
+   if (faker)
+      now = faker->now(); /* ns */
    auto elapsed = now - sw_stats.last_fps_update; /* ns */
    float frametime_ms = frametime_ns / 1000000.f;
 
@@ -256,9 +261,11 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
    fps = double(1000 / frametime_ms);
 
    if (elapsed >= params.fps_sampling_period) {
+#ifndef __EMSCRIPTEN__
       if (!hw_update_thread)
          hw_update_thread = std::make_unique<hw_info_updater>();
       hw_update_thread->update(&params, vendorID);
+#endif
 
       sw_stats.fps = 1000000000.0 * sw_stats.n_frames_since_update / elapsed;
 
@@ -294,7 +301,7 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
 }
 
 void update_hud_info(struct swapchain_stats& sw_stats, const struct overlay_params& params, uint32_t vendorID){
-   uint64_t now = os_time_get_nano(); /* ns */
+   uint64_t now = faker->now(); /* ns */
    uint64_t frametime_ns = now - sw_stats.last_present_time;
    if (!params.no_display || logger->is_active())
       update_hud_info_with_frametime(sw_stats, params, vendorID, frametime_ns);

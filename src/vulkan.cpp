@@ -54,7 +54,7 @@
 #ifdef __linux__
 #include "implot.h"
 #endif
-
+#include "faker.h"
 using namespace std;
 
 float offset_x, offset_y, hudSpacing;
@@ -457,6 +457,7 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
 {
    struct device_data *device_data = data->device;
    struct instance_data *instance_data = device_data->instance;
+   faker = std::make_unique<Faker>(data->sw_stats, instance_data->params, device_data->properties.vendorID);
    update_hud_info(data->sw_stats, instance_data->params, device_data->properties.vendorID);
    check_keybinds(instance_data->params, device_data->properties.vendorID);
 #ifdef __linux__

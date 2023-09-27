@@ -16,6 +16,7 @@
 #include "hud_elements.h"
 #include "overlay.h"
 #include "font_default.h"
+#include "faker.h"
 
 GLFWwindow* g_window;
 ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
@@ -133,11 +134,11 @@ int init_imgui()
   // Setup style
   // ImGui::StyleColorsDark();
 
-  ImGuiIO& io = ImGui::GetIO();
   create_fonts(nullptr, params, sw_stats.font1, sw_stats.font_text);
   parse_overlay_config(&params, "MANGOHUD_CONFIG", false);
   HUDElements.convert_colors(params);
   sw_stats.engine = EngineTypes::VULKAN;
+  faker = std::make_unique<Faker>(sw_stats, params, vendorID);
   resizeCanvas();
 
   return 0;

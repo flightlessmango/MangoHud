@@ -52,7 +52,7 @@ cxx_flags = [
     '-s', 'USE_PTHREADS=1',
 ]
 
-libs = ['-lGL']
+libs = ['-lGL', '-gsource-map', '-sDISABLE_EXCEPTION_CATCHING=1', '-g']
 spdlog_dep = mangohud_sp.get_variable('spdlog_dep')
 
 executable('imgui', sources,

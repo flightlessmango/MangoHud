@@ -82,12 +82,17 @@ if is_unixy or cpp.get_id() == 'emscripten'
     'control.cpp',
     'device.cpp',
     'amdgpu.cpp',
-    'intel.cpp'
+    'intel.cpp',
+    'faker.cpp'
   )
 
   if cpp.get_id() != 'emscripten'
     vklayer_files += 'real_dlsym.cpp'
     vklayer_files += 'notify.cpp'
+  endif
+
+  if get_option('with_faker').enabled()
+    vklayer_files += 'faker.cpp'
   endif
 
   opengl_files = files(
