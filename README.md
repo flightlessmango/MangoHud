@@ -328,6 +328,8 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `custom_text_center`               | Display a custom text centered useful for a header e.g `custom_text_center=FlightLessMango Benchmarks` |
 | `custom_text`                      | Display a custom text e.g `custom_text=Fsync enabled`                                 |
 | `debug`                            | Shows the graph of gamescope app frametimes and latency (only on gamescope obviously) |
+| `device_battery_icon`              | Display wirless device battery icon.                                                  |
+| `device_battery`                   | Display wireless device battery percent. Currently supported arguments `gamepad` and `mouse` e.g `device_battery=gamepad,mouse` |
 | `dynamic_frame_timing`             | This changes frame_timing y-axis to correspond with the current maximum and minimum frametime instead of being a static 0-50 |
 | `engine_short_names`               | Display a short version of the used engine (e.g. `OGL` instead of `OpenGL`)           |
 | `engine_version`                   | Display OpenGL or vulkan and vulkan-based render engine's version                     |
@@ -356,8 +358,6 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `fsr`                              | Display the status of FSR (only works in gamescope)                                   |
 | `full`                             | Enable most of the toggleable parameters (currently excludes `histogram`)             |
 | `gamemode`                         | Show if GameMode is on                                                                |
-| `gamepad_battery_icon`             | Display gamepad battery percent with icon. *Enabled by default*                       |
-| `gamepad_battery`                  | Display battey of wireless gamepads (xone/xpadneo/ds4)                                |
 | `gpu_color`<br>`cpu_color`<br>`vram_color`<br>`ram_color`<br>`io_color`<br>`engine_color`<br>`frametime_color`<br>`background_color`<br>`text_color`<br>`media_player_color`         | Change default colors: `gpu_color=RRGGBB` |
 | `gpu_core_clock`<br>`gpu_mem_clock`| Display GPU core/memory frequency                                                     |
 | `gpu_fan`                          | GPU fan in rpm (only works on AMD GPUs)                                               |
