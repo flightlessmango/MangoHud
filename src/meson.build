@@ -1,12 +1,18 @@
 glslang = find_program('glslang', 'glslangValidator')
 
+if get_option('dynamic_string_tokens')
+  ld_prefix = get_option('prefix') + '/\$LIB/'
+else
+  ld_prefix = join_paths(get_option('prefix') ,get_option('libdir')) + '/'
+endif
+
 # Needs prefix for configure_file()
 if get_option('append_libdir_mangohud')
   libdir_mangohud = join_paths(get_option('prefix'), get_option('libdir'), 'mangohud')
-  ld_libdir_mangohud = get_option('prefix') + '/\$LIB/mangohud/'
+  ld_libdir_mangohud = ld_prefix + 'mangohud/'
 else
   libdir_mangohud = join_paths(get_option('prefix'), get_option('libdir'))
-  ld_libdir_mangohud = get_option('prefix') + '/\$LIB/'
+  ld_libdir_mangohud = ld_prefix
 endif
 
 git = find_program('git', required: false)
