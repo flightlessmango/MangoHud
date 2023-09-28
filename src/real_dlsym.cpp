@@ -26,6 +26,7 @@ static void get_real_functions()
 #endif
         "*libc.so*",
         "*libc.*.so*",
+        "*ld-musl-*.so*",
     };
 
     for (size_t i = 0; i < sizeof(libs) / sizeof(*libs); i++)

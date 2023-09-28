@@ -29,6 +29,12 @@
  *  \{
  */
 
+#ifdef __GLIBC__
+# define ABS_ADDR(obj, ptr) (ptr)
+#else
+# define ABS_ADDR(obj, ptr) ((obj->addr) + (ptr))
+#endif
+
 struct eh_iterate_callback_args {
 	eh_iterate_obj_callback_func callback;
 	void *arg;
@@ -196,22 +202,22 @@ int eh_init_obj(eh_obj_t *obj)
 			if (obj->strtab)
 				return ENOTSUP;
 
-			obj->strtab = (const char *) obj->dynamic[p].d_un.d_ptr;
+			obj->strtab = (const char *) ABS_ADDR(obj, obj->dynamic[p].d_un.d_ptr);
 		} else if (obj->dynamic[p].d_tag == DT_HASH) {
 			if (obj->hash)
 				return ENOTSUP;
 
-			obj->hash = (ElfW(Word) *) obj->dynamic[p].d_un.d_ptr;
+			obj->hash = (ElfW(Word) *) ABS_ADDR(obj, obj->dynamic[p].d_un.d_ptr);
 		} else if (obj->dynamic[p].d_tag == DT_GNU_HASH) {
 			if (obj->gnu_hash)
 				return ENOTSUP;
 
-			obj->gnu_hash = (Elf32_Word *) obj->dynamic[p].d_un.d_ptr;
+			obj->gnu_hash = (Elf32_Word *) ABS_ADDR(obj, obj->dynamic[p].d_un.d_ptr);
 		} else if (obj->dynamic[p].d_tag == DT_SYMTAB) {
 			if (obj->symtab)
 				return ENOTSUP;
 
-			obj->symtab = (ElfW(Sym) *) obj->dynamic[p].d_un.d_ptr;
+			obj->symtab = (ElfW(Sym) *) ABS_ADDR(obj, obj->dynamic[p].d_un.d_ptr);
 		}
 		p++;
 	}
@@ -449,7 +455,7 @@ int eh_find_next_dyn(eh_obj_t *obj, ElfW_Sword tag, int i, ElfW(Dyn) **next)
 
 int eh_set_rela_plt(eh_obj_t *obj, int p, const char *sym, void *val)
 {
-	ElfW(Rela) *rela = (ElfW(Rela) *) obj->dynamic[p].d_un.d_ptr;
+	ElfW(Rela) *rela = (ElfW(Rela) *) ABS_ADDR(obj, obj->dynamic[p].d_un.d_ptr);
 	ElfW(Dyn) *relasize;
 	unsigned int i;
 
@@ -470,7 +476,7 @@ int eh_set_rela_plt(eh_obj_t *obj, int p, const char *sym, void *val)
 
 int eh_set_rel_plt(eh_obj_t *obj, int p, const char *sym, void *val)
 {
-	ElfW(Rel) *rel = (ElfW(Rel) *) obj->dynamic[p].d_un.d_ptr;
+	ElfW(Rel) *rel = (ElfW(Rel) *) ABS_ADDR(obj, obj->dynamic[p].d_un.d_ptr);
 	ElfW(Dyn) *relsize;
 	unsigned int i;
 
@@ -520,7 +526,7 @@ int eh_set_rel(eh_obj_t *obj, const char *sym, void *val)
 
 int eh_iterate_rela_plt(eh_obj_t *obj, int p, eh_iterate_rel_callback_func callback, void *arg)
 {
-	ElfW(Rela) *rela = (ElfW(Rela) *) obj->dynamic[p].d_un.d_ptr;
+	ElfW(Rela) *rela = (ElfW(Rela) *) ABS_ADDR(obj, obj->dynamic[p].d_un.d_ptr);
 	ElfW(Dyn) *relasize;
 	eh_rel_t rel;
 	eh_sym_t sym;
@@ -550,7 +556,7 @@ int eh_iterate_rela_plt(eh_obj_t *obj, int p, eh_iterate_rel_callback_func callb
 
 int eh_iterate_rel_plt(eh_obj_t *obj, int p, eh_iterate_rel_callback_func callback, void *arg)
 {
-	ElfW(Rel) *relp = (ElfW(Rel) *) obj->dynamic[p].d_un.d_ptr;
+	ElfW(Rel) *relp = (ElfW(Rel) *) ABS_ADDR(obj, obj->dynamic[p].d_un.d_ptr);
 	ElfW(Dyn) *relsize;
 	eh_rel_t rel;
 	eh_sym_t sym;
