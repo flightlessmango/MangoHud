@@ -9,12 +9,22 @@ else
   ld_libdir_mangohud = get_option('prefix') + '/\$LIB/'
 endif
 
+git = find_program('git', required: false)
+if git.found()
+  git_describe = run_command([git, 'describe', '--tags', '--dirty=+'], check: false)
+endif
+if git.found() and git_describe.returncode() == 0
+  describe_ver = git_describe.stdout().strip()
+else
+  describe_ver = meson.project_version()
+endif
+
 conf_data = configuration_data()
 
 conf_data.set('ld_libdir_mangohud_abs', libdir_mangohud)
 conf_data.set('ld_libdir_mangohud', ld_libdir_mangohud)
 conf_data.set('cpu_family', host_machine.cpu_family())
-conf_data.set('version', run_command(['git', 'describe', '--tags', '--dirty=+']).stdout().strip())
+conf_data.set('version', describe_ver)
 
 overlay_shaders = [
   'overlay.frag',
