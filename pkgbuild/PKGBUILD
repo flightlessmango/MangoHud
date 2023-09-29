@@ -12,8 +12,8 @@ license=('MIT')
 source=(
         "mangohud"::"git+https://github.com/flightlessmango/MangoHud.git#branch=master"
         "mangohud-minhook"::"git+https://github.com/flightlessmango/minhook.git"
-        "imgui-v1.81.tar.gz::https://github.com/ocornut/imgui/archive/v1.81.tar.gz"
-        "imgui-1.81-1-wrap.zip::https://wrapdb.mesonbuild.com/v1/projects/imgui/1.81/1/get_zip"
+        "imgui-1.89.9.tar.gz::https://github.com/ocornut/imgui/archive/refs/tags/v1.89.9.tar.gz"
+        "imgui_1.89.9-1_patch.zip::https://wrapdb.mesonbuild.com/v2/imgui_1.89.9-1/get_patch"
         "spdlog-1.8.5.tar.gz::https://github.com/gabime/spdlog/archive/v1.8.5.tar.gz"
         "spdlog-1.8.5-1-wrap.zip::https://wrapdb.mesonbuild.com/v1/projects/spdlog/1.8.5/1/get_zip"
         "nlohmann_json-3.10.5.zip::https://github.com/nlohmann/json/releases/download/v3.10.5/include.zip"
@@ -26,8 +26,8 @@ source=(
 sha256sums=(
             'SKIP'
             'SKIP'
-            'f7c619e03a06c0f25e8f47262dbc32d61fd033d2c91796812bf0f8c94fca78fb'
-            '6d00b442690b6a5c5d8f898311daafbce16d370cf64f53294c3b8c5c661e435f'
+            '1acc27a778b71d859878121a3f7b287cd81c29d720893d2b2bf74455bf9d52d6'
+            '9b21290c597d76bf8d4eeb3f9ffa024b11d9ea6c61e91d648ccc90b42843d584'
             '944d0bd7c763ac721398dca2bb0f3b5ed16f67cef36810ede5061f35a543b4b8'
             '3c38f275d5792b1286391102594329e98b17737924b344f98312ab09929b74be'
             'b94997df68856753b72f0d7a3703b7d484d4745c567f3584ef97c96c25a5798e'
@@ -51,7 +51,7 @@ prepare() {
   git -c protocol.file.allow=always submodule update
 
   # meson subprojects
-  ln -sv "$srcdir/imgui-1.81" subprojects
+  ln -sv "$srcdir/imgui-1.89.9" subprojects
   ln -sv "$srcdir/spdlog-1.8.5" subprojects
   mkdir  subprojects/nlohmann_json-3.10.5
   ln -sv "$srcdir/include" subprojects/nlohmann_json-3.10.5/
