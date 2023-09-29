@@ -196,6 +196,7 @@ imgui_options = [
   'osx=disabled',
   'win=disabled',
   'allegro5=disabled',
+  'webgpu=disabled'
 ]
 
 sizeof_ptr = cc.sizeof('void*')
