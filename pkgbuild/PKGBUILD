@@ -19,6 +19,8 @@ source=(
         "nlohmann_json-3.10.5.zip::https://github.com/nlohmann/json/releases/download/v3.10.5/include.zip"
         "vulkan-headers-1.2.158.tar.gz::https://github.com/KhronosGroup/Vulkan-Headers/archive/v1.2.158.tar.gz"
         "vulkan-headers-1.2.158-2-wrap.zip::https://wrapdb.mesonbuild.com/v2/vulkan-headers_1.2.158-2/get_patch"
+        "implot-0.16.zip::https://github.com/epezent/implot/archive/refs/tags/v0.16.zip"
+        "implot_0.16-1_patch.zip::https://wrapdb.mesonbuild.com/v2/implot_0.16-1/get_patch"
         )
 
 sha256sums=(
@@ -31,6 +33,8 @@ sha256sums=(
             'b94997df68856753b72f0d7a3703b7d484d4745c567f3584ef97c96c25a5798e'
             "53361271cfe274df8782e1e47bdc9e61b7af432ba30acbfe31723f9df2c257f3"
             "860358cf5e73f458cd1e88f8c38116d123ab421d5ce2e4129ec38eaedd820e17"
+            "24f772c688f6b8a6e19d7efc10e4923a04a915f13d487b08b83553aa62ae1708"
+            "1c6b1462066a5452fa50c1da1dd47fed841f28232972c82d778f2962936568c7"
             )
 
 _build_args="-Dappend_libdir_mangohud=false -Dwith_xnvctrl=disabled -Dmangoapp_layer=true -Dtests=disabled"
@@ -55,6 +59,7 @@ prepare() {
   ln -sv "$srcdir/LICENSE.MIT" subprojects/nlohmann_json-3.10.5/
   ln -sv "$srcdir/meson.build" subprojects/nlohmann_json-3.10.5/
   ln -sv "$srcdir/Vulkan-Headers-1.2.158" subprojects
+  ln -sv "$srcdir/implot-0.16" subprojects
 }
 
 build() {
