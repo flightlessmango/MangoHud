@@ -787,6 +787,7 @@ void HudElements::frame_timing(){
             }
         }
         ImGui::EndChild();
+#ifdef __linux__
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_throttling_status_graph] && throttling){
             ImGui::Dummy(ImVec2(0.0f, real_font_size.y / 2));
 
@@ -806,6 +807,7 @@ void HudElements::frame_timing(){
         }
         ImGui::PopFont();
         ImGui::PopStyleColor();
+#endif
     }
 }
 
