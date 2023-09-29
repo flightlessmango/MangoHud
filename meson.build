@@ -191,6 +191,7 @@ imgui_options = [
   'metal=disabled',
   'opengl=disabled',
   'vulkan=disabled',
+  'webgpu=disabled',
   'glfw=disabled',
   'sdl2=disabled',
   'osx=disabled',
