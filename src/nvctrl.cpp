@@ -164,6 +164,19 @@ void getNvctrlInfo(){
 int64_t getNvctrlFanSpeed(){
     auto& nvctrl = get_libnvctrl_loader();
     int64_t fan_speed = 0;
+    /* Get the number of Cooler devices in the system */
+    int num_coolers;
+    bool ret = nvctrl.XNVCTRLQueryTargetCount(display.get(),
+                        NV_CTRL_TARGET_TYPE_COOLER,
+                        &num_coolers);
+    if (!ret) {
+        SPDLOG_ERROR("XNVCtrl Failed to query number of Coolers");
+    } else {
+        SPDLOG_DEBUG("XNVCtrl number of Cooler Devices: {}", num_coolers);
+        if (num_coolers <= 0) {
+            return fan_speed;
+        }
+    }
     nvctrl.XNVCTRLQueryTargetAttribute64(display.get(),
                         NV_CTRL_TARGET_TYPE_COOLER,
                         0,

@@ -80,6 +80,14 @@ bool libnvctrl_loader::Load(const std::string& library_name) {
     return false;
   }
 
+  XNVCTRLQueryTargetCount =
+      reinterpret_cast<decltype(this->XNVCTRLQueryTargetCount)>(
+          dlsym(library_, "XNVCTRLQueryTargetCount"));
+  if (!XNVCTRLQueryTargetCount) {
+    CleanUp(true);
+    return false;
+  }
+
 #endif
 
 #if defined(LIBRARY_LOADER_NVCTRL_H_DT_NEEDED)
