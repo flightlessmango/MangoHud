@@ -731,6 +731,7 @@ void HudElements::frame_timing(){
             ImGui::TableSetColumnIndex(ImGui::TableGetColumnCount() - 1);
             ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
             right_aligned_text(HUDElements.colors.text, ImGui::GetContentRegionAvail().x, "min: %.1fms, max: %.1fms", min_frametime, max_frametime);
+            ImGui::Dummy(ImVec2(0.0f, real_font_size.y / 2));
             ImguiNextColumnFirstItem();
         }
         char hash[40];
