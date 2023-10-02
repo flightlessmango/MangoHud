@@ -16,6 +16,7 @@ static std::unique_ptr<Display, std::function<void(Display*)>> display;
 
 struct nvctrlInfo nvctrl_info;
 bool nvctrlSuccess = false;
+int num_coolers = 0;
 
 static bool find_nv_x11(libnvctrl_loader& nvctrl, Display*& dpy)
 {
@@ -70,6 +71,11 @@ bool checkXNVCtrl()
                     NV_CTRL_PCI_ID,
                     &pci_id);
     deviceID = (pci_id & 0xFFFF);
+
+    // get number of coolers at init
+    nvctrl.XNVCTRLQueryTargetCount(display.get(),
+                    NV_CTRL_TARGET_TYPE_COOLER,
+                    &num_coolers);
 
     return true;
 }
@@ -162,26 +168,15 @@ void getNvctrlInfo(){
 }
 
 int64_t getNvctrlFanSpeed(){
-    auto& nvctrl = get_libnvctrl_loader();
     int64_t fan_speed = 0;
-    /* Get the number of Cooler devices in the system */
-    int num_coolers;
-    bool ret = nvctrl.XNVCTRLQueryTargetCount(display.get(),
-                        NV_CTRL_TARGET_TYPE_COOLER,
-                        &num_coolers);
-    if (!ret) {
-        SPDLOG_ERROR("XNVCtrl Failed to query number of Coolers");
-    } else {
-        SPDLOG_DEBUG("XNVCtrl number of Cooler Devices: {}", num_coolers);
-        if (num_coolers <= 0) {
-            return fan_speed;
-        }
+    if (num_coolers >= 1) {
+        auto& nvctrl = get_libnvctrl_loader();
+        nvctrl.XNVCTRLQueryTargetAttribute64(display.get(),
+                            NV_CTRL_TARGET_TYPE_COOLER,
+                            0,
+                            0,
+                            NV_CTRL_THERMAL_COOLER_SPEED,
+                            &fan_speed);
     }
-    nvctrl.XNVCTRLQueryTargetAttribute64(display.get(),
-                        NV_CTRL_TARGET_TYPE_COOLER,
-                        0,
-                        0,
-                        NV_CTRL_THERMAL_COOLER_SPEED,
-                        &fan_speed);
     return fan_speed;
 }
