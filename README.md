@@ -406,7 +406,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `throttling_status`                | Show if GPU is throttling based on Power, current, temp or "other" (Only shows if throttling is currently happening). Currently disabled by default for Nvidia as it causes lag on 3000 series |
 | `throttling_status_graph`          | Same as `throttling_status` but displays throttling in the frametime graph and only power and temp throttling |
 | `time`<br>`time_format=%T`         | Display local time. See [std::put_time](https://en.cppreference.com/w/cpp/io/manip/put_time) for formatting help. NOTE: Sometimes apps may set `TZ` (timezone) environment variable to UTC/GMT |
-| `toggle_fps_limit`                 | Cycle between FPS limits. Defaults to `Shift_L+F1`                                    |
+| `toggle_fps_limit`                 | Cycle between FPS limits (needs at least two values set with `fps_limit`). Defaults to `Shift_L+F1`                                    |
 | `toggle_preset`                    | Cycle between Presets. Defaults to `Shift_R+F10`                                      |
 | `toggle_hud=`<br>`toggle_logging=` | Modifiable toggle hotkeys. Default are `Shift_R+F12` and `Shift_L+F2`, respectively   |
 | `toggle_hud_position`              | Toggle MangoHud postion. Default is `R_Shift+F11`                                     |
