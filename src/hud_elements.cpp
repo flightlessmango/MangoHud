@@ -951,7 +951,10 @@ void HudElements::battery(){
             if (Battery_Stats.current_watt != 0) {
                 if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_watt]){
                     ImguiNextColumnOrNewRow();
-                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", Battery_Stats.current_watt);
+                    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact] && Battery_Stats.current_watt >= 10.0f)
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", Battery_Stats.current_watt);
+                    else
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", Battery_Stats.current_watt);
                     ImGui::SameLine(0,1.0f);
                     ImGui::PushFont(HUDElements.sw_stats->font1);
                     HUDElements.TextColored(HUDElements.colors.text, "W");
