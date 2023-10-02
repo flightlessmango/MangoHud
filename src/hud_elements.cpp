@@ -477,10 +477,12 @@ void HudElements::vram(){
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", gpu_info.memoryUsed + gpu_info.gtt_used);
         else
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", gpu_info.memoryUsed);
-        ImGui::SameLine(0,1.0f);
-        ImGui::PushFont(HUDElements.sw_stats->font1);
-        HUDElements.TextColored(HUDElements.colors.text, "GiB");
-        ImGui::PopFont();
+        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
+            ImGui::SameLine(0,1.0f);
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            HUDElements.TextColored(HUDElements.colors.text, "GiB");
+            ImGui::PopFont();
+        }
 
         if (gpu_info.memory_temp > -1 && HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_mem_temp]) {
             ImguiNextColumnOrNewRow();
