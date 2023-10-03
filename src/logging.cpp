@@ -272,7 +272,9 @@ void Logger::calculate_benchmark_data(){
   for (auto& point : m_log_array)
     sorted.push_back(point.frametime);
 
-  std::sort(sorted.begin(), sorted.end());
+  std::sort(sorted.begin(), sorted.end(), [](float a, float b) {
+    return a > b;
+  });
   benchmark.percentile_data.clear();
 
   benchmark.total = 0.f;
@@ -301,14 +303,11 @@ void Logger::calculate_benchmark_data(){
       benchmark.percentile_data.push_back({percentile, (1000 / result)});
   }
   string label;
-  float mins[2] = {0.01f, 0.001f}, total;
+  float mins[2] = {0.01f, 0.001f};
   for (auto percent : mins){
-    total = 0;
-    size_t idx = ceil(sorted.size() * percent);
-    for (size_t i = 0; i < idx; i++){
-      total = total + sorted[i];
-    }
-    result = 1000 / (total / idx);
+    size_t percentile_pos = sorted.size() * percent;
+    percentile_pos = std::min(percentile_pos, sorted.size() - 1);
+    float result = 1000 / sorted[percentile_pos];
 
     if (percent == 0.001f)
       label = "0.1%";
