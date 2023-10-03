@@ -113,7 +113,7 @@ void HudElements::convert_colors(bool do_conv, const struct overlay_params& para
 
 void HudElements::TextColored(ImVec4 col, const char *fmt, ...){
     auto textColor = ImGui::ColorConvertFloat4ToU32(col);
-    char buffer[32] {};
+    char buffer[48] {};
 
     va_list args;
     va_start(args, fmt);
