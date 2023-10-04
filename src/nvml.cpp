@@ -14,7 +14,6 @@ unsigned int nvidiaTemp = 0, nvidiaCoreClock = 0, nvidiaMemClock = 0, nvidiaPowe
 unsigned long long nvml_throttle_reasons;
 struct nvmlUtilization_st nvidiaUtilization;
 struct nvmlMemory_st nvidiaMemory {};
-struct nvmlUnitFanSpeeds_st nvidiaFanSpeeds {};
 struct nvmlUnit_st* nvidiaUnit {};
 
 bool checkNVML(const char* pciBusId){
@@ -61,6 +60,8 @@ bool getNVMLInfo(const struct overlay_params& params){
     deviceID = nvidiaPciInfo.pciDeviceId >> 16;
     if (params.enabled[OVERLAY_PARAM_ENABLED_throttling_status])
         nvml.nvmlDeviceGetCurrentClocksThrottleReasons(nvidiaDevice, &nvml_throttle_reasons);
+
+    nvml.nvmlDeviceGetFanSpeed(nvidiaDevice, &nvidiaFanSpeed);
 
     if (response == NVML_ERROR_NOT_SUPPORTED) {
         if (nvmlSuccess)
