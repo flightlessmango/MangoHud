@@ -201,4 +201,10 @@ bool lib_loaded(const std::string& lib) {
 
 }
 
+std::string remove_parentheses(const std::string& text) {
+    // Remove parentheses and text between them
+    std::regex pattern("\\([^)]*\\)");
+    return std::regex_replace(text, pattern, "");
+}
+
 #endif // __linux__

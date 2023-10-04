@@ -50,6 +50,7 @@
 #include "notify.h"
 #include "blacklist.h"
 #include "pci_ids.h"
+#include "file_utils.h"
 #ifdef __linux__
 #include "implot.h"
 #endif
@@ -1550,7 +1551,7 @@ static VkResult overlay_CreateSwapchainKHR(
    std::string deviceName = prop.deviceName;
    if (!is_blacklisted()) {
 #ifdef __linux__
-      swapchain_data->sw_stats.gpuName = deviceName;
+      swapchain_data->sw_stats.gpuName = remove_parentheses(deviceName);
 #endif
    }
    swapchain_data->sw_stats.driverName = driverProps.driverInfo;

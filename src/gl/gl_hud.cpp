@@ -149,7 +149,7 @@ void imgui_create(void *ctx, const gl_wsi plat)
 
     SPDLOG_DEBUG("GL device id: {:04X}", device_id);
     init_gpu_stats(vendorID, device_id, params);
-    sw_stats.gpuName = gpu = deviceName;
+    sw_stats.gpuName = gpu = remove_parentheses(deviceName);
     SPDLOG_DEBUG("gpu: {}", gpu);
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
