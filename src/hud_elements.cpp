@@ -901,8 +901,10 @@ void HudElements::custom_text(){
     const char* value;
     if (size_t(HUDElements.place) < HUDElements.ordered_functions.size())
         value = HUDElements.ordered_functions[HUDElements.place].second.c_str();
-    else
+    else {
+        ImGui::PopFont();
         return;
+    }
     HUDElements.TextColored(HUDElements.colors.text, "%s",value);
     ImGui::PopFont();
 }
