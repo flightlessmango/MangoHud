@@ -188,7 +188,6 @@ mangohud_static_lib = static_library(
     implot_dep],
   include_directories : [inc_common],
   link_args : link_args,
-  link_with : implot_lib,
   install_dir : libdir_mangohud,
   install : false
 )
