@@ -32,6 +32,9 @@ void create_fonts(ImFontAtlas* font_atlas, const overlay_params& params, ImFont*
    // Load Icon file and merge to exisitng font
     ImFontConfig config;
     config.MergeMode = true;
+    // ImGui changed OversampleH default to 2, but it appears to sometimes cause
+    // crashing issues in 32bit applications.
+    config.OversampleH = 3;
     static const ImWchar icon_ranges[] = { ICON_MIN_FK, ICON_MAX_FK, 0 };
 
    ImVector<ImWchar> glyph_ranges;
