@@ -4,6 +4,13 @@
 #include <utility>
 #include <imgui.h>
 #include "timing.hpp"
+#include <functional>
+
+struct Function {
+    std::function<void()> run;  // Using std::function instead of a raw function pointer for more flexibility
+    std::string name;
+    std::string value;
+};
 
 struct overlay_params;
 class HudElements{
@@ -26,7 +33,7 @@ class HudElements{
         int g_fsrSharpness = -1;
         Clock::time_point last_exec;
         std::vector<std::pair<std::string, std::string>> options;
-        std::vector<std::pair<void(*)(), std::string >> ordered_functions;
+        std::vector<Function> ordered_functions;
         std::vector<float> gamescope_debug_latency {};
         std::vector<float> gamescope_debug_app {};
         int min, max, gpu_core_max, gpu_mem_max, cpu_temp_max, gpu_temp_max;
