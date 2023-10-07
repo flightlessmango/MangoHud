@@ -926,13 +926,16 @@ parse_overlay_config(struct overlay_params *params,
    auto real_size = params->font_size * params->font_scale;
    real_font_size = ImVec2(real_size, real_size / 2);
    HUDElements.params = params;
-   if (params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout]){
-        HUDElements.legacy_elements();
-   } else {
-      for (auto& option : HUDElements.options)
-         HUDElements.sort_elements(option);
-   }
 
+   for (const auto& option : HUDElements.options) {
+      SPDLOG_DEBUG("Param: '{}' = '{}'", option.first, option.second);
+
+      if (params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout]) {
+         HUDElements.legacy_elements();
+      } else {
+         HUDElements.sort_elements(option);
+      }
+   }
    // Needs ImGui context but it is null here for OpenGL so just note it and update somewhere else
    HUDElements.colors.update = true;
    if (params->no_small_font)
