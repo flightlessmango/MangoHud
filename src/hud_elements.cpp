@@ -3,6 +3,7 @@
 #include <functional>
 #include <sstream>
 #include <cmath>
+#include <map>
 #include "overlay.h"
 #include "overlay_params.h"
 #include "hud_elements.h"
