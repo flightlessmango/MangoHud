@@ -27,14 +27,9 @@ pre_args = [
   '-DSPDLOG_COMPILED_LIB'
 ]
 
-# Define DEBUG for debug builds only (debugoptimized is not included on this one)
-if get_option('buildtype') == 'debug'
-  pre_args += '-DDEBUG'
-  pre_args += '-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE'
-else
-  pre_args += '-DNDEBUG'
-  pre_args += '-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_' + get_option('loglevel').to_upper()
-endif
+# Always set max spdlog level, handle this using MANGOHUD_LOG_LEVEL instead.
+pre_args += '-DDEBUG'
+pre_args += '-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE'
 
 # TODO: this is very incomplete
 is_unixy = false
