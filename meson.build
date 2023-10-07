@@ -28,7 +28,9 @@ pre_args = [
 ]
 
 # Always set max spdlog level, handle this using MANGOHUD_LOG_LEVEL instead.
-pre_args += '-DDEBUG'
+if get_option('buildtype') == 'debug'
+  pre_args += '-DDEBUG'
+endif
 pre_args += '-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE'
 
 # TODO: this is very incomplete

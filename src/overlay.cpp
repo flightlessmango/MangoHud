@@ -72,7 +72,7 @@ void init_spdlog()
          SPDLOG_ERROR("{}", ex.what());
       }
    }
-#ifndef NDEBUG
+#ifdef DEBUG
    spdlog::set_level(spdlog::level::level_enum::debug);
 #endif
    spdlog::cfg::load_env_levels();
@@ -88,10 +88,12 @@ void init_spdlog()
             spdlog::set_level(spdlog::level::from_str(log_level));
          }
       }
+#ifndef DEBUG
    } else {
       std::string log_level = "err";
       transform(log_level.begin(), log_level.end(), log_level.begin(), ::tolower);
       spdlog::set_level(spdlog::level::from_str(log_level));
+#endif
    }
 
 }
