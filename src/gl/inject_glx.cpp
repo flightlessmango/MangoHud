@@ -111,7 +111,7 @@ EXPORT_C_(int) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
     if (!is_blacklisted()) {
         if (ret) {
             imgui_set_context(ctx, gl_wsi::GL_WSI_GLX);
-            SPDLOG_DEBUG("GL ref count: {}", refcnt);
+            SPDLOG_DEBUG("GL ref count: {}", refcnt.load());
         }
 
         // Afaik -1 only works with EXT version if it has GLX_EXT_swap_control_tear, maybe EGL_MESA_swap_control_tear someday
@@ -304,7 +304,7 @@ EXPORT_C_(void *) mangohud_find_glx_ptr(const char *name)
 EXPORT_C_(void *) glXGetProcAddress(const unsigned char* procName) {
     void *real_func = get_glx_proc_address((const char*)procName);
     void *func = mangohud_find_glx_ptr( (const char*)procName );
-    SPDLOG_TRACE("{}: '{}', real: {}, fun: {}", __func__, procName, real_func, func);
+    SPDLOG_TRACE("{}: '{}', real: {}, fun: {}", __func__, fmt::ptr(procName), real_func, func);
 
     if (func && real_func)
         return func;
@@ -315,7 +315,7 @@ EXPORT_C_(void *) glXGetProcAddress(const unsigned char* procName) {
 EXPORT_C_(void *) glXGetProcAddressARB(const unsigned char* procName) {
     void *real_func = get_glx_proc_address((const char*)procName);
     void *func = mangohud_find_glx_ptr( (const char*)procName );
-    SPDLOG_TRACE("{}: '{}', real: {}, fun: {}", __func__, procName, real_func, func);
+    SPDLOG_TRACE("{}: '{}', real: {}, fun: {}", __func__, fmt::ptr(procName), real_func, func);
     if (func && real_func)
         return func;
 
