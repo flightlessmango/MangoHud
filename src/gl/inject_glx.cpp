@@ -316,6 +316,7 @@ EXPORT_C_(void *) glXGetProcAddressARB(const unsigned char* procName) {
     void *real_func = get_glx_proc_address((const char*)procName);
     void *func = mangohud_find_glx_ptr( (const char*)procName );
     SPDLOG_TRACE("{}: '{}', real: {}, fun: {}", __func__, reinterpret_cast<const char*>(procName), real_func, func);
+    if (func && real_func)
         return func;
 
     return real_func;
