@@ -30,9 +30,9 @@ pre_args = [
 # Always set max spdlog level, handle this using MANGOHUD_LOG_LEVEL instead.
 if get_option('buildtype') == 'debug'
   pre_args += '-DDEBUG'
+  pre_args += '-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE'
 endif
-pre_args += '-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE'
-
+pre_args += '-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG'
 # TODO: this is very incomplete
 is_unixy = false
 if ['linux', 'cygwin', 'gnu'].contains(host_machine.system())
