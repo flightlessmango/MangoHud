@@ -1428,7 +1428,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
                 if (find(permitted_params.begin(), permitted_params.end(), val) != permitted_params.end()) {
                     ordered_functions.push_back({graphs, "graph: " + val, val});
                 } else {
-                    spdlog::error("Unrecognized graph type: {}", val);
+                    SPDLOG_ERROR("Unrecognized graph type: {}", val);
                 }
             }
         } else {
