@@ -281,4 +281,6 @@ if get_option('tests').enabled()
 endif
 
 # install helper sripts
-subdir('bin')
+if get_option('mangoplot').enabled()
+  subdir('bin')
+endif
