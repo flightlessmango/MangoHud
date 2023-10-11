@@ -1362,7 +1362,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
     const auto& param = option.first;
     const auto& value = option.second;
 
-    // ordered_functions.push_back({func name, "name", value});
+    // Initialize a map of display parameters and their corresponding functions.
     const std::map<std::string, Function> display_params = {
         {"version", {version}},
         {"time", {time}},
@@ -1402,7 +1402,6 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
         {"graphs", {graphs}}
     };
 
-    // check param against map
     auto check_param = display_params.find(param);
     if (check_param != display_params.end()) {
         const Function& func = check_param->second;
@@ -1417,6 +1416,9 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
                 [](const auto& a) { return a.name == "io_stats"; })) {
                 ordered_functions.push_back({io_stats, "io_stats", value});
             }
+        } else if (param == "exec") {
+            ordered_functions.push_back({_exec, "exec", value});
+            exec_list.push_back({int(ordered_functions.size() - 1), value});
         } else if (param == "graphs") {
             // Handle graphs parameter
             if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs]) {
