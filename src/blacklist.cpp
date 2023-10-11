@@ -49,7 +49,6 @@ static  std::vector<std::string> blacklist {
     "RSI Launcher.exe",
     "tabtip.exe",
     "steam.exe",
-    "wine64-preloader",
     "explorer.exe",
     "wine-preloader",
     "iexplore.exe",
