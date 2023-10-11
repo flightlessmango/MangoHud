@@ -14,8 +14,8 @@ source=(
         "mangohud-minhook"::"git+https://github.com/flightlessmango/minhook.git"
         "imgui-1.89.9.tar.gz::https://github.com/ocornut/imgui/archive/refs/tags/v1.89.9.tar.gz"
         "imgui_1.89.9-1_patch.zip::https://wrapdb.mesonbuild.com/v2/imgui_1.89.9-1/get_patch"
-        "spdlog-1.8.5.tar.gz::https://github.com/gabime/spdlog/archive/v1.8.5.tar.gz"
-        "spdlog-1.8.5-1-wrap.zip::https://wrapdb.mesonbuild.com/v1/projects/spdlog/1.8.5/1/get_zip"
+        "spdlog-1.12.0.tar.gz::https://github.com/gabime/spdlog/archive/refs/tags/v1.12.0.tar.gz"
+        "spdlog_1.12.0-1_patch.zip::https://wrapdb.mesonbuild.com/v2/spdlog_1.12.0-1/get_patch"
         "nlohmann_json-3.10.5.zip::https://github.com/nlohmann/json/releases/download/v3.10.5/include.zip"
         "vulkan-headers-1.2.158.tar.gz::https://github.com/KhronosGroup/Vulkan-Headers/archive/v1.2.158.tar.gz"
         "vulkan-headers-1.2.158-2-wrap.zip::https://wrapdb.mesonbuild.com/v2/vulkan-headers_1.2.158-2/get_patch"
@@ -28,8 +28,8 @@ sha256sums=(
             'SKIP'
             '1acc27a778b71d859878121a3f7b287cd81c29d720893d2b2bf74455bf9d52d6'
             '9b21290c597d76bf8d4eeb3f9ffa024b11d9ea6c61e91d648ccc90b42843d584'
-            '944d0bd7c763ac721398dca2bb0f3b5ed16f67cef36810ede5061f35a543b4b8'
-            '3c38f275d5792b1286391102594329e98b17737924b344f98312ab09929b74be'
+            '4dccf2d10f410c1e2feaff89966bfc49a1abb29ef6f08246335b110e001e09a9'
+            '0515906db7324df0e439bdd018bf019a60304430f6af8f1725910652e30ebe69'
             'b94997df68856753b72f0d7a3703b7d484d4745c567f3584ef97c96c25a5798e'
             "53361271cfe274df8782e1e47bdc9e61b7af432ba30acbfe31723f9df2c257f3"
             "860358cf5e73f458cd1e88f8c38116d123ab421d5ce2e4129ec38eaedd820e17"
@@ -52,7 +52,7 @@ prepare() {
 
   # meson subprojects
   ln -sv "$srcdir/imgui-1.89.9" subprojects
-  ln -sv "$srcdir/spdlog-1.8.5" subprojects
+  ln -sv "$srcdir/spdlog-1.12.0" subprojects
   mkdir  subprojects/nlohmann_json-3.10.5
   ln -sv "$srcdir/include" subprojects/nlohmann_json-3.10.5/
   ln -sv "$srcdir/single_include" subprojects/nlohmann_json-3.10.5/
