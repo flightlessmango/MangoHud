@@ -16,6 +16,7 @@ class libx11_loader {
 
   decltype(&::XOpenDisplay) XOpenDisplay;
   decltype(&::XCloseDisplay) XCloseDisplay;
+  decltype(&::XDefaultScreen) XDefaultScreen;
   decltype(&::XQueryKeymap) XQueryKeymap;
   decltype(&::XKeysymToKeycode) XKeysymToKeycode;
   decltype(&::XStringToKeysym) XStringToKeysym;

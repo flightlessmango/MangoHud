@@ -37,6 +37,14 @@ bool libx11_loader::Load(const std::string& library_name) {
     return false;
   }
 
+  XDefaultScreen =
+      reinterpret_cast<decltype(this->XDefaultScreen)>(
+          dlsym(library_, "XDefaultScreen"));
+  if (!XDefaultScreen) {
+      CleanUp(true);
+      return false;
+  }
+
   XQueryKeymap =
       reinterpret_cast<decltype(this->XQueryKeymap)>(
           dlsym(library_, "XQueryKeymap"));
