@@ -26,7 +26,8 @@ static bool find_nv_x11(libnvctrl_loader& nvctrl, Display*& dpy)
         snprintf(buf, sizeof(buf), ":%d", i);
         Display *d = libx11->XOpenDisplay(buf);
         if (d) {
-            if (nvctrl.XNVCTRLIsNvScreen(d, i)) {
+            int s = libx11->XDefaultScreen(d);
+            if (nvctrl.XNVCTRLIsNvScreen(d, s)) {
                 dpy = d;
                 SPDLOG_DEBUG("XNVCtrl is using display {}", buf);
                 return true;
