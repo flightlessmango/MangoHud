@@ -1,12 +1,19 @@
 #!/bin/sh
 
 if [ "$#" -eq 0 ]; then
-	programname=`basename "$0"`
-	echo "ERROR: No program supplied"
-	echo
-	echo "Usage: $programname <program>"
-	exit 1
+    programname=$(basename "$0")
+    echo "ERROR: No program supplied"
+    echo
+    echo "Usage: $programname <program>"
+    exit 1
 fi
+
+# Names of executables that we do not want LD_PRELOAD set for
+DISABLE_LD_PRELOAD=("cs2.sh")
+
+# Combine all command line arguments into a single string
+command_line="$0 $@"
+disable_preload=false
 
 MANGOHUD_LIB_NAME="@ld_libdir_mangohud@libMangoHud_opengl.so"
 
@@ -18,20 +25,31 @@ elif [ "$MANGOHUD_DLSYM" = "1" ]; then
 fi
 
 if [ "$1" = "--version" ]; then
-	echo @version@
-	exit 0
+    echo @version@
+    exit 0
 fi
 
-# Make sure we don't append mangohud lib multiple times
-# otherwise this could cause issues with steam runtime
-case ":${LD_PRELOAD-}:" in
-    (*:$MANGOHUD_LIB_NAME:*)
-        ;;
-    (*)
-	# Preload using the plain filenames of the libs, the dynamic linker will
-	# figure out whether the 32 or 64 bit version should be used
-        LD_PRELOAD="${LD_PRELOAD:+$LD_PRELOAD:}${MANGOHUD_LIB_NAME}"
-esac
+# Check if any of the names in DISABLE_LD_PRELOAD are in the command line
+for name in "${DISABLE_LD_PRELOAD[@]}"; do
+    if echo "$command_line" | grep -q "$name"; then
+        disable_preload=true
+        break
+    fi
+done
 
+if [ "$disable_preload" = true ]; then
+    exec env MANGOHUD=1 "$@"
+else
+    # Make sure we don't append mangohud lib multiple times
+    # otherwise, this could cause issues with the steam runtime
+    case ":${LD_PRELOAD-}:" in
+        (*:$MANGOHUD_LIB_NAME:*)
+            ;;
+        (*)
+            # Preload using the plain filenames of the libs, the dynamic linker will
+            # figure out whether the 32 or 64 bit version should be used
+            LD_PRELOAD="${LD_PRELOAD:+$LD_PRELOAD:}${MANGOHUD_LIB_NAME}"
+    esac
 
-exec env MANGOHUD=1 LD_PRELOAD="${LD_PRELOAD}" "$@"
+    exec env MANGOHUD=1 LD_PRELOAD="${LD_PRELOAD}" "$@"
+fi
