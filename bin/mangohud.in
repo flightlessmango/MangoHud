@@ -8,12 +8,10 @@ if [ "$#" -eq 0 ]; then
     exit 1
 fi
 
-# Names of executables that we do not want LD_PRELOAD set for
-DISABLE_LD_PRELOAD=("cs2.sh")
 
-# Combine all command line arguments into a single string
-command_line="$0 $@"
-disable_preload=false
+# Add exe names newline separated to the string to disable LD_PRELOAD
+DISABLE_LD_PRELOAD="cs2.sh
+some_other_exe"
 
 MANGOHUD_LIB_NAME="@ld_libdir_mangohud@libMangoHud_opengl.so"
 
@@ -29,9 +27,14 @@ if [ "$1" = "--version" ]; then
     exit 0
 fi
 
-# Check if any of the names in DISABLE_LD_PRELOAD are in the command line
-for name in "${DISABLE_LD_PRELOAD[@]}"; do
-    if echo "$command_line" | grep -q "$name"; then
+# grab all arguments from command_line
+command_line="$*"
+# flag for disable_preload
+disable_preload=false
+
+# Check if the script name or any of the executables in DISABLE_LD_PRELOAD are in the command line
+for exe in $DISABLE_LD_PRELOAD; do
+    if echo "$command_line" | grep -q "$exe"; then
         disable_preload=true
         break
     fi
