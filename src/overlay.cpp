@@ -674,7 +674,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    if(params.enabled[OVERLAY_PARAM_ENABLED_horizontal])
       table_flags = ImGuiTableFlags_NoClip | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_NoHostExtendX;
 
-   if (!params.no_display && !steam_focused){
+   if (!params.no_display && !steam_focused && params.table_columns){
       ImGui::Begin("Main", &gui_open, ImGuiWindowFlags_NoDecoration);
       if (ImGui::BeginTable("hud", params.table_columns, table_flags )) {
          HUDElements.place = 0;
