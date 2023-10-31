@@ -43,6 +43,7 @@ class HudElements{
         };
         std::vector<exec_entry> exec_list;
         std::chrono::steady_clock::time_point overlay_start = std::chrono::steady_clock::now();
+        uint32_t vendorID;
 
         void sort_elements(const std::pair<std::string, std::string>& option);
         void legacy_elements();

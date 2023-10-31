@@ -24,6 +24,7 @@
 #include "implot.h"
 #endif
 #include "amdgpu.h"
+#include "fps_metrics.h"
 
 #define CHAR_CELSIUS    "\xe2\x84\x83"
 #define CHAR_FAHRENHEIT "\xe2\x84\x89"
@@ -236,19 +237,19 @@ void HudElements::gpu_stats(){
             ImGui::PopFont();
         }
 
-        if (deviceID == 7815 || deviceID == 29772){
+        if (HUDElements.vendorID == 0x1002 || HUDElements.vendorID == 0x10de){
             if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_fan] && cpuStats.cpu_type != "APU"){
                 ImguiNextColumnOrNewRow();
                 right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.fan_speed);
                 ImGui::SameLine(0, 1.0f);
                 // if Nvidia GPU
-                if (deviceID == 7815) {
+                if (HUDElements.vendorID == 0x10de) {
                     HUDElements.TextColored(HUDElements.colors.text, "%%");
                     ImGui::PushFont(HUDElements.sw_stats->font1);
                     ImGui::SameLine(0, 1.0f);
                     HUDElements.TextColored(HUDElements.colors.text, "FAN");
                 //  if AMD GPU
-                } else if (deviceID == 29772) {
+                } else if (HUDElements.vendorID == 0x1002) {
                     ImGui::PushFont(HUDElements.sw_stats->font1);
                     HUDElements.TextColored(HUDElements.colors.text, "RPM");
                 }
@@ -1358,6 +1359,34 @@ void HudElements::exec_name(){
     }
 }
 
+void HudElements::fps_metrics(){
+    for (auto& metric : fpsmetrics->metrics){
+        ImguiNextColumnFirstItem();
+        HUDElements.TextColored(HUDElements.colors.engine, "%s", metric.display_name.c_str());
+        ImguiNextColumnOrNewRow();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", metric.value);
+        ImGui::SameLine(0, 1.0f);
+        ImGui::PushFont(HUDElements.sw_stats->font1);
+        HUDElements.TextColored(HUDElements.colors.text, "FPS");
+        ImGui::PopFont();
+        ImguiNextColumnOrNewRow();
+    }
+    
+    // HUDElements.TextColored(HUDElements.colors.engine, "%s", "AVG");
+    // ImguiNextColumnOrNewRow();
+    // right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", HUDElements.fps_avg);
+    // ImGui::SameLine(0, 1.0f);
+    // ImGui::PushFont(HUDElements.sw_stats->font1);
+    // HUDElements.TextColored(HUDElements.colors.text, "FPS");
+    // ImGui::PopFont();
+    // ImguiNextColumnOrNewRow();
+    // right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", 1000 / HUDElements.fps_avg);
+    // ImGui::SameLine(0, 1.0f);
+    // ImGui::PushFont(HUDElements.sw_stats->font1);
+    // HUDElements.TextColored(HUDElements.colors.text, "ms");
+    // ImGui::PopFont();
+}
+
 void HudElements::sort_elements(const std::pair<std::string, std::string>& option) {
     const auto& param = option.first;
     const auto& value = option.second;
@@ -1399,7 +1428,8 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
         {"throttling_status", {throttling_status}},
         {"exec_name", {exec_name}},
         {"duration", {duration}},
-        {"graphs", {graphs}}
+        {"graphs", {graphs}},
+        {"fps_metrics", {fps_metrics}}
     };
 
     auto check_param = display_params.find(param);
@@ -1471,6 +1501,8 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({throttling_status, "throttling_status", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_fps])
         ordered_functions.push_back({fps, "fps", value});
+    if (!params->fps_metrics.empty())
+        ordered_functions.push_back({fps_metrics, "fps_metrics", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_fps_only])
         ordered_functions.push_back({fps_only, "fps_only", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_engine_version])

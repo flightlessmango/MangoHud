@@ -81,6 +81,7 @@ static void ctrl_thread(){
         const struct mangoapp_ctrl_msgid1_v1 *mangoapp_ctrl_v1 = (const struct mangoapp_ctrl_msgid1_v1*) raw_msg;
         memset(raw_msg, 0, sizeof(raw_msg));
         msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 2, 0);
+        printf("got msg\n");
         switch (mangoapp_ctrl_v1->log_session) {
             case 0:
                 // Keep as-is
@@ -126,7 +127,23 @@ static void ctrl_thread(){
                     break;
             }
         }
+        printf("before debug check\n");
+        if (mangoapp_ctrl_v1->debug){
+            struct mangoapp_ctrl_msgid1_v1 ctrl_msg;
+            ctrl_msg.hdr.ctrl_msg_type = 1;
+            ctrl_msg.hdr.msg_type = 3;
+            char resp[10240] = "";
+            for (auto& option : HUDElements.options){
+                strcat(resp, option.first.c_str());
+                strcat(resp, "\n");
+            }
+            strcat(ctrl_msg.debug_response, resp);
+            printf("sending msg\n");
+            int ret = msgsnd(msgid, &raw_msg, sizeof(raw_msg), IPC_NOWAIT);
+            printf("ret: %i\n", ret);
+        }
         mangoapp_cv.notify_one();
+        printf("back to top\n");
     }
 }
 
@@ -151,7 +168,7 @@ static void msg_read_thread(){
         HUDElements.gamescope_debug_app.push_back(0);
         HUDElements.gamescope_debug_latency.push_back(0);
     }
-    int key = ftok("mangoapp", 65);
+    int key = ftok("/tmp/mangoapp", 65);
     msgid = msgget(key, 0666 | IPC_CREAT);
     // uint32_t previous_pid = 0;
     const struct mangoapp_msg_header *hdr = (const struct mangoapp_msg_header*) raw_msg;
@@ -316,6 +333,8 @@ int main(int, char**)
             vendorID = 0x10de;
         }
     }
+
+    HUDElements.vendorID = vendorID;
     init_gpu_stats(vendorID, 0, params);
     init_system_info();
     sw_stats.engine = EngineTypes::GAMESCOPE;

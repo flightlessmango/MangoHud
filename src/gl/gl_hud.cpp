@@ -143,6 +143,8 @@ void imgui_create(void *ctx, const gl_wsi plat)
         vendorID = 0x10de;
     }
 
+    HUDElements.vendorID = vendorID;
+
     uint32_t device_id = 0;
     if (plat == gl_wsi::GL_WSI_GLX)
         glx_mesa_queryInteger(GLX_RENDERER_DEVICE_ID_MESA, &device_id);

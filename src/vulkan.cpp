@@ -1528,6 +1528,7 @@ static VkResult overlay_CreateSwapchainKHR(
    swapchain_data->sw_stats.engineVersion = device_data->instance->engineVersion;
    swapchain_data->sw_stats.engine        = device_data->instance->engine;
 
+   HUDElements.vendorID = prop.vendorID;
    std::stringstream ss;
 //   ss << prop.deviceName;
    if (prop.vendorID == 0x10de) {
