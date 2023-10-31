@@ -352,7 +352,8 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `fps_limit`                        | Limit the apps framerate. Comma-separated list of one or more FPS values. `0` means unlimited |
 | `fps_only`                         | Show FPS only. ***Not meant to be used with other display params***                   |
 | `fps_sampling_period=`             | Time interval between two sampling points for gathering the FPS in milliseconds. Default is `500`   |
-| `fps_value=`                       | Choose the break points where `fps_color_change` changes colors between. E.g `60,144`, default is `30,60` |
+| `fps_value`                        | Choose the break points where `fps_color_change` changes colors between. E.g `60,144`, default is `30,60` |
+| `fps_metrics`                      | Takes a list of decimal values or the value avg, e.g `avg,0.001`                      |
 | `frame_count`                      | Display frame count                                                                   |
 | `frametime`                        | Display frametime next to FPS text                                                    |
 | `fsr`                              | Display the status of FSR (only works in gamescope)                                   |

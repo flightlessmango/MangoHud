@@ -186,6 +186,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(text_outline_thickness)      \
    OVERLAY_PARAM_CUSTOM(fps_text)                    \
    OVERLAY_PARAM_CUSTOM(device_battery)              \
+   OVERLAY_PARAM_CUSTOM(fps_metrics)                 \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -306,6 +307,7 @@ struct overlay_params {
    unsigned text_outline_color;
    float text_outline_thickness;
    std::vector<std::string> device_battery;
+   std::vector<std::string> fps_metrics;
 };
 
 const extern char *overlay_param_names[];

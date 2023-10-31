@@ -84,6 +84,7 @@ class HudElements{
         static void throttling_status();
         static void exec_name();
         static void duration();
+        static void fps_metrics();
 
         void convert_colors(const struct overlay_params& params);
         void convert_colors(bool do_conv, const struct overlay_params& params);

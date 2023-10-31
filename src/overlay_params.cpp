@@ -38,6 +38,9 @@
 #include "dbus_info.h"
 
 #include "app/mangoapp.h"
+#include "fps_metrics.h"
+
+std::unique_ptr<fpsMetrics> fpsmetrics;
 
 #if __cplusplus >= 201703L
 
@@ -412,6 +415,20 @@ parse_gl_size_query(const char *str)
    if (value == "scissorbox")
       return GL_SIZE_SCISSORBOX;
    return GL_SIZE_DRAWABLE;
+}
+
+static std::vector<std::string>
+parse_fps_metrics(const char *str){
+   std::vector<std::string> metrics;
+   auto tokens = str_tokenize(str);
+   for (auto& token : tokens) {
+      metrics.push_back(token);
+   }
+
+   fpsmetrics.release();
+   fpsmetrics = std::make_unique<fpsMetrics>(metrics);
+
+   return metrics;
 }
 
 #define parse_width(s) parse_unsigned(s)

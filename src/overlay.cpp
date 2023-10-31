@@ -23,7 +23,7 @@
 #include "pci_ids.h"
 #include "iostats.h"
 #include "amdgpu.h"
-
+#include "fps_metrics.h"
 
 #ifdef __linux__
 #include <libgen.h>
@@ -256,11 +256,14 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
 #endif
    frametime = frametime_ms;
    fps = double(1000 / frametime_ms);
+   if (fpsmetrics) fpsmetrics->update(now, fps);
 
    if (elapsed >= params.fps_sampling_period) {
       if (!hw_update_thread)
          hw_update_thread = std::make_unique<hw_info_updater>();
       hw_update_thread->update(&params, vendorID);
+
+      if (fpsmetrics) fpsmetrics->update_thread();
 
       sw_stats.fps = 1000000000.0 * sw_stats.n_frames_since_update / elapsed;
 
