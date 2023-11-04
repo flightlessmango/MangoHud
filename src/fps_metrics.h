@@ -28,9 +28,12 @@ class fpsMetrics {
 
         void calculate(){
             thread_init = true;
-            while (!terminate){
+            while (true){
                 std::unique_lock<std::mutex> lock(mtx);
                 cv.wait(lock, [this] { return run; });
+
+                if (terminate)
+                    break;
 
                 std::vector<float> sorted_values;
                 for (const auto& p : fps_stats)
