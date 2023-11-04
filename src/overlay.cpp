@@ -24,6 +24,7 @@
 #include "iostats.h"
 #include "amdgpu.h"
 #include "fps_metrics.h"
+#include "intel.h"
 
 #ifdef __linux__
 #include <libgen.h>
@@ -135,7 +136,7 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
          getNvidiaGpuInfo(params);
 #ifdef __linux__
       if (vendorID== 0x8086)
-         getIntelGpuInfo();
+         if (intel) intel->update();
 #endif
    }
 
@@ -823,6 +824,7 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
          path = drm + dir;
          drm_dev = dir;
          SPDLOG_DEBUG("Intel: using drm device {}", drm_dev);
+         intel = std::make_unique<Intel>();
          break;
       }
    }

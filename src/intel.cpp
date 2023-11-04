@@ -1,21 +1,8 @@
-#include <thread>
-#include "overlay.h"
-#include "gpu.h"
-#include "spdlog/spdlog.h"
-#include <nlohmann/json.hpp>
-#include <sys/stat.h>
-#include <filesystem.h>
-#include <inttypes.h>
+#include "intel.h"
+std::unique_ptr<Intel> intel;
 
-using json = nlohmann::json;
-namespace fs = ghc::filesystem;
-
-static bool init_intel = false;
-struct gpuInfo gpu_info_intel {};
-FILE* fdinfo;
-
-static void intelGpuThread(bool runtime){
-    init_intel = true;
+void Intel::intel_gpu_thread(){
+    init = true;
     static char stdout_buffer[1024];
     static FILE* intel_gpu_top;
     if (runtime)
@@ -63,6 +50,8 @@ static void intelGpuThread(bool runtime){
             num_line = 0;
         }
         num_iterations++;
+        if (stop)
+            break;
     }
 
     int exitcode = pclose(intel_gpu_top) / 256;
@@ -74,11 +63,11 @@ static void intelGpuThread(bool runtime){
         SPDLOG_INFO("Missing permissions for '{}'", "intel_gpu_top");
 
         SPDLOG_INFO("Disabling gpu_stats");
-        _params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
+        HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
     }
 }
 
-static uint64_t get_gpu_time() {
+uint64_t Intel::get_gpu_time() {
     rewind(fdinfo);
     fflush(fdinfo);
     char line[256];
@@ -91,7 +80,7 @@ static uint64_t get_gpu_time() {
     return val;
 }
 
-static FILE* find_fd() {
+FILE* Intel::find_fd() {
     DIR* dir = opendir("/proc/self/fdinfo");
     if (!dir) {
         perror("Failed to open directory");
@@ -124,37 +113,23 @@ static FILE* find_fd() {
     return NULL;  // Return NULL if no matching file is found
 }
 
-void getIntelGpuInfo(){
-    if (!init_intel){
-        fdinfo = find_fd();
-        static bool runtime = false;
-        static struct stat buffer;
-        if (stat("/run/pressure-vessel", &buffer) == 0)
-            runtime = true;
+void Intel::get_fdinfo(){
+    static uint64_t previous_gpu_time, previous_time, now, gpu_time_now;
+    gpu_time_now = get_gpu_time();
+    now = os_time_get_nano();
 
-        std::thread(intelGpuThread, runtime).detach();
+    if (previous_time && previous_gpu_time && gpu_time_now > previous_gpu_time){
+        float time_since_last = now - previous_time;
+        float gpu_since_last = gpu_time_now - previous_gpu_time;
+        auto result = int((gpu_since_last / time_since_last) * 100);
+        if (result > 100)
+            result = 100;
+
+        gpu_info_intel.load = result;
+        previous_gpu_time = gpu_time_now;
+        previous_time = now;
+    } else {
+        previous_gpu_time = gpu_time_now;
+        previous_time = now;
     }
-
-    if (fdinfo){
-        static uint64_t previous_gpu_time, previous_time, now, gpu_time_now;
-        gpu_time_now = get_gpu_time();
-        now = os_time_get_nano();
-
-        if (previous_time && previous_gpu_time && gpu_time_now > previous_gpu_time){
-            float time_since_last = now - previous_time;
-            float gpu_since_last = gpu_time_now - previous_gpu_time;
-            auto result = int((gpu_since_last / time_since_last) * 100);
-            if (result > 100)
-                result = 100;
-
-            gpu_info_intel.load = result;
-            previous_gpu_time = gpu_time_now;
-            previous_time = now;
-        } else {
-            previous_gpu_time = gpu_time_now;
-            previous_time = now;
-        }
-    }
-
-    gpu_info = gpu_info_intel;
 }
