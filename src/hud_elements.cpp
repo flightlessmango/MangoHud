@@ -1371,20 +1371,25 @@ void HudElements::fps_metrics(){
         ImGui::PopFont();
         ImguiNextColumnOrNewRow();
     }
-    
-    // HUDElements.TextColored(HUDElements.colors.engine, "%s", "AVG");
-    // ImguiNextColumnOrNewRow();
-    // right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", HUDElements.fps_avg);
-    // ImGui::SameLine(0, 1.0f);
-    // ImGui::PushFont(HUDElements.sw_stats->font1);
-    // HUDElements.TextColored(HUDElements.colors.text, "FPS");
-    // ImGui::PopFont();
-    // ImguiNextColumnOrNewRow();
-    // right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", 1000 / HUDElements.fps_avg);
-    // ImGui::SameLine(0, 1.0f);
-    // ImGui::PushFont(HUDElements.sw_stats->font1);
-    // HUDElements.TextColored(HUDElements.colors.text, "ms");
-    // ImGui::PopFont();
+
+}
+
+void HudElements::hdr() {
+    if (HUDElements.hdr_status > 0) {
+        ImguiNextColumnFirstItem();
+        HUDElements.TextColored(HUDElements.colors.engine, "%s", "HDR");
+        ImguiNextColumnOrNewRow();
+        right_aligned_text(HUDElements.colors.fps_value_high, HUDElements.ralign_width, "ON");
+    }
+}
+
+void HudElements::refresh_rate() {
+    if (HUDElements.refresh > 0) {
+        ImguiNextColumnFirstItem();
+        HUDElements.TextColored(HUDElements.colors.engine, "%s", "Display Hz");
+        ImguiNextColumnOrNewRow();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", HUDElements.refresh);
+    }
 }
 
 void HudElements::sort_elements(const std::pair<std::string, std::string>& option) {
@@ -1429,7 +1434,9 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
         {"exec_name", {exec_name}},
         {"duration", {duration}},
         {"graphs", {graphs}},
-        {"fps_metrics", {fps_metrics}}
+        {"fps_metrics", {fps_metrics}},
+        {"hdr", {hdr}},
+        {"refresh_rate", {refresh_rate}}
     };
 
     auto check_param = display_params.find(param);
@@ -1497,6 +1504,10 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({fan, "fan", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_fsr])
         ordered_functions.push_back({gamescope_fsr, "gamescope_fsr", value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_hdr])
+        ordered_functions.push_back({hdr, "hdr", value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_refresh_rate])
+        ordered_functions.push_back({refresh_rate, "refresh_rate", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_throttling_status])
         ordered_functions.push_back({throttling_status, "throttling_status", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_fps])

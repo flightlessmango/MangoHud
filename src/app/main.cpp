@@ -51,7 +51,7 @@ static uint32_t screenWidth, screenHeight;
 
 static unsigned int get_prop(const char* propName){
     Display *x11_display = glfwGetX11Display();
-    Atom gamescope_focused = XInternAtom(x11_display, propName, true);
+    Atom gamescope_focused = XInternAtom(x11_display, propName, false);
     auto scr = DefaultScreen(x11_display);
     auto root = RootWindow(x11_display, scr);
     Atom actual;
@@ -73,7 +73,7 @@ static unsigned int get_prop(const char* propName){
         }
         return i;
     }
-    return 0;
+    return -1;
 }
 
 static void ctrl_thread(){
@@ -242,6 +242,11 @@ static void shutdown(GLFWwindow* window){
     glfwDestroyWindow(window);
 }
 
+static void get_atom_info(){
+    HUDElements.hdr_status = get_prop("GAMESCOPE_COLOR_APP_WANTS_HDR_FEEDBACK");
+    HUDElements.refresh = get_prop("GAMESCOPE_DISPLAY_REFRESH_RATE_FEEDBACK");
+}
+
 static bool render(GLFWwindow* window) {
     if (HUDElements.colors.update)
         HUDElements.convert_colors(params);
@@ -253,6 +258,7 @@ static bool render(GLFWwindow* window) {
     overlay_new_frame(params);
     position_layer(sw_stats, params, window_size);
     render_imgui(sw_stats, params, window_size, true);
+    get_atom_info();
     overlay_end_frame();
     if (screenWidth && screenHeight)
         glfwSetWindowSize(window, screenWidth, screenHeight);

@@ -106,6 +106,8 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(dynamic_frame_timing)          \
    OVERLAY_PARAM_BOOL(duration)                      \
    OVERLAY_PARAM_BOOL(inherit)                       \
+   OVERLAY_PARAM_BOOL(hdr)                           \
+   OVERLAY_PARAM_BOOL(refresh_rate)                  \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \

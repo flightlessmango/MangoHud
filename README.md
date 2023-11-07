@@ -357,6 +357,8 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `frame_count`                      | Display frame count                                                                   |
 | `frametime`                        | Display frametime next to FPS text                                                    |
 | `fsr`                              | Display the status of FSR (only works in gamescope)                                   |
+| `hdr`                              | Display the status of HDR (only works in gamescope)                                   |
+| `refresh_rate`                     | Display the current refresh rate (only works in gamescope)                            |
 | `full`                             | Enable most of the toggleable parameters (currently excludes `histogram`)             |
 | `gamemode`                         | Show if GameMode is on                                                                |
 | `gpu_color`<br>`cpu_color`<br>`vram_color`<br>`ram_color`<br>`io_color`<br>`engine_color`<br>`frametime_color`<br>`background_color`<br>`text_color`<br>`media_player_color`         | Change default colors: `gpu_color=RRGGBB` |

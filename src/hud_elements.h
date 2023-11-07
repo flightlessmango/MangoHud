@@ -44,6 +44,8 @@ class HudElements{
         std::vector<exec_entry> exec_list;
         std::chrono::steady_clock::time_point overlay_start = std::chrono::steady_clock::now();
         uint32_t vendorID;
+        int hdr_status = 0;
+        int refresh = 0;
 
         void sort_elements(const std::pair<std::string, std::string>& option);
         void legacy_elements();
@@ -85,6 +87,8 @@ class HudElements{
         static void exec_name();
         static void duration();
         static void fps_metrics();
+        static void hdr();
+        static void refresh_rate();
 
         void convert_colors(const struct overlay_params& params);
         void convert_colors(bool do_conv, const struct overlay_params& params);
