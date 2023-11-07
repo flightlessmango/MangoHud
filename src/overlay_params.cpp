@@ -1078,6 +1078,7 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
          add_to_options(params, "gpu_mem_clock", "1");
          add_to_options(params, "gpu_core_clock", "1");
          add_to_options(params, "battery", "1");
+         add_to_options(params, "hdr", "1");
          break;
 
       case 4:
