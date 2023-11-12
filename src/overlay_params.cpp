@@ -1001,7 +1001,6 @@ bool parse_preset_config(int preset, struct overlay_params *params){
    bool found_preset = false;
 
    while (std::getline(stream, line)) {
-      printf("line: %s\n", line.c_str());
       trim(line);
 
       if (line == "")
