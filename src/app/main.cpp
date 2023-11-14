@@ -151,7 +151,7 @@ static void msg_read_thread(){
         HUDElements.gamescope_debug_app.push_back(0);
         HUDElements.gamescope_debug_latency.push_back(0);
     }
-    int key = ftok("/tmp/mangoapp", 65);
+    int key = ftok("mangoapp", 65);
     msgid = msgget(key, 0666 | IPC_CREAT);
     // uint32_t previous_pid = 0;
     const struct mangoapp_msg_header *hdr = (const struct mangoapp_msg_header*) raw_msg;
