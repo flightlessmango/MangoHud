@@ -425,6 +425,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `width=`<br>`height=`              | Customizeable HUD dimensions (in pixels)                                              |
 | `wine_color`                       | Change color of the wine/proton text                                                  |
 | `wine`                             | Show current Wine or Proton version in use                                            |
+| `winesync`                         | Show wine sync method in use                                                          |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 Because comma is also used as option delimiter and needs to be escaped for values with a backslash, you can use `+` like `MANGOHUD_CONFIG=fps_limit=60+30+0` instead.

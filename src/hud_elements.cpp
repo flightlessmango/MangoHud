@@ -1414,6 +1414,18 @@ void HudElements::refresh_rate() {
     }
 }
 
+void HudElements::winesync() {
+    if (!HUDElements.winesync_ptr)
+        HUDElements.winesync_ptr = std::make_unique<WineSync>();
+
+    if (HUDElements.winesync_ptr->valid()) {
+        ImguiNextColumnFirstItem();
+        HUDElements.TextColored(HUDElements.colors.engine, "%s", "WSYNC");
+        ImguiNextColumnOrNewRow();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", HUDElements.winesync_ptr->get_method().c_str());
+    }
+}
+
 void HudElements::sort_elements(const std::pair<std::string, std::string>& option) {
     const auto& param = option.first;
     const auto& value = option.second;
@@ -1458,7 +1470,8 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
         {"graphs", {graphs}},
         {"fps_metrics", {fps_metrics}},
         {"hdr", {hdr}},
-        {"refresh_rate", {refresh_rate}}
+        {"refresh_rate", {refresh_rate}},
+        {"winesync", {winesync}}
     };
 
     auto check_param = display_params.find(param);
@@ -1579,6 +1592,8 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({exec_name, "exec_name", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_duration])
         ordered_functions.push_back({duration, "duration", value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_winesync])
+        ordered_functions.push_back({winesync, "winesync", value});
 }
 
 void HudElements::update_exec(){
