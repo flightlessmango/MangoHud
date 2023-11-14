@@ -210,6 +210,7 @@ static void msg_read_thread(){
 static const char *GamescopeOverlayProperty = "GAMESCOPE_EXTERNAL_OVERLAY";
 
 static GLFWwindow* init(const char* glsl_version){
+    init_spdlog();
     GLFWwindow *window = glfwCreateWindow(1280, 800, "mangoapp overlay window", NULL, NULL);
     Display *x11_display = glfwGetX11Display();
     Window x11_window = glfwGetX11Window(window);
