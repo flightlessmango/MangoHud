@@ -983,9 +983,9 @@ parse_overlay_config(struct overlay_params *params,
 }
 
 bool parse_preset_config(int preset, struct overlay_params *params){
-   const std::string data_dir = get_data_dir();
+   const char *presets_file_env = getenv("MANGOHUD_PRESETSFILE");
    const std::string config_dir = get_config_dir();
-   std::string preset_path = config_dir + "/MangoHud/" + "presets.conf";
+   std::string preset_path = presets_file_env ? presets_file_env : config_dir + "/MangoHud/" + "presets.conf";
 
    char preset_string[20];
    snprintf(preset_string, sizeof(preset_string), "[preset %d]", preset);
@@ -994,6 +994,7 @@ bool parse_preset_config(int preset, struct overlay_params *params){
    stream.imbue(std::locale::classic());
 
    if (!stream.good()) {
+      SPDLOG_ERROR("Failed to read presets file: '{}'", preset_path);
       return false;
    }
 

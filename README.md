@@ -21,7 +21,7 @@ A Vulkan and OpenGL overlay for monitoring FPS, temperatures, CPU/GPU load and m
   - [Normal usage](#normal-usage)
   - [OpenGL](#opengl)
   - [Hud configuration](#hud-configuration)
-    - [Environment Variables: **`MANGOHUD_CONFIG`** and **`MANGOHUD_CONFIGFILE`**](#environment-variables-mangohud_config-and-mangohud_configfile)
+    - [Environment Variables: **`MANGOHUD_CONFIG`**, **`MANGOHUD_CONFIGFILE`**, and **`MANGOHUD_PRESETSFILE`**](#environment-variables)
   - [Vsync](#vsync)
     - [OpenGL Vsync](#opengl-vsync)
     - [Vulkan Vsync](#vulkan-vsync)
@@ -289,11 +289,13 @@ You can find an example config in /usr/share/doc/mangohud
 
 ---
 
-### Environment Variables: **`MANGOHUD_CONFIG`** and **`MANGOHUD_CONFIGFILE`**
+### Environment Variables
 
 You can also customize the hud by using the `MANGOHUD_CONFIG` environment variable while separating different options with a comma. This takes priority over any config file.
 
 You can also specify configuration file with `MANGOHUD_CONFIGFILE=/path/to/config` for applications whose names are hard to guess (java, python etc).
+
+You can also specify presets file with `MANGOHUD_PRESETSFILE=/path/to/config`. This is especially useful when running mangohud in a sandbox such as flatpak.
 
 A partial list of parameters are below. See the config file for a complete list.
 Parameters that are enabled by default have to be explicitly disabled. These (currently) are `fps`, `frame_timing`, `cpu_stats` (cpu load), `gpu_stats` (gpu load), and each can be disabled by setting the corresponding variable to 0 (e.g., fps=0).
