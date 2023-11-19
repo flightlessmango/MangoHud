@@ -1512,6 +1512,15 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({throttling_status, "throttling_status", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_fps])
         ordered_functions.push_back({fps, "fps", value});
+    for (const auto& pair : options) {
+        if (pair.first.find("graphs") != std::string::npos) {
+            std::stringstream ss(pair.second);
+            std::string token;
+            while (std::getline(ss, token, ',')){
+                ordered_functions.push_back({graphs, "graphs", token});
+            }
+        }
+    }
     if (!params->fps_metrics.empty())
         ordered_functions.push_back({fps_metrics, "fps_metrics", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_fps_only])
