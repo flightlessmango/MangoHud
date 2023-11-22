@@ -576,6 +576,8 @@ parse_overlay_env(struct overlay_params *params,
    uint32_t num;
    char key[256], value[256];
    while ((num = parse_string(env, key, value)) != 0) {
+      trim_char(key);
+      trim_char(value);
       env += num;
       if (!strcmp("full", key)) {
          bool read_cfg = params->enabled[OVERLAY_PARAM_ENABLED_read_cfg];
