@@ -164,10 +164,16 @@ and uncomment:
 #Include = /etc/pacman.d/mirrorlist
 ```
 
-then save the file and execute:
+then save the file and execute the command to refresh databases:
 
 ```
 sudo pacman -Syy
+```
+
+and install with:
+
+```
+sudo pacman -S mangohud
 ```
 
 ### Debian, Ubuntu
