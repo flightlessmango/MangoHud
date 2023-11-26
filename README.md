@@ -160,7 +160,7 @@ sudo nano /etc/pacman.conf
 and uncomment the lines in order to look like this:
 
 ```txt
-[multilib]
+\[multilib\]
 Include = /etc/pacman.d/mirrorlist
 ```
 
