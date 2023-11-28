@@ -36,7 +36,9 @@ class Intel {
         }
 
         void update() {
-            get_fdinfo();
+            if (fdinfo)
+                get_fdinfo();
+
             gpu_info = gpu_info_intel;
         }
 
