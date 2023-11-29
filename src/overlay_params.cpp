@@ -1108,6 +1108,8 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
          add_to_options(params, "hdr", "1");
          add_to_options(params, "refresh_rate", "1");
          add_to_options(params, "media_player", "0");
+         add_to_options(params, "gpu_name", "0");
+         add_to_options(params, "graphs", "power");
          break;
 
    }

@@ -1327,11 +1327,21 @@ void HudElements::graphs(){
         HUDElements.min = 0;
         HUDElements.TextColored(HUDElements.colors.engine, "%s", "RAM");
     }
+
+    if (value == "power"){
+        if (!throttling)
+            return;
+
+        arr.resize(throttling->power_w.size());
+        arr = throttling->power_w;
+        HUDElements.max = 15;
+        HUDElements.min = 0;
+        HUDElements.TextColored(HUDElements.colors.engine, "%s %.1fw/%iw", "Power", throttling->avg_soc_power_graph, 15);
+    }
 #endif
     ImGui::PopFont();
     ImGui::Dummy(ImVec2(0.0f,5.0f));
     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-    ImguiNextColumnOrNewRow();
     if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_histogram]){
         ImGui::PlotLines("", arr.data(),
                 arr.size(), 0,

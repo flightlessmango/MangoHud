@@ -11,6 +11,7 @@
 #include <vector>
 #include <sys/param.h>
 #include <algorithm>
+#include <numeric>
 
 #define METRICS_UPDATE_PERIOD_MS 500
 #define METRICS_POLLING_PERIOD_MS 25
@@ -173,6 +174,7 @@ struct amdgpu_common_metrics {
 	/* Power usage: averaged across the sampling period */
 	float average_gfx_power_w;
 	float average_cpu_power_w;
+	float average_soc_power_w;
 
 	/* Clocks: latest value of the clock */
 	uint16_t current_gfxclk_mhz;
@@ -206,18 +208,39 @@ class Throttling {
 	public:
 		std::vector<float> power;
 		std::vector<float> thermal;
+		std::vector<float> power_w;
 		int64_t indep_throttle_status;
+		bool steamdeck = false;
+		float avg_soc_power;
+		float avg_soc_power_graph;
+		int power_limit;
 
 		Throttling()
 			: power(200, 0.0f),
-			thermal(200, 0.0f) {}
+			thermal(200, 0.0f),
+			power_w(200, 0.0f) {
+				if (getenv("STEAM_USE_MANGOAPP"))
+					steamdeck = true;
+			}
 
 		void update(){
-			if (((indep_throttle_status >> 0) & 0xFF) != 0)
-				power.push_back(0.1);
-			else
-				power.push_back(0);
+			if (steamdeck) {
+				if ((indep_throttle_status & (1LL << 4)) != 0)
+					power.push_back(0.1);
+				else
+					power.push_back(0);
 
+				power_w.push_back(avg_soc_power);
+				float sum = std::accumulate(power_w.begin(), power_w.end(), 0.0f);
+				avg_soc_power_graph = sum / power_w.size();
+				power_w.erase(power_w.begin());
+
+			} else {
+				if (((indep_throttle_status >> 0) & 0xFF) != 0)
+					power.push_back(0.1);
+				else
+					power.push_back(0);
+			}
 
 			if (((indep_throttle_status >> 32) & 0xFFFF) != 0)
 				thermal.push_back(0.1);

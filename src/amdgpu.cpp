@@ -173,6 +173,8 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 			metrics->apu_cpu_temp_c = 0;
 		}
 
+		metrics->average_soc_power_w = amdgpu_metrics->average_socket_power / 1000.f;
+
 		indep_throttle_status = amdgpu_metrics->indep_throttle_status;
 	}
 
@@ -183,8 +185,10 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	metrics->is_current_throttled = ((indep_throttle_status >> 16) & 0xFF) != 0;
 	metrics->is_temp_throttled = ((indep_throttle_status >> 32) & 0xFFFF) != 0;
 	metrics->is_other_throttled = ((indep_throttle_status >> 56) & 0xFF) != 0;
-	if (throttling)
+	if (throttling) {
 		throttling->indep_throttle_status = indep_throttle_status;
+		throttling->avg_soc_power = metrics->average_soc_power_w;
+	}
 }
 
 void amdgpu_get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT], bool &gpu_load_needs_dividing) {
@@ -206,6 +210,7 @@ void amdgpu_get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[MET
 		UPDATE_METRIC_AVERAGE(gpu_load_percent);
 		UPDATE_METRIC_AVERAGE_FLOAT(average_gfx_power_w);
 		UPDATE_METRIC_AVERAGE_FLOAT(average_cpu_power_w);
+		UPDATE_METRIC_AVERAGE_FLOAT(average_soc_power_w);
 
 		UPDATE_METRIC_AVERAGE(current_gfxclk_mhz);
 		UPDATE_METRIC_AVERAGE(current_uclk_mhz);
