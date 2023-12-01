@@ -85,7 +85,7 @@ static void test_amdgpu_get_samples_and_copy(void **state) {
 static void test_amdgpu_get_metrics(void **state) {
     UNUSED(state);
 
-    amdgpu_get_metrics();
+    amdgpu_get_metrics(0x1435);
 }
 
 const struct CMUnitTest amdgpu_tests[] = {
