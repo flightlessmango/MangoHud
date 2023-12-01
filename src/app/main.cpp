@@ -133,10 +133,13 @@ static void ctrl_thread(){
 bool new_frame = false;
 
 static void gamescope_frametime(uint64_t app_frametime_ns, uint64_t latency_ns){
-    float app_frametime_ms = app_frametime_ns / 1000000.f;
-    HUDElements.gamescope_debug_app.push_back(app_frametime_ms);
-    if (HUDElements.gamescope_debug_app.size() > 200)
-        HUDElements.gamescope_debug_app.erase(HUDElements.gamescope_debug_app.begin());
+    if (app_frametime_ns != uint64_t(-1))
+    {
+        float app_frametime_ms = app_frametime_ns / 1000000.f;
+        HUDElements.gamescope_debug_app.push_back(app_frametime_ms);
+        if (HUDElements.gamescope_debug_app.size() > 200)
+            HUDElements.gamescope_debug_app.erase(HUDElements.gamescope_debug_app.begin());
+    }
 
     float latency_ms = latency_ns / 1000000.f;
     if (latency_ns == uint64_t(-1))
@@ -162,8 +165,11 @@ static void msg_read_thread(){
         size_t msg_size = msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 1, 0) + sizeof(long);
         if (hdr->version == 1){
             if (msg_size > offsetof(struct mangoapp_msg_v1, visible_frametime_ns)){
-                if (!params.no_display || logger->is_active())
+                bool should_new_frame = false;
+                if (mangoapp_v1->visible_frametime_ns != ~(0lu) && (!params.no_display || logger->is_active())) {
                     update_hud_info_with_frametime(sw_stats, params, vendorID, mangoapp_v1->visible_frametime_ns);
+                    should_new_frame = true;
+                }
 
                 if (msg_size > offsetof(mangoapp_msg_v1, fsrUpscale)){
                     HUDElements.g_fsrUpscale = mangoapp_v1->fsrUpscale;
@@ -192,13 +198,16 @@ static void msg_read_thread(){
                 if (msg_size > offsetof(mangoapp_msg_v1, latency_ns))
                     gamescope_frametime(mangoapp_v1->app_frametime_ns, mangoapp_v1->latency_ns);
 
+                if (should_new_frame)
                 {
-                    std::unique_lock<std::mutex> lk(mangoapp_m);
-                    new_frame = true;
+                    {
+                        std::unique_lock<std::mutex> lk(mangoapp_m);
+                        new_frame = true;
+                    }
+                    mangoapp_cv.notify_one();
+                    screenWidth = mangoapp_v1->outputWidth;
+                    screenHeight = mangoapp_v1->outputHeight;
                 }
-                mangoapp_cv.notify_one();
-                screenWidth = mangoapp_v1->outputWidth;
-                screenHeight = mangoapp_v1->outputHeight;
             }
         } else {
             printf("Unsupported mangoapp struct version: %i\n", hdr->version);
