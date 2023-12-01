@@ -193,7 +193,7 @@ struct amdgpu_common_metrics {
 };
 
 bool amdgpu_verify_metrics(const std::string& path);
-void amdgpu_get_metrics();
+void amdgpu_get_metrics(uint32_t deviceID);
 extern std::string metrics_path;
 extern std::condition_variable amdgpu_c;
 extern bool amdgpu_run_thread;

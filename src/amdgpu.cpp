@@ -250,7 +250,7 @@ void amdgpu_metrics_polling_thread() {
 	}
 }
 
-void amdgpu_get_metrics(){
+void amdgpu_get_metrics(uint32_t deviceID){
 	static bool init = false;
 	if (!init){
 		std::thread(amdgpu_metrics_polling_thread).detach();
@@ -264,7 +264,12 @@ void amdgpu_get_metrics(){
 	gpu_info.MemClock = amdgpu_common_metrics.current_uclk_mhz;
 
 	// Use hwmon instead, see gpu.cpp
-	// gpu_info.CoreClock = amdgpu_common_metrics.current_gfxclk_mhz;
+	if ( deviceID == 0x1435 || deviceID == 0x163f )
+	{
+		// If we are on VANGOGH (Steam Deck), then
+		// always use use core clock from GPU metrics.
+		gpu_info.CoreClock = amdgpu_common_metrics.current_gfxclk_mhz;
+	}
 	// gpu_info.temp = amdgpu_common_metrics.gpu_temp_c;
 	gpu_info.apu_cpu_power = amdgpu_common_metrics.average_cpu_power_w;
 	gpu_info.apu_cpu_temp = amdgpu_common_metrics.apu_cpu_temp_c;
