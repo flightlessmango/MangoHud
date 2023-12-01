@@ -1092,6 +1092,8 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
 
       case 4:
          add_to_options(params, "full", "1");
+         add_to_options(params, "version", "0");
+         add_to_options(params, "time", "0");
          add_to_options(params, "throttling_status", "0");
          add_to_options(params, "throttling_status_graph", "0");
          add_to_options(params, "io_read", "0");
