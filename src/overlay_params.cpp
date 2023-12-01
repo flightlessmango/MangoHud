@@ -1051,6 +1051,7 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
          add_to_options(params, "fps", "1");
          add_to_options(params, "fps_only", "1");
          add_to_options(params, "frametime", "0");
+         add_to_options(params, "debug", "0");
          break;
 
       case 2:
@@ -1071,6 +1072,7 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
          add_to_options(params, "cpu_power", "1");
          add_to_options(params, "battery_watt", "1");
          add_to_options(params, "battery_time", "1");
+         add_to_options(params, "debug", "0");
          break;
 
       case 3:
@@ -1085,6 +1087,7 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
          add_to_options(params, "gpu_core_clock", "1");
          add_to_options(params, "battery", "1");
          add_to_options(params, "hdr", "1");
+         add_to_options(params, "debug", "0");
          break;
 
       case 4:
@@ -1108,6 +1111,7 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
          add_to_options(params, "hdr", "1");
          add_to_options(params, "refresh_rate", "1");
          add_to_options(params, "media_player", "0");
+         add_to_options(params, "debug", "1");
          break;
 
    }
