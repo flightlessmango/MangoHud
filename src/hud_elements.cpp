@@ -160,8 +160,12 @@ static void ImGuiTableSetColumnIndex(int column)
 
 void HudElements::time(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_time]){
+        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
         ImguiNextColumnFirstItem();
-        HUDElements.TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.00f), "%s", HUDElements.sw_stats->time.c_str());
+            HUDElements.TextColored(HUDElements.colors.text, "Time");
+        }
+        ImguiNextColumnFirstItem();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", HUDElements.sw_stats->time.c_str());
     }
 }
 
