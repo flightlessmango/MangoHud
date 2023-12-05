@@ -47,3 +47,10 @@ install_data(
   rename : ['MangoHud.conf.example'],
   install_tag : 'doc',
 )
+
+install_data(
+  files('presets.conf'),
+  install_dir : join_paths(get_option('datadir'), 'doc', 'mangohud'),
+  rename : ['presets.conf.example'],
+  install_tag : 'doc',
+)
