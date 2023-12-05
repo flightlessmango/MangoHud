@@ -669,6 +669,7 @@ static void set_param_defaults(struct overlay_params *params){
    params->enabled[OVERLAY_PARAM_ENABLED_dynamic_frame_timing] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_duration] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_frame_timing_detailed] = false;
    params->fps_sampling_period = 500000000; /* 500ms */
    params->width = 0;
    params->height = 140;
@@ -1113,6 +1114,7 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
          add_to_options(params, "media_player", "0");
          add_to_options(params, "debug", "1");
          add_to_options(params, "version", "0");
+         add_to_options(params, "frame_timing_detailed", "1");
          break;
 
    }
