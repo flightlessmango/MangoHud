@@ -519,6 +519,9 @@ bool CPUStats::GetCpuFile() {
         } else if (name == "it8603") {
             find_input(path, "temp", input, "temp1");
             break;
+        } else if (name == "nct6797") {
+            find_input(path, "temp", input, "TSI0_TEMP");
+            break;
         } else {
             path.clear();
         }
