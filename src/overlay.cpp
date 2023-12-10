@@ -403,9 +403,7 @@ void RenderOutlinedText(const char* text, ImU32 textColor) {
 
    float outlineThickness = HUDElements.params->text_outline_thickness;
    ImVec2 textSize = ImGui::CalcTextSize(text);
-   ImVec4 colorVec4 = ImGui::ColorConvertU32ToFloat4(HUDElements.params->text_outline_color);
-   colorVec4.w = HUDElements.params->alpha;
-   ImU32 outlineColor = ImGui::ColorConvertFloat4ToU32(colorVec4);
+   ImU32 outlineColor = ImGui::ColorConvertFloat4ToU32(HUDElements.colors.text_outline);
    ImVec2 pos = window->DC.CursorPos;
 
    ImDrawList* drawList = ImGui::GetWindowDrawList();

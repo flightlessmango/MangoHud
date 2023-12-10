@@ -115,7 +115,8 @@ class HudElements{
                 cpu_load_high,
                 fps_value_low,
                 fps_value_med,
-                fps_value_high;
+                fps_value_high,
+                text_outline;
         } colors {};
 
         void TextColored(ImVec4 col, const char *fmt, ...);

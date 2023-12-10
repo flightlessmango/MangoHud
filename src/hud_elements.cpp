@@ -97,6 +97,7 @@ void HudElements::convert_colors(const struct overlay_params& params)
     HUDElements.colors.fps_value_low = convert(params.fps_color[0]);
     HUDElements.colors.fps_value_med = convert(params.fps_color[1]);
     HUDElements.colors.fps_value_high = convert(params.fps_color[2]);
+    HUDElements.colors.text_outline = convert(params.text_outline_color);
 
     ImGuiStyle& style = ImGui::GetStyle();
     style.Colors[ImGuiCol_PlotLines] = convert(params.frametime_color);
