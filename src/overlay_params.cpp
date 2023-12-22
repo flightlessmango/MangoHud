@@ -972,8 +972,6 @@ parse_overlay_config(struct overlay_params *params,
       logger->stop_logging();
    }
    logger = std::make_unique<Logger>(params);
-   if(params->autostart_log && !logger->is_active())
-      std::thread(autostart_log, params->autostart_log).detach();
 #ifdef MANGOAPP
    {
       extern bool new_frame;

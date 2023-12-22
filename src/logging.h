@@ -60,6 +60,7 @@ public:
   std::string output_folder;
   const int64_t log_interval;
   const int64_t log_duration;
+  bool autostart_init = false;
 
 private:
   std::vector<logData> m_log_array;

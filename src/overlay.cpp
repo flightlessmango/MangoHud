@@ -275,6 +275,13 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
          sw_stats.time = time.str();
       }
 
+      if (params.autostart_log && logger && !logger->autostart_init) {
+         if ((std::chrono::steady_clock::now() - HUDElements.overlay_start) > std::chrono::seconds(params.autostart_log)){
+            logger->start_logging();
+            logger->autostart_init = true;
+         }
+      }
+
       sw_stats.n_frames_since_update = 0;
       sw_stats.last_fps_update = now;
 
