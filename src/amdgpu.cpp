@@ -40,8 +40,8 @@ bool amdgpu_verify_metrics(const std::string& path)
 				break;
 			cpuStats.cpu_type = "GPU";
 			return true;
-		case 2: // v2_1, v2_2, v2_3
-			if(header.content_revision<=0 || header.content_revision>3)// v2_0, not naturally aligned
+		case 2: // v2_1, v2_2, v2_3, v2_4
+			if(header.content_revision<=0 || header.content_revision>4)// v2_0, not naturally aligned
 				break;
 			cpuStats.cpu_type = "APU";
 			return true;
