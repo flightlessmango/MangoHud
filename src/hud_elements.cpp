@@ -789,28 +789,36 @@ void HudElements::frame_timing(){
                                 NULL, min_time, max_time,
                                 ImVec2(width, height));
 #else
-                if (ImPlot::BeginPlot("My Plot", ImVec2(width, height), ImPlotFlags_CanvasOnly | ImPlotFlags_NoInputs)) {
-                    ImPlotStyle& style = ImPlot::GetStyle();
-                    style.Colors[ImPlotCol_PlotBg] = ImVec4(0.92f, 0.92f, 0.95f, 0.00f);
-                    style.Colors[ImPlotCol_AxisGrid] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
-                    style.Colors[ImPlotCol_AxisTick] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
-                    ImPlotAxisFlags ax_flags_x = ImPlotAxisFlags_NoDecorations;
-                    ImPlotAxisFlags ax_flags_y = ImPlotAxisFlags_NoDecorations;
-                    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_frame_timing_detailed])
-                        ax_flags_y = ImPlotAxisFlags_Opposite | ImPlotAxisFlags_NoMenus;
 
-                    ImPlot::SetupAxes(nullptr, nullptr, ax_flags_x, ax_flags_y);
-                    ImPlot::SetupAxisScale(ImAxis_Y1, TransformForward_Custom, TransformInverse_Custom);
-                    ImPlot::SetupAxesLimits(0, 200, min_time, max_time);
-                    ImPlot::SetNextLineStyle(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), 1.5);
-                    ImPlot::PlotLine("frametime line", frametime_data.data(), frametime_data.size());
-                    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_throttling_status_graph] && throttling){
-                        ImPlot::SetNextLineStyle(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), 1.5);
-                        ImPlot::PlotLine("power line", throttling->power.data(), throttling->power.size());
-                        ImPlot::SetNextLineStyle(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), 1.5);
-                        ImPlot::PlotLine("thermal line", throttling->thermal.data(), throttling->thermal.size());
+                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
+                    ImGui::PlotLines(hash, get_time_stat, HUDElements.sw_stats,
+                    ARRAY_SIZE(HUDElements.sw_stats->frames_stats), 0,
+                    NULL, min_time, max_time,
+                    ImVec2(width, height));
+                } else {
+                    if (ImPlot::BeginPlot("My Plot", ImVec2(width, height), ImPlotFlags_CanvasOnly | ImPlotFlags_NoInputs)) {
+                        ImPlotStyle& style = ImPlot::GetStyle();
+                        style.Colors[ImPlotCol_PlotBg] = ImVec4(0.92f, 0.92f, 0.95f, 0.00f);
+                        style.Colors[ImPlotCol_AxisGrid] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+                        style.Colors[ImPlotCol_AxisTick] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+                        ImPlotAxisFlags ax_flags_x = ImPlotAxisFlags_NoDecorations;
+                        ImPlotAxisFlags ax_flags_y = ImPlotAxisFlags_NoDecorations;
+                        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_frame_timing_detailed])
+                            ax_flags_y = ImPlotAxisFlags_Opposite | ImPlotAxisFlags_NoMenus;
+
+                        ImPlot::SetupAxes(nullptr, nullptr, ax_flags_x, ax_flags_y);
+                        ImPlot::SetupAxisScale(ImAxis_Y1, TransformForward_Custom, TransformInverse_Custom);
+                        ImPlot::SetupAxesLimits(0, 200, min_time, max_time);
+                        ImPlot::SetNextLineStyle(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), 1.5);
+                        ImPlot::PlotLine("frametime line", frametime_data.data(), frametime_data.size());
+                        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_throttling_status_graph] && throttling){
+                            ImPlot::SetNextLineStyle(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), 1.5);
+                            ImPlot::PlotLine("power line", throttling->power.data(), throttling->power.size());
+                            ImPlot::SetNextLineStyle(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), 1.5);
+                            ImPlot::PlotLine("thermal line", throttling->thermal.data(), throttling->thermal.size());
+                        }
+                        ImPlot::EndPlot();
                     }
-                    ImPlot::EndPlot();
                 }
 #endif
             }
