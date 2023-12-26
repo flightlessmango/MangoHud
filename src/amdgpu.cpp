@@ -24,8 +24,10 @@ bool amdgpu_verify_metrics(const std::string& path)
 	metrics_table_header header {};
 	FILE *f;
 	f = fopen(path.c_str(), "rb");
-	if (!f)
+	if (!f) {
+		SPDLOG_DEBUG("Failed to read the metrics header of '{}'", path);
 		return false;
+	}
 
 	if (fread(&header, sizeof(header), 1, f) == 0)
 	{
@@ -56,7 +58,7 @@ bool amdgpu_verify_metrics(const std::string& path)
 #define IS_VALID_METRIC(FIELD) (FIELD != 0xffff)
 void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	FILE *f;
-	void *buf[MAX(sizeof(struct gpu_metrics_v1_3), sizeof(struct gpu_metrics_v2_3))/sizeof(void*)+1];
+	void *buf[MAX(sizeof(struct gpu_metrics_v1_3), sizeof(struct gpu_metrics_v2_4))/sizeof(void*)+1];
 	struct metrics_table_header* header = (metrics_table_header*)buf;
 
 	f = fopen(metrics_path.c_str(), "rb");
