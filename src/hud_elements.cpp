@@ -164,9 +164,12 @@ void HudElements::time(){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
             ImguiNextColumnFirstItem();
             HUDElements.TextColored(HUDElements.colors.text, "Time");
+            ImguiNextColumnOrNewRow();
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", HUDElements.sw_stats->time.c_str());
+        } else {
+            ImguiNextColumnFirstItem();
+            HUDElements.TextColored(HUDElements.colors.text, "%s", HUDElements.sw_stats->time.c_str());
         }
-        ImguiNextColumnFirstItem();
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", HUDElements.sw_stats->time.c_str());
     }
 }
 
