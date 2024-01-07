@@ -103,6 +103,9 @@ void getAmdGpuInfo(){
             gpu_info.MemClock = value / 1000000;
         }
 
+        // TODO: on some gpus this will use the power1_input instead
+        // this value is instantaneous and should be averaged over time
+        // probably just average everything in this function to be safe
         if (amdgpu.power_usage) {
             rewind(amdgpu.power_usage);
             fflush(amdgpu.power_usage);

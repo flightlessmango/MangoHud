@@ -930,6 +930,8 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
                   amdgpu.memory_clock = fopen((hwmon_path + dir + "/freq2_input").c_str(), "r");
                if (!amdgpu.power_usage)
                   amdgpu.power_usage = fopen((hwmon_path + dir + "/power1_average").c_str(), "r");
+               if (!amdgpu.power_usage)
+                  amdgpu.power_usage = fopen((hwmon_path + dir + "/power1_input").c_str(), "r");
                if (!amdgpu.fan)
                   amdgpu.fan = fopen((hwmon_path + dir + "/fan1_input").c_str(), "r");
             }
