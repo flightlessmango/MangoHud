@@ -139,6 +139,8 @@ void imgui_create(void *ctx, const gl_wsi plat)
     } else if (vendor.find("Intel") != std::string::npos
     || deviceName.find("Intel") != std::string::npos) {
         vendorID = 0x8086;
+    } else if (vendor.find("freedreno") != std::string::npos) {
+        vendorID = 0x5143;
     }  else {
         vendorID = 0x10de;
     }
