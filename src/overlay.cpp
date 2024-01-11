@@ -25,6 +25,7 @@
 #include "amdgpu.h"
 #include "fps_metrics.h"
 #include "intel.h"
+#include "msm.h"
 
 #ifdef __linux__
 #include <libgen.h>
@@ -137,6 +138,8 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
 #ifdef __linux__
       if (vendorID== 0x8086)
          if (intel) intel->update();
+      if (vendorID == 0x5143)
+         if (msm) msm->update();
 #endif
    }
 
@@ -831,6 +834,19 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
          SPDLOG_DEBUG("Intel: using drm device {}", drm_dev);
          intel = std::make_unique<Intel>();
          break;
+      }
+   }
+
+   if (vendorID == 0x5143) {
+      auto dirs = ls(drm.c_str(), "card");
+      for (auto& dir : dirs) {
+         if (dir.find("-") != std::string::npos) {
+             continue; // filter display adapters
+         }
+         path = drm + dir;
+         drm_dev = dir;
+         SPDLOG_DEBUG("msm: using drm device {}", drm_dev);
+         msm = std::make_unique<MSM>();
       }
    }
 
