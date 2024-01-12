@@ -144,6 +144,13 @@ if is_unixy
     )
   endif
 
+  if get_option('with_wayland').enabled()
+    opengl_files += files(
+      'loaders/loader_glx.cpp',
+      'gl/inject_glx.cpp',
+    )
+  endif
+
   if dbus_dep.found() and get_option('with_dbus').enabled()
     pre_args += '-DHAVE_DBUS'
     vklayer_files += files(
