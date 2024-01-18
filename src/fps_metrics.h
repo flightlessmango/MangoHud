@@ -70,6 +70,9 @@ class fpsMetrics {
                             }
                             it->display_name = stream.str();
                             uint64_t idx = val * sorted_values.size() - 1;
+                            if (idx >= sorted_values.size())
+                                break;
+
                             it->value = sorted_values[idx];
                             ++it;
                         } catch (const std::invalid_argument& e) {
