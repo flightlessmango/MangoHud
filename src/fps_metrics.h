@@ -106,17 +106,24 @@ class fpsMetrics {
 
         void update(uint64_t now, double fps){
             fps_stats.push_back({now, fps});
-            // Calculate the cut-off nanotime (10 minutes ago)
-            uint64_t ten_minutes_ns = 600000000000ULL; // 10 minutes in nanoseconds
-            uint64_t cutoff_time_ns = os_time_get_nano() - ten_minutes_ns;
+            uint64_t ten_minute_duration = 600000000000ULL; // 10 minutes in nanoseconds
 
-            // Removing elements older than 10 minutes
-            fps_stats.erase(std::remove_if(fps_stats.begin(), fps_stats.end(),
-                                            [cutoff_time_ns](const std::pair<uint64_t, float>& p) {
-                                                return p.first < cutoff_time_ns;
-                                            }),
-                            fps_stats.end());
-        };
+            // Check if the system's uptime is less than 10 minutes
+            if (now >= ten_minute_duration) {
+                uint64_t ten_minutes_ago = now - ten_minute_duration;
+
+                fps_stats.erase(
+                    std::remove_if(
+                        fps_stats.begin(), 
+                        fps_stats.end(), 
+                        [ten_minutes_ago](const std::pair<uint64_t, float>& entry) {
+                            return entry.first < ten_minutes_ago;
+                        }
+                    ),
+                    fps_stats.end()
+                );
+            }
+        }
 
         void update_thread(){
             {
