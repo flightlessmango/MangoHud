@@ -229,7 +229,7 @@ if not spdlog_dep.found()
     'default_library=static',
     'compile_library=true',
     'werror=false',
-    'tests=false',
+    'tests=disabled',
     'external_fmt=disabled'
   ])
   spdlog_dep = spdlog_sp.get_variable('spdlog_dep')
