@@ -3,6 +3,7 @@
 #include "timing.hpp"
 #include "logging.h"
 #include "keybinds.h"
+#include "fps_metrics.h"
 
 void check_keybinds(struct overlay_params& params, uint32_t vendorID){
    using namespace std::chrono_literals;
@@ -93,5 +94,11 @@ void check_keybinds(struct overlay_params& params, uint32_t vendorID){
        keys_are_pressed(params.toggle_hud_position)) {
       next_hud_position(params);
       last_f12_press = now;
+   }
+
+   if (elapsedF12 >= keyPressDelay &&
+       keys_are_pressed(params.reset_fps_metrics)) {
+      last_f12_press = now;
+      fpsmetrics->reset_metrics();
    }
 }

@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <condition_variable>
 #include <stdexcept>
+#include <iomanip>
+#include <spdlog/spdlog.h>
 
 struct metric_t {
     std::string name;
@@ -25,6 +27,7 @@ class fpsMetrics {
         bool run = false;
         bool thread_init = false;
         bool terminate = false;
+        bool resetting = false;
 
         void calculate(){
             thread_init = true;
@@ -105,6 +108,9 @@ class fpsMetrics {
         };
 
         void update(uint64_t now, double fps){
+            if (resetting)
+                return;
+
             fps_stats.push_back({now, fps});
             uint64_t ten_minute_duration = 600000000000ULL; // 10 minutes in nanoseconds
 
@@ -114,8 +120,8 @@ class fpsMetrics {
 
                 fps_stats.erase(
                     std::remove_if(
-                        fps_stats.begin(), 
-                        fps_stats.end(), 
+                        fps_stats.begin(),
+                        fps_stats.end(),
                         [ten_minutes_ago](const std::pair<uint64_t, float>& entry) {
                             return entry.first < ten_minutes_ago;
                         }
@@ -126,11 +132,22 @@ class fpsMetrics {
         }
 
         void update_thread(){
+            if (resetting)
+                return;
+
             {
                 std::lock_guard<std::mutex> lock(mtx);
                 run = true;
             }
             cv.notify_one();
+            std::cout << fps_stats.size() << std::endl;
+        }
+
+        void reset_metrics(){
+            resetting = true;
+            while (run){}
+            fps_stats.clear();
+            resetting = false;
         }
 
         ~fpsMetrics(){

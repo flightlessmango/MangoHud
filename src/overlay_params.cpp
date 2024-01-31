@@ -156,6 +156,7 @@ parse_string_to_keysym_vec(const char *str)
 #define parse_upload_logs           parse_string_to_keysym_vec
 #define parse_toggle_fps_limit      parse_string_to_keysym_vec
 #define parse_toggle_preset         parse_string_to_keysym_vec
+#define parse_reset_fps_metrics     parse_string_to_keysym_vec
 
 #else
 #define parse_toggle_hud(x)            {}
@@ -166,6 +167,7 @@ parse_string_to_keysym_vec(const char *str)
 #define parse_upload_logs(x)           {}
 #define parse_toggle_fps_limit(x)      {}
 #define parse_toggle_preset(x)         {}
+#define parse_reset_fps_metrics(x)     {}
 #endif
 
 // NOTE: This is NOT defined as an OVERLAY_PARAM and will be called manually
@@ -735,6 +737,7 @@ parse_overlay_config(struct overlay_params *params,
    params->toggle_hud = { XK_Shift_R, XK_F12 };
    params->toggle_hud_position = { XK_Shift_R, XK_F11 };
    params->toggle_preset = { XK_Shift_R, XK_F10 };
+   params->reset_fps_metrics = { XK_Shift_R, XK_F9};
    params->toggle_fps_limit = { XK_Shift_L, XK_F1 };
    params->toggle_logging = { XK_Shift_L, XK_F2 };
    params->reload_cfg = { XK_Shift_L, XK_F4 };
@@ -745,6 +748,7 @@ parse_overlay_config(struct overlay_params *params,
 #ifdef _WIN32
    params->toggle_hud = { VK_F12 };
    params->toggle_preset = { VK_F10 };
+   params->reset_fps_metrics = { VK_F9};
    params->toggle_fps_limit = { VK_F3 };
    params->toggle_logging = { VK_F2 };
    params->reload_cfg = { VK_F4 };
