@@ -140,7 +140,6 @@ class fpsMetrics {
                 run = true;
             }
             cv.notify_one();
-            std::cout << fps_stats.size() << std::endl;
         }
 
         void reset_metrics(){
