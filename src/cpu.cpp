@@ -520,8 +520,10 @@ bool CPUStats::GetCpuFile() {
             find_input(path, "temp", input, "temp1");
             break;
         } else if (starts_with(name, "nct")) {
-            find_input(path, "temp", input, "TSI0_TEMP");
-            break;
+            // Only break if nct module has TSI0_TEMP node
+            if (find_input(path, "temp", input, "TSI0_TEMP"))
+                break;
+
         } else if (name == "asusec") {
             find_input(path, "temp", input, "CPU");
             break;
