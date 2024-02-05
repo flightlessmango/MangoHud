@@ -1516,10 +1516,14 @@ static VkResult overlay_CreateSwapchainKHR(
    createInfo.imageUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
    struct device_data *device_data = FIND(struct device_data, device);
+   auto params = device_data->instance->params;
 
-   VkPresentModeKHR presentMode = HUDElements.presentModes[device_data->instance->params.vsync];
-   if (device_data->instance->params.vsync < 4)
-      createInfo.presentMode = presentMode;
+   if (device_data->instance->params.vsync < 4) {
+      HUDElements.cur_present_mode = HUDElements.presentModes[params.vsync];
+      createInfo.presentMode = HUDElements.cur_present_mode;
+   } else {
+      HUDElements.cur_present_mode = createInfo.presentMode;
+   }
 
    struct instance_data *instance_data =
       FIND(struct instance_data, device_data->physical_device);
@@ -1533,11 +1537,10 @@ static VkResult overlay_CreateSwapchainKHR(
       VkResult result = fpGetPhysicalDeviceSurfacePresentModesKHR(device_data->physical_device, pCreateInfo->surface, &presentModeCount, presentModes.data());
 
       if (result == VK_SUCCESS) {
-         if (IsPresentModeSupported(HUDElements.presentModes[device_data->instance->params.vsync], presentModes))
-            SPDLOG_DEBUG("Present mode: {}", HUDElements.get_present_mode());
+         if (IsPresentModeSupported(HUDElements.cur_present_mode, presentModes))
+            SPDLOG_DEBUG("Present mode: {}", HUDElements.presentModeMap[HUDElements.cur_present_mode]);
          else {
-            SPDLOG_DEBUG("Present mode is not supported: {}", HUDElements.get_present_mode());
-            device_data->instance->params.vsync = 3;
+            SPDLOG_DEBUG("Present mode is not supported: {}", HUDElements.presentModeMap[HUDElements.cur_present_mode]);
          }
       }
    }

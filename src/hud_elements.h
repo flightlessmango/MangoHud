@@ -141,14 +141,20 @@ class HudElements{
             {VK_PRESENT_MODE_FIFO_KHR, "FIFO"},
             {VK_PRESENT_MODE_FIFO_RELAXED_KHR, "FIFO Relaxed"},
             {VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR, "DEMAND"},
-            {VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR, "ONTINUOUS"}
+            {VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR, "CONTINUOUS"}
         };
+
+        VkPresentModeKHR cur_present_mode;
 
         std::string get_present_mode(){
             if (is_vulkan)
-                return presentModeMap[presentModes[params->vsync]];
+                return presentModeMap[cur_present_mode];
+            // TODO: the opengl side is probably not as solid.
+            // But it also might not be possible to figure out if vsync
+            // is on or off unless we specify it.
             else
                 return params->gl_vsync == 0 ? "OFF" : "ON";
+
         }
 };
 
