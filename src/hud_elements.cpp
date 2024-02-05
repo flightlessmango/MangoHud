@@ -1430,6 +1430,18 @@ void HudElements::winesync() {
     }
 }
 
+void HudElements::present_mode() {
+    ImguiNextColumnFirstItem();
+    ImGui::PushFont(HUDElements.sw_stats->font1);
+    if (HUDElements.is_vulkan)
+        HUDElements.TextColored(HUDElements.colors.engine, "%s", "Present Mode");
+    else
+        HUDElements.TextColored(HUDElements.colors.engine, "%s", "VSYNC");
+    ImguiNextColumnOrNewRow();
+    HUDElements.TextColored(HUDElements.colors.text, "%s\n", HUDElements.get_present_mode().c_str());
+    ImGui::PopFont();
+}
+
 void HudElements::sort_elements(const std::pair<std::string, std::string>& option) {
     const auto& param = option.first;
     const auto& value = option.second;
@@ -1475,7 +1487,9 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
         {"fps_metrics", {fps_metrics}},
         {"hdr", {hdr}},
         {"refresh_rate", {refresh_rate}},
-        {"winesync", {winesync}}
+        {"winesync", {winesync}},
+        {"present_mode", {present_mode}}
+
     };
 
     auto check_param = display_params.find(param);
@@ -1598,6 +1612,9 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({duration, "duration", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_winesync])
         ordered_functions.push_back({winesync, "winesync", value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_present_mode])
+        ordered_functions.push_back({present_mode, "present_mode", value});
+
 }
 
 void HudElements::update_exec(){

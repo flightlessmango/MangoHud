@@ -110,6 +110,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(refresh_rate)                  \
    OVERLAY_PARAM_BOOL(frame_timing_detailed)         \
    OVERLAY_PARAM_BOOL(winesync)                      \
+   OVERLAY_PARAM_BOOL(present_mode)                  \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \

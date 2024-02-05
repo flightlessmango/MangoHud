@@ -6,6 +6,8 @@
 #include "timing.hpp"
 #include <functional>
 #include "winesync.h"
+#include "vulkan/vulkan.h"
+#include <array>
 
 struct Function {
     std::function<void()> run;  // Using std::function instead of a raw function pointer for more flexibility
@@ -26,7 +28,7 @@ class HudElements{
         float ralign_width;
         float old_scale;
         float res_width, res_height;
-        bool is_vulkan, gamemode_bol = false, vkbasalt_bol = false;
+        bool is_vulkan = true, gamemode_bol = false, vkbasalt_bol = false;
         int place;
         int text_column = 1;
         int table_columns_count = 0;
@@ -92,6 +94,7 @@ class HudElements{
         static void hdr();
         static void refresh_rate();
         static void winesync();
+        static void present_mode();
 
         void convert_colors(const struct overlay_params& params);
         void convert_colors(bool do_conv, const struct overlay_params& params);
@@ -123,6 +126,30 @@ class HudElements{
         } colors {};
 
         void TextColored(ImVec4 col, const char *fmt, ...);
+
+        std::array<VkPresentModeKHR, 6> presentModes = {
+            VK_PRESENT_MODE_FIFO_RELAXED_KHR,
+            VK_PRESENT_MODE_IMMEDIATE_KHR,
+            VK_PRESENT_MODE_MAILBOX_KHR,
+            VK_PRESENT_MODE_FIFO_KHR,
+            VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR,
+            VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR};
+
+        std::map<VkPresentModeKHR, std::string> presentModeMap = {
+            {VK_PRESENT_MODE_IMMEDIATE_KHR, "IMMEDIATE"},
+            {VK_PRESENT_MODE_MAILBOX_KHR, "MAILBOX"},
+            {VK_PRESENT_MODE_FIFO_KHR, "FIFO"},
+            {VK_PRESENT_MODE_FIFO_RELAXED_KHR, "FIFO Relaxed"},
+            {VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR, "DEMAND"},
+            {VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR, "ONTINUOUS"}
+        };
+
+        std::string get_present_mode(){
+            if (is_vulkan)
+                return presentModeMap[presentModes[params->vsync]];
+            else
+                return params->gl_vsync == 0 ? "OFF" : "ON";
+        }
 };
 
 extern HudElements HUDElements;
