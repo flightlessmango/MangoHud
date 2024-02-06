@@ -111,7 +111,9 @@ class fpsMetrics {
             if (resetting)
                 return;
 
-            fps_stats.push_back({now, fps});
+            if (fps > 0.0001)
+                fps_stats.push_back({now, fps});
+
             uint64_t ten_minute_duration = 600000000000ULL; // 10 minutes in nanoseconds
 
             // Check if the system's uptime is less than 10 minutes
