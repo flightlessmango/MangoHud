@@ -31,7 +31,7 @@ rm -r ${NAME}/subprojects/nlohmann_json-*
 # remove some vulkan clutter
 rm -r ${NAME}/subprojects/Vulkan-Headers-*/cmake ${NAME}/subprojects/Vulkan-Headers-*/BUILD.gn
 # remove some dear imgui clutter
-rm -rf ${NAME}/subprojects/imgui-*/examples ${NAME}/subprojects/imgui-*/misc
+rm -rf ${NAME}/subprojects/imgui-*/examples
 # compress new sources
 tar -cJf ${DFSG_TAR_NAME} ${NAME}
 
