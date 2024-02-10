@@ -161,7 +161,9 @@ static void ImGuiTableSetColumnIndex(int column)
 
 void HudElements::time(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_time]){
-        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
+        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] &&
+            !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact] &&
+            !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_time_no_label]){
             ImguiNextColumnFirstItem();
             HUDElements.TextColored(HUDElements.colors.text, "Time");
             ImguiNextColumnOrNewRow();
