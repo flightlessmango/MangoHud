@@ -812,7 +812,7 @@ void HudElements::frame_timing(){
                         ImPlot::SetupAxes(nullptr, nullptr, ax_flags_x, ax_flags_y);
                         ImPlot::SetupAxisScale(ImAxis_Y1, TransformForward_Custom, TransformInverse_Custom);
                         ImPlot::SetupAxesLimits(0, 200, min_time, max_time);
-                        ImPlot::SetNextLineStyle(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), 1.5);
+                        ImPlot::SetNextLineStyle(HUDElements.colors.frametime, 1.5);
                         ImPlot::PlotLine("frametime line", frametime_data.data(), frametime_data.size());
                         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_throttling_status_graph] && throttling){
                             ImPlot::SetNextLineStyle(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), 1.5);
