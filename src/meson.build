@@ -286,6 +286,7 @@ if get_option('mangoapp')
     dependencies : [
       dearimgui_dep,
       dep_dl,
+      dep_vulkan,
       spdlog_dep,
       dbus_dep,
       dep_x11,
