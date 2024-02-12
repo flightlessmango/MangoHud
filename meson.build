@@ -273,6 +273,7 @@ if get_option('tests').enabled()
     ),
     cpp_args: ['-DTEST_ONLY'],
     dependencies: [
+      dep_vulkan,
       cmocka_dep,
       spdlog_dep,
       dearimgui_dep
