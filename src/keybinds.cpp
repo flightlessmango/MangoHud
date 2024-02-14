@@ -99,6 +99,7 @@ void check_keybinds(struct overlay_params& params, uint32_t vendorID){
    if (elapsedF12 >= keyPressDelay &&
        keys_are_pressed(params.reset_fps_metrics)) {
       last_f12_press = now;
-      fpsmetrics->reset_metrics();
+      if (fpsmetrics)
+         fpsmetrics->reset_metrics();
    }
 }
