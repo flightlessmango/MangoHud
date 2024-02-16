@@ -775,7 +775,7 @@ parse_overlay_config(struct overlay_params *params,
    bool read_cfg = params->enabled[OVERLAY_PARAM_ENABLED_read_cfg];
    if (!env || read_cfg) {
 
-      // Get config options
+      // this pass is just to get preset option
       parseConfigFile(*params);
 
       if (!use_existing_preset) {
@@ -787,7 +787,13 @@ parse_overlay_config(struct overlay_params *params,
         current_preset = params->preset[0];
       }
 
+      // clear options since we don't want config options to appear first
+      params->options.clear();
+      HUDElements.options.clear();
+      // add preset options
       presets(current_preset, params);
+      // potentially override preset options with config options
+      parseConfigFile(*params);
 
       if (params->options.find("full") != params->options.end() && params->options.find("full")->second != "0") {
 #define OVERLAY_PARAM_BOOL(name) \

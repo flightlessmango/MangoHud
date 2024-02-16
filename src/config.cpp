@@ -99,8 +99,6 @@ static void enumerate_config_files(std::vector<std::string>& paths) {
 }
 
 void parseConfigFile(overlay_params& params) {
-    HUDElements.options.clear();
-    params.options.clear();
     std::vector<std::string> paths;
     const char *cfg_file = getenv("MANGOHUD_CONFIGFILE");
 
