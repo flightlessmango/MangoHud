@@ -46,6 +46,7 @@ void getNvidiaGpuInfo(const struct overlay_params& params){
         gpu_info.CoreClock = nvidiaCoreClock;
         gpu_info.MemClock = nvidiaMemClock;
         gpu_info.powerUsage = nvidiaPowerUsage / 1000;
+        gpu_info.fan_rpm = false;
         gpu_info.memoryTotal = nvidiaMemory.total / (1024.f * 1024.f * 1024.f);
         gpu_info.fan_speed = nvidiaFanSpeed;
         if (params.enabled[OVERLAY_PARAM_ENABLED_throttling_status]){
@@ -55,8 +56,10 @@ void getNvidiaGpuInfo(const struct overlay_params& params){
         }
         #ifdef HAVE_XNVCTRL
             static bool nvctrl_available = checkXNVCtrl();
-            if (nvctrl_available)
+            if (nvctrl_available) {
+                gpu_info.fan_rpm = true;
                 gpu_info.fan_speed = getNvctrlFanSpeed();
+            }
         #endif
 
         return;
@@ -72,6 +75,7 @@ void getNvidiaGpuInfo(const struct overlay_params& params){
         gpu_info.MemClock = nvctrl_info.MemClock;
         gpu_info.powerUsage = 0;
         gpu_info.memoryTotal = nvctrl_info.memoryTotal;
+        gpu_info.fan_rpm = true;
         gpu_info.fan_speed = nvctrl_info.fan_speed;
         return;
     }
@@ -122,8 +126,9 @@ void getAmdGpuInfo(){
         if (fscanf(amdgpu.fan, "%" PRId64, &value) != 1)
             value = 0;
         gpu_info.fan_speed = value;
+        gpu_info.fan_rpm = true;
     }
-    
+
     if (amdgpu.vram_total) {
         rewind(amdgpu.vram_total);
         fflush(amdgpu.vram_total);

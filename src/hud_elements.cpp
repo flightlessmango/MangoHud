@@ -252,16 +252,14 @@ void HudElements::gpu_stats(){
                 ImguiNextColumnOrNewRow();
                 right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.fan_speed);
                 ImGui::SameLine(0, 1.0f);
-                // if Nvidia GPU
-                if (HUDElements.vendorID == 0x10de) {
+                if (gpu_info.fan_rpm) {
+                    ImGui::PushFont(HUDElements.sw_stats->font1);
+                    HUDElements.TextColored(HUDElements.colors.text, "RPM");
+                } else if (HUDElements.vendorID == 0x1002) {
                     HUDElements.TextColored(HUDElements.colors.text, "%%");
                     ImGui::PushFont(HUDElements.sw_stats->font1);
                     ImGui::SameLine(0, 1.0f);
                     HUDElements.TextColored(HUDElements.colors.text, "FAN");
-                //  if AMD GPU
-                } else if (HUDElements.vendorID == 0x1002) {
-                    ImGui::PushFont(HUDElements.sw_stats->font1);
-                    HUDElements.TextColored(HUDElements.colors.text, "RPM");
                 }
                 ImGui::PopFont();
             }

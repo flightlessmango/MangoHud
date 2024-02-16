@@ -44,6 +44,7 @@ struct gpuInfo{
     float gtt_used;
     int fan_speed;
     int voltage;
+    bool fan_rpm;
 };
 
 extern struct gpuInfo gpu_info;
