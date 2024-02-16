@@ -26,7 +26,8 @@ string exec(string command) {
 #endif
     std::array<char, 128> buffer;
     std::string result;
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command.c_str(), "r"), pclose);
+    auto deleter = [](FILE* ptr){ pclose(ptr); };
+    std::unique_ptr<FILE, decltype(deleter)> pipe(popen(command.c_str(), "r"), deleter);
     if (!pipe) {
       return "popen failed!";
     }
