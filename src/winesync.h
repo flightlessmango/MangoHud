@@ -47,7 +47,8 @@ class WineSync {
             for (size_t i = 0; i < sizeof(paths) / sizeof(paths[0]); i++) {
                 path = paths[i];
                 for (auto& p : fs::directory_iterator(path)) {
-                    auto filename = p.path().string().c_str();
+                    auto filepath = p.path().string();
+                    const char* filename = filepath.c_str();
                     auto sym = read_symlink(filename);
                     if (sym.find("winesync") != std::string::npos)
                     method = syncMethods::NTSYNC;
