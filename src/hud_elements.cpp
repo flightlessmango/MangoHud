@@ -255,7 +255,7 @@ void HudElements::gpu_stats(){
                 if (gpu_info.fan_rpm) {
                     ImGui::PushFont(HUDElements.sw_stats->font1);
                     HUDElements.TextColored(HUDElements.colors.text, "RPM");
-                } else if (HUDElements.vendorID == 0x1002) {
+                } else {
                     HUDElements.TextColored(HUDElements.colors.text, "%%");
                     ImGui::PushFont(HUDElements.sw_stats->font1);
                     ImGui::SameLine(0, 1.0f);
