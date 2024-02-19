@@ -6,37 +6,50 @@
 #include "shared_x11.h"
 #include "loaders/loader_x11.h"
 #endif
+#ifdef HAVE_WAYLAND
+#include "wayland_hook.h"
+#endif
 
 #ifndef KeySym
 typedef unsigned long KeySym;
 #endif
 
-Clock::time_point last_f2_press, toggle_fps_limit_press, toggle_preset_press, last_f12_press, reload_cfg_press, last_upload_press;
+#if defined(HAVE_X11) || defined(HAVE_WAYLAND)
+static inline bool keys_are_pressed(const std::vector<KeySym>& keys)
+{
+    #if defined(HAVE_WAYLAND)
+    if(wl_display_ptr && wl_handle)
+    {
+        update_wl_queue();
 
-#if defined(HAVE_X11)
-static inline bool keys_are_pressed(const std::vector<KeySym>& keys) {
-
-    if (!init_x11())
-        return false;
-
-    char keys_return[32];
-    size_t pressed = 0;
-
-    auto libx11 = get_libx11();
-    libx11->XQueryKeymap(get_xdisplay(), keys_return);
-
-    for (KeySym ks : keys) {
-        KeyCode kc2 = libx11->XKeysymToKeycode(get_xdisplay(), ks);
-
-        bool isPressed = !!(keys_return[kc2 >> 3] & (1 << (kc2 & 7)));
-
-        if (isPressed)
-            pressed++;
+        if(wl_pressed_keys.size() == keys.size() && wl_pressed_keys == keys)
+            return true;
     }
+    #endif
 
-    if (pressed > 0 && pressed == keys.size()) {
-        return true;
+    #if defined(HAVE_X11)
+    if (init_x11())
+    {
+        char keys_return[32];
+        size_t pressed = 0;
+
+        auto libx11 = get_libx11();
+        libx11->XQueryKeymap(get_xdisplay(), keys_return);
+
+        for (KeySym ks : keys) {
+            KeyCode kc2 = libx11->XKeysymToKeycode(get_xdisplay(), ks);
+
+            bool isPressed = !!(keys_return[kc2 >> 3] & (1 << (kc2 & 7)));
+
+            if (isPressed)
+                pressed++;
+        }
+
+        if (pressed > 0 && pressed == keys.size()) {
+            return true;
+        }
     }
+    #endif
 
     return false;
 }
@@ -54,10 +67,6 @@ static inline bool keys_are_pressed(const std::vector<KeySym>& keys) {
         return true;
     }
 
-    return false;
-}
-#else // XXX: Add wayland support
-static inline bool keys_are_pressed(const std::vector<KeySym>& keys) {
     return false;
 }
 #endif

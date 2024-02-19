@@ -8,5 +8,7 @@
     dlsym;
     mangohud_find_glx_ptr;
     mangohud_find_egl_ptr;
+    wl_display_connect;
+    wl_display_connect_to_fd;
   local: *;
 };

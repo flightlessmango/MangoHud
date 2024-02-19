@@ -1,9 +1,15 @@
 #include <cstdint>
+#include <cstring>
+#include <array>
+#include <algorithm>
+#include <unistd.h>
 #include "overlay.h"
 #include "timing.hpp"
 #include "logging.h"
 #include "keybinds.h"
 #include "fps_metrics.h"
+
+Clock::time_point last_f2_press, toggle_fps_limit_press, toggle_preset_press, last_f12_press, reload_cfg_press, last_upload_press;
 
 void check_keybinds(struct overlay_params& params, uint32_t vendorID){
    using namespace std::chrono_literals;
@@ -20,7 +26,7 @@ void check_keybinds(struct overlay_params& params, uint32_t vendorID){
       return;
    last_check = now;
 
-   auto keyPressDelay = 400ms;
+   const auto keyPressDelay = 400ms;
 
    if (elapsedF2 >= keyPressDelay &&
        keys_are_pressed(params.toggle_logging)) {

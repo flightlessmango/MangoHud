@@ -59,7 +59,7 @@ vklayer_files = files(
   'config.cpp',
   'gpu.cpp',
   'blacklist.cpp',
-  'file_utils.cpp',
+  'file_utils.cpp'
 )
 
 opengl_files  = []
@@ -147,6 +147,15 @@ if is_unixy
     opengl_files += files(
       'loaders/loader_glx.cpp',
       'gl/inject_glx.cpp',
+    )
+  endif
+
+  if get_option('with_wayland').enabled()
+    pre_args += '-DHAVE_WAYLAND'
+
+    vklayer_files += files(
+      'wayland_hook.cpp',
+      'wayland_keybinds.cpp'
     )
   endif
 
@@ -290,6 +299,7 @@ if get_option('mangoapp')
       spdlog_dep,
       dbus_dep,
       dep_x11,
+      dep_wayland_client,
       glfw3_dep,
       json_dep,
       glew_dep,

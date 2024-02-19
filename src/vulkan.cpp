@@ -50,8 +50,13 @@
 #include "notify.h"
 #include "blacklist.h"
 #include "pci_ids.h"
+#if defined(HAVE_WAYLAND)
+#include "wayland_hook.h"
+#endif
+#include "real_dlsym.h"
 #include "file_utils.h"
 #ifdef __linux__
+#include <dlfcn.h>
 #include "implot.h"
 #endif
 
@@ -2028,6 +2033,23 @@ static void overlay_DestroyInstance(
    destroy_instance_data(instance_data);
 }
 
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+static VkResult overlay_CreateWaylandSurfaceKHR(
+   VkInstance                                  instance,
+   const VkWaylandSurfaceCreateInfoKHR*        pCreateInfo,
+   const VkAllocationCallbacks*                pAllocator,
+   VkSurfaceKHR*                               pSurface
+)
+{
+   struct instance_data *instance_data = FIND(struct instance_data, instance);
+   if (!wl_handle)
+      wl_handle = real_dlopen("libwayland-client.so", RTLD_LAZY);
+   wl_display_ptr = pCreateInfo->display;
+   init_wayland_data();
+   return instance_data->vtable.CreateWaylandSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
+}
+#endif
+
 extern "C" VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetDeviceProcAddr(VkDevice dev,
                                                                              const char *funcName);
 extern "C" VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetInstanceProcAddr(VkInstance instance,
@@ -2048,6 +2070,9 @@ static const struct {
    ADD_HOOK(EndCommandBuffer),
    ADD_HOOK(CmdExecuteCommands),
 
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+   ADD_HOOK(CreateWaylandSurfaceKHR),
+#endif
    ADD_HOOK(CreateSwapchainKHR),
    ADD_HOOK(QueuePresentKHR),
    ADD_HOOK(DestroySwapchainKHR),
