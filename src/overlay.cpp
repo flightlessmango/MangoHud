@@ -901,6 +901,7 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
          const std::string device_path = path + "/device";
          const std::string gpu_metrics_path = device_path + "/gpu_metrics";
          if (amdgpu_verify_metrics(gpu_metrics_path)) {
+            gpu_info.fan_rpm = true;
             gpu_metrics_exists = true;
             metrics_path = gpu_metrics_path;
             throttling = std::make_unique<Throttling>();
