@@ -112,6 +112,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(winesync)                      \
    OVERLAY_PARAM_BOOL(present_mode)                  \
    OVERLAY_PARAM_BOOL(time_no_label)                 \
+   OVERLAY_PARAM_BOOL(liquid)                        \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
@@ -194,6 +195,11 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(fps_text)                    \
    OVERLAY_PARAM_CUSTOM(device_battery)              \
    OVERLAY_PARAM_CUSTOM(fps_metrics)                 \
+   OVERLAY_PARAM_CUSTOM(liquid_text)                 \
+   OVERLAY_PARAM_CUSTOM(liquid_color)                \
+   OVERLAY_PARAM_CUSTOM(liquid_temp)                 \
+   OVERLAY_PARAM_CUSTOM(liquid_flow)                 \
+   OVERLAY_PARAM_CUSTOM(liquid_additional_sensors)   \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -266,7 +272,7 @@ struct overlay_params {
    enum gl_size_query gl_size_query {GL_SIZE_DRAWABLE};
    bool gl_dont_flip {false};
    int64_t log_duration, log_interval;
-   unsigned cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color, wine_color, battery_color;
+   unsigned cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color, wine_color, battery_color, liquid_color;
    std::vector<unsigned> gpu_load_color;
    std::vector<unsigned> cpu_load_color;
    std::vector<unsigned> gpu_load_value;
@@ -293,7 +299,9 @@ struct overlay_params {
    std::string time_format, output_folder, output_file;
    std::string pci_dev;
    std::string media_player_name;
-   std::string cpu_text, gpu_text, fps_text;
+   std::string cpu_text, gpu_text, fps_text, liquid_text;
+   std::string liquid_additional_sensors;
+   std::vector<std::string> liquid_temp, liquid_flow;
    std::vector<std::string> blacklist;
    unsigned autostart_log;
    std::vector<std::string> media_player_format;
