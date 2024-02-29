@@ -53,6 +53,7 @@ static  std::vector<std::string> blacklist {
     "wine-preloader",
     "iexplore.exe",
     "rundll32.exe",
+    "Launcher", //Paradox Interactive Launcher
 };
 
 
