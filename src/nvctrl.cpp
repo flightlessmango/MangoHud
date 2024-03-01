@@ -45,7 +45,7 @@ bool checkXNVCtrl()
 
     auto& nvctrl = get_libnvctrl_loader();
     if (!nvctrl.IsLoaded()) {
-        SPDLOG_ERROR("XNVCtrl loader failed to load");
+        SPDLOG_DEBUG("XNVCtrl loader failed to load");
         return false;
     }
 
