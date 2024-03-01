@@ -1205,9 +1205,10 @@ void HudElements::device_battery()
 
 void HudElements::liquid_stats()
 {
+#ifdef __linux__
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_liquid])
     {
-        std::vector<WatercoolingDevice> devices = liquidStats.GetDevicesData();
+        std::vector<WatercoolingDevice> devices = liquidStats->GetDevicesData();
         const char* liquid_text;
         liquid_text = HUDElements.params->liquid_text.c_str();
 
@@ -1273,6 +1274,7 @@ void HudElements::liquid_stats()
             }
         }
     }
+#endif
 }
 
 void HudElements::frame_count(){

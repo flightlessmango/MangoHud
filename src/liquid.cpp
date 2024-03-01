@@ -391,6 +391,12 @@ bool LiquidStats::Init(std::vector<std::string> tempDevices, std::vector<std::st
     if (!this->devices.empty())
         return true;
 
+    if (tempDevices.empty() && flowDevices.empty() && additionalSensors.empty())
+    {
+        liquidStats.reset();
+        return false;
+    }
+
     AddDeviceAndSensor(tempDevices, TEMP);
     AddDeviceAndSensor(flowDevices, FLOW);
     AddAdditionalSensors(additionalSensors);
@@ -399,6 +405,7 @@ bool LiquidStats::Init(std::vector<std::string> tempDevices, std::vector<std::st
     if (this->devices.empty())
     {
         SPDLOG_ERROR("Could not find watercooling devices");
+        liquidStats.reset();
         return false;
     }
 
@@ -479,4 +486,4 @@ std::vector< WatercoolingDevice > LiquidStats::GetDevicesData() const
     return this->devices;
 }
 
-LiquidStats liquidStats;
+std::unique_ptr<LiquidStats> liquidStats = std::make_unique<LiquidStats>();

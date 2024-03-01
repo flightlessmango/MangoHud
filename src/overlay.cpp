@@ -161,8 +161,10 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
       getIoStats(g_io_stats);
 #endif
 
+#ifdef __linux__
    if(params.enabled[OVERLAY_PARAM_ENABLED_liquid])
-      liquidStats.Update();
+      liquidStats->Update();
+#endif
 
    currentLogData.gpu_load = gpu_info.load;
    currentLogData.gpu_temp = gpu_info.temp;
@@ -755,9 +757,11 @@ void init_cpu_stats(overlay_params& params)
 
 void init_liquid_stats(overlay_params& params)
 {
+#ifdef __linux__
    auto& enabled = params.enabled;
-   enabled[OVERLAY_PARAM_ENABLED_liquid] = liquidStats.Init(params.liquid_temp, params.liquid_flow, params.liquid_additional_sensors)
+   enabled[OVERLAY_PARAM_ENABLED_liquid] = liquidStats->Init(params.liquid_temp, params.liquid_flow, params.liquid_additional_sensors)
                            && enabled[OVERLAY_PARAM_ENABLED_liquid];
+#endif
 }
 
 struct pci_bus {

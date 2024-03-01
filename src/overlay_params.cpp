@@ -719,7 +719,7 @@ static void set_param_defaults(struct overlay_params *params){
    params->fps_color = { 0xb22222, 0xfdfd09, 0x39f900 };
    params->fps_value = { 30, 60 };
    params->round_corners = 0;
-   params->battery_color =0xff9078;
+   params->battery_color = 0xff9078;
    params->fsr_steam_sharpness = -1;
    params->picmip = -17;
    params->af = -1;
@@ -727,7 +727,7 @@ static void set_param_defaults(struct overlay_params *params){
    params->table_columns = 3;
    params->text_outline_color = 0x000000;
    params->text_outline_thickness = 1.5;
-   params->liquid_color=0x3fcbd4;
+   params->liquid_color = 0x3fcbd4;
    params->liquid_text = "Liquid";
 }
 
