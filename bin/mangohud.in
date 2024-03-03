@@ -11,8 +11,8 @@ fi
 
 # Add exe names newline separated to the string to disable LD_PRELOAD
 DISABLE_LD_PRELOAD="cs2.sh
-some_other_exe
-RoboCop.exe"
+RoboCop.exe
+Borderlands3.exe"
 
 MANGOHUD_LIB_NAME="@ld_libdir_mangohud@libMangoHud_opengl.so"
 
