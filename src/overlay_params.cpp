@@ -572,60 +572,114 @@ const char *overlay_param_names[] = {
 };
 
 static void
-parse_overlay_env(struct overlay_params *params,
-                  const char *env)
+initialize_preset(struct overlay_params *params)
 {
+   if (params->options.find("preset") != params->options.end()) {
+      auto presets = parse_preset(params->options.find("preset")->second.c_str());
+      if (!presets.empty())
+         params->preset = presets;
+   }
+   current_preset = params->preset[0];
+}
+
+static void
+set_parameters_from_options(struct overlay_params *params)
+{
+   bool read_cfg = false;
+   if (params->options.find("read_cfg") != params->options.end() && params->options.find("read_cfg")->second != "0")
+      read_cfg = true;
+
+   if (params->options.find("full") != params->options.end() && params->options.find("full")->second != "0") {
+#define OVERLAY_PARAM_BOOL(name) \
+      params->enabled[OVERLAY_PARAM_ENABLED_##name] = 1;
+#define OVERLAY_PARAM_CUSTOM(name)
+      OVERLAY_PARAMS
+      #undef OVERLAY_PARAM_BOOL
+      #undef OVERLAY_PARAM_CUSTOM
+      params->enabled[OVERLAY_PARAM_ENABLED_histogram] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_fps_only] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_battery_icon] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_hide_fsr_sharpness] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_throttling_status] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_fcat] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_horizontal] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_hud_no_margin] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_log_versioning] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_hud_compact] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_exec_name] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_trilinear] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_bicubic] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_retro] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_debug] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_dynamic_frame_timing] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_duration] = false;
+      params->enabled[OVERLAY_PARAM_ENABLED_core_bars] = false;
+      params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = read_cfg;
+      params->options.erase("full");
+   }
+   for (auto& it : params->options) {
+#define OVERLAY_PARAM_BOOL(name)                                 \
+      if (it.first == #name) {                                   \
+          params->enabled[OVERLAY_PARAM_ENABLED_##name] =        \
+          strtol(it.second.c_str(), NULL, 0);                    \
+          continue;                                              \
+       }
+#define OVERLAY_PARAM_CUSTOM(name)                               \
+      if (it.first == #name) {                                   \
+         params->name = parse_##name(it.second.c_str());         \
+      continue;                                                  \
+   }
+      OVERLAY_PARAMS
+      #undef OVERLAY_PARAM_BOOL
+      #undef OVERLAY_PARAM_CUSTOM
+      if (it.first == "preset") {
+         continue; // Handled above
+      }
+      SPDLOG_ERROR("Unknown option '{}'", it.first.c_str());
+   }
+}
+
+static void
+parse_overlay_env(struct overlay_params *params,
+                  const char *env, bool use_existing_preset)
+{
+   const char *env_start = env;
+
    uint32_t num;
    char key[256], value[256];
    while ((num = parse_string(env, key, value)) != 0) {
       trim_char(key);
       trim_char(value);
       env += num;
-      if (!strcmp("full", key)) {
-         bool read_cfg = params->enabled[OVERLAY_PARAM_ENABLED_read_cfg];
-#define OVERLAY_PARAM_BOOL(name) \
-         params->enabled[OVERLAY_PARAM_ENABLED_##name] = 1;
-#define OVERLAY_PARAM_CUSTOM(name)
-         OVERLAY_PARAMS
-#undef OVERLAY_PARAM_BOOL
-#undef OVERLAY_PARAM_CUSTOM
-         params->enabled[OVERLAY_PARAM_ENABLED_histogram] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_gpu_load_change] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_cpu_load_change] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_fps_only] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_fps_color_change] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_core_load_change] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_battery_icon] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_hide_fsr_sharpness] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_throttling_status] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = read_cfg;
-         params->enabled[OVERLAY_PARAM_ENABLED_fcat] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_horizontal] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_horizontal_stretch] = 1;
-         params->enabled[OVERLAY_PARAM_ENABLED_hud_no_margin] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_log_versioning] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_hud_compact] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_exec_name] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_trilinear] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_bicubic] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_retro] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_debug] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_dynamic_frame_timing] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_core_bars] = false;
+      if (!strcmp("preset", key)) {
+         if (!use_existing_preset) {
+            add_to_options(params, key, value);
+            initialize_preset(params);
+         }
+         presets(current_preset, params);
+         break;
+      }
+   }
+
+   env = env_start;
+
+   while ((num = parse_string(env, key, value)) != 0) {
+      trim_char(key);
+      trim_char(value);
+      env += num;
+      if (!strcmp("preset", key)) {
+         continue; // Avoid 'Unknown option' error
       }
 #define OVERLAY_PARAM_BOOL(name)                                       \
       if (!strcmp(#name, key)) {                                       \
-         params->enabled[OVERLAY_PARAM_ENABLED_##name] =               \
-            strtol(value, NULL, 0);                                    \
          add_to_options(params, key, value);                           \
          continue;                                                     \
       }
 #define OVERLAY_PARAM_CUSTOM(name)                                     \
       if (!strcmp(#name, key)) {                                       \
-         params->name = parse_##name(value);                           \
          add_to_options(params, key, value);                           \
          continue;                                                     \
       }
@@ -634,6 +688,7 @@ parse_overlay_env(struct overlay_params *params,
 #undef OVERLAY_PARAM_CUSTOM
       SPDLOG_ERROR("Unknown option '{}'", key);
    }
+   set_parameters_from_options(params);
 }
 
 static void set_param_defaults(struct overlay_params *params){
@@ -768,23 +823,20 @@ parse_overlay_config(struct overlay_params *params,
 
    HUDElements.ordered_functions.clear();
    HUDElements.exec_list.clear();
+   params->options.clear();
+   HUDElements.options.clear();
+
    // first pass with env var
    if (env)
-      parse_overlay_env(params, env);
+      parse_overlay_env(params, env, use_existing_preset);
 
    bool read_cfg = params->enabled[OVERLAY_PARAM_ENABLED_read_cfg];
+   bool env_contains_preset = params->options.find("preset") != params->options.end();
    if (!env || read_cfg) {
-
-      // this pass is just to get preset option
       parseConfigFile(*params);
 
-      if (!use_existing_preset) {
-         if (params->options.find("preset") != params->options.end()) {
-            auto presets = parse_preset(params->options.find("preset")->second.c_str());
-            if (!presets.empty())
-               params->preset = presets;
-         }
-        current_preset = params->preset[0];
+      if (!use_existing_preset && !env_contains_preset) {
+         initialize_preset(params);
       }
 
       // clear options since we don't want config options to appear first
@@ -795,56 +847,7 @@ parse_overlay_config(struct overlay_params *params,
       // potentially override preset options with config options
       parseConfigFile(*params);
 
-      if (params->options.find("full") != params->options.end() && params->options.find("full")->second != "0") {
-#define OVERLAY_PARAM_BOOL(name) \
-            params->enabled[OVERLAY_PARAM_ENABLED_##name] = 1;
-#define OVERLAY_PARAM_CUSTOM(name)
-            OVERLAY_PARAMS
-#undef OVERLAY_PARAM_BOOL
-#undef OVERLAY_PARAM_CUSTOM
-         params->enabled[OVERLAY_PARAM_ENABLED_histogram] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_fps_only] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_battery_icon] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_hide_fsr_sharpness] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_throttling_status] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_fcat] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_horizontal] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_hud_no_margin] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_log_versioning] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_hud_compact] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_exec_name] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_trilinear] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_bicubic] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_retro] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_debug] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_dynamic_frame_timing] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit] = 0;
-         params->enabled[OVERLAY_PARAM_ENABLED_duration] = false;
-         params->enabled[OVERLAY_PARAM_ENABLED_core_bars] = false;
-         params->options.erase("full");
-      }
-      for (auto& it : params->options) {
-#define OVERLAY_PARAM_BOOL(name)                                       \
-         if (it.first == #name) {                                      \
-            params->enabled[OVERLAY_PARAM_ENABLED_##name] =            \
-               strtol(it.second.c_str(), NULL, 0);                     \
-            continue;                                                  \
-         }
-#define OVERLAY_PARAM_CUSTOM(name)                                     \
-         if (it.first == #name) {                                      \
-            params->name = parse_##name(it.second.c_str());            \
-            continue;                                                  \
-         }
-         OVERLAY_PARAMS
-#undef OVERLAY_PARAM_BOOL
-#undef OVERLAY_PARAM_CUSTOM
-         if (it.first == "preset") {
-            continue;
-         }
-         SPDLOG_ERROR("Unknown option '{}'", it.first.c_str());
-      }
+      set_parameters_from_options(params);
    }
 
    // TODO decide what to do for legacy_layout=0
@@ -852,7 +855,7 @@ parse_overlay_config(struct overlay_params *params,
    if (params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout] && env && read_cfg) {
       // If passing legacy_layout=0 to MANGOHUD_CONFIG anyway then clear first pass' results
       HUDElements.ordered_functions.clear();
-      parse_overlay_env(params, env);
+      parse_overlay_env(params, env, true);
    }
 
    // If fps_only param is enabled disable legacy_layout
