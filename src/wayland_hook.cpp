@@ -18,42 +18,46 @@ struct wl_display* wl_display_ptr = nullptr;
 
 EXPORT_C_(struct wl_display*) wl_display_connect(const char *name)
 {
-   struct wl_display *ret = NULL;
+   struct wl_display *ret = nullptr;
 
-   if(!wl_handle)
-   {
+   if (!wl_handle) {
       wl_handle = real_dlopen("libwayland-client.so", RTLD_LAZY);
-      wl_display_connect_ptr = (pwl_display_connect)real_dlsym(wl_handle, "wl_display_connect");
-      wl_display_connect_to_fd_ptr = (pwl_display_connect_to_fd)real_dlsym(wl_handle, "wl_display_connect_to_fd");
    }
 
-   ret = wl_display_connect_ptr(name);
+   if (wl_handle) {
+       wl_display_connect_ptr = (pwl_display_connect)real_dlsym(wl_handle, "wl_display_connect");
+       wl_display_connect_to_fd_ptr = (pwl_display_connect_to_fd)real_dlsym(wl_handle, "wl_display_connect_to_fd");
 
-   if(!wl_display_ptr)
-      wl_display_ptr = ret;
+      ret = wl_display_connect_ptr(name);
 
-   init_wayland_data();
+      if (!wl_display_ptr) {
+         wl_display_ptr = ret;
+         init_wayland_data();
+      }
+   }
 
    return ret;
 }
 
 EXPORT_C_(struct wl_display*) wl_display_connect_to_fd(int fd)
 {
-   struct wl_display *ret = NULL;
+   struct wl_display *ret = nullptr;
 
-   if(!wl_handle)
-   {
+   if (!wl_handle) {
       wl_handle = real_dlopen("libwayland-client.so", RTLD_LAZY);
-      wl_display_connect_to_fd_ptr = (pwl_display_connect_to_fd)real_dlsym(wl_handle, "wl_display_connect_to_fd");
-      wl_display_connect_ptr = (pwl_display_connect)real_dlsym(wl_handle, "wl_display_connect");
    }
 
-   ret = wl_display_connect_to_fd_ptr(fd);
+   if (wl_handle) {
+      wl_display_connect_to_fd_ptr = (pwl_display_connect_to_fd)real_dlsym(wl_handle, "wl_display_connect_to_fd");
+      wl_display_connect_ptr = (pwl_display_connect)real_dlsym(wl_handle, "wl_display_connect");
 
-   if(!wl_display_ptr)
-      wl_display_ptr = ret;
+      ret = wl_display_connect_to_fd_ptr(fd);
 
-   init_wayland_data();
+      if (!wl_display_ptr) {
+         wl_display_ptr = ret;
+         init_wayland_data();
+      }
+   }
 
    return ret;
 }
