@@ -1,6 +1,7 @@
 #include <sstream>
 #include <iomanip>
 #include <array>
+#include <algorithm>
 #include <spdlog/spdlog.h>
 #include "logging.h"
 #include "overlay.h"
@@ -71,12 +72,24 @@ static void writeSummary(string filename){
   SPDLOG_DEBUG("Writing summary log file [{}]", filename);
   std::ofstream out(filename, ios::out | ios::app);
   if (out){
-    out << "0.1% Min FPS," << "1% Min FPS," << "97% Percentile FPS," << "Average FPS," << "GPU Load," << "CPU Load" << "\n";
+    out << "0.1% Min FPS," << "1% Min FPS," << "97% Percentile FPS," << "Average FPS," << "GPU Load," << "CPU Load," << "Average Frame Time," << "Average GPU Temp," << "Average CPU Temp," << "Average VRAM Used," << "Average RAM Used," << "Average Swap Used," << "Peak GPU Load," << "Peak CPU Load," << "Peak GPU Temp," << "Peak CPU Temp," << "Peak VRAM Used," << "Peak RAM Used," << "Peak Swap Used" << "\n";
     std::vector<logData> sorted = logArray;
     std::sort(sorted.begin(), sorted.end(), compareByFps);
     float total = 0.0f;
-    float total_cpu = 0.0f;
     float total_gpu = 0.0f;
+    float total_cpu = 0.0f;
+    int total_gpu_temp = 0.0f;
+    int total_cpu_temp = 0.0f;
+    float total_vram = 0.0f;
+    float total_ram = 0.0f;
+    float total_swap = 0.0f;
+    int peak_gpu = 0.0f;
+    float peak_cpu = 0.0f;
+    int peak_gpu_temp = 0.0f;
+    int peak_cpu_temp = 0.0f;
+    float peak_vram = 0.0f;
+    float peak_ram = 0.0f;
+    float peak_swap = 0.0f;
     float result;
     float percents[2] = {0.001, 0.01};
     for (auto percent : percents){
@@ -91,21 +104,66 @@ static void writeSummary(string filename){
     // 97th percentile
     result = sorted.empty() ? 0.0f : 1000 / sorted[floor(0.97 * (sorted.size() - 1))].frametime;
     out << fixed << setprecision(1) << result << ",";
-    // avg
+    // avg + peak
     total = 0;
     for (auto input : sorted){
       total = total + input.frametime;
-      total_cpu = total_cpu + input.cpu_load;
       total_gpu = total_gpu + input.gpu_load;
+      total_cpu = total_cpu + input.cpu_load;
+      total_gpu_temp = total_gpu_temp + input.gpu_temp;
+      total_cpu_temp = total_cpu_temp + input.cpu_temp;
+      total_vram = total_vram + input.gpu_vram_used;
+      total_ram = total_ram + input.ram_used;
+      total_swap = total_swap + input.swap_used;
+      peak_gpu = std::max(peak_gpu, input.gpu_load);
+      peak_cpu = std::max(peak_cpu, input.cpu_load);
+      peak_gpu_temp = std::max(peak_gpu_temp, input.gpu_temp);
+      peak_cpu_temp = std::max(peak_cpu_temp, input.cpu_temp);
+      peak_vram = std::max(peak_vram, input.gpu_vram_used);
+      peak_ram = std::max(peak_ram, input.ram_used);
+      peak_swap = std::max(peak_swap, input.swap_used);
     }
+    // Average FPS
     result = 1000 / (total / sorted.size());
     out << fixed << setprecision(1) << result << ",";
-    // GPU
+    // GPU Load (Average)
     result = total_gpu / sorted.size();
     out << result << ",";
-    // CPU
+    // CPU Load (Average)
     result = total_cpu / sorted.size();
-    out << result;
+    out << result << ",";
+    // Average Frame Time
+    result = total / sorted.size();
+    out << result << ",";
+    // Average GPU Temp
+    result = total_gpu_temp / sorted.size();
+    out << result << ",";
+    // Average CPU Temp
+    result = total_cpu_temp / sorted.size();
+    out << result << ",";
+    // Average VRAM Used
+    result = total_vram / sorted.size();
+    out << result << ",";
+    // Average RAM Used
+    result = total_ram / sorted.size();
+    out << result << ",";
+    // Average Swap Used
+    result = total_swap / sorted.size();
+    out << result << ",";
+    // Peak GPU Load
+    out << peak_gpu << ",";
+    // Peak CPU Load
+    out << peak_cpu << ",";
+    // Peak GPU Temp
+    out << peak_gpu_temp << ",";
+    // Peak CPU Temp
+    out << peak_cpu_temp << ",";
+    // Peak VRAM Used
+    out << peak_vram << ",";
+    // Peak RAM Used
+    out << peak_ram << ",";
+    // Peak Swap Used
+    out << peak_swap;
   } else {
     SPDLOG_ERROR("Failed to write log file");
   }
