@@ -26,6 +26,7 @@
 #include "fps_metrics.h"
 #include "intel.h"
 #include "msm.h"
+#include "liquid.h"
 
 #ifdef __linux__
 #include <libgen.h>
@@ -158,6 +159,11 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
       update_procmem();
    if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])
       getIoStats(g_io_stats);
+#endif
+
+#ifdef __linux__
+   if(params.enabled[OVERLAY_PARAM_ENABLED_liquid])
+      liquidStats->Update();
 #endif
 
    currentLogData.gpu_load = gpu_info.load;
@@ -746,6 +752,15 @@ void init_cpu_stats(overlay_params& params)
                            && enabled[OVERLAY_PARAM_ENABLED_cpu_temp];
    enabled[OVERLAY_PARAM_ENABLED_cpu_power] = cpuStats.InitCpuPowerData()
                            && enabled[OVERLAY_PARAM_ENABLED_cpu_power];
+#endif
+}
+
+void init_liquid_stats(overlay_params& params)
+{
+#ifdef __linux__
+   auto& enabled = params.enabled;
+   enabled[OVERLAY_PARAM_ENABLED_liquid] = liquidStats->Init(params.liquid_temp, params.liquid_flow, params.liquid_additional_sensors)
+                           && enabled[OVERLAY_PARAM_ENABLED_liquid];
 #endif
 }
 

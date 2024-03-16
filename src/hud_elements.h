@@ -55,6 +55,7 @@ class HudElements{
         void legacy_elements();
         void update_exec();
         int convert_to_fahrenheit(int celsius);
+        float convert_to_fahrenheit(float celsius);
         static void version();
         static void time();
         static void gpu_stats();
@@ -95,6 +96,7 @@ class HudElements{
         static void refresh_rate();
         static void winesync();
         static void present_mode();
+        static void liquid_stats();
 
         void convert_colors(const struct overlay_params& params);
         void convert_colors(bool do_conv, const struct overlay_params& params);
@@ -122,7 +124,8 @@ class HudElements{
                 fps_value_low,
                 fps_value_med,
                 fps_value_high,
-                text_outline;
+                text_outline,
+                liquid;
         } colors {};
 
         void TextColored(ImVec4 col, const char *fmt, ...);

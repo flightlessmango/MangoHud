@@ -1957,6 +1957,7 @@ static VkResult overlay_CreateInstance(
 #endif
 
       init_cpu_stats(instance_data->params);
+      init_liquid_stats(instance_data->params);
 
       // Adjust height for DXVK/VKD3D version number
       if (engineName == "DXVK" || engineName == "VKD3D"){
