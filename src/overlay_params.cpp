@@ -1026,7 +1026,7 @@ bool parse_preset_config(int preset, struct overlay_params *params){
    stream.imbue(std::locale::classic());
 
    if (!stream.good()) {
-      SPDLOG_ERROR("Failed to read presets file: '{}'", preset_path);
+      SPDLOG_DEBUG("Failed to read presets file: '{}'.  Falling back to default presets", preset_path);
       return false;
    }
 
