@@ -261,11 +261,6 @@ static bool render(GLFWwindow* window) {
     if (HUDElements.colors.update)
         HUDElements.convert_colors(params);
 
-    if (screenWidth && screenHeight && params.enabled[OVERLAY_PARAM_ENABLED_horizontal])
-        glfwSetWindowSize(window, screenWidth, params.height);
-    else
-        glfwSetWindowSize(window, params.width, params.height);
-
     ImVec2 last_window_size = window_size;
     ImGui_ImplGlfw_NewFrame();
     ImGui_ImplOpenGL3_NewFrame();
@@ -275,6 +270,8 @@ static bool render(GLFWwindow* window) {
     render_imgui(sw_stats, params, window_size, true);
     get_atom_info();
     overlay_end_frame();
+    if (screenWidth && screenHeight)
+        glfwSetWindowSize(window, screenWidth, screenHeight);
     ImGui::EndFrame();
     return last_window_size.x != window_size.x || last_window_size.y != window_size.y;
 }
