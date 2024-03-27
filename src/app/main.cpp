@@ -162,56 +162,63 @@ static void msg_read_thread(){
     while (1){
         // make sure that the message recieved is compatible
         // and that we're not trying to use variables that don't exist (yet)
-        size_t msg_size = msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 1, 0) + sizeof(long);
-        if (hdr->version == 1){
-            if (msg_size > offsetof(struct mangoapp_msg_v1, visible_frametime_ns)){
-                bool should_new_frame = false;
-                if (mangoapp_v1->visible_frametime_ns != ~(0lu) && (!params.no_display || logger->is_active())) {
-                    update_hud_info_with_frametime(sw_stats, params, vendorID, mangoapp_v1->visible_frametime_ns);
-                    should_new_frame = true;
-                }
-
-                if (msg_size > offsetof(mangoapp_msg_v1, fsrUpscale)){
-                    HUDElements.g_fsrUpscale = mangoapp_v1->fsrUpscale;
-                    if (params.fsr_steam_sharpness < 0)
-                        HUDElements.g_fsrSharpness = mangoapp_v1->fsrSharpness;
-                    else
-                       HUDElements.g_fsrSharpness = params.fsr_steam_sharpness - mangoapp_v1->fsrSharpness;
-                }
-                if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam]){
-                    steam_focused = get_prop("GAMESCOPE_FOCUSED_APP_GFX") == 769;
-                } else {
-                    steam_focused = false;
-                }
-                // if (!steam_focused && mangoapp_v1->pid != previous_pid){
-                //     string path = "/tmp/mangoapp/" + to_string(mangoapp_v1->pid) + ".json";
-                //     ifstream i(path);
-                //     if (i.fail()){
-                //         sw_stats.engine = EngineTypes::GAMESCOPE;
-                //     } else {
-                //         json j;
-                //         i >> j;
-                //         sw_stats.engine = static_cast<EngineTypes> (j["engine"]);
-                //     }
-                //     previous_pid = mangoapp_v1->pid;
-                // }
-                if (msg_size > offsetof(mangoapp_msg_v1, latency_ns))
-                    gamescope_frametime(mangoapp_v1->app_frametime_ns, mangoapp_v1->latency_ns);
-
-                if (should_new_frame)
-                {
-                    {
-                        std::unique_lock<std::mutex> lk(mangoapp_m);
-                        new_frame = true;
+        size_t msg_size = msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 1, 0);
+        if (msg_size != -1)
+        {
+            if (hdr->version == 1){
+                if (msg_size > offsetof(struct mangoapp_msg_v1, visible_frametime_ns)){
+                    bool should_new_frame = false;
+                    if (mangoapp_v1->visible_frametime_ns != ~(0lu) && (!params.no_display || logger->is_active())) {
+                        update_hud_info_with_frametime(sw_stats, params, vendorID, mangoapp_v1->visible_frametime_ns);
+                        should_new_frame = true;
                     }
-                    mangoapp_cv.notify_one();
-                    screenWidth = mangoapp_v1->outputWidth;
-                    screenHeight = mangoapp_v1->outputHeight;
+
+                    if (msg_size > offsetof(mangoapp_msg_v1, fsrUpscale)){
+                        HUDElements.g_fsrUpscale = mangoapp_v1->fsrUpscale;
+                        if (params.fsr_steam_sharpness < 0)
+                            HUDElements.g_fsrSharpness = mangoapp_v1->fsrSharpness;
+                        else
+                        HUDElements.g_fsrSharpness = params.fsr_steam_sharpness - mangoapp_v1->fsrSharpness;
+                    }
+                    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam]){
+                        steam_focused = get_prop("GAMESCOPE_FOCUSED_APP_GFX") == 769;
+                    } else {
+                        steam_focused = false;
+                    }
+                    // if (!steam_focused && mangoapp_v1->pid != previous_pid){
+                    //     string path = "/tmp/mangoapp/" + to_string(mangoapp_v1->pid) + ".json";
+                    //     ifstream i(path);
+                    //     if (i.fail()){
+                    //         sw_stats.engine = EngineTypes::GAMESCOPE;
+                    //     } else {
+                    //         json j;
+                    //         i >> j;
+                    //         sw_stats.engine = static_cast<EngineTypes> (j["engine"]);
+                    //     }
+                    //     previous_pid = mangoapp_v1->pid;
+                    // }
+                    if (msg_size > offsetof(mangoapp_msg_v1, latency_ns))
+                        gamescope_frametime(mangoapp_v1->app_frametime_ns, mangoapp_v1->latency_ns);
+
+                    if (should_new_frame)
+                    {
+                        {
+                            std::unique_lock<std::mutex> lk(mangoapp_m);
+                            new_frame = true;
+                        }
+                        mangoapp_cv.notify_one();
+                        screenWidth = mangoapp_v1->outputWidth;
+                        screenHeight = mangoapp_v1->outputHeight;
+                    }
                 }
+            } else {
+                printf("Unsupported mangoapp struct version: %i\n", hdr->version);
+                exit(1);
             }
-        } else {
-            printf("Unsupported mangoapp struct version: %i\n", hdr->version);
-            exit(1);
+        }
+        else
+        {
+            printf("mangoapp: msgrcv returned -1 with error %d - %s\n", errno, strerror(errno));
         }
     }
 }
