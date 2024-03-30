@@ -91,7 +91,8 @@ if is_unixy
     'device.cpp',
     'amdgpu.cpp',
     'intel.cpp',
-    'msm.cpp'
+    'msm.cpp',
+    'net.cpp'
   )
 
   opengl_files = files(

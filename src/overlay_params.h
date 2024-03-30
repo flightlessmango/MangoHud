@@ -161,6 +161,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(text_color)                  \
    OVERLAY_PARAM_CUSTOM(wine_color)                  \
    OVERLAY_PARAM_CUSTOM(battery_color)               \
+   OVERLAY_PARAM_CUSTOM(network_color)               \
    OVERLAY_PARAM_CUSTOM(alpha)                       \
    OVERLAY_PARAM_CUSTOM(log_duration)                \
    OVERLAY_PARAM_CUSTOM(pci_dev)                     \
@@ -194,6 +195,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(fps_text)                    \
    OVERLAY_PARAM_CUSTOM(device_battery)              \
    OVERLAY_PARAM_CUSTOM(fps_metrics)                 \
+   OVERLAY_PARAM_CUSTOM(network)                     \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -266,7 +268,9 @@ struct overlay_params {
    enum gl_size_query gl_size_query {GL_SIZE_DRAWABLE};
    bool gl_dont_flip {false};
    int64_t log_duration, log_interval;
-   unsigned cpu_color, gpu_color, vram_color, ram_color, engine_color, io_color, frametime_color, background_color, text_color, wine_color, battery_color;
+   unsigned cpu_color, gpu_color, vram_color, ram_color,
+            engine_color, io_color, frametime_color, background_color,
+            text_color, wine_color, battery_color, network_color;
    std::vector<unsigned> gpu_load_color;
    std::vector<unsigned> cpu_load_color;
    std::vector<unsigned> gpu_load_value;
@@ -316,6 +320,7 @@ struct overlay_params {
    float text_outline_thickness;
    std::vector<std::string> device_battery;
    std::vector<std::string> fps_metrics;
+   std::vector<std::string> network;
 };
 
 const extern char *overlay_param_names[];

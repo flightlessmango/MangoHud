@@ -8,6 +8,8 @@
 #include "winesync.h"
 #include "vulkan/vulkan.h"
 #include <array>
+#include "net.h"
+#include "overlay_params.h"
 
 struct Function {
     std::function<void()> run;  // Using std::function instead of a raw function pointer for more flexibility
@@ -50,6 +52,7 @@ class HudElements{
         int hdr_status = 0;
         int refresh = 0;
         std::unique_ptr<WineSync> winesync_ptr = nullptr;
+        std::unique_ptr<Net> net = nullptr;
 
         void sort_elements(const std::pair<std::string, std::string>& option);
         void legacy_elements();
@@ -95,6 +98,7 @@ class HudElements{
         static void refresh_rate();
         static void winesync();
         static void present_mode();
+        static void network();
 
         void convert_colors(const struct overlay_params& params);
         void convert_colors(bool do_conv, const struct overlay_params& params);
@@ -122,7 +126,8 @@ class HudElements{
                 fps_value_low,
                 fps_value_med,
                 fps_value_high,
-                text_outline;
+                text_outline,
+                network;
         } colors {};
 
         void TextColored(ImVec4 col, const char *fmt, ...);

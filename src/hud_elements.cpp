@@ -98,6 +98,7 @@ void HudElements::convert_colors(const struct overlay_params& params)
     HUDElements.colors.fps_value_med = convert(params.fps_color[1]);
     HUDElements.colors.fps_value_high = convert(params.fps_color[2]);
     HUDElements.colors.text_outline = convert(params.text_outline_color);
+    HUDElements.colors.network = convert(params.network_color);
 
     ImGuiStyle& style = ImGui::GetStyle();
     style.Colors[ImGuiCol_PlotLines] = convert(params.frametime_color);
@@ -1442,6 +1443,39 @@ void HudElements::present_mode() {
     ImGui::PopFont();
 }
 
+void HudElements::network() {
+    if (HUDElements.net && HUDElements.net->should_reset)
+        HUDElements.net.reset(new Net);
+
+    if (!HUDElements.net)
+        HUDElements.net = std::make_unique<Net>();
+
+    ImguiNextColumnFirstItem();
+    HUDElements.TextColored(HUDElements.colors.network, "%s", "NET");
+    ImGui::TableNextColumn();
+    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", "TX");
+    ImGui::TableNextColumn();
+    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", "RX");
+
+    for (auto& iface : HUDElements.net->interfaces){
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        HUDElements.TextColored(HUDElements.colors.network, "%s", iface.name.c_str());
+        ImGui::TableNextColumn();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", iface.txBps / 1000.f);
+        ImGui::SameLine(0,1.0f);
+        ImGui::PushFont(HUDElements.sw_stats->font1);
+        HUDElements.TextColored(HUDElements.colors.text, "KB/s");
+        ImGui::PopFont();
+        ImGui::TableNextColumn();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", iface.rxBps / 1000.f);
+        ImGui::SameLine(0,1.0f);
+        ImGui::PushFont(HUDElements.sw_stats->font1);
+        HUDElements.TextColored(HUDElements.colors.text, "KB/s");
+        ImGui::PopFont();
+    }
+}
+
 void HudElements::sort_elements(const std::pair<std::string, std::string>& option) {
     const auto& param = option.first;
     const auto& value = option.second;
@@ -1488,7 +1522,8 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
         {"hdr", {hdr}},
         {"refresh_rate", {refresh_rate}},
         {"winesync", {winesync}},
-        {"present_mode", {present_mode}}
+        {"present_mode", {present_mode}},
+        {"network", {network}}
 
     };
 
@@ -1614,6 +1649,8 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({winesync, "winesync", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_present_mode])
         ordered_functions.push_back({present_mode, "present_mode", value});
+    if (!params->network.empty())
+        ordered_functions.push_back({network, "network", value});
 
 }
 

@@ -428,6 +428,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `wine`                             | Show current Wine or Proton version in use                                            |
 | `winesync`                         | Show wine sync method in use                                                          |
 | `present_mode`                     | Shows current vulkan [present mode](https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPresentModeKHR.html) or vsync status in opengl  |
+| `network`                          | Show network interfaces tx and rx kb/s. You can specify interface with `network=eth0` |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 Because comma is also used as option delimiter and needs to be escaped for values with a backslash, you can use `+` like `MANGOHUD_CONFIG=fps_limit=60+30+0` instead.

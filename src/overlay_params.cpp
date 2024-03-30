@@ -483,6 +483,7 @@ parse_fps_metrics(const char *str){
 #define parse_text_color(s) parse_color(s)
 #define parse_media_player_color(s) parse_color(s)
 #define parse_wine_color(s) parse_color(s)
+#define parse_network_color(s) parse_color(s)
 #define parse_gpu_load_color(s) parse_load_color(s)
 #define parse_cpu_load_color(s) parse_load_color(s)
 #define parse_gpu_load_value(s) parse_load_value(s)
@@ -498,6 +499,7 @@ parse_fps_metrics(const char *str){
 #define parse_text_outline_color(s) parse_color(s)
 #define parse_text_outline_thickness(s) parse_float(s)
 #define parse_device_battery(s) parse_str_tokenize(s)
+#define parse_network(s) parse_str_tokenize(s)
 
 static bool
 parse_help(const char *str)
@@ -752,6 +754,7 @@ static void set_param_defaults(struct overlay_params *params){
    params->background_color = 0x020202;
    params->text_color = 0xffffff;
    params->media_player_color = 0xffffff;
+   params->network_color = 0xd66077;
    params->media_player_name = "";
    params->font_scale = 1.0f;
    params->wine_color = 0xeb5b5b;
@@ -869,7 +872,7 @@ parse_overlay_config(struct overlay_params *params,
       params->font_scale_media_player = 0.55f;
 
    // Convert from 0xRRGGBB to ImGui's format
-   std::array<unsigned *, 22> colors = {
+   std::array<unsigned *, 23> colors = {
       &params->cpu_color,
       &params->gpu_color,
       &params->vram_color,
@@ -892,6 +895,7 @@ parse_overlay_config(struct overlay_params *params,
       &params->fps_color[1],
       &params->fps_color[2],
       &params->text_outline_color,
+      &params->network_color,
    };
 
    for (auto color : colors){
@@ -995,6 +999,8 @@ parse_overlay_config(struct overlay_params *params,
    mangoapp_cv.notify_one();
    g_fsrSharpness = params->fsr_steam_sharpness;
 #endif
+   if (HUDElements.net)
+      HUDElements.net->should_reset = true;
 }
 
 bool parse_preset_config(int preset, struct overlay_params *params){
