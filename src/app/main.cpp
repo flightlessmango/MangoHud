@@ -347,6 +347,10 @@ int main(int, char**)
     std::thread(msg_read_thread).detach();
     std::thread(ctrl_thread).detach();
     if(!logger) logger = std::make_unique<Logger>(HUDElements.params);
+    Atom noFocusAtom = XInternAtom(x11_display, "GAMESCOPE_NO_FOCUS", False);
+    uint32_t value = 1;
+    XChangeProperty(x11_display, x11_window, noFocusAtom, XA_CARDINAL, 32,
+                    PropModeReplace, (unsigned char *)&value, 1);
     // Main loop
     while (!glfwWindowShouldClose(window)){
         if (!params.no_display){
