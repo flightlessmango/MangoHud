@@ -24,7 +24,7 @@ namespace fs = ghc::filesystem;
 class Net {
     public:
         bool should_reset = false;
-        struct interface {
+        struct networkInterface {
             std::string name;
             uint64_t txBytes;
             uint64_t rxBytes;
@@ -35,7 +35,7 @@ class Net {
 
         Net();
         void update();
-        std::vector<interface> interfaces = {};
+        std::vector<networkInterface> interfaces = {};
 
     private:
         uint64_t calculateThroughput(long long currentBytes, long long previousBytes,

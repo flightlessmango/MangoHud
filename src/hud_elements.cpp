@@ -1444,6 +1444,7 @@ void HudElements::present_mode() {
 }
 
 void HudElements::network() {
+#ifdef __linux__
     if (HUDElements.net && HUDElements.net->should_reset)
         HUDElements.net.reset(new Net);
 
@@ -1474,6 +1475,7 @@ void HudElements::network() {
         HUDElements.TextColored(HUDElements.colors.text, "KB/s");
         ImGui::PopFont();
     }
+#endif
 }
 
 void HudElements::sort_elements(const std::pair<std::string, std::string>& option) {

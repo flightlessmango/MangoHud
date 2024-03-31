@@ -269,7 +269,9 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
       hw_update_thread->update(&params, vendorID);
 
       if (fpsmetrics) fpsmetrics->update_thread();
+#ifdef __linux__
       if (HUDElements.net) HUDElements.net->update();
+#endif
 
       sw_stats.fps = 1000000000.0 * sw_stats.n_frames_since_update / elapsed;
 
