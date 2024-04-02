@@ -68,7 +68,7 @@ dependencies() {
                 dep_install
 
                 unset INSTALL
-                DEPS="{glibc-devel.i686,libstdc++-devel.i686,libX11-devel.i686}"
+                DEPS="{glibc-devel.i686,libstdc++-devel.i686,libX11-devel.i686,wayland-devel.i686,libxkbcommon-devel.i686}"
                 dep_install
                 break
             ;;
