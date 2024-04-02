@@ -43,8 +43,6 @@ jobs:
           ./build.sh build -Dwerror=true package release
       - name: Upload release
         if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           assets=()
           for asset in ./MangoHud-*-Source*.tar.*; do
