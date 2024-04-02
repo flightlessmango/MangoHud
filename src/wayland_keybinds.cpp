@@ -101,6 +101,9 @@ void update_wl_queue()
 
 void init_wayland_data()
 {
+   if (!wl_display_ptr)
+      return;
+
    struct wl_display *display_wrapped = (struct wl_display*)wl_proxy_create_wrapper(wl_display_ptr);
    queue = wl_display_create_queue(wl_display_ptr);
    wl_proxy_set_queue((struct wl_proxy*)display_wrapped, queue);
