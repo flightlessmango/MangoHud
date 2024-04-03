@@ -28,7 +28,7 @@ jobs:
           cd pkgbuild
           pkgver=$(git describe --tags | sed -r 's/^v//;s/([^-]*-g)/r\1/;s/-/./g')
           sed -i "s/pkgver=.*/pkgver=$pkgver/g" PKGBUILD
-          sudo -u nobody -- sh -c "makepkg -fsiCc --noconfirm"
+          sudo -u nobody -- sh -c "makepkg -fsCc --noconfirm"
       - name: Edit release and add files
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
