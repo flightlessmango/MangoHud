@@ -2,11 +2,6 @@ name: Build release package
 on:
   release:
     types: [published]
-#  push:
-#    tags: ["v*"]
-#    branches:
-#      - main
-  workflow_dispatch:
 
 jobs:
   build:
@@ -16,9 +11,14 @@ jobs:
       - uses: actions/checkout@v3
       - name: Install build tools
         run: |
+          set -x
+          dpkg --add-architecture i386
           sudo apt update
-          sudo apt install gcc-multilib g++-multilib ninja-build python3-setuptools python3-wheel mesa-common-dev libxnvctrl-dev libdbus-1-dev python3-numpy python3-matplotlib unzip hub
-          sudo pip3 install 'meson>=0.60' mako
+          sudo apt -y install gcc-multilib g++-multilib ninja-build python3-setuptools \
+                              python3-wheel mesa-common-dev libxnvctrl-dev libdbus-1-dev \
+                              python3-numpy python3-matplotlib unzip hub libxkbcommon-dev libwayland-dev wget unzip \
+                              libxkbcommon-dev:i386 libwayland-dev:i386
+          sudo pip3 --no-input install 'meson>=0.60' mako
           wget https://github.com/KhronosGroup/glslang/releases/download/SDK-candidate-26-Jul-2020/glslang-master-linux-Release.zip
           unzip glslang-master-linux-Release.zip bin/glslangValidator
           sudo install -m755 bin/glslangValidator /usr/local/bin/
@@ -43,7 +43,10 @@ jobs:
           ./build.sh build -Dwerror=true package release
       - name: Upload release
         if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -x
           assets=()
           for asset in ./MangoHud-*-Source*.tar.*; do
             assets+=("-a" "$asset")

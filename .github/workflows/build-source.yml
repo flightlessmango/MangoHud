@@ -11,11 +11,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Run build-source.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -x
           sudo apt update
-          sudo apt install gcc g++ ninja-build python3-pip python3-setuptools python3-wheel pkg-config mesa-common-dev libx11-dev libxnvctrl-dev libdbus-1-dev glslang-tools
-          sudo pip3 install 'meson>=0.60' mako
+          sudo apt -y install gcc g++ ninja-build python3-pip python3-setuptools python3-wheel pkg-config mesa-common-dev libx11-dev libxnvctrl-dev libdbus-1-dev glslang-tools hub libxkbcommon-dev libwayland-dev wget unzip
+          sudo pip3 --no-input install 'meson>=0.60' mako
           ./build-source.sh
           assets=()
           for asset in ./MangoHud-*-Source*.tar.*; do
@@ -24,3 +26,10 @@ jobs:
           tag_name="${GITHUB_REF##*/}"
           hub release edit "${assets[@]}" -m "" "$tag_name"
           #hub release create "${assets[@]}" -m "$tag_name" "$tag_name"
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        continue-on-error: true
+        with:
+          name: MangoHud-${{steps.git-vars.outputs.artifact-metadata}}
+          path: ${{runner.workspace}}/MangoHud/build/MangoHud-*tar.gz
+          retention-days: 30
