@@ -941,8 +941,10 @@ void HudElements::_exec(){
     ImGui::PushFont(HUDElements.sw_stats->font1);
     ImguiNextColumnFirstItem();
     for (auto& item : HUDElements.exec_list){
-        if (item.pos == HUDElements.place)
-            HUDElements.TextColored(HUDElements.colors.text, "%s", item.ret.c_str());
+        if (item.pos == HUDElements.place){
+            ImguiNextColumnFirstItem();
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", item.ret.c_str());
+        }
     }
     ImGui::PopFont();
 }
