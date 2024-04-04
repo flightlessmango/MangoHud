@@ -19,6 +19,7 @@
 
 #include <glad/glad.h>
 #include "gl_hud.h"
+#include "../config.h"
 
 using namespace MangoHud::GL;
 
@@ -106,7 +107,12 @@ EXPORT_C_(void) glXDestroyContext(void *dpy, void *ctx)
 EXPORT_C_(int) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
     glx.Load();
     SPDLOG_DEBUG("{}: {}, {}", __func__, drawable, ctx);
-    int ret = glx.MakeCurrent(dpy, drawable, ctx);
+    int ret;
+    // This is hack, proper fix should be implemented.
+    // MakeCurrent fails on the minecraft-launcher so we
+    // just bypass it and minecraft hooking works as it should
+    if (get_program_name() != "minecraft-launcher")
+        ret = glx.MakeCurrent(dpy, drawable, ctx);
 
     if (!is_blacklisted()) {
         if (ret) {
