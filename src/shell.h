@@ -2,7 +2,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <cstring>
-#ifdef __LINUX__
+#ifdef __linux__
 #include <sys/wait.h>
 #endif
 #include <string>
@@ -14,7 +14,7 @@ private:
     int from_shell[2];
     pid_t shell_pid;
 
-#ifdef __LINUX__
+#ifdef __linux__
     void setNonBlocking(int fd) {
         int flags = fcntl(fd, F_GETFL, 0);
         fcntl(fd, F_SETFL, flags | O_NONBLOCK);
