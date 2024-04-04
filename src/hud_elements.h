@@ -10,6 +10,7 @@
 #include <array>
 #include "net.h"
 #include "overlay_params.h"
+#include "shell.h"
 
 struct Function {
     std::function<void()> run;  // Using std::function instead of a raw function pointer for more flexibility
@@ -53,6 +54,7 @@ class HudElements{
         int refresh = 0;
         std::unique_ptr<WineSync> winesync_ptr = nullptr;
         std::unique_ptr<Net> net = nullptr;
+        std::unique_ptr<Shell> shell = nullptr;
 
         void sort_elements(const std::pair<std::string, std::string>& option);
         void legacy_elements();

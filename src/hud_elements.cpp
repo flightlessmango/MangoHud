@@ -1658,8 +1658,11 @@ void HudElements::legacy_elements(){
 }
 
 void HudElements::update_exec(){
+    if (!HUDElements.shell)
+        HUDElements.shell = std::make_unique<Shell>();
+
     for(auto& item : exec_list)
-        item.ret = exec(item.value);
+        item.ret = HUDElements.shell->exec(item.value + "\n");
 }
 
 HudElements HUDElements;
