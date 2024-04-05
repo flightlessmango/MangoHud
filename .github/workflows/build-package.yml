@@ -12,7 +12,7 @@ jobs:
       - name: Install build tools
         run: |
           set -x
-          dpkg --add-architecture i386
+          sudo dpkg --add-architecture i386
           sudo apt update
           sudo apt -y install gcc-multilib g++-multilib ninja-build python3-setuptools \
                               python3-wheel mesa-common-dev libxnvctrl-dev libdbus-1-dev \
