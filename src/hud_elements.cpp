@@ -1658,7 +1658,7 @@ void HudElements::legacy_elements(){
 }
 
 void HudElements::update_exec(){
-#ifdef __LINUX__
+#ifdef __linux__
     if (!HUDElements.shell)
         HUDElements.shell = std::make_unique<Shell>();
 

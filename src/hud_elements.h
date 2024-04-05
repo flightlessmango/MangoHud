@@ -54,7 +54,7 @@ class HudElements{
         int refresh = 0;
         std::unique_ptr<WineSync> winesync_ptr = nullptr;
         std::unique_ptr<Net> net = nullptr;
-#ifdef __LINUX__
+#ifdef __linux__
         std::unique_ptr<Shell> shell = nullptr;
 #endif
 
