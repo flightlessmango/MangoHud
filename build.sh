@@ -73,7 +73,7 @@ dependencies() {
                 break
             ;;
 
-            *debian*|*ubuntu*|*deepin*)
+            *debian*|*ubuntu*|*deepin*|*pop*)
                 MANAGER_QUERY="dpkg-query -s"
                 MANAGER_INSTALL="apt install"
                 DEPS="{${DEPS_DEBIAN}}"
