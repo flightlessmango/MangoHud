@@ -942,7 +942,6 @@ void HudElements::_exec(){
     ImguiNextColumnFirstItem();
     for (auto& item : HUDElements.exec_list){
         if (item.pos == HUDElements.place){
-            ImguiNextColumnFirstItem();
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", item.ret.c_str());
         }
     }
