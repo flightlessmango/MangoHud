@@ -54,6 +54,8 @@ static  std::vector<std::string> blacklist {
     "iexplore.exe",
     "rundll32.exe",
     "Launcher", //Paradox Interactive Launcher
+    "steamwebhelper.exe",
+    "EpicWebHelper.exe"
 };
 
 
