@@ -469,7 +469,7 @@ static bool find_input(const std::string& path, const char* input_prefix, std::s
         if (uscore != std::string::npos) {
             file.erase(uscore, std::string::npos);
             input = path + "/" + file + "_input";
-            return true;
+            return std::stoi(read_line(input)) > 0;
         }
     }
     return false;
