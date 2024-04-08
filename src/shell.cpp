@@ -84,8 +84,14 @@ std::string Shell::exec(std::string cmd) {
     return readOutput();
 }
 
+void Shell::writeCommand(const std::string& command) {
+    if (write(to_shell[1], command.c_str(), command.length()) == -1)
+    SPDLOG_ERROR("Failed exit shell");
+}
+
 Shell::~Shell() {
-    write(to_shell[1], "exit\n", 5);
+    if (write(to_shell[1], "exit\n", 5) == -1)
+        SPDLOG_ERROR("Failed exit shell");
     close(to_shell[1]);
     close(from_shell[0]);
     waitpid(shell_pid, nullptr, 0);
