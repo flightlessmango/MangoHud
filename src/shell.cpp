@@ -2,6 +2,7 @@
 #include <thread>
 #include <iostream>
 #include <sys/wait.h>
+#include <spdlog/spdlog.h>
 
 std::string Shell::readOutput() {
     std::string output;
@@ -37,8 +38,22 @@ std::string Shell::readOutput() {
 }
 
 Shell::Shell() {
-    pipe(to_shell);
-    pipe(from_shell);
+    static bool failed;
+    if (pipe(to_shell) == -1) {
+        SPDLOG_ERROR("Failed to create to_shell pipe: {}", strerror(errno));
+        failed = true;
+    }
+
+    if (pipe(from_shell) == -1) {
+        SPDLOG_ERROR("Failed to create from_shell pipe: {}", strerror(errno));
+        failed = true;
+    }
+
+    // if either pipe fails, there's no point in continuing.
+    if (failed){
+        SPDLOG_ERROR("Shell has failed, will not be able to use exec");
+        return;
+    }
 
     shell_pid = fork();
 
@@ -58,9 +73,13 @@ Shell::Shell() {
         // Set the read end of the from_shell pipe to non-blocking
         setNonBlocking(from_shell[0]);
     }
+    success = true;
 }
 
 std::string Shell::exec(std::string cmd) {
+    if (!success)
+        return "";
+
     writeCommand(cmd);
     return readOutput();
 }

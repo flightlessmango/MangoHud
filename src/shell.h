@@ -13,6 +13,7 @@ private:
     int to_shell[2];
     int from_shell[2];
     pid_t shell_pid;
+    bool success;
 
 #ifdef __linux__
     void setNonBlocking(int fd) {
