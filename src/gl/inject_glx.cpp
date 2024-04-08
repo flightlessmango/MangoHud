@@ -107,7 +107,7 @@ EXPORT_C_(void) glXDestroyContext(void *dpy, void *ctx)
 EXPORT_C_(int) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
     glx.Load();
     SPDLOG_DEBUG("{}: {}, {}", __func__, drawable, ctx);
-    int ret;
+    int ret = 0;
     // This is hack, proper fix should be implemented.
     // MakeCurrent fails on the minecraft-launcher so we
     // just bypass it and minecraft hooking works as it should
