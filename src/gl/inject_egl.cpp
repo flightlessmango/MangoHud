@@ -20,9 +20,7 @@ static void* get_egl_proc_address(const char* name) {
     void *func = nullptr;
     static void *(*pfn_eglGetProcAddress)(const char*) = nullptr;
     if (!pfn_eglGetProcAddress) {
-        void *handle = real_dlopen("libEGL.so", RTLD_LAZY);
-        if (!handle)
-            handle = real_dlopen("libEGL.so.1", RTLD_LAZY);
+        void *handle = real_dlopen("libEGL.so.1", RTLD_LAZY|RTLD_LOCAL);
         if (!handle) {
             SPDLOG_ERROR("Failed to open " MANGOHUD_ARCH " libEGL.so.1: {}", dlerror());
         } else {
