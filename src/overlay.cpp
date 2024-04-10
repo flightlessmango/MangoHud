@@ -666,6 +666,8 @@ void horizontal_separator(struct overlay_params& params) {
 
 void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& window_size, bool is_vulkan)
 {
+   std::unique_lock<std::mutex> lock(config_mtx);
+   config_cv.wait(lock, []{ return config_ready; });
    // data.engine = EngineTypes::GAMESCOPE;
    HUDElements.sw_stats = &data; HUDElements.params = &params;
    HUDElements.is_vulkan = is_vulkan;

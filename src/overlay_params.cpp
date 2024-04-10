@@ -41,6 +41,9 @@
 #include "fps_metrics.h"
 
 std::unique_ptr<fpsMetrics> fpsmetrics;
+std::mutex config_mtx;
+std::condition_variable config_cv;
+bool config_ready = false;
 
 #if __cplusplus >= 201703L
 
@@ -1001,6 +1004,12 @@ parse_overlay_config(struct overlay_params *params,
 #endif
    if (HUDElements.net)
       HUDElements.net->should_reset = true;
+
+   {
+      std::lock_guard<std::mutex> lock(config_mtx);
+      config_ready = true;
+      config_cv.notify_one();
+   }
 }
 
 bool parse_preset_config(int preset, struct overlay_params *params){

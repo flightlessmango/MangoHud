@@ -6,6 +6,8 @@
 #include <vector>
 #include <unordered_map>
 #include <cstdint>
+#include <condition_variable>
+#include <mutex>
 
 #ifdef __cplusplus
 extern "C" {
@@ -330,9 +332,11 @@ void parse_overlay_config(struct overlay_params *params,
 void presets(int preset, struct overlay_params *params, bool inherit=false);
 bool parse_preset_config(int preset, struct overlay_params *params);
 void add_to_options(struct overlay_params *params, std::string option, std::string value);
-
 #ifdef __cplusplus
 }
 #endif
+extern std::mutex config_mtx;
+extern std::condition_variable config_cv;
+extern bool config_ready;
 
 #endif /* MANGOHUD_OVERLAY_PARAMS_H */
