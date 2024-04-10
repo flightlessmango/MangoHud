@@ -306,6 +306,9 @@ void Logger::calculate_benchmark_data(){
   string label;
   float mins[2] = {0.01f, 0.001f};
   for (auto percent : mins){
+    if (sorted.empty())
+      continue;
+
     size_t percentile_pos = sorted.size() * percent;
     percentile_pos = std::min(percentile_pos, sorted.size() - 1);
     float result = 1000 / sorted[percentile_pos];
