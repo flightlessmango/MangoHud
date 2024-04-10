@@ -469,8 +469,7 @@ static bool find_input(const std::string& path, const char* input_prefix, std::s
         if (uscore != std::string::npos) {
             file.erase(uscore, std::string::npos);
             input = path + "/" + file + "_input";
-            //9 characters should not overflow the 32-bit int
-            return std::stoi(read_line(input).substr(0, 9)) > 0;
+            return std::stoi(read_line(input)) > 0;
         }
     }
     return false;
