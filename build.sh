@@ -54,7 +54,7 @@ dependencies() {
         for i in $DISTRO; do
         echo "# Checking dependencies for \"$i\""
         case $i in
-            *arch*|*manjaro*|*artix*)
+            *arch*|*manjaro*|*artix*|*SteamOS*)
                 MANAGER_QUERY="pacman -Q"
                 MANAGER_INSTALL="pacman -S"
                 DEPS="{${DEPS_ARCH}}"
