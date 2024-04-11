@@ -86,7 +86,7 @@ std::string Shell::exec(std::string cmd) {
 
 void Shell::writeCommand(const std::string& command) {
     if (write(to_shell[1], command.c_str(), command.length()) == -1)
-    SPDLOG_ERROR("Failed exit shell");
+        SPDLOG_ERROR("Failed to write to shell");
 }
 
 Shell::~Shell() {
