@@ -25,6 +25,7 @@ static  std::vector<std::string> blacklist {
     "EpicGamesLauncher.exe",
     "IGOProxy.exe",
     "IGOProxy64.exe",
+    "monado-service",
     "Origin.exe",
     "OriginThinSetupInternal.exe",
     "steam",
