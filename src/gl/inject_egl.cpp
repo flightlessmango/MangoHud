@@ -35,7 +35,7 @@ static void* get_egl_proc_address(const char* name) {
         func = get_proc_address( name );
 
     if (!func) {
-        SPDLOG_DEBUG("Failed to get function '{}'", name);
+        SPDLOG_ERROR("Failed to get function '{}'", name);
     }
 
     return func;
