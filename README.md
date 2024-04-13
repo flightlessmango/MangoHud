@@ -365,7 +365,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `refresh_rate`                     | Display the current refresh rate (only works in gamescope)                            |
 | `full`                             | Enable most of the toggleable parameters (currently excludes `histogram`)             |
 | `gamemode`                         | Show if GameMode is on                                                                |
-| `gpu_color`<br>`cpu_color`<br>`vram_color`<br>`ram_color`<br>`io_color`<br>`engine_color`<br>`frametime_color`<br>`background_color`<br>`text_color`<br>`media_player_color`         | Change default colors: `gpu_color=RRGGBB` |
+| `gpu_color`<br>`cpu_color`<br>`vram_color`<br>`ram_color`<br>`io_color`<br>`engine_color`<br>`frametime_color`<br>`background_color`<br>`text_color`<br>`media_player_color`<br>`liquid_color`         | Change default colors: `gpu_color=RRGGBB` |
 | `gpu_core_clock`<br>`gpu_mem_clock`| Display GPU core/memory frequency                                                     |
 | `gpu_fan`                          | GPU fan in rpm on AMD, FAN in percent on NVIDIA |
 | `gpu_load_change`                  | Change the color of the GPU load depending on load                                    |
@@ -431,6 +431,11 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `winesync`                         | Show wine sync method in use                                                          |
 | `present_mode`                     | Shows current vulkan [present mode](https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPresentModeKHR.html) or vsync status in opengl  |
 | `network`                          | Show network interfaces tx and rx kb/s. You can specify interface with `network=eth0` |
+|`liquid` 							 | Enable liquid cooling stats. Devices that were checked to display the correct data: D5NEXT, HIGHFLOWNEXT, QUADRO |
+|`liquid_text` 						 | Override liquid text. Default: "Liquid" 																		|
+|`liquid_temp`						 | Enable coolant temperature monitoring. To display only specific devices the devices names must be specified separated by comma Eg. liquid_temp=d5next,highflownext|
+|`liquid_flow`						 | Enable flow monitoring, displayed in L/h(Liters/hour). To display only specific devices the devices names must be specified separated by comma			|
+|`liquid_additional_sensors`	     | Enables monitoring various sensors/data from devices. Device names must be provided followed by sensor names between braces. The sensor names need to be separated by comma and need to be provided by the name they are displayed in terminal when using `sensors` command. Devices need to be sparated by semicolon. Eg. d5next {fan speed, pump speed}; highflownext {external sensor, dissipated power}; quadro {sensor 1, sensor 2}	|
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 Because comma is also used as option delimiter and needs to be escaped for values with a backslash, you can use `+` like `MANGOHUD_CONFIG=fps_limit=60+30+0` instead.

@@ -20,6 +20,7 @@
 #include <IconsForkAwesome.h>
 #include "version.h"
 #include "blacklist.h"
+#include "liquid.h"
 #ifdef __linux__
 #include "implot.h"
 #endif
@@ -99,6 +100,7 @@ void HudElements::convert_colors(const struct overlay_params& params)
     HUDElements.colors.fps_value_high = convert(params.fps_color[2]);
     HUDElements.colors.text_outline = convert(params.text_outline_color);
     HUDElements.colors.network = convert(params.network_color);
+    HUDElements.colors.liquid = convert(params.liquid_color);
 
     ImGuiStyle& style = ImGui::GetStyle();
     style.Colors[ImGuiCol_PlotLines] = convert(params.frametime_color);
@@ -129,6 +131,11 @@ void HudElements::TextColored(ImVec4 col, const char *fmt, ...){
 
 int HudElements::convert_to_fahrenheit(int celsius){
     int fahrenheit = (celsius * 9 / 5) + 32;
+    return fahrenheit;
+}
+
+float HudElements::convert_to_fahrenheit(float celsius){
+    float fahrenheit = (celsius * 9.0f / 5.0f) + 32.0f;
     return fahrenheit;
 }
 
@@ -1198,6 +1205,80 @@ void HudElements::device_battery()
 #endif
 }
 
+void HudElements::liquid_stats()
+{
+#ifdef __linux__
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_liquid])
+    {
+        std::vector<WatercoolingDevice> devices = liquidStats->GetDevicesData();
+        const char* liquid_text;
+        liquid_text = HUDElements.params->liquid_text.c_str();
+
+        ImguiNextColumnFirstItem();
+        HUDElements.TextColored(HUDElements.colors.liquid, "%s", liquid_text);
+        for (size_t i = 0; i < devices.size(); ++i)
+        {
+            if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
+            {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+            }
+            else
+                ImguiNextColumnOrNewRow();
+
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            HUDElements.TextColored(HUDElements.colors.liquid, "%s", devices[i].deviceName.c_str());
+            ImGui::PopFont();
+            for (size_t j = 0; j < devices[i].sensors.size(); ++j)
+            {
+                //ImGui::SameLine(0, 1.0f);
+                ImguiNextColumnOrNewRow();
+
+                switch (devices[i].sensors[j].type)
+                {
+                    case TEMP:
+                        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit])
+                            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", HUDElements.convert_to_fahrenheit(devices[i].sensors[j].input));
+                    else
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", devices[i].sensors[j].input);
+                    ImGui::SameLine(0, 1.0f);
+                    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact])
+                        HUDElements.TextColored(HUDElements.colors.text, "°");
+                    else
+                        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit])
+                            HUDElements.TextColored(HUDElements.colors.text, "°F");
+                    else
+                        HUDElements.TextColored(HUDElements.colors.text, "°C");
+                    break;
+
+                    case FLOW:
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", devices[i].sensors[j].input);
+                        ImGui::SameLine(0, 1.0f);
+                        HUDElements.TextColored(HUDElements.colors.text, "L/h");
+                        break;
+
+                    case POWER:
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", devices[i].sensors[j].input);
+                        ImGui::SameLine(0, 1.0f);
+                        ImGui::PushFont(HUDElements.sw_stats->font1);
+                        HUDElements.TextColored(HUDElements.colors.text, "W");
+                        ImGui::PopFont();
+                        break;
+
+                    case RPM:
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%0.f", devices[i].sensors[j].input);
+                        ImGui::SameLine(0, 1.0f);
+                        ImGui::PushFont(HUDElements.sw_stats->font1);
+                        HUDElements.TextColored(HUDElements.colors.text, "RPM");
+                        ImGui::PopFont();
+                        break;
+                }
+            }
+        }
+    }
+#endif
+}
+
 void HudElements::frame_count(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_frame_count]){
         ImguiNextColumnFirstItem();
@@ -1525,7 +1606,8 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
         {"refresh_rate", {refresh_rate}},
         {"winesync", {winesync}},
         {"present_mode", {present_mode}},
-        {"network", {network}}
+        {"network", {network}},
+        {"liquid", {liquid_stats}}
 
     };
 
