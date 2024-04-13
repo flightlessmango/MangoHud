@@ -144,6 +144,11 @@ static void trim_char(char* str) {
     memmove(str, ptr, len + 1);
 }
 
+static std::string get_string(const std::string &s)
+{
+    return s;
+}
+
 #pragma GCC diagnostic pop
 
 #endif //MANGOHUD_STRING_UTILS_H

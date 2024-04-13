@@ -101,6 +101,7 @@ void imgui_init()
     init_system_info();
     cfg_inited = true;
     init_cpu_stats(params);
+    init_liquid_stats(params);
 }
 
 //static
