@@ -15,8 +15,8 @@ EXPORT_C_(void*) dlsym(void * handle, const char * name)
         find_egl_ptr = reinterpret_cast<decltype(find_egl_ptr)> (real_dlsym(RTLD_NEXT, "mangohud_find_egl_ptr"));
 
     void* func = nullptr;
+    bool is_angle = real_dlsym(handle, "eglStreamPostD3DTextureANGLE");
     void* real_func = real_dlsym(handle, name);
-    bool is_angle = !!real_dlsym(handle, "eglStreamPostD3DTextureANGLE");
 
     if (find_glx_ptr && real_func) {
         func = find_glx_ptr(name);
