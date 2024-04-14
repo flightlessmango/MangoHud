@@ -1425,10 +1425,12 @@ void HudElements::winesync() {
         HUDElements.winesync_ptr = std::make_unique<WineSync>();
 
     if (HUDElements.winesync_ptr->valid()) {
+        ImGui::PushFont(HUDElements.sw_stats->font1);
         ImguiNextColumnFirstItem();
         HUDElements.TextColored(HUDElements.colors.engine, "%s", "WSYNC");
         ImguiNextColumnOrNewRow();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", HUDElements.winesync_ptr->get_method().c_str());
+        ImGui::PopFont();
     }
 }
 
