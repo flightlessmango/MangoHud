@@ -758,7 +758,7 @@ static void set_param_defaults(struct overlay_params *params){
    params->background_color = 0x020202;
    params->text_color = 0xffffff;
    params->media_player_color = 0xffffff;
-   params->network_color = 0xd66077;
+   params->network_color = 0xe07b85;
    params->media_player_name = "";
    params->font_scale = 1.0f;
    params->wine_color = 0xeb5b5b;
