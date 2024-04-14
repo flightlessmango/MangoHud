@@ -1143,6 +1143,8 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
          add_to_options(params, "debug", "1");
          add_to_options(params, "version", "0");
          add_to_options(params, "frame_timing_detailed", "1");
+         add_to_options(params, "network", "1");
+         add_to_options(params, "present_mode", "0");
          break;
 
    }
