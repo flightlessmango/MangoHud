@@ -1450,28 +1450,21 @@ void HudElements::network() {
     if (!HUDElements.net)
         HUDElements.net = std::make_unique<Net>();
 
-    ImguiNextColumnFirstItem();
-    HUDElements.TextColored(HUDElements.colors.network, "%s", "NET");
-    ImGui::TableNextColumn();
-    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", "TX");
-    ImGui::TableNextColumn();
-    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", "RX");
-
     for (auto& iface : HUDElements.net->interfaces){
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        HUDElements.TextColored(HUDElements.colors.network, "%s", iface.name.c_str());
+        HUDElements.TextColored(HUDElements.colors.network, "%.8s", iface.name.c_str());
         ImGui::TableNextColumn();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", iface.txBps / 1000.f);
         ImGui::SameLine(0,1.0f);
         ImGui::PushFont(HUDElements.sw_stats->font1);
-        HUDElements.TextColored(HUDElements.colors.text, "KB/s");
+        HUDElements.TextColored(HUDElements.colors.text, "KB/s %s", ICON_FK_ARROW_UP);
         ImGui::PopFont();
         ImGui::TableNextColumn();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", iface.rxBps / 1000.f);
         ImGui::SameLine(0,1.0f);
         ImGui::PushFont(HUDElements.sw_stats->font1);
-        HUDElements.TextColored(HUDElements.colors.text, "KB/s");
+        HUDElements.TextColored(HUDElements.colors.text, "KB/s %s", ICON_FK_ARROW_DOWN);
         ImGui::PopFont();
     }
 #endif
@@ -1587,6 +1580,8 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({vram, "vram", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_ram])
         ordered_functions.push_back({ram, "ram", value});
+    if (!params->network.empty())
+        ordered_functions.push_back({network, "network", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_battery])
         ordered_functions.push_back({battery, "battery", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_fan])
@@ -1650,8 +1645,6 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({winesync, "winesync", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_present_mode])
         ordered_functions.push_back({present_mode, "present_mode", value});
-    if (!params->network.empty())
-        ordered_functions.push_back({network, "network", value});
 
 }
 
