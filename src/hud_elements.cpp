@@ -1085,24 +1085,23 @@ void HudElements::gamescope_frame_timing(){
         static double min_time = 0.0f;
         static double max_time = 50.0f;
         if (HUDElements.gamescope_debug_app.size() > 0 && HUDElements.gamescope_debug_app.back() > -1){
-            ImguiNextColumnFirstItem();
-            ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
-            ImGui::PushFont(HUDElements.sw_stats->font1);
-            HUDElements.TextColored(HUDElements.colors.engine, "%s", "App");
-            ImGui::TableNextRow();
-            ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
             auto min = std::min_element(HUDElements.gamescope_debug_app.begin(),
                                         HUDElements.gamescope_debug_app.end());
             auto max = std::max_element(HUDElements.gamescope_debug_app.begin(),
                                         HUDElements.gamescope_debug_app.end());
+            
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
+            HUDElements.TextColored(HUDElements.colors.engine, "%s", "App");
+            ImGui::TableSetColumnIndex(ImGui::TableGetColumnCount() - 1);
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "min: %.1fms, max: %.1fms", min[0], max[0]);
-            ImGui::PopFont();
+            ImGui::Dummy(ImVec2(0.0f, real_font_size.y / 2));
             ImguiNextColumnFirstItem();
+            ImGui::PopFont();
             char hash[40];
             snprintf(hash, sizeof(hash), "##%s", overlay_param_names[OVERLAY_PARAM_ENABLED_frame_timing]);
             HUDElements.sw_stats->stat_selector = OVERLAY_PLOTS_frame_timing;
             HUDElements.sw_stats->time_dividor = 1000000.0f; /* ns -> ms */
-
 
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
             if (ImGui::BeginChild("gamescope_app_window", ImVec2(ImGui::GetWindowContentRegionWidth(), 50))) {
