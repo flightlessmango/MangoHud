@@ -1411,10 +1411,12 @@ void HudElements::hdr() {
 
 void HudElements::refresh_rate() {
     if (HUDElements.refresh > 0) {
+        ImGui::PushFont(HUDElements.sw_stats->font1);
         ImguiNextColumnFirstItem();
         HUDElements.TextColored(HUDElements.colors.engine, "%s", "Display Hz");
         ImguiNextColumnOrNewRow();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", HUDElements.refresh);
+        ImGui::PopFont();
     }
 }
 
@@ -1590,8 +1592,6 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({gamescope_fsr, "gamescope_fsr", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_hdr])
         ordered_functions.push_back({hdr, "hdr", value});
-    if (params->enabled[OVERLAY_PARAM_ENABLED_refresh_rate])
-        ordered_functions.push_back({refresh_rate, "refresh_rate", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_throttling_status])
         ordered_functions.push_back({throttling_status, "throttling_status", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_fps])
@@ -1645,7 +1645,8 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({winesync, "winesync", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_present_mode])
         ordered_functions.push_back({present_mode, "present_mode", value});
-
+    if (params->enabled[OVERLAY_PARAM_ENABLED_refresh_rate])
+        ordered_functions.push_back({refresh_rate, "refresh_rate", value});
 }
 
 void HudElements::update_exec(){
