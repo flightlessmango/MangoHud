@@ -5,6 +5,7 @@
 #include "overlay.h"
 #include "overlay_params.h"
 #include "nvctrl.h"
+#include "logging.h"
 
 nvmlReturn_t result;
 nvmlDevice_t nvidiaDevice;
@@ -52,16 +53,22 @@ bool getNVMLInfo(const struct overlay_params& params){
     nvmlReturn_t response;
     auto& nvml = get_libnvml_loader();
     response = nvml.nvmlDeviceGetUtilizationRates(nvidiaDevice, &nvidiaUtilization);
-    nvml.nvmlDeviceGetTemperature(nvidiaDevice, NVML_TEMPERATURE_GPU, &nvidiaTemp);
-    nvml.nvmlDeviceGetMemoryInfo(nvidiaDevice, &nvidiaMemory);
-    nvml.nvmlDeviceGetClockInfo(nvidiaDevice, NVML_CLOCK_GRAPHICS, &nvidiaCoreClock);
-    nvml.nvmlDeviceGetClockInfo(nvidiaDevice, NVML_CLOCK_MEM, &nvidiaMemClock);
-    nvml.nvmlDeviceGetPowerUsage(nvidiaDevice, &nvidiaPowerUsage);
+    if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_temp] || logger->is_active())
+        nvml.nvmlDeviceGetTemperature(nvidiaDevice, NVML_TEMPERATURE_GPU, &nvidiaTemp);
+    if (params.enabled[OVERLAY_PARAM_ENABLED_vram] || logger->is_active())
+        nvml.nvmlDeviceGetMemoryInfo(nvidiaDevice, &nvidiaMemory);
+    if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock] || logger->is_active())
+        nvml.nvmlDeviceGetClockInfo(nvidiaDevice, NVML_CLOCK_GRAPHICS, &nvidiaCoreClock);
+    if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_mem_clock] || logger->is_active())
+        nvml.nvmlDeviceGetClockInfo(nvidiaDevice, NVML_CLOCK_MEM, &nvidiaMemClock);
+    if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_power] || logger->is_active())
+        nvml.nvmlDeviceGetPowerUsage(nvidiaDevice, &nvidiaPowerUsage);
     deviceID = nvidiaPciInfo.pciDeviceId >> 16;
     if (params.enabled[OVERLAY_PARAM_ENABLED_throttling_status])
         nvml.nvmlDeviceGetCurrentClocksThrottleReasons(nvidiaDevice, &nvml_throttle_reasons);
 
-    nvml.nvmlDeviceGetFanSpeed(nvidiaDevice, &nvidiaFanSpeed);
+    if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_fan] || logger->is_active())
+        nvml.nvmlDeviceGetFanSpeed(nvidiaDevice, &nvidiaFanSpeed);
 
     if (response == NVML_ERROR_NOT_SUPPORTED) {
         if (nvmlSuccess)
