@@ -976,6 +976,7 @@ parse_overlay_config(struct overlay_params *params,
    if (params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout]) {
       HUDElements.legacy_elements();
    } else {
+      HUDElements.ordered_functions.clear();
       for (auto& option : HUDElements.options) {
          HUDElements.sort_elements(option);
       }
