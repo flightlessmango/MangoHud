@@ -6,6 +6,7 @@
 
 namespace fs = ghc::filesystem;
 using namespace std;
+std::mutex device_lock;
 std::vector<device_batt> device_data;
 std::vector<std::string> list;
 bool device_found = false;
@@ -28,6 +29,7 @@ static bool operator<(const device_batt& a, const device_batt& b)
 
 
 void device_update(const struct overlay_params& params){
+    std::unique_lock<std::mutex> l(device_lock);
     fs::path path("/sys/class/power_supply");
     list.clear();
     xbox_count = 0;
@@ -87,6 +89,7 @@ void device_update(const struct overlay_params& params){
 
 void device_info () {
     device_count = 0;
+    std::unique_lock<std::mutex> l(device_lock);
     device_data.clear();
     //gamepad counters
     int xbox_counter = 0;

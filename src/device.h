@@ -14,6 +14,7 @@ struct device_batt {
 };
 
 extern std::vector<device_batt> device_data;
+extern std::mutex device_lock;
 
 extern bool device_found;
 extern int device_count;

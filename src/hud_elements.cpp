@@ -1144,6 +1144,7 @@ void HudElements::gamescope_frame_timing(){
 void HudElements::device_battery()
 {
 #ifdef __linux__
+    std::unique_lock<std::mutex> l(device_lock);
     if (!HUDElements.params->device_battery.empty()) {
         if (device_found) {
             for (int i = 0; i < device_count; i++) {
