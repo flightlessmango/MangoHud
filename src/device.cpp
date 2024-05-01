@@ -160,9 +160,11 @@ void device_info () {
         //Logitech Devices
          if (check_mouse == true) {
             if (path.find("hidpp_battery") != std::string::npos) {
-                if (std::getline(device_name, line)) {
-                    device_data[device_count].name = line;
-                }
+                // Find a good way truncate name or retreive device type before using this
+                    // if (std::getline(device_name, line)) {
+                    //     device_data[device_count].name = line;
+                    // }
+                device_data[device_count].name = "LOGI MOUSE/KB";
             }
          }
 
