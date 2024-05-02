@@ -35,8 +35,11 @@ bool init_x11() {
     }
 
     failed = !display;
-    if (failed)
+    if (failed && displayid)
         SPDLOG_ERROR("XOpenDisplay failed to open display '{}'", displayid);
+    
+    if (!displayid)
+        SPDLOG_DEBUG("DISPLAY env is not set");
 
     return !!display;
 }
