@@ -88,8 +88,8 @@ void device_update(const struct overlay_params& params){
 
 
 void device_info () {
-    device_count = 0;
     std::unique_lock<std::mutex> l(device_lock);
+    device_count = 0;
     device_data.clear();
     //gamepad counters
     int xbox_counter = 0;
