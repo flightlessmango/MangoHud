@@ -19,6 +19,7 @@ int ds5_count = 0;
 int switch_count = 0;
 int bitdo_count = 0;
 int logi_count = 0; //Logitech devices, mice & keyboards etc.
+int shield_count = 0;
 
 std::string  xbox_paths [2]{"gip","xpadneo"};
 
@@ -37,6 +38,7 @@ void device_update(const struct overlay_params& params){
     ds5_count = 0;
     switch_count = 0;
     bitdo_count = 0;
+    shield_count = 0;
     for (auto &p : fs::directory_iterator(path)) {
         string fileName = p.path().filename();
 //Gamepads
@@ -73,7 +75,14 @@ void device_update(const struct overlay_params& params){
                 device_found = true;
                 bitdo_count += 1;
             }
-    }
+            //CHECK NVIDIA SHIELD DEVICES
+            if (fileName.find("thunderstrike") != std::string::npos) {
+                list.push_back(p.path());
+                device_found = true;
+                shield_count += 1;
+            }
+        }
+
 // Mice and Keyboards
         //CHECK LOGITECH DEVICES
          if (std::find(params.device_battery.begin(), params.device_battery.end(), "mouse") != params.device_battery.end()) {
@@ -97,6 +106,7 @@ void device_info () {
     int ds5_counter = 0;
     int switch_counter = 0;
     int bitdo_counter = 0;
+    int shield_counter = 0;
 
     for (auto &path : list ) {
         //Set devices paths
@@ -155,7 +165,16 @@ void device_info () {
                     device_data[device_count].name = "8BITDO PAD-" + to_string(bitdo_counter + 1);
                 bitdo_counter++;
             }
+            //Shield devices
+            if (path.find("thunderstrike") != std::string::npos) {
+                if (shield_count == 1)
+                    device_data[device_count].name = "SHIELD PAD";
+                else
+                    device_data[device_count].name = "SHIELD PAD-" + to_string(shield_counter + 1);
+                shield_counter++;
+            }
         }
+
 // MICE AND KEYBOARDS
         //Logitech Devices
          if (check_mouse == true) {
