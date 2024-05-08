@@ -226,7 +226,7 @@ implot_lib = static_library('nulllib', [])
 endif
 
 spdlog_dep = cpp.find_library('spdlog', required: get_option('use_system_spdlog'))
-if not spdlog_dep.found()
+if get_option('use_system_spdlog').disabled() or not spdlog_dep.found()
   spdlog_sp = subproject('spdlog', default_options: [
     'default_library=static',
     'compile_library=true',
