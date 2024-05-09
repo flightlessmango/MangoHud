@@ -166,9 +166,18 @@ else
   dep_rt = null_dep
 endif
 
-vkh_sp = subproject('vulkan-headers')
-vk_api_xml = vkh_sp.get_variable('vulkan_api_xml')
-dep_vulkan = vkh_sp.get_variable('vulkan_headers_dep')
+# Commented code can be used if mangohud start using latest SDK Vulkan-Headers
+# Allowing user to build mangohud using system Vulkan-Headers
+#if not dependency('VulkanHeaders').found()
+  vkh_sp = subproject('vulkan-headers')
+  vk_api_xml = vkh_sp.get_variable('vulkan_api_xml')
+  dep_vulkan = vkh_sp.get_variable('vulkan_headers_dep')
+#else
+#  dep_vulkan = dependency('VulkanHeaders', required: true)
+#  vk_api_xml = files('/usr/share/vulkan/registry/vk.xml')
+#endif
+
+
 
 vk_enum_to_str = custom_target(
   'vk_enum_to_str',
@@ -213,35 +222,36 @@ if get_option('mangoapp')
     'glfw=enabled',
   ]
 endif
-
-dearimgui_sp = subproject('imgui', default_options: imgui_options)
-dearimgui_dep = dearimgui_sp.get_variable('imgui_dep')
+dearimgui_dep = dependency('imgui', fallback: ['imgui'], required: true, default_options: imgui_options)
 
 if is_unixy
-implot_sp = subproject('implot', default_options: ['default_library=static'])
-implot_dep = implot_sp.get_variable('implot_dep')
+implot_dep = dependency('implot', fallback: ['implot'], required: true, default_options: ['default_library=static'])
 else
 implot_dep = null_dep
 implot_lib = static_library('nulllib', [])
 endif
 
-if not cpp.find_library('spdlog', required: false).found()
-  spdlog_sp = subproject('spdlog', default_options: [
-    'default_library=static',
-    'compile_library=true',
-    'werror=false',
-    'tests=disabled',
-    'external_fmt=disabled',
-    'std_format=disabled'
-  ])
-  spdlog_dep = spdlog_sp.get_variable('spdlog_dep')
-else
-  spdlog_dep = dependency('spdlog', fallback: ['spdlog', 'spdlog_dep'], required: true)
+spdlog_options = [
+  'default_library=static',
+  'compile_library=true',
+  'werror=false',
+  'tests=disabled',
+  'external_fmt=disabled',
+  'std_format=disabled'
+]
+
+spdlog_dep = dependency('spdlog', required: false)
+
+if get_option('use_system_spdlog').disabled() or not spdlog_dep.found()
+    if get_option('use_system_spdlog').enabled()
+      warning('spdlog depedency not found follwing back to submodule')
+    endif
+    spdlog_sp = subproject('spdlog', default_options: spdlog_options)
+    spdlog_dep = spdlog_sp.get_variable('spdlog_dep')
 endif
 
 if ['windows', 'mingw'].contains(host_machine.system())
-  minhook_sp = subproject('minhook')
-  minhook_dep = minhook_sp.get_variable('minhook_dep')
+  minhook_dep = dependency('minhook', fallback: ['minhook', 'minhook_dep'], required: true)
   windows_deps = [
     minhook_dep,
   ]
@@ -277,6 +287,7 @@ if get_option('tests').enabled()
       dep_vulkan,
       cmocka_dep,
       spdlog_dep,
+      implot_dep,
       dearimgui_dep
     ],
     include_directories: inc_common)
