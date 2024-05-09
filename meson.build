@@ -225,8 +225,7 @@ implot_dep = null_dep
 implot_lib = static_library('nulllib', [])
 endif
 
-spdlog_dep = cpp.find_library('spdlog', required: get_option('use_system_spdlog'))
-if get_option('use_system_spdlog').disabled() or not spdlog_dep.found()
+if not cpp.find_library('spdlog', required: false).found()
   spdlog_sp = subproject('spdlog', default_options: [
     'default_library=static',
     'compile_library=true',
@@ -237,7 +236,7 @@ if get_option('use_system_spdlog').disabled() or not spdlog_dep.found()
   ])
   spdlog_dep = spdlog_sp.get_variable('spdlog_dep')
 else
-  spdlog_dep = dependency('spdlog', required: true)
+  spdlog_dep = dependency('spdlog', fallback: ['spdlog', 'spdlog_dep'], required: true)
 endif
 
 if ['windows', 'mingw'].contains(host_machine.system())
