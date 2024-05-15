@@ -665,11 +665,11 @@ parse_overlay_env(struct overlay_params *params,
             add_to_options(params, key, value);
             initialize_preset(params);
          }
-         presets(current_preset, params);
          break;
       }
    }
 
+   presets(current_preset, params);
    env = env_start;
 
    while ((num = parse_string(env, key, value)) != 0) {
