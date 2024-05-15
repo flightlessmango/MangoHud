@@ -794,6 +794,9 @@ parse_overlay_config(struct overlay_params *params,
      .preset = use_existing_preset ? params->preset : default_preset
    };
    set_param_defaults(params);
+   if (!use_existing_preset) {
+      current_preset = params->preset[0];
+   }
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_Shift_R, XK_F12 };
