@@ -62,8 +62,6 @@ void Intel::intel_gpu_thread(){
         if (exitcode == 1)
         SPDLOG_INFO("Missing permissions for '{}'", "intel_gpu_top");
 
-        SPDLOG_INFO("Disabling gpu_stats");
-        HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
     }
 }
 
