@@ -99,7 +99,6 @@ FILE* Intel::find_fd() {
                 if (found_driver){
                     if(strstr(line, "drm-engine-render")){
                         sscanf(line, "drm-engine-render: %" SCNu64 " ns", &val);
-                        if (val > 0)
                             return file;
                     }
                 }

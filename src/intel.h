@@ -32,7 +32,7 @@ class Intel {
                 runtime = true;
 
             fdinfo = find_fd();
-            thread = std::thread(&Intel::intel_gpu_thread, this);
+            // thread = std::thread(&Intel::intel_gpu_thread, this);
         }
 
         void update() {
@@ -42,10 +42,10 @@ class Intel {
             gpu_info = gpu_info_intel;
         }
 
-        ~Intel(){
-            stop = true;
-            thread.join();
-        }
+        // ~Intel(){
+        //     stop = true;
+        //     thread.join();
+        // }
 };
 
 extern std::unique_ptr<Intel> intel;
