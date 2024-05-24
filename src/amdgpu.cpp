@@ -179,7 +179,7 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	}
 
 	/* Throttling: See
-	https://elixir.bootlin.com/linux/latest/source/drivers/gpu/drm/amd/pm/inc/amdgpu_smu.h
+	https://elixir.bootlin.com/linux/latest/source/drivers/gpu/drm/amd/pm/swsmu/inc/amdgpu_smu.h
 	for the offsets */
 	metrics->is_power_throttled = ((indep_throttle_status >> 0) & 0xFF) != 0;
 	metrics->is_current_throttled = ((indep_throttle_status >> 16) & 0xFF) != 0;
