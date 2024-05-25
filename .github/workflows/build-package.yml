@@ -42,25 +42,15 @@ jobs:
         run: |
           ./build-source.sh
           ./build.sh build -Dwerror=true package release
-      - name: Authenticate with GitHub
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          hub api user
       - name: Upload assets to release
         if: github.event.action == 'published'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -x
-          git config --global hub.protocol https
-          hub release create -p -m "Release $tag_name" "$tag_name"
-          assets=()
+          tag_name="${GITHUB_REF##*/}"
           for pkg in ./build/*.tar.*; do
-            echo $pkg
-            assets+=("-a" "$pkg")
+            gh release upload "$tag_name" "$pkg" --clobber
           done
-          hub release edit "${assets[@]}" -m "" "$tag_name"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
