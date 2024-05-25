@@ -39,6 +39,10 @@ jobs:
           fi
           echo "##[set-output name=artifact-metadata;]${ARTIFACT_NAME}"
         id: git-vars
+      - name: Build release package
+        run: |
+          ./build-source.sh
+          ./build.sh build -Dwerror=true package release
       - name: Upload assets to release
         if: github.event.action == 'published'
         env:
