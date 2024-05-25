@@ -10,7 +10,6 @@
 #include "hud_elements.h"
 #include "logging.h"
 #include "mesa/util/macros.h"
-#include <endian.h>
 
 std::string metrics_path = "";
 struct amdgpu_common_metrics amdgpu_common_metrics;
@@ -78,36 +77,36 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	if (header->format_revision == 1) {
 		// Desktop GPUs
 		struct gpu_metrics_v1_3 *amdgpu_metrics = (struct gpu_metrics_v1_3 *) buf;
-		metrics->gpu_load_percent = le16toh(amdgpu_metrics->average_gfx_activity);
+		metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
 
-		metrics->average_gfx_power_w = le16toh(amdgpu_metrics->average_socket_power);
+		metrics->average_gfx_power_w = amdgpu_metrics->average_socket_power;
 
-		metrics->current_gfxclk_mhz = le16toh(amdgpu_metrics->current_gfxclk);
-		metrics->current_uclk_mhz = le16toh(amdgpu_metrics->current_uclk);
+		metrics->current_gfxclk_mhz = amdgpu_metrics->current_gfxclk;
+		metrics->current_uclk_mhz = amdgpu_metrics->current_uclk;
 
-		metrics->gpu_temp_c = le16toh(amdgpu_metrics->temperature_edge);
-		indep_throttle_status = le16toh(amdgpu_metrics->indep_throttle_status);
-		metrics->fan_speed = le16toh(amdgpu_metrics->current_fan_speed);
+		metrics->gpu_temp_c = amdgpu_metrics->temperature_edge;
+		indep_throttle_status = amdgpu_metrics->indep_throttle_status;
+		metrics->fan_speed = amdgpu_metrics->current_fan_speed;
 	} else if (header->format_revision == 2) {
 		// APUs
 		struct gpu_metrics_v2_3 *amdgpu_metrics = (struct gpu_metrics_v2_3 *) buf;
 
-		metrics->gpu_load_percent = le16toh(amdgpu_metrics->average_gfx_activity);
+		metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
 
-		metrics->average_gfx_power_w = le16toh(amdgpu_metrics->average_gfx_power) / 1000.f;
+		metrics->average_gfx_power_w = amdgpu_metrics->average_gfx_power / 1000.f;
 
 		if( IS_VALID_METRIC(amdgpu_metrics->average_cpu_power) ) {
 			// prefered method
-			metrics->average_cpu_power_w = le16toh(amdgpu_metrics->average_cpu_power) / 1000.f;
+			metrics->average_cpu_power_w = amdgpu_metrics->average_cpu_power / 1000.f;
 		} else if( IS_VALID_METRIC(amdgpu_metrics->average_core_power[0]) ) {
 			// fallback 1: sum of core power
 			metrics->average_cpu_power_w = 0;
 			unsigned i = 0;
-			do metrics->average_cpu_power_w = metrics->average_cpu_power_w + le16toh(amdgpu_metrics->average_core_power[i]) / 1000.f;
+			do metrics->average_cpu_power_w = metrics->average_cpu_power_w + amdgpu_metrics->average_core_power[i] / 1000.f;
 			while (++i < ARRAY_SIZE(amdgpu_metrics->average_core_power) && IS_VALID_METRIC(amdgpu_metrics->average_core_power[i]));
 		} else if( IS_VALID_METRIC(amdgpu_metrics->average_socket_power) && IS_VALID_METRIC(amdgpu_metrics->average_gfx_power) ) {
 			// fallback 2: estimate cpu power from total socket power
-			metrics->average_cpu_power_w = le16toh(amdgpu_metrics->average_socket_power) / 1000.f - le16toh(amdgpu_metrics->average_gfx_power) / 1000.f;
+			metrics->average_cpu_power_w = amdgpu_metrics->average_socket_power / 1000.f - amdgpu_metrics->average_gfx_power / 1000.f;
 		} else {
 			// giving up
 			metrics->average_cpu_power_w = 0;
@@ -115,20 +114,20 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 
 		if( IS_VALID_METRIC(amdgpu_metrics->current_gfxclk) ) {
 			// prefered method
-			metrics->current_gfxclk_mhz = le16toh(amdgpu_metrics->current_gfxclk);
+			metrics->current_gfxclk_mhz = amdgpu_metrics->current_gfxclk;
 		} else if( IS_VALID_METRIC(amdgpu_metrics->average_gfxclk_frequency) ) {
 			// fallback 1
-			metrics->current_gfxclk_mhz = le16toh(amdgpu_metrics->average_gfxclk_frequency);
+			metrics->current_gfxclk_mhz = amdgpu_metrics->average_gfxclk_frequency;
 		} else {
 			// giving up
 			metrics->current_gfxclk_mhz = 0;
 		}
 		if( IS_VALID_METRIC(amdgpu_metrics->current_uclk) ) {
 			// prefered method
-			metrics->current_uclk_mhz = le16toh(amdgpu_metrics->current_uclk);
+			metrics->current_uclk_mhz = amdgpu_metrics->current_uclk;
 		} else if( IS_VALID_METRIC(amdgpu_metrics->average_uclk_frequency) ) {
 			// fallback 1
-			metrics->current_uclk_mhz = le16toh(amdgpu_metrics->average_uclk_frequency);
+			metrics->current_uclk_mhz = amdgpu_metrics->average_uclk_frequency;
 		} else {
 			// giving up
 			metrics->current_uclk_mhz = 0;
@@ -136,20 +135,20 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 
 		if( IS_VALID_METRIC(amdgpu_metrics->temperature_soc) ) {
 			// prefered method
-			metrics->soc_temp_c = le16toh(amdgpu_metrics->temperature_soc) / 100;
+			metrics->soc_temp_c = amdgpu_metrics->temperature_soc / 100;
 		} else if( header->content_revision >= 3 && IS_VALID_METRIC(amdgpu_metrics->average_temperature_soc) ) {
 			// fallback 1
-			metrics->soc_temp_c = le16toh(amdgpu_metrics->average_temperature_soc) / 100;
+			metrics->soc_temp_c = amdgpu_metrics->average_temperature_soc / 100;
 		} else {
 			// giving up
 			metrics->soc_temp_c = 0;
 		}
 		if( IS_VALID_METRIC(amdgpu_metrics->temperature_gfx) ) {
 			// prefered method
-			metrics->gpu_temp_c = le16toh(amdgpu_metrics->temperature_gfx) / 100;
+			metrics->gpu_temp_c = amdgpu_metrics->temperature_gfx / 100;
 		} else if( header->content_revision >= 3 && IS_VALID_METRIC(amdgpu_metrics->average_temperature_gfx) ) {
 			// fallback 1
-			metrics->gpu_temp_c = le16toh(amdgpu_metrics->average_temperature_gfx) / 100;
+			metrics->gpu_temp_c = amdgpu_metrics->average_temperature_gfx / 100;
 		} else {
 			// giving up
 			metrics->gpu_temp_c = 0;
@@ -158,23 +157,16 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		int cpu_temp = 0;
 		if( IS_VALID_METRIC(amdgpu_metrics->temperature_core[0]) ) {
 			// prefered method
-			uint64_t cpu_temp = 0;
-			for (size_t i = 0; i < ARRAY_SIZE(amdgpu_metrics->temperature_core); i++)
-				if (IS_VALID_METRIC(amdgpu_metrics->temperature_core[i]))
-					if (cpu_temp < amdgpu_metrics->temperature_core[i])
-						cpu_temp = amdgpu_metrics->temperature_core[i];
-
-			metrics->apu_cpu_temp_c = le16toh(cpu_temp) / 100;
-			
+			unsigned i = 0;
+			do cpu_temp = MAX(cpu_temp, amdgpu_metrics->temperature_core[i]);
+			while (++i < ARRAY_SIZE(amdgpu_metrics->temperature_core) && IS_VALID_METRIC(amdgpu_metrics->temperature_core[i]));
+			metrics->apu_cpu_temp_c = cpu_temp / 100;
 		} else if( header->content_revision >= 3 && IS_VALID_METRIC(amdgpu_metrics->average_temperature_core[0]) ) {
 			// fallback 1
-			uint64_t cpu_temp = 0;
-			for (size_t i = 0; i < ARRAY_SIZE(amdgpu_metrics->average_temperature_core); i++)
-				if (IS_VALID_METRIC(amdgpu_metrics->average_temperature_core[i]))
-					if (cpu_temp < amdgpu_metrics->average_temperature_core[i])
-						cpu_temp = amdgpu_metrics->average_temperature_core[i];
-
-			metrics->apu_cpu_temp_c = le16toh(cpu_temp) / 100;
+			unsigned i = 0;
+			do cpu_temp = MAX(cpu_temp, amdgpu_metrics->average_temperature_core[i]);
+			while (++i < ARRAY_SIZE(amdgpu_metrics->average_temperature_core) && IS_VALID_METRIC(amdgpu_metrics->average_temperature_core[i]));
+			metrics->apu_cpu_temp_c = cpu_temp / 100;
 		} else if( cpuStats.ReadcpuTempFile(cpu_temp) ) {
 			// fallback 2: Try temp from file 'm_cpuTempFile' of 'cpu.cpp'
 			metrics->apu_cpu_temp_c = cpu_temp;
@@ -189,10 +181,10 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	/* Throttling: See
 	https://elixir.bootlin.com/linux/latest/source/drivers/gpu/drm/amd/pm/inc/amdgpu_smu.h
 	for the offsets */
-	metrics->is_power_throttled = le16toh(((indep_throttle_status) >> 0) & 0xFF) != 0;
-	metrics->is_current_throttled = le16toh(((indep_throttle_status) >> 16) & 0xFF) != 0;
-	metrics->is_temp_throttled = le16toh(((indep_throttle_status) >> 32) & 0xFFFF) != 0;
-	metrics->is_other_throttled = le16toh(((indep_throttle_status) >> 56) & 0xFF) != 0;
+	metrics->is_power_throttled = ((indep_throttle_status >> 0) & 0xFF) != 0;
+	metrics->is_current_throttled = ((indep_throttle_status >> 16) & 0xFF) != 0;
+	metrics->is_temp_throttled = ((indep_throttle_status >> 32) & 0xFFFF) != 0;
+	metrics->is_other_throttled = ((indep_throttle_status >> 56) & 0xFF) != 0;
 	if (throttling)
 		throttling->indep_throttle_status = indep_throttle_status;
 }
