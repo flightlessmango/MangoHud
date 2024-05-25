@@ -37,12 +37,16 @@ jobs:
           else
             echo "##[set-output name=short-sha;]$(git rev-parse --short "$GITHUB_SHA")"
           fi
-          echo "##[set-output name=artifact-metadata;]${ARTIFACT_NAME}"
-        id: git-vars
-      - name: Build release package
+          echo "##[set-output name=artifact-metadata;]$ARTIFACT_NAME"
+      - name: Build and package
         run: |
           ./build-source.sh
           ./build.sh build -Dwerror=true package release
+      - name: Authenticate with GitHub
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          hub api user
       - name: Upload assets to release
         if: github.event.action == 'published'
         env:
