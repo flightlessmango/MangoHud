@@ -53,12 +53,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -x
+          git config --global hub.protocol https
+          hub release create -p -m "Release $tag_name" "$tag_name"
           assets=()
           for pkg in ./build/*.tar.*; do
             echo $pkg
             assets+=("-a" "$pkg")
           done
-          tag_name="${GITHUB_REF##*/}"
           hub release edit "${assets[@]}" -m "" "$tag_name"
 
       - name: Upload artifact
