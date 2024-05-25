@@ -8,24 +8,8 @@ extern "C" {
 #include "stdio.h"
 #include "../src/amdgpu.h"
 #include "../src/cpu.h"
-#include <endian.h>
 
 #define UNUSED(x) (void)(x)
-
-static void convert_metrics_to_host_endian(struct amdgpu_common_metrics *metrics) {
-    metrics->gpu_load_percent = le16toh(metrics->gpu_load_percent);
-    metrics->average_gfx_power_w = le16toh(metrics->average_gfx_power_w);
-    metrics->average_cpu_power_w = le16toh(metrics->average_cpu_power_w);
-    metrics->current_gfxclk_mhz = le16toh(metrics->current_gfxclk_mhz);
-    metrics->current_uclk_mhz = le16toh(metrics->current_uclk_mhz);
-    metrics->gpu_temp_c = le16toh(metrics->gpu_temp_c);
-    metrics->soc_temp_c = le16toh(metrics->soc_temp_c);
-    metrics->apu_cpu_temp_c = le16toh(metrics->apu_cpu_temp_c);
-    metrics->is_power_throttled = le16toh(metrics->is_power_throttled);
-    metrics->is_current_throttled = le16toh(metrics->is_current_throttled);
-    metrics->is_temp_throttled = le16toh(metrics->is_temp_throttled);
-    metrics->is_other_throttled = le16toh(metrics->is_other_throttled);
-}
 
 static void test_amdgpu_verify_metrics(void **state) {
     UNUSED(state);
@@ -48,7 +32,6 @@ static void test_amdgpu_get_instant_metrics(void **state) {
     metrics_path = "./gpu_metrics";
     metrics = {};
     amdgpu_get_instant_metrics(&metrics);
-    convert_metrics_to_host_endian(&metrics);
     assert_int_equal(metrics.gpu_load_percent, 64);
     assert_float_equal(metrics.average_gfx_power_w, 33, 0);
     assert_float_equal(metrics.average_cpu_power_w, 0, 0);
@@ -66,7 +49,6 @@ static void test_amdgpu_get_instant_metrics(void **state) {
     metrics_path = "./gpu_metrics_reserved_throttle_bits";
     metrics = {};
     amdgpu_get_instant_metrics(&metrics);
-    convert_metrics_to_host_endian(&metrics);
     assert_false(metrics.is_power_throttled);
     assert_false(metrics.is_current_throttled);
     assert_false(metrics.is_temp_throttled);
@@ -75,7 +57,6 @@ static void test_amdgpu_get_instant_metrics(void **state) {
     metrics_path = "./gpu_metrics_apu";
     metrics = {};
     amdgpu_get_instant_metrics(&metrics);
-    convert_metrics_to_host_endian(&metrics);
     assert_int_equal(metrics.gpu_load_percent, 100);
     assert_float_equal(metrics.average_gfx_power_w, 6.161, 0);
     assert_float_equal(metrics.average_cpu_power_w, 9.235, 0);
