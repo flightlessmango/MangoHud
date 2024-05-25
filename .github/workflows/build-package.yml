@@ -13,11 +13,13 @@ jobs:
         run: |
           set -x
           sudo dpkg --add-architecture i386
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages focal main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
           sudo apt update
           sudo apt -y install gcc-multilib g++-multilib ninja-build python3-setuptools \
                               python3-wheel mesa-common-dev libxnvctrl-dev libdbus-1-dev \
                               python3-numpy python3-matplotlib unzip hub libxkbcommon-dev libwayland-dev wget unzip \
-                              libxkbcommon-dev:i386 libwayland-dev:i386
+                              libxkbcommon-dev:i386 libwayland-dev:i386 gh
           sudo pip3 --no-input install 'meson>=0.60' mako
           wget https://github.com/KhronosGroup/glslang/releases/download/SDK-candidate-26-Jul-2020/glslang-master-linux-Release.zip
           unzip glslang-master-linux-Release.zip bin/glslangValidator
@@ -37,26 +39,20 @@ jobs:
           fi
           echo "##[set-output name=artifact-metadata;]${ARTIFACT_NAME}"
         id: git-vars
-      - name: Build release package
-        run: |
-          ./build-source.sh
-          ./build.sh build -Dwerror=true package release
-      - name: Upload release
-        if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
+      - name: Upload assets to release
+        if: github.event.action == 'published'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -x
           assets=()
-          for asset in ./MangoHud-*-Source*.tar.*; do
-            assets+=("-a" "$asset")
-          done
-          for asset in ./build/MangoHud-*.tar.*; do
-            assets+=("-a" "$asset")
+          for pkg in ./build/*.tar.*; do
+            echo $pkg
+            assets+=("-a" "$pkg")
           done
           tag_name="${GITHUB_REF##*/}"
           hub release edit "${assets[@]}" -m "" "$tag_name"
-          #hub release create "${assets[@]}" -m "$tag_name" "$tag_name"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         continue-on-error: true
