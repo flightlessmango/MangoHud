@@ -85,10 +85,40 @@ void getNvidiaGpuInfo(const struct overlay_params& params){
 #ifdef _WIN32
 nvapi_util();
 #endif
+
+// FIXME: generic GPU sensor data
+// load
 gpu_info.load = std::stoi(read_line("/sys/devices/gpu.0/load")) / 10;
-// gpu_info.temp = nvidiaTemp;
-// gpu_info.memoryUsed = nvidiaMemory.used / (1024.f * 1024.f * 1024.f);
-gpu_info.CoreClock = std::stoi(read_line("/sys/devices/gpu.0/devfreq/57000000.gpu/cur_freq")) / 1000000 ;
+
+// temporary strings
+std::string type, path, input;
+
+// temperature
+// this runs every reading. needs to be changed to be like cpu.cpp where the location is stored
+std::string thermal = "/sys/class/thermal/";
+for (auto& dir : ls(thermal.c_str())) {
+    path = thermal + dir;
+    type = read_line(path + "/type");
+    if (type == "GPU-therm") {
+        input = path + "/temp";
+        gpu_info.temp = std::stoi(read_line(input)) / 1000;
+        break;
+    } else {
+        path.clear();
+    }
+}
+
+// gpu clocks
+// this runs every reading. needs to be changed to be like cpu.cpp where the location is stored
+std::string devfreq = "/sys/devices/gpu.0/devfreq/";
+for (auto& dir : ls(devfreq.c_str())) {
+    path = devfreq + dir;
+    input = path + "/cur_freq";
+    gpu_info.CoreClock = std::stoi(read_line(input)) / 1000000 ;
+    break;
+}
+
+// nvdev/nvenc/vic clocks
 if (file_exists("/sys/kernel/debug/clk/nvdec/clk_rate")) {
   if (read_line("/sys/kernel/debug/clk/nvdec/clk_state") == "1") gpu_info.NVDECClock = std::stoi(read_line("/sys/kernel/debug/clk/nvdec/clk_rate")) / 1000000 ; else gpu_info.NVDECClock = 0 ;
 }
