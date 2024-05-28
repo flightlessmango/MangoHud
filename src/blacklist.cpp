@@ -57,6 +57,7 @@ static  std::vector<std::string> blacklist {
     "Launcher", //Paradox Interactive Launcher
     "steamwebhelper.exe",
     "EpicWebHelper.exe"
+    "UplayWebCore.exe"
 };
 
 
