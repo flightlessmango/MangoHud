@@ -111,8 +111,8 @@ parse_control(const char *str)
 
    int ret = os_socket_listen_abstract(path.c_str(), 1);
    if (ret < 0) {
-      SPDLOG_ERROR("Couldn't create socket pipe at '{}'", path);
-      SPDLOG_ERROR("ERROR: '{}'", strerror(errno));
+      SPDLOG_DEBUG("Couldn't create socket pipe at '{}'", path);
+      SPDLOG_DEBUG("ERROR: '{}'", strerror(errno));
       return ret;
    }
 
