@@ -22,7 +22,7 @@ private:
     }
 #endif
 
-    void writeCommand(const std::string& command);
+    void writeCommand(std::string command);
     std::string readOutput();
 
 public:
