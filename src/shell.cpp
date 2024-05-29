@@ -4,40 +4,28 @@
 #include <sys/wait.h>
 #include <spdlog/spdlog.h>
 #include "string_utils.h"
+#include <array>
 
 std::string Shell::readOutput() {
-    std::string output;
-    char buffer[256];
-    ssize_t bytesRead;
-    bool dataAvailable = false;
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-    // Wait for up to 500 milliseconds for output to become available
-    for (int i = 0; i < 10; ++i) {
-        bytesRead = read(from_shell[0], buffer, sizeof(buffer) - 1);
-        if (bytesRead > 0) {
-            buffer[bytesRead] = '\0';
-            output += buffer;
-            dataAvailable = true;
-            break; // Break as soon as we get some data
-        } else {
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        }
+    std::array<char, 128> buffer;
+    std::string result;
+    ssize_t count;
+    while ((count = ::read(from_shell[0], buffer.data(), buffer.size())) > 0) {
+        result.append(buffer.data(), count);
     }
 
-    // If we detected data, keep reading until no more is available
-    while (dataAvailable) {
-        bytesRead = read(from_shell[0], buffer, sizeof(buffer) - 1);
-        if (bytesRead > 0) {
-            buffer[bytesRead] = '\0';
-            output += buffer;
-        } else {
-            break; // No more data available
-        }
+    // Split the result into lines and return the last line
+    std::istringstream stream(result);
+    std::string line;
+    std::string last_line;
+    while (std::getline(stream, line)) {
+        last_line = line;
     }
-    
-    trim(output);
-    SPDLOG_DEBUG("Shell: recieved output: {}", output);
-    return output;
+
+    SPDLOG_DEBUG("Shell: recieved output: {}", last_line);
+    return last_line;
 }
 
 Shell::Shell() {
