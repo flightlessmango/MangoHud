@@ -860,10 +860,10 @@ parse_overlay_config(struct overlay_params *params,
       set_parameters_from_options(params);
    }
 
-   // TODO decide what to do for legacy_layout=0
-   // second pass, override config file settings with MANGOHUD_CONFIG
-   if (params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout] && env && read_cfg) {
-      // If passing legacy_layout=0 to MANGOHUD_CONFIG anyway then clear first pass' results
+   if (params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout])
+      HUDElements.ordered_functions.clear();
+
+   if (env && read_cfg) {
       HUDElements.ordered_functions.clear();
       parse_overlay_env(params, env, true);
    }
