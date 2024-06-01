@@ -21,9 +21,6 @@ std::string Shell::readOutput() {
     std::string line;
     std::string last_line;
     while (std::getline(stream, line)) {
-        if (strstr(line.c_str(), "ERROR: ld.so: object"))
-            continue;
-        
         last_line = line;
     }
 
@@ -79,7 +76,9 @@ std::string Shell::exec(std::string cmd) {
 }
 
 void Shell::writeCommand(std::string command) {
-    if (write(to_shell[1], command.c_str(), command.length()) == -1)
+    std::string command_without_preload = "LD_PRELOAD= " + command;
+    
+    if (write(to_shell[1], command_without_preload.c_str(), command_without_preload.length()) == -1)
         SPDLOG_ERROR("Failed to write to shell");
     
     trim(command);
