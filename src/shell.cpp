@@ -21,6 +21,9 @@ std::string Shell::readOutput() {
     std::string line;
     std::string last_line;
     while (std::getline(stream, line)) {
+        if (strstr(line.c_str(), "ERROR: ld.so: object"))
+            continue;
+        
         last_line = line;
     }
 
