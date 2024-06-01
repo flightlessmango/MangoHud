@@ -56,6 +56,7 @@ enum {
 };
 
 struct CPUPowerData {
+   virtual ~CPUPowerData() = default;
    int source;
 };
 
