@@ -55,7 +55,7 @@ Shell::Shell() {
         dup2(to_shell[0], STDIN_FILENO);
         dup2(from_shell[1], STDOUT_FILENO);
         dup2(from_shell[1], STDERR_FILENO);
-        execl("/bin/sh", "sh", nullptr);
+        execl("/bin/sh", "sh", "-c", "unset LD_PRELOAD; exec /bin/sh", nullptr);
         exit(1); // Exit if execl fails
     } else {
         close(to_shell[0]);
@@ -76,9 +76,7 @@ std::string Shell::exec(std::string cmd) {
 }
 
 void Shell::writeCommand(std::string command) {
-    std::string command_without_preload = "LD_PRELOAD= " + command;
-    
-    if (write(to_shell[1], command_without_preload.c_str(), command_without_preload.length()) == -1)
+    if (write(to_shell[1], command.c_str(), command.length()) == -1)
         SPDLOG_ERROR("Failed to write to shell");
     
     trim(command);
