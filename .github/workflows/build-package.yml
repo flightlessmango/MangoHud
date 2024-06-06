@@ -1,7 +1,6 @@
 name: Build release package
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -43,7 +42,6 @@ jobs:
           ./build-source.sh
           ./build.sh build -Dwerror=true package release
       - name: Upload assets to release
-        if: github.event.action == 'published'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

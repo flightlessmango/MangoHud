@@ -1,8 +1,7 @@
 name: arch package
 
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
 
 jobs:
   build-arch-pkg:
