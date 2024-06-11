@@ -224,8 +224,9 @@ if get_option('mangoapp')
 endif
 dearimgui_dep = dependency('imgui', fallback: ['imgui'], required: true, default_options: imgui_options)
 
-if is_unixy
+if is_unixy and get_option('with_implot').enabled()
 implot_dep = dependency('implot', fallback: ['implot'], required: true, default_options: ['default_library=static'])
+pre_args += '-DHAVE_IMPLOT'
 else
 implot_dep = null_dep
 implot_lib = static_library('nulllib', [])
