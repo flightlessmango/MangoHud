@@ -27,6 +27,12 @@
 #include <GLFW/glfw3native.h>
 #include <X11/Xatom.h>
 
+// Define GLFW 3.4 constants for older GLFW compatibility
+#if !defined(GLFW_PLATFORM) || !defined(GLFW_PLATFORM_X11)
+#define GLFW_PLATFORM 0x00050003
+#define GLFW_PLATFORM_X11 0x00060004
+#endif
+
 #include "nlohmann/json.hpp"
 using json = nlohmann::json;
 using namespace std;
@@ -287,6 +293,7 @@ int main(int, char**)
 {
     // Setup window
     glfwSetErrorCallback(glfw_error_callback);
+    glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
     if (!glfwInit())
         return 1;
 
