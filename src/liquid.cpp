@@ -136,7 +136,6 @@ static bool getInput(WatercoolingDevice &device, std::string label)
                 std::string line = read_line(input);
                 add = (newSensor.source != nullptr) && (line != "0") && (!line.empty());
 
-
                 if (add)
                     device.sensors.push_back(newSensor);
                 else
@@ -287,9 +286,8 @@ void LiquidStats::AddAdditionalSensors(std::string s)//(std::vector<std::pair<st
                 {
                     device = &this->devices[j];
                     for (size_t k = 0; k < devicesSensors[i].second.size(); ++k)
-                    {
                         getInput((*device), devicesSensors[i].second[k]);
-                    }
+
                     break;
                 }
             }
@@ -305,9 +303,7 @@ void LiquidStats::AddAdditionalSensors(std::string s)//(std::vector<std::pair<st
                     device->directory = path;
 
                     for (size_t j = 0; j < devicesSensors[i].second.size(); ++j)
-                    {
                         getInput((*device), devicesSensors[i].second[j]);
-                    }
 
                     this->devices.push_back(*device);
                     delete device;

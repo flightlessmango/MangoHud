@@ -431,7 +431,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `winesync`                         | Show wine sync method in use                                                          |
 | `present_mode`                     | Shows current vulkan [present mode](https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPresentModeKHR.html) or vsync status in opengl  |
 | `network`                          | Show network interfaces tx and rx kb/s. You can specify interface with `network=eth0` |
-| `liquid` 							 | Enable liquid cooling stats. Devices that were checked to display the correct data: D5NEXT, HIGHFLOWNEXT, QUADRO |
+| `liquid_stats` 							 | Enable liquid cooling stats. Devices that were checked to display the correct data: D5NEXT, HIGHFLOWNEXT, QUADRO |
 | `liquid_text` 						 | Override liquid text. Default: "Liquid" 																		|
 | `liquid_temp`						 | Enable coolant temperature monitoring. To display only specific devices the devices names must be specified separated by comma Eg. liquid_temp=d5next,highflownext|
 | `liquid_flow`						 | Enable flow monitoring, displayed in L/h(Liters/hour). To display only specific devices the devices names must be specified separated by comma			|
