@@ -163,7 +163,7 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
 #endif
 
 #ifdef __linux__
-   if(params.enabled[OVERLAY_PARAM_ENABLED_liquid])
+   if(params.enabled[OVERLAY_PARAM_ENABLED_liquid_stats])
       liquidStats->Update();
 #endif
 
@@ -768,8 +768,8 @@ void init_liquid_stats(overlay_params& params)
 #ifdef __linux__
    liquidStats = std::make_unique<LiquidStats>();
    auto& enabled = params.enabled;
-   enabled[OVERLAY_PARAM_ENABLED_liquid] = liquidStats->Init(params.liquid_temp, params.liquid_flow, params.liquid_additional_sensors)
-                           && enabled[OVERLAY_PARAM_ENABLED_liquid];
+   enabled[OVERLAY_PARAM_ENABLED_liquid_stats] = liquidStats->Init(params.liquid_temp, params.liquid_flow, params.liquid_additional_sensors)
+                           && ((enabled[OVERLAY_PARAM_ENABLED_liquid_stats]) || (!params.liquid_additional_sensors.empty()) || (!params.liquid_flow.empty()) || (!params.liquid_temp.empty()));
 #endif
 }
 

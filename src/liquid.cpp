@@ -133,7 +133,9 @@ static bool getInput(WatercoolingDevice &device, std::string label)
                 else if (fileName.find("fan") != std::string::npos && label.find("speed") != std::string::npos)
                     newSensor.type = RPM;
 
-                add = newSensor.source != nullptr;
+                std::string line = read_line(input);
+                add = (newSensor.source != nullptr) && (line != "0") && (!line.empty());
+
 
                 if (add)
                     device.sensors.push_back(newSensor);
@@ -263,15 +265,19 @@ void LiquidStats::AddDeviceAndSensor(std::vector<std::string> list, Type type)
 
 void LiquidStats::AddAdditionalSensors(std::string s)//(std::vector<std::pair<std::string, std::vector<std::string>>> list)
 {
-    std::vector<std::pair<std::string, std::vector<std::string>>> list = parse_liquid_additional_sensors(s);
-    if (list.empty())
-        return;
-
-    if (!list[0].first.empty())
+    if (s == "1") // liquid_additional_sensors provided with no values
     {
-        for (size_t i = 0; i < list.size(); ++i)
+        std::vector<std::pair<std::string, std::vector<std::string>>> devicesSensors {
+                                                                                        {"d5next", {"Pump speed", "Fan speed"}},
+                                                                                        {"highflownext", {"External sensor", "Dissipated power"}},
+                                                                                        {"quadro", {"Sensor 1", "Sensor 2", "Sensor 3", "Sensor 4", "Fan 1 speed", "Fan 2 speed", "Fan 3 speed", "Fan 4 speed"}},
+                                                                                        {"octo", {"Sensor 1", "Sensor 2", "Sensor 3", "Sensor 4", "Sensor 5", "Sensor 6", "Sensor 7", "Sensor 8", "Fan 1 speed", "Fan 2 speed", "Fan 3 speed", "Fan 4 speed",
+                                                                                            "Fan 5 speed", "Fan 6 speed", "Fan 7 speed", "Fan 8 speed"}}
+                                                                                     };
+
+        for (size_t i = 0; i < devicesSensors.size(); ++i)
         {
-            std::string deviceName = list[i].first;
+            std::string deviceName = devicesSensors[i].first;
 
             WatercoolingDevice *device = nullptr;
 
@@ -280,11 +286,9 @@ void LiquidStats::AddAdditionalSensors(std::string s)//(std::vector<std::pair<st
                 if (this->devices[j].deviceName == deviceName)
                 {
                     device = &this->devices[j];
-                    for (size_t k = 0; k < list[i].second.size(); ++k)
+                    for (size_t k = 0; k < devicesSensors[i].second.size(); ++k)
                     {
-                        bool found = getInput((*device), list[i].second[k]);
-                        if (!found)
-                            SPDLOG_ERROR("Could not find [{}] sensor for [{}]", list[i].second[k], deviceName);
+                        getInput((*device), devicesSensors[i].second[k]);
                     }
                     break;
                 }
@@ -299,20 +303,70 @@ void LiquidStats::AddAdditionalSensors(std::string s)//(std::vector<std::pair<st
                     device = new WatercoolingDevice;
                     device->deviceName = deviceName;
                     device->directory = path;
-                    for (size_t j = 0; j < list[i].second.size(); ++j)
+
+                    for (size_t j = 0; j < devicesSensors[i].second.size(); ++j)
                     {
-                        bool found = getInput((*device), list[i].second[j]);
-                        if (!found)
-                            SPDLOG_ERROR("Could not find [{}] sensor for [{}]", list[i].second[j], deviceName);
+                        getInput((*device), devicesSensors[i].second[j]);
                     }
+
                     this->devices.push_back(*device);
                     delete device;
                     device = nullptr;
                 }
-                else
-                    SPDLOG_ERROR("Could not find device [{}]", deviceName);
             }
         }
+    }
+    else
+    {
+        std::vector<std::pair<std::string, std::vector<std::string>>> list = parse_liquid_additional_sensors(s);
+
+        if (list.empty())
+            return;
+
+        for (size_t i = 0; i < list.size(); ++i)
+            {
+                std::string deviceName = list[i].first;
+
+                WatercoolingDevice *device = nullptr;
+
+                for (size_t j = 0; j < this->devices.size(); ++j)
+                {
+                    if (this->devices[j].deviceName == deviceName)
+                    {
+                        device = &this->devices[j];
+                        for (size_t k = 0; k < list[i].second.size(); ++k)
+                        {
+                            bool found = getInput((*device), list[i].second[k]);
+                            if (!found)
+                                SPDLOG_ERROR("Could not find [{}] sensor for [{}]", list[i].second[k], deviceName);
+                        }
+                        break;
+                    }
+                }
+
+                if (device == nullptr)
+                {
+                    std::string path = findPath(deviceName);
+
+                    if (!path.empty())
+                    {
+                        device = new WatercoolingDevice;
+                        device->deviceName = deviceName;
+                        device->directory = path;
+                        for (size_t j = 0; j < list[i].second.size(); ++j)
+                        {
+                            bool found = getInput((*device), list[i].second[j]);
+                            if (!found)
+                                SPDLOG_ERROR("Could not find [{}] sensor for [{}]", list[i].second[j], deviceName);
+                        }
+                        this->devices.push_back(*device);
+                        delete device;
+                        device = nullptr;
+                    }
+                    else
+                        SPDLOG_ERROR("Could not find device [{}]", deviceName);
+                }
+            }
     }
 }
 

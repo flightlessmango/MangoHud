@@ -1096,7 +1096,7 @@ void HudElements::gamescope_frame_timing(){
                                         HUDElements.gamescope_debug_app.end());
             auto max = std::max_element(HUDElements.gamescope_debug_app.begin(),
                                         HUDElements.gamescope_debug_app.end());
-            
+
             ImGui::PushFont(HUDElements.sw_stats->font1);
             ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
             HUDElements.TextColored(HUDElements.colors.engine, "%s", "App");
@@ -1208,7 +1208,7 @@ void HudElements::device_battery()
 void HudElements::liquid_stats()
 {
 #ifdef __linux__
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_liquid])
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_liquid_stats])
     {
         std::vector<WatercoolingDevice> devices = liquidStats->GetDevicesData();
         const char* liquid_text;
@@ -1604,9 +1604,13 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
         {"winesync", {winesync}},
         {"present_mode", {present_mode}},
         {"network", {network}},
-        {"liquid", {liquid_stats}}
+        {"liquid_stats", {liquid_stats}},
+        {"liquid_temp", {liquid_stats}},
+        {"liquid_flow", {liquid_stats}},
+        {"liquid_additional_sensors", {liquid_stats}}
 
     };
+
 
     auto check_param = display_params.find(param);
     if (check_param != display_params.end()) {
@@ -1639,7 +1643,13 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
                     SPDLOG_ERROR("Unrecognized graph type: {}", val);
                 }
             }
-        } else {
+        } else if ((param == "liquid_temp") || (param == "liquid_flow") || (param == "liquid_additional_sensors")) {
+            if (std::none_of(ordered_functions.begin(), ordered_functions.end(),
+                [](const auto& a) {return a.name == "liquid_stats";})) {
+                ordered_functions.push_back({liquid_stats, "liquid_stats", value});
+            }
+        }
+        else {
             // Use this to always add to the front of the vector
             // ordered_functions.insert(ordered_functions.begin(), std::make_pair(param, value));
             ordered_functions.push_back({func.run, param, value});
