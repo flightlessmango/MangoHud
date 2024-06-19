@@ -7,8 +7,10 @@ class MSM {
     private:
         struct gpuInfo gpu_info_msm {};
         std::vector<FILE*> fdinfo;
+        std::string gpu_clock_path;
         void find_fd();
         uint64_t get_gpu_time();
+	    uint16_t get_gpu_clock();
         void get_fdinfo();
 
     public:
