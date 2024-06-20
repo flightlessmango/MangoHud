@@ -3,12 +3,10 @@ c = 'i686-w64-mingw32-gcc'
 cpp = 'i686-w64-mingw32-g++'
 ar = 'i686-w64-mingw32-ar'
 strip = 'i686-w64-mingw32-strip'
-pkgconfig = 'i686-w64-mingw32-pkg-config'
+pkg-config = 'i686-w64-mingw32-pkg-config'
 sh = '/usr/bin/sh'
 
 [properties]
-c_link_args = ['-static', '-static-libgcc']
-cpp_link_args = ['-static', '-static-libgcc', '-static-libstdc++']
 needs_exe_wrapper = true
 
 [host_machine]
