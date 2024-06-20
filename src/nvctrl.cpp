@@ -53,7 +53,7 @@ bool checkXNVCtrl()
     nvctrlSuccess = find_nv_x11(nvctrl, dpy);
 
     if (!nvctrlSuccess) {
-        SPDLOG_ERROR("XNVCtrl didn't find the correct display");
+        SPDLOG_DEBUG("XNVCtrl didn't find the correct display");
         return false;
     }
 
