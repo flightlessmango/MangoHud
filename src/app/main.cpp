@@ -324,11 +324,13 @@ int main(int, char**)
     window_size = ImVec2(params.width, params.height);
     deviceName = (char*)glGetString(GL_RENDERER);
     sw_stats.deviceName = deviceName;
-
+    SPDLOG_DEBUG("mangoapp deviceName: {}", deviceName);
     #define GLX_RENDERER_VENDOR_ID_MESA 0x8183
     auto pfn_glXQueryCurrentRendererIntegerMESA = (Bool (*)(int, unsigned int*)) (glfwGetProcAddress("glXQueryCurrentRendererIntegerMESA"));
-    if (pfn_glXQueryCurrentRendererIntegerMESA) {
+    // This will return 0x0 vendorID on NVIDIA so just go to else
+    if (pfn_glXQueryCurrentRendererIntegerMESA && vendorID != 0x0) {
         pfn_glXQueryCurrentRendererIntegerMESA(GLX_RENDERER_VENDOR_ID_MESA, &vendorID);
+        SPDLOG_DEBUG("mangoapp vendorID: {:#x}", vendorID);
     } else {
         if (deviceName.find("Radeon") != std::string::npos
         || deviceName.find("AMD") != std::string::npos){
