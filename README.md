@@ -269,6 +269,13 @@ OpenGL games may also need `dlsym` hooking. Add `--dlsym` to your command like `
 Some Linux native OpenGL games overrides LD_PRELOAD and stops MangoHud from working. You can sometimes fix this by editing LD_PRELOAD in the start script
 `LD_PRELOAD=/path/to/mangohud/lib/`
 
+## gamescope
+
+To enable mangohud with gamescope you need to install mangoapp.
+`gamescope --mangoapp %command%`
+
+Using normal mangohud with gamescope is not support.
+
 ## Hud configuration
 
 MangoHud comes with a config file which can be used to set configuration options globally or per application. Usually it is installed as `/usr/share/doc/mangohud/MangoHud.conf.example` or [get a copy from here](https://raw.githubusercontent.com/flightlessmango/MangoHud/master/data/MangoHud.conf).
