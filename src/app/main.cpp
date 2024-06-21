@@ -48,9 +48,10 @@ std::mutex mangoapp_m;
 std::condition_variable mangoapp_cv;
 static uint8_t raw_msg[1024] = {0};
 static uint32_t screenWidth, screenHeight;
+Display *x11_display;
+Window root_window;
 
 static unsigned int get_prop(const char* propName){
-    Display *x11_display = glfwGetX11Display();
     Atom gamescope_focused = XInternAtom(x11_display, propName, false);
     auto scr = DefaultScreen(x11_display);
     auto root = RootWindow(x11_display, scr);
@@ -228,14 +229,12 @@ static const char *GamescopeOverlayProperty = "GAMESCOPE_EXTERNAL_OVERLAY";
 static GLFWwindow* init(const char* glsl_version){
     init_spdlog();
     GLFWwindow *window = glfwCreateWindow(1280, 800, "mangoapp overlay window", NULL, NULL);
-    Display *x11_display = glfwGetX11Display();
-    Window x11_window = glfwGetX11Window(window);
-    if (x11_window && x11_display)
+    if (root_window && x11_display)
     {
         // Set atom for gamescope to render as an overlay.
         Atom overlay_atom = XInternAtom (x11_display, GamescopeOverlayProperty, False);
         uint32_t value = 1;
-        XChangeProperty(x11_display, x11_window, overlay_atom, XA_CARDINAL, 32, PropertyNewValue, (unsigned char *)&value, 1);
+        XChangeProperty(x11_display, root_window, overlay_atom, XA_CARDINAL, 32, PropertyNewValue, (unsigned char *)&value, 1);
     }
 
     glfwMakeContextCurrent(window);
@@ -299,12 +298,10 @@ int main(int, char**)
 
     // Create window with graphics context
     GLFWwindow* window = init(glsl_version);
-
-    Display *x11_display = glfwGetX11Display();
-    Window x11_window = glfwGetX11Window(window);
+    x11_display = XOpenDisplay(getenv("DISPLAY"));
+    root_window = DefaultRootWindow(x11_display);
     Atom overlay_atom = XInternAtom (x11_display, GamescopeOverlayProperty, False);
     // Initialize OpenGL loader
-
     bool err = glewInit() != GLEW_OK;
 
     if (err)
@@ -351,7 +348,7 @@ int main(int, char**)
     if(!logger) logger = std::make_unique<Logger>(HUDElements.params);
     Atom noFocusAtom = XInternAtom(x11_display, "GAMESCOPE_NO_FOCUS", False);
     uint32_t value = 1;
-    XChangeProperty(x11_display, x11_window, noFocusAtom, XA_CARDINAL, 32,
+    XChangeProperty(x11_display, root_window, noFocusAtom, XA_CARDINAL, 32,
                     PropModeReplace, (unsigned char *)&value, 1);
     // Main loop
     while (!glfwWindowShouldClose(window)){
@@ -359,7 +356,7 @@ int main(int, char**)
             if (mangoapp_paused){
                 glfwRestoreWindow(window);
                 uint32_t value = 1;
-                XChangeProperty(x11_display, x11_window, overlay_atom, XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&value, 1);
+                XChangeProperty(x11_display, root_window, overlay_atom, XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&value, 1);
                 XSync(x11_display, 0);
                 mangoapp_paused = false;
                 {
@@ -402,7 +399,7 @@ int main(int, char**)
         } else if (!mangoapp_paused) {
             glfwIconifyWindow(window);
             uint32_t value = 0;
-            XChangeProperty(x11_display, x11_window, overlay_atom, XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&value, 1);
+            XChangeProperty(x11_display, root_window, overlay_atom, XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&value, 1);
             XSync(x11_display, 0);
             mangoapp_paused = true;
             {
