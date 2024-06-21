@@ -13,19 +13,23 @@
 #include <thread>
 #include <unistd.h>
 #include "../overlay.h"
-#include "notify.h"
+#include "../notify.h"
 #include "mangoapp.h"
 #include "mangoapp_proto.h"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-#include "amdgpu.h"
+#include "../amdgpu.h"
 #ifdef __linux__
 #include "implot.h"
 #endif
 
-#define GLFW_EXPOSE_NATIVE_X11
+#define GLFW_EXPOSE_NATIVE_EGL
+#define GLFW_EXPOSE_NATIVE_WAYLAND
 #include <GLFW/glfw3native.h>
-#include <X11/Xatom.h>
+
+#define namespace _namespace
+#include <wlr-layer-shell-unstable-v1-client-protocol.h>
+#undef namespace
 
 #include "nlohmann/json.hpp"
 using json = nlohmann::json;
@@ -47,34 +51,8 @@ static bool mangoapp_paused = false;
 std::mutex mangoapp_m;
 std::condition_variable mangoapp_cv;
 static uint8_t raw_msg[1024] = {0};
-static uint32_t screenWidth, screenHeight;
-
-static unsigned int get_prop(const char* propName){
-    Display *x11_display = glfwGetX11Display();
-    Atom gamescope_focused = XInternAtom(x11_display, propName, false);
-    auto scr = DefaultScreen(x11_display);
-    auto root = RootWindow(x11_display, scr);
-    Atom actual;
-    int format;
-    unsigned long n, left;
-    uint64_t *data;
-    int result = XGetWindowProperty(x11_display, root, gamescope_focused, 0L, 1L, false,
-                            XA_CARDINAL, &actual, &format,
-                            &n, &left, ( unsigned char** )&data);
-
-    if (result == Success && data != NULL){
-        bool *found = nullptr;
-        unsigned int i;
-        memcpy(&i, data, sizeof(unsigned int));
-        XFree((void *) data);
-        if ( found != nullptr )
-        {
-            *found = true;
-        }
-        return i;
-    }
-    return -1;
-}
+static uint32_t screenWidth = 1280, screenHeight = 800;
+struct zwlr_layer_surface_v1 *layer_surface;
 
 static void ctrl_thread(){
     while (1){
@@ -181,10 +159,12 @@ static void msg_read_thread(){
                         HUDElements.g_fsrSharpness = params.fsr_steam_sharpness - mangoapp_v1->fsrSharpness;
                     }
                     if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam]){
-                        steam_focused = get_prop("GAMESCOPE_FOCUSED_APP_GFX") == 769;
+                        steam_focused = mangoapp_v1->bSteamFocused;
                     } else {
                         steam_focused = false;
                     }
+                    HUDElements.hdr_status = mangoapp_v1->bAppWantsHDR;
+                    HUDElements.refresh = mangoapp_v1->displayRefresh;
                     // if (!steam_focused && mangoapp_v1->pid != previous_pid){
                     //     string path = "/tmp/mangoapp/" + to_string(mangoapp_v1->pid) + ".json";
                     //     ifstream i(path);
@@ -208,7 +188,8 @@ static void msg_read_thread(){
                         }
                         mangoapp_cv.notify_one();
                         screenWidth = mangoapp_v1->outputWidth;
-                        screenHeight = mangoapp_v1->outputHeight;
+                        // Don't care about the height, just the width.
+                        //screenHeight = mangoapp_v1->outputHeight;
                     }
                 }
             } else {
@@ -223,20 +204,94 @@ static void msg_read_thread(){
     }
 }
 
-static const char *GamescopeOverlayProperty = "GAMESCOPE_EXTERNAL_OVERLAY";
+static bool make_layer_shell(GLFWwindow *window)
+{
+    wl_display *display = glfwGetWaylandDisplay();
+    if (!display)
+        return false;
+
+    wl_registry *registry;
+    if (!(registry = wl_display_get_registry(display)))
+        return false;
+
+    struct registry_data
+    {
+        struct zwlr_layer_shell_v1 *layer_shell = nullptr;
+    } data;
+
+    static const wl_registry_listener s_RegistryListener =
+    {
+        .global = [] ( void *pUserData, wl_registry *pRegistry, uint32_t uName, const char *pInterface, uint32_t uVersion )
+        {
+            registry_data *data = (registry_data *)pUserData;
+            if ( !strcmp( pInterface, zwlr_layer_shell_v1_interface.name ) && uVersion >= 4u )
+                data->layer_shell = (zwlr_layer_shell_v1 *)wl_registry_bind(pRegistry, uName, &zwlr_layer_shell_v1_interface, 4 );
+        },
+        .global_remove = []( auto... args )
+        {
+        },
+    };
+
+    wl_registry_add_listener( registry, &s_RegistryListener, (void *)&data );
+    wl_display_roundtrip(display);
+
+    if ( !data.layer_shell )
+    {
+        fprintf(stderr, "Failed to get layer shell!\n");
+        return false;
+    }
+
+    wl_surface *surface = glfwGetWaylandWindow(window);
+
+    layer_surface = zwlr_layer_shell_v1_get_layer_surface(data.layer_shell, surface, nullptr, 1, "performance_overlay");
+    if (!layer_surface)
+    {
+        fprintf(stderr, "Failed to create layer surface!\n");
+        return false;
+    }
+
+    static const struct zwlr_layer_surface_v1_listener layer_surface_listener = {
+        .configure = [](void *data, struct zwlr_layer_surface_v1 *layer_surface, uint32_t serial, uint32_t width, uint32_t height)
+        {
+            SPDLOG_INFO("CONFIGURE!!!");
+            wl_surface *surface = (wl_surface *)data;
+            zwlr_layer_surface_v1_ack_configure(layer_surface, serial);
+            screenWidth = width;
+            screenHeight = height;
+            if ( !screenWidth )
+                screenWidth = 1280;
+            if ( !screenHeight )
+                screenHeight = 800;
+            zwlr_layer_surface_v1_set_size(layer_surface, width, height);
+            wl_surface_commit(surface);
+        },
+        .closed = [](void *data, struct zwlr_layer_surface_v1 *surface)
+        {
+        },
+    };
+
+    zwlr_layer_surface_v1_add_listener(layer_surface, &layer_surface_listener, surface);
+
+    zwlr_layer_surface_v1_set_size(layer_surface, screenWidth, screenHeight);
+    zwlr_layer_surface_v1_set_anchor(layer_surface, ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP | ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT);
+    zwlr_layer_surface_v1_set_margin(layer_surface, 0, 0, 0, 0);
+
+    wl_display_roundtrip(display);
+
+    wl_surface_commit(surface);
+    wl_display_roundtrip(display);
+
+    return true;
+}
 
 static GLFWwindow* init(const char* glsl_version){
     init_spdlog();
+
+    // Don't make xdg_shell objects for us.
+    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
     GLFWwindow *window = glfwCreateWindow(1280, 800, "mangoapp overlay window", NULL, NULL);
-    Display *x11_display = glfwGetX11Display();
-    Window x11_window = glfwGetX11Window(window);
-    if (x11_window && x11_display)
-    {
-        // Set atom for gamescope to render as an overlay.
-        Atom overlay_atom = XInternAtom (x11_display, GamescopeOverlayProperty, False);
-        uint32_t value = 1;
-        XChangeProperty(x11_display, x11_window, overlay_atom, XA_CARDINAL, 32, PropertyNewValue, (unsigned char *)&value, 1);
-    }
+    if ( !make_layer_shell(window) )
+        return nullptr;
 
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
@@ -259,11 +314,6 @@ static void shutdown(GLFWwindow* window){
     glfwDestroyWindow(window);
 }
 
-static void get_atom_info(){
-    HUDElements.hdr_status = get_prop("GAMESCOPE_COLOR_APP_WANTS_HDR_FEEDBACK");
-    HUDElements.refresh = get_prop("GAMESCOPE_DISPLAY_REFRESH_RATE_FEEDBACK");
-}
-
 static bool render(GLFWwindow* window) {
     if (HUDElements.colors.update)
         HUDElements.convert_colors(params);
@@ -275,16 +325,26 @@ static bool render(GLFWwindow* window) {
     overlay_new_frame(params);
     position_layer(sw_stats, params, window_size);
     render_imgui(sw_stats, params, window_size, true);
-    get_atom_info();
     overlay_end_frame();
     if (screenWidth && screenHeight)
+    {
+        zwlr_layer_surface_v1_set_size(layer_surface, screenWidth, screenHeight);
         glfwSetWindowSize(window, screenWidth, screenHeight);
+    }
     ImGui::EndFrame();
     return last_window_size.x != window_size.x || last_window_size.y != window_size.y;
 }
 
 int main(int, char**)
 {
+    // If we are under Gamescope, always prefer running under Wayland.
+    const char *gamescope_wayland_display = getenv( "GAMESCOPE_WAYLAND_DISPLAY");
+    if (gamescope_wayland_display && *gamescope_wayland_display)
+    {
+        setenv("WAYLAND_DISPLAY", gamescope_wayland_display, 1);
+        unsetenv("DISPLAY");
+    }
+
     // Setup window
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
@@ -299,10 +359,6 @@ int main(int, char**)
 
     // Create window with graphics context
     GLFWwindow* window = init(glsl_version);
-
-    Display *x11_display = glfwGetX11Display();
-    Window x11_window = glfwGetX11Window(window);
-    Atom overlay_atom = XInternAtom (x11_display, GamescopeOverlayProperty, False);
     // Initialize OpenGL loader
 
     bool err = glewInit() != GLEW_OK;
@@ -349,18 +405,10 @@ int main(int, char**)
     std::thread(msg_read_thread).detach();
     std::thread(ctrl_thread).detach();
     if(!logger) logger = std::make_unique<Logger>(HUDElements.params);
-    Atom noFocusAtom = XInternAtom(x11_display, "GAMESCOPE_NO_FOCUS", False);
-    uint32_t value = 1;
-    XChangeProperty(x11_display, x11_window, noFocusAtom, XA_CARDINAL, 32,
-                    PropModeReplace, (unsigned char *)&value, 1);
     // Main loop
     while (!glfwWindowShouldClose(window)){
         if (!params.no_display){
             if (mangoapp_paused){
-                glfwRestoreWindow(window);
-                uint32_t value = 1;
-                XChangeProperty(x11_display, x11_window, overlay_atom, XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&value, 1);
-                XSync(x11_display, 0);
                 mangoapp_paused = false;
                 {
                     amdgpu_run_thread = true;
@@ -398,12 +446,8 @@ int main(int, char**)
             glClear(GL_COLOR_BUFFER_BIT);
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-            glfwSwapBuffers(window);
+            eglSwapBuffers(glfwGetEGLDisplay(), glfwGetEGLSurface(window));
         } else if (!mangoapp_paused) {
-            glfwIconifyWindow(window);
-            uint32_t value = 0;
-            XChangeProperty(x11_display, x11_window, overlay_atom, XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&value, 1);
-            XSync(x11_display, 0);
             mangoapp_paused = true;
             {
                 amdgpu_run_thread = false;
@@ -415,6 +459,7 @@ int main(int, char**)
     }
 
     // Cleanup
+    SPDLOG_INFO("Mangohud Shutting Down");
     shutdown(window);
 
     glfwTerminate();
