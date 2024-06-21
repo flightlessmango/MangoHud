@@ -332,6 +332,11 @@ static bool render(GLFWwindow* window) {
         glfwSetWindowSize(window, screenWidth, screenHeight);
     }
     ImGui::EndFrame();
+
+    // We don't re-load these, clear the texture data now.
+    ImGuiIO& io = ImGui::GetIO();
+    io.Fonts->ClearTexData();
+
     return last_window_size.x != window_size.x || last_window_size.y != window_size.y;
 }
 
