@@ -184,7 +184,7 @@ static void writeFileHeaders(ofstream& out){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_log_versioning])
       out << "--------------------FRAME METRICS--------------------" << endl;
 
-    out << "fps," << "frametime," << "cpu_load," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "gpu_power," << "ram_used," << "swap_used," << "process_rss," << "elapsed" << endl;
+    out << "fps," << "frametime," << "cpu_load," << "cpu_power," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "gpu_power," << "ram_used," << "swap_used," << "process_rss," << "elapsed" << endl;
 
 }
 
@@ -199,6 +199,7 @@ void Logger::writeToFile(){
     output_file << logArray.back().fps << ",";
     output_file << logArray.back().frametime << ",";
     output_file << logArray.back().cpu_load << ",";
+    output_file << logArray.back().cpu_power << ",";
     output_file << logArray.back().gpu_load << ",";
     output_file << logArray.back().cpu_temp << ",";
     output_file << logArray.back().gpu_temp << ",";

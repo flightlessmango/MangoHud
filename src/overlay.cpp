@@ -175,6 +175,7 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
 
    currentLogData.cpu_load = cpuStats.GetCPUDataTotal().percent;
    currentLogData.cpu_temp = cpuStats.GetCPUDataTotal().temp;
+   currentLogData.cpu_power = cpuStats.GetCPUDataTotal().power;
    // Save data for graphs
    if (graph_data.size() >= kMaxGraphEntries)
       graph_data.pop_front();
