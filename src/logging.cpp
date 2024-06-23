@@ -66,6 +66,13 @@ static bool compareByFps(const logData &a, const logData &b)
 
 static void writeSummary(string filename){
   auto& logArray = logger->get_log_data();
+  // if the log is stopped/started too fast we might end up with an empty vector.
+  // in that case, just bail.
+  if (logArray.size() == 0){
+    logger->stop_logging();
+    return;
+  }
+
   filename = filename.substr(0, filename.size() - 4);
   filename += "_summary.csv";
   SPDLOG_INFO("{}", filename);
