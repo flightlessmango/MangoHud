@@ -926,6 +926,7 @@ void HudElements::custom_text_center(){
 }
 
 void HudElements::image(){
+#ifdef __linux__
     const std::string& value = HUDElements.ordered_functions[HUDElements.place].value;
 
     // load the image if needed
@@ -962,9 +963,11 @@ void HudElements::image(){
         ImGui::TableNextRow(); ImGui::TableNextColumn();
         ImGui::Image(HUDElements.image_infos.texture, ImVec2(HUDElements.image_infos.width, HUDElements.image_infos.height));
     }
+#endif
 }
 
 void HudElements::background_image(){
+#ifdef __linux__
     const std::string& value = HUDElements.params->background_image;
 
     // load the image if needed
@@ -997,6 +1000,7 @@ void HudElements::background_image(){
                                                  ImVec2(0, 0),
                                                  ImVec2(HUDElements.background_image_infos.width, HUDElements.background_image_infos.height));
     }
+#endif
 }
 
 void HudElements::custom_text(){
