@@ -3,7 +3,7 @@ error('mangoapp also needs \'with_x11\'')
 endif
 
 subdir('protocol')
-
+egl_dep = dependency('egl', required: true)
 pre_args += '-DIMGUI_IMPL_OPENGL_LOADER_GLEW'
 pre_args += '-DMANGOAPP'
 mangoapp = executable(
@@ -31,7 +31,8 @@ mangoapp = executable(
         glfw3_dep,
         json_dep,
         glew_dep,
-        implot_dep
+        implot_dep,
+        egl_dep
     ],
     include_directories : [inc_common],
     install_tag : 'mangoapp',
