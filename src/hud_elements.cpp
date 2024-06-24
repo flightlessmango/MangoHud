@@ -1732,6 +1732,10 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({present_mode, "present_mode", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_refresh_rate])
         ordered_functions.push_back({refresh_rate, "refresh_rate", value});
+    if (!params->background_image.empty())
+        ordered_functions.push_back({background_image, "background_image", value});
+    if (!params->image.empty())
+        ordered_functions.push_back({image, "image", value});
 }
 
 void HudElements::update_exec(){
