@@ -315,10 +315,12 @@ int main(int, char**)
 
     // Setup Platform/Renderer backends
     int control_client = -1;
+    init_liquid_stats(params);
     parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"), false);
     create_fonts(nullptr, params, sw_stats.font1, sw_stats.font_text);
     HUDElements.convert_colors(params);
     init_cpu_stats(params);
+
     notifier.params = &params;
     start_notifier(notifier);
     window_size = ImVec2(params.width, params.height);
