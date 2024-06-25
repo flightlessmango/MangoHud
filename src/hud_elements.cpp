@@ -927,7 +927,7 @@ void HudElements::custom_text_center(){
 
 void HudElements::image(){
 #ifdef __linux__
-    const std::string& value = HUDElements.ordered_functions[HUDElements.place].value;
+    const std::string& value = HUDElements.params->image;
 
     // load the image if needed
     if (HUDElements.image_infos.loaded == false) {
