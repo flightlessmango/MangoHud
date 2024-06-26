@@ -52,6 +52,7 @@ class HudElements{
         uint32_t vendorID;
         int hdr_status = 0;
         int refresh = 0;
+        unsigned int vsync = 10;
         std::unique_ptr<WineSync> winesync_ptr = nullptr;
         std::unique_ptr<Net> net = nullptr;
 #ifdef __linux__
@@ -158,11 +159,8 @@ class HudElements{
         std::string get_present_mode(){
             if (is_vulkan)
                 return presentModeMap[cur_present_mode];
-            // TODO: the opengl side is probably not as solid.
-            // But it also might not be possible to figure out if vsync
-            // is on or off unless we specify it.
             else
-                return params->gl_vsync == 0 ? "OFF" : "ON";
+                return vsync == 0 ? "OFF" : "ON";
 
         }
 };

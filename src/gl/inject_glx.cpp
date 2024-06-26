@@ -131,8 +131,19 @@ EXPORT_C_(int) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
     return ret;
 }
 
+#ifndef GLX_SWAP_INTERVAL_EXT
+#define GLX_SWAP_INTERVAL_EXT 0x20F1
+#endif
+
 static void do_imgui_swap(void *dpy, void *drawable)
 {
+    static auto last_time = std::chrono::steady_clock::now();
+    auto current_time = std::chrono::steady_clock::now();
+
+    std::chrono::duration<double> elapsed_seconds = current_time - last_time;
+    if (HUDElements.vsync == 10 || elapsed_seconds.count() > 5.0)
+        glx.QueryDrawable(dpy, drawable, GLX_SWAP_INTERVAL_EXT, &HUDElements.vsync);
+
     GLint vp[4];
     if (!is_blacklisted()) {
         imgui_create(glx.GetCurrentContext(), gl_wsi::GL_WSI_GLX);
