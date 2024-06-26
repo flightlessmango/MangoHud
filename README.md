@@ -372,7 +372,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `refresh_rate`                     | Display the current refresh rate (only works in gamescope)                            |
 | `full`                             | Enable most of the toggleable parameters (currently excludes `histogram`)             |
 | `gamemode`                         | Show if GameMode is on                                                                |
-| `gpu_color`<br>`cpu_color`<br>`vram_color`<br>`ram_color`<br>`io_color`<br>`engine_color`<br>`frametime_color`<br>`background_color`<br>`text_color`<br>`media_player_color`         | Change default colors: `gpu_color=RRGGBB` |
+| `gpu_color`<br>`cpu_color`<br>`vram_color`<br>`ram_color`<br>`io_color`<br>`engine_color`<br>`frametime_color`<br>`background_color`<br>`text_color`<br>`media_player_color`<br>`network_color`         | Change default colors: `gpu_color=RRGGBB` |
 | `gpu_core_clock`<br>`gpu_mem_clock`| Display GPU core/memory frequency                                                     |
 | `gpu_fan`                          | GPU fan in rpm on AMD, FAN in percent on NVIDIA |
 | `gpu_load_change`                  | Change the color of the GPU load depending on load                                    |
