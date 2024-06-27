@@ -526,8 +526,9 @@ bool CPUStats::GetCpuFile() {
                 break;
 
         } else if (name == "asusec") {
-            find_input(path, "temp", input, "CPU");
-            break;
+            // Only break if module has CPU node
+            if (find_input(path, "temp", input, "CPU"))
+                break;
         } else {
             path.clear();
         }
