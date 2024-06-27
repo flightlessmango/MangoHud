@@ -195,8 +195,9 @@ class BenchmarkFile:
 
             found_fps_column = False
             for row_number, row_content in enumerate(reader):
-                if row_number > 4:
-                    # if we're past the 4th row, break the loop
+                if row_number > 100:
+                    # did not find the row that starts with the
+                    # 'fps' column up until here.  give up.
                     break
 
                 if "fps" in row_content:
