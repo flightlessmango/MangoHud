@@ -19,11 +19,20 @@ struct xkb_state *state_xkb = nullptr;
 struct wl_event_queue* queue = nullptr;
 std::vector<KeySym> wl_pressed_keys {};
 
+static void seat_handle_capabilities(void *data, wl_seat *seat, uint32_t caps);
+static void seat_handle_name(void *data, struct wl_seat *seat, const char *name) {}
+
+struct wl_seat_listener seat_listener {
+   .capabilities = seat_handle_capabilities,
+   .name = seat_handle_name,
+};
+
 static void registry_handle_global(void *data, struct wl_registry* registry, uint32_t name, const char *interface, uint32_t version)
 {
    if(strcmp(interface, wl_seat_interface.name) == 0)
    {
-      seat = (struct wl_seat*)wl_registry_bind(registry, name, &wl_seat_interface, 7);
+      seat = (struct wl_seat*)wl_registry_bind(registry, name, &wl_seat_interface, 5);
+      wl_seat_add_listener(seat, &seat_listener, NULL);
    }
 }
 
@@ -94,9 +103,21 @@ struct wl_keyboard_listener keyboard_listener {
    .repeat_info = wl_keyboard_repeat_info
 };
 
+static void seat_handle_capabilities(void *data, wl_seat *seat, uint32_t caps)
+{
+   if(caps & WL_SEAT_CAPABILITY_KEYBOARD)
+   {
+      if(!keyboard)
+      {
+         keyboard = wl_seat_get_keyboard(seat);
+         wl_keyboard_add_listener(keyboard, &keyboard_listener, NULL);
+      }
+   }
+}
+
 void update_wl_queue()
 {
-    wl_display_roundtrip_queue(wl_display_ptr, queue);
+   wl_display_dispatch_queue_pending(wl_display_ptr, queue);
 }
 
 void init_wayland_data()
@@ -104,15 +125,12 @@ void init_wayland_data()
    if (!wl_display_ptr)
       return;
 
-   struct wl_display *display_wrapped = (struct wl_display*)wl_proxy_create_wrapper(wl_display_ptr);
    queue = wl_display_create_queue(wl_display_ptr);
+   struct wl_display *display_wrapped = (struct wl_display*)wl_proxy_create_wrapper(wl_display_ptr);
    wl_proxy_set_queue((struct wl_proxy*)display_wrapped, queue);
    wl_registry *registry = wl_display_get_registry(display_wrapped);
    wl_proxy_wrapper_destroy(display_wrapped);
    wl_registry_add_listener(registry, &registry_listener, NULL);
-   update_wl_queue();
-   update_wl_queue();
-   keyboard = wl_seat_get_keyboard(seat);
-   wl_keyboard_add_listener(keyboard, &keyboard_listener, NULL);
-   update_wl_queue();
+   wl_display_roundtrip_queue(wl_display_ptr, queue);
+   wl_display_roundtrip_queue(wl_display_ptr, queue);
 }
