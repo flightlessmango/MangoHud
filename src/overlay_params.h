@@ -74,6 +74,9 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(fps_color_change)              \
    OVERLAY_PARAM_BOOL(custom_text_center)            \
    OVERLAY_PARAM_BOOL(custom_text)                   \
+   OVERLAY_PARAM_CUSTOM(background_image)            \
+   OVERLAY_PARAM_CUSTOM(image)                       \
+   OVERLAY_PARAM_CUSTOM(image_max_width)             \
    OVERLAY_PARAM_BOOL(exec)                          \
    OVERLAY_PARAM_BOOL(vkbasalt)                      \
    OVERLAY_PARAM_BOOL(gamemode)                      \
@@ -308,6 +311,9 @@ struct overlay_params {
    uint32_t font_glyph_ranges;
    std::string custom_text_center;
    std::string custom_text;
+   std::string background_image;
+   std::string image;
+   unsigned image_max_width;
    std::string config_file_path;
    std::unordered_map<std::string,std::string> options;
    int permit_upload;

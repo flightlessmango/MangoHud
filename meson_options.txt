@@ -6,6 +6,7 @@ option('with_nvml', type : 'combo', value : 'enabled', choices: ['enabled', 'sys
 option('with_xnvctrl', type : 'feature', value : 'enabled', description: 'Enable XNVCtrl support')
 option('with_x11', type : 'feature', value : 'enabled')
 option('with_wayland', type : 'feature', value : 'enabled')
+option('use_vulkan', type : 'boolean', value : true)
 option('with_dbus', type : 'feature', value : 'enabled')
 option('loglevel', type: 'combo', choices : ['trace', 'debug', 'info', 'warn', 'err', 'critical', 'off'], value : 'info', description: 'Max log level in non-debug build')
 option('mangoapp', type: 'boolean', value : false)

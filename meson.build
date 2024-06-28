@@ -166,6 +166,7 @@ else
   dep_rt = null_dep
 endif
 
+if get_option('use_vulkan')
 # Commented code can be used if mangohud start using latest SDK Vulkan-Headers
 # Allowing user to build mangohud using system Vulkan-Headers
 #if not dependency('VulkanHeaders').found()
@@ -177,17 +178,19 @@ endif
 #  vk_api_xml = files('/usr/share/vulkan/registry/vk.xml')
 #endif
 
-
-
-vk_enum_to_str = custom_target(
-  'vk_enum_to_str',
-  input : ['bin/gen_enum_to_str.py', vk_api_xml],
-  output : ['vk_enum_to_str.c', 'vk_enum_to_str.h'],
-  command : [
-    prog_python, '@INPUT0@', '--xml', '@INPUT1@',
-    '--outdir', meson.current_build_dir()
-  ],
-)
+  vk_enum_to_str = custom_target(
+    'vk_enum_to_str',
+    input : ['bin/gen_enum_to_str.py', vk_api_xml],
+    output : ['vk_enum_to_str.c', 'vk_enum_to_str.h'],
+    command : [
+      prog_python, '@INPUT0@', '--xml', '@INPUT1@',
+      '--outdir', meson.current_build_dir()
+    ],
+  )
+else
+  dep_vulkan = null_dep
+  vk_enum_to_str = []
+endif
 
 imgui_options = [
   'default_library=static',
