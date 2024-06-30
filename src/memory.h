@@ -6,6 +6,7 @@
 #include <thread>
 
 extern float memused, memmax, swapused, swapmax, rss;
+extern int memclock, membandwidth;
 
 struct memory_information {
   /* memory information in kilobytes */
