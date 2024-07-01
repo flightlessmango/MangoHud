@@ -7,6 +7,7 @@
 #endif
 #include <string>
 #include <memory>
+#include <sys/stat.h>
 
 class Shell {
 private:
@@ -14,6 +15,8 @@ private:
     int from_shell[2];
     pid_t shell_pid;
     bool success;
+    struct stat stat_buffer;
+    bool runtime = false;
 
 #ifdef __linux__
     void setNonBlocking(int fd) {

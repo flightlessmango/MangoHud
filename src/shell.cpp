@@ -29,6 +29,9 @@ std::string Shell::readOutput() {
 }
 
 Shell::Shell() {
+    if (stat("/run/pressure-vessel", &stat_buffer) == 0)
+        runtime = true;
+
     static bool failed;
     if (pipe(to_shell) == -1) {
         SPDLOG_ERROR("Failed to create to_shell pipe: {}", strerror(errno));
@@ -78,6 +81,9 @@ std::string Shell::exec(std::string cmd) {
 void Shell::writeCommand(std::string command) {
     if (write(to_shell[1], command.c_str(), command.length()) == -1)
         SPDLOG_ERROR("Failed to write to shell");
+    
+    if (runtime)
+        command = "steam-runtime-launch-client --alongside-steam --host -- " + command;
     
     trim(command);
     SPDLOG_DEBUG("Shell: wrote command: {}", command);
