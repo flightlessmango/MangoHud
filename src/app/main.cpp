@@ -163,7 +163,7 @@ static void msg_read_thread(){
         // make sure that the message recieved is compatible
         // and that we're not trying to use variables that don't exist (yet)
         size_t msg_size = msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 1, 0);
-        if (msg_size != -1)
+        if (msg_size != size_t(-1))
         {
             if (hdr->version == 1){
                 if (msg_size > offsetof(struct mangoapp_msg_v1, visible_frametime_ns)){
