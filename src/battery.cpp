@@ -13,7 +13,7 @@ void BatteryStats::numBattery() {
     fs::path path("/sys/class/power_supply/");
     for (auto& p : fs::directory_iterator(path)) {
         string fileName = p.path().filename();
-        if (fileName.find("BAT") != std::string::npos) {
+        if (fileName.find("BAT") != std::string::npos || fileName.find("qcom-battmgr-bat") != std::string::npos) {
             battPath[batteryCount] = p.path();
             batteryCount += 1;
         }
@@ -141,6 +141,7 @@ float BatteryStats::getTimeRemaining(){
         string energy_now = syspath + "/energy_now";
         string voltage_now = syspath + "/voltage_now";
         string power_now = syspath + "/power_now";
+        string time_to_empty_avg = syspath + "/time_to_empty_avg";
 
         if (fs::exists(current_now)) {
             std::ifstream input(current_now);
@@ -185,6 +186,14 @@ float BatteryStats::getTimeRemaining(){
         }
         if (current_now_vec.size() > 25)
             current_now_vec.erase(current_now_vec.begin());
+        if (fs::exists(time_to_empty_avg)) {
+             std::ifstream input(time_to_empty_avg);
+             std::string line;
+             if(std::getline(input, line)) {
+                 return std::stof(line) / 3600;
+             }
+         }
+
     }
 
     for(auto& current_now : current_now_vec){
