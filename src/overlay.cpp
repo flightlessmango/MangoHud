@@ -749,12 +749,12 @@ void init_cpu_stats(overlay_params& params)
 {
 #ifdef __linux__
    auto& enabled = params.enabled;
-   enabled[OVERLAY_PARAM_ENABLED_cpu_stats] = cpuStats.Init()
-                           && enabled[OVERLAY_PARAM_ENABLED_cpu_stats];
-   enabled[OVERLAY_PARAM_ENABLED_cpu_temp] = cpuStats.GetCpuFile()
-                           && enabled[OVERLAY_PARAM_ENABLED_cpu_temp];
-   enabled[OVERLAY_PARAM_ENABLED_cpu_power] = cpuStats.InitCpuPowerData()
-                           && enabled[OVERLAY_PARAM_ENABLED_cpu_power];
+   enabled[OVERLAY_PARAM_ENABLED_cpu_stats] = enabled[OVERLAY_PARAM_ENABLED_cpu_stats]
+                           && cpuStats.Init();
+   enabled[OVERLAY_PARAM_ENABLED_cpu_temp] = enabled[OVERLAY_PARAM_ENABLED_cpu_temp]
+                           && cpuStats.GetCpuFile();
+   enabled[OVERLAY_PARAM_ENABLED_cpu_power] = enabled[OVERLAY_PARAM_ENABLED_cpu_power]
+                           && cpuStats.InitCpuPowerData();
 #endif
 }
 
