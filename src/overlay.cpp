@@ -767,8 +767,8 @@ struct pci_bus {
 
 void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_params& params)
 {
-   //if (!params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
-   //   return;
+   if (!params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
+      return;
 
    pci_bus pci;
    bool pci_bus_parsed = false;
