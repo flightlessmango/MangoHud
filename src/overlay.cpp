@@ -114,7 +114,8 @@ void FpsLimiter(struct fps_limit& stats){
 
 void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
 {
-   update_fan();
+   if (params.enabled[OVERLAY_PARAM_ENABLED_fan])
+      update_fan();
    if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
       cpuStats.UpdateCPUData();
 
