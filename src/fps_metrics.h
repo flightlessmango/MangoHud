@@ -54,7 +54,6 @@ class fpsMetrics {
                                                             return acc + p.second;
                                                         });
                             it->value = sum / fps_stats.size();
-                            ++it;
                         }
                     } else {
                         try {
@@ -77,12 +76,12 @@ class fpsMetrics {
                                 break;
 
                             it->value = sorted_values[idx];
-                            ++it;
                         } catch (const std::invalid_argument& e) {
                             SPDLOG_DEBUG("Failed to use fps metric value {}", it->name);
                             it = metrics.erase(it);
                         }
                     }
+                    ++it;
                 }
 
                 run = false;
