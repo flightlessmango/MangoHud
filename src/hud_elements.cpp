@@ -1657,8 +1657,12 @@ void HudElements::update_exec(){
     if (!HUDElements.shell)
         HUDElements.shell = std::make_unique<Shell>();
 
-    for(auto& item : exec_list)
-        item.ret = HUDElements.shell->exec(item.value + "\n");
+    for(auto& item : exec_list){
+        std::string ret = HUDElements.shell->exec(item.value + "\n");
+        // use the previous ret if we get bad system call
+        if (ret.find("Bad system call") == std::string::npos)
+            item.ret = ret;
+    }
 #endif
 }
 
