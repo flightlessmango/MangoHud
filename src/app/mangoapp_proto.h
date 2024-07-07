@@ -17,6 +17,9 @@ struct mangoapp_msg_v1 {
     uint64_t latency_ns;
     uint32_t outputWidth;
     uint32_t outputHeight;
+    uint16_t displayRefresh;
+    bool bAppWantsHDR : 1;
+    bool bSteamFocused : 1;
     // WARNING: Always ADD fields, never remove or repurpose fields
 } __attribute__((packed));
 

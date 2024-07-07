@@ -278,44 +278,7 @@ if is_unixy
 endif
 
 if get_option('mangoapp')
-  if not get_option('with_x11').enabled()
-    error('mangoapp also needs \'with_x11\'')
-  endif
-  pre_args += '-DIMGUI_IMPL_OPENGL_LOADER_GLEW'
-  pre_args += '-DMANGOAPP'
-  mangoapp = executable(
-    'mangoapp',
-    files(
-      'app/main.cpp',
-    ),
-    c_args : [
-      pre_args,
-      vulkan_wsi_args
-    ],
-    cpp_args : [
-      pre_args,
-      vulkan_wsi_args
-    ],
-    gnu_symbol_visibility : 'hidden',
-    dependencies : [
-      dearimgui_dep,
-      dep_dl,
-      dep_vulkan,
-      spdlog_dep,
-      dbus_dep,
-      dep_x11,
-      dep_wayland_client,
-      glfw3_dep,
-      json_dep,
-      glew_dep,
-      implot_dep
-    ],
-    include_directories : [inc_common],
-    install_tag : 'mangoapp',
-    link_with: mangohud_static_lib,
-    link_args : link_args,
-    install : true
-  )
+  subdir('app')
 endif
 
 if get_option('mangohudctl')
