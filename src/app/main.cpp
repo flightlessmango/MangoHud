@@ -285,6 +285,8 @@ static bool render(GLFWwindow* window) {
 
 int main(int, char**)
 {
+    XInitThreads();
+
     // Setup window
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
