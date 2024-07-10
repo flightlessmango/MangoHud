@@ -7,6 +7,8 @@ assignees: ''
 
 ---
 
+**Do not report issue for old MangoHud versions**
+
 **Describe the bug**
 A clear and concise description of what the bug is.
 
