@@ -274,7 +274,7 @@ static bool render(GLFWwindow* window) {
     ImGui::NewFrame();
     overlay_new_frame(params);
     position_layer(sw_stats, params, window_size);
-    render_imgui(sw_stats, params, window_size, true);
+    render_imgui(sw_stats, params, window_size, false);
     get_atom_info();
     overlay_end_frame();
     if (screenWidth && screenHeight)

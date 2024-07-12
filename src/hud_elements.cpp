@@ -25,6 +25,7 @@
 #endif
 #include "amdgpu.h"
 #include "fps_metrics.h"
+#include "load_textures.h"
 
 #define CHAR_CELSIUS    "\xe2\x84\x83"
 #define CHAR_FAHRENHEIT "\xe2\x84\x89"
@@ -680,6 +681,7 @@ void HudElements::engine_version(){
         ImguiNextColumnFirstItem();
         ImGui::PushFont(HUDElements.sw_stats->font1);
         if (HUDElements.is_vulkan) {
+#ifdef HAVE_VULKAN
             if ((HUDElements.sw_stats->engine == EngineTypes::DXVK || HUDElements.sw_stats->engine == EngineTypes::VKD3D)){
                 HUDElements.TextColored(HUDElements.colors.engine,
                     "%s/%d.%d.%d", HUDElements.sw_stats->engineVersion.c_str(),
@@ -693,6 +695,7 @@ void HudElements::engine_version(){
                     HUDElements.sw_stats->version_vk.minor,
                     HUDElements.sw_stats->version_vk.patch);
             }
+#endif
         } else {
             HUDElements.TextColored(HUDElements.colors.engine,
                 "%d.%d%s", HUDElements.sw_stats->version_gl.major, HUDElements.sw_stats->version_gl.minor,
@@ -922,6 +925,84 @@ void HudElements::custom_text_center(){
     }
 }
 
+void HudElements::image(){
+#ifdef __linux__
+    const std::string& value = HUDElements.params->image;
+
+    // load the image if needed
+    if (HUDElements.image_infos.loaded == false) {
+        unsigned maxwidth = HUDElements.params->width;
+        if (HUDElements.params->image_max_width != 0 && HUDElements.params->image_max_width < maxwidth) {
+            maxwidth = HUDElements.params->image_max_width;
+        }
+
+        HUDElements.image_infos.loaded = true;
+        if (HUDElements.is_vulkan) {
+#ifdef HAVE_VULKAN
+            if ((HUDElements.image_infos.texture = add_texture(HUDElements.sw_stats, value, &(HUDElements.image_infos.width), &(HUDElements.image_infos.height), maxwidth)))
+                HUDElements.image_infos.valid = true;
+#endif
+        } else {
+#ifndef HAVE_VULKAN
+            HUDElements.image_infos.valid = GL_LoadTextureFromFile(value.c_str(),
+                                                                reinterpret_cast<unsigned int*>(&(HUDElements.image_infos.texture)),
+                                                                &(HUDElements.image_infos.width),
+                                                                &(HUDElements.image_infos.height),
+                                                                maxwidth);
+#endif
+        }
+
+        if (HUDElements.image_infos.valid)
+            SPDLOG_INFO("Image {} loaded ({}x{})", value, HUDElements.image_infos.width, HUDElements.image_infos.height);
+        else
+            SPDLOG_WARN("Failed to load image: {}", value);
+    }
+
+    // render the image
+    if (HUDElements.image_infos.valid) {
+        ImGui::TableNextRow(); ImGui::TableNextColumn();
+        ImGui::Image(HUDElements.image_infos.texture, ImVec2(HUDElements.image_infos.width, HUDElements.image_infos.height));
+    }
+#endif
+}
+
+void HudElements::background_image(){
+#ifdef __linux__
+    const std::string& value = HUDElements.params->background_image;
+
+    // load the image if needed
+    if (HUDElements.background_image_infos.loaded == false) {
+        HUDElements.background_image_infos.loaded = true;
+        if (HUDElements.is_vulkan) {
+#ifdef HAVE_VULKAN
+            if ((HUDElements.background_image_infos.texture = add_texture(HUDElements.sw_stats, value, &(HUDElements.background_image_infos.width), &(HUDElements.background_image_infos.height), 0)))
+                HUDElements.background_image_infos.valid = true;
+#endif
+        } else {
+#ifndef HAVE_VULKAN
+            HUDElements.background_image_infos.valid = GL_LoadTextureFromFile(value.c_str(),
+                                                                            reinterpret_cast<unsigned int*>(&(HUDElements.background_image_infos.texture)),
+                                                                            &(HUDElements.background_image_infos.width),
+                                                                            &(HUDElements.background_image_infos.height),
+                                                                            0);
+#endif
+        }
+
+        if (HUDElements.background_image_infos.valid)
+            SPDLOG_INFO("Image {} loaded ({}x{})", value, HUDElements.background_image_infos.width, HUDElements.background_image_infos.height);
+        else
+            SPDLOG_WARN("Failed to load image: {}", value);
+    }
+
+    // render the image
+    if (HUDElements.background_image_infos.valid) {
+        ImGui::GetBackgroundDrawList()->AddImage(HUDElements.background_image_infos.texture,
+                                                 ImVec2(0, 0),
+                                                 ImVec2(HUDElements.background_image_infos.width, HUDElements.background_image_infos.height));
+    }
+#endif
+}
+
 void HudElements::custom_text(){
     ImguiNextColumnFirstItem();
     ImGui::PushFont(HUDElements.sw_stats->font1);
@@ -1089,7 +1170,7 @@ void HudElements::gamescope_frame_timing(){
                                         HUDElements.gamescope_debug_app.end());
             auto max = std::max_element(HUDElements.gamescope_debug_app.begin(),
                                         HUDElements.gamescope_debug_app.end());
-            
+
             ImGui::PushFont(HUDElements.sw_stats->font1);
             ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
             HUDElements.TextColored(HUDElements.colors.engine, "%s", "App");
@@ -1522,8 +1603,9 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
         {"refresh_rate", {refresh_rate}},
         {"winesync", {winesync}},
         {"present_mode", {present_mode}},
-        {"network", {network}}
-
+        {"network", {network}},
+        {"background_image", {background_image}},
+        {"image", {image}},
     };
 
     auto check_param = display_params.find(param);
@@ -1650,6 +1732,10 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({present_mode, "present_mode", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_refresh_rate])
         ordered_functions.push_back({refresh_rate, "refresh_rate", value});
+    if (!params->background_image.empty())
+        ordered_functions.push_back({background_image, "background_image", value});
+    if (!params->image.empty())
+        ordered_functions.push_back({image, "image", value});
 }
 
 void HudElements::update_exec(){

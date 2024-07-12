@@ -494,6 +494,9 @@ parse_fps_metrics(const char *str){
 #define parse_blacklist(s) parse_str_tokenize(s)
 #define parse_custom_text_center(s) parse_str(s)
 #define parse_custom_text(s) parse_str(s)
+#define parse_background_image(s) parse_str(s)
+#define parse_image(s) parse_str(s)
+#define parse_image_max_width(s) parse_unsigned(s)
 #define parse_fps_value(s) parse_load_value(s)
 #define parse_fps_color(s) parse_load_color(s)
 #define parse_battery_color(s) parse_color(s)
@@ -783,6 +786,7 @@ static void set_param_defaults(struct overlay_params *params){
    params->table_columns = 3;
    params->text_outline_color = 0x000000;
    params->text_outline_thickness = 1.5;
+   params->image_max_width = 0;
 }
 
 void
