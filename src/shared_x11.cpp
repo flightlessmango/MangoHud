@@ -5,6 +5,7 @@
 #include <spdlog/spdlog.h>
 #include "shared_x11.h"
 #include "loaders/loader_x11.h"
+#include "hud_elements.h"
 
 static std::unique_ptr<Display, std::function<void(Display*)>> display;
 
@@ -40,6 +41,15 @@ bool init_x11() {
     
     if (!displayid)
         SPDLOG_DEBUG("DISPLAY env is not set");
+
+    if (display && HUDElements.display_server == HUDElements.display_servers::UNKNOWN) {
+        int opcode, event, error;
+        if (libx11->XQueryExtension(display.get(), "XWAYLAND", &opcode, &event, &error))
+		    HUDElements.display_server = HUDElements.display_servers::XWAYLAND;
+        else
+            HUDElements.display_server = HUDElements.display_servers::XORG;
+
+	}
 
     return !!display;
 }

@@ -1475,6 +1475,20 @@ void HudElements::network() {
 #endif
 }
 
+void HudElements::_display_session() {
+    ImGui::PushFont(HUDElements.sw_stats->font1);
+    ImguiNextColumnFirstItem();
+    HUDElements.TextColored(HUDElements.colors.engine, "%s", "display server");
+    ImguiNextColumnOrNewRow();
+    static std::map<display_servers, std::string> servers {
+        {WAYLAND, {"WAYLAND"}},
+        {XWAYLAND, {"XWAYLAND"}},
+        {XORG, {"XORG"}}
+    };
+    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", servers[HUDElements.display_server].c_str());
+    ImGui::PopFont();
+}
+
 void HudElements::sort_elements(const std::pair<std::string, std::string>& option) {
     const auto& param = option.first;
     const auto& value = option.second;
@@ -1522,7 +1536,8 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
         {"refresh_rate", {refresh_rate}},
         {"winesync", {winesync}},
         {"present_mode", {present_mode}},
-        {"network", {network}}
+        {"network", {network}},
+        {"display_session", {_display_session}}
 
     };
 
@@ -1650,6 +1665,8 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({present_mode, "present_mode", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_refresh_rate])
         ordered_functions.push_back({refresh_rate, "refresh_rate", value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_display_server])
+        ordered_functions.push_back({_display_session, "display_session", value});
 }
 
 void HudElements::update_exec(){

@@ -4,6 +4,7 @@
 #include <cstdio>
 #include "real_dlsym.h"
 #include "wayland_hook.h"
+#include "hud_elements.h"
 
 EXPORT_C_(struct wl_display*) wl_display_connect(const char *name);
 EXPORT_C_(struct wl_display*) wl_display_connect_to_fd(int fd);
@@ -32,6 +33,7 @@ EXPORT_C_(struct wl_display*) wl_display_connect(const char *name)
 
       if (!wl_display_ptr) {
          wl_display_ptr = ret;
+         HUDElements.display_server = HUDElements.display_servers::WAYLAND;
          init_wayland_data();
       }
    }
@@ -55,6 +57,7 @@ EXPORT_C_(struct wl_display*) wl_display_connect_to_fd(int fd)
 
       if (!wl_display_ptr) {
          wl_display_ptr = ret;
+         HUDElements.display_server = HUDElements.display_servers::WAYLAND;
          init_wayland_data();
       }
    }
