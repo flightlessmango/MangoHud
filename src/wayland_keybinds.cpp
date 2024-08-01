@@ -11,8 +11,8 @@
 #include "timing.hpp"
 #include "keybinds.h"
 
-void* wl_handle;
-struct wl_display* wl_display_ptr;
+void* wl_handle = nullptr;
+struct wl_display* wl_display_ptr = nullptr;
 struct wl_seat* seat = nullptr;
 struct wl_keyboard* keyboard = nullptr;
 struct xkb_context *context_xkb = nullptr;
