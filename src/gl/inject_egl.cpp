@@ -114,7 +114,7 @@ EXPORT_C_(void*) eglGetDisplay( void* native_display )
     {
         void** display_ptr = (void**)native_display;
         wl_interface* iface = (wl_interface*)*display_ptr;
-        if(strcmp(iface->name, wl_display_interface.name) == 0)
+        if(iface && strcmp(iface->name, wl_display_interface.name) == 0)
         {
             wl_display_ptr = (struct wl_display*)native_display;
             HUDElements.display_server = HUDElements.display_servers::WAYLAND;
@@ -122,7 +122,7 @@ EXPORT_C_(void*) eglGetDisplay( void* native_display )
             init_wayland_data();
         }
     }
-    catch(const std::exception& e)
+    catch(...)
     {
     }
 
