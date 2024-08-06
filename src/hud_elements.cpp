@@ -1478,7 +1478,7 @@ void HudElements::network() {
 void HudElements::_display_session() {
     ImGui::PushFont(HUDElements.sw_stats->font1);
     ImguiNextColumnFirstItem();
-    HUDElements.TextColored(HUDElements.colors.engine, "%s", "display server");
+    HUDElements.TextColored(HUDElements.colors.engine, "%s", "Display server");
     ImguiNextColumnOrNewRow();
     static std::map<display_servers, std::string> servers {
         {WAYLAND, {"WAYLAND"}},
