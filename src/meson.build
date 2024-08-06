@@ -156,7 +156,6 @@ if is_unixy
     pre_args += '-DHAVE_WAYLAND'
 
     vklayer_files += files(
-      'wayland_hook.cpp',
       'wayland_keybinds.cpp'
     )
   endif
