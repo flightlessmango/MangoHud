@@ -324,7 +324,8 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `benchmark_percentiles`            | Configure which framerate percentiles are shown in the logging summary. Default is `97,AVG,1,0.1` |
 | `bicubic`                          | Force bicubic filtering                                                               |
 | `blacklist`                        | Add a program to the blacklist. e.g `blacklist=vkcube,WatchDogs2.exe`                 |
-| `cellpadding_y`                    | Set the vertical cellpadding, default is `-0.085` |
+| `cellpadding_x`                    | Set the horizontal cellpadding, default is `0`                                        |
+| `cellpadding_y`                    | Set the vertical cellpadding, default is `-0.085`                                     |
 | `control=`                         | Sets up a unix socket with a specific name that can be connected to with mangohud-control.<br>I.e. `control=mangohud` or `control=mangohud-%p` (`%p` will be replaced by process id)    |
 | `core_load_change`                 | Change the colors of cpu core loads, uses the same data from `cpu_load_value` and `cpu_load_change` |
 | `core_load`                        | Display load & frequency per core                                                     |

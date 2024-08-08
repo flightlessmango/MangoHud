@@ -183,6 +183,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(cpu_load_color)              \
    OVERLAY_PARAM_CUSTOM(fps_value)                   \
    OVERLAY_PARAM_CUSTOM(fps_color)                   \
+   OVERLAY_PARAM_CUSTOM(cellpadding_x)               \
    OVERLAY_PARAM_CUSTOM(cellpadding_y)               \
    OVERLAY_PARAM_CUSTOM(table_columns)               \
    OVERLAY_PARAM_CUSTOM(blacklist)                   \
@@ -287,6 +288,7 @@ struct overlay_params {
    float font_size_text;
    float font_scale_media_player;
    float background_alpha, alpha;
+   float cellpadding_x;
    float cellpadding_y;
    std::vector<KeySym> toggle_hud;
    std::vector<KeySym> toggle_preset;
