@@ -164,6 +164,9 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
    currentLogData.gpu_load = gpu_info.load;
    currentLogData.gpu_temp = gpu_info.temp;
    currentLogData.gpu_core_clock = gpu_info.CoreClock;
+   currentLogData.gpu_nvdec_clock = gpu_info.NVDECClock;
+   currentLogData.gpu_nvenc_clock = gpu_info.NVENCClock;
+   currentLogData.gpu_vic_clock = gpu_info.VICClock;
    currentLogData.gpu_mem_clock = gpu_info.MemClock;
    currentLogData.gpu_vram_used = gpu_info.memoryUsed;
    currentLogData.gpu_power = gpu_info.powerUsage;
