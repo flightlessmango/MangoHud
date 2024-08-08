@@ -105,6 +105,7 @@ void HudElements::convert_colors(const struct overlay_params& params)
     style.Colors[ImGuiCol_PlotHistogram] = convert(params.frametime_color);
     style.Colors[ImGuiCol_WindowBg]  = convert(params.background_color);
     style.Colors[ImGuiCol_Text] = convert(params.text_color);
+    style.CellPadding.x = params.cellpadding_x * real_font_size.x;
     style.CellPadding.y = params.cellpadding_y * real_font_size.y;
     style.WindowRounding = params.round_corners;
 }

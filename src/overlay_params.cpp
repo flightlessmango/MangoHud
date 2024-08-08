@@ -464,6 +464,7 @@ parse_fps_metrics(const char *str){
 #define parse_alpha(s) parse_float(s)
 #define parse_permit_upload(s) parse_unsigned(s)
 #define parse_no_small_font(s) parse_unsigned(s) != 0
+#define parse_cellpadding_x(s) parse_float(s)
 #define parse_cellpadding_y(s) parse_float(s)
 #define parse_table_columns(s) parse_unsigned(s)
 #define parse_autostart_log(s) parse_unsigned(s)
@@ -771,6 +772,7 @@ static void set_param_defaults(struct overlay_params *params){
    params->benchmark_percentiles = { "97", "AVG"};
    params->gpu_load_value = { 60, 90 };
    params->cpu_load_value = { 60, 90 };
+   params->cellpadding_x = 0;
    params->cellpadding_y = -0.085;
    params->fps_color = { 0xb22222, 0xfdfd09, 0x39f900 };
    params->fps_value = { 30, 60 };
@@ -917,15 +919,17 @@ parse_overlay_config(struct overlay_params *params,
 
    //increase hud width if io read and write
    if (!params->width && !params->enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
-      params->width = params->font_size * params->font_scale * params->table_columns * 4.6;
+      const auto real_size = params->font_size * params->font_scale;
+
+      params->width = static_cast<uint>(((1.0 + params->cellpadding_x * 2.0) * 4.6) * real_size * params->table_columns);
 
       if ((params->enabled[OVERLAY_PARAM_ENABLED_io_read] || params->enabled[OVERLAY_PARAM_ENABLED_io_write])) {
-         params->width += 2 * params->font_size * params->font_scale;
+         params->width += 2 * real_size;
       }
 
       // Treat it like hud would need to be ~7 characters wider with default font.
       if (params->no_small_font)
-         params->width += 7 * params->font_size * params->font_scale;
+         params->width += 7 * real_size;
    }
 
    params->font_params_hash = get_hash(params->font_size,
