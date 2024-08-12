@@ -274,7 +274,7 @@ Some Linux native OpenGL games overrides LD_PRELOAD and stops MangoHud from work
 To enable mangohud with gamescope you need to install mangoapp.
 `gamescope --mangoapp %command%`
 
-Using normal mangohud with gamescope is not support.
+Using normal mangohud with gamescope is not supported.
 
 ## Hud configuration
 
