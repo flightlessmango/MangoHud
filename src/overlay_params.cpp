@@ -342,39 +342,8 @@ parse_path(const char *str)
 static std::vector<std::string>
 parse_benchmark_percentiles(const char *str)
 {
+   SPDLOG_INFO("benchmark_percetile is obsolete and will be removed. Use fps_metrics instead");
    std::vector<std::string> percentiles;
-   auto tokens = str_tokenize(str);
-   for (auto& value : tokens) {
-      trim(value);
-
-      if (value == "AVG") {
-         percentiles.push_back(value);
-         continue;
-      }
-
-      float as_float;
-      size_t float_len = 0;
-
-      try {
-         as_float = parse_float(value, &float_len);
-      } catch (const std::invalid_argument&) {
-         SPDLOG_ERROR("invalid benchmark percentile: '{}'", value);
-         continue;
-      }
-
-      if (float_len != value.length()) {
-         SPDLOG_ERROR("invalid benchmark percentile: '{}'", value);
-         continue;
-      }
-
-      if (as_float > 100 || as_float < 0) {
-         SPDLOG_ERROR("benchmark percentile is not between 0 and 100 ({})", value);
-         continue;
-      }
-
-      percentiles.push_back(value);
-   }
-
    return percentiles;
 }
 
