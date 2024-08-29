@@ -355,8 +355,8 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `font_glyph_ranges`                | Specify extra font glyph ranges, comma separated: `korean`, `chinese`, `chinese_simplified`, `japanese`, `cyrillic`, `thai`, `vietnamese`, `latin_ext_a`, `latin_ext_b`. If you experience crashes or text is just squares, reduce font size or glyph ranges |
 | `font_scale=`                      | Set global font scale. Default is `1.0`                                               |
 | `font_scale_media_player`          | Change size of media player text relative to `font_size`                              |
-| `font_size=`                       | Customizeable font size. Default is `24`                                              |
-| `font_size_text=`                  | Customizeable font size for other text like media metadata. Default is `24`           |
+| `font_size=`                       | Customizable font size. Default is `24`                                              |
+| `font_size_text=`                  | Customizable font size for other text like media metadata. Default is `24`           |
 | `fps_color_change`                 | Change the FPS text color depepending on the FPS value                                |
 | `fps_color=`                       | Choose the colors that the fps changes to when `fps_color_change` is enabled. Corresponds with fps_value. Default is `b22222,fdfd09,39f900`   |
 | `fps_limit_method`                 | If FPS limiter should wait before or after presenting a frame. Choose `late` (default) for the lowest latency or `early` for the smoothest frametimes |
@@ -424,7 +424,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `toggle_fps_limit`                 | Cycle between FPS limits (needs at least two values set with `fps_limit`). Defaults to `Shift_L+F1`                                    |
 | `toggle_preset`                    | Cycle between Presets. Defaults to `Shift_R+F10`                                      |
 | `toggle_hud=`<br>`toggle_logging=` | Modifiable toggle hotkeys. Default are `Shift_R+F12` and `Shift_L+F2`, respectively   |
-| `toggle_hud_position`              | Toggle MangoHud postion. Default is `R_Shift+F11`                                     |
+| `toggle_hud_position`              | Toggle MangoHud position. Default is `R_Shift+F11`                                     |
 | `trilinear`                        | Force trilinear filtering                                                             |
 | `upload_log`                       | Change keybind for uploading log                                                      |
 | `upload_logs`                      | Enables automatic uploads of logs to flightlessmango.com                              |
@@ -432,7 +432,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `vkbasalt`                         | Show if vkBasalt is on                                                                |
 | `vsync`<br> `gl_vsync`             | Set Vsync for OpenGL or Vulkan                                                        |
 | `vulkan_driver`                    | Display used Vulkan driver (radv/amdgpu-pro/amdvlk)                                   |
-| `width=`<br>`height=`              | Customizeable HUD dimensions (in pixels)                                              |
+| `width=`<br>`height=`              | Customizable HUD dimensions (in pixels)                                              |
 | `wine_color`                       | Change color of the wine/proton text                                                  |
 | `wine`                             | Show current Wine or Proton version in use                                            |
 | `winesync`                         | Show wine sync method in use                                                          |

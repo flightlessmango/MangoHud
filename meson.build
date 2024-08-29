@@ -244,7 +244,7 @@ spdlog_dep = dependency('spdlog', required: false)
 
 if get_option('use_system_spdlog').disabled() or not spdlog_dep.found()
     if get_option('use_system_spdlog').enabled()
-      warning('spdlog depedency not found follwing back to submodule')
+      warning('spdlog dependency not found following back to submodule')
     endif
     spdlog_sp = subproject('spdlog', default_options: spdlog_options)
     spdlog_dep = spdlog_sp.get_variable('spdlog_dep')
@@ -296,7 +296,7 @@ if get_option('tests').enabled()
 
 endif
 
-# install helper sripts
+# install helper scripts
 if get_option('mangoplot').enabled()
   subdir('bin')
 endif
