@@ -29,7 +29,7 @@
  *  \{
  */
 
-#ifdef __GLIBC__
+#if defined(__GLIBC__) && !defined(__riscv)
 # define ABS_ADDR(obj, ptr) (ptr)
 #else
 # define ABS_ADDR(obj, ptr) ((obj->addr) + (ptr))
