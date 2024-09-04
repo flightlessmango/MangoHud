@@ -58,9 +58,9 @@ class fpsMetrics {
                     if (!fps_stats.empty()) {
                         float sum = std::accumulate(fps_stats.begin(), fps_stats.end(), 0.0f,
                                                     [](float acc, const std::pair<uint64_t, float>& p) {
-                                                        return acc + p.second;
+                                                        return acc + 1000.f / p.second;
                                                     });
-                        it->value = sum / fps_stats.size();
+                        it->value = 1000.f / (sum / fps_stats.size());
                     }
                 } else {
                     try {
