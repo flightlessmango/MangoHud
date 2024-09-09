@@ -1547,6 +1547,7 @@ static VkResult overlay_CreateSwapchainKHR(
          else {
             SPDLOG_DEBUG("Present mode is not supported: {}", HUDElements.presentModeMap[HUDElements.cur_present_mode]);
             HUDElements.cur_present_mode = VK_PRESENT_MODE_FIFO_KHR;
+            createInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
          }
       }
    }
