@@ -10,7 +10,9 @@
 #include "mesa/util/os_time.h"
 #include "blacklist.h"
 #include "gl_hud.h"
+#ifdef HAVE_WAYLAND
 #include "wayland_hook.h"
+#endif
 
 using namespace MangoHud::GL;
 
@@ -92,6 +94,7 @@ EXPORT_C_(void*) eglGetPlatformDisplay( unsigned int platform, void* native_disp
     if (!pfn_eglGetPlatformDisplay)
         pfn_eglGetPlatformDisplay = reinterpret_cast<decltype(pfn_eglGetPlatformDisplay)>(get_egl_proc_address("eglGetPlatformDisplay"));
 
+#ifdef HAVE_WAYLAND
     if(platform == EGL_PLATFORM_WAYLAND_KHR)
     {
         wl_display_ptr = (struct wl_display*)native_display;
@@ -99,6 +102,7 @@ EXPORT_C_(void*) eglGetPlatformDisplay( unsigned int platform, void* native_disp
         wl_handle = real_dlopen("libwayland-client.so", RTLD_LAZY);
         init_wayland_data();
     }
+#endif
 
     return pfn_eglGetPlatformDisplay(platform, native_display, attrib_list);
 }
@@ -110,6 +114,7 @@ EXPORT_C_(void*) eglGetDisplay( void* native_display )
     if (!pfn_eglGetDisplay)
         pfn_eglGetDisplay = reinterpret_cast<decltype(pfn_eglGetDisplay)>(get_egl_proc_address("eglGetDisplay"));
 
+#ifdef HAVE_WAYLAND
     try
     {
         void** display_ptr = (void**)native_display;
@@ -125,6 +130,7 @@ EXPORT_C_(void*) eglGetDisplay( void* native_display )
     catch(...)
     {
     }
+#endif
 
     return pfn_eglGetDisplay(native_display);
 }
