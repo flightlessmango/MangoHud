@@ -34,6 +34,9 @@ struct gpuInfo{
     float memoryTotal;
     int MemClock;
     int CoreClock;
+    int NVDECClock;
+    int NVENCClock;
+    int VICClock;
     float powerUsage;
     float apu_cpu_power;
     int apu_cpu_temp;

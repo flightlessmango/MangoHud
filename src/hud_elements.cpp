@@ -297,6 +297,39 @@ void HudElements::gpu_stats(){
             HUDElements.TextColored(HUDElements.colors.text, "mV");
             ImGui::PopFont();
         }
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_nvdec_clock]){
+            ImGui::TableNextColumn();
+            ImGui::TextColored(HUDElements.colors.gpu, "%s", "NVDEC");
+            ImGui::TableNextColumn();
+            ImguiNextColumnOrNewRow();
+            right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.NVDECClock);
+            ImGui::SameLine(0, 1.0f);
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            ImGui::Text("MHz");
+            ImGui::PopFont();
+        }
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_nvenc_clock]){
+            ImGui::TableNextColumn();
+            ImGui::TextColored(HUDElements.colors.gpu, "%s", "NVENC");
+            ImGui::TableNextColumn();
+            ImguiNextColumnOrNewRow();
+            right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.NVENCClock);
+            ImGui::SameLine(0, 1.0f);
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            ImGui::Text("MHz");
+            ImGui::PopFont();
+        }
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_vic_clock]){
+            ImGui::TableNextColumn();
+            ImGui::TextColored(HUDElements.colors.gpu, "%s", "VIC");
+            ImGui::TableNextColumn();
+            ImguiNextColumnOrNewRow();
+            right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu_info.VICClock);
+            ImGui::SameLine(0, 1.0f);
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            ImGui::Text("MHz");
+            ImGui::PopFont();
+        }        
     }
 }
 
@@ -543,6 +576,22 @@ void HudElements::ram(){
             HUDElements.TextColored(HUDElements.colors.text, "GiB");
             ImGui::PopFont();
         }
+    }
+
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram_clock]){
+        ImguiNextColumnOrNewRow();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", memclock);
+        ImGui::SameLine(0, 1.0f);
+        ImGui::PushFont(HUDElements.sw_stats->font1);
+        ImGui::Text("MHz");
+        ImGui::PopFont();
+    }
+
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram_bandwidth]){
+        ImguiNextColumnOrNewRow();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", membandwidth);
+        ImGui::SameLine(0, 1.0f);
+        ImGui::TextColored(HUDElements.colors.text,"%%");
     }
 
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram] && HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_swap]){
@@ -1320,6 +1369,42 @@ void HudElements::graphs(){
         HUDElements.max = HUDElements.gpu_core_max;
         HUDElements.min = 0;
         HUDElements.TextColored(HUDElements.colors.engine, "%s", "GPU Core Clock");
+    }
+
+    if (value == "gpu_nvdec_clock"){
+        for (auto& it : graph_data){
+            arr.push_back(float(it.gpu_nvdec_clock));
+        }
+        if (int(arr.back()) > HUDElements.gpu_nvdec_max)
+            HUDElements.gpu_nvdec_max = arr.back();
+
+        HUDElements.max = HUDElements.gpu_nvdec_max;
+        HUDElements.min = 0;
+        ImGui::TextColored(HUDElements.colors.engine, "%s", "NVDEC Clock");
+    }
+
+    if (value == "gpu_nvenc_clock"){
+        for (auto& it : graph_data){
+            arr.push_back(float(it.gpu_nvenc_clock));
+        }
+        if (int(arr.back()) > HUDElements.gpu_nvenc_max)
+            HUDElements.gpu_nvenc_max = arr.back();
+
+        HUDElements.max = HUDElements.gpu_nvenc_max;
+        HUDElements.min = 0;
+        ImGui::TextColored(HUDElements.colors.engine, "%s", "NVENC Clock");
+    }
+
+    if (value == "gpu_vic_clock"){
+        for (auto& it : graph_data){
+            arr.push_back(float(it.gpu_vic_clock));
+        }
+        if (int(arr.back()) > HUDElements.gpu_vic_max)
+            HUDElements.gpu_vic_max = arr.back();
+
+        HUDElements.max = HUDElements.gpu_vic_max;
+        HUDElements.min = 0;
+        ImGui::TextColored(HUDElements.colors.engine, "%s", "VIC Clock");
     }
 
     if (value == "gpu_mem_clock"){
