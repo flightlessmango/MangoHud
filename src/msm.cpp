@@ -54,6 +54,32 @@ void MSM::find_fd() {
     }
 
     closedir(dir);
+
+    if (!fs::exists("/sys/class/devfreq/")) {
+        return;
+    }
+
+    fs::path path("/sys/class/devfreq/");
+    gpu_clock_path = "";
+    for (auto& p : fs::directory_iterator(path)) {
+        std::string fileName = p.path().filename();
+        if (fileName.find("gpu") != std::string::npos) {
+            gpu_clock_path = p.path();
+        }
+    }
+}
+
+uint16_t MSM::get_gpu_clock() {
+    if (gpu_clock_path.empty()){
+	    return 0;
+    }
+
+    std::ifstream input(gpu_clock_path + "/cur_freq");
+    std::string line;
+    if(std::getline(input,line)) {
+	    return stoi(line) / 1000000;
+    }
+    return 0;
 }
 
 void MSM::get_fdinfo() {
@@ -69,6 +95,7 @@ void MSM::get_fdinfo() {
             result = 100;
 
         gpu_info_msm.load = result;
+	    gpu_info_msm.CoreClock = get_gpu_clock();
         previous_gpu_time = gpu_time_now;
         previous_time = now;
     } else {
