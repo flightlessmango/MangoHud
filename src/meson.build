@@ -59,7 +59,10 @@ vklayer_files = files(
   'config.cpp',
   'gpu.cpp',
   'blacklist.cpp',
-  'file_utils.cpp'
+  'file_utils.cpp',
+  'nvidia.cpp',
+  'gpu_fdinfo.cpp',
+  'amdgpu.cpp'
 )
 
 opengl_files  = []
@@ -89,9 +92,6 @@ if is_unixy
     'battery.cpp',
     'control.cpp',
     'device.cpp',
-    'amdgpu.cpp',
-    'intel.cpp',
-    'msm.cpp',
     'net.cpp',
     'shell.cpp'
   )
@@ -115,7 +115,6 @@ if is_unixy
   if nvml_h_found
     pre_args += '-DHAVE_NVML'
     vklayer_files += files(
-      'nvml.cpp',
       'loaders/loader_nvml.cpp',
     )
   endif
@@ -133,8 +132,7 @@ if is_unixy
 
     pre_args += '-DHAVE_XNVCTRL'
     vklayer_files += files(
-      'loaders/loader_nvctrl.cpp',
-      'nvctrl.cpp',
+      'loaders/loader_nvctrl.cpp'
     )
   endif
 

@@ -3,7 +3,7 @@ project('MangoHud',
   version : 'v0.7.2',
   license : 'MIT',
   meson_version: '>=0.60.0',
-  default_options : ['buildtype=release', 'c_std=c99', 'cpp_std=c++14', 'warning_level=2']
+  default_options : ['buildtype=release', 'c_std=c99', 'cpp_std=c++17', 'warning_level=2']
 )
 
 cc = meson.get_compiler('c')
@@ -277,14 +277,11 @@ if get_option('tests').enabled()
   e = executable('amdgpu', 'tests/test_amdgpu.cpp',
     files(
       'src/amdgpu.cpp',
-      'src/cpu.cpp',
-      'src/gpu.cpp',
       'src/mesa/util/os_time.c',
       'src/file_utils.cpp',
     ),
     cpp_args: ['-DTEST_ONLY'],
     dependencies: [
-      dep_vulkan,
       cmocka_dep,
       spdlog_dep,
       implot_dep,

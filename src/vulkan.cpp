@@ -1859,7 +1859,6 @@ static VkResult overlay_CreateDevice(
       gpu = device_data->properties.deviceName;
       SPDLOG_DEBUG("gpu: {}", gpu);
 #endif
-      init_gpu_stats(device_data->properties.vendorID, device_data->properties.deviceID, device_data->instance->params);
    }
 
    return result;

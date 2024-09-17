@@ -12,6 +12,7 @@
 #include "net.h"
 #include "overlay_params.h"
 #include "shell.h"
+#include "gpu.h"
 
 struct Function {
     std::function<void()> run;  // Using std::function instead of a raw function pointer for more flexibility

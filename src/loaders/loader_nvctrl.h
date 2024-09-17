@@ -1,6 +1,7 @@
+#pragma once
 #ifndef LIBRARY_LOADER_NVCTRL_H
 #define LIBRARY_LOADER_NVCTRL_H
-#define Bool bool
+// #define Bool bool
 #include <X11/Xlib.h>
 #include "NVCtrl/NVCtrlLib.h"
 #define LIBRARY_LOADER_NVCTRL_H_DLOPEN

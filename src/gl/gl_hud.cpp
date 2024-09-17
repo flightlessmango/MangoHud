@@ -152,7 +152,6 @@ void imgui_create(void *ctx, const gl_wsi plat)
         glx_mesa_queryInteger(GLX_RENDERER_DEVICE_ID_MESA, &device_id);
 
     SPDLOG_DEBUG("GL device id: {:04X}", device_id);
-    init_gpu_stats(vendorID, device_id, params);
     sw_stats.gpuName = gpu = remove_parentheses(deviceName);
     SPDLOG_DEBUG("gpu: {}", gpu);
     // Setup Dear ImGui context

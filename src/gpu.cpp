@@ -4,198 +4,145 @@
 #include <functional>
 #include <thread>
 #include <cstring>
+#include <unistd.h>
+#include <fstream>
 #include <spdlog/spdlog.h>
-#ifdef HAVE_XNVCTRL
-#include "nvctrl.h"
-#endif
 #include "timing.hpp"
-#ifdef HAVE_NVML
-#include "nvidia_info.h"
-#endif
-
 #include "amdgpu.h"
 
+#include "file_utils.h"
 using namespace std::chrono_literals;
 
-struct gpuInfo gpu_info {};
-amdgpu_files amdgpu {};
+#include <iostream>
+#include <filesystem>
+#include <string>
+namespace fs = std::filesystem;
 
-bool checkNvidia(const char *pci_dev){
-    bool nvSuccess = false;
-#ifdef HAVE_NVML
-    nvSuccess = checkNVML(pci_dev) && getNVMLInfo({});
-#endif
-#ifdef HAVE_XNVCTRL
-    if (!nvSuccess)
-        nvSuccess = checkXNVCtrl();
-#endif
-#ifdef _WIN32
-    if (!nvSuccess)
-        nvSuccess = checkNVAPI();
-#endif
-    return nvSuccess;
-}
+GPUS::GPUS() {
+    std::vector<std::string> gpu_entries;
 
-void getNvidiaGpuInfo(const struct overlay_params& params){
-#ifdef HAVE_NVML
-    if (nvmlSuccess){
-        getNVMLInfo(params);
-        gpu_info.load = nvidiaUtilization.gpu;
-        gpu_info.temp = nvidiaTemp;
-        gpu_info.memoryUsed = nvidiaMemory.used / (1024.f * 1024.f * 1024.f);
-        gpu_info.CoreClock = nvidiaCoreClock;
-        gpu_info.MemClock = nvidiaMemClock;
-        gpu_info.powerUsage = nvidiaPowerUsage / 1000;
-        gpu_info.fan_rpm = false;
-        gpu_info.memoryTotal = nvidiaMemory.total / (1024.f * 1024.f * 1024.f);
-        gpu_info.fan_speed = nvidiaFanSpeed;
-        if (params.enabled[OVERLAY_PARAM_ENABLED_throttling_status]){
-            gpu_info.is_temp_throttled = (nvml_throttle_reasons & 0x0000000000000060LL) != 0;
-            gpu_info.is_power_throttled = (nvml_throttle_reasons & 0x000000000000008CLL) != 0;
-            gpu_info.is_other_throttled = (nvml_throttle_reasons & 0x0000000000000112LL) != 0;
-        }
-        #ifdef HAVE_XNVCTRL
-            static bool nvctrl_available = checkXNVCtrl();
-            if (nvctrl_available) {
-                gpu_info.fan_rpm = true;
-                gpu_info.fan_speed = getNvctrlFanSpeed();
+    // Collect all relevant GPU entries (e.g., card0, card1, etc.)
+    for (const auto& entry : fs::directory_iterator("/sys/class/drm")) {
+        if (entry.is_directory()) {
+            std::string node_name = entry.path().filename().string();
+
+            // Check if the directory is a GPU card (e.g., card0, card1, etc.)
+            if (node_name.find("card") == 0 && node_name.length() == 5 && isdigit(node_name[4])) {
+                gpu_entries.push_back(node_name);  // Store the card entry
             }
-        #endif
+        }
+    }
 
-        return;
+    // Sort the entries based on the numeric value of the card number
+    std::sort(gpu_entries.begin(), gpu_entries.end(), [](const std::string& a, const std::string& b) {
+        int num_a = std::stoi(a.substr(4));
+        int num_b = std::stoi(b.substr(4));
+        return num_a < num_b;
+    });
+
+    // Now process the sorted GPU entries
+    for (const auto& node_name : gpu_entries) {
+        uint32_t vendor_id = std::stoul(read_line("/sys/class/drm/" + node_name + "/device/vendor"), nullptr, 16);
+        uint32_t device_id = std::stoul(read_line("/sys/class/drm/" + node_name + "/device/device"), nullptr, 16);
+        const char* pci_dev = get_pci_device_address("/sys/class/drm/" + node_name).c_str();
+
+        std::shared_ptr<GPU> ptr = std::make_shared<GPU>(node_name, vendor_id, device_id, pci_dev);
+        available_gpus.emplace_back(ptr);
+
+        SPDLOG_DEBUG("GPU Found: node_name: {}, vendor_id: {:x} device_id: {:x} pci_dev: {}", node_name, vendor_id, device_id, pci_dev);
     }
-#endif
-#ifdef HAVE_XNVCTRL
-    if (nvctrlSuccess) {
-        getNvctrlInfo();
-        gpu_info.load = nvctrl_info.load;
-        gpu_info.temp = nvctrl_info.temp;
-        gpu_info.memoryUsed = nvctrl_info.memoryUsed / (1024.f);
-        gpu_info.CoreClock = nvctrl_info.CoreClock;
-        gpu_info.MemClock = nvctrl_info.MemClock;
-        gpu_info.powerUsage = 0;
-        gpu_info.memoryTotal = nvctrl_info.memoryTotal;
-        gpu_info.fan_rpm = true;
-        gpu_info.fan_speed = nvctrl_info.fan_speed;
-        return;
+
+    find_active_gpu();
+}
+
+std::string GPUS::get_pci_device_address(const std::string& drm_card_path) {
+    // Resolve the symbolic link to get the actual device path
+    fs::path device_path = fs::canonical(fs::path(drm_card_path) / "device");
+
+    // Convert the resolved device path to a string
+    std::string path_str = device_path.string();
+
+    // Extract the last PCI address from the path using a regular expression
+    // This regex matches typical PCI addresses like 0000:03:00.0
+    std::regex pci_address_regex(R"((\d{4}:\d{2}:\d{2}\.\d))");
+    std::smatch match;
+    std::string pci_address;
+
+    // Search for all matches and store the last one
+    auto it = std::sregex_iterator(path_str.begin(), path_str.end(), pci_address_regex);
+    auto end = std::sregex_iterator();
+    for (std::sregex_iterator i = it; i != end; ++i) {
+        pci_address = (*i).str();
     }
-#endif
-#ifdef _WIN32
-nvapi_util();
+
+    if (!pci_address.empty()) {
+        return pci_address;  // Return the last matched PCI address
+    } else {
+        SPDLOG_DEBUG("PCI address not found in the path: " + path_str);
+        return "";
+    }
+}
+
+void GPUS::find_active_gpu() {
+    pid_t pid = getpid();
+    std::string fdinfo_dir = "/proc/" + std::to_string(pid) + "/fdinfo/";
+    bool active_gpu_found = false;
+
+    for (const auto& entry : fs::directory_iterator(fdinfo_dir)) {
+        if (entry.is_regular_file()) {
+            std::ifstream file(entry.path());
+            std::string line;
+            std::string drm_pdev;
+            bool has_drm_driver = false;
+            bool has_drm_engine_gfx = false;
+
+            while (std::getline(file, line)) {
+                if (line.find("drm-driver:") != std::string::npos) {
+                    has_drm_driver = true;
+                }
+                if (line.find("drm-pdev:") != std::string::npos) {
+                    drm_pdev = line.substr(line.find(":") + 1);
+                    drm_pdev.erase(0, drm_pdev.find_first_not_of(" \t"));
+                }
+                if (line.find("drm-engine-gfx:") != std::string::npos) {
+                    uint64_t gfx_time = std::stoull(line.substr(line.find(":") + 1));
+                    if (gfx_time > 0) {
+                        has_drm_engine_gfx = true;
+                    }
+                }
+            }
+
+            if (has_drm_driver && has_drm_engine_gfx) {
+                for (const auto& gpu : available_gpus) {
+                    if (gpu->pci_dev == drm_pdev) {
+                        gpu->is_active = true;
+                        SPDLOG_DEBUG("Active GPU Found: node_name: {}, pci_dev: {}", gpu->name, gpu->pci_dev);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    // NVIDIA GPUs will not show up in fdinfo so we use NVML instead to find the active GPU
+    // This will not work for older NVIDIA GPUs
+#ifdef HAVE_NVML
+    if (!active_gpu_found) {
+        for (const auto& gpu : available_gpus) {
+            // NVIDIA vendor ID is 0x10de
+            if (gpu->vendor_id == 0x10de) { 
+                for (auto& pid : gpu->nvidia_pids()) {
+                    if (pid == getpid()) {
+                        gpu->is_active = true;
+                        SPDLOG_DEBUG("Active GPU Found: node_name: {}, pci_dev: {}", gpu->name, gpu->pci_dev);
+                        return;
+                    }
+                }
+
+            }
+        }
+    }
 #endif
 }
 
-void getAmdGpuInfo(){
-#ifdef __linux__
-    int64_t value = 0;
-    if (metrics_path.empty()){
-        if (amdgpu.busy) {
-            rewind(amdgpu.busy);
-            fflush(amdgpu.busy);
-            int value = 0;
-            if (fscanf(amdgpu.busy, "%d", &value) != 1)
-                value = 0;
-            gpu_info.load = value;
-        }
-
-        if (amdgpu.memory_clock) {
-            rewind(amdgpu.memory_clock);
-            fflush(amdgpu.memory_clock);
-            if (fscanf(amdgpu.memory_clock, "%" PRId64, &value) != 1)
-                value = 0;
-
-            gpu_info.MemClock = value / 1000000;
-        }
-
-        // TODO: on some gpus this will use the power1_input instead
-        // this value is instantaneous and should be averaged over time
-        // probably just average everything in this function to be safe
-        if (amdgpu.power_usage) {
-            rewind(amdgpu.power_usage);
-            fflush(amdgpu.power_usage);
-            if (fscanf(amdgpu.power_usage, "%" PRId64, &value) != 1)
-                value = 0;
-
-            gpu_info.powerUsage = value / 1000000;
-        }
-    }
-
-    if (amdgpu.fan) {
-        rewind(amdgpu.fan);
-        fflush(amdgpu.fan);
-        if (fscanf(amdgpu.fan, "%" PRId64, &value) != 1)
-            value = 0;
-        gpu_info.fan_speed = value;
-        gpu_info.fan_rpm = true;
-    }
-
-    if (amdgpu.vram_total) {
-        rewind(amdgpu.vram_total);
-        fflush(amdgpu.vram_total);
-        if (fscanf(amdgpu.vram_total, "%" PRId64, &value) != 1)
-            value = 0;
-        gpu_info.memoryTotal = float(value) / (1024 * 1024 * 1024);
-    }
-
-    if (amdgpu.vram_used) {
-        rewind(amdgpu.vram_used);
-        fflush(amdgpu.vram_used);
-        if (fscanf(amdgpu.vram_used, "%" PRId64, &value) != 1)
-            value = 0;
-        gpu_info.memoryUsed = float(value) / (1024 * 1024 * 1024);
-    }
-    // On some GPUs SMU can sometimes return the wrong temperature.
-    // As HWMON is way more visible than the SMU metrics, let's always trust it as it is the most likely to work
-    if (amdgpu.core_clock) {
-        rewind(amdgpu.core_clock);
-        fflush(amdgpu.core_clock);
-        if (fscanf(amdgpu.core_clock, "%" PRId64, &value) != 1)
-            value = 0;
-
-        gpu_info.CoreClock = value / 1000000;
-    }
-
-    if (amdgpu.temp){
-        rewind(amdgpu.temp);
-        fflush(amdgpu.temp);
-        int value = 0;
-        if (fscanf(amdgpu.temp, "%d", &value) != 1)
-            value = 0;
-        gpu_info.temp = value / 1000;
-    }
-
-    if (amdgpu.junction_temp){
-        rewind(amdgpu.junction_temp);
-        fflush(amdgpu.junction_temp);
-        int value = 0;
-        if (fscanf(amdgpu.junction_temp, "%d", &value) != 1)
-            value = 0;
-        gpu_info.junction_temp = value / 1000;
-    }
-
-    if (amdgpu.memory_temp){
-        rewind(amdgpu.memory_temp);
-        fflush(amdgpu.memory_temp);
-        int value = 0;
-        if (fscanf(amdgpu.memory_temp, "%d", &value) != 1)
-            value = 0;
-        gpu_info.memory_temp = value / 1000;
-    }
-
-    if (amdgpu.gtt_used) {
-        rewind(amdgpu.gtt_used);
-        fflush(amdgpu.gtt_used);
-        if (fscanf(amdgpu.gtt_used, "%" PRId64, &value) != 1)
-            value = 0;
-        gpu_info.gtt_used = float(value) / (1024 * 1024 * 1024);
-    }
-
-    if (amdgpu.gpu_voltage_soc) {
-        rewind(amdgpu.gpu_voltage_soc);
-        fflush(amdgpu.gpu_voltage_soc);
-        if (fscanf(amdgpu.gpu_voltage_soc, "%" PRId64, &value) != 1)
-            value = 0;
-        gpu_info.voltage = value;
-    }
-#endif
-}
+std::unique_ptr<GPUS> gpus = nullptr;

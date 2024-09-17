@@ -1,6 +1,5 @@
 #include <windows.h>
 #include <iostream>
-#include "nvidia_info.h"
 #include "gpu.h"
 
 // magic numbers, do not change them
@@ -62,6 +61,8 @@ void nvapi_util()
     gpuUsages[0] = (NVAPI_MAX_USAGES_PER_GPU * 4) | 0x10000;
     (*NvAPI_EnumPhysicalGPUs)(gpuHandles, &gpuCount);
     (*NvAPI_GPU_GetUsages)(gpuHandles[0], gpuUsages);
-    gpu_info.load = gpuUsages[3];
+    // TODO: create a GPU class for nvapi
+    // otherwise we can't display information
+    // gpu_info.load = gpuUsages[3];
 
 }

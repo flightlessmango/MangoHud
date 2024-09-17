@@ -281,16 +281,21 @@ bool CPUStats::ReadcpuTempFile(int& temp) {
 }
 
 bool CPUStats::UpdateCpuTemp() {
-	if (cpu_type == "APU"){
-        m_cpuDataTotal.temp = gpu_info.apu_cpu_temp;
-        return true;
+    if (gpus){
+        for (auto gpu : gpus->available_gpus)
+            if (gpu->is_apu()) {
+                m_cpuDataTotal.temp = gpu->metrics.apu_cpu_temp;
+                return true;
+            }
     } else {
         int temp = 0;
-		bool ret = ReadcpuTempFile(temp);
-		m_cpuDataTotal.temp = temp;
+        bool ret = ReadcpuTempFile(temp);
+        m_cpuDataTotal.temp = temp;
 
         return ret;
     }
+
+    return false;
 }
 
 static bool get_cpu_power_k10temp(CPUPowerData* cpuPowerData, float& power) {
@@ -419,8 +424,14 @@ static bool get_cpu_power_rapl(CPUPowerData* cpuPowerData, float& power) {
 }
 
 static bool get_cpu_power_amdgpu(float& power) {
-    power = gpu_info.apu_cpu_power;
-    return true;
+    if (gpus)
+        for (auto gpu : gpus->available_gpus)
+            if (gpu->is_apu()) {
+                power = gpu->metrics.apu_cpu_power;
+                return true;
+            }
+
+    return false;
 }
 
 bool CPUStats::UpdateCpuPower() {

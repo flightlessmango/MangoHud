@@ -345,7 +345,6 @@ int main(int, char**)
     }
 
     HUDElements.vendorID = vendorID;
-    init_gpu_stats(vendorID, 0, params);
     init_system_info();
     sw_stats.engine = EngineTypes::GAMESCOPE;
     std::thread(msg_read_thread).detach();
@@ -364,10 +363,9 @@ int main(int, char**)
                 XChangeProperty(x11_display, x11_window, overlay_atom, XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&value, 1);
                 XSync(x11_display, 0);
                 mangoapp_paused = false;
-                {
-                    amdgpu_run_thread = true;
-                    amdgpu_c.notify_one();
-                }
+                // resume all GPU threads
+                for (auto gpu : gpus->available_gpus)
+                    gpu->resume();
             }
             {
                 std::unique_lock<std::mutex> lk(mangoapp_m);
@@ -407,10 +405,10 @@ int main(int, char**)
             XChangeProperty(x11_display, x11_window, overlay_atom, XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&value, 1);
             XSync(x11_display, 0);
             mangoapp_paused = true;
-            {
-                amdgpu_run_thread = false;
-                amdgpu_c.notify_one();
-            }
+            // pause all GPUs threads
+            for (auto gpu : gpus->available_gpus)
+                gpu->pause();
+
             std::unique_lock<std::mutex> lk(mangoapp_m);
             mangoapp_cv.wait(lk, []{return !params.no_display;});
         }

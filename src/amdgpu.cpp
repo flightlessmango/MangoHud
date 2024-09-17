@@ -11,15 +11,7 @@
 #include "logging.h"
 #include "mesa/util/macros.h"
 
-std::string metrics_path = "";
-struct amdgpu_common_metrics amdgpu_common_metrics;
-std::mutex amdgpu_common_metrics_m;
-std::mutex amdgpu_m;
-std::condition_variable amdgpu_c;
-bool amdgpu_run_thread = true;
-std::unique_ptr<Throttling> throttling;
-
-bool amdgpu_verify_metrics(const std::string& path)
+bool AMDGPU::verify_metrics(const std::string& path)
 {
 	metrics_table_header header {};
 	FILE *f;
@@ -40,12 +32,13 @@ bool amdgpu_verify_metrics(const std::string& path)
 		case 1: // v1_1, v1_2, v1_3
 			if(header.content_revision<=0 || header.content_revision>3)// v1_0, not naturally aligned
 				break;
-			cpuStats.cpu_type = "GPU";
+
 			return true;
 		case 2: // v2_1, v2_2, v2_3, v2_4
 			if(header.content_revision<=0 || header.content_revision>4)// v2_0, not naturally aligned
 				break;
-			cpuStats.cpu_type = "APU";
+
+			this->is_apu = true;
 			return true;
 		default:
 			break;
@@ -56,18 +49,18 @@ bool amdgpu_verify_metrics(const std::string& path)
 }
 
 #define IS_VALID_METRIC(FIELD) (FIELD != 0xffff)
-void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
+void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	FILE *f;
 	void *buf[MAX(sizeof(struct gpu_metrics_v1_3), sizeof(struct gpu_metrics_v2_4))/sizeof(void*)+1];
 	struct metrics_table_header* header = (metrics_table_header*)buf;
 
-	f = fopen(metrics_path.c_str(), "rb");
+	f = fopen(gpu_metrics_path.c_str(), "rb");
 	if (!f)
 		return;
 
 	// Read the whole file
 	if (fread(buf, sizeof(buf), 1, f) != 0) {
-		SPDLOG_DEBUG("amdgpu metrics file '{}' is larger than the buffer", metrics_path.c_str());
+		SPDLOG_DEBUG("amdgpu metrics file '{}' is larger than the buffer", gpu_metrics_path.c_str());
 		fclose(f);
 		return;
 	}
@@ -105,42 +98,7 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 			do metrics->average_cpu_power_w = metrics->average_cpu_power_w + amdgpu_metrics->average_core_power[i] / 1000.f;
 			while (++i < ARRAY_SIZE(amdgpu_metrics->average_core_power) && IS_VALID_METRIC(amdgpu_metrics->average_core_power[i]));
 		} else if( IS_VALID_METRIC(amdgpu_metrics->average_socket_power) && IS_VALID_METRIC(amdgpu_metrics->average_gfx_power) ) {
-			// fallback 2: estimate cpu power from total socket power
-			metrics->average_cpu_power_w = amdgpu_metrics->average_socket_power / 1000.f - amdgpu_metrics->average_gfx_power / 1000.f;
-		} else {
-			// giving up
-			metrics->average_cpu_power_w = 0;
-		}
-
-		if( IS_VALID_METRIC(amdgpu_metrics->current_gfxclk) ) {
-			// prefered method
-			metrics->current_gfxclk_mhz = amdgpu_metrics->current_gfxclk;
-		} else if( IS_VALID_METRIC(amdgpu_metrics->average_gfxclk_frequency) ) {
-			// fallback 1
-			metrics->current_gfxclk_mhz = amdgpu_metrics->average_gfxclk_frequency;
-		} else {
-			// giving up
-			metrics->current_gfxclk_mhz = 0;
-		}
-		if( IS_VALID_METRIC(amdgpu_metrics->current_uclk) ) {
-			// prefered method
-			metrics->current_uclk_mhz = amdgpu_metrics->current_uclk;
-		} else if( IS_VALID_METRIC(amdgpu_metrics->average_uclk_frequency) ) {
-			// fallback 1
-			metrics->current_uclk_mhz = amdgpu_metrics->average_uclk_frequency;
-		} else {
-			// giving up
-			metrics->current_uclk_mhz = 0;
-		}
-
-		if( IS_VALID_METRIC(amdgpu_metrics->temperature_soc) ) {
-			// prefered method
-			metrics->soc_temp_c = amdgpu_metrics->temperature_soc / 100;
-		} else if( header->content_revision >= 3 && IS_VALID_METRIC(amdgpu_metrics->average_temperature_soc) ) {
-			// fallback 1
-			metrics->soc_temp_c = amdgpu_metrics->average_temperature_soc / 100;
-		} else {
-			// giving up
+			// fallback 2: estimate cpu power frostd::string pci_dev, uint32_t deviceID, uint32_t vendorID
 			metrics->soc_temp_c = 0;
 		}
 		if( IS_VALID_METRIC(amdgpu_metrics->temperature_gfx) ) {
@@ -167,9 +125,11 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 			do cpu_temp = MAX(cpu_temp, amdgpu_metrics->average_temperature_core[i]);
 			while (++i < ARRAY_SIZE(amdgpu_metrics->average_temperature_core) && IS_VALID_METRIC(amdgpu_metrics->average_temperature_core[i]));
 			metrics->apu_cpu_temp_c = cpu_temp / 100;
+#ifdef DETECT_OS_UNIX
 		} else if( cpuStats.ReadcpuTempFile(cpu_temp) ) {
 			// fallback 2: Try temp from file 'm_cpuTempFile' of 'cpu.cpp'
 			metrics->apu_cpu_temp_c = cpu_temp;
+#endif
 		} else {
 			// giving up
 			metrics->apu_cpu_temp_c = 0;
@@ -189,10 +149,12 @@ void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		throttling->indep_throttle_status = indep_throttle_status;
 }
 
-void amdgpu_get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT], bool &gpu_load_needs_dividing) {
+void AMDGPU::get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT], bool &gpu_load_needs_dividing) {
+	while (!stop_thread) {
 		// Get all the samples
 		for (size_t cur_sample_id=0; cur_sample_id < METRICS_SAMPLE_COUNT; cur_sample_id++) {
-			amdgpu_get_instant_metrics(&metrics_buffer[cur_sample_id]);
+			if (gpu_metrics_is_valid)
+				get_instant_metrics(&metrics_buffer[cur_sample_id]);
 
 			// Detect and fix if the gpu load is reported in centipercent
 			if (gpu_load_needs_dividing || metrics_buffer[cur_sample_id].gpu_load_percent > 100){
@@ -203,34 +165,65 @@ void amdgpu_get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[MET
 			usleep(METRICS_POLLING_PERIOD_MS * 1000);
 		}
 
-		// Copy the results from the different metrics to amdgpu_common_metrics
-		amdgpu_common_metrics_m.lock();
-		UPDATE_METRIC_AVERAGE(gpu_load_percent);
-		UPDATE_METRIC_AVERAGE_FLOAT(average_gfx_power_w);
-		UPDATE_METRIC_AVERAGE_FLOAT(average_cpu_power_w);
+		if (stop_thread) break;
 
-		UPDATE_METRIC_AVERAGE(current_gfxclk_mhz);
-		UPDATE_METRIC_AVERAGE(current_uclk_mhz);
+        std::unique_lock<std::mutex> lock(metrics_mutex);
+        cond_var.wait(lock, [this]() { return !paused || stop_thread; });
+		// do one pass of metrics from sysfs nodes
+		// then we replace with GPU metrics if it's available
+		get_sysfs_metrics();
 
-		UPDATE_METRIC_AVERAGE(soc_temp_c);
-		UPDATE_METRIC_AVERAGE(gpu_temp_c);
-		UPDATE_METRIC_AVERAGE(apu_cpu_temp_c);
+		if (gpu_metrics_is_valid) {
+			UPDATE_METRIC_AVERAGE(gpu_load_percent);
+			UPDATE_METRIC_AVERAGE_FLOAT(average_gfx_power_w);
+			UPDATE_METRIC_AVERAGE_FLOAT(average_cpu_power_w);
 
-		UPDATE_METRIC_MAX(is_power_throttled);
-		UPDATE_METRIC_MAX(is_current_throttled);
-		UPDATE_METRIC_MAX(is_temp_throttled);
-		UPDATE_METRIC_MAX(is_other_throttled);
+			UPDATE_METRIC_AVERAGE(current_gfxclk_mhz);
+			UPDATE_METRIC_AVERAGE(current_uclk_mhz);
 
-		UPDATE_METRIC_MAX(fan_speed);
-		amdgpu_common_metrics_m.unlock();
+			UPDATE_METRIC_AVERAGE(soc_temp_c);
+			UPDATE_METRIC_AVERAGE(gpu_temp_c);
+			UPDATE_METRIC_AVERAGE(apu_cpu_temp_c);
+
+			UPDATE_METRIC_MAX(is_power_throttled);
+			UPDATE_METRIC_MAX(is_current_throttled);
+			UPDATE_METRIC_MAX(is_temp_throttled);
+			UPDATE_METRIC_MAX(is_other_throttled);
+
+			UPDATE_METRIC_MAX(fan_speed);
+			metrics.fan_rpm = true;
+
+			metrics.load = amdgpu_common_metrics.gpu_load_percent;
+			metrics.powerUsage = amdgpu_common_metrics.average_gfx_power_w;
+			metrics.MemClock = amdgpu_common_metrics.current_uclk_mhz;
+
+			// Use hwmon instead, see gpu.cpp
+			if ( device_id == 0x1435 || device_id == 0x163f )
+			{
+				// If we are on VANGOGH (Steam Deck), then
+				// always use core clock from GPU metrics.
+				metrics.CoreClock = amdgpu_common_metrics.current_gfxclk_mhz;
+			}
+			metrics.temp = amdgpu_common_metrics.gpu_temp_c;
+			metrics.apu_cpu_power = amdgpu_common_metrics.average_cpu_power_w;
+			metrics.apu_cpu_temp = amdgpu_common_metrics.apu_cpu_temp_c;
+
+			metrics.is_power_throttled = amdgpu_common_metrics.is_power_throttled;
+			metrics.is_current_throttled = amdgpu_common_metrics.is_current_throttled;
+			metrics.is_temp_throttled = amdgpu_common_metrics.is_temp_throttled;
+			metrics.is_other_throttled = amdgpu_common_metrics.is_other_throttled;
+
+			metrics.fan_speed = amdgpu_common_metrics.fan_speed;
+		}
+	}
 }
 
-void amdgpu_metrics_polling_thread() {
+void AMDGPU::metrics_polling_thread() {
 	struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT];
 	bool gpu_load_needs_dividing = false;  //some GPUs report load as centipercent
 
 	// Initial poll of the metrics, so that we have values to display as fast as possible
-	amdgpu_get_instant_metrics(&amdgpu_common_metrics);
+	get_instant_metrics(&amdgpu_common_metrics);
 	if (amdgpu_common_metrics.gpu_load_percent > 100){
 		gpu_load_needs_dividing = true;
 		amdgpu_common_metrics.gpu_load_percent /= 100;
@@ -240,48 +233,156 @@ void amdgpu_metrics_polling_thread() {
 	memset(metrics_buffer, 0, sizeof(metrics_buffer));
 
 	while (1) {
-		std::unique_lock<std::mutex> lock(amdgpu_m);
-		amdgpu_c.wait(lock, []{return amdgpu_run_thread;});
-		lock.unlock();
 #ifndef TEST_ONLY
 		if (HUDElements.params->no_display && !logger->is_active())
 			usleep(100000);
 		else
 #endif
-			amdgpu_get_samples_and_copy(metrics_buffer, gpu_load_needs_dividing);
+			get_samples_and_copy(metrics_buffer, gpu_load_needs_dividing);
 	}
 }
 
-void amdgpu_get_metrics(uint32_t deviceID){
-	static bool init = false;
-	if (!init){
-		std::thread(amdgpu_metrics_polling_thread).detach();
-		init = true;
+void AMDGPU::get_sysfs_metrics() {
+    int64_t value = 0;
+	if (sysfs_nodes.busy) {
+		rewind(sysfs_nodes.busy);
+		fflush(sysfs_nodes.busy);
+		int value = 0;
+		if (fscanf(sysfs_nodes.busy, "%d", &value) != 1)
+			value = 0;
+		metrics.load = value;
 	}
 
-	amdgpu_common_metrics_m.lock();
-	gpu_info.load = amdgpu_common_metrics.gpu_load_percent;
+	if (sysfs_nodes.memory_clock) {
+		rewind(sysfs_nodes.memory_clock);
+		fflush(sysfs_nodes.memory_clock);
+		if (fscanf(sysfs_nodes.memory_clock, "%" PRId64, &value) != 1)
+			value = 0;
 
-	gpu_info.powerUsage = amdgpu_common_metrics.average_gfx_power_w;
-	gpu_info.MemClock = amdgpu_common_metrics.current_uclk_mhz;
-
-	// Use hwmon instead, see gpu.cpp
-	if ( deviceID == 0x1435 || deviceID == 0x163f )
-	{
-		// If we are on VANGOGH (Steam Deck), then
-		// always use use core clock from GPU metrics.
-		gpu_info.CoreClock = amdgpu_common_metrics.current_gfxclk_mhz;
+		metrics.MemClock = value / 1000000;
 	}
-	// gpu_info.temp = amdgpu_common_metrics.gpu_temp_c;
-	gpu_info.apu_cpu_power = amdgpu_common_metrics.average_cpu_power_w;
-	gpu_info.apu_cpu_temp = amdgpu_common_metrics.apu_cpu_temp_c;
 
-	gpu_info.is_power_throttled = amdgpu_common_metrics.is_power_throttled;
-	gpu_info.is_current_throttled = amdgpu_common_metrics.is_current_throttled;
-	gpu_info.is_temp_throttled = amdgpu_common_metrics.is_temp_throttled;
-	gpu_info.is_other_throttled = amdgpu_common_metrics.is_other_throttled;
+	// TODO: on some gpus this will use the power1_input instead
+	// this value is instantaneous and should be averaged over time
+	// probably just average everything in this function to be safe
+	if (sysfs_nodes.power_usage) {
+		rewind(sysfs_nodes.power_usage);
+		fflush(sysfs_nodes.power_usage);
+		if (fscanf(sysfs_nodes.power_usage, "%" PRId64, &value) != 1)
+			value = 0;
 
-	gpu_info.fan_speed = amdgpu_common_metrics.fan_speed;
+		metrics.powerUsage = value / 1000000;
+	}
 
-	amdgpu_common_metrics_m.unlock();
+	if (sysfs_nodes.fan) {
+		rewind(sysfs_nodes.fan);
+		fflush(sysfs_nodes.fan);
+		if (fscanf(sysfs_nodes.fan, "%" PRId64, &value) != 1)
+			value = 0;
+		metrics.fan_speed = value;
+		metrics.fan_rpm = true;
+	}
+
+	if (sysfs_nodes.vram_total) {
+		rewind(sysfs_nodes.vram_total);
+		fflush(sysfs_nodes.vram_total);
+		if (fscanf(sysfs_nodes.vram_total, "%" PRId64, &value) != 1)
+			value = 0;
+		metrics.memoryTotal = float(value) / (1024 * 1024 * 1024);
+	}
+
+	if (sysfs_nodes.vram_used) {
+		rewind(sysfs_nodes.vram_used);
+		fflush(sysfs_nodes.vram_used);
+		if (fscanf(sysfs_nodes.vram_used, "%" PRId64, &value) != 1)
+			value = 0;
+		metrics.memoryUsed = float(value) / (1024 * 1024 * 1024);
+	}
+	// On some GPUs SMU can sometimes return the wrong temperature.
+	// As HWMON is way more visible than the SMU metrics, let's always trust it as it is the most likely to work
+	if (sysfs_nodes.core_clock) {
+		rewind(sysfs_nodes.core_clock);
+		fflush(sysfs_nodes.core_clock);
+		if (fscanf(sysfs_nodes.core_clock, "%" PRId64, &value) != 1)
+			value = 0;
+
+		metrics.CoreClock = value / 1000000;
+	}
+
+	if (sysfs_nodes.temp){
+		rewind(sysfs_nodes.temp);
+		fflush(sysfs_nodes.temp);
+		int value = 0;
+		if (fscanf(sysfs_nodes.temp, "%d", &value) != 1)
+			value = 0;
+		metrics.temp = value / 1000;
+	}
+
+	if (sysfs_nodes.junction_temp){
+		rewind(sysfs_nodes.junction_temp);
+		fflush(sysfs_nodes.junction_temp);
+		int value = 0;
+		if (fscanf(sysfs_nodes.junction_temp, "%d", &value) != 1)
+			value = 0;
+		metrics.junction_temp = value / 1000;
+	}
+
+	if (sysfs_nodes.memory_temp){
+		rewind(sysfs_nodes.memory_temp);
+		fflush(sysfs_nodes.memory_temp);
+		int value = 0;
+		if (fscanf(sysfs_nodes.memory_temp, "%d", &value) != 1)
+			value = 0;
+		metrics.memory_temp = value / 1000;
+	}
+
+	if (sysfs_nodes.gtt_used) {
+		rewind(sysfs_nodes.gtt_used);
+		fflush(sysfs_nodes.gtt_used);
+		if (fscanf(sysfs_nodes.gtt_used, "%" PRId64, &value) != 1)
+			value = 0;
+		metrics.gtt_used = float(value) / (1024 * 1024 * 1024);
+	}
+
+	if (sysfs_nodes.gpu_voltage_soc) {
+		rewind(sysfs_nodes.gpu_voltage_soc);
+		fflush(sysfs_nodes.gpu_voltage_soc);
+		if (fscanf(sysfs_nodes.gpu_voltage_soc, "%" PRId64, &value) != 1)
+			value = 0;
+		metrics.voltage = value;
+	}
+}
+
+AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id) {
+	this->pci_dev = pci_dev;
+	this->device_id = device_id;
+	this->vendor_id = vendor_id;
+	const std::string device_path = "/sys/bus/pci/devices/" + pci_dev;
+	gpu_metrics_path = device_path + "/gpu_metrics";
+	gpu_metrics_is_valid = verify_metrics(gpu_metrics_path);
+
+	sysfs_nodes.busy = fopen((device_path + "/gpu_busy_percent").c_str(), "r");
+	sysfs_nodes.vram_total = fopen((device_path + "/mem_info_vram_total").c_str(), "r");
+	sysfs_nodes.vram_used = fopen((device_path + "/mem_info_vram_used").c_str(), "r");
+	sysfs_nodes.gtt_used = fopen((device_path + "/mem_info_gtt_used").c_str(), "r");
+
+	const std::string hwmon_path = device_path + "/hwmon/";
+	if (fs::exists(hwmon_path)){
+		const auto dirs = ls(hwmon_path.c_str(), "hwmon", LS_DIRS);
+		for (const auto& dir : dirs) {
+			sysfs_nodes.temp = fopen((hwmon_path + dir + "/temp1_input").c_str(), "r");
+			sysfs_nodes.junction_temp = fopen((hwmon_path + dir + "/temp2_input").c_str(), "r");
+			sysfs_nodes.memory_temp = fopen((hwmon_path + dir + "/temp3_input").c_str(), "r");
+			sysfs_nodes.core_clock = fopen((hwmon_path + dir + "/freq1_input").c_str(), "r");
+			sysfs_nodes.gpu_voltage_soc = fopen((hwmon_path + dir + "/in0_input").c_str(), "r");
+			sysfs_nodes.memory_clock = fopen((hwmon_path + dir + "/freq2_input").c_str(), "r");
+			sysfs_nodes.power_usage = fopen((hwmon_path + dir + "/power1_average").c_str(), "r");
+			sysfs_nodes.power_usage = fopen((hwmon_path + dir + "/power1_input").c_str(), "r");
+			sysfs_nodes.fan = fopen((hwmon_path + dir + "/fan1_input").c_str(), "r");
+		}
+	}
+
+	throttling = std::make_shared<Throttling>(0x1002);
+	std::thread thread(&AMDGPU::metrics_polling_thread, this);
+	thread.detach();
 }
