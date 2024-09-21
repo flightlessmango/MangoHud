@@ -974,7 +974,10 @@ void HudElements::_exec(){
     ImguiNextColumnFirstItem();
     for (auto& item : HUDElements.exec_list){
         if (item.pos == HUDElements.place){
-            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", item.ret.c_str());
+            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
+                HUDElements.TextColored(HUDElements.colors.text, "%s",item.ret.c_str());
+            else
+                right_aligned_text(HUDElements.colors.text,HUDElements.ralign_width, "%s", item.ret.c_str());
         }
     }
     ImGui::PopFont();
@@ -1121,7 +1124,7 @@ void HudElements::gamescope_frame_timing(){
                                         HUDElements.gamescope_debug_app.end());
             auto max = std::max_element(HUDElements.gamescope_debug_app.begin(),
                                         HUDElements.gamescope_debug_app.end());
-            
+
             ImGui::PushFont(HUDElements.sw_stats->font1);
             ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
             HUDElements.TextColored(HUDElements.colors.engine, "%s", "App");
