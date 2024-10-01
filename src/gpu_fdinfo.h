@@ -21,8 +21,8 @@ class GPU_fdinfo {
         void find_fd();
         std::thread thread;
         std::condition_variable cond_var;
-        std::atomic<bool> stop_thread = false;
-        std::atomic<bool> paused = false;
+        std::atomic<bool> stop_thread{false};
+        std::atomic<bool> paused{false};
         mutable std::mutex metrics_mutex;
 
         uint64_t get_gpu_time();

@@ -315,8 +315,8 @@ class AMDGPU {
 		struct amdgpu_files sysfs_nodes;
 		bool gpu_metrics_is_valid = false;
 		std::condition_variable cond_var;
-		std::atomic<bool> stop_thread = false;
-        std::atomic<bool> paused = false;
+		std::atomic<bool> stop_thread{false};
+        std::atomic<bool> paused{false};
 		std::mutex metrics_mutex;
 		gpu_metrics metrics;
 		struct amdgpu_common_metrics amdgpu_common_metrics;

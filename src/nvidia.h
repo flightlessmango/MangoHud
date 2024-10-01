@@ -58,8 +58,8 @@ class NVIDIA {
         gpu_metrics metrics;
         std::thread thread;
         std::condition_variable cond_var;
-        std::atomic<bool> stop_thread = false;
-        std::atomic<bool> paused = false;
+        std::atomic<bool> stop_thread{false};
+        std::atomic<bool> paused{false};
 #if defined(HAVE_XNVCTRL) && defined(HAVE_X11)
         void get_instant_metrics_xnvctrl(struct gpu_metrics *metrics);
         void parse_token(std::string token, std::unordered_map<std::string, std::string>& options);

@@ -16,7 +16,7 @@ using namespace std::chrono_literals;
 #include <iostream>
 #include <filesystem>
 #include <string>
-namespace fs = std::filesystem;
+namespace fs = ghc::filesystem;
 
 GPUS::GPUS() {
     std::vector<std::string> gpu_entries;

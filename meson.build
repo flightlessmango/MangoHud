@@ -3,7 +3,7 @@ project('MangoHud',
   version : 'v0.7.2',
   license : 'MIT',
   meson_version: '>=0.60.0',
-  default_options : ['buildtype=release', 'c_std=c99', 'cpp_std=c++17', 'warning_level=2']
+  default_options : ['buildtype=release', 'c_std=c99', 'cpp_std=c++14', 'warning_level=2']
 )
 
 cc = meson.get_compiler('c')
