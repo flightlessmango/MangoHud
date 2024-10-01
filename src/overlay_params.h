@@ -301,11 +301,12 @@ struct overlay_params {
    std::string time_format, output_folder, output_file;
    std::string pci_dev;
    std::string media_player_name;
-   std::string cpu_text, gpu_text, fps_text;
+   std::string cpu_text, fps_text;
    std::vector<std::string> blacklist;
    unsigned autostart_log;
    std::vector<std::string> media_player_format;
    std::vector<std::string> benchmark_percentiles;
+   std::vector<std::string> gpu_text;
    std::string font_file, font_file_text;
    uint32_t font_glyph_ranges;
    std::string custom_text_center;

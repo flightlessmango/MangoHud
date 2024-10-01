@@ -423,7 +423,6 @@ parse_fps_metrics(const char *str){
 #define parse_media_player_name(s) parse_str(s)
 #define parse_font_scale_media_player(s) parse_float(s)
 #define parse_cpu_text(s) parse_str(s)
-#define parse_gpu_text(s) parse_str(s)
 #define parse_fps_text(s) parse_str(s)
 #define parse_log_interval(s) parse_unsigned(s)
 #define parse_font_size(s) parse_float(s)
@@ -472,6 +471,7 @@ parse_fps_metrics(const char *str){
 #define parse_text_outline_thickness(s) parse_float(s)
 #define parse_device_battery(s) parse_str_tokenize(s)
 #define parse_network(s) parse_str_tokenize(s)
+#define parse_gpu_text(s) parse_str_tokenize(s)
 
 static bool
 parse_help(const char *str)

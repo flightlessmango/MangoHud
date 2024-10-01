@@ -194,12 +194,19 @@ void HudElements::gpu_stats(){
             if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_active_gpu] && !gpu->is_active)
                 continue;
 
+            std::string gpu_text;
             ImguiNextColumnFirstItem();
             if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_active_gpu]) {
-                HUDElements.TextColored(HUDElements.colors.gpu, "%s", "GPU");
+                gpu_text = "GPU";
+                if (!HUDElements.params->gpu_text.empty())
+                    gpu_text = HUDElements.params->gpu_text[i];
             } else {
-                HUDElements.TextColored(HUDElements.colors.gpu, "%s", ("GPU" + to_string(i)).c_str());
+                gpu_text = "GPU" + std::to_string(i);
+                if (!HUDElements.params->gpu_text.empty())
+                    gpu_text = HUDElements.params->gpu_text[i];
             }
+            HUDElements.TextColored(HUDElements.colors.gpu, "%s", gpu_text.c_str());
+
             ImguiNextColumnOrNewRow();
             auto text_color = HUDElements.colors.text;
             if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_load_change]){
