@@ -90,7 +90,7 @@ void GPUS::find_active_gpu() {
 
     for (const auto& entry : fs::directory_iterator(fdinfo_dir)) {
         if (entry.is_regular_file()) {
-            std::ifstream file(entry.path());
+            std::ifstream file(entry.path().string());
             std::string line;
             std::string drm_pdev;
             bool has_drm_driver = false;
