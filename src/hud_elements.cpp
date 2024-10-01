@@ -193,7 +193,7 @@ void HudElements::gpu_stats(){
         for (auto gpu : gpus->available_gpus) {
             if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_active_gpu] && !gpu->is_active)
                 continue;
-
+            
             std::string gpu_text;
             ImguiNextColumnFirstItem();
             if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_active_gpu]) {
@@ -313,6 +313,8 @@ void HudElements::gpu_stats(){
                 HUDElements.TextColored(HUDElements.colors.text, "mV");
                 ImGui::PopFont();
             }
+            if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
+                ImGui::TableNextRow();
             i++;
         }
     }
@@ -510,24 +512,22 @@ void HudElements::io_stats(){
 void HudElements::vram(){
     if (!gpus)
         gpus = std::make_unique<GPUS>();
-
+    
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_vram]){
         std::lock_guard<std::mutex> lock(gpus->metrics_mutex);
         int i = 0;
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
             for (auto gpu : gpus->available_gpus) {
+                ImguiNextColumnFirstItem();
                 if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_active_gpu] && !gpu->is_active)
                     continue;
 
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn();
                 if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_active_gpu]) {
                     HUDElements.TextColored(HUDElements.colors.vram, "VRAM");
                 } else {
                     HUDElements.TextColored(HUDElements.colors.vram, ("VRAM" + to_string(i)).c_str());
                 }
 
-                
                 ImguiNextColumnOrNewRow();
                 // Add gtt_used to vram usage for APUs
                 if (cpuStats.cpu_type == "APU")
@@ -562,6 +562,8 @@ void HudElements::vram(){
                     HUDElements.TextColored(HUDElements.colors.text, "MHz");
                     ImGui::PopFont();
                 }
+                if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
+                    ImGui::TableNextRow();
                 i++;
             }
         }
