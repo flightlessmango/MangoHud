@@ -39,6 +39,7 @@
 
 #include "app/mangoapp.h"
 #include "fps_metrics.h"
+#include "version.h"
 
 std::unique_ptr<fpsMetrics> fpsmetrics;
 std::mutex config_mtx;
@@ -758,6 +759,7 @@ void
 parse_overlay_config(struct overlay_params *params,
                   const char *env, bool use_existing_preset)
 {
+   SPDLOG_DEBUG("Version: {}", MANGOHUD_VERSION);
    std::vector<int> default_preset = {-1, 0, 1, 2, 3, 4};
    *params = {
      .preset = use_existing_preset ? params->preset : default_preset
