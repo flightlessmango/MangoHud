@@ -66,7 +66,7 @@ std::string GPUS::get_pci_device_address(const std::string& drm_card_path) {
 
     // Extract the last PCI address from the path using a regular expression
     // This regex matches typical PCI addresses like 0000:03:00.0
-    std::regex pci_address_regex(R"((\d{4}:\d{2}:\d{2}\.\d))");
+    std::regex pci_address_regex(R"((\d{4}:[a-z0-9]{2}:\d{2}\.\d))");
     std::smatch match;
     std::string pci_address;
 
