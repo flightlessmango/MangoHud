@@ -42,8 +42,12 @@ GPUS::GPUS() {
 
     // Now process the sorted GPU entries
     for (const auto& node_name : gpu_entries) {
-        uint32_t vendor_id = std::stoul(read_line("/sys/class/drm/" + node_name + "/device/vendor"), nullptr, 16);
-        uint32_t device_id = std::stoul(read_line("/sys/class/drm/" + node_name + "/device/device"), nullptr, 16);
+        uint32_t vendor_id = 0;
+        uint32_t device_id = 0;
+        try {
+            vendor_id = std::stoul(read_line("/sys/class/drm/" + node_name + "/device/vendor"), nullptr, 16);
+            device_id = std::stoul(read_line("/sys/class/drm/" + node_name + "/device/device"), nullptr, 16);
+        } catch(...) {}
         std::string path = "/sys/class/drm/" + node_name;
         std::string device_address = get_pci_device_address(path);  // Store the result
         const char* pci_dev = device_address.c_str();
@@ -74,7 +78,7 @@ std::string GPUS::get_pci_device_address(const std::string& drm_card_path) {
     auto it = std::sregex_iterator(path_str.begin(), path_str.end(), pci_address_regex);
     auto end = std::sregex_iterator();
     for (std::sregex_iterator i = it; i != end; ++i) {
-        pci_address = (*i).str();
+        pci_address = i->str();
     }
 
     if (!pci_address.empty()) {
@@ -107,10 +111,12 @@ void GPUS::find_active_gpu() {
                     drm_pdev.erase(0, drm_pdev.find_first_not_of(" \t"));
                 }
                 if (line.find("drm-engine-gfx:") != std::string::npos) {
-                    uint64_t gfx_time = std::stoull(line.substr(line.find(":") + 1));
-                    if (gfx_time > 0) {
-                        has_drm_engine_gfx = true;
-                    }
+                    try {
+                        uint64_t gfx_time = std::stoull(line.substr(line.find(":") + 1));
+                        if (gfx_time > 0) {
+                            has_drm_engine_gfx = true;
+                        }
+                    } catch (...) {}
                 }
             }
 
