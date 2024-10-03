@@ -119,9 +119,11 @@ void GPUS::find_active_gpu() {
                     if (gpu->pci_dev == drm_pdev) {
                         gpu->is_active = true;
                         SPDLOG_DEBUG("Active GPU Found: node_name: {}, pci_dev: {}", gpu->name, gpu->pci_dev);
-                        return;
+                    } else {
+                        gpu->is_active = false;
                     }
                 }
+                return;
             }
         }
     }
