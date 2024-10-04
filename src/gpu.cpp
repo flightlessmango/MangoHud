@@ -42,10 +42,23 @@ GPUS::GPUS() {
 
     // Now process the sorted GPU entries
     for (const auto& node_name : gpu_entries) {
-        uint32_t vendor_id = std::stoul(read_line("/sys/class/drm/" + node_name + "/device/vendor"), nullptr, 16);
-        uint32_t device_id = std::stoul(read_line("/sys/class/drm/" + node_name + "/device/device"), nullptr, 16);
         std::string path = "/sys/class/drm/" + node_name;
         std::string device_address = get_pci_device_address(path);  // Store the result
+        uint32_t vendor_id;
+        uint32_t device_id;
+        try {
+            vendor_id = std::stoul(read_line("/sys/bus/pci/devices/" + device_address + "/vendor"), nullptr, 16);
+        } catch(...) {
+            SPDLOG_ERROR("stoul failed on: {}", "/sys/bus/pci/devices/" + device_address + "/vendor");
+        }
+        
+        try {
+            device_id = std::stoul(read_line("/sys/bus/pci/devices/" + device_address + "/device"), nullptr, 16);
+        } catch (...) {
+            SPDLOG_ERROR("stoul failed on: {}", "/sys/bus/pci/devices/" + device_address + "/device");
+        }
+
+        std::string pci_bus_device = "/sys/class/devices/" + device_address;
         const char* pci_dev = device_address.c_str();
 
         std::shared_ptr<GPU> ptr = std::make_shared<GPU>(node_name, vendor_id, device_id, pci_dev);
