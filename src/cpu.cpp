@@ -281,21 +281,18 @@ bool CPUStats::ReadcpuTempFile(int& temp) {
 }
 
 bool CPUStats::UpdateCpuTemp() {
-    if (gpus){
+    if (gpus)
         for (auto gpu : gpus->available_gpus)
             if (gpu->is_apu()) {
                 m_cpuDataTotal.temp = gpu->metrics.apu_cpu_temp;
                 return true;
             }
-    } else {
-        int temp = 0;
-        bool ret = ReadcpuTempFile(temp);
-        m_cpuDataTotal.temp = temp;
 
-        return ret;
-    }
+    int temp = 0;
+    bool ret = ReadcpuTempFile(temp);
+    m_cpuDataTotal.temp = temp;
 
-    return false;
+    return ret;
 }
 
 static bool get_cpu_power_k10temp(CPUPowerData* cpuPowerData, float& power) {
