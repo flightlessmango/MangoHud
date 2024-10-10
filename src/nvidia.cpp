@@ -59,7 +59,7 @@ NVIDIA::NVIDIA(const char* pciBusId) {
     if (!nvctrl_available)
         SPDLOG_DEBUG("XNVCtrl didn't find the correct display");
     else {
-        nvctrl.XNVCTRLQueryTargetCount(this->display.get(),
+        nvctrl.XNVCTRLQueryTargetCount(dpy,
             NV_CTRL_TARGET_TYPE_COOLER,
             &num_coolers);
     }
