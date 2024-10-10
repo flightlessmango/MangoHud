@@ -104,7 +104,7 @@ static void writeSummary(string filename){
       fps_values.push_back(data.fps);
 
     std::unique_ptr<fpsMetrics> fpsmetrics;
-    std::vector<std::string> metrics {"0.001", "0.01", "0.97", "avg"};
+    std::vector<std::string> metrics {"0.001", "0.01", "0.97"};
     fpsmetrics = std::make_unique<fpsMetrics>(metrics, fps_values);
     for (auto& metric : fpsmetrics->metrics)
       out << metric.value << ",";
