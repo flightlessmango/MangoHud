@@ -356,6 +356,8 @@ int main(int, char**)
                     PropModeReplace, (unsigned char *)&value, 1);
     // Main loop
     while (!glfwWindowShouldClose(window)){
+        check_keybinds(params, vendorID);
+
         if (!params.no_display){
             if (mangoapp_paused){
                 glfwRestoreWindow(window);
@@ -372,8 +374,6 @@ int main(int, char**)
                 mangoapp_cv.wait(lk, []{return new_frame || params.no_display;});
                 new_frame = false;
             }
-
-            check_keybinds(params, vendorID);
             // Start the Dear ImGui frame
             {
                 if (render(window)) {
