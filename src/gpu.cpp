@@ -21,22 +21,25 @@ namespace fs = ghc::filesystem;
 GPUS::GPUS() {
     std::vector<std::string> gpu_entries;
 
-    // Collect all relevant GPU entries (e.g., card0, card1, etc.)
     for (const auto& entry : fs::directory_iterator("/sys/class/drm")) {
         if (entry.is_directory()) {
             std::string node_name = entry.path().filename().string();
 
-            // Check if the directory is a GPU card (e.g., card0, card1, etc.)
-            if (node_name.find("card") == 0 && node_name.length() == 5 && isdigit(node_name[4])) {
-                gpu_entries.push_back(node_name);  // Store the card entry
+            // Check if the directory is a render node (e.g., renderD128, renderD129, etc.)
+            if (node_name.find("renderD") == 0 && node_name.length() > 7) {
+                // Ensure the rest of the string after "renderD" is numeric
+                std::string render_number = node_name.substr(7);
+                if (std::all_of(render_number.begin(), render_number.end(), ::isdigit)) {
+                    gpu_entries.push_back(node_name);  // Store the render entry
+                }
             }
         }
     }
 
-    // Sort the entries based on the numeric value of the card number
+    // Sort the entries based on the numeric value of the render number
     std::sort(gpu_entries.begin(), gpu_entries.end(), [](const std::string& a, const std::string& b) {
-        int num_a = std::stoi(a.substr(4));
-        int num_b = std::stoi(b.substr(4));
+        int num_a = std::stoi(a.substr(7));
+        int num_b = std::stoi(b.substr(7));
         return num_a < num_b;
     });
 
@@ -159,6 +162,7 @@ void GPUS::find_active_gpu() {
         }
     }
 #endif
+    SPDLOG_DEBUG("failed to find active GPU");
 }
 
 std::unique_ptr<GPUS> gpus = nullptr;
