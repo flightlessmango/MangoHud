@@ -254,14 +254,14 @@ bool libnvml_loader::Load(const std::string& library_name) {
   }
 
 #if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
-  nvmlDeviceGetComputeRunningProcesses =
-      reinterpret_cast<decltype(this->nvmlDeviceGetComputeRunningProcesses)>(
-          dlsym(library_, "nvmlDeviceGetComputeRunningProcesses"));
+  nvmlDeviceGetGraphicsRunningProcesses =
+      reinterpret_cast<decltype(this->nvmlDeviceGetGraphicsRunningProcesses)>(
+          dlsym(library_, "nvmlDeviceGetGraphicsRunningProcesses"));
 #endif
 #if defined(LIBRARY_LOADER_NVML_H_DT_NEEDED)
-  nvmlDeviceGetComputeRunningProcesses = &::nvmlDeviceGetComputeRunningProcesses;
+  nvmlDeviceGetGraphicsRunningProcesses = &::nvmlDeviceGetGraphicsRunningProcesses;
 #endif
-  if (!nvmlDeviceGetComputeRunningProcesses) {
+  if (!nvmlDeviceGetGraphicsRunningProcesses) {
     CleanUp(true);
     return false;
   }
@@ -291,5 +291,5 @@ void libnvml_loader::CleanUp(bool unload) {
   nvmlUnitGetFanSpeedInfo = NULL;
   nvmlUnitGetHandleByIndex = NULL;
   nvmlDeviceGetFanSpeed = NULL;
-  nvmlDeviceGetComputeRunningProcesses = NULL;
+  nvmlDeviceGetGraphicsRunningProcesses = NULL;
 }

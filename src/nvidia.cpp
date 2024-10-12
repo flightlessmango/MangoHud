@@ -66,9 +66,6 @@ NVIDIA::NVIDIA(const char* pciBusId) {
 #ifdef HAVE_NVML
     nvml_available = true;
     if (nvml_available || nvctrl_available){
-        nvml.nvmlDeviceGetComputeRunningProcesses(device, &infoCount, process_info);
-        // first run is to get the proper infoCount
-        nvml.nvmlDeviceGetComputeRunningProcesses(device, &infoCount, process_info);
         throttling = std::make_shared<Throttling>(0x10de);
         std::thread thread(&NVIDIA::get_samples_and_copy, this);
         thread.detach();
@@ -279,14 +276,13 @@ char* NVIDIA::get_attr_target_string(libnvctrl_loader& nvctrl, int attr, int tar
 #if defined(HAVE_XNVCTRL) && defined(HAVE_X11)
 bool NVIDIA::find_nv_x11(libnvctrl_loader& nvctrl, Display*& dpy)
 {
-    char buf[8] {};
     auto libx11 = get_libx11();
     Display *d = libx11->XOpenDisplay(getenv("DISPLAY"));
     if (d) {
         int s = libx11->XDefaultScreen(d);
         if (nvctrl.XNVCTRLIsNvScreen(d, s)) {
             dpy = d;
-            SPDLOG_DEBUG("XNVCtrl is using display {}", buf);
+            SPDLOG_DEBUG("XNVCtrl is using display {}", getenv("DISPLAY"));
             return true;
         }
         libx11->XCloseDisplay(d);

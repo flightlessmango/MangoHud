@@ -11,13 +11,6 @@
 #include <chrono>
 #include <regex>
 #include <iostream>
-#ifdef HAVE_NVML
-#include "loaders/loader_nvml.h"
-#endif
-#ifdef HAVE_XNVCTRL
-#include "loaders/loader_nvctrl.h"
-#include "loaders/loader_x11.h"
-#endif
 #include "amdgpu.h"
 #include "nvidia.h"
 #include "gpu_metrics_util.h"
