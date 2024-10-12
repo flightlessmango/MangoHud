@@ -276,16 +276,19 @@ char* NVIDIA::get_attr_target_string(libnvctrl_loader& nvctrl, int attr, int tar
 #if defined(HAVE_XNVCTRL) && defined(HAVE_X11)
 bool NVIDIA::find_nv_x11(libnvctrl_loader& nvctrl, Display*& dpy)
 {
+    const char *displayid = getenv("DISPLAY");
     auto libx11 = get_libx11();
-    Display *d = libx11->XOpenDisplay(getenv("DISPLAY"));
-    if (d) {
-        int s = libx11->XDefaultScreen(d);
-        if (nvctrl.XNVCTRLIsNvScreen(d, s)) {
-            dpy = d;
-            SPDLOG_DEBUG("XNVCtrl is using display {}", getenv("DISPLAY"));
-            return true;
+    if (displayid) {
+        Display *d = libx11->XOpenDisplay(displayid);
+        if (d) {
+            int s = libx11->XDefaultScreen(d);
+            if (nvctrl.XNVCTRLIsNvScreen(d, s)) {
+                dpy = d;
+                SPDLOG_DEBUG("XNVCtrl is using display {}", displayid);
+                return true;
+            }
+            libx11->XCloseDisplay(d);
         }
-        libx11->XCloseDisplay(d);
     }
     return false;
 }
