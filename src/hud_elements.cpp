@@ -185,27 +185,13 @@ void HudElements::version(){
 
 void HudElements::gpu_stats(){
     if (!gpus)
-        gpus = std::make_unique<GPUS>();
+        gpus = std::make_unique<GPUS>(HUDElements.params);
 
-    std::lock_guard<std::mutex> lock(gpus->metrics_mutex);
-    int i = 0;
+    size_t i = 0;
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
-        for (auto gpu : gpus->available_gpus) {
-            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_active_gpu] && !gpu->is_active)
-                continue;
-
-            std::string gpu_text;
+        for (auto& gpu : gpus->selected_gpus()) {
             ImguiNextColumnFirstItem();
-            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_active_gpu]) {
-                gpu_text = "GPU";
-                if (HUDElements.params->gpu_text.size() > (size_t)i)
-                    gpu_text = HUDElements.params->gpu_text[i];
-            } else {
-                gpu_text = "GPU" + std::to_string(i);
-                if (HUDElements.params->gpu_text.size() > (size_t)i)
-                    gpu_text = HUDElements.params->gpu_text[i];
-            }
-            HUDElements.TextColored(HUDElements.colors.gpu, "%s", gpu_text.c_str());
+            HUDElements.TextColored(HUDElements.colors.gpu, "%s", gpu->gpu_text().c_str());
 
             ImguiNextColumnOrNewRow();
             auto text_color = HUDElements.colors.text;
@@ -511,22 +497,22 @@ void HudElements::io_stats(){
 
 void HudElements::vram(){
     if (!gpus)
-        gpus = std::make_unique<GPUS>();
+        gpus = std::make_unique<GPUS>(HUDElements.params);
     
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_vram]){
-        std::lock_guard<std::mutex> lock(gpus->metrics_mutex);
-        int i = 0;
+        size_t i = 0;
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
-            for (auto gpu : gpus->available_gpus) {
+            for (auto& gpu : gpus->selected_gpus()) {
                 ImguiNextColumnFirstItem();
-                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_active_gpu] && !gpu->is_active)
-                    continue;
+                // Just iterate through the user selected GPUs
+                if (!HUDElements.params->gpu_list.empty())
+                    for (auto& gpu_index : HUDElements.params->gpu_list)
+                        if (gpu_index < gpus->available_gpus.size())
+                            if (i != gpu_index)
+                                continue;
 
-                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_active_gpu]) {
-                    HUDElements.TextColored(HUDElements.colors.vram, "VRAM");
-                } else {
-                    HUDElements.TextColored(HUDElements.colors.vram, ("VRAM" + to_string(i)).c_str());
-                }
+
+                HUDElements.TextColored(HUDElements.colors.vram, gpu->vram_text().c_str());
 
                 ImguiNextColumnOrNewRow();
                 // Add gtt_used to vram usage for APUs

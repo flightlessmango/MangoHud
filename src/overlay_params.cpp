@@ -294,6 +294,22 @@ parse_str_tokenize(const char *str, const std::string& delims = ",:+", bool btri
     return data;
 }
 
+static std::vector<unsigned>
+parse_gpu_list(const char *str) {
+
+   std::vector<unsigned int> result;
+   std::stringstream ss{std::string(str)};
+   std::string item;
+
+   while (std::getline(ss, item, ',')) {
+      unsigned int num = static_cast<unsigned int>(std::stoul(item));
+      printf("parsing gpu list num: %i\n", num);
+      result.push_back(num);
+   }
+
+   return result;
+}
+
 
 static unsigned
 parse_unsigned(const char *str)

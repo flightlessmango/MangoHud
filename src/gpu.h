@@ -104,19 +104,24 @@ class GPU {
             return nullptr;
         }
         
+        std::string gpu_text();
+        std::string vram_text();
 
     private:
         uint32_t device_id;
         std::thread thread;
+
+        int index_in_selected_gpus();
 };
 
 class GPUS {
     public:
         std::vector<std::shared_ptr<GPU>> available_gpus;
-        std::mutex metrics_mutex;
-        
+        std::mutex mutex;
+        overlay_params* params;
+
         void find_active_gpu();
-        GPUS();
+        GPUS(overlay_params* params);
 
         void pause() {
             for (auto& gpu : available_gpus)
@@ -131,8 +136,9 @@ class GPUS {
         std::shared_ptr<GPU> active_gpu() {
             if (!available_gpus.empty()){
                 for (auto gpu : available_gpus) {
-                    if (gpu->is_active)
+                    if (gpu->is_active) {
                         return gpu;
+                    }
                 }
             }
 
@@ -146,9 +152,29 @@ class GPUS {
         }
 
         void get_metrics() {
-            std::lock_guard<std::mutex> lock(metrics_mutex);
+            std::lock_guard<std::mutex> lock(mutex);
             for (auto gpu : available_gpus)
                 gpu->get_metrics();
+        }
+
+        std::vector<std::shared_ptr<GPU>> selected_gpus() {
+            std::lock_guard<std::mutex> lock(mutex);
+            std::vector<std::shared_ptr<GPU>> vec;
+            if (!params->gpu_list.empty()) {
+                for (unsigned index : params->gpu_list) {
+                    if (index < available_gpus.size()) {
+                        if (available_gpus[index])
+                            vec.push_back(available_gpus[index]);
+                    }   
+                }
+            // if the user hasn't selected any GPUs, we use the active one
+            } else {
+                if (active_gpu())
+                    vec.push_back(active_gpu());
+                
+            }
+
+            return vec;
         }
 
     private:

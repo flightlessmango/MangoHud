@@ -115,7 +115,6 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(present_mode)                  \
    OVERLAY_PARAM_BOOL(time_no_label)                 \
    OVERLAY_PARAM_BOOL(display_server)                \
-   OVERLAY_PARAM_BOOL(active_gpu)                    \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
@@ -200,6 +199,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(device_battery)              \
    OVERLAY_PARAM_CUSTOM(fps_metrics)                 \
    OVERLAY_PARAM_CUSTOM(network)                     \
+   OVERLAY_PARAM_CUSTOM(gpu_list)                    \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -326,6 +326,7 @@ struct overlay_params {
    std::vector<std::string> device_battery;
    std::vector<std::string> fps_metrics;
    std::vector<std::string> network;
+   std::vector<unsigned> gpu_list;
 };
 
 const extern char *overlay_param_names[];

@@ -18,7 +18,7 @@ using namespace std::chrono_literals;
 #include <string>
 namespace fs = ghc::filesystem;
 
-GPUS::GPUS() {
+GPUS::GPUS(overlay_params* params) : params(params) {
     std::vector<std::string> gpu_entries;
 
     for (const auto& entry : fs::directory_iterator("/sys/class/drm")) {
@@ -163,6 +163,41 @@ void GPUS::find_active_gpu() {
     }
 #endif
     SPDLOG_DEBUG("failed to find active GPU");
+}
+
+int GPU::index_in_selected_gpus() {
+    auto selected_gpus = gpus->selected_gpus();
+    auto it = std::find_if(selected_gpus.begin(), selected_gpus.end(), 
+                        [this](const std::shared_ptr<GPU>& gpu) {
+                            return gpu.get() == this;
+                        });
+    if (it != selected_gpus.end()) {
+        return std::distance(selected_gpus.begin(), it);
+    }
+    return -1;
+}
+
+std::string GPU::gpu_text() {
+    std::string gpu_text;
+    size_t index = this->index_in_selected_gpus();
+    if (gpus->selected_gpus().size() > 1) {
+        gpu_text = "GPU" + std::to_string(index);
+        if (gpus->params->gpu_text.size() > index)
+            gpu_text = gpus->params->gpu_text[index];
+    } else {
+        gpu_text = "GPU";
+    }
+    return gpu_text;
+}
+
+std::string GPU::vram_text() {
+    std::string vram_text;
+    size_t index = this->index_in_selected_gpus();
+    if (gpus->selected_gpus().size() > 1)
+        vram_text = "VRAM" + std::to_string(index);
+    else
+        vram_text = "VRAM";
+    return vram_text;
 }
 
 std::unique_ptr<GPUS> gpus = nullptr;
