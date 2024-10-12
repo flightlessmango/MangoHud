@@ -1,4 +1,13 @@
 #pragma once
+#include <X11/Xlib.h>
+#include "gpu.h"
+#ifdef HAVE_NVML
+#include "loaders/loader_nvml.h"
+#endif
+#ifdef HAVE_XNVCTRL
+#include "loaders/loader_nvctrl.h"
+#include "loaders/loader_x11.h"
+#endif
 
 class NVIDIA {
     public:
@@ -40,7 +49,8 @@ class NVIDIA {
 
     private:
 #if defined(HAVE_XNVCTRL) && defined(HAVE_X11)
-        std::unique_ptr<Display, std::function<void(Display*)>> display;
+        Display* display;
+        // std::unique_ptr<Display, std::function<void(Display*)>> display;
         int num_coolers;
         int64_t get_nvctrl_fan_speed();
 #endif

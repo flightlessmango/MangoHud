@@ -1,7 +1,6 @@
 #include "nvml.h"
 #include "hud_elements.h"
 #include "logging.h"
-#include "gpu.h"
 #include "string_utils.h"
 #include <thread>
 #include <chrono>
@@ -54,12 +53,11 @@ NVIDIA::NVIDIA(const char* pciBusId) {
     if (!nvctrl.IsLoaded())
         SPDLOG_DEBUG("XNVCtrl loader failed to load");
 
-    Display *dpy;
-    nvctrl_available = find_nv_x11(nvctrl, dpy);
+    nvctrl_available = find_nv_x11(nvctrl, display);
     if (!nvctrl_available)
         SPDLOG_DEBUG("XNVCtrl didn't find the correct display");
     else {
-        nvctrl.XNVCTRLQueryTargetCount(dpy,
+        nvctrl.XNVCTRLQueryTargetCount(display,
             NV_CTRL_TARGET_TYPE_COOLER,
             &num_coolers);
     }
@@ -187,7 +185,7 @@ void NVIDIA::get_instant_metrics_xnvctrl(struct gpu_metrics *metrics) {
             metrics->MemClock = 0;
 
         int64_t temp = 0;
-        nvctrl.XNVCTRLQueryTargetAttribute64(display.get(),
+        nvctrl.XNVCTRLQueryTargetAttribute64(display,
                             NV_CTRL_TARGET_TYPE_GPU,
                             0,
                             0,
@@ -196,7 +194,7 @@ void NVIDIA::get_instant_metrics_xnvctrl(struct gpu_metrics *metrics) {
         metrics->temp = temp;
 
         int64_t memtotal = 0;
-        nvctrl.XNVCTRLQueryTargetAttribute64(display.get(),
+        nvctrl.XNVCTRLQueryTargetAttribute64(display,
                             NV_CTRL_TARGET_TYPE_GPU,
                             0,
                             0,
@@ -205,7 +203,7 @@ void NVIDIA::get_instant_metrics_xnvctrl(struct gpu_metrics *metrics) {
         metrics->memoryTotal = memtotal;
 
         int64_t memused = 0;
-        nvctrl.XNVCTRLQueryTargetAttribute64(display.get(),
+        nvctrl.XNVCTRLQueryTargetAttribute64(display,
                             NV_CTRL_TARGET_TYPE_GPU,
                             0,
                             0,
@@ -256,13 +254,14 @@ int64_t NVIDIA::get_nvctrl_fan_speed(){
     int64_t fan_speed = 0;
     if (num_coolers >= 1) {
         auto& nvctrl = get_libnvctrl_loader();
-        nvctrl.XNVCTRLQueryTargetAttribute64(display.get(),
+        nvctrl.XNVCTRLQueryTargetAttribute64(display,
                             NV_CTRL_TARGET_TYPE_COOLER,
                             0,
                             0,
                             NV_CTRL_THERMAL_COOLER_SPEED,
                             &fan_speed);
     }
+    metrics.fan_rpm = true;
     return fan_speed;
 }
 #endif
@@ -270,7 +269,7 @@ int64_t NVIDIA::get_nvctrl_fan_speed(){
 #ifdef HAVE_XNVCTRL
 char* NVIDIA::get_attr_target_string(libnvctrl_loader& nvctrl, int attr, int target_type, int target_id) {
     char* c = nullptr;
-    if (!nvctrl.XNVCTRLQueryTargetStringAttribute(NVIDIA::display.get(), target_type, target_id, 0, attr, &c)) {
+    if (!nvctrl.XNVCTRLQueryTargetStringAttribute(NVIDIA::display, target_type, target_id, 0, attr, &c)) {
         SPDLOG_ERROR("Failed to query attribute '{}'", attr);
     }
     return c;
