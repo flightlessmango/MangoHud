@@ -1,5 +1,4 @@
 #pragma once
-#include <X11/Xlib.h>
 #include "gpu.h"
 #ifdef HAVE_NVML
 #include "loaders/loader_nvml.h"
