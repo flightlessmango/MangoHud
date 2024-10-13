@@ -180,7 +180,7 @@ int GPU::index_in_selected_gpus() {
 std::string GPU::gpu_text() {
     std::string gpu_text;
     size_t index = this->index_in_selected_gpus();
-    if (gpus->selected_gpus().size() > 1) {
+    if (gpus->selected_gpus().size() >= 1) {
         gpu_text = "GPU" + std::to_string(index);
         if (gpus->params->gpu_text.size() > index)
             gpu_text = gpus->params->gpu_text[index];
