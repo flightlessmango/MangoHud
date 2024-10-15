@@ -88,32 +88,32 @@ void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics) {
         }
         metrics->load = nvml_utilization.gpu;
 
-        if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp] || logger->is_active()) {
+        if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp] || (logger && logger->is_active())) {
             unsigned int temp;
             nvml.nvmlDeviceGetTemperature(device, NVML_TEMPERATURE_GPU, &temp);
             metrics->temp = temp;
         }
 
-        if (params->enabled[OVERLAY_PARAM_ENABLED_vram] || logger->is_active()) {
+        if (params->enabled[OVERLAY_PARAM_ENABLED_vram] || (logger && logger->is_active())) {
             struct nvmlMemory_st nvml_memory;
             nvml.nvmlDeviceGetMemoryInfo(device, &nvml_memory);
             metrics->memoryTotal = nvml_memory.total / (1024.f * 1024.f * 1024.f);
             metrics->memoryUsed = nvml_memory.used / (1024.f * 1024.f * 1024.f);
         }
 
-        if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock] || logger->is_active()) {
+        if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock] || (logger && logger->is_active())) {
             unsigned int core_clock;
             nvml.nvmlDeviceGetClockInfo(device, NVML_CLOCK_GRAPHICS, &core_clock);
             metrics->CoreClock = core_clock;
         }
 
-        if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_mem_clock] || logger->is_active()) {
+        if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_mem_clock] || (logger && logger->is_active())) {
             unsigned int memory_clock;
             nvml.nvmlDeviceGetClockInfo(device, NVML_CLOCK_MEM, &memory_clock);
             metrics->MemClock = memory_clock;
         }
 
-        if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_power] || logger->is_active()) {
+        if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_power] || (logger && logger->is_active())) {
             unsigned int power;
             nvml.nvmlDeviceGetPowerUsage(device, &power);
             metrics->powerUsage = power / 1000;
@@ -129,7 +129,7 @@ void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics) {
 		        throttling->indep_throttle_status = nvml_throttle_reasons;
         }
 
-        if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_fan] || logger->is_active()){
+        if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_fan] || (logger && logger->is_active())){
             unsigned int fan_speed;
             nvml.nvmlDeviceGetFanSpeed(device, &fan_speed);
             metrics->fan_speed = fan_speed;
