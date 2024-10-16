@@ -23,6 +23,7 @@ static  std::vector<std::string> blacklist {
     "Battle.net.exe",
     "BethesdaNetLauncher.exe",
     "EpicGamesLauncher.exe",
+    "halloy",
     "IGOProxy.exe",
     "IGOProxy64.exe",
     "monado-service",
