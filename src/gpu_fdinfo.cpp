@@ -17,6 +17,7 @@ std::string GPU_fdinfo::get_drm_engine_type() {
 }
 
 void GPU_fdinfo::find_fd() {
+#ifdef __linux__
     DIR* dir = opendir("/proc/self/fdinfo");
     if (!dir) {
         perror("Failed to open directory");
@@ -46,6 +47,7 @@ void GPU_fdinfo::find_fd() {
     }
 
     closedir(dir);
+#endif
 }
 
 uint64_t GPU_fdinfo::get_gpu_time() {
