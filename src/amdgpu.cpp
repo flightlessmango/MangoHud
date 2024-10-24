@@ -125,11 +125,9 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 			do cpu_temp = MAX(cpu_temp, amdgpu_metrics->average_temperature_core[i]);
 			while (++i < ARRAY_SIZE(amdgpu_metrics->average_temperature_core) && IS_VALID_METRIC(amdgpu_metrics->average_temperature_core[i]));
 			metrics->apu_cpu_temp_c = cpu_temp / 100;
-#ifdef DETECT_OS_UNIX
 		} else if( cpuStats.ReadcpuTempFile(cpu_temp) ) {
 			// fallback 2: Try temp from file 'm_cpuTempFile' of 'cpu.cpp'
 			metrics->apu_cpu_temp_c = cpu_temp;
-#endif
 		} else {
 			// giving up
 			metrics->apu_cpu_temp_c = 0;
