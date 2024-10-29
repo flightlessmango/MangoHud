@@ -180,13 +180,24 @@ int GPU::index_in_selected_gpus() {
 std::string GPU::gpu_text() {
     std::string gpu_text;
     size_t index = this->index_in_selected_gpus();
-    if (gpus->selected_gpus().size() >= 1) {
+
+    if (gpus->selected_gpus().size() == 1) {
+        // When there's exactly one selected GPU, return "GPU" without index
+        gpu_text = "GPU";
+        if (gpus->params->gpu_text.size() > 0) {
+            gpu_text = gpus->params->gpu_text[0];
+        }
+    } else if (gpus->selected_gpus().size() > 1) {
+        // When there are multiple selected GPUs, use GPU+index or matching gpu_text
         gpu_text = "GPU" + std::to_string(index);
-        if (gpus->params->gpu_text.size() > index)
+        if (gpus->params->gpu_text.size() > index) {
             gpu_text = gpus->params->gpu_text[index];
+        }
     } else {
+        // Default case for no selected GPUs
         gpu_text = "GPU";
     }
+
     return gpu_text;
 }
 
