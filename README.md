@@ -85,6 +85,21 @@ Python 3 libraries:
 
 If distro's packaged `meson` is too old and gives build errors, install newer version with `pip` (`python3-pip`).
 
+### Meson options
+
+| Option        | Default | Description 
+| --------      | ------- | -
+| with_nvml     | enabled    |Required for NVIDIA GPU metrics on wayland
+| with_xnvctrl  | enabled    |Required for NVIDIA GPU metrics on older GPUs
+| with_x11      | enabled    |Required for keybinds on x11
+| with_wayland  | enabled    |Required for keybinds on wayland
+| with_dbus     | enabled    |Required for using the media features
+| mangoapp      | false      |Includes mangoapp
+| mangohudctl   | false      |Include mangohudctl
+| tests         | auto       |Includes tests
+| mangoplot     | true       |Includes mangoplot
+
+
 ### Building with build script
 
 You can also use `build.sh` script to do some things automatically like install dependencies, if distro is supported but it usually assumes you are running on x86_64 architecture.
