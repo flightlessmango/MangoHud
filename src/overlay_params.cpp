@@ -777,9 +777,9 @@ parse_overlay_config(struct overlay_params *params,
 {
    SPDLOG_DEBUG("Version: {}", MANGOHUD_VERSION);
    std::vector<int> default_preset = {-1, 0, 1, 2, 3, 4};
-   *params = {
-     .preset = use_existing_preset ? params->preset : default_preset
-   };
+   auto preset = std::move(params->preset);
+   *params = {};
+   params->preset = use_existing_preset ? std::move(preset) : default_preset;
    set_param_defaults(params);
    if (!use_existing_preset) {
       current_preset = params->preset[0];
