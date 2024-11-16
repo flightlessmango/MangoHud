@@ -64,7 +64,6 @@ NVIDIA::NVIDIA(const char* pciBusId) {
 
 #endif
 #ifdef HAVE_NVML
-    nvml_available = true;
     if (nvml_available || nvctrl_available){
         throttling = std::make_shared<Throttling>(0x10de);
         std::thread thread(&NVIDIA::get_samples_and_copy, this);
