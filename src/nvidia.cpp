@@ -218,9 +218,11 @@ void NVIDIA::get_samples_and_copy() {
     while(!stop_thread) {
         for (size_t cur_sample_id=0; cur_sample_id < METRICS_SAMPLE_COUNT; cur_sample_id++) {
 #ifdef HAVE_NVML
+        if (nvml_available)
             NVIDIA::get_instant_metrics_nvml(&metrics_buffer[cur_sample_id]);
 #endif
 #if defined(HAVE_XNVCTRL) && defined(HAVE_X11)
+        if (nvctrl_available)
             NVIDIA::get_instant_metrics_xnvctrl(&metrics_buffer[cur_sample_id]);
 #endif
             usleep(METRICS_POLLING_PERIOD_MS * 1000);
