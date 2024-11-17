@@ -149,7 +149,7 @@ void GPUS::find_active_gpu() {
     if (!active_gpu_found) {
         for (const auto& gpu : available_gpus) {
             // NVIDIA vendor ID is 0x10de
-            if (gpu->vendor_id == 0x10de) { 
+            if (gpu->vendor_id == 0x10de && gpu->nvidia->nvml_available) { 
                 for (auto& pid : gpu->nvidia_pids()) {
                     if (pid == getpid()) {
                         gpu->is_active = true;
