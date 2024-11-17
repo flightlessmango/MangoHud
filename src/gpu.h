@@ -141,8 +141,11 @@ class GPUS {
                     }
                 }
             }
-
-            return nullptr;
+            // if no GPU is marked as active, just set it to the first one
+            if (available_gpus.size() > 0)
+                return available_gpus.front();
+            else
+                return nullptr;
         }
 
         void update_throttling() {
