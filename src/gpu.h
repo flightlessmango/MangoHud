@@ -38,10 +38,10 @@ class GPU {
                 // For now we're only accepting one of these modules at once
                 // Might be possible that multiple can exist on a system in the future?
                 if (vendor_id == 0x8086)
-                    fdinfo = std::make_unique<GPU_fdinfo>("i915");
+                    fdinfo = std::make_unique<GPU_fdinfo>("i915", pci_dev);
 
                 if (vendor_id == 0x5143)
-                    fdinfo = std::make_unique<GPU_fdinfo>("msm");
+                    fdinfo = std::make_unique<GPU_fdinfo>("msm", pci_dev);
         }
 
         gpu_metrics get_metrics() {

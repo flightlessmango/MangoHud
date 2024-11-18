@@ -18,7 +18,10 @@ class GPU_fdinfo {
         struct gpu_metrics metrics;
         std::vector<FILE*> fdinfo;
         const char* module;
+        const char* pci_dev;
         void find_fd();
+        void find_intel_hwmon();
+        std::ifstream energy_stream;
         std::thread thread;
         std::condition_variable cond_var;
         std::atomic<bool> stop_thread{false};
@@ -30,10 +33,15 @@ class GPU_fdinfo {
         std::string get_drm_engine_type();
         std::string get_drm_memory_type();
         float get_vram_usage();
+        float get_power_usage();
 
     public:
-        GPU_fdinfo(const char* module) : module(module) {
+        GPU_fdinfo(const char* module, const char* pci_dev) : module(module), pci_dev(pci_dev) {
             find_fd();
+
+            if (strstr(module, "i915"))
+                find_intel_hwmon();
+
             std::thread thread(&GPU_fdinfo::get_load, this);
             thread.detach();
         }
