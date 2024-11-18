@@ -28,6 +28,8 @@ class GPU_fdinfo {
         uint64_t get_gpu_time();
         void get_load();
         std::string get_drm_engine_type();
+        std::string get_drm_memory_type();
+        float get_vram_usage();
 
     public:
         GPU_fdinfo(const char* module) : module(module) {

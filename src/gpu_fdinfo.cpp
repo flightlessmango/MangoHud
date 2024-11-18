@@ -16,6 +16,21 @@ std::string GPU_fdinfo::get_drm_engine_type() {
     return drm_type;
 }
 
+std::string GPU_fdinfo::get_drm_memory_type() {
+    std::string drm_type = "drm-";
+
+    // msm driver does not report vram usage
+
+    if (strstr(module, "amdgpu"))
+        drm_type += "memory-vram";
+    else if (strstr(module, "i915"))
+        drm_type += "total-local0";
+    else
+        drm_type += "memory-none";
+
+    return drm_type;
+}
+
 void GPU_fdinfo::find_fd() {
 #ifdef __linux__
     DIR* dir = opendir("/proc/self/fdinfo");
@@ -70,24 +85,51 @@ uint64_t GPU_fdinfo::get_gpu_time() {
     return total_val;
 }
 
+float GPU_fdinfo::get_vram_usage() {
+    char line[256];
+    uint64_t total_val = 0;
+
+    for (auto fd : fdinfo) {
+        rewind(fd);
+        fflush(fd);
+
+        uint64_t val = 0;
+
+        while (fgets(line, sizeof(line), fd)) {
+            std::string scan_str = get_drm_memory_type() + ": %llu KiB";
+
+            if (sscanf(line, scan_str.c_str(), &val) == 1) {
+                total_val += val;
+                break;
+            }
+        }
+    }
+
+    return (float)total_val / 1024 / 1024;
+}
+
 void GPU_fdinfo::get_load() {
     while (!stop_thread) {
         std::unique_lock<std::mutex> lock(metrics_mutex);
         cond_var.wait(lock, [this]() { return !paused || stop_thread; });
 
         static uint64_t previous_gpu_time, previous_time, now, gpu_time_now;
+
         gpu_time_now = get_gpu_time();
         now = os_time_get_nano();
 
         if (gpu_time_now > previous_gpu_time &&
-            now - previous_time > METRICS_UPDATE_PERIOD_MS * 1'000'000){
+            now - previous_time > METRICS_UPDATE_PERIOD_MS * 1'000'000) {
             float time_since_last = now - previous_time;
             float gpu_since_last = gpu_time_now - previous_gpu_time;
+
             auto result = int((gpu_since_last / time_since_last) * 100);
             if (result > 100)
                 result = 100;
 
             metrics.load = result;
+            metrics.memoryUsed = get_vram_usage();
+
             previous_gpu_time = gpu_time_now;
             previous_time = now;
         }
