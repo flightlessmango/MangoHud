@@ -108,20 +108,59 @@ float GPU_fdinfo::get_vram_usage() {
     return (float)total_val / 1024 / 1024;
 }
 
+void GPU_fdinfo::find_intel_hwmon() {
+    std::string device = "/sys/bus/pci/devices/";
+    device += pci_dev;
+    device += "/hwmon";
+
+    auto dir_iterator = fs::directory_iterator(device);
+    auto hwmon = dir_iterator->path().string();
+
+    if (hwmon.empty()) {
+        SPDLOG_DEBUG("Intel hwmon directory is empty.");
+        return;
+    }
+
+    hwmon += "/energy1_input";
+
+    SPDLOG_DEBUG("Intel hwmon found: hwmon = {}", hwmon);
+    energy_stream.open(hwmon);
+
+    if (!energy_stream.good())
+        SPDLOG_DEBUG("Intel hwmon: failed to open {}", hwmon);
+}
+
+float GPU_fdinfo::get_power_usage() {
+    if (!energy_stream.is_open())
+        return 0.f;
+
+    std::string energy_input_str;
+    uint64_t energy_input;
+
+    energy_stream.seekg(0);
+    std::getline(energy_stream, energy_input_str);
+    energy_input = std::stoull(energy_input_str);
+
+    return energy_input / 1'000'000;
+}
+
 void GPU_fdinfo::get_load() {
     while (!stop_thread) {
         std::unique_lock<std::mutex> lock(metrics_mutex);
         cond_var.wait(lock, [this]() { return !paused || stop_thread; });
 
         static uint64_t previous_gpu_time, previous_time, now, gpu_time_now;
+        static float power_usage_now, previous_power_usage;
 
         gpu_time_now = get_gpu_time();
+        power_usage_now = get_power_usage();
         now = os_time_get_nano();
 
         if (gpu_time_now > previous_gpu_time &&
             now - previous_time > METRICS_UPDATE_PERIOD_MS * 1'000'000) {
             float time_since_last = now - previous_time;
             float gpu_since_last = gpu_time_now - previous_gpu_time;
+            float power_usage_since_last = power_usage_now - previous_power_usage;
 
             auto result = int((gpu_since_last / time_since_last) * 100);
             if (result > 100)
@@ -129,9 +168,11 @@ void GPU_fdinfo::get_load() {
 
             metrics.load = result;
             metrics.memoryUsed = get_vram_usage();
+            metrics.powerUsage = power_usage_since_last;
 
             previous_gpu_time = gpu_time_now;
             previous_time = now;
+            previous_power_usage = power_usage_now;
         }
     }
 }
