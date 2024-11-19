@@ -168,12 +168,15 @@ void GPU_fdinfo::get_load() {
         static uint64_t previous_gpu_time, previous_time, now, gpu_time_now;
         static float power_usage_now, previous_power_usage;
 
-        gpu_time_now = get_gpu_time();
-        power_usage_now = get_power_usage();
         now = os_time_get_nano();
 
-        if (gpu_time_now > previous_gpu_time &&
-            now - previous_time > METRICS_UPDATE_PERIOD_MS * 1'000'000) {
+        if (now - previous_time < METRICS_UPDATE_PERIOD_MS * 1'000'000)
+            continue;
+
+        gpu_time_now = get_gpu_time();
+        power_usage_now = get_power_usage();
+
+        if (gpu_time_now > previous_gpu_time) {
             float time_since_last = now - previous_time;
             float gpu_since_last = gpu_time_now - previous_gpu_time;
             float power_usage_since_last = power_usage_now - previous_power_usage;
