@@ -113,6 +113,11 @@ void GPU_fdinfo::find_intel_hwmon() {
     device += pci_dev;
     device += "/hwmon";
 
+    if (!fs::exists(device)) {
+        SPDLOG_DEBUG("Intel hwmon directory {} doesn't exist.", device);
+        return;
+    }
+
     auto dir_iterator = fs::directory_iterator(device);
     auto hwmon = dir_iterator->path().string();
 
@@ -123,7 +128,13 @@ void GPU_fdinfo::find_intel_hwmon() {
 
     hwmon += "/energy1_input";
 
+    if (!fs::exists(hwmon)) {
+        SPDLOG_DEBUG("Intel hwmon: file {} doesn't exist.", hwmon);
+        return;
+    }
+
     SPDLOG_DEBUG("Intel hwmon found: hwmon = {}", hwmon);
+
     energy_stream.open(hwmon);
 
     if (!energy_stream.good())
@@ -138,7 +149,12 @@ float GPU_fdinfo::get_power_usage() {
     uint64_t energy_input;
 
     energy_stream.seekg(0);
+
     std::getline(energy_stream, energy_input_str);
+
+    if (energy_input_str.empty())
+        return 0.f;
+
     energy_input = std::stoull(energy_input_str);
 
     return energy_input / 1'000'000;
