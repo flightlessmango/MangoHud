@@ -37,8 +37,6 @@ class GPU_fdinfo {
 
     public:
         GPU_fdinfo(const std::string module, const std::string pci_dev) : module(module), pci_dev(pci_dev) {
-            find_fd();
-
             if (module == "i915") {
                 drm_engine_type = "drm-engine-render";
                 drm_memory_type = "drm-total-local0";
@@ -50,6 +48,8 @@ class GPU_fdinfo {
                 // msm driver does not report vram usage
                 drm_engine_type = "drm-engine-gpu";
             }
+
+            find_fd();
 
             std::thread thread(&GPU_fdinfo::get_load, this);
             thread.detach();
