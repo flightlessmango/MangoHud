@@ -16,9 +16,9 @@ class GPU_fdinfo {
     private:
         bool init = false;
         struct gpu_metrics metrics;
-        std::vector<FILE*> fdinfo;
-        const char* module;
-        const char* pci_dev;
+        std::vector<std::ifstream> fdinfo;
+        const std::string module;
+        const std::string pci_dev;
         void find_fd();
         void find_intel_hwmon();
         std::ifstream energy_stream;
@@ -30,17 +30,26 @@ class GPU_fdinfo {
 
         uint64_t get_gpu_time();
         void get_load();
-        std::string get_drm_engine_type();
-        std::string get_drm_memory_type();
+        std::string drm_engine_type = "EMPTY";
+        std::string drm_memory_type = "EMPTY";
         float get_vram_usage();
         float get_power_usage();
 
     public:
-        GPU_fdinfo(const char* module, const char* pci_dev) : module(module), pci_dev(pci_dev) {
+        GPU_fdinfo(const std::string module, const std::string pci_dev) : module(module), pci_dev(pci_dev) {
             find_fd();
 
-            if (strstr(module, "i915"))
+            if (module == "i915") {
+                drm_engine_type = "drm-engine-render";
+                drm_memory_type = "drm-total-local0";
                 find_intel_hwmon();
+            } else if (module == "amdgpu") {
+                drm_engine_type = "drm-engine-gfx";
+                drm_memory_type = "drm-memory-vram";
+            } else if (module == "msm") {
+                // msm driver does not report vram usage
+                drm_engine_type = "drm-engine-gpu";
+            }
 
             std::thread thread(&GPU_fdinfo::get_load, this);
             thread.detach();
@@ -58,12 +67,5 @@ class GPU_fdinfo {
         void resume() {
             paused = false;
             cond_var.notify_one();
-        }
-
-        ~GPU_fdinfo() {
-            for (size_t i = 0; i < fdinfo.size(); i++) {
-                fclose(fdinfo[i]);
-            }
-            fdinfo.clear();
         }
 };
