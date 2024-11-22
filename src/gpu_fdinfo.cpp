@@ -1,7 +1,8 @@
 #include "gpu_fdinfo.h"
 namespace fs = ghc::filesystem;
 
-void GPU_fdinfo::find_fd() {
+void GPU_fdinfo::find_fd()
+{
     auto path = fs::path("/proc/self/fdinfo");
 
     if (!fs::exists(path)) {
@@ -33,7 +34,8 @@ void GPU_fdinfo::find_fd() {
         fdinfo.push_back(std::ifstream(fd));
 }
 
-uint64_t GPU_fdinfo::get_gpu_time() {
+uint64_t GPU_fdinfo::get_gpu_time()
+{
     uint64_t total_val = 0;
 
     for (auto& fd : fdinfo) {
@@ -52,7 +54,8 @@ uint64_t GPU_fdinfo::get_gpu_time() {
     return total_val;
 }
 
-float GPU_fdinfo::get_vram_usage() {
+float GPU_fdinfo::get_vram_usage()
+{
     uint64_t total_val = 0;
 
     for (auto& fd : fdinfo) {
@@ -71,7 +74,8 @@ float GPU_fdinfo::get_vram_usage() {
     return (float)total_val / 1024 / 1024;
 }
 
-void GPU_fdinfo::find_intel_hwmon() {
+void GPU_fdinfo::find_intel_hwmon()
+{
     std::string device = "/sys/bus/pci/devices/";
     device += pci_dev;
     device += "/hwmon";
@@ -104,7 +108,8 @@ void GPU_fdinfo::find_intel_hwmon() {
         SPDLOG_DEBUG("Intel hwmon: failed to open {}", hwmon);
 }
 
-float GPU_fdinfo::get_power_usage() {
+float GPU_fdinfo::get_power_usage()
+{
     if (!energy_stream.is_open())
         return 0.f;
 
@@ -123,7 +128,8 @@ float GPU_fdinfo::get_power_usage() {
     return (float)energy_input / 1'000'000;
 }
 
-void GPU_fdinfo::get_load() {
+void GPU_fdinfo::get_load()
+{
     while (!stop_thread) {
         std::unique_lock<std::mutex> lock(metrics_mutex);
         cond_var.wait(lock, [this]() { return !paused || stop_thread; });
