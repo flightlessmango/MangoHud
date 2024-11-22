@@ -240,6 +240,9 @@ void NVIDIA::get_samples_and_copy() {
 
         GPU_UPDATE_METRIC_AVERAGE(temp);
 
+        GPU_UPDATE_METRIC_AVERAGE_FLOAT(memoryTotal);
+        GPU_UPDATE_METRIC_AVERAGE_FLOAT(memoryUsed);
+
         GPU_UPDATE_METRIC_MAX(is_power_throttled);
         GPU_UPDATE_METRIC_MAX(is_current_throttled);
         GPU_UPDATE_METRIC_MAX(is_temp_throttled);
