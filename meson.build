@@ -259,7 +259,7 @@ else
   windows_deps = null_dep
 endif
 
-if get_option('mangoapp') or get_option('mangoapp_layer')
+if get_option('mangoapp')
   glfw3_dep = dependency('glfw3')
   glew_dep = dependency('glew')
 endif
