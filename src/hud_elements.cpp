@@ -1484,16 +1484,15 @@ void HudElements::network() {
         HUDElements.net = std::make_unique<Net>();
 
     for (auto& iface : HUDElements.net->interfaces){
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
+        ImguiNextColumnFirstItem();
         HUDElements.TextColored(HUDElements.colors.network, "%.8s", iface.name.c_str());
-        ImGui::TableNextColumn();
+        ImguiNextColumnOrNewRow();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", iface.txBps / 1000.f);
         ImGui::SameLine(0,1.0f);
         ImGui::PushFont(HUDElements.sw_stats->font1);
         HUDElements.TextColored(HUDElements.colors.text, "KB/s %s", ICON_FK_ARROW_UP);
         ImGui::PopFont();
-        ImGui::TableNextColumn();
+        ImguiNextColumnOrNewRow();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", iface.rxBps / 1000.f);
         ImGui::SameLine(0,1.0f);
         ImGui::PushFont(HUDElements.sw_stats->font1);
