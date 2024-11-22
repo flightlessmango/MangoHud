@@ -52,7 +52,6 @@ jobs:
           -D with_dbus=enabled
           -D mangoapp=true
           -D mangohudctl=true
-          -D mangoapp_layer=true
           -D tests=enabled
     - name: 'Build'
       run: meson compile -C ./builddir || ninja -C ./builddir
