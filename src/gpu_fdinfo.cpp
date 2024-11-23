@@ -169,10 +169,6 @@ void GPU_fdinfo::get_load() {
         static float power_usage_now, previous_power_usage;
 
         now = os_time_get_nano();
-
-        if (now - previous_time < METRICS_UPDATE_PERIOD_MS * 1'000'000)
-            continue;
-
         gpu_time_now = get_gpu_time();
         power_usage_now = get_power_usage();
 
@@ -193,5 +189,7 @@ void GPU_fdinfo::get_load() {
             previous_time = now;
             previous_power_usage = power_usage_now;
         }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(METRICS_UPDATE_PERIOD_MS));
     }
 }
