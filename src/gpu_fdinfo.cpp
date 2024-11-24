@@ -157,7 +157,7 @@ float GPU_fdinfo::get_power_usage() {
 
     energy_input = std::stoull(energy_input_str);
 
-    return energy_input / 1'000'000;
+    return (float)energy_input / 1'000'000;
 }
 
 void GPU_fdinfo::get_load() {
@@ -175,7 +175,9 @@ void GPU_fdinfo::get_load() {
         if (gpu_time_now > previous_gpu_time) {
             float time_since_last = now - previous_time;
             float gpu_since_last = gpu_time_now - previous_gpu_time;
-            float power_usage_since_last = power_usage_now - previous_power_usage;
+            float power_usage_since_last =
+                (power_usage_now - previous_power_usage) /
+                ((float)METRICS_UPDATE_PERIOD_MS / 1000);
 
             auto result = int((gpu_since_last / time_since_last) * 100);
             if (result > 100)
@@ -190,6 +192,8 @@ void GPU_fdinfo::get_load() {
             previous_power_usage = power_usage_now;
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(METRICS_UPDATE_PERIOD_MS));
+        std::this_thread::sleep_for(
+            std::chrono::milliseconds(METRICS_UPDATE_PERIOD_MS)
+        );
     }
 }
