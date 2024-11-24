@@ -13,7 +13,7 @@ fi
 DISABLE_LD_PRELOAD="cs2.sh
 "
 
-MANGOHUD_LIB_NAME="@ld_libdir_mangohud@libMangoHud_opengl.so"
+MANGOHUD_LIB_NAME="@ld_libdir_mangohud@libMangoHud_shim.so"
 
 if [ "$1" = "--dlsym" ]; then
     MANGOHUD_LIB_NAME="@ld_libdir_mangohud@libMangoHud_dlsym.so:${MANGOHUD_LIB_NAME}"
