@@ -1,7 +1,7 @@
 #pragma once
 #ifndef MANGOHUD_GL_GL_H
 #define MANGOHUD_GL_GL_H
-
+#include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
 #endif //__cplusplus

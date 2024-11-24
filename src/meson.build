@@ -222,6 +222,7 @@ mangohud_opengl_shared_lib = shared_library(
   opengl_files,
   vklayer_files,
   util_files,
+  gnu_symbol_visibility : 'hidden',
   c_args : [
     pre_args,
     vulkan_wsi_args
@@ -322,6 +323,16 @@ mangoapp = executable(
   install_tag : 'mangoapp', #TODO MangoHud layer itself currently doesn't support it
   install : true
 )
+endif
+if is_unixy
+  mangohud_shim = shared_library(
+    'MangoHud_shim',
+    files(
+      'gl/shim.c',
+    ),
+    install_dir : libdir_mangohud,
+    install: true
+  )
 endif
 
 configure_file(input : 'mangohud.json.in',
