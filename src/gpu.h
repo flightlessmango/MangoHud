@@ -17,6 +17,9 @@
 #include "gpu_fdinfo.h"
 
 class GPU {
+    private:
+        std::string is_i915_or_xe();
+
     public:
         gpu_metrics metrics;
         std::string name;
@@ -38,7 +41,7 @@ class GPU {
                 // For now we're only accepting one of these modules at once
                 // Might be possible that multiple can exist on a system in the future?
                 if (vendor_id == 0x8086)
-                    fdinfo = std::make_unique<GPU_fdinfo>("i915", pci_dev);
+                    fdinfo = std::make_unique<GPU_fdinfo>(is_i915_or_xe(), pci_dev);
 
                 if (vendor_id == 0x5143)
                     fdinfo = std::make_unique<GPU_fdinfo>("msm", pci_dev);

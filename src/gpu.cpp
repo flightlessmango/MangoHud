@@ -72,6 +72,26 @@ GPUS::GPUS(overlay_params* params) : params(params) {
     find_active_gpu();
 }
 
+std::string GPU::is_i915_or_xe() {
+    std::string path = "/sys/bus/pci/devices/";
+    path += pci_dev + "/driver";
+
+    if (!fs::exists(path)) {
+        SPDLOG_ERROR("{} doesn't exist", path);
+        return "";
+    }
+
+    if (!fs::is_symlink(path)) {
+        SPDLOG_ERROR("{} is not a symlink (it should be)", path);
+        return "";
+    }
+
+    std::string driver = fs::read_symlink(path);
+    driver = driver.substr(driver.rfind("/") + 1);
+
+    return driver;
+}
+
 std::string GPUS::get_pci_device_address(const std::string& drm_card_path) {
     // Resolve the symbolic link to get the actual device path
     fs::path device_path = fs::canonical(fs::path(drm_card_path) / "device");
