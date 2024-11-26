@@ -15,24 +15,36 @@
 class GPU_fdinfo {
 private:
     bool init = false;
-    struct gpu_metrics metrics;
-    std::vector<std::ifstream> fdinfo;
+
     const std::string module;
     const std::string pci_dev;
-    void find_fd();
-    void find_intel_hwmon();
-    std::ifstream energy_stream;
+
     std::thread thread;
     std::condition_variable cond_var;
+
     std::atomic<bool> stop_thread { false };
     std::atomic<bool> paused { false };
+
+    struct gpu_metrics metrics;
     mutable std::mutex metrics_mutex;
 
-    uint64_t get_gpu_time();
-    void get_load();
+    std::vector<std::ifstream> fdinfo;
+    std::ifstream energy_stream;
+
     std::string drm_engine_type = "EMPTY";
     std::string drm_memory_type = "EMPTY";
-    float get_vram_usage();
+
+    void main_thread();
+
+    void find_fd();
+    void find_intel_hwmon();
+
+    int get_gpu_load();
+    uint64_t get_gpu_time();
+
+    float get_memory_used();
+
+    float get_current_power();
     float get_power_usage();
 
 public:
@@ -54,7 +66,7 @@ public:
 
         find_fd();
 
-        std::thread thread(&GPU_fdinfo::get_load, this);
+        std::thread thread(&GPU_fdinfo::main_thread, this);
         thread.detach();
     }
 

@@ -54,7 +54,7 @@ uint64_t GPU_fdinfo::get_gpu_time()
     return total_val;
 }
 
-float GPU_fdinfo::get_vram_usage()
+float GPU_fdinfo::get_memory_used()
 {
     uint64_t total_val = 0;
 
@@ -108,7 +108,7 @@ void GPU_fdinfo::find_intel_hwmon()
         SPDLOG_DEBUG("Intel hwmon: failed to open {}", hwmon);
 }
 
-float GPU_fdinfo::get_power_usage()
+float GPU_fdinfo::get_current_power()
 {
     if (!energy_stream.is_open())
         return 0.f;
@@ -128,40 +128,51 @@ float GPU_fdinfo::get_power_usage()
     return (float)energy_input / 1'000'000;
 }
 
-void GPU_fdinfo::get_load()
+float GPU_fdinfo::get_power_usage()
+{
+    static float last;
+    float now = get_current_power();
+
+    float delta = now - last;
+    delta /= (float)METRICS_UPDATE_PERIOD_MS / 1000;
+
+    last = now;
+
+    return delta;
+}
+
+int GPU_fdinfo::get_gpu_load()
+{
+    static uint64_t previous_gpu_time, previous_time;
+
+    uint64_t now = os_time_get_nano();
+    uint64_t gpu_time_now = get_gpu_time();
+
+    float delta_time = now - previous_time;
+    float delta_gpu_time = gpu_time_now - previous_gpu_time;
+
+    int result = std::lround(delta_gpu_time / delta_time * 100);
+
+    if (result > 100)
+        result = 100;
+
+    previous_gpu_time = gpu_time_now;
+    previous_time = now;
+
+    return result;
+}
+
+void GPU_fdinfo::main_thread()
 {
     while (!stop_thread) {
         std::unique_lock<std::mutex> lock(metrics_mutex);
         cond_var.wait(lock, [this]() { return !paused || stop_thread; });
 
-        static uint64_t previous_gpu_time, previous_time, now, gpu_time_now;
-        static float power_usage_now, previous_power_usage;
-
-        now = os_time_get_nano();
-        gpu_time_now = get_gpu_time();
-        power_usage_now = get_power_usage();
-
-        if (gpu_time_now > previous_gpu_time) {
-            float time_since_last = now - previous_time;
-            float gpu_since_last = gpu_time_now - previous_gpu_time;
-            float power_usage_since_last =
-                (power_usage_now - previous_power_usage) /
-                ((float)METRICS_UPDATE_PERIOD_MS / 1000);
-
-            auto result = int((gpu_since_last / time_since_last) * 100);
-            if (result > 100)
-                result = 100;
-
-            metrics.load = result;
-            metrics.memoryUsed = get_vram_usage();
-            metrics.powerUsage = power_usage_since_last;
-
-            previous_gpu_time = gpu_time_now;
-            previous_power_usage = power_usage_now;
-        }
+        metrics.load = get_gpu_load();
+        metrics.memoryUsed = get_memory_used();
+        metrics.powerUsage = get_power_usage();
 
         std::this_thread::sleep_for(
-            std::chrono::milliseconds(METRICS_UPDATE_PERIOD_MS)
-        );
+            std::chrono::milliseconds(METRICS_UPDATE_PERIOD_MS));
     }
 }
