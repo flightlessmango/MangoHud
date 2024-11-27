@@ -42,6 +42,10 @@ private:
     int get_gpu_load();
     uint64_t get_gpu_time();
 
+    std::vector<uint64_t> xe_fdinfo_last_cycles;
+    int get_xe_load();
+    std::pair<uint64_t, uint64_t> get_gpu_time_xe();
+
     float get_memory_used();
 
     float get_current_power();
@@ -52,10 +56,14 @@ public:
         : module(module)
         , pci_dev(pci_dev)
     {
+        SPDLOG_DEBUG("GPU driver is \"{}\"", module);
+
         if (module == "i915") {
             drm_engine_type = "drm-engine-render";
             drm_memory_type = "drm-total-local0";
-            find_intel_hwmon();
+        } else if (module == "xe") {
+            drm_engine_type = "drm-total-cycles-rcs";
+            drm_memory_type = "drm-total-vram0";
         } else if (module == "amdgpu") {
             drm_engine_type = "drm-engine-gfx";
             drm_memory_type = "drm-memory-vram";
@@ -63,6 +71,9 @@ public:
             // msm driver does not report vram usage
             drm_engine_type = "drm-engine-gpu";
         }
+
+        if (module == "i915" || module == "xe")
+            find_intel_hwmon();
 
         find_fd();
 

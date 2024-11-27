@@ -86,7 +86,7 @@ std::string GPU::is_i915_or_xe() {
         return "";
     }
 
-    std::string driver = fs::read_symlink(path);
+    std::string driver = fs::read_symlink(path).string();
     driver = driver.substr(driver.rfind("/") + 1);
 
     return driver;
