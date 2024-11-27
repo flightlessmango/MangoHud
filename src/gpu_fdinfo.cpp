@@ -30,8 +30,12 @@ void GPU_fdinfo::find_fd()
         }
     }
 
-    for (const auto& fd : fds_to_open)
+    for (const auto& fd : fds_to_open) {
         fdinfo.push_back(std::ifstream(fd));
+
+        if (module == "xe")
+            xe_fdinfo_last_cycles.push_back(0);
+    }
 }
 
 uint64_t GPU_fdinfo::get_gpu_time()
@@ -93,7 +97,7 @@ void GPU_fdinfo::find_intel_hwmon()
         return;
     }
 
-    hwmon += "/energy1_input";
+    hwmon += module == "i915" ? "/energy1_input" : "/energy2_input";
 
     if (!fs::exists(hwmon)) {
         SPDLOG_DEBUG("Intel hwmon: file {} doesn't exist.", hwmon);
@@ -141,9 +145,90 @@ float GPU_fdinfo::get_power_usage()
     return delta;
 }
 
+std::pair<uint64_t, uint64_t> GPU_fdinfo::get_gpu_time_xe()
+{
+    uint64_t total_cycles = 0, total_total_cycles = 0;
+
+    for (size_t i = 0; i < fdinfo.size(); i++) {
+        fdinfo[i].clear();
+        fdinfo[i].seekg(0);
+
+        uint64_t current_cycles = 0, current_total_cycles = 0;
+
+        for (std::string line; std::getline(fdinfo[i], line);) {
+            if (line.find("drm-cycles-rcs") == std::string::npos &&
+                line.find("drm-total-cycles-rcs") == std::string::npos
+            )
+                continue;
+
+            auto drm_type = line.substr(0, line.find(":"));
+
+            auto start = (drm_type + ": ").length();
+            auto val = std::stoull(line.substr(start));
+
+            if (drm_type == "drm-cycles-rcs")
+                current_cycles = val;
+            else if (drm_type == "drm-total-cycles-rcs")
+                current_total_cycles = val;
+
+            if (current_cycles > 0 && current_total_cycles > 0)
+                break;
+        }
+
+        if (current_cycles > 0 && current_cycles != xe_fdinfo_last_cycles[i] &&
+            current_total_cycles > 0)
+        {
+            total_cycles += current_cycles;
+            total_total_cycles += current_total_cycles;
+
+            xe_fdinfo_last_cycles[i] = current_cycles;
+        }
+    }
+
+    return { total_cycles, total_total_cycles };
+}
+
+int GPU_fdinfo::get_xe_load()
+{
+    static uint64_t previous_cycles, previous_total_cycles;
+
+    auto gpu_time = get_gpu_time_xe();
+    uint64_t cycles = gpu_time.first;
+    uint64_t total_cycles = gpu_time.second;
+
+    uint64_t delta_cycles = cycles - previous_cycles;
+    uint64_t delta_total_cycles = total_cycles - previous_total_cycles;
+
+    if (delta_cycles == 0 || delta_total_cycles == 0)
+        return 0;
+
+    double load = (double)delta_cycles / delta_total_cycles * 100;
+
+    previous_cycles = cycles;
+    previous_total_cycles = total_cycles;
+
+    // SPDLOG_DEBUG("cycles             = {}", cycles);
+    // SPDLOG_DEBUG("total_cycles       = {}", total_cycles);
+    // SPDLOG_DEBUG("delta_cycles       = {}", delta_cycles);
+    // SPDLOG_DEBUG("delta_total_cycles = {}", delta_total_cycles);
+    // SPDLOG_DEBUG("{} / {} * 100 = {}", delta_cycles, delta_total_cycles, load);
+    // SPDLOG_DEBUG("load = {}\n", std::lround(load));
+
+    return std::lround(load);
+}
+
 int GPU_fdinfo::get_gpu_load()
 {
     static uint64_t previous_gpu_time, previous_time;
+
+    if (module == "xe") {
+        int result = get_xe_load();
+
+        if (result > 100)
+            result = 100;
+
+        return result;
+    }
 
     uint64_t now = os_time_get_nano();
     uint64_t gpu_time_now = get_gpu_time();
@@ -151,7 +236,7 @@ int GPU_fdinfo::get_gpu_load()
     float delta_time = now - previous_time;
     float delta_gpu_time = gpu_time_now - previous_gpu_time;
 
-    int result = std::lround(delta_gpu_time / delta_time * 100);
+    int result = delta_gpu_time / delta_time * 100;
 
     if (result > 100)
         result = 100;
