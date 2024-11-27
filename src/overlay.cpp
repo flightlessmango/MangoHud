@@ -761,7 +761,7 @@ void init_system_info(){
 
       ram =  exec("sed -n 's/^MemTotal: *\\([0-9]*\\).*/\\1/p' /proc/meminfo");
       trim(ram);
-      cpu =  exec("sed -n 's/^model name.*: \\(.*\\)/\\1/p' /proc/cpuinfo | sed 's/([^)]*)//g' | tail -n1");
+      cpu =  exec("sed -n 's/^[M,m]odel [N,n]ame.*: \\(.*\\)/\\1/p' /proc/cpuinfo | sed 's/([^)]*)//g' | tail -n1");
       trim(cpu);
       kernel = exec("uname -r");
       trim(kernel);
