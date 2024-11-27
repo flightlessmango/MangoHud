@@ -11,6 +11,7 @@
 #include "gpu_metrics_util.h"
 #include <atomic>
 #include <spdlog/spdlog.h>
+#include <map>
 
 class GPU_fdinfo {
 private:
@@ -33,6 +34,9 @@ private:
 
     std::string drm_engine_type = "EMPTY";
     std::string drm_memory_type = "EMPTY";
+
+    std::vector<std::map<std::string, std::string>> fdinfo_data;
+    void gather_fdinfo_data();
 
     void main_thread();
 

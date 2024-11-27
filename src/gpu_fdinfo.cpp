@@ -32,50 +32,57 @@ void GPU_fdinfo::find_fd()
 
     for (const auto& fd : fds_to_open) {
         fdinfo.push_back(std::ifstream(fd));
+        fdinfo_data.push_back({});
 
         if (module == "xe")
             xe_fdinfo_last_cycles.push_back(0);
     }
 }
 
-uint64_t GPU_fdinfo::get_gpu_time()
-{
-    uint64_t total_val = 0;
+void GPU_fdinfo::gather_fdinfo_data() {
+    for (size_t i = 0; i < fdinfo.size(); i++) {
+        fdinfo[i].clear();
+        fdinfo[i].seekg(0);
 
-    for (auto& fd : fdinfo) {
-        fd.clear();
-        fd.seekg(0);
-
-        for (std::string line; std::getline(fd, line);) {
-            if (line.find(drm_engine_type) == std::string::npos)
-                continue;
-
-            auto start = (drm_engine_type + ": ").length();
-            total_val += std::stoull(line.substr(start));
+        for (std::string line; std::getline(fdinfo[i], line);) {
+            auto key = line.substr(0, line.find(":"));
+            auto val = line.substr(key.length() + 2);
+            fdinfo_data[i][key] = val;
         }
     }
+}
 
-    return total_val;
+uint64_t GPU_fdinfo::get_gpu_time()
+{
+    uint64_t total = 0;
+
+    for (auto& fd : fdinfo_data) {
+        auto time = fd[drm_engine_type];
+
+        if (time.empty())
+            continue;
+
+        total += std::stoull(time);
+    }
+
+    return total;
 }
 
 float GPU_fdinfo::get_memory_used()
 {
-    uint64_t total_val = 0;
+    uint64_t total = 0;
 
-    for (auto& fd : fdinfo) {
-        fd.clear();
-        fd.seekg(0);
+    for (auto& fd : fdinfo_data) {
+        auto mem = fd[drm_memory_type];
 
-        for (std::string line; std::getline(fd, line);) {
-            if (line.find(drm_memory_type) == std::string::npos)
-                continue;
+        if (mem.empty())
+            continue;
 
-            auto start = (drm_memory_type + ": ").length();
-            total_val += std::stoull(line.substr(start));
-        }
+        total += std::stoull(mem);
     }
 
-    return (float)total_val / 1024 / 1024;
+    // TODO: sometimes it's not KB, so add a check for that.
+    return (float)total / 1024 / 1024;
 }
 
 void GPU_fdinfo::find_intel_hwmon()
@@ -149,40 +156,30 @@ std::pair<uint64_t, uint64_t> GPU_fdinfo::get_gpu_time_xe()
 {
     uint64_t total_cycles = 0, total_total_cycles = 0;
 
-    for (size_t i = 0; i < fdinfo.size(); i++) {
-        fdinfo[i].clear();
-        fdinfo[i].seekg(0);
+    size_t idx = -1;
+    for (auto& fd : fdinfo_data) {
+        idx++;
 
-        uint64_t current_cycles = 0, current_total_cycles = 0;
+        auto cur_cycles_str = fd["drm-cycles-rcs"];
+        auto cur_total_cycles_str = fd["drm-total-cycles-rcs"];
 
-        for (std::string line; std::getline(fdinfo[i], line);) {
-            if (line.find("drm-cycles-rcs") == std::string::npos &&
-                line.find("drm-total-cycles-rcs") == std::string::npos
-            )
-                continue;
+        if (cur_cycles_str.empty() || cur_total_cycles_str.empty())
+            continue;
 
-            auto drm_type = line.substr(0, line.find(":"));
+        auto cur_cycles = std::stoull(cur_cycles_str);
+        auto cur_total_cycles = std::stoull(cur_total_cycles_str);
 
-            auto start = (drm_type + ": ").length();
-            auto val = std::stoull(line.substr(start));
+        if (
+            cur_cycles <= 0 ||
+            cur_cycles == xe_fdinfo_last_cycles[idx] ||
+            cur_total_cycles <= 0
+        )
+            continue;
 
-            if (drm_type == "drm-cycles-rcs")
-                current_cycles = val;
-            else if (drm_type == "drm-total-cycles-rcs")
-                current_total_cycles = val;
+        total_cycles += cur_cycles;
+        total_total_cycles += cur_total_cycles;
 
-            if (current_cycles > 0 && current_total_cycles > 0)
-                break;
-        }
-
-        if (current_cycles > 0 && current_cycles != xe_fdinfo_last_cycles[i] &&
-            current_total_cycles > 0)
-        {
-            total_cycles += current_cycles;
-            total_total_cycles += current_total_cycles;
-
-            xe_fdinfo_last_cycles[i] = current_cycles;
-        }
+        xe_fdinfo_last_cycles[idx] = cur_cycles;
     }
 
     return { total_cycles, total_total_cycles };
@@ -204,6 +201,9 @@ int GPU_fdinfo::get_xe_load()
 
     double load = (double)delta_cycles / delta_total_cycles * 100;
 
+    if (load > 100.f)
+        load = 100.f;
+
     previous_cycles = cycles;
     previous_total_cycles = total_cycles;
 
@@ -221,14 +221,8 @@ int GPU_fdinfo::get_gpu_load()
 {
     static uint64_t previous_gpu_time, previous_time;
 
-    if (module == "xe") {
-        int result = get_xe_load();
-
-        if (result > 100)
-            result = 100;
-
-        return result;
-    }
+    if (module == "xe")
+        return get_xe_load();
 
     uint64_t now = os_time_get_nano();
     uint64_t gpu_time_now = get_gpu_time();
@@ -252,6 +246,8 @@ void GPU_fdinfo::main_thread()
     while (!stop_thread) {
         std::unique_lock<std::mutex> lock(metrics_mutex);
         cond_var.wait(lock, [this]() { return !paused || stop_thread; });
+
+        gather_fdinfo_data();
 
         metrics.load = get_gpu_load();
         metrics.memoryUsed = get_memory_used();
