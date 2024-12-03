@@ -1,13 +1,18 @@
-#include <wayland-client.h>
+#pragma once
+#ifndef MANGOHUD_WAYLAND_HOOK_H
+#define MANGOHUD_WAYLAND_HOOK_H
+
 #include <vector>
+
+struct wl_display;
 
 #ifndef KeySym
 typedef unsigned long KeySym;
 #endif
 
-extern void* wl_handle;
-extern struct wl_display* wl_display_ptr;
-extern std::vector<KeySym> wl_pressed_keys;
+void init_wayland_data(wl_display *display);
+void fini_wayland_data();
 
-void init_wayland_data();
-void update_wl_queue();
+bool any_wayland_seat_syms_are_pressed(const std::vector<KeySym> &syms);
+
+#endif
