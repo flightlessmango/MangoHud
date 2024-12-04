@@ -10,7 +10,11 @@ void GPU_fdinfo::find_fd()
         return;
     }
 
-    std::vector<std::string> fds_to_open;
+    // Here we store client-ids, if ids match, we dont open this file,
+    // because it will have same readings and it becomes a duplicate
+    std::set<std::string> client_ids;
+    int total = 0;
+
     for (const auto& entry : fs::directory_iterator(path)) {
         auto fd_path = entry.path().string();
         auto file = std::ifstream(fd_path);
@@ -18,25 +22,48 @@ void GPU_fdinfo::find_fd()
         if (!file.is_open())
             continue;
 
-        bool found_driver = false;
+        std::string driver, pdev, client_id;
+
         for (std::string line; std::getline(file, line);) {
-            if (line.find(module) != std::string::npos)
-                found_driver = true;
+            auto key = line.substr(0, line.find(":"));
+            auto val = line.substr(key.length() + 2);
 
-            if (found_driver && line.find(drm_engine_type) != std::string::npos) {
-                fds_to_open.push_back(fd_path);
-                break;
-            }
+            if (key == "drm-driver")
+                driver = val;
+            else if (key == "drm-pdev")
+                pdev = val;
+            else if (key == "drm-client-id")
+                client_id = val;
         }
+
+        if (!driver.empty() && driver == module) {
+            total++;
+            SPDLOG_DEBUG(
+                "driver = \"{}\", pdev = \"{}\", client_id = \"{}\", client_id_exists = \"{}\"",
+                driver, pdev, client_id, client_ids.find(client_id) != client_ids.end()
+            );
+        }
+
+        if (
+            driver.empty() || pdev.empty() || client_id.empty() ||
+            driver != module || pdev != pci_dev ||
+            client_ids.find(client_id) != client_ids.end()
+        )
+            continue;
+
+        client_ids.insert(client_id);
+        open_fdinfo_fd(fd_path);
     }
 
-    for (const auto& fd : fds_to_open) {
-        fdinfo.push_back(std::ifstream(fd));
-        fdinfo_data.push_back({});
+    SPDLOG_DEBUG("Found {} total fds. Opened {} unique fds.", total, fdinfo.size());
+}
 
-        if (module == "xe")
-            xe_fdinfo_last_cycles.push_back(0);
-    }
+void GPU_fdinfo::open_fdinfo_fd(std::string path) {
+    fdinfo.push_back(std::ifstream(path));
+    fdinfo_data.push_back({});
+
+    if (module == "xe")
+        xe_fdinfo_last_cycles.push_back(0);
 }
 
 void GPU_fdinfo::gather_fdinfo_data() {
@@ -142,7 +169,6 @@ float GPU_fdinfo::get_current_power()
 float GPU_fdinfo::get_power_usage()
 {
     float now = get_current_power();
-
     float delta = now - this->last_power;
     delta /= (float)METRICS_UPDATE_PERIOD_MS / 1000;
 
