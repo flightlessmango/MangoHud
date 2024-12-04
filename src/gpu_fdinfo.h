@@ -13,6 +13,8 @@
 #include <atomic>
 #include <spdlog/spdlog.h>
 #include <map>
+#include <set>
+#include <unistd.h>
 
 class GPU_fdinfo {
 private:
@@ -43,6 +45,7 @@ private:
     void main_thread();
 
     void find_fd();
+    void open_fdinfo_fd(std::string path);
     void find_intel_hwmon();
 
     int get_gpu_load();
@@ -66,12 +69,14 @@ public:
     {
         SPDLOG_DEBUG("GPU driver is \"{}\"", module);
 
+        find_fd();
+
         if (module == "i915") {
             drm_engine_type = "drm-engine-render";
             drm_memory_type = "drm-total-local0";
         } else if (module == "xe") {
             drm_engine_type = "drm-total-cycles-rcs";
-            drm_memory_type = "drm-total-vram0";
+            drm_memory_type = "drm-resident-vram0";
         } else if (module == "amdgpu") {
             drm_engine_type = "drm-engine-gfx";
             drm_memory_type = "drm-memory-vram";
@@ -80,10 +85,13 @@ public:
             drm_engine_type = "drm-engine-gpu";
         }
 
+        SPDLOG_DEBUG(
+            "drm_engine_type = {}, drm_memory_type = {}",
+            drm_engine_type, drm_memory_type
+        );
+
         if (module == "i915" || module == "xe")
             find_intel_hwmon();
-
-        find_fd();
 
         std::thread thread(&GPU_fdinfo::main_thread, this);
         thread.detach();
