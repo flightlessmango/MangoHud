@@ -141,13 +141,12 @@ float GPU_fdinfo::get_current_power()
 
 float GPU_fdinfo::get_power_usage()
 {
-    static float last;
     float now = get_current_power();
 
-    float delta = now - last;
+    float delta = now - this->last_power;
     delta /= (float)METRICS_UPDATE_PERIOD_MS / 1000;
 
-    last = now;
+    this->last_power = now;
 
     return delta;
 }
@@ -219,8 +218,6 @@ int GPU_fdinfo::get_xe_load()
 
 int GPU_fdinfo::get_gpu_load()
 {
-    static uint64_t previous_gpu_time, previous_time;
-
     if (module == "xe")
         return get_xe_load();
 
@@ -253,7 +250,13 @@ void GPU_fdinfo::main_thread()
         metrics.memoryUsed = get_memory_used();
         metrics.powerUsage = get_power_usage();
 
+        SPDLOG_DEBUG(
+            "pci_dev = {}, pid = {}, module = {}, load = {}, mem = {}, power = {}",
+            pci_dev, pid, module, metrics.load, metrics.memoryUsed, metrics.powerUsage
+        );
+
         std::this_thread::sleep_for(
-            std::chrono::milliseconds(METRICS_UPDATE_PERIOD_MS));
+            std::chrono::milliseconds(METRICS_UPDATE_PERIOD_MS)
+        );
     }
 }

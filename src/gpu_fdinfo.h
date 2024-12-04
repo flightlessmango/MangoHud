@@ -2,6 +2,7 @@
 #include <filesystem.h>
 #include <inttypes.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include <thread>
 #ifdef TEST_ONLY
 #include <../src/mesa/util/os_time.h>
@@ -16,6 +17,7 @@
 class GPU_fdinfo {
 private:
     bool init = false;
+    pid_t pid = getpid();
 
     const std::string module;
     const std::string pci_dev;
@@ -45,6 +47,7 @@ private:
 
     int get_gpu_load();
     uint64_t get_gpu_time();
+    uint64_t previous_gpu_time, previous_time = 0;
 
     std::vector<uint64_t> xe_fdinfo_last_cycles;
     int get_xe_load();
@@ -54,6 +57,7 @@ private:
 
     float get_current_power();
     float get_power_usage();
+    float last_power = 0;
 
 public:
     GPU_fdinfo(const std::string module, const std::string pci_dev)
