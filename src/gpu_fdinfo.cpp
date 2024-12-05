@@ -144,6 +144,10 @@ void GPU_fdinfo::find_intel_hwmon()
 
     if (!energy_stream.good())
         SPDLOG_DEBUG("Intel hwmon: failed to open {}", hwmon);
+
+    // Initialize value for the first time, otherwise delta will be very large
+    // and your gpu power usage will be like 1 million watts for a second.
+    this->last_power = get_current_power();
 }
 
 float GPU_fdinfo::get_current_power()
