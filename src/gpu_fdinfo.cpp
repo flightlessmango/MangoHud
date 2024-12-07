@@ -61,9 +61,6 @@ void GPU_fdinfo::find_fd()
 void GPU_fdinfo::open_fdinfo_fd(std::string path) {
     fdinfo.push_back(std::ifstream(path));
     fdinfo_data.push_back({});
-
-    if (module == "xe")
-        xe_fdinfo_last_cycles.push_back(0);
 }
 
 void GPU_fdinfo::gather_fdinfo_data() {
@@ -181,67 +178,46 @@ float GPU_fdinfo::get_power_usage()
     return delta;
 }
 
-std::pair<uint64_t, uint64_t> GPU_fdinfo::get_gpu_time_xe()
+int GPU_fdinfo::get_xe_load()
 {
-    uint64_t total_cycles = 0, total_total_cycles = 0;
+    double load = 0;
 
-    size_t idx = -1;
     for (auto& fd : fdinfo_data) {
-        idx++;
+        std::string client_id = fd["drm-client-id"];
+        std::string cur_cycles_str = fd["drm-cycles-rcs"];
+        std::string cur_total_cycles_str = fd["drm-total-cycles-rcs"];
 
-        auto cur_cycles_str = fd["drm-cycles-rcs"];
-        auto cur_total_cycles_str = fd["drm-total-cycles-rcs"];
-
-        if (cur_cycles_str.empty() || cur_total_cycles_str.empty())
+        if (
+            client_id.empty() || cur_cycles_str.empty() ||
+            cur_total_cycles_str.empty()
+        )
             continue;
 
         auto cur_cycles = std::stoull(cur_cycles_str);
         auto cur_total_cycles = std::stoull(cur_total_cycles_str);
 
-        if (
-            cur_cycles <= 0 ||
-            cur_cycles == xe_fdinfo_last_cycles[idx] ||
-            cur_total_cycles <= 0
-        )
+        if (prev_xe_cycles.find(client_id) == prev_xe_cycles.end()) {
+            prev_xe_cycles[client_id] = { cur_cycles, cur_total_cycles };
+            continue;
+        }
+
+        auto prev_cycles = prev_xe_cycles[client_id].first;
+        auto prev_total_cycles = prev_xe_cycles[client_id].second;
+
+        auto delta_cycles = cur_cycles - prev_cycles;
+        auto delta_total_cycles = cur_total_cycles - prev_total_cycles;
+
+        prev_xe_cycles[client_id] = { cur_cycles, cur_total_cycles };
+
+        if (delta_cycles <= 0 || delta_total_cycles <= 0)
             continue;
 
-        total_cycles += cur_cycles;
-        total_total_cycles += cur_total_cycles;
-
-        xe_fdinfo_last_cycles[idx] = cur_cycles;
+        auto fd_load = (double)delta_cycles / delta_total_cycles * 100;
+        load += fd_load;
     }
-
-    return { total_cycles, total_total_cycles };
-}
-
-int GPU_fdinfo::get_xe_load()
-{
-    static uint64_t previous_cycles, previous_total_cycles;
-
-    auto gpu_time = get_gpu_time_xe();
-    uint64_t cycles = gpu_time.first;
-    uint64_t total_cycles = gpu_time.second;
-
-    uint64_t delta_cycles = cycles - previous_cycles;
-    uint64_t delta_total_cycles = total_cycles - previous_total_cycles;
-
-    if (delta_cycles == 0 || delta_total_cycles == 0)
-        return 0;
-
-    double load = (double)delta_cycles / delta_total_cycles * 100;
 
     if (load > 100.f)
         load = 100.f;
-
-    previous_cycles = cycles;
-    previous_total_cycles = total_cycles;
-
-    // SPDLOG_DEBUG("cycles             = {}", cycles);
-    // SPDLOG_DEBUG("total_cycles       = {}", total_cycles);
-    // SPDLOG_DEBUG("delta_cycles       = {}", delta_cycles);
-    // SPDLOG_DEBUG("delta_total_cycles = {}", delta_total_cycles);
-    // SPDLOG_DEBUG("{} / {} * 100 = {}", delta_cycles, delta_total_cycles, load);
-    // SPDLOG_DEBUG("load = {}\n", std::lround(load));
 
     return std::lround(load);
 }
