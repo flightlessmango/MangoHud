@@ -181,8 +181,7 @@ void GPUS::find_active_gpu() {
             }
         }
 #endif
-    }
-    SPDLOG_DEBUG("failed to find active GPU");
+    SPDLOG_WARN("failed to find active GPU");
 }
 
 int GPU::index_in_selected_gpus() {
