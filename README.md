@@ -87,7 +87,7 @@ If distro's packaged `meson` is too old and gives build errors, install newer ve
 
 ### Meson options
 
-| Option        | Default | Description 
+| Option        | Default | Description
 | --------      | ------- | -
 | with_nvml     | enabled    |Required for NVIDIA GPU metrics on wayland
 | with_xnvctrl  | enabled    |Required for NVIDIA GPU metrics on older GPUs
@@ -356,10 +356,11 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `debug`                            | Shows the graph of gamescope app frametimes and latency (only on gamescope obviously) |
 | `device_battery_icon`              | Display wirless device battery icon.                                                  |
 | `device_battery`                   | Display wireless device battery percent. Currently supported arguments `gamepad` and `mouse` e.g `device_battery=gamepad,mouse` |
+| `display_server`                   | Display the current display session (e.g. X11 or wayland)                             |
 | `dynamic_frame_timing`             | This changes frame_timing y-axis to correspond with the current maximum and minimum frametime instead of being a static 0-50 |
 | `engine_short_names`               | Display a short version of the used engine (e.g. `OGL` instead of `OpenGL`)           |
 | `engine_version`                   | Display OpenGL or vulkan and vulkan-based render engine's version                     |
-| `exec`                             | Display output of bash command in next column, e.g `custom_text=/home` , `exec=df -h /home \| tail -n 1`. Only works with `legacy_layout=0` |
+| `exec`                             | Display output of bash command in next column, e.g. `custom_text=/home` , `exec=df -h /home \| tail -n 1`. Only works with `legacy_layout=0` |
 | `exec_name`                        | Display current exec name                                                             |
 | `fan`                              | Shows the Steam Deck fan rpm                                                          |
 | `fcat`                             | Enables frame capture analysis                                                        |
@@ -380,8 +381,11 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `fps_sampling_period=`             | Time interval between two sampling points for gathering the FPS in milliseconds. Default is `500`   |
 | `fps_value`                        | Choose the break points where `fps_color_change` changes colors between. E.g `60,144`, default is `30,60` |
 | `fps_metrics`                      | Takes a list of decimal values or the value avg, e.g `avg,0.001`                      |
+| `reset_fps_metrics`                | Reset fps metrics keybind, default is `Shift_R+F9`                                    |
+| `fps_text`                         | Display custom text for engine name in front of FPS                                   |
 | `frame_count`                      | Display frame count                                                                   |
 | `frametime`                        | Display frametime next to FPS text                                                    |
+| `frame_timing_detailed`            | Display frame timing in a more detailed chart                                         |
 | `fsr`                              | Display the status of FSR (only works in gamescope)                                   |
 | `hdr`                              | Display the status of HDR (only works in gamescope)                                   |
 | `refresh_rate`                     | Display the current refresh rate (only works in gamescope)                            |
@@ -487,6 +491,7 @@ Not all vulkan vsync options may be supported on your device, you can check what
 - `Shift_L+F2` : Toggle Logging
 - `Shift_L+F4` : Reload Config
 - `Shift_R+F12` : Toggle Hud
+- `Shift_R+9` : Reset FPS metrics
 
 ## Workarounds
 
