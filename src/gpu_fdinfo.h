@@ -53,8 +53,8 @@ private:
     uint64_t previous_gpu_time, previous_time = 0;
 
     std::vector<uint64_t> xe_fdinfo_last_cycles;
+    std::map<std::string, std::pair<uint64_t, uint64_t>> prev_xe_cycles;
     int get_xe_load();
-    std::pair<uint64_t, uint64_t> get_gpu_time_xe();
 
     float get_memory_used();
 
