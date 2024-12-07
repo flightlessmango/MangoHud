@@ -97,10 +97,9 @@ EXPORT_C_(void*) eglGetPlatformDisplay( unsigned int platform, void* native_disp
 #ifdef HAVE_WAYLAND
     if(platform == EGL_PLATFORM_WAYLAND_KHR)
     {
-        wl_display_ptr = (struct wl_display*)native_display;
+        wl_display* display = static_cast<wl_display*>(native_display);
         HUDElements.display_server = HUDElements.display_servers::WAYLAND;
-        wl_handle = real_dlopen("libwayland-client.so", RTLD_LAZY);
-        init_wayland_data();
+        init_wayland_data(display);
     }
 #endif
 
@@ -117,14 +116,12 @@ EXPORT_C_(void*) eglGetDisplay( void* native_display )
 #ifdef HAVE_WAYLAND
     try
     {
-        void** display_ptr = (void**)native_display;
-        wl_interface* iface = (wl_interface*)*display_ptr;
+        wl_interface* iface = *static_cast<wl_interface**>(native_display);
         if(iface && strcmp(iface->name, wl_display_interface.name) == 0)
         {
-            wl_display_ptr = (struct wl_display*)native_display;
+            wl_display* display = static_cast<wl_display*>(native_display);
             HUDElements.display_server = HUDElements.display_servers::WAYLAND;
-            wl_handle = real_dlopen("libwayland-client.so", RTLD_LAZY);
-            init_wayland_data();
+            init_wayland_data(display);
         }
     }
     catch(...)
@@ -135,17 +132,32 @@ EXPORT_C_(void*) eglGetDisplay( void* native_display )
     return pfn_eglGetDisplay(native_display);
 }
 
+EXPORT_C_(unsigned) eglTerminate( void* native_display );
+EXPORT_C_(unsigned) eglTerminate( void* native_display )
+{
+    static unsigned (*pfn_eglTerminate)(void*) = nullptr;
+    if (!pfn_eglTerminate)
+        pfn_eglTerminate= reinterpret_cast<decltype(pfn_eglTerminate)>(get_egl_proc_address("eglTerminate"));
+
+#ifdef HAVE_WAYLAND
+    fini_wayland_data();
+#endif
+
+    return pfn_eglTerminate(native_display);
+}
+
 struct func_ptr {
    const char *name;
    void *ptr;
 };
 
-static std::array<const func_ptr, 4> name_to_funcptr_map = {{
+static std::array<const func_ptr, 5> name_to_funcptr_map = {{
 #define ADD_HOOK(fn) { #fn, (void *) fn }
    ADD_HOOK(eglGetProcAddress),
    ADD_HOOK(eglSwapBuffers),
    ADD_HOOK(eglGetPlatformDisplay),
-   ADD_HOOK(eglGetDisplay)
+   ADD_HOOK(eglGetDisplay),
+   ADD_HOOK(eglTerminate)
 #undef ADD_HOOK
 }};
 

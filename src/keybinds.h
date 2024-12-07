@@ -18,14 +18,8 @@ typedef unsigned long KeySym;
 static inline bool keys_are_pressed(const std::vector<KeySym>& keys)
 {
     #if defined(HAVE_WAYLAND)
-    if(wl_display_ptr && wl_handle)
-    {
-        update_wl_queue();
-
-        if(wl_pressed_keys == keys)
-        {
-            return true;
-        }
+    if (any_wayland_seat_syms_are_pressed(keys)) {
+        return true;
     }
     #endif
 
