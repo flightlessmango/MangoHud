@@ -30,9 +30,8 @@
 #include "mesa/util/os_socket.h"
 #include "file_utils.h"
 
-#ifdef HAVE_X11
-#include <X11/keysym.h>
-#include "loaders/loader_x11.h"
+#if defined(HAVE_X11) || defined(HAVE_WAYLAND)
+#include <xkbcommon/xkbcommon.h>
 #endif
 
 #include "dbus_info.h"
@@ -132,22 +131,19 @@ parse_float(const char *str)
    return val;
 }
 
-#ifdef HAVE_X11
+#if defined(HAVE_X11) || defined(HAVE_WAYLAND)
 static std::vector<KeySym>
 parse_string_to_keysym_vec(const char *str)
 {
    std::vector<KeySym> keys;
-   if(get_libx11()->IsLoaded())
-   {
-      auto keyStrings = str_tokenize(str);
-      for (auto& ks : keyStrings) {
-         trim(ks);
-         KeySym xk = get_libx11()->XStringToKeysym(ks.c_str());
-         if (xk)
-            keys.push_back(xk);
-         else
-            SPDLOG_ERROR("Unrecognized key: '{}'", ks);
-      }
+   auto keyStrings = str_tokenize(str);
+   for (auto& ks : keyStrings) {
+      trim(ks);
+      xkb_keysym_t xk = xkb_keysym_from_name(ks.c_str(), XKB_KEYSYM_CASE_INSENSITIVE);
+      if (xk != XKB_KEY_NoSymbol)
+         keys.push_back(xk);
+      else
+         SPDLOG_ERROR("Unrecognized key: '{}'", ks);
    }
    return keys;
 }
@@ -785,16 +781,16 @@ parse_overlay_config(struct overlay_params *params,
       current_preset = params->preset[0];
    }
 
-#ifdef HAVE_X11
-   params->toggle_hud = { XK_Shift_R, XK_F12 };
-   params->toggle_hud_position = { XK_Shift_R, XK_F11 };
-   params->toggle_preset = { XK_Shift_R, XK_F10 };
-   params->reset_fps_metrics = { XK_Shift_R, XK_F9};
-   params->toggle_fps_limit = { XK_Shift_L, XK_F1 };
-   params->toggle_logging = { XK_Shift_L, XK_F2 };
-   params->reload_cfg = { XK_Shift_L, XK_F4 };
-   params->upload_log = { XK_Shift_L, XK_F3 };
-   params->upload_logs = { XK_Control_L, XK_F3 };
+#if defined(HAVE_X11) || defined(HAVE_WAYLAND)
+   params->toggle_hud = { XKB_KEY_Shift_R, XKB_KEY_F12 };
+   params->toggle_hud_position = { XKB_KEY_Shift_R, XKB_KEY_F11 };
+   params->toggle_preset = { XKB_KEY_Shift_R, XKB_KEY_F10 };
+   params->reset_fps_metrics = { XKB_KEY_Shift_R, XKB_KEY_F9};
+   params->toggle_fps_limit = { XKB_KEY_Shift_L, XKB_KEY_F1 };
+   params->toggle_logging = { XKB_KEY_Shift_L, XKB_KEY_F2 };
+   params->reload_cfg = { XKB_KEY_Shift_L, XKB_KEY_F4 };
+   params->upload_log = { XKB_KEY_Shift_L, XKB_KEY_F3 };
+   params->upload_logs = { XKB_KEY_Control_L, XKB_KEY_F3 };
 #endif
 
 #ifdef _WIN32
