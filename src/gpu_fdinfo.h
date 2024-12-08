@@ -2,6 +2,7 @@
 #include <filesystem.h>
 #include <inttypes.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include <thread>
 #ifdef TEST_ONLY
 #include <../src/mesa/util/os_time.h>
@@ -12,10 +13,12 @@
 #include <atomic>
 #include <spdlog/spdlog.h>
 #include <map>
+#include <set>
 
 class GPU_fdinfo {
 private:
     bool init = false;
+    pid_t pid = getpid();
 
     const std::string module;
     const std::string pci_dev;
@@ -41,33 +44,55 @@ private:
     void main_thread();
 
     void find_fd();
-    void find_intel_hwmon();
+    void open_fdinfo_fd(std::string path);
 
     int get_gpu_load();
     uint64_t get_gpu_time();
+    uint64_t previous_gpu_time, previous_time = 0;
 
     std::vector<uint64_t> xe_fdinfo_last_cycles;
+    std::map<std::string, std::pair<uint64_t, uint64_t>> prev_xe_cycles;
     int get_xe_load();
-    std::pair<uint64_t, uint64_t> get_gpu_time_xe();
 
     float get_memory_used();
 
+    void find_intel_hwmon();
     float get_current_power();
     float get_power_usage();
+    float last_power = 0;
+
+    std::ifstream gpu_clock_stream;
+    void find_i915_gt_dir();
+    void find_xe_gt_dir();
+    int get_gpu_clock();
 
 public:
     GPU_fdinfo(const std::string module, const std::string pci_dev)
         : module(module)
         , pci_dev(pci_dev)
     {
-        SPDLOG_DEBUG("GPU driver is \"{}\"", module);
+        SPDLOG_INFO("GPU driver is \"{}\"", module);
+
+        find_fd();
+        gather_fdinfo_data();
 
         if (module == "i915") {
             drm_engine_type = "drm-engine-render";
             drm_memory_type = "drm-total-local0";
         } else if (module == "xe") {
             drm_engine_type = "drm-total-cycles-rcs";
-            drm_memory_type = "drm-total-vram0";
+            drm_memory_type = "drm-resident-vram0";
+
+            if (
+                fdinfo_data.size() > 0 &&
+                fdinfo_data[0].find(drm_memory_type) == fdinfo_data[0].end()
+            ) {
+                SPDLOG_INFO(
+                    "\"{}\" is not found, you probably have an integrated GPU. "
+                    "Using \"drm-resident-gtt\".", drm_memory_type
+                );
+                drm_memory_type = "drm-resident-gtt";
+            }
         } else if (module == "amdgpu") {
             drm_engine_type = "drm-engine-gfx";
             drm_memory_type = "drm-memory-vram";
@@ -76,10 +101,18 @@ public:
             drm_engine_type = "drm-engine-gpu";
         }
 
+        SPDLOG_DEBUG(
+            "drm_engine_type = {}, drm_memory_type = {}",
+            drm_engine_type, drm_memory_type
+        );
+
         if (module == "i915" || module == "xe")
             find_intel_hwmon();
 
-        find_fd();
+        if (module == "i915")
+            find_i915_gt_dir();
+        else if (module == "xe")
+            find_xe_gt_dir();
 
         std::thread thread(&GPU_fdinfo::main_thread, this);
         thread.detach();
