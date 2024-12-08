@@ -89,7 +89,7 @@ if is_unixy
   dep_wayland_client = dependency('wayland-client',
       required: get_option('with_wayland'), version : '>=1.11')
   dbus_dep = dependency('dbus-1', required: get_option('with_dbus')).partial_dependency(compile_args : true, includes : true)
-  dep_xkb = dependency('xkbcommon', required: get_option('with_wayland'))
+  dep_xkb = dependency('xkbcommon', required: get_option('with_x11').enabled() or get_option('with_wayland').enabled())
 else
   dep_x11 = null_dep
   dep_wayland_client = null_dep
