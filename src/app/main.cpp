@@ -5,6 +5,7 @@
 
 #include <sys/ipc.h>
 #include <sys/msg.h>
+#include <mqueue.h>
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -42,11 +43,12 @@ static ImVec2 window_size;
 static uint32_t vendorID;
 static std::string deviceName;
 static notify_thread notifier;
-static int msgid;
+static int msgid = 0;
 static bool mangoapp_paused = false;
 std::mutex mangoapp_m;
 std::condition_variable mangoapp_cv;
 static uint8_t raw_msg[1024] = {0};
+static uint8_t raw_ctrl_msg[1024] = {0};
 static uint32_t screenWidth, screenHeight;
 
 static unsigned int get_prop(const char* propName){
@@ -78,9 +80,9 @@ static unsigned int get_prop(const char* propName){
 
 static void ctrl_thread(){
     while (1){
-        const struct mangoapp_ctrl_msgid1_v1 *mangoapp_ctrl_v1 = (const struct mangoapp_ctrl_msgid1_v1*) raw_msg;
-        memset(raw_msg, 0, sizeof(raw_msg));
-        msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 2, 0);
+        const struct mangoapp_ctrl_msgid1_v1 *mangoapp_ctrl_v1 = (const struct mangoapp_ctrl_msgid1_v1*) raw_ctrl_msg;
+        memset(raw_ctrl_msg, 0, sizeof(raw_ctrl_msg));
+        msgrcv(msgid, (void *) raw_ctrl_msg, sizeof(raw_ctrl_msg), 2, 0);
         switch (mangoapp_ctrl_v1->log_session) {
             case 0:
                 // Keep as-is
@@ -150,19 +152,34 @@ static void gamescope_frametime(uint64_t app_frametime_ns, uint64_t latency_ns){
 }
 
 static void msg_read_thread(){
+    mqd_t mqd = 0;
     for (size_t i = 0; i < 200; i++){
         HUDElements.gamescope_debug_app.push_back(0);
         HUDElements.gamescope_debug_latency.push_back(0);
     }
-    int key = ftok("mangoapp", 65);
+    // WARNING: Unless a file named "mangoapp" is in the current directory key will be -1 (0xffffffff) and errno will be set
+    //   0xffffffff is a valid key, but is likely to collide
+    // TODO: Deprecate SysV message queues or use a path that definitely exists e.g. the current directory (".")
+    key_t key = ftok("mangoapp", 65);
     msgid = msgget(key, 0666 | IPC_CREAT);
     // uint32_t previous_pid = 0;
+    const char *mangoapp_mq_name = getenv("MANGOAPP_MQ_NAME");
+    if (mangoapp_mq_name) {
+        mqd = mq_open(mangoapp_mq_name, O_RDONLY);
+        if (mqd == -1)
+            printf("mangoapp: Failed to open message queue \"%s\" %d: %s\n", mangoapp_mq_name, errno, strerror(errno));
+    }
     const struct mangoapp_msg_header *hdr = (const struct mangoapp_msg_header*) raw_msg;
     const struct mangoapp_msg_v1 *mangoapp_v1 = (const struct mangoapp_msg_v1*) raw_msg;
     while (1){
         // make sure that the message recieved is compatible
         // and that we're not trying to use variables that don't exist (yet)
-        size_t msg_size = msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 1, 0);
+        size_t msg_size = 0;
+        if (mqd > 0) {
+            msg_size = mq_receive(mqd, (char *)raw_msg, sizeof(raw_msg), NULL);
+        } else {
+            msg_size = msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 1, 0);
+        }
         if (msg_size != size_t(-1))
         {
             if (hdr->version == 1){
