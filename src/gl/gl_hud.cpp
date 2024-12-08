@@ -22,7 +22,9 @@
 #define GLX_RENDERER_VENDOR_ID_MESA                      0x8183
 #define GLX_RENDERER_DEVICE_ID_MESA                      0x8184
 
+#ifdef HAVE_X11
 bool glx_mesa_queryInteger(int attrib, unsigned int *value);
+#endif
 
 namespace MangoHud { namespace GL {
 
@@ -148,9 +150,10 @@ void imgui_create(void *ctx, const gl_wsi plat)
     HUDElements.vendorID = vendorID;
 
     uint32_t device_id = 0;
+#ifdef HAVE_X11
     if (plat == gl_wsi::GL_WSI_GLX)
         glx_mesa_queryInteger(GLX_RENDERER_DEVICE_ID_MESA, &device_id);
-
+#endif
     SPDLOG_DEBUG("GL device id: {:04X}", device_id);
     sw_stats.gpuName = gpu = remove_parentheses(deviceName);
     SPDLOG_DEBUG("gpu: {}", gpu);
