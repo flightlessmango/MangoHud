@@ -123,7 +123,6 @@ std::string GPUS::get_pci_device_address(const std::string& drm_card_path) {
 void GPUS::find_active_gpu() {
     pid_t pid = getpid();
     std::string fdinfo_dir = "/proc/" + std::to_string(pid) + "/fdinfo/";
-    bool active_gpu_found = false;
 
     for (const auto& entry : fs::directory_iterator(fdinfo_dir)) {
         if (entry.is_regular_file()) {
@@ -166,19 +165,17 @@ void GPUS::find_active_gpu() {
     // NVIDIA GPUs will not show up in fdinfo so we use NVML instead to find the active GPU
     // This will not work for older NVIDIA GPUs
 #ifdef HAVE_NVML
-    if (!active_gpu_found) {
-        for (const auto& gpu : available_gpus) {
-            // NVIDIA vendor ID is 0x10de
-            if (gpu->vendor_id == 0x10de && gpu->nvidia->nvml_available) { 
-                for (auto& pid : gpu->nvidia_pids()) {
-                    if (pid == getpid()) {
-                        gpu->is_active = true;
-                        SPDLOG_DEBUG("Active GPU Found: node_name: {}, pci_dev: {}", gpu->name, gpu->pci_dev);
-                        return;
-                    }
+    for (const auto& gpu : available_gpus) {
+        // NVIDIA vendor ID is 0x10de
+        if (gpu->vendor_id == 0x10de && gpu->nvidia->nvml_available) { 
+            for (auto& pid : gpu->nvidia_pids()) {
+                if (pid == getpid()) {
+                    gpu->is_active = true;
+                    SPDLOG_DEBUG("Active GPU Found: node_name: {}, pci_dev: {}", gpu->name, gpu->pci_dev);
+                    return;
                 }
-
             }
+
         }
     }
 #endif
