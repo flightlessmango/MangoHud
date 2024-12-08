@@ -118,13 +118,16 @@ EXPORT_C_(void*) eglGetDisplay( void* native_display )
     try
     {
         void** display_ptr = (void**)native_display;
-        wl_interface* iface = (wl_interface*)*display_ptr;
-        if(iface && strcmp(iface->name, wl_display_interface.name) == 0)
+        if (native_display)
         {
-            wl_display_ptr = (struct wl_display*)native_display;
-            HUDElements.display_server = HUDElements.display_servers::WAYLAND;
-            wl_handle = real_dlopen("libwayland-client.so", RTLD_LAZY);
-            init_wayland_data();
+            wl_interface* iface = (wl_interface*)*display_ptr;
+            if(iface && strcmp(iface->name, wl_display_interface.name) == 0)
+            {
+                wl_display_ptr = (struct wl_display*)native_display;
+                HUDElements.display_server = HUDElements.display_servers::WAYLAND;
+                wl_handle = real_dlopen("libwayland-client.so", RTLD_LAZY);
+                init_wayland_data();
+            }
         }
     }
     catch(...)
