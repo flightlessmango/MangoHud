@@ -1,7 +1,7 @@
 #pragma once
 #ifndef MANGOHUD_GL_GL_H
 #define MANGOHUD_GL_GL_H
-#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif //__cplusplus
@@ -24,6 +24,8 @@ int glXQueryDrawable(void *dpy, void* glxdraw, int attr, unsigned int * value);
 int64_t glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t target_msc, int64_t divisor, int64_t remainder);
 
 unsigned int eglSwapBuffers( void*, void* );
+void* eglGetPlatformDisplay( unsigned int, void*, const intptr_t*);
+void* eglGetDisplay( void* );
 
 #ifdef __cplusplus
 }
