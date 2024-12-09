@@ -28,6 +28,13 @@ struct hwmon_sensor {
     uint64_t val = 0;
 };
 
+enum GPU_throttle_status : int {
+    POWER = 0b0001,
+    CURRENT = 0b0010,
+    TEMP = 0b0100,
+    OTHER = 0b1000,
+};
+
 class GPU_fdinfo {
 private:
     bool init = false;
@@ -80,6 +87,22 @@ private:
     void find_i915_gt_dir();
     void find_xe_gt_dir();
     int get_gpu_clock();
+
+    std::ifstream throttle_status_stream;
+    std::vector<std::ifstream> throttle_power_streams;
+    std::vector<std::ifstream> throttle_current_streams;
+    std::vector<std::ifstream> throttle_temp_streams;
+    bool check_throttle_reasons(std::vector<std::ifstream> &throttle_reason_streams);
+    int get_throttling_status();
+
+    const std::vector<std::string> intel_throttle_power = {"reason_pl1", "reason_pl2"};
+    const std::vector<std::string> intel_throttle_current = {"reason_pl4", "reason_vr_tdc"};
+    const std::vector<std::string> intel_throttle_temp = {
+        "reason_prochot", "reason_ratl", "reason_thermal", "reason_vr_thermalert"};
+    void load_xe_i915_throttle_reasons(
+        std::string throttle_folder,
+        std::vector<std::string> throttle_reasons,
+        std::vector<std::ifstream> &throttle_reason_streams);
 
 public:
     GPU_fdinfo(const std::string module, const std::string pci_dev)
