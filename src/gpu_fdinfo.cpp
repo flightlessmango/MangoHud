@@ -39,8 +39,10 @@ void GPU_fdinfo::find_fd()
         if (!driver.empty() && driver == module) {
             total++;
             SPDLOG_DEBUG(
-                "driver = \"{}\", pdev = \"{}\", client_id = \"{}\", client_id_exists = \"{}\"",
-                driver, pdev, client_id, client_ids.find(client_id) != client_ids.end()
+                "driver = \"{}\", pdev = \"{}\", "
+                "client_id = \"{}\", client_id_exists = \"{}\"",
+                driver, pdev,
+                client_id, client_ids.find(client_id) != client_ids.end()
             );
         }
 
@@ -55,7 +57,11 @@ void GPU_fdinfo::find_fd()
         open_fdinfo_fd(fd_path);
     }
 
-    SPDLOG_DEBUG("Found {} total fds. Opened {} unique fds.", total, fdinfo.size());
+    SPDLOG_DEBUG(
+        "Found {} total fds. Opened {} unique fds.",
+        total,
+        fdinfo.size()
+    );
 }
 
 void GPU_fdinfo::open_fdinfo_fd(std::string path) {
@@ -109,14 +115,12 @@ float GPU_fdinfo::get_memory_used()
     return (float)total / 1024 / 1024;
 }
 
-void GPU_fdinfo::find_intel_hwmon()
+void GPU_fdinfo::find_hwmon()
 {
-    std::string device = "/sys/bus/pci/devices/";
-    device += pci_dev;
-    device += "/hwmon";
+    std::string device = "/sys/bus/pci/devices/" + pci_dev + "/hwmon";
 
     if (!fs::exists(device)) {
-        SPDLOG_DEBUG("Intel hwmon directory {} doesn't exist.", device);
+        SPDLOG_DEBUG("hwmon: hwmon directory {} doesn't exist.", device);
         return;
     }
 
@@ -124,58 +128,95 @@ void GPU_fdinfo::find_intel_hwmon()
     auto hwmon = dir_iterator->path().string();
 
     if (hwmon.empty()) {
-        SPDLOG_DEBUG("Intel hwmon directory is empty.");
+        SPDLOG_DEBUG("hwmon: hwmon directory is empty.");
         return;
     }
 
-    hwmon += module == "i915" ? "/energy1_input" : "/energy2_input";
+    for (const auto &entry : fs::directory_iterator(hwmon)) {
+        auto filename = entry.path().filename().string();
 
-    if (!fs::exists(hwmon)) {
-        SPDLOG_DEBUG("Intel hwmon: file {} doesn't exist.", hwmon);
-        return;
+        for (auto& hs : hwmon_sensors) {
+            auto key = hs.first;
+            auto sensor = &hs.second;
+            std::smatch matches;
+
+            if (
+                !std::regex_match(filename, matches, sensor->rx) ||
+                matches.size() != 2
+            )
+                continue;
+
+            auto cur_id = std::stoull(matches[1].str());
+
+            if (sensor->filename.empty() || cur_id < sensor->id) {
+                sensor->filename = entry.path().string();
+                sensor->id = cur_id;
+            }
+        }
     }
 
-    SPDLOG_DEBUG("Intel hwmon found: hwmon = {}", hwmon);
+    for (auto& hs : hwmon_sensors) {
+        auto key = hs.first;
+        auto sensor = &hs.second;
 
-    energy_stream.open(hwmon);
+        if (sensor->filename.empty()) {
+            SPDLOG_DEBUG("hwmon: {} reading not found at {}", key, hwmon);
+            continue;
+        }
 
-    if (!energy_stream.good())
-        SPDLOG_DEBUG("Intel hwmon: failed to open {}", hwmon);
+        SPDLOG_DEBUG("hwmon: {} reading found at {}", key, sensor->filename);
 
-    // Initialize value for the first time, otherwise delta will be very large
-    // and your gpu power usage will be like 1 million watts for a second.
-    this->last_power = get_current_power();
+        sensor->stream.open(sensor->filename);
+
+        if (!sensor->stream.good()) {
+            SPDLOG_DEBUG(
+                "hwmon: failed to open {} reading {}",
+                key, sensor->filename
+            );
+            continue;
+        }
+    }
 }
 
-float GPU_fdinfo::get_current_power()
+void GPU_fdinfo::get_current_hwmon_readings()
 {
-    if (!energy_stream.is_open())
-        return 0.f;
+    for (auto& hs : hwmon_sensors) {
+        auto key = hs.first;
+        auto sensor = &hs.second;
 
-    std::string energy_input_str;
-    uint64_t energy_input;
+        if (!sensor->stream.is_open())
+            continue;
 
-    energy_stream.seekg(0);
+        sensor->stream.seekg(0);
 
-    std::getline(energy_stream, energy_input_str);
+        std::stringstream ss;
+        ss << sensor->stream.rdbuf();
 
-    if (energy_input_str.empty())
-        return 0.f;
+        if (ss.str().empty())
+            continue;
 
-    energy_input = std::stoull(energy_input_str);
-
-    return (float)energy_input / 1'000'000;
+        sensor->val = std::stoull(ss.str());
+    }
 }
 
 float GPU_fdinfo::get_power_usage()
 {
-    float now = get_current_power();
+    if (!hwmon_sensors["power"].filename.empty())
+        return (float)hwmon_sensors["power"].val / 1'000'000;
+
+    float now = hwmon_sensors["energy"].val;
+
+    // Initialize value for the first time, otherwise delta will be very large
+    // and your gpu power usage will be like 1 million watts for a second.
+    if (this->last_power == 0.f)
+        this->last_power = now;
+
     float delta = now - this->last_power;
     delta /= (float)METRICS_UPDATE_PERIOD_MS / 1000;
 
     this->last_power = now;
 
-    return delta;
+    return delta / 1'000'000;
 }
 
 int GPU_fdinfo::get_xe_load()
@@ -349,15 +390,26 @@ void GPU_fdinfo::main_thread()
         cond_var.wait(lock, [this]() { return !paused || stop_thread; });
 
         gather_fdinfo_data();
+        get_current_hwmon_readings();
 
         metrics.load = get_gpu_load();
         metrics.memoryUsed = get_memory_used();
         metrics.powerUsage = get_power_usage();
         metrics.CoreClock = get_gpu_clock();
+        metrics.temp = hwmon_sensors["temp"].val / 1000;
+        metrics.fan_speed = hwmon_sensors["fan_speed"].val;
+        metrics.voltage = hwmon_sensors["voltage"].val;
+        metrics.fan_rpm = true; // Fan data is pulled from hwmon
 
         SPDLOG_DEBUG(
-            "pci_dev = {}, pid = {}, module = {}, load = {}, mem = {}, power = {}",
-            pci_dev, pid, module, metrics.load, metrics.memoryUsed, metrics.powerUsage
+            "pci_dev = {}, pid = {}, module = {}, "
+            "load = {}, mem = {}, power = {}, "
+            "core = {}, temp = {}, fan = {}, "
+            "voltage = {}",
+            pci_dev, pid, module,
+            metrics.load, metrics.memoryUsed, metrics.powerUsage,
+            metrics.CoreClock, metrics.temp, metrics.fan_speed,
+            metrics.voltage
         );
 
         std::this_thread::sleep_for(
