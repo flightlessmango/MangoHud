@@ -1,19 +1,32 @@
 #pragma once
+#include <cstdint>
 #include <filesystem.h>
 #include <inttypes.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include <thread>
+
 #ifdef TEST_ONLY
 #include <../src/mesa/util/os_time.h>
 #else
 #include <mesa/util/os_time.h>
 #endif
+
 #include "gpu_metrics_util.h"
 #include <atomic>
 #include <spdlog/spdlog.h>
 #include <map>
 #include <set>
+#include <regex>
+
+struct hwmon_sensor {
+    std::regex rx;
+    std::ifstream stream;
+    std::string filename;
+    unsigned char id = 0;
+    uint64_t val = 0;
+};
 
 class GPU_fdinfo {
 private:
@@ -33,7 +46,8 @@ private:
     mutable std::mutex metrics_mutex;
 
     std::vector<std::ifstream> fdinfo;
-    std::ifstream energy_stream;
+
+    std::map<std::string, hwmon_sensor> hwmon_sensors;
 
     std::string drm_engine_type = "EMPTY";
     std::string drm_memory_type = "EMPTY";
@@ -56,8 +70,9 @@ private:
 
     float get_memory_used();
 
-    void find_intel_hwmon();
-    float get_current_power();
+    void find_hwmon();
+    void get_current_hwmon_readings();
+
     float get_power_usage();
     float last_power = 0;
 
@@ -106,8 +121,13 @@ public:
             drm_engine_type, drm_memory_type
         );
 
-        if (module == "i915" || module == "xe")
-            find_intel_hwmon();
+        hwmon_sensors["voltage"]   = { .rx = std::regex("in(\\d+)_input") };
+        hwmon_sensors["fan_speed"] = { .rx = std::regex("fan(\\d+)_input") };
+        hwmon_sensors["temp"]      = { .rx = std::regex("temp(\\d+)_input") };
+        hwmon_sensors["power"]     = { .rx = std::regex("power(\\d+)_input") };
+        hwmon_sensors["energy"]    = { .rx = std::regex("energy(\\d+)_input") };
+
+        find_hwmon();
 
         if (module == "i915")
             find_i915_gt_dir();
