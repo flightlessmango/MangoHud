@@ -222,7 +222,6 @@ mangohud_opengl_shared_lib = shared_library(
   opengl_files,
   vklayer_files,
   util_files,
-  gnu_symbol_visibility : 'hidden',
   c_args : [
     pre_args,
     vulkan_wsi_args
@@ -330,6 +329,9 @@ if is_unixy
     files(
       'gl/shim.c',
     ),
+    dependencies : [
+      dep_dl
+    ],
     install_dir : libdir_mangohud,
     install: true
   )

@@ -9,34 +9,41 @@
 static void* handle = NULL;
 static bool mangoHudLoaded = false;
 
+// Load MangoHud after EGL/GLX functions have been intercepted
 static void loadMangoHud(void);
 static void loadMangoHud() {
     if (mangoHudLoaded) return;
 
-    //allow user to load custom mangohud libs (useful for testing)
-    char *libdir = getenv("MANGOHUD_OPENGL_LIB");
+    // allow user to load custom mangohud libs (useful for testing)
+    char *libs = getenv("MANGOHUD_OPENGL_LIBS");
+    char *lib = NULL;
 
-    if (libdir)
+    if (libs)
     {
-        handle = dlopen(libdir, RTLD_LAZY | RTLD_LOCAL | RTLD_DEEPBIND);
+        lib = strtok(libs, ":");
 
-        if (handle) mangoHudLoaded = true;
-        else {
-            fprintf(stderr, "shim: Failed to load from: %s\n", libdir);
-            libdir = NULL;
+        // when user specifies only one path
+        if (!lib) lib = libs;
+
+        while (lib != NULL)
+        {
+            handle = dlopen(lib, RTLD_LAZY | RTLD_LOCAL | RTLD_DEEPBIND);
+
+            if (handle)
+            {
+                mangoHudLoaded = true;
+                break;
+            }
+            else fprintf(stderr, "shim: Failed to load from: %s\n", lib);
+
+            lib = strtok(NULL, ":");
         }
     }
 
-    // Load MangoHud after GLX functions have been intercepted
-    if(!mangoHudLoaded)
+    if (!mangoHudLoaded)
     {
         handle = dlopen("${ORIGIN}/libMangoHud_opengl.so", RTLD_LAZY | RTLD_LOCAL | RTLD_DEEPBIND);
         if (handle) mangoHudLoaded = true;
-    }
-
-    if (mangoHudLoaded) {
-        printf("shim: Loaded mangohud library\n");
-        if (libdir) printf("from custom location: %s\n", libdir);
     }
 }
 
@@ -90,7 +97,7 @@ unsigned int eglSwapBuffers(void* dpy, void* surf) {
     // Get the hooked eglSwapBuffers function from the loaded library if available
     unsigned int (*peglSwapBuffers)(void*, void*) = dlsym(handle, "eglSwapBuffers");
     if (peglSwapBuffers) {
-        return peglSwapBuffers(dpy, surf);;
+        return peglSwapBuffers(dpy, surf);
     } else {
         // Fall back to the original eglSwapBuffers function
         peglSwapBuffers = dlsym(RTLD_NEXT, "eglSwapBuffers");
