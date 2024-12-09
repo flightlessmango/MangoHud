@@ -250,22 +250,20 @@ void HudElements::gpu_stats(){
                 ImGui::PopFont();
             }
 
-            if (HUDElements.vendorID == 0x1002 || HUDElements.vendorID == 0x10de){
-                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_fan] && cpuStats.cpu_type != "APU"){
-                    ImguiNextColumnOrNewRow();
-                    right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu->metrics.fan_speed);
+            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_fan] && !gpu->is_apu()){
+                ImguiNextColumnOrNewRow();
+                right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu->metrics.fan_speed);
+                ImGui::SameLine(0, 1.0f);
+                if (gpu->metrics.fan_rpm) {
+                    ImGui::PushFont(HUDElements.sw_stats->font1);
+                    HUDElements.TextColored(HUDElements.colors.text, "RPM");
+                } else {
+                    HUDElements.TextColored(HUDElements.colors.text, "%%");
+                    ImGui::PushFont(HUDElements.sw_stats->font1);
                     ImGui::SameLine(0, 1.0f);
-                    if (gpu->metrics.fan_rpm) {
-                        ImGui::PushFont(HUDElements.sw_stats->font1);
-                        HUDElements.TextColored(HUDElements.colors.text, "RPM");
-                    } else {
-                        HUDElements.TextColored(HUDElements.colors.text, "%%");
-                        ImGui::PushFont(HUDElements.sw_stats->font1);
-                        ImGui::SameLine(0, 1.0f);
-                        HUDElements.TextColored(HUDElements.colors.text, "FAN");
-                    }
-                    ImGui::PopFont();
+                    HUDElements.TextColored(HUDElements.colors.text, "FAN");
                 }
+                ImGui::PopFont();
             }
 
             if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]){
