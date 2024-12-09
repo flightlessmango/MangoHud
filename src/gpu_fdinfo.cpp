@@ -10,7 +10,11 @@ void GPU_fdinfo::find_fd()
         return;
     }
 
-    std::vector<std::string> fds_to_open;
+    // Here we store client-ids, if ids match, we dont open this file,
+    // because it will have same readings and it becomes a duplicate
+    std::set<std::string> client_ids;
+    int total = 0;
+
     for (const auto& entry : fs::directory_iterator(path)) {
         auto fd_path = entry.path().string();
         auto file = std::ifstream(fd_path);
@@ -18,25 +22,51 @@ void GPU_fdinfo::find_fd()
         if (!file.is_open())
             continue;
 
-        bool found_driver = false;
+        std::string driver, pdev, client_id;
+
         for (std::string line; std::getline(file, line);) {
-            if (line.find(module) != std::string::npos)
-                found_driver = true;
+            auto key = line.substr(0, line.find(":"));
+            auto val = line.substr(key.length() + 2);
 
-            if (found_driver && line.find(drm_engine_type) != std::string::npos) {
-                fds_to_open.push_back(fd_path);
-                break;
-            }
+            if (key == "drm-driver")
+                driver = val;
+            else if (key == "drm-pdev")
+                pdev = val;
+            else if (key == "drm-client-id")
+                client_id = val;
         }
+
+        if (!driver.empty() && driver == module) {
+            total++;
+            SPDLOG_DEBUG(
+                "driver = \"{}\", pdev = \"{}\", "
+                "client_id = \"{}\", client_id_exists = \"{}\"",
+                driver, pdev,
+                client_id, client_ids.find(client_id) != client_ids.end()
+            );
+        }
+
+        if (
+            driver.empty() || pdev.empty() || client_id.empty() ||
+            driver != module || pdev != pci_dev ||
+            client_ids.find(client_id) != client_ids.end()
+        )
+            continue;
+
+        client_ids.insert(client_id);
+        open_fdinfo_fd(fd_path);
     }
 
-    for (const auto& fd : fds_to_open) {
-        fdinfo.push_back(std::ifstream(fd));
-        fdinfo_data.push_back({});
+    SPDLOG_DEBUG(
+        "Found {} total fds. Opened {} unique fds.",
+        total,
+        fdinfo.size()
+    );
+}
 
-        if (module == "xe")
-            xe_fdinfo_last_cycles.push_back(0);
-    }
+void GPU_fdinfo::open_fdinfo_fd(std::string path) {
+    fdinfo.push_back(std::ifstream(path));
+    fdinfo_data.push_back({});
 }
 
 void GPU_fdinfo::gather_fdinfo_data() {
@@ -85,14 +115,12 @@ float GPU_fdinfo::get_memory_used()
     return (float)total / 1024 / 1024;
 }
 
-void GPU_fdinfo::find_intel_hwmon()
+void GPU_fdinfo::find_hwmon()
 {
-    std::string device = "/sys/bus/pci/devices/";
-    device += pci_dev;
-    device += "/hwmon";
+    std::string device = "/sys/bus/pci/devices/" + pci_dev + "/hwmon";
 
     if (!fs::exists(device)) {
-        SPDLOG_DEBUG("Intel hwmon directory {} doesn't exist.", device);
+        SPDLOG_DEBUG("hwmon: hwmon directory {} doesn't exist.", device);
         return;
     }
 
@@ -100,127 +128,143 @@ void GPU_fdinfo::find_intel_hwmon()
     auto hwmon = dir_iterator->path().string();
 
     if (hwmon.empty()) {
-        SPDLOG_DEBUG("Intel hwmon directory is empty.");
+        SPDLOG_DEBUG("hwmon: hwmon directory is empty.");
         return;
     }
 
-    hwmon += module == "i915" ? "/energy1_input" : "/energy2_input";
+    for (const auto &entry : fs::directory_iterator(hwmon)) {
+        auto filename = entry.path().filename().string();
 
-    if (!fs::exists(hwmon)) {
-        SPDLOG_DEBUG("Intel hwmon: file {} doesn't exist.", hwmon);
-        return;
+        for (auto& hs : hwmon_sensors) {
+            auto key = hs.first;
+            auto sensor = &hs.second;
+            std::smatch matches;
+
+            if (
+                !std::regex_match(filename, matches, sensor->rx) ||
+                matches.size() != 2
+            )
+                continue;
+
+            auto cur_id = std::stoull(matches[1].str());
+
+            if (sensor->filename.empty() || cur_id < sensor->id) {
+                sensor->filename = entry.path().string();
+                sensor->id = cur_id;
+            }
+        }
     }
 
-    SPDLOG_DEBUG("Intel hwmon found: hwmon = {}", hwmon);
+    for (auto& hs : hwmon_sensors) {
+        auto key = hs.first;
+        auto sensor = &hs.second;
 
-    energy_stream.open(hwmon);
+        if (sensor->filename.empty()) {
+            SPDLOG_DEBUG("hwmon: {} reading not found at {}", key, hwmon);
+            continue;
+        }
 
-    if (!energy_stream.good())
-        SPDLOG_DEBUG("Intel hwmon: failed to open {}", hwmon);
+        SPDLOG_DEBUG("hwmon: {} reading found at {}", key, sensor->filename);
+
+        sensor->stream->open(sensor->filename);
+
+        if (!sensor->stream->good()) {
+            SPDLOG_DEBUG(
+                "hwmon: failed to open {} reading {}",
+                key, sensor->filename
+            );
+            continue;
+        }
+    }
 }
 
-float GPU_fdinfo::get_current_power()
+void GPU_fdinfo::get_current_hwmon_readings()
 {
-    if (!energy_stream.is_open())
-        return 0.f;
+    for (auto& hs : hwmon_sensors) {
+        auto key = hs.first;
+        auto sensor = &hs.second;
 
-    std::string energy_input_str;
-    uint64_t energy_input;
+        if (!sensor->stream->is_open())
+            continue;
 
-    energy_stream.seekg(0);
+        sensor->stream->seekg(0);
 
-    std::getline(energy_stream, energy_input_str);
+        std::stringstream ss;
+        ss << sensor->stream->rdbuf();
 
-    if (energy_input_str.empty())
-        return 0.f;
+        if (ss.str().empty())
+            continue;
 
-    energy_input = std::stoull(energy_input_str);
-
-    return (float)energy_input / 1'000'000;
+        sensor->val = std::stoull(ss.str());
+    }
 }
 
 float GPU_fdinfo::get_power_usage()
 {
-    static float last;
-    float now = get_current_power();
+    if (!hwmon_sensors["power"].filename.empty())
+        return (float)hwmon_sensors["power"].val / 1'000'000;
 
-    float delta = now - last;
+    float now = hwmon_sensors["energy"].val;
+
+    // Initialize value for the first time, otherwise delta will be very large
+    // and your gpu power usage will be like 1 million watts for a second.
+    if (this->last_power == 0.f)
+        this->last_power = now;
+
+    float delta = now - this->last_power;
     delta /= (float)METRICS_UPDATE_PERIOD_MS / 1000;
 
-    last = now;
+    this->last_power = now;
 
-    return delta;
+    return delta / 1'000'000;
 }
 
-std::pair<uint64_t, uint64_t> GPU_fdinfo::get_gpu_time_xe()
+int GPU_fdinfo::get_xe_load()
 {
-    uint64_t total_cycles = 0, total_total_cycles = 0;
+    double load = 0;
 
-    size_t idx = -1;
     for (auto& fd : fdinfo_data) {
-        idx++;
+        std::string client_id = fd["drm-client-id"];
+        std::string cur_cycles_str = fd["drm-cycles-rcs"];
+        std::string cur_total_cycles_str = fd["drm-total-cycles-rcs"];
 
-        auto cur_cycles_str = fd["drm-cycles-rcs"];
-        auto cur_total_cycles_str = fd["drm-total-cycles-rcs"];
-
-        if (cur_cycles_str.empty() || cur_total_cycles_str.empty())
+        if (
+            client_id.empty() || cur_cycles_str.empty() ||
+            cur_total_cycles_str.empty()
+        )
             continue;
 
         auto cur_cycles = std::stoull(cur_cycles_str);
         auto cur_total_cycles = std::stoull(cur_total_cycles_str);
 
-        if (
-            cur_cycles <= 0 ||
-            cur_cycles == xe_fdinfo_last_cycles[idx] ||
-            cur_total_cycles <= 0
-        )
+        if (prev_xe_cycles.find(client_id) == prev_xe_cycles.end()) {
+            prev_xe_cycles[client_id] = { cur_cycles, cur_total_cycles };
+            continue;
+        }
+
+        auto prev_cycles = prev_xe_cycles[client_id].first;
+        auto prev_total_cycles = prev_xe_cycles[client_id].second;
+
+        auto delta_cycles = cur_cycles - prev_cycles;
+        auto delta_total_cycles = cur_total_cycles - prev_total_cycles;
+
+        prev_xe_cycles[client_id] = { cur_cycles, cur_total_cycles };
+
+        if (delta_cycles <= 0 || delta_total_cycles <= 0)
             continue;
 
-        total_cycles += cur_cycles;
-        total_total_cycles += cur_total_cycles;
-
-        xe_fdinfo_last_cycles[idx] = cur_cycles;
+        auto fd_load = (double)delta_cycles / delta_total_cycles * 100;
+        load += fd_load;
     }
-
-    return { total_cycles, total_total_cycles };
-}
-
-int GPU_fdinfo::get_xe_load()
-{
-    static uint64_t previous_cycles, previous_total_cycles;
-
-    auto gpu_time = get_gpu_time_xe();
-    uint64_t cycles = gpu_time.first;
-    uint64_t total_cycles = gpu_time.second;
-
-    uint64_t delta_cycles = cycles - previous_cycles;
-    uint64_t delta_total_cycles = total_cycles - previous_total_cycles;
-
-    if (delta_cycles == 0 || delta_total_cycles == 0)
-        return 0;
-
-    double load = (double)delta_cycles / delta_total_cycles * 100;
 
     if (load > 100.f)
         load = 100.f;
-
-    previous_cycles = cycles;
-    previous_total_cycles = total_cycles;
-
-    // SPDLOG_DEBUG("cycles             = {}", cycles);
-    // SPDLOG_DEBUG("total_cycles       = {}", total_cycles);
-    // SPDLOG_DEBUG("delta_cycles       = {}", delta_cycles);
-    // SPDLOG_DEBUG("delta_total_cycles = {}", delta_total_cycles);
-    // SPDLOG_DEBUG("{} / {} * 100 = {}", delta_cycles, delta_total_cycles, load);
-    // SPDLOG_DEBUG("load = {}\n", std::lround(load));
 
     return std::lround(load);
 }
 
 int GPU_fdinfo::get_gpu_load()
 {
-    static uint64_t previous_gpu_time, previous_time;
-
     if (module == "xe")
         return get_xe_load();
 
@@ -241,6 +285,176 @@ int GPU_fdinfo::get_gpu_load()
     return result;
 }
 
+std::vector<std::string> intel_throttle_power = {"reason_pl1", "reason_pl2"};
+std::vector<std::string> intel_throttle_current = {"reason_pl4", "reason_vr_tdc"};
+std::vector<std::string> intel_throttle_temp = {
+    "reason_prochot", "reason_ratl", "reason_thermal", "reason_vr_thermalert"};
+
+void GPU_fdinfo::find_i915_gt_dir()
+{
+    std::string device = "/sys/bus/pci/devices/" + pci_dev + "/drm";
+
+    // Find first dir which starts with name "card"
+    for (const auto& entry : fs::directory_iterator(device)) {
+        auto path = entry.path().string();
+
+        if (path.substr(device.size() + 1, 4) == "card") {
+            device = path;
+            break;
+        }
+    }
+
+    auto gpu_clock_path = device + "/gt_act_freq_mhz";
+    gpu_clock_stream.open(gpu_clock_path);
+
+    if (!gpu_clock_stream.good())
+        SPDLOG_WARN("Intel i915 gt dir: failed to open {}", device);
+
+    // Assuming gt0 since all recent GPUs have the RCS engine on gt0, and latest GPUs need Xe anyway
+    auto throttle_folder = device + "/gt/gt0/throttle_";
+    auto throttle_status_path = throttle_folder + "reason_status";
+
+    throttle_status_stream.open(throttle_status_path);
+    if (!throttle_status_stream.good()) {
+       SPDLOG_WARN("Intel i915 gt dir: failed to open {}", throttle_status_path);
+    } else {
+        load_xe_i915_throttle_reasons(throttle_folder, intel_throttle_power, throttle_power_streams);
+        load_xe_i915_throttle_reasons(throttle_folder, intel_throttle_current, throttle_current_streams);
+        load_xe_i915_throttle_reasons(throttle_folder, intel_throttle_temp, throttle_temp_streams);
+    }
+}
+
+void GPU_fdinfo::find_xe_gt_dir()
+{
+    std::string device = "/sys/bus/pci/devices/" + pci_dev + "/tile0";
+
+    if (!fs::exists(device)) {
+        SPDLOG_WARN(
+            "\"{}\" doesn't exist. GPU clock will be unavailable.",
+            device
+        );
+        return;
+    }
+
+    bool has_rcs = true;
+
+    // Check every "gt" dir if it has "engines/rcs" inside
+    for (const auto& entry : fs::directory_iterator(device)) {
+        auto path = entry.path().string();
+
+        if (path.substr(device.size() + 1, 2) != "gt")
+            continue;
+
+        SPDLOG_DEBUG("Checking \"{}\" for rcs.", path);
+
+        if (!fs::exists(path + "/engines/rcs")) {
+            SPDLOG_DEBUG("Skipping \"{}\" because rcs doesn't exist.", path);
+            continue;
+        }
+
+        SPDLOG_DEBUG("Found rcs in \"{}\"", path);
+        has_rcs = true;
+        device = path;
+        break;
+
+    }
+
+    if (!has_rcs) {
+        SPDLOG_WARN("rcs not found inside \"{}\". GPU clock will not be available.", device);
+        return;
+    }
+
+    auto gpu_clock_path = device + "/freq0/act_freq";
+    gpu_clock_stream.open(gpu_clock_path);
+
+    if (!gpu_clock_stream.good())
+        SPDLOG_WARN("Intel xe gt dir: failed to open {}", gpu_clock_path);
+
+    auto throttle_folder = device + "/freq0/throttle/";
+    auto throttle_status_path = throttle_folder + "status";
+
+    throttle_status_stream.open(throttle_status_path);
+    if (!throttle_status_stream.good()) {
+       SPDLOG_WARN("Intel xe gt dir: failed to open {}", throttle_status_path);
+    } else {
+        load_xe_i915_throttle_reasons(throttle_folder, intel_throttle_power, throttle_power_streams);
+        load_xe_i915_throttle_reasons(throttle_folder, intel_throttle_current, throttle_current_streams);
+        load_xe_i915_throttle_reasons(throttle_folder, intel_throttle_temp, throttle_temp_streams);
+    }
+}
+
+void GPU_fdinfo::load_xe_i915_throttle_reasons(
+    std::string throttle_folder,
+    std::vector<std::string> throttle_reasons,
+    std::vector<std::ifstream>& throttle_reason_streams
+) {
+    for (const auto& throttle_reason : throttle_reasons) {
+        std::string throttle_path = throttle_folder + throttle_reason;
+        if (!fs::exists(throttle_path)) {
+            SPDLOG_WARN("Intel xe/i915 gt dir: Throttle file {} not found", throttle_path);
+            continue;
+        }
+        auto throttle_stream = std::ifstream(throttle_path);
+        if (!throttle_stream.good()) {
+            SPDLOG_WARN("Intel xe/i915 gt dir: failed to open {}", throttle_path);
+            continue;
+        }
+        throttle_reason_streams.push_back(std::move(throttle_stream));
+    }
+}
+
+int GPU_fdinfo::get_gpu_clock()
+{
+    if (!gpu_clock_stream.is_open())
+        return 0;
+
+    std::string clock_str;
+
+    gpu_clock_stream.seekg(0);
+
+    std::getline(gpu_clock_stream, clock_str);
+
+    if (clock_str.empty())
+        return 0;
+
+    return std::stoi(clock_str);
+}
+
+bool GPU_fdinfo::check_throttle_reasons(std::vector<std::ifstream>& throttle_reason_streams)
+{
+    for (auto& throttle_reason_stream : throttle_reason_streams) {
+        std::string throttle_reason_str;
+        throttle_reason_stream.seekg(0);
+        std::getline(throttle_reason_stream, throttle_reason_str);
+
+        if (throttle_reason_str == "1")
+            return true;
+    }
+
+    return false;
+}
+
+GPU_throttle_status GPU_fdinfo::get_throttling_status()
+{
+    if (!throttle_status_stream.is_open())
+        return GPU_throttle_status::NONE;
+
+    std::string throttle_status_str;
+    throttle_status_stream.seekg(0);
+    std::getline(throttle_status_stream, throttle_status_str);
+
+    if (throttle_status_str != "1")
+        return GPU_throttle_status::NONE;
+    else if (check_throttle_reasons(throttle_power_streams))
+        return GPU_throttle_status::POWER;
+    else if (check_throttle_reasons(throttle_current_streams))
+        return GPU_throttle_status::CURRENT;
+    else if (check_throttle_reasons(throttle_temp_streams))
+        return GPU_throttle_status::TEMP;
+
+    return GPU_throttle_status::OTHER;
+}
+
 void GPU_fdinfo::main_thread()
 {
     while (!stop_thread) {
@@ -248,12 +462,35 @@ void GPU_fdinfo::main_thread()
         cond_var.wait(lock, [this]() { return !paused || stop_thread; });
 
         gather_fdinfo_data();
+        get_current_hwmon_readings();
 
         metrics.load = get_gpu_load();
         metrics.memoryUsed = get_memory_used();
         metrics.powerUsage = get_power_usage();
+        metrics.CoreClock = get_gpu_clock();
+        auto throttling = get_throttling_status();
+        metrics.is_power_throttled = throttling == GPU_throttle_status::POWER;
+        metrics.is_current_throttled = throttling == GPU_throttle_status::CURRENT;
+        metrics.is_temp_throttled = throttling == GPU_throttle_status::TEMP;
+        metrics.is_other_throttled = throttling == GPU_throttle_status::OTHER;
+        metrics.temp = hwmon_sensors["temp"].val / 1000;
+        metrics.fan_speed = hwmon_sensors["fan_speed"].val;
+        metrics.voltage = hwmon_sensors["voltage"].val;
+        metrics.fan_rpm = true; // Fan data is pulled from hwmon
+
+        SPDLOG_DEBUG(
+            "pci_dev = {}, pid = {}, module = {}, "
+            "load = {}, mem = {}, power = {}, "
+            "core = {}, temp = {}, fan = {}, "
+            "voltage = {}",
+            pci_dev, pid, module,
+            metrics.load, metrics.memoryUsed, metrics.powerUsage,
+            metrics.CoreClock, metrics.temp, metrics.fan_speed,
+            metrics.voltage
+        );
 
         std::this_thread::sleep_for(
-            std::chrono::milliseconds(METRICS_UPDATE_PERIOD_MS));
+            std::chrono::milliseconds(METRICS_UPDATE_PERIOD_MS)
+        );
     }
 }

@@ -91,7 +91,7 @@ void init_spdlog()
       }
 #ifndef DEBUG
    } else {
-      std::string log_level = "err";
+      std::string log_level = "info";
       transform(log_level.begin(), log_level.end(), log_level.begin(), ::tolower);
       spdlog::set_level(spdlog::level::from_str(log_level));
 #endif
