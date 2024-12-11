@@ -26,6 +26,23 @@ Net::Net() {
         SPDLOG_ERROR("Network: couldn't find any interfaces");
 }
 
+long long safe_stoll(const std::string& str, long long default_value);
+long long safe_stoll(const std::string& str, long long default_value = 0) {
+    if (str.empty()) {
+        SPDLOG_DEBUG("tx or rx returned an empty string");
+        return default_value;
+    }
+
+    try {
+        return std::stoll(str);
+    } catch (const std::invalid_argument& e) {
+        SPDLOG_DEBUG("stoll invalid argument");
+    } catch (const std::out_of_range& e) {
+        SPDLOG_DEBUG("stoll out of range");
+    }
+    return default_value;
+}
+
 void Net::update() {
     if (!interfaces.empty()) {
         for (auto& iface : interfaces) {
@@ -38,8 +55,8 @@ void Net::update() {
             uint64_t prevRx = iface.rxBytes;
             
             // current amount of bytes
-            iface.txBytes = std::stoll(read_line(txfile));
-            iface.rxBytes = std::stoll(read_line(rxfile));
+            iface.txBytes = safe_stoll(read_line(txfile));
+            iface.rxBytes = safe_stoll(read_line(rxfile));
 
             auto now = std::chrono::steady_clock::now();
             // calculate the bytes per second since last update
