@@ -66,7 +66,7 @@ GPUS::GPUS(overlay_params* params) : params(params) {
         std::shared_ptr<GPU> ptr = std::make_shared<GPU>(node_name, vendor_id, device_id, pci_dev);
         available_gpus.emplace_back(ptr);
 
-        SPDLOG_DEBUG("GPU Found: node_name: {}, vendor_id: {:x} device_id: {:x} pci_dev: {}", node_name, vendor_id, device_id, pci_dev);
+        SPDLOG_INFO("GPU Found: node_name: {}, vendor_id: {:x} device_id: {:x} pci_dev: {}", node_name, vendor_id, device_id, pci_dev);
     }
 
     find_active_gpu();
@@ -153,7 +153,7 @@ void GPUS::find_active_gpu() {
                 for (const auto& gpu : available_gpus) {
                     if (gpu->pci_dev == drm_pdev) {
                         gpu->is_active = true;
-                        SPDLOG_DEBUG("Active GPU Found: node_name: {}, pci_dev: {}", gpu->name, gpu->pci_dev);
+                        SPDLOG_INFO("Active GPU Found: node_name: {}, pci_dev: {}", gpu->name, gpu->pci_dev);
                     } else {
                         gpu->is_active = false;
                     }
@@ -173,7 +173,7 @@ void GPUS::find_active_gpu() {
                 for (auto& pid : gpu->nvidia_pids()) {
                     if (pid == getpid()) {
                         gpu->is_active = true;
-                        SPDLOG_DEBUG("Active GPU Found: node_name: {}, pci_dev: {}", gpu->name, gpu->pci_dev);
+                        SPDLOG_INFO("Active GPU Found: node_name: {}, pci_dev: {}", gpu->name, gpu->pci_dev);
                         return;
                     }
                 }
@@ -182,7 +182,7 @@ void GPUS::find_active_gpu() {
         }
     }
 #endif
-    SPDLOG_DEBUG("failed to find active GPU");
+    SPDLOG_WARN("failed to find active GPU");
 }
 
 int GPU::index_in_selected_gpus() {
