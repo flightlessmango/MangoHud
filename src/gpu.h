@@ -123,7 +123,6 @@ class GPUS {
         std::mutex mutex;
         overlay_params* params;
 
-        void find_active_gpu();
         GPUS(overlay_params* params);
 
         void pause() {

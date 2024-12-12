@@ -68,8 +68,6 @@ GPUS::GPUS(overlay_params* params) : params(params) {
 
         SPDLOG_DEBUG("GPU Found: node_name: {}, vendor_id: {:x} device_id: {:x} pci_dev: {}", node_name, vendor_id, device_id, pci_dev);
     }
-
-    find_active_gpu();
 }
 
 std::string GPU::is_i915_or_xe() {
@@ -118,70 +116,6 @@ std::string GPUS::get_pci_device_address(const std::string& drm_card_path) {
         SPDLOG_DEBUG("PCI address not found in the path: " + path_str);
         return "";
     }
-}
-
-void GPUS::find_active_gpu() {
-    pid_t pid = getpid();
-    std::string fdinfo_dir = "/proc/" + std::to_string(pid) + "/fdinfo/";
-    bool active_gpu_found = false;
-
-    for (const auto& entry : fs::directory_iterator(fdinfo_dir)) {
-        if (entry.is_regular_file()) {
-            std::ifstream file(entry.path().string());
-            std::string line;
-            std::string drm_pdev;
-            bool has_drm_driver = false;
-            bool has_drm_engine_gfx = false;
-
-            while (std::getline(file, line)) {
-                if (line.find("drm-driver:") != std::string::npos) {
-                    has_drm_driver = true;
-                }
-                if (line.find("drm-pdev:") != std::string::npos) {
-                    drm_pdev = line.substr(line.find(":") + 1);
-                    drm_pdev.erase(0, drm_pdev.find_first_not_of(" \t"));
-                }
-                if (line.find("drm-engine-gfx:") != std::string::npos) {
-                    uint64_t gfx_time = std::stoull(line.substr(line.find(":") + 1));
-                    if (gfx_time > 0) {
-                        has_drm_engine_gfx = true;
-                    }
-                }
-            }
-
-            if (has_drm_driver && has_drm_engine_gfx) {
-                for (const auto& gpu : available_gpus) {
-                    if (gpu->pci_dev == drm_pdev) {
-                        gpu->is_active = true;
-                        SPDLOG_DEBUG("Active GPU Found: node_name: {}, pci_dev: {}", gpu->name, gpu->pci_dev);
-                    } else {
-                        gpu->is_active = false;
-                    }
-                }
-                return;
-            }
-        }
-    }
-
-    // NVIDIA GPUs will not show up in fdinfo so we use NVML instead to find the active GPU
-    // This will not work for older NVIDIA GPUs
-    if (!active_gpu_found) {
-#ifdef HAVE_NVML
-        for (const auto& gpu : available_gpus) {
-            // NVIDIA vendor ID is 0x10de
-            if (gpu->vendor_id == 0x10de && gpu->nvidia->nvml_available) { 
-                for (auto& pid : gpu->nvidia_pids()) {
-                    if (pid == getpid()) {
-                        gpu->is_active = true;
-                        SPDLOG_DEBUG("Active GPU Found: node_name: {}, pci_dev: {}", gpu->name, gpu->pci_dev);
-                        return;
-                    }
-                }
-
-            }
-        }
-#endif
-    SPDLOG_WARN("failed to find active GPU");
 }
 
 int GPU::index_in_selected_gpus() {
