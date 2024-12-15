@@ -10,7 +10,7 @@
 #ifdef TEST_ONLY
 #include <../src/mesa/util/os_time.h>
 #else
-#include <mesa/util/os_time.h>
+#include "mesa/util/os_time.h"
 #endif
 
 #include "gpu_metrics_util.h"

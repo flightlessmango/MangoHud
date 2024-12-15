@@ -1,4 +1,5 @@
 #include "gpu.h"
+#include <cstdint>
 #include <inttypes.h>
 #include <memory>
 #include <functional>
@@ -22,16 +23,17 @@ GPUS::GPUS(overlay_params* params) : params(params) {
     std::vector<std::string> gpu_entries;
 
     for (const auto& entry : fs::directory_iterator("/sys/class/drm")) {
-        if (entry.is_directory()) {
-            std::string node_name = entry.path().filename().string();
+        if (!entry.is_directory())
+            continue;
 
-            // Check if the directory is a render node (e.g., renderD128, renderD129, etc.)
-            if (node_name.find("renderD") == 0 && node_name.length() > 7) {
-                // Ensure the rest of the string after "renderD" is numeric
-                std::string render_number = node_name.substr(7);
-                if (std::all_of(render_number.begin(), render_number.end(), ::isdigit)) {
-                    gpu_entries.push_back(node_name);  // Store the render entry
-                }
+        std::string node_name = entry.path().filename().string();
+
+        // Check if the directory is a render node (e.g., renderD128, renderD129, etc.)
+        if (node_name.find("renderD") == 0 && node_name.length() > 7) {
+            // Ensure the rest of the string after "renderD" is numeric
+            std::string render_number = node_name.substr(7);
+            if (std::all_of(render_number.begin(), render_number.end(), ::isdigit)) {
+                gpu_entries.push_back(node_name);  // Store the render entry
             }
         }
     }
@@ -44,6 +46,8 @@ GPUS::GPUS(overlay_params* params) : params(params) {
     });
 
     // Now process the sorted GPU entries
+    uint8_t idx = 0, total_active = 0;
+
     for (const auto& node_name : gpu_entries) {
         std::string path = "/sys/class/drm/" + node_name;
         std::string device_address = get_pci_device_address(path);  // Store the result
@@ -56,7 +60,7 @@ GPUS::GPUS(overlay_params* params) : params(params) {
         } catch(...) {
             SPDLOG_ERROR("stoul failed on: {}", "/sys/bus/pci/devices/" + device_address + "/vendor");
         }
-        
+
         try {
             device_id = std::stoul(read_line("/sys/bus/pci/devices/" + device_address + "/device"), nullptr, 16);
         } catch (...) {
@@ -64,10 +68,40 @@ GPUS::GPUS(overlay_params* params) : params(params) {
         }
 
         std::shared_ptr<GPU> ptr = std::make_shared<GPU>(node_name, vendor_id, device_id, pci_dev);
+
+        if (params->gpu_list.size() == 1 && params->gpu_list[0] == idx++)
+            ptr->is_active = true;
+
+        if (!params->pci_dev.empty() && pci_dev == params->pci_dev)
+            ptr->is_active = true;
+
         available_gpus.emplace_back(ptr);
 
         SPDLOG_DEBUG("GPU Found: node_name: {}, vendor_id: {:x} device_id: {:x} pci_dev: {}", node_name, vendor_id, device_id, pci_dev);
+
+        if (ptr->is_active) {
+            SPDLOG_INFO("Set {} as active GPU (id={:x}:{:x} pci_dev={})", node_name, vendor_id, device_id, pci_dev);
+            total_active++;
+        }
     }
+
+    if (total_active < 2)
+        return;
+
+    for (auto& gpu : available_gpus) {
+        if (!gpu->is_active)
+            continue;
+
+        SPDLOG_WARN(
+            "You have more than 1 active GPU, check if you use both pci_dev "
+            "and gpu_list. If you use fps logging, MangoHud will log only "
+            "this GPU: name = {}, vendor = {:x}, pci_dev = {}",
+            gpu->name, gpu->vendor_id, gpu->pci_dev
+        );
+
+        break;
+    }
+
 }
 
 std::string GPU::is_i915_or_xe() {
@@ -120,7 +154,7 @@ std::string GPUS::get_pci_device_address(const std::string& drm_card_path) {
 
 int GPU::index_in_selected_gpus() {
     auto selected_gpus = gpus->selected_gpus();
-    auto it = std::find_if(selected_gpus.begin(), selected_gpus.end(), 
+    auto it = std::find_if(selected_gpus.begin(), selected_gpus.end(),
                         [this](const std::shared_ptr<GPU>& gpu) {
                             return gpu.get() == this;
                         });
