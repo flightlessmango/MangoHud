@@ -997,6 +997,13 @@ parse_overlay_config(struct overlay_params *params,
    if (HUDElements.net)
       HUDElements.net->should_reset = true;
 
+   if (!params->gpu_list.empty() && !params->pci_dev.empty()) {
+      SPDLOG_WARN(
+         "You have specified both gpu_list and pci_dev, "
+         "ignoring pci_dev."
+      );
+   }
+
    {
       std::lock_guard<std::mutex> lock(config_mtx);
       config_ready = true;

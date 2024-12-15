@@ -26,9 +26,9 @@ class GPU {
         std::unique_ptr<NVIDIA> nvidia = nullptr;
         std::unique_ptr<AMDGPU> amdgpu = nullptr;
         std::unique_ptr<GPU_fdinfo> fdinfo = nullptr;
-        bool is_active;
+        bool is_active = false;
         std::string pci_dev;
-        uint32_t vendor_id;
+        uint32_t vendor_id = 0;
 
         GPU(std::string name, uint32_t vendor_id, uint32_t device_id, const char* pci_dev)
             : name(name), pci_dev(pci_dev), vendor_id(vendor_id), device_id(device_id) {
@@ -136,18 +136,17 @@ class GPUS {
         }
 
         std::shared_ptr<GPU> active_gpu() {
-            if (!available_gpus.empty()){
-                for (auto gpu : available_gpus) {
-                    if (gpu->is_active) {
-                        return gpu;
-                    }
-                }
-            }
-            // if no GPU is marked as active, just set it to the first one
-            if (available_gpus.size() > 0)
-                return available_gpus.front();
-            else
+            if (available_gpus.empty())
                 return nullptr;
+
+            for (auto gpu : available_gpus) {
+                if (gpu->is_active)
+                    return gpu;
+            }
+
+            // if no GPU is marked as active, just set it to the last one
+            // because integrated gpus are usually first
+            return available_gpus.back();
         }
 
         void update_throttling() {
@@ -165,18 +164,30 @@ class GPUS {
         std::vector<std::shared_ptr<GPU>> selected_gpus() {
             std::lock_guard<std::mutex> lock(mutex);
             std::vector<std::shared_ptr<GPU>> vec;
+
+            if (params->gpu_list.empty() && params->pci_dev.empty())
+                return available_gpus;
+
             if (!params->gpu_list.empty()) {
                 for (unsigned index : params->gpu_list) {
                     if (index < available_gpus.size()) {
                         if (available_gpus[index])
                             vec.push_back(available_gpus[index]);
-                    }   
+                    }
                 }
-            // if the user hasn't selected any GPUs, we use the active one
-            } else {
-                if (active_gpu())
-                    vec.push_back(active_gpu());
-                
+
+                return vec;
+            }
+
+            if (!params->pci_dev.empty()) {
+                for (auto &gpu : available_gpus) {
+                    if (gpu->pci_dev == params->pci_dev) {
+                        vec.push_back(gpu);
+                        return vec;
+                    }
+                }
+
+                return vec;
             }
 
             return vec;
