@@ -2031,6 +2031,9 @@ static void overlay_DestroyInstance(
       stop_notifier(instance_data->notifier);
 #endif
    destroy_instance_data(instance_data);
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+   fini_wayland_data();
+#endif
 }
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
@@ -2042,11 +2045,8 @@ static VkResult overlay_CreateWaylandSurfaceKHR(
 )
 {
    struct instance_data *instance_data = FIND(struct instance_data, instance);
-   if (!wl_handle)
-      wl_handle = real_dlopen("libwayland-client.so", RTLD_LAZY);
-   wl_display_ptr = pCreateInfo->display;
    HUDElements.display_server = HUDElements.display_servers::WAYLAND;
-   init_wayland_data();
+   init_wayland_data(pCreateInfo->display);
    return instance_data->vtable.CreateWaylandSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
 }
 #endif
