@@ -68,6 +68,8 @@ NVIDIA::NVIDIA(const char* pciBusId) {
         throttling = std::make_shared<Throttling>(0x10de);
         std::thread thread(&NVIDIA::get_samples_and_copy, this);
         thread.detach();
+    } else {
+        SPDLOG_INFO("NVML and NVCTRL are unavailable. Unable to get NVIDIA info. User is on DFSG version of mangohud?");
     }
 #endif
 }
