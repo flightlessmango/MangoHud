@@ -540,6 +540,9 @@ bool CPUStats::GetCpuFile() {
             // Only break if module has CPU node
             if (find_input(path, "temp", input, "CPU"))
                 break;
+        } else if (name == "l_pcs") { // Elbrus temperature module
+            find_input(path, "temp", input, "Node 0 Max");
+            break;
         } else {
             path.clear();
         }
