@@ -217,7 +217,7 @@ void imgui_render(unsigned int width, unsigned int height)
         process_control_socket(control_client, params);
     }
 
-    check_keybinds(params, vendorID);
+    check_keybinds(params);
     update_hud_info(sw_stats, params, vendorID);
 
     ImGuiContext *saved_ctx = ImGui::GetCurrentContext();
