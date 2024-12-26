@@ -176,7 +176,23 @@ if is_unixy
   endif
 endif
 
-link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL', '-lGL', '-static-libstdc++'])
+link_args = cpp.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL', '-lGL'])
+
+# Approach for libc++ detection taken from https://github.com/mesonbuild/meson/commit/675b47b0692131fae974298829ba807d730ab098
+# Rationale for the approach is explained in this SO answer https://stackoverflow.com/a/31658120
+if cpp.has_header('<version>')
+  header = 'version'
+else
+  header = 'ciso646'
+endif
+is_libcxx = cpp.has_header_symbol(header, '_LIBCPP_VERSION')
+
+# https://github.com/llvm/llvm-project/issues/38622
+if is_libcxx
+  message('Detected libcxx, not appending -static-libstc++ to linker arguments')
+else
+  link_args+=['-static-libstdc++']
+endif
 
 mangohud_static_lib = static_library(
   'MangoHud',
