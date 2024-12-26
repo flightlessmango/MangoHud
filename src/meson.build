@@ -168,8 +168,6 @@ if is_unixy
 endif
 
 link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL', '-lGL', '-static-libstdc++'])
-# meson fails to check version-script so just force add
-link_args += '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version'))
 
 mangohud_static_lib = static_library(
   'MangoHud',
@@ -211,9 +209,23 @@ mangohud_shared_lib = shared_library(
   'MangoHud',
   objects: mangohud_static_lib.extract_all_objects(),
   link_with: mangohud_static_lib,
-  link_args : link_args,
+  link_args : [link_args, '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version'))],
   install_dir : libdir_mangohud,
   install: true
+)
+
+mangohud_opengl_syms = configuration_data()
+if get_option('with_x11').enabled()
+  mangohud_opengl_syms.set('x11_symbols', 'glX*; mangohud_find_glx_ptr;')
+endif
+if get_option('with_wayland').enabled()
+  mangohud_opengl_syms.set('wayland_symbols', 'egl*; mangohud_find_egl_ptr;')
+endif
+
+mangohud_opengl_version_file = configure_file(
+  input: 'mangohud_opengl.version.in',
+  output: 'mangohud_opengl.version',
+  configuration: mangohud_opengl_syms,
 )
 
 mangohud_opengl_shared_lib = shared_library(
@@ -244,8 +256,9 @@ mangohud_opengl_shared_lib = shared_library(
     json_dep,
     implot_dep],
   include_directories : [inc_common],
-  link_args : link_args,
+  link_args : [link_args, '-Wl,--version-script,@0@'.format(join_paths(meson.current_build_dir(), 'mangohud_opengl.version'))],
   link_with: mangohud_static_lib,
+  link_depends: mangohud_opengl_version_file,
   install_dir : libdir_mangohud,
   install: true
 )
@@ -267,7 +280,7 @@ if is_unixy
     gnu_symbol_visibility : 'hidden',
     dependencies : [dep_dl],
     include_directories : [inc_common],
-    link_args : link_args,
+    link_args : [link_args, '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud_dlsym.version'))],
     link_with: mangohud_static_lib,
     install_dir : libdir_mangohud,
     install : true

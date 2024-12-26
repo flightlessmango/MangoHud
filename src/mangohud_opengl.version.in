@@ -1,0 +1,6 @@
+{
+    global:
+        @x11_symbols@
+        @wayland_symbols@
+    local: *;
+};
