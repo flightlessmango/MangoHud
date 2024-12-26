@@ -279,7 +279,7 @@ Or alternatively, add `MANGOHUD=1` to your shell profile (Vulkan only).
 
 ## OpenGL
 
-OpenGL games may also need `dlsym` hooking. Add `--dlsym` to your command like `mangohud --dlsym %command%` for Steam.
+OpenGL games may also need `dlsym` hooking, which is now enabled by default. Set the `MANGOHUD_DLSYM` env to `0` to disable like `MANGOHUD_DLSYM=0 %command%` for Steam.
 
 Some Linux native OpenGL games overrides LD_PRELOAD and stops MangoHud from working. You can sometimes fix this by editing LD_PRELOAD in the start script
 `LD_PRELOAD=/path/to/mangohud/lib/`
@@ -320,6 +320,8 @@ You can also customize the hud by using the `MANGOHUD_CONFIG` environment variab
 You can also specify configuration file with `MANGOHUD_CONFIGFILE=/path/to/config` for applications whose names are hard to guess (java, python etc).
 
 You can also specify presets file with `MANGOHUD_PRESETSFILE=/path/to/config`. This is especially useful when running mangohud in a sandbox such as flatpak.
+
+You can also specify custom hud libraries for OpenGL using `MANGOHUD_OPENGL_LIBS=/path/to/libMangoHud_opengl.so`. This is useful for testing MangoHud without modifying the installation on your system.
 
 A partial list of parameters are below. See the config file for a complete list.
 Parameters that are enabled by default have to be explicitly disabled. These (currently) are `fps`, `frame_timing`, `cpu_stats` (cpu load), `gpu_stats` (gpu load), and each can be disabled by setting the corresponding variable to 0 (e.g., fps=0).

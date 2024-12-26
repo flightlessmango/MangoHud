@@ -86,8 +86,8 @@ if is_unixy
     'memory.cpp',
     'iostats.cpp',
     'notify.cpp',
-    'elfhacks.cpp',
-    'real_dlsym.cpp',
+    'elfhacks.c',
+    'real_dlsym.c',
     'pci_ids.cpp',
     'battery.cpp',
     'control.cpp',
@@ -250,30 +250,6 @@ mangohud_opengl_shared_lib = shared_library(
   install: true
 )
 
-if is_unixy
-  mangohud_dlsym = shared_library(
-    'MangoHud_dlsym',
-    files(
-      'elfhacks.cpp',
-      'real_dlsym.cpp',
-      'hook_dlsym.cpp',
-    ),
-    c_args : [
-      pre_args,
-      ],
-    cpp_args : [
-      pre_args,
-      ],
-    gnu_symbol_visibility : 'hidden',
-    dependencies : [dep_dl],
-    include_directories : [inc_common],
-    link_args : link_args,
-    link_with: mangohud_static_lib,
-    install_dir : libdir_mangohud,
-    install : true
-  )
-endif
-
 if get_option('mangoapp')
   if not get_option('with_x11').enabled()
     error('mangoapp also needs \'with_x11\'')
@@ -328,10 +304,13 @@ if is_unixy
     'MangoHud_shim',
     files(
       'gl/shim.c',
+      'real_dlsym.c',
+      'elfhacks.c'
     ),
     dependencies : [
       dep_dl
     ],
+    include_directories : [inc_common],
     install_dir : libdir_mangohud,
     install: true
   )
