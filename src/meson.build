@@ -177,8 +177,6 @@ if is_unixy
 endif
 
 link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL', '-lGL', '-static-libstdc++'])
-# meson fails to check version-script so just force add
-link_args += '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version'))
 
 mangohud_static_lib = static_library(
   'MangoHud',
@@ -219,9 +217,15 @@ mangohud_shared_lib = shared_library(
   'MangoHud',
   objects: mangohud_static_lib.extract_all_objects(),
   link_with: mangohud_static_lib,
-  link_args : link_args,
+  link_args : [link_args, '-Wl,--version-script,@0@'.format(
+    join_paths(meson.current_source_dir(), 'mangohud.version'))],
   install_dir : libdir_mangohud,
   install: true
+)
+
+mangohud_opengl_versionscript = cpp.preprocess(
+  'mangohud_opengl.version',
+  compile_args: pre_args,
 )
 
 mangohud_opengl_shared_lib = shared_library(
@@ -251,8 +255,9 @@ mangohud_opengl_shared_lib = shared_library(
     windows_deps,
     implot_dep],
   include_directories : [inc_common],
-  link_args : link_args,
+  link_args : [link_args, '-Wl,--version-script,@0@'.format(mangohud_opengl_versionscript[0].full_path())],
   link_with: mangohud_static_lib,
+  link_depends: mangohud_opengl_versionscript,
   install_dir : libdir_mangohud,
   install: true
 )
