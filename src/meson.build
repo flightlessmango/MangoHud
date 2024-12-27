@@ -239,44 +239,46 @@ mangohud_shared_lib = shared_library(
   install: true
 )
 
-mangohud_opengl_versionscript = cpp.preprocess(
-  'mangohud_opengl.version',
-  compile_args: pre_args,
-)
+if is_unixy
+  mangohud_opengl_versionscript = cpp.preprocess(
+    'mangohud_opengl.version',
+    compile_args: pre_args,
+  )
 
-mangohud_opengl_shared_lib = shared_library(
-  'MangoHud_opengl',
-  mangohud_version,
-  opengl_files,
-  vklayer_files,
-  util_files,
-  c_args : [
-    pre_args,
-    vulkan_wsi_args
-    ],
-  cpp_args : [
-    pre_args,
-    vulkan_wsi_args
-    ],
-  dependencies : [
-    mangohud_version_dep,
-    vulkan_wsi_deps,
-    dearimgui_dep,
-    spdlog_dep,
-    dbus_dep,
-    dep_dl,
-    dep_rt,
-    dep_pthread,
-    dep_vulkan,
-    windows_deps,
-    implot_dep],
-  include_directories : [inc_common],
-  link_args : [link_args, '-Wl,--version-script,@0@'.format(mangohud_opengl_versionscript[0].full_path())],
-  link_with: mangohud_static_lib,
-  link_depends: mangohud_opengl_versionscript,
-  install_dir : libdir_mangohud,
-  install: true
-)
+  mangohud_opengl_shared_lib = shared_library(
+    'MangoHud_opengl',
+    mangohud_version,
+    opengl_files,
+    vklayer_files,
+    util_files,
+    c_args : [
+      pre_args,
+      vulkan_wsi_args
+      ],
+    cpp_args : [
+      pre_args,
+      vulkan_wsi_args
+      ],
+    dependencies : [
+      mangohud_version_dep,
+      vulkan_wsi_deps,
+      dearimgui_dep,
+      spdlog_dep,
+      dbus_dep,
+      dep_dl,
+      dep_rt,
+      dep_pthread,
+      dep_vulkan,
+      windows_deps,
+      implot_dep],
+    include_directories : [inc_common],
+    link_args : [link_args, '-Wl,--version-script,@0@'.format(mangohud_opengl_versionscript[0].full_path())],
+    link_with: mangohud_static_lib,
+    link_depends: mangohud_opengl_versionscript,
+    install_dir : libdir_mangohud,
+    install: true
+  )
+endif
 
 if get_option('mangoapp')
   if not get_option('with_x11').enabled()
