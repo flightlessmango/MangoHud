@@ -230,56 +230,55 @@ mangohud_shared_lib = shared_library(
   install: true
 )
 
-mangohud_opengl_syms = configuration_data()
-if get_option('with_x11').enabled()
-  mangohud_opengl_syms.set('x11_symbols', 'glX*; mangohud_find_glx_ptr;')
-endif
-if get_option('with_wayland').enabled()
-  mangohud_opengl_syms.set('wayland_symbols', 'egl*; mangohud_find_egl_ptr;')
-endif
-
-mangohud_opengl_version_file = configure_file(
-  input: 'mangohud_opengl.version.in',
-  output: 'mangohud_opengl.version',
-  configuration: mangohud_opengl_syms,
-)
-
-mangohud_opengl_shared_lib = shared_library(
-  'MangoHud_opengl',
-  mangohud_version,
-  opengl_files,
-  vklayer_files,
-  util_files,
-  c_args : [
-    pre_args,
-    vulkan_wsi_args
-    ],
-  cpp_args : [
-    pre_args,
-    vulkan_wsi_args
-    ],
-  dependencies : [
-    mangohud_version_dep,
-    vulkan_wsi_deps,
-    dearimgui_dep,
-    spdlog_dep,
-    dbus_dep,
-    dep_dl,
-    dep_rt,
-    dep_pthread,
-    dep_vulkan,
-    windows_deps,
-    json_dep,
-    implot_dep],
-  include_directories : [inc_common],
-  link_args : [link_args, '-Wl,--version-script,@0@'.format(join_paths(meson.current_build_dir(), 'mangohud_opengl.version'))],
-  link_with: mangohud_static_lib,
-  link_depends: mangohud_opengl_version_file,
-  install_dir : libdir_mangohud,
-  install: true
-)
-
 if is_unixy
+  mangohud_opengl_syms = configuration_data()
+  if get_option('with_x11').enabled()
+    mangohud_opengl_syms.set('x11_symbols', 'glX*; mangohud_find_glx_ptr;')
+  endif
+  if get_option('with_wayland').enabled()
+    mangohud_opengl_syms.set('wayland_symbols', 'egl*; mangohud_find_egl_ptr;')
+  endif
+
+  mangohud_opengl_version_file = configure_file(
+    input: 'mangohud_opengl.version.in',
+    output: 'mangohud_opengl.version',
+    configuration: mangohud_opengl_syms,
+  )
+
+  mangohud_opengl_shared_lib = shared_library(
+    'MangoHud_opengl',
+    mangohud_version,
+    opengl_files,
+    vklayer_files,
+    util_files,
+    c_args : [
+      pre_args,
+      vulkan_wsi_args
+      ],
+    cpp_args : [
+      pre_args,
+      vulkan_wsi_args
+      ],
+    dependencies : [
+      mangohud_version_dep,
+      vulkan_wsi_deps,
+      dearimgui_dep,
+      spdlog_dep,
+      dbus_dep,
+      dep_dl,
+      dep_rt,
+      dep_pthread,
+      dep_vulkan,
+      json_dep,
+      implot_dep],
+    include_directories : [inc_common],
+    link_args : [link_args, '-Wl,--version-script,@0@'.format(join_paths(meson.current_build_dir(), 'mangohud_opengl.version'))],
+    link_with: mangohud_static_lib,
+    link_depends: mangohud_opengl_version_file,
+    install_dir : libdir_mangohud,
+    install: true
+  )
+
   mangohud_dlsym = shared_library(
     'MangoHud_dlsym',
     files(
