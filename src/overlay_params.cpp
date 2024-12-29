@@ -767,6 +767,29 @@ static void set_param_defaults(struct overlay_params *params){
    params->text_outline_thickness = 1.5;
 }
 
+static std::string verify_pci_dev(std::string pci_dev) {
+   uint32_t domain, bus, slot, func;
+
+   if (
+      sscanf(
+         pci_dev.c_str(), "%04x:%02x:%02x.%x",
+         &domain, &bus, &slot, &func
+      ) != 4) {
+      SPDLOG_ERROR("Failed to parse PCI device ID: '{}'", pci_dev);
+      return pci_dev;
+   }
+
+   std::stringstream ss;
+   ss << std::hex
+      << std::setw(4) << std::setfill('0') << domain << ":"
+      << std::setw(2) << bus << ":"
+      << std::setw(2) << slot << "."
+      << std::setw(1) << func;
+
+   SPDLOG_DEBUG("pci_dev = {}", ss.str());
+   return ss.str();
+}
+
 void
 parse_overlay_config(struct overlay_params *params,
                   const char *env, bool use_existing_preset)
@@ -999,6 +1022,9 @@ parse_overlay_config(struct overlay_params *params,
          "ignoring pci_dev."
       );
    }
+
+   if (!params->pci_dev.empty())
+      params->pci_dev = verify_pci_dev(params->pci_dev);
 
    {
       std::lock_guard<std::mutex> lock(config_mtx);
