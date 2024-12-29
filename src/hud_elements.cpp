@@ -496,7 +496,7 @@ void HudElements::io_stats(){
 void HudElements::vram(){
     if (!gpus)
         gpus = std::make_unique<GPUS>(HUDElements.params);
-    
+
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_vram]){
         size_t i = 0;
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
@@ -562,7 +562,7 @@ void HudElements::ram(){
         ImguiNextColumnOrNewRow();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", memused);
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
-            ImGui::SameLine(0,1.0f);
+            ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(HUDElements.sw_stats->font1);
             HUDElements.TextColored(HUDElements.colors.text, "GiB");
             ImGui::PopFont();
@@ -572,7 +572,7 @@ void HudElements::ram(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram] && HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_swap]){
         ImguiNextColumnOrNewRow();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", swapused);
-        ImGui::SameLine(0,1.0f);
+        ImGui::SameLine(0, 1.0f);
         ImGui::PushFont(HUDElements.sw_stats->font1);
         HUDElements.TextColored(HUDElements.colors.text, "GiB");
         ImGui::PopFont();
@@ -584,33 +584,34 @@ void HudElements::procmem()
 {
 #ifdef __linux__
     const char* unit = nullptr;
+
     if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_procmem])
         return;
 
     ImguiNextColumnFirstItem();
     HUDElements.TextColored(HUDElements.colors.ram, "PMEM");
     ImguiNextColumnOrNewRow();
-    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", format_units(proc_mem.resident, unit));
-    ImGui::SameLine(0,1.0f);
+    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", format_units(proc_mem_resident, unit));
+    ImGui::SameLine(0, 1.0f);
     ImGui::PushFont(HUDElements.sw_stats->font1);
     HUDElements.TextColored(HUDElements.colors.text, "%s", unit);
     ImGui::PopFont();
 
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_procmem_shared]){
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_procmem_shared]) {
         ImguiNextColumnOrNewRow();
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", format_units(proc_mem.shared, unit));
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", format_units(proc_mem_shared, unit));
         ImGui::SameLine(0,1.0f);
         ImGui::PushFont(HUDElements.sw_stats->font1);
         HUDElements.TextColored(HUDElements.colors.text, "%s", unit);
         ImGui::PopFont();
     }
 
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_procmem_virt]){
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_procmem_virt]) {
         ImguiNextColumnOrNewRow();
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", format_units(proc_mem.virt, unit));
-        ImGui::SameLine(0,1.0f);
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", format_units(proc_mem_virt, unit));
+        ImGui::SameLine(0, 1.0f);
         ImGui::PushFont(HUDElements.sw_stats->font1);
-       HUDElements.TextColored(HUDElements.colors.text, "%s", unit);
+        HUDElements.TextColored(HUDElements.colors.text, "%s", unit);
         ImGui::PopFont();
     }
 #endif
@@ -839,7 +840,7 @@ void HudElements::frame_timing(){
                         ImPlot::SetupAxesLimits(0, 200, min_time, max_time);
                         ImPlot::SetNextLineStyle(HUDElements.colors.frametime, 1.5);
                         ImPlot::PlotLine("frametime line", frametime_data.data(), frametime_data.size());
-                        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_throttling_status_graph] && 
+                        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_throttling_status_graph] &&
                             gpus->active_gpu() && gpus->active_gpu()->throttling()){
                             ImPlot::SetNextLineStyle(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), 1.5);
                             ImPlot::PlotLine("power line", gpus->active_gpu()->throttling()->power.data(), gpus->active_gpu()->throttling()->power.size());
