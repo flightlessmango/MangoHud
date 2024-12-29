@@ -1,131 +1,65 @@
 #include <spdlog/spdlog.h>
-#include "memory.h"
-#include <iomanip>
-#include <cstring>
-#include <stdio.h>
-#include <iostream>
-#include <thread>
+#include <map>
+#include <fstream>
+#include <string>
 #include <unistd.h>
+#include <array>
 
-struct memory_information mem_info;
-float memused, memmax, swapused, swapmax;
-struct process_mem proc_mem {};
+#include "memory.h"
 
-FILE *open_file(const char *file, int *reported) {
-  FILE *fp = nullptr;
+float memused, memmax, swapused;
+uint64_t proc_mem_resident, proc_mem_shared, proc_mem_virt;
 
-  fp = fopen(file, "re");
+void update_meminfo() {
+    std::ifstream file("/proc/meminfo");
+    std::map<std::string, float> meminfo;
 
-  if (fp == nullptr) {
-    if ((reported == nullptr) || *reported == 0) {
-      SPDLOG_ERROR("can't open {}: {}", file, strerror(errno));
-      if (reported != nullptr) { *reported = 1; }
+    if (!file.is_open()) {
+        SPDLOG_ERROR("can't open /proc/meminfo");
+        return;
     }
-    return nullptr;
-  }
 
-  return fp;
-}
-
-void update_meminfo(void) {
-  FILE *meminfo_fp;
-  static int reported = 0;
-
-  /* unsigned int a; */
-  char buf[256];
-
-  /* With multi-threading, calculations that require
-   * multple steps to reach a final result can cause havok
-   * if the intermediary calculations are directly assigned to the
-   * information struct (they may be read by other functions in the meantime).
-   * These variables keep the calculations local to the function and finish off
-   * the function by assigning the results to the information struct */
-  unsigned long long shmem = 0, sreclaimable = 0, curmem = 0, curbufmem = 0,
-                     cureasyfree = 0, memavail = 0;
-
-  mem_info.memmax = mem_info.memdirty = mem_info.swap = mem_info.swapfree = mem_info.swapmax =
-      mem_info.memwithbuffers = mem_info.buffers = mem_info.cached = mem_info.memfree =
-          mem_info.memeasyfree = 0;
-
-  if (!(meminfo_fp = open_file("/proc/meminfo", &reported))) { }
-
-  while (!feof(meminfo_fp)) {
-    if (fgets(buf, 255, meminfo_fp) == nullptr) { break; }
-
-    if (strncmp(buf, "MemTotal:", 9) == 0) {
-      sscanf(buf, "%*s %llu", &mem_info.memmax);
-    } else if (strncmp(buf, "MemFree:", 8) == 0) {
-      sscanf(buf, "%*s %llu", &mem_info.memfree);
-    } else if (strncmp(buf, "SwapTotal:", 10) == 0) {
-      sscanf(buf, "%*s %llu", &mem_info.swapmax);
-    } else if (strncmp(buf, "SwapFree:", 9) == 0) {
-      sscanf(buf, "%*s %llu", &mem_info.swapfree);
-    } else if (strncmp(buf, "Buffers:", 8) == 0) {
-      sscanf(buf, "%*s %llu", &mem_info.buffers);
-    } else if (strncmp(buf, "Cached:", 7) == 0) {
-      sscanf(buf, "%*s %llu", &mem_info.cached);
-    } else if (strncmp(buf, "Dirty:", 6) == 0) {
-      sscanf(buf, "%*s %llu", &mem_info.memdirty);
-    } else if (strncmp(buf, "MemAvailable:", 13) == 0) {
-      sscanf(buf, "%*s %llu", &memavail);
-    } else if (strncmp(buf, "Shmem:", 6) == 0) {
-      sscanf(buf, "%*s %llu", &shmem);
-    } else if (strncmp(buf, "SReclaimable:", 13) == 0) {
-      sscanf(buf, "%*s %llu", &sreclaimable);
+    for (std::string line; std::getline(file, line);) {
+        auto key = line.substr(0, line.find(":"));
+        auto val = line.substr(key.length() + 2);
+        meminfo[key] = std::stoull(val) / 1024.f / 1024.f;
     }
-  }
 
-  curmem = mem_info.memwithbuffers = mem_info.memmax - mem_info.memfree;
-  cureasyfree = mem_info.memfree;
-  mem_info.swap = mem_info.swapmax - mem_info.swapfree;
-
-  /* Reclaimable memory: does not include shared memory, which is part of cached
-     but unreclaimable. Includes the reclaimable part of the Slab cache though.
-     Note: when shared memory is swapped out, shmem decreases and swapfree
-     decreases - we want this.
-  */
-  curbufmem = (mem_info.cached - shmem) + mem_info.buffers + sreclaimable;
-
-  curmem = mem_info.memmax - memavail;
-  cureasyfree += curbufmem;
-
-  /* Now that we know that every calculation is finished we can wrap up
-   * by assigning the values to the information structure */
-  mem_info.mem = curmem;
-  mem_info.bufmem = curbufmem;
-  mem_info.memeasyfree = cureasyfree;
-
-  memused = (float(mem_info.memmax) - float(mem_info.memeasyfree)) / (1024 * 1024);
-  memmax = float(mem_info.memmax) / (1024 * 1024);
-
-  swapused = (float(mem_info.swapmax) - float(mem_info.swapfree)) / (1024 * 1024);
-  swapmax = float(mem_info.swapmax) / (1024 * 1024);
-
-  fclose(meminfo_fp);
+    memmax = meminfo["MemTotal"];
+    memused = meminfo["MemTotal"] - meminfo["MemAvailable"];
+    swapused = meminfo["SwapTotal"] - meminfo["SwapFree"];
 }
 
 void update_procmem()
 {
-    static int reported = 0;
-    FILE *statm = open_file("/proc/self/statm", &reported);
-    if (!statm)
+    auto page_size = sysconf(_SC_PAGESIZE);
+    if (page_size < 0) page_size = 4096;
+
+    std::ifstream file("/proc/self/statm");
+
+    if (!file.is_open()) {
+        SPDLOG_ERROR("can't open /proc/self/statm");
+        return;
+    }
+
+    size_t last_idx = 0;
+    std::string line;
+    std::getline(file, line);
+
+    if (line.empty())
         return;
 
-    static auto pageSize = sysconf(_SC_PAGESIZE);
-    if (pageSize < 0) pageSize = 4096;
+    std::array<uint64_t, 3> meminfo;
 
-    long long int temp[7];
-    if (fscanf(statm, "%lld %lld %lld %lld %lld %lld %lld",
-        &temp[0], &temp[1], &temp[2], &temp[3],
-        &temp[4], /* unused since Linux 2.6; always 0 */
-        &temp[5], &temp[6]) == 7)
-    {
-        proc_mem.virt = temp[0] * pageSize;// / (1024.f * 1024.f); //MiB
-        proc_mem.resident = temp[1] * pageSize;// / (1024.f * 1024.f); //MiB
-        proc_mem.shared = temp[2] * pageSize;// / (1024.f * 1024.f); //MiB;
-        proc_mem.text = temp[3];
-        proc_mem.data = temp[5];
-        proc_mem.dirty = temp[6];
+    for (auto i = 0; i < 3; i++) {
+        auto idx = line.find(" ", last_idx);
+        auto val = line.substr(last_idx, idx);
+
+        meminfo[i] = std::stoull(val) * page_size;
+        last_idx = idx + 1;
     }
-    fclose(statm);
+
+    proc_mem_virt = meminfo[0];
+    proc_mem_resident = meminfo[1];
+    proc_mem_shared = meminfo[2];
 }
