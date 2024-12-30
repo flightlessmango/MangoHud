@@ -167,9 +167,23 @@ if is_unixy
   endif
 endif
 
-link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL', '-lGL', '-static-libstdc++'])
-# meson fails to check version-script so just force add
-link_args += '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version'))
+link_args = cpp.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL', '-lGL'])
+
+# Approach for libc++ detection taken from https://github.com/mesonbuild/meson/commit/675b47b0692131fae974298829ba807d730ab098
+# Rationale for the approach is explained in this SO answer https://stackoverflow.com/a/31658120
+if cpp.has_header('<version>')
+  header = 'version'
+else
+  header = 'ciso646'
+endif
+is_libcxx = cpp.has_header_symbol(header, '_LIBCPP_VERSION')
+
+# https://github.com/llvm/llvm-project/issues/38622
+if is_libcxx
+  message('Detected libcxx, not appending -static-libstc++ to linker arguments')
+else
+  link_args+=['-static-libstdc++']
+endif
 
 mangohud_static_lib = static_library(
   'MangoHud',
@@ -211,46 +225,60 @@ mangohud_shared_lib = shared_library(
   'MangoHud',
   objects: mangohud_static_lib.extract_all_objects(),
   link_with: mangohud_static_lib,
-  link_args : link_args,
-  install_dir : libdir_mangohud,
-  install: true
-)
-
-mangohud_opengl_shared_lib = shared_library(
-  'MangoHud_opengl',
-  mangohud_version,
-  opengl_files,
-  vklayer_files,
-  util_files,
-  c_args : [
-    pre_args,
-    vulkan_wsi_args
-    ],
-  cpp_args : [
-    pre_args,
-    vulkan_wsi_args
-    ],
-  dependencies : [
-    mangohud_version_dep,
-    vulkan_wsi_deps,
-    dearimgui_dep,
-    spdlog_dep,
-    dbus_dep,
-    dep_dl,
-    dep_rt,
-    dep_pthread,
-    dep_vulkan,
-    windows_deps,
-    json_dep,
-    implot_dep],
-  include_directories : [inc_common],
-  link_args : link_args,
-  link_with: mangohud_static_lib,
+  link_args : [link_args, '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version'))],
   install_dir : libdir_mangohud,
   install: true
 )
 
 if is_unixy
+  mangohud_opengl_syms = configuration_data()
+  if get_option('with_x11').enabled()
+    mangohud_opengl_syms.set('x11_symbols', 'glX*; mangohud_find_glx_ptr;')
+  endif
+  if get_option('with_wayland').enabled()
+    mangohud_opengl_syms.set('wayland_symbols', 'egl*; mangohud_find_egl_ptr;')
+  endif
+
+  mangohud_opengl_version_file = configure_file(
+    input: 'mangohud_opengl.version.in',
+    output: 'mangohud_opengl.version',
+    configuration: mangohud_opengl_syms,
+  )
+
+  mangohud_opengl_shared_lib = shared_library(
+    'MangoHud_opengl',
+    mangohud_version,
+    opengl_files,
+    vklayer_files,
+    util_files,
+    c_args : [
+      pre_args,
+      vulkan_wsi_args
+      ],
+    cpp_args : [
+      pre_args,
+      vulkan_wsi_args
+      ],
+    dependencies : [
+      mangohud_version_dep,
+      vulkan_wsi_deps,
+      dearimgui_dep,
+      spdlog_dep,
+      dbus_dep,
+      dep_dl,
+      dep_rt,
+      dep_pthread,
+      dep_vulkan,
+      json_dep,
+      implot_dep],
+    include_directories : [inc_common],
+    link_args : [link_args, '-Wl,--version-script,@0@'.format(join_paths(meson.current_build_dir(), 'mangohud_opengl.version'))],
+    link_with: mangohud_static_lib,
+    link_depends: mangohud_opengl_version_file,
+    install_dir : libdir_mangohud,
+    install: true
+  )
+
   mangohud_dlsym = shared_library(
     'MangoHud_dlsym',
     files(
@@ -267,7 +295,7 @@ if is_unixy
     gnu_symbol_visibility : 'hidden',
     dependencies : [dep_dl],
     include_directories : [inc_common],
-    link_args : link_args,
+    link_args : [link_args, '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud_dlsym.version'))],
     link_with: mangohud_static_lib,
     install_dir : libdir_mangohud,
     install : true
