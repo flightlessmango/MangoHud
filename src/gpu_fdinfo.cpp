@@ -1,9 +1,18 @@
 #include "gpu_fdinfo.h"
+#include "hud_elements.h"
 namespace fs = ghc::filesystem;
 
 void GPU_fdinfo::find_fd()
 {
-    auto path = fs::path("/proc/self/fdinfo");
+    if (fdinfo.size() > 0) {
+        fdinfo.clear();
+        fdinfo_data.clear();
+    }
+
+    auto dir = std::string("/proc/") + std::to_string(pid) + "/fdinfo";
+    auto path = fs::path(dir);
+
+    SPDLOG_DEBUG("fdinfo_dir = {}", dir);
 
     if (!fs::exists(path)) {
         SPDLOG_DEBUG("{} does not exist", path.string());
@@ -481,6 +490,12 @@ void GPU_fdinfo::main_thread()
     while (!stop_thread) {
         std::unique_lock<std::mutex> lock(metrics_mutex);
         cond_var.wait(lock, [this]() { return !paused || stop_thread; });
+
+        if (HUDElements.g_gamescopePid > 0 && HUDElements.g_gamescopePid != pid)
+        {
+            pid = HUDElements.g_gamescopePid;
+            find_fd();
+        }
 
         gather_fdinfo_data();
         get_current_hwmon_readings();
