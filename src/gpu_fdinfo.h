@@ -116,27 +116,32 @@ public:
 
         if (module == "i915") {
             drm_engine_type = "drm-engine-render";
-            drm_memory_type = "drm-total-local0";
+            drm_memory_type = "drm-resident-local0";
         } else if (module == "xe") {
             drm_engine_type = "drm-total-cycles-rcs";
             drm_memory_type = "drm-resident-vram0";
-
-            if (
-                fdinfo_data.size() > 0 &&
-                fdinfo_data[0].find(drm_memory_type) == fdinfo_data[0].end()
-            ) {
-                SPDLOG_DEBUG(
-                    "\"{}\" is not found, you probably have an integrated GPU. "
-                    "Using \"drm-resident-gtt\".", drm_memory_type
-                );
-                drm_memory_type = "drm-resident-gtt";
-            }
         } else if (module == "amdgpu") {
             drm_engine_type = "drm-engine-gfx";
             drm_memory_type = "drm-memory-vram";
         } else if (module == "msm") {
             // msm driver does not report vram usage
             drm_engine_type = "drm-engine-gpu";
+        }
+
+        if (fdinfo_data.size() > 0 &&
+            fdinfo_data[0].find(drm_memory_type) == fdinfo_data[0].end())
+        {
+            auto old_type = drm_memory_type;
+
+            if (module == "i915")
+                drm_memory_type = "drm-resident-system0";
+            else if (module == "xe")
+                drm_memory_type = "drm-resident-gtt";
+
+            SPDLOG_DEBUG(
+                "\"{}\" is not found, you probably have an integrated GPU. "
+                "Using \"{}\"", old_type, drm_memory_type
+            );
         }
 
         SPDLOG_DEBUG(
