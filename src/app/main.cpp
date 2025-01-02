@@ -166,6 +166,9 @@ static void msg_read_thread(){
         if (msg_size != size_t(-1))
         {
             if (hdr->version == 1){
+                if (msg_size > offsetof(struct mangoapp_msg_v1, pid))
+                    HUDElements.g_gamescopePid = mangoapp_v1->pid;
+
                 if (msg_size > offsetof(struct mangoapp_msg_v1, visible_frametime_ns)){
                     bool should_new_frame = false;
                     if (mangoapp_v1->visible_frametime_ns != ~(0lu) && (!params.no_display || logger->is_active())) {
