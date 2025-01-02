@@ -71,7 +71,7 @@ class GPU {
         void pause() {
             if (nvidia)
                 nvidia->pause();
-            
+
             if (amdgpu)
                 amdgpu->pause();
 
@@ -106,7 +106,7 @@ class GPU {
 
             return nullptr;
         }
-        
+
         std::string gpu_text();
         std::string vram_text();
 
