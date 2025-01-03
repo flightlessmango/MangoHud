@@ -20,6 +20,11 @@ if [ "$1" = "--version" ]; then
     exit 0
 fi
 
+if [ "$1" = "--dlsym" ]; then
+    # no-op, dlsym enabled by default
+    shift
+fi
+
 # grab all arguments from command_line
 command_line="$*"
 # flag for disable_preload
