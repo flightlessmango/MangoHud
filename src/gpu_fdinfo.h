@@ -1,11 +1,16 @@
 #pragma once
-#include <cstdint>
-#include <filesystem.h>
+
 #include <inttypes.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#include <cstdint>
 #include <thread>
+#include <atomic>
+#include <map>
+#include <set>
+#include <regex>
 
 #ifdef TEST_ONLY
 #include <../src/mesa/util/os_time.h>
@@ -13,12 +18,10 @@
 #include "mesa/util/os_time.h"
 #endif
 
-#include "gpu_metrics_util.h"
-#include <atomic>
 #include <spdlog/spdlog.h>
-#include <map>
-#include <set>
-#include <regex>
+#include <filesystem.h>
+
+#include "gpu_metrics_util.h"
 
 struct hwmon_sensor {
     std::regex rx;
@@ -53,6 +56,7 @@ private:
     mutable std::mutex metrics_mutex;
 
     std::vector<std::ifstream> fdinfo;
+    uint64_t fdinfo_last_update_ms = 0;
 
     std::map<std::string, hwmon_sensor> hwmon_sensors;
 
