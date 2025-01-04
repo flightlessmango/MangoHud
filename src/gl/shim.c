@@ -53,97 +53,38 @@ static void loadMangoHud() {
     }
 }
 
-void glXSwapBuffers(void* dpy, void* drawable) {
-    loadMangoHud();
-
-    void (*pglXSwapBuffers)(void*, void*) = real_dlsym(handle, "glXSwapBuffers");
-    if (pglXSwapBuffers) {
-        pglXSwapBuffers(dpy, drawable);
+#define CREATE_FWD_VOID(name, params, ...) \
+    void name params { \
+        loadMangoHud(); \
+        void (*p##name) params = real_dlsym(handle, #name); \
+        if (p##name) p##name(__VA_ARGS__); \
     }
-}
-
-void* eglGetDisplay(void *native_dpy) {
-    loadMangoHud();
-
-    void* (*peglGetDisplay)(void*) = real_dlsym(handle, "eglGetDisplay");
-    if (peglGetDisplay) {
-        return peglGetDisplay(native_dpy);
+#define CREATE_FWD(ret_type, name, params, ...) \
+    ret_type name params { \
+        loadMangoHud(); \
+        ret_type (*p##name) params = real_dlsym(handle, #name); \
+        if (p##name) return p##name(__VA_ARGS__); \
+        return (ret_type)0; \
     }
 
-    return NULL;
-}
+CREATE_FWD_VOID(glXSwapBuffers, (void* dpy, void* drawable), dpy, drawable)
+CREATE_FWD(void*, eglGetDisplay, (void* native_dpy), native_dpy)
+CREATE_FWD(void*, eglGetPlatformDisplay,
+    (unsigned int platform,
+     void* native_display,
+     const intptr_t* attrib_list),
+     platform, native_display, attrib_list)
+CREATE_FWD(unsigned int, eglSwapBuffers, (void* dpy, void* surf), dpy, surf)
+CREATE_FWD(int64_t, glXSwapBuffersMscOML,
+    (void* dpy, void* drawable, int64_t target_msc,
+     int64_t divisor, int64_t remainder),
+     dpy, drawable, target_msc, divisor, remainder)
+CREATE_FWD(void*, glXGetProcAddress, (const unsigned char* procName), procName)
+CREATE_FWD(void*, glXGetProcAddressARB, (const unsigned char* procName), procName)
+CREATE_FWD(void*, eglGetProcAddress, (const char* procName), procName)
 
-void* eglGetPlatformDisplay(unsigned int platform, void* native_display, const intptr_t* attrib_list)
-{
-    loadMangoHud();
-
-    void* (*peglGetPlatformDisplay)(unsigned int, void*, const intptr_t*) = real_dlsym(handle, "eglGetPlatformDisplay");
-    if (peglGetPlatformDisplay) {
-        return peglGetPlatformDisplay(platform, native_display, attrib_list);
-    }
-
-    return NULL;
-}
-
-unsigned int eglSwapBuffers(void* dpy, void* surf) {
-    loadMangoHud();
-
-    // Get the hooked eglSwapBuffers function from the loaded library if available
-    unsigned int (*peglSwapBuffers)(void*, void*) = real_dlsym(handle, "eglSwapBuffers");
-    if (peglSwapBuffers) {
-        return peglSwapBuffers(dpy, surf);
-    }
-
-    return 0;
-}
-
-int64_t glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t target_msc, int64_t divisor, int64_t remainder) {
-    loadMangoHud();
-
-    // Get the hooked glXSwapBuffersMscOML function from the loaded library if available
-    int64_t (*pglXSwapBuffersMscOML)(void*, void*, int64_t, int64_t, int64_t) = real_dlsym(handle, "glXSwapBuffersMscOML");
-    if (pglXSwapBuffersMscOML) {
-        return pglXSwapBuffersMscOML(dpy, drawable, target_msc, divisor, remainder);
-    }
-
-    return -1;
-}
-
-void* glXGetProcAddress(const unsigned char* procName)
-{
-    loadMangoHud();
-
-    void* (*pglXGetProcAddress)(const unsigned char*) = real_dlsym(handle, "glXGetProcAddress");
-    if (pglXGetProcAddress) {
-        return pglXGetProcAddress(procName);
-    }
-
-    return NULL;
-}
-
-void* glXGetProcAddressARB(const unsigned char* procName)
-{
-    loadMangoHud();
-
-    void* (*pglXGetProcAddressARB)(const unsigned char*) = real_dlsym(handle, "glXGetProcAddressARB");
-    if (pglXGetProcAddressARB) {
-        return pglXGetProcAddressARB(procName);
-    }
-
-    return NULL;
-}
-
-void* eglGetProcAddress(const char *procName)
-{
-    loadMangoHud();
-
-    void* (*peglGetProcAddress)(const char*) = real_dlsym(handle, "eglGetProcAddress");
-    if (peglGetProcAddress) {
-        return peglGetProcAddress(procName);
-    }
-
-    return NULL;
-}
+#undef CREATE_FWD
+#undef CREATE_FWD_VOID
 
 struct func_ptr {
     const char* name;
