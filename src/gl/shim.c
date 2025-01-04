@@ -45,6 +45,11 @@ static void loadMangoHud() {
     {
         handle = dlopen("${ORIGIN}/libMangoHud_opengl.so", RTLD_NOW | RTLD_LOCAL | RTLD_DEEPBIND);
         if (handle) mangoHudLoaded = true;
+        else
+        {
+            fprintf(stderr, "shim: Failed to load from ${ORIGIN}/libMangoHud_opengl.so\n");
+            handle = RTLD_NEXT;
+        }
     }
 }
 
@@ -54,10 +59,6 @@ void glXSwapBuffers(void* dpy, void* drawable) {
     void (*pglXSwapBuffers)(void*, void*) = real_dlsym(handle, "glXSwapBuffers");
     if (pglXSwapBuffers) {
         pglXSwapBuffers(dpy, drawable);
-    } else {
-       pglXSwapBuffers = real_dlsym(RTLD_NEXT, "glXSwapBuffers");
-        if (pglXSwapBuffers)
-            pglXSwapBuffers(dpy, drawable);
     }
 }
 
@@ -67,10 +68,6 @@ void* eglGetDisplay(void *native_dpy) {
     void* (*peglGetDisplay)(void*) = real_dlsym(handle, "eglGetDisplay");
     if (peglGetDisplay) {
         return peglGetDisplay(native_dpy);
-    } else {
-        peglGetDisplay = real_dlsym(RTLD_NEXT, "eglGetDisplay");
-        if (peglGetDisplay)
-            return peglGetDisplay(native_dpy);
     }
 
     return NULL;
@@ -83,10 +80,6 @@ void* eglGetPlatformDisplay(unsigned int platform, void* native_display, const i
     void* (*peglGetPlatformDisplay)(unsigned int, void*, const intptr_t*) = real_dlsym(handle, "eglGetPlatformDisplay");
     if (peglGetPlatformDisplay) {
         return peglGetPlatformDisplay(platform, native_display, attrib_list);
-    } else {
-        peglGetPlatformDisplay = real_dlsym(RTLD_NEXT, "eglGetPlatformDisplay");
-        if (peglGetPlatformDisplay)
-            return peglGetPlatformDisplay(platform, native_display, attrib_list);
     }
 
     return NULL;
@@ -99,12 +92,6 @@ unsigned int eglSwapBuffers(void* dpy, void* surf) {
     unsigned int (*peglSwapBuffers)(void*, void*) = real_dlsym(handle, "eglSwapBuffers");
     if (peglSwapBuffers) {
         return peglSwapBuffers(dpy, surf);
-    } else {
-        // Fall back to the original eglSwapBuffers function
-        peglSwapBuffers = real_dlsym(RTLD_NEXT, "eglSwapBuffers");
-        if (peglSwapBuffers) {
-            return peglSwapBuffers(dpy, surf);
-        }
     }
 
     return 0;
@@ -117,12 +104,6 @@ int64_t glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t target_msc, int6
     int64_t (*pglXSwapBuffersMscOML)(void*, void*, int64_t, int64_t, int64_t) = real_dlsym(handle, "glXSwapBuffersMscOML");
     if (pglXSwapBuffersMscOML) {
         return pglXSwapBuffersMscOML(dpy, drawable, target_msc, divisor, remainder);
-    } else {
-        // Fall back to the original glXSwapBuffersMscOML function
-        pglXSwapBuffersMscOML = real_dlsym(RTLD_NEXT, "glXSwapBuffersMscOML");
-        if (pglXSwapBuffersMscOML) {
-            return pglXSwapBuffersMscOML(dpy, drawable, target_msc, divisor, remainder);
-        }
     }
 
     return -1;
@@ -135,11 +116,6 @@ void* glXGetProcAddress(const unsigned char* procName)
     void* (*pglXGetProcAddress)(const unsigned char*) = real_dlsym(handle, "glXGetProcAddress");
     if (pglXGetProcAddress) {
         return pglXGetProcAddress(procName);
-    } else {
-        pglXGetProcAddress = real_dlsym(RTLD_NEXT, "glXGetProcAddress");
-        if (pglXGetProcAddress) {
-            return pglXGetProcAddress(procName);
-        }
     }
 
     return NULL;
@@ -152,11 +128,6 @@ void* glXGetProcAddressARB(const unsigned char* procName)
     void* (*pglXGetProcAddressARB)(const unsigned char*) = real_dlsym(handle, "glXGetProcAddressARB");
     if (pglXGetProcAddressARB) {
         return pglXGetProcAddressARB(procName);
-    } else {
-        pglXGetProcAddressARB = real_dlsym(RTLD_NEXT, "glXGetProcAddressARB");
-        if (pglXGetProcAddressARB) {
-            return pglXGetProcAddressARB(procName);
-        }
     }
 
     return NULL;
@@ -169,11 +140,6 @@ void* eglGetProcAddress(const char *procName)
     void* (*peglGetProcAddress)(const char*) = real_dlsym(handle, "eglGetProcAddress");
     if (peglGetProcAddress) {
         return peglGetProcAddress(procName);
-    } else {
-        peglGetProcAddress = real_dlsym(RTLD_NEXT, "eglGetProcAddress");
-        if (peglGetProcAddress) {
-            return peglGetProcAddress(procName);
-        }
     }
 
     return NULL;
