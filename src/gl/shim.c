@@ -14,6 +14,7 @@ static bool mangoHudLoaded = false;
 static void loadMangoHud(void);
 static void loadMangoHud() {
     if (mangoHudLoaded) return;
+    if (handle == RTLD_NEXT) return;
 
     // allow user to load custom mangohud libs (useful for testing)
     char *libs = getenv("MANGOHUD_OPENGL_LIBS");
