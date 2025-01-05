@@ -30,6 +30,7 @@ A Vulkan and OpenGL overlay for monitoring FPS, temperatures, CPU/GPU load and m
   - [FPS logging](#fps-logging)
     - [Online visualization: FlightlessMango.com](#online-visualization-flightlessmangocom)
     - [Local visualization: `mangoplot`](#local-visualization-mangoplot)
+  - [Metrics support by GPU vendor](#metrics-support-by-gpu-vendor)
 
 ## Installation - Build From Source
 
@@ -528,3 +529,108 @@ Example output:
 ![Overwatch 2 windows 11 vs linux](assets/Overwatch2-w11-vs-linux.svg)
 
 <sub><sup>Overwatch 2, 5950X + 5700XT, low graphics preset, FHD, 50% render scale</sup></sub>
+
+## Metrics support by GPU vendor
+<table>
+	<tr>
+		<th></th>
+		<th>Nvidia</th>
+		<th>AMD</th>
+		<th colspan="2">Intel</th>
+	</tr>
+	<tr>
+		<td></td>
+		<td></td>
+		<td></td>
+		<th>i915</th>
+		<th>xe</th>
+	</tr>
+	<tr>
+		<td>Usage%</td>
+		<td>🟢</td>
+		<td>🟢</td>
+		<td>🟢<sup>3</sup></td>
+		<td>🟢<sup>3</sup></td>
+	</tr>
+	<tr>
+		<td>Temperature</td>
+		<td>🟢</td>
+		<td>🟢</td>
+		<td>🟢<sup>1,2</sup></td>
+		<td>🔴</td>
+	</tr>
+	<tr>
+		<td>Junction Temperature</td>
+		<td>🔴</td>
+		<td>🟢</td>
+		<td>🔴</td>
+		<td>🔴</td>
+	</tr>
+	<tr>
+		<td>Memory Temperature</td>
+		<td>🔴</td>
+		<td>🟢</td>
+		<td>🔴</td>
+		<td>🔴</td>
+	</tr>
+	<tr>
+		<td>Memory Used</td>
+		<td>🟢</td>
+		<td>🟢</td>
+		<td>🟢<sup>3</sup></td>
+		<td>🟢<sup>3</sup></td>
+	</tr>
+	<tr>
+		<td>Memory Total</td>
+		<td>🟢</td>
+		<td>🟢</td>
+		<td>🔴</td>
+		<td>🔴</td>
+	</tr>
+	<tr>
+		<td>Memory Clock</td>
+		<td>🟢</td>
+		<td>🟢</td>
+		<td>🔴</td>
+		<td>🔴</td>
+	</tr>
+	<tr>
+		<td>Core Clock</td>
+		<td>🟢</td>
+		<td>🟢</td>
+		<td>🟢</td>
+		<td>🟢</td>
+	</tr>
+	<tr>
+		<td>Power Usage</td>
+		<td>🟢</td>
+		<td>🟢</td>
+		<td>🟢<sup>2</sup></td>
+		<td>🟢<sup>2</sup></td>
+	</tr>
+	<tr>
+		<td>Throttling Status</td>
+		<td>🟢</td>
+		<td>🟢</td>
+		<td>🟢</td>
+		<td>🟢</td>
+	</tr>
+	<tr>
+		<td>Fan Speed</td>
+		<td>🟢</td>
+		<td>🟢</td>
+		<td>🟢<sup>2</sup></td>
+		<td>🔴</td>
+	</tr>
+	<tr>
+		<td>Voltage</td>
+		<td>🔴</td>
+		<td>🟢</td>
+		<td>🟢</td>
+		<td>🟢</td>
+	</tr>
+</table>
+
+- 1 - requires linux 6.13+
+- 2 - integrated gpus are not supported
+- 3 - shows usage per-process, not total system usage
