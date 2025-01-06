@@ -1,5 +1,8 @@
 #include "gpu_fdinfo.h"
+
+#ifndef TEST_ONLY
 #include "hud_elements.h"
+#endif
 
 namespace fs = ghc::filesystem;
 
@@ -490,11 +493,13 @@ void GPU_fdinfo::main_thread()
         std::unique_lock<std::mutex> lock(metrics_mutex);
         cond_var.wait(lock, [this]() { return !paused || stop_thread; });
 
+#ifndef TEST_ONLY
         if (HUDElements.g_gamescopePid > 0 && HUDElements.g_gamescopePid != pid)
         {
             pid = HUDElements.g_gamescopePid;
             find_fd();
         }
+#endif
 
         // Recheck fds every 10secs, fixes Mass Effect 1, maybe some others too
         {

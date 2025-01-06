@@ -43,6 +43,7 @@ subprojects/imgui-*/
 subprojects/spdlog-*/
 subprojects/nlohmann_json-*/
 subprojects/implot-*/
+subprojects/cmocka/
 
 #GNU Global Metadata
 **/GPATH
