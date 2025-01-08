@@ -6,6 +6,7 @@
 #include <array>
 
 #include "memory.h"
+#include "hud_elements.h"
 
 float memused, memmax, swapused;
 uint64_t proc_mem_resident, proc_mem_shared, proc_mem_virt;
@@ -35,10 +36,18 @@ void update_procmem()
     auto page_size = sysconf(_SC_PAGESIZE);
     if (page_size < 0) page_size = 4096;
 
-    std::ifstream file("/proc/self/statm");
+    std::string f = "/proc/";
+
+    {
+        auto gs_pid = HUDElements.g_gamescopePid;
+        f += gs_pid < 1 ? "self" : std::to_string(gs_pid);
+        f += "/statm";
+    }
+
+    std::ifstream file(f);
 
     if (!file.is_open()) {
-        SPDLOG_ERROR("can't open /proc/self/statm");
+        SPDLOG_ERROR("can't open {}", f);
         return;
     }
 
