@@ -67,6 +67,14 @@ GPUS::GPUS(overlay_params* params) : params(params) {
             SPDLOG_ERROR("stoul failed on: {}", "/sys/bus/pci/devices/" + device_address + "/device");
         }
 
+        if (!vendor_id) {
+            auto line = read_line("/sys/class/drm/" + node_name + "/device/uevent" );
+            if (line.find("DRIVER=msm_dpu") != std::string::npos) {
+                SPDLOG_DEBUG("MSM device found!");
+                vendor_id = 0x5143;
+            }
+        }
+
         std::shared_ptr<GPU> ptr = std::make_shared<GPU>(node_name, vendor_id, device_id, pci_dev);
 
         if (params->gpu_list.size() == 1 && params->gpu_list[0] == idx++)
