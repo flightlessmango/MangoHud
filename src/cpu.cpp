@@ -528,6 +528,9 @@ bool CPUStats::GetCpuFile() {
         } else if (name == "it8603") {
             find_input(path, "temp", input, "temp1");
             break;
+        } else if (starts_with(name, "cpuss0_")) {
+            find_fallback_input(path, "temp1", input);
+            break;
         } else if (starts_with(name, "nct")) {
             // Only break if nct module has TSI0_TEMP node
             if (find_input(path, "temp", input, "TSI0_TEMP"))
