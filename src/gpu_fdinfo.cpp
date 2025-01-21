@@ -58,7 +58,7 @@ void GPU_fdinfo::find_fd()
         }
 
         if (
-            driver.empty() || pdev.empty() || client_id.empty() ||
+            driver.empty() || client_id.empty() ||
             driver != module || pdev != pci_dev ||
             client_ids.find(client_id) != client_ids.end()
         )
