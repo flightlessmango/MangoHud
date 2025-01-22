@@ -126,22 +126,21 @@ float GPU_fdinfo::get_memory_used()
     return (float)total / 1024 / 1024;
 }
 
-void GPU_fdinfo::find_hwmon()
+void GPU_fdinfo::find_hwmon_sensors()
 {
-    std::string device = "/sys/bus/pci/devices/" + pci_dev + "/hwmon";
+    std::string hwmon;
 
-    if (!fs::exists(device)) {
-        SPDLOG_DEBUG("hwmon: hwmon directory {} doesn't exist.", device);
-        return;
-    }
-
-    auto dir_iterator = fs::directory_iterator(device);
-    auto hwmon = dir_iterator->path().string();
+    if (module == "msm")
+        hwmon = find_msm_hwmon_dir();
+    else
+        hwmon = find_hwmon_dir();
 
     if (hwmon.empty()) {
-        SPDLOG_DEBUG("hwmon: hwmon directory is empty.");
+        SPDLOG_DEBUG("hwmon: failed to find hwmon directory");
         return;
     }
+
+    SPDLOG_DEBUG("hwmon: checking \"{}\" directory", hwmon);
 
     for (const auto &entry : fs::directory_iterator(hwmon)) {
         auto filename = entry.path().filename().string();
@@ -187,6 +186,53 @@ void GPU_fdinfo::find_hwmon()
             continue;
         }
     }
+}
+
+std::string GPU_fdinfo::find_hwmon_dir() {
+    std::string d = "/sys/class/drm/" + drm_node + "/device/hwmon";
+
+    if (!fs::exists(d)) {
+        SPDLOG_DEBUG("hwmon: hwmon directory \"{}\" doesn't exist", d);
+        return "";
+    }
+
+    auto dir_iterator = fs::directory_iterator(d);
+    auto hwmon = dir_iterator->path().string();
+
+    if (hwmon.empty()) {
+        SPDLOG_DEBUG("hwmon: hwmon directory \"{}\" is empty.", d);
+        return "";
+    }
+
+    return hwmon;
+}
+
+std::string GPU_fdinfo::find_msm_hwmon_dir() {
+    std::string d = "/sys/class/hwmon/";
+
+    if (!fs::exists(d))
+        return "";
+
+    for (const auto &entry : fs::directory_iterator(d)) {
+        auto hwmon_dir = entry.path().string();
+        auto hwmon_name = hwmon_dir + "/name";
+
+        std::ifstream name_stream(hwmon_name);
+        std::string name_content;
+
+        if (!name_stream.is_open())
+            continue;
+
+        std::getline(name_stream, name_content);
+
+        if (name_content.find("gpu") == std::string::npos)
+            continue;
+
+        // return the first gpu sensor
+        return hwmon_dir;
+    }
+
+    return "";
 }
 
 void GPU_fdinfo::get_current_hwmon_readings()

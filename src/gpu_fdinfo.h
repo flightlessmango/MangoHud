@@ -82,7 +82,9 @@ private:
 
     float get_memory_used();
 
-    void find_hwmon();
+    void find_hwmon_sensors();
+    std::string find_hwmon_dir();
+    std::string find_msm_hwmon_dir();
     void get_current_hwmon_readings();
 
     float get_power_usage();
@@ -161,7 +163,7 @@ public:
         hwmon_sensors["power"]     = { .rx = std::regex("power(\\d+)_input") };
         hwmon_sensors["energy"]    = { .rx = std::regex("energy(\\d+)_input") };
 
-        find_hwmon();
+        find_hwmon_sensors();
 
         if (module == "i915")
             find_i915_gt_dir();
