@@ -25,6 +25,7 @@
 #include "amdgpu.h"
 #include "fps_metrics.h"
 #include "net.h"
+#include "fex.h"
 
 #ifdef __linux__
 #include <libgen.h>
@@ -247,6 +248,9 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
 #ifdef __linux__
    if (gpus)
       gpus->update_throttling();
+#endif
+#ifdef HAVE_FEX
+   fex::update_fex_stats();
 #endif
    frametime = frametime_ms;
    fps = double(1000 / frametime_ms);
