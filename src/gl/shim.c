@@ -1,4 +1,6 @@
 #include <dlfcn.h>
+#include <errno.h>
+#include <link.h>
 #include <stdio.h>
 #include <stdint.h>
 #include "gl.h"
@@ -9,6 +11,69 @@
 
 static void* handle = NULL;
 static bool mangoHudLoaded = false;
+
+#ifdef __GLIBC__
+static inline void
+free_indirect(char **p)
+{
+    free(*p);
+}
+
+static bool load_adjacent_opengl_lib(void)
+{
+    __attribute__((cleanup(free_indirect))) char *location = NULL;
+    __attribute__((cleanup(free_indirect))) char *lib = NULL;
+    Dl_info info = {};
+    void *extra_info = NULL;
+
+    // The first argument can be any symbol in this shared library,
+    // mangoHudLoaded is a convenient one
+    if (!dladdr1(&mangoHudLoaded, &info, &extra_info, RTLD_DL_LINKMAP))
+    {
+        fprintf(stderr, "shim: Unable to find my own location: %s\n", dlerror());
+        return false;
+    }
+
+    const struct link_map *map = extra_info;
+    if (map == NULL)
+    {
+        fprintf(stderr, "shim: Unable to find my own location: NULL link_map\n");
+        return false;
+    }
+    if (map->l_name == NULL)
+    {
+        fprintf(stderr, "shim: Unable to find my own location: NULL l_name\n");
+        return false;
+    }
+
+    location = realpath(map->l_name, NULL);
+    char *slash = strrchr(location, '/');
+
+    if (slash == NULL)
+    {
+        fprintf(stderr, "shim: Unable to find my own location: no directory separator\n");
+        return false;
+    }
+
+    *slash = '\0';
+
+    if (asprintf(&lib, "%s/libMangoHud_opengl.so", location) < 0)
+    {
+        fprintf(stderr, "shim: asprintf: %s\n", strerror(errno));
+        return false;
+    }
+
+    handle = dlopen(lib, RTLD_NOW | RTLD_LOCAL | RTLD_DEEPBIND);
+
+    if (handle == NULL)
+    {
+        fprintf(stderr, "shim: Failed to load from \"%s\": %s\n", lib, dlerror());
+        return false;
+    }
+
+    return true;
+}
+#endif
 
 // Load MangoHud after EGL/GLX functions have been intercepted
 static void loadMangoHud(void);
@@ -33,13 +98,21 @@ static void loadMangoHud() {
             if (handle)
             {
                 mangoHudLoaded = true;
-                break;
+                return;
             }
             else fprintf(stderr, "shim: Failed to load from \"%s\": %s\n", lib, dlerror());
 
             lib = strtok(NULL, ":");
         }
     }
+
+#ifdef __GLIBC__
+    if (load_adjacent_opengl_lib())
+    {
+        mangoHudLoaded = true;
+        return;
+    }
+#endif
 
     if (!mangoHudLoaded)
     {
