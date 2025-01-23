@@ -35,7 +35,7 @@ static void loadMangoHud() {
                 mangoHudLoaded = true;
                 break;
             }
-            else fprintf(stderr, "shim: Failed to load from: %s\n", lib);
+            else fprintf(stderr, "shim: Failed to load from \"%s\": %s\n", lib, dlerror());
 
             lib = strtok(NULL, ":");
         }
@@ -47,7 +47,7 @@ static void loadMangoHud() {
         if (handle) mangoHudLoaded = true;
         else
         {
-            fprintf(stderr, "shim: Failed to load from ${ORIGIN}/libMangoHud_opengl.so\n");
+            fprintf(stderr, "shim: Failed to load from ${ORIGIN}/libMangoHud_opengl.so: %s\n", dlerror());
             handle = RTLD_NEXT;
         }
     }
