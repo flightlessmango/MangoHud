@@ -104,7 +104,7 @@ GPUS::GPUS(overlay_params* params) : params(params) {
             "You have more than 1 active GPU, check if you use both pci_dev "
             "and gpu_list. If you use fps logging, MangoHud will log only "
             "this GPU: name = {}, vendor = {:x}, pci_dev = {}",
-            gpu->name, gpu->vendor_id, gpu->pci_dev
+            gpu->drm_node, gpu->vendor_id, gpu->pci_dev
         );
 
         break;
