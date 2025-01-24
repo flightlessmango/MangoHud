@@ -55,16 +55,20 @@ GPUS::GPUS(overlay_params* params) : params(params) {
 
         uint32_t vendor_id = 0;
         uint32_t device_id = 0;
-        try {
-            vendor_id = std::stoul(read_line("/sys/bus/pci/devices/" + device_address + "/vendor"), nullptr, 16);
-        } catch(...) {
-            SPDLOG_ERROR("stoul failed on: {}", "/sys/bus/pci/devices/" + device_address + "/vendor");
-        }
 
-        try {
-            device_id = std::stoul(read_line("/sys/bus/pci/devices/" + device_address + "/device"), nullptr, 16);
-        } catch (...) {
-            SPDLOG_ERROR("stoul failed on: {}", "/sys/bus/pci/devices/" + device_address + "/device");
+        if (!device_address.empty())
+        {
+            try {
+                vendor_id = std::stoul(read_line("/sys/bus/pci/devices/" + device_address + "/vendor"), nullptr, 16);
+            } catch(...) {
+                SPDLOG_ERROR("stoul failed on: {}", "/sys/bus/pci/devices/" + device_address + "/vendor");
+            }
+
+            try {
+                device_id = std::stoul(read_line("/sys/bus/pci/devices/" + device_address + "/device"), nullptr, 16);
+            } catch (...) {
+                SPDLOG_ERROR("stoul failed on: {}", "/sys/bus/pci/devices/" + device_address + "/device");
+            }
         }
 
         if (!vendor_id) {
