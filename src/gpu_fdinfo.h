@@ -45,6 +45,7 @@ private:
 
     const std::string module;
     const std::string pci_dev;
+    const std::string drm_node;
 
     std::thread thread;
     std::condition_variable cond_var;
@@ -109,9 +110,10 @@ private:
         std::vector<std::ifstream> &throttle_reason_streams);
 
 public:
-    GPU_fdinfo(const std::string module, const std::string pci_dev)
+    GPU_fdinfo(const std::string module, const std::string pci_dev, const std::string drm_node)
         : module(module)
         , pci_dev(pci_dev)
+        , drm_node(drm_node)
     {
         SPDLOG_DEBUG("GPU driver is \"{}\"", module);
 
