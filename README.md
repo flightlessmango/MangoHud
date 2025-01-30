@@ -196,6 +196,15 @@ If you are using Debian 11 (Bullseye) or later, Ubuntu 21.10 (Impish) or later, 
 sudo apt install mangohud
 ```
 
+Optionally, if you also need MangoHud for 32-bit applications,
+on Debian you can execute:
+
+```
+sudo apt install mangohud:i386
+```
+
+The 32-bit package is not available on Ubuntu.
+
 ### Fedora
 
 If you are using Fedora, to install the [MangoHud](https://src.fedoraproject.org/rpms/mangohud) package, execute:
