@@ -412,8 +412,17 @@ int main(int, char**)
             for (auto gpu : gpus->available_gpus)
                 gpu->pause();
 
-            std::unique_lock<std::mutex> lk(mangoapp_m);
-            mangoapp_cv.wait(lk, []{return !params.no_display;});
+            // If mangoapp is hidden, using mangoapp_cv.wait() causes a hang.
+            // Because of this hang, we can't detect if the user presses R_SHIFT + F12,
+            // which prevents mangoapp from being unhidden.
+            // To address this, replace mangoapp_cv.wait() with sleep().
+            //
+            // If severe power usage issues arise, find an alternative solution.
+
+            // std::unique_lock<std::mutex> lk(mangoapp_m);
+            // mangoapp_cv.wait(lk, []{return !params.no_display;});
+        } else {
+            usleep(100000);
         }
     }
 
