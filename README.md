@@ -159,11 +159,13 @@ __NOTE: If you are running an Ubuntu-based, Arch-based, Fedora-based, or openSUS
 
 ### GitHub releases
 
-If you do not wish to compile anything, simply download the file under [Releases](https://github.com/flightlessmango/MangoHud/releases), extract it, and from within the extracted folder in terminal, execute:
-
-```
-./mangohud-setup.sh install
-```
+If you do not wish to compile anything:
+1. [Download](https://github.com/flightlessmango/MangoHud/releases/download/v0.7.2/MangoHud-0.7.2.r0.g7b80f73.tar.gz) latest pre-compiled archive from [releases](https://github.com/flightlessmango/MangoHud/releases)
+2. Extract it
+3. In terminal, go to the extracted folder
+4. Execute one of the following:
+   - To install: `./mangohud-setup.sh install`
+   - To uninstall: `./mangohud-setup.sh uninstall`
 
 ### Arch-based distributions
 
@@ -207,15 +209,15 @@ The 32-bit package is not available on Ubuntu.
 
 ### Fedora
 
-If you are using Fedora, to install the [MangoHud](https://src.fedoraproject.org/rpms/mangohud) package, execute:
+If you are using Fedora, to install both 64-bit and 32-bit [MangoHud](https://src.fedoraproject.org/rpms/mangohud) package, execute:
 
 ```
-sudo dnf install mangohud
+sudo dnf install mangohud mangohud.i686
 ```
 
 ### Solus
 
-If you are using Solus, to install [MangoHud](https://dev.getsol.us/source/mangohud/) simply execute:
+If you are using Solus, to install both 64-bit and 32-bit [MangoHud](https://github.com/getsolus/packages/tree/main/packages/m/mangohud) simply execute:
 
 ```
 sudo eopkg it mangohud
