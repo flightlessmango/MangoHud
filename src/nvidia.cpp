@@ -1,4 +1,6 @@
+#ifdef HAVE_NVML
 #include "nvml.h"
+#endif
 #include "hud_elements.h"
 #include "logging.h"
 #include "string_utils.h"
