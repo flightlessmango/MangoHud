@@ -1617,7 +1617,7 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({time, "time", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_version])
         ordered_functions.push_back({version, "version", value});
-    if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats]
+    if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
         ordered_functions.push_back({gpu_stats, "gpu_stats", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats])
         ordered_functions.push_back({cpu_stats, "cpu_stats", value});
