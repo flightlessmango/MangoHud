@@ -22,12 +22,14 @@ jobs:
           pacman -Syu base-devel sudo meson python-mako glslang hub python-numpy python-matplotlib --noconfirm
       - name: makepkg
         run: |
-          echo "nobody ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-          chown nobody:nobody pkgbuild
+          useradd -m builduser
+          echo "builduser ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/builduser
+          chmod 0440 /etc/sudoers.d/builduser
+          chown -R builduser:builduser pkgbuild
           cd pkgbuild
           pkgver=$(git describe --tags | sed -r 's/^v//;s/([^-]*-g)/r\1/;s/-/./g')
           sed -i "s/pkgver=.*/pkgver=$pkgver/g" PKGBUILD
-          sudo -u nobody -- sh -c "makepkg -fsCc --noconfirm"
+          sudo -u builduser -- sh -c "makepkg -fsCc --noconfirm"
       - name: Edit release and add files
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
