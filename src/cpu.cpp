@@ -540,6 +540,10 @@ bool CPUStats::GetCpuFile() {
             // Only break if module has CPU node
             if (find_input(path, "temp", input, "CPU"))
                 break;
+        } else if (name == "cpu_hwmon") {
+            // for loongarch cpu temp, read /sys/class/hwmon{n}, with name cpu_hwmon
+                find_input(path, "temp1", input, "CPU");
+                break;
         } else {
             path.clear();
         }
