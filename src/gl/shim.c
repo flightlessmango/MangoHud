@@ -9,6 +9,10 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#ifndef RTLD_DEEPBIND
+#define RTLD_DEEPBIND 0
+#endif
+
 static void* handle = NULL;
 static bool mangoHudLoaded = false;
 
