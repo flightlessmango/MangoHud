@@ -146,7 +146,7 @@ if is_unixy
   endif
 
   if get_option('with_x11').enabled()
-    pre_args += '-DHAVE_X11'
+    add_project_arguments('-DHAVE_X11', language : ['c', 'cpp'])
 
     vklayer_files += files(
       'loaders/loader_x11.cpp',
@@ -160,7 +160,7 @@ if is_unixy
   endif
 
   if get_option('with_wayland').enabled()
-    pre_args += '-DHAVE_WAYLAND'
+    add_project_arguments('-DHAVE_WAYLAND', language : ['c', 'cpp'])
 
     vklayer_files += files(
       'wayland_keybinds.cpp'
@@ -240,10 +240,7 @@ mangohud_shared_lib = shared_library(
 )
 
 if is_unixy
-  mangohud_opengl_versionscript = cpp.preprocess(
-    'mangohud_opengl.version',
-    compile_args: pre_args,
-  )
+  mangohud_opengl_versionscript = cpp.preprocess('mangohud_opengl.version')
 
   mangohud_opengl_shared_lib = shared_library(
     'MangoHud_opengl',
