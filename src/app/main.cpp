@@ -19,7 +19,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include "amdgpu.h"
-#ifdef __linux__
+#ifdef HAVE_IMPLOT
 #include "implot.h"
 #endif
 
@@ -244,7 +244,7 @@ static GLFWwindow* init(const char* glsl_version){
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
     ImGui::CreateContext();
-#ifdef __linux__
+#ifdef HAVE_IMPLOT
     ImPlot::CreateContext();
 #endif
     ImGuiIO& io = ImGui::GetIO(); (void)io;

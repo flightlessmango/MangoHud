@@ -20,7 +20,7 @@
 #include <IconsForkAwesome.h>
 #include "version.h"
 #include "blacklist.h"
-#ifdef __linux__
+#ifdef HAVE_IMPLOT
 #include "implot.h"
 #endif
 #include "amdgpu.h"
@@ -812,7 +812,7 @@ void HudElements::frame_timing(){
                                     NULL, min_time, max_time,
                                     ImVec2(width, height));
             } else {
-#ifndef __linux__
+#ifndef HAVE_IMPLOT
                 ImGui::PlotLines(hash, get_time_stat, HUDElements.sw_stats,
                                 ARRAY_SIZE(HUDElements.sw_stats->frames_stats), 0,
                                 NULL, min_time, max_time,
@@ -854,7 +854,7 @@ void HudElements::frame_timing(){
             }
         }
         ImGui::EndChild();
-#ifdef __linux__
+#ifdef HAVE_IMPLOT
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_throttling_status_graph] && gpus->active_gpu()->throttling()){
             ImGui::Dummy(ImVec2(0.0f, real_font_size.y / 2));
 
@@ -874,6 +874,11 @@ void HudElements::frame_timing(){
         }
         ImGui::PopFont();
         ImGui::PopStyleColor();
+#else
+        static unsigned int once;
+
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_throttling_status_graph] && !once++)
+            SPDLOG_DEBUG("Throttling status graph requires ImPlot");
 #endif
     }
 }

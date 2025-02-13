@@ -444,7 +444,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `text_outline_color=`              | Set the color of `text_outline`. Default = `000000`                                   |
 | `text_outline_thickness=`          | Set the thickness of `text_outline`. Default = `1.5`                                  |
 | `throttling_status`                | Show if GPU is throttling based on Power, current, temp or "other" (Only shows if throttling is currently happening). Currently disabled by default for Nvidia as it causes lag on 3000 series |
-| `throttling_status_graph`          | Same as `throttling_status` but displays throttling in the frametime graph and only power and temp throttling |
+| `throttling_status_graph`          | Same as `throttling_status` but displays throttling in the frametime graph and only power and temp throttling (requires ImPlot dependency) |
 | `time`<br>`time_format=%T`         | Display local time. See [std::put_time](https://en.cppreference.com/w/cpp/io/manip/put_time) for formatting help. NOTE: Sometimes apps may set `TZ` (timezone) environment variable to UTC/GMT |
 | `time_no_label`                    | Remove the label before time                                                          |
 | `toggle_fps_limit`                 | Cycle between FPS limits (needs at least two values set with `fps_limit`). Defaults to `Shift_L+F1`                                    |

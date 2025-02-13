@@ -57,6 +57,9 @@
 #include "file_utils.h"
 #ifdef __linux__
 #include <dlfcn.h>
+#endif
+
+#ifdef HAVE_IMPLOT
 #include "implot.h"
 #endif
 
@@ -1319,7 +1322,7 @@ static void setup_swapchain_data(struct swapchain_data *data,
    data->format = pCreateInfo->imageFormat;
 
    data->imgui_context = ImGui::CreateContext(data->font_atlas);
-#ifdef __linux__
+#ifdef HAVE_IMPLOT
    ImPlot::CreateContext();
 #endif
    ImGui::SetCurrentContext(data->imgui_context);
