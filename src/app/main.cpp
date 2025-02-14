@@ -369,8 +369,9 @@ int main(int, char**)
                 XSync(x11_display, 0);
                 mangoapp_paused = false;
                 // resume all GPU threads
-                for (auto gpu : gpus->available_gpus)
-                    gpu->resume();
+                if (gpus)
+                    for (auto gpu : gpus->available_gpus)
+                        gpu->resume();
             }
             {
                 std::unique_lock<std::mutex> lk(mangoapp_m);
@@ -409,8 +410,9 @@ int main(int, char**)
             XSync(x11_display, 0);
             mangoapp_paused = true;
             // pause all GPUs threads
-            for (auto gpu : gpus->available_gpus)
-                gpu->pause();
+            if (gpus)
+                for (auto gpu : gpus->available_gpus)
+                    gpu->pause();
 
             // If mangoapp is hidden, using mangoapp_cv.wait() causes a hang.
             // Because of this hang, we can't detect if the user presses R_SHIFT + F12,
