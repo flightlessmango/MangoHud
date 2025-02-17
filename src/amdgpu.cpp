@@ -143,6 +143,17 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 			// giving up
 			metrics->current_gfxclk_mhz = 0;
 		}
+		
+		if( IS_VALID_METRIC(amdgpu_metrics->current_uclk) ) {
+			// prefered method
+			metrics->current_uclk_mhz = amdgpu_metrics->current_uclk;
+		} else if( IS_VALID_METRIC(amdgpu_metrics->average_uclk_frequency) ) {
+			// fallback 1
+			metrics->current_uclk_mhz = amdgpu_metrics->average_uclk_frequency;
+		} else {
+			// giving up
+			metrics->current_uclk_mhz = 0;
+		}
 
 		indep_throttle_status = amdgpu_metrics->indep_throttle_status;
 	}
