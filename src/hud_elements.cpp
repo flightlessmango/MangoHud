@@ -514,7 +514,7 @@ void HudElements::vram(){
 
                 ImguiNextColumnOrNewRow();
                 // Add gtt_used to vram usage for APUs
-                if (cpuStats.cpu_type == "APU")
+                if (gpu->is_apu())
                     right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", gpu->metrics.memoryUsed + gpu->metrics.gtt_used);
                 else
                     right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", gpu->metrics.memoryUsed);
