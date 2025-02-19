@@ -52,13 +52,14 @@ NVIDIA::NVIDIA(const char* pciBusId) {
         SPDLOG_DEBUG("XNVCtrl: X11 not loaded");
 
     auto& nvctrl = get_libnvctrl_loader();
-    if (!nvctrl.IsLoaded())
+    if (!nvctrl.IsLoaded()) {
         SPDLOG_DEBUG("XNVCtrl loader failed to load");
+        nvctrl_available = false;
+    } else {
+        nvctrl_available = find_nv_x11(nvctrl, display);
+    }
 
-    nvctrl_available = find_nv_x11(nvctrl, display);
-    if (!nvctrl_available)
-        SPDLOG_DEBUG("XNVCtrl didn't find the correct display");
-    else {
+    if (nvctrl_available) {
         nvctrl.XNVCTRLQueryTargetCount(display,
             NV_CTRL_TARGET_TYPE_COOLER,
             &num_coolers);
@@ -298,6 +299,7 @@ bool NVIDIA::find_nv_x11(libnvctrl_loader& nvctrl, Display*& dpy)
             libx11->XCloseDisplay(d);
         }
     }
+    SPDLOG_DEBUG("XNVCtrl didn't find the correct display");
     return false;
 }
 #endif
