@@ -855,7 +855,8 @@ void HudElements::frame_timing(){
         }
         ImGui::EndChild();
 #ifdef __linux__
-        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_throttling_status_graph] && gpus->active_gpu()->throttling()){
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_throttling_status_graph] &&
+            gpus->active_gpu() && gpus->active_gpu()->throttling()){
             ImGui::Dummy(ImVec2(0.0f, real_font_size.y / 2));
 
             if (gpus->active_gpu()->throttling()->power_throttling()) {
@@ -1254,7 +1255,10 @@ void HudElements::fan(){
 void HudElements::throttling_status(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_throttling_status]){
         auto gpu = gpus->active_gpu();
-        if (gpu->metrics.is_power_throttled || gpu->metrics.is_current_throttled || gpu->metrics.is_temp_throttled || gpu->metrics.is_other_throttled){
+        if (!gpu)
+            return;
+
+        if ((gpu->metrics.is_power_throttled || gpu->metrics.is_current_throttled || gpu->metrics.is_temp_throttled || gpu->metrics.is_other_throttled)){
             ImguiNextColumnFirstItem();
             HUDElements.TextColored(HUDElements.colors.engine, "%s", "Throttling");
             ImguiNextColumnOrNewRow();
@@ -1368,6 +1372,10 @@ void HudElements::graphs(){
         for (auto& it : graph_data){
             arr.push_back(float(it.gpu_vram_used));
         }
+
+        auto gpu = gpus->active_gpu();
+        if (!gpu)
+            return;
 
         HUDElements.max = gpus->active_gpu()->metrics.memoryTotal;
         HUDElements.min = 0;
