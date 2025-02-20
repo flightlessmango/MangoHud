@@ -29,6 +29,7 @@
 #include "blacklist.h"
 #include "mesa/util/os_socket.h"
 #include "file_utils.h"
+#include "fex.h"
 
 #if defined(HAVE_X11) || defined(HAVE_WAYLAND)
 #include <xkbcommon/xkbcommon.h>
@@ -416,6 +417,43 @@ parse_fps_metrics(const char *str){
    fpsmetrics = std::make_unique<fpsMetrics>(metrics);
 
    return metrics;
+}
+
+static overlay_params::fex_stats_options
+parse_fex_stats(const char *str) {
+   overlay_params::fex_stats_options options {
+#ifdef HAVE_FEX
+      .enabled = fex::is_fex_capable(),
+#endif
+   };
+
+   auto tokens = str_tokenize(str);
+#define option_check(str, option) do { \
+      if (token == #str) options.option = true; \
+   } while (0)
+
+   // If we have any tokens then default disable.
+   if (!tokens.empty()) {
+      options.status = false;
+      options.app_type = false;
+      options.hot_threads = false;
+      options.jit_load = false;
+      options.sigbus_counts = false;
+      options.smc_counts = false;
+      options.softfloat_counts = false;
+   }
+
+   for (auto& token : tokens) {
+      option_check(status, status);
+      option_check(apptype, app_type);
+      option_check(hotthreads, hot_threads);
+      option_check(jitload, jit_load);
+      option_check(sigbus, sigbus_counts);
+      option_check(smc, smc_counts);
+      option_check(softfloat, softfloat_counts);
+   }
+
+   return options;
 }
 
 #define parse_width(s) parse_unsigned(s)

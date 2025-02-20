@@ -200,6 +200,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(fps_metrics)                 \
    OVERLAY_PARAM_CUSTOM(network)                     \
    OVERLAY_PARAM_CUSTOM(gpu_list)                    \
+   OVERLAY_PARAM_CUSTOM(fex_stats)                   \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -327,6 +328,24 @@ struct overlay_params {
    std::vector<std::string> fps_metrics;
    std::vector<std::string> network;
    std::vector<unsigned> gpu_list;
+
+   struct fex_stats_options {
+      bool enabled {false};
+
+      // Enabled Texts
+      bool status {true};
+      bool app_type {true};
+
+      // Graphs
+      bool hot_threads {true};
+      bool jit_load {true};
+
+      // Counts
+      bool sigbus_counts {true};
+      bool smc_counts {true};
+      bool softfloat_counts {true};
+   };
+   fex_stats_options fex_stats{};
 };
 
 const extern char *overlay_param_names[];

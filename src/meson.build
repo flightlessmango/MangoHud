@@ -93,8 +93,15 @@ if is_unixy
     'control.cpp',
     'device.cpp',
     'net.cpp',
-    'shell.cpp'
+    'shell.cpp',
   )
+
+  if get_option('with_fex')
+    pre_args += '-DHAVE_FEX'
+    vklayer_files += files(
+      'fex.cpp',
+    )
+  endif
 
   opengl_files = files(
     'gl/glad.c',
