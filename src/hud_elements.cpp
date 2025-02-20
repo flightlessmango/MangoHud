@@ -770,6 +770,9 @@ static inline double TransformInverse_Custom(double v, void*) {
 
 void HudElements::frame_timing(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
+        if (!gpus)
+            gpus = std::make_unique<GPUS>(HUDElements.params);
+
         ImguiNextColumnFirstItem();
         ImGui::PushFont(HUDElements.sw_stats->font1);
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
@@ -1254,6 +1257,9 @@ void HudElements::fan(){
 
 void HudElements::throttling_status(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_throttling_status]){
+        if (!gpus)
+            gpus = std::make_unique<GPUS>(HUDElements.params);
+
         auto gpu = gpus->active_gpu();
         if (!gpu)
             return;
@@ -1372,12 +1378,14 @@ void HudElements::graphs(){
         for (auto& it : graph_data){
             arr.push_back(float(it.gpu_vram_used));
         }
+        if (!gpus)
+            gpus = std::make_unique<GPUS>(HUDElements.params);
 
         auto gpu = gpus->active_gpu();
         if (!gpu)
             return;
 
-        HUDElements.max = gpus->active_gpu()->metrics.memoryTotal;
+        HUDElements.max = gpu->metrics.memoryTotal;
         HUDElements.min = 0;
         HUDElements.TextColored(HUDElements.colors.engine, "%s", "VRAM");
     }
