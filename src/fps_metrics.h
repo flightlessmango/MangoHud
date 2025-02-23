@@ -129,18 +129,18 @@ class fpsMetrics {
             if (fps > 0.0001)
                 fps_stats.push_back({now, fps});
 
-            uint64_t ten_minute_duration = 600000000000ULL; // 10 minutes in nanoseconds
+            uint64_t one_minute_duration = 1 * 60ULL * 1000000000ULL; // 60000000000 ns
 
-            // Check if the system's uptime is less than 10 minutes
-            if (now >= ten_minute_duration) {
-                uint64_t ten_minutes_ago = now - ten_minute_duration;
+            // Check if the system's uptime is less than 1 minutes
+            if (now >= one_minute_duration) {
+                uint64_t one_minutes_ago = now - one_minute_duration;
 
                 fps_stats.erase(
                     std::remove_if(
                         fps_stats.begin(),
                         fps_stats.end(),
-                        [ten_minutes_ago](const std::pair<uint64_t, float>& entry) {
-                            return entry.first < ten_minutes_ago;
+                        [one_minutes_ago](const std::pair<uint64_t, float>& entry) {
+                            return entry.first < one_minutes_ago;
                         }
                     ),
                     fps_stats.end()
