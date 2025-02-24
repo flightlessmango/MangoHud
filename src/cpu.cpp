@@ -540,7 +540,8 @@ bool CPUStats::GetCpuFile() {
             // Only break if module has CPU node
             if (find_input(path, "temp", input, "CPU"))
                 break;
-        } else if (name == "l_pcs") { // Elbrus temperature module
+        } else if (name == "l_pcs") {
+            // E2K (Elbrus 2000) CPU temperature module
             find_input(path, "temp", input, "Node 0 Max");
             break;
         } else {
