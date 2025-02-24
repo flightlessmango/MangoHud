@@ -300,7 +300,6 @@ parse_gpu_list(const char *str) {
 
    while (std::getline(ss, item, ',')) {
       unsigned int num = static_cast<unsigned int>(std::stoul(item));
-      printf("parsing gpu list num: %i\n", num);
       result.push_back(num);
    }
 
