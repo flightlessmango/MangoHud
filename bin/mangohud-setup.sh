@@ -105,7 +105,8 @@ mangohud_install() {
     # $LIB can be "lib/tls/x86_64"?
     ln -sv ../tls /usr/lib/mangohud/lib/tls
 
-    rm -rf ./usr
+    # Let's not clean up because this can be destructive
+    # rm -rf ./usr
 
     echo "MangoHud Installed"
 }
