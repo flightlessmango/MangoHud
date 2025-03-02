@@ -26,23 +26,27 @@ bool init_x11() {
     }
 
     const char *displayid = getenv("DISPLAY");
-    if (displayid) {
-        display = { libx11->XOpenDisplay(displayid),
-            [libx11](Display* dpy) {
-                if (dpy)
-                    libx11->XCloseDisplay(dpy);
-            }
-        };
+
+    if (!displayid || !*displayid) {
+        SPDLOG_DEBUG("DISPLAY env is not set or empty");
+        failed = true;
+        return false;
     }
 
-    failed = !display;
-    if (failed && displayid)
-        SPDLOG_ERROR("XOpenDisplay failed to open display '{}'", displayid);
-    
-    if (!displayid)
-        SPDLOG_DEBUG("DISPLAY env is not set");
+    display = { libx11->XOpenDisplay(displayid),
+        [libx11](Display* dpy) {
+            if (dpy)
+                libx11->XCloseDisplay(dpy);
+        }
+    };
 
-    if (display && HUDElements.display_server == HUDElements.display_servers::UNKNOWN) {
+    failed = !display;
+    if (failed) {
+        SPDLOG_ERROR("XOpenDisplay failed to open display '{}'", displayid);
+        return false;
+    }
+
+    if (HUDElements.display_server == HUDElements.display_servers::UNKNOWN) {
         int opcode, event, error;
         if (libx11->XQueryExtension(display.get(), "XWAYLAND", &opcode, &event, &error))
 		    HUDElements.display_server = HUDElements.display_servers::XWAYLAND;
