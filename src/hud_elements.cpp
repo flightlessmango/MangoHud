@@ -407,7 +407,7 @@ void HudElements::core_load(){
             width = 150;
             height = HUDElements.params->font_size;
         } else {
-            width = ImGui::GetWindowContentRegionWidth();
+            width = ImGui::GetContentRegionAvail().x;
             height = 50;
         }
 
@@ -797,7 +797,7 @@ void HudElements::frame_timing(){
             width = 150;
             height = HUDElements.params->font_size * 0.85;
         } else {
-            width = ImGui::GetWindowContentRegionWidth();
+            width = ImGui::GetContentRegionAvail().x;
             height = max_time;
         }
 
@@ -1138,11 +1138,11 @@ void HudElements::gamescope_frame_timing(){
             HUDElements.sw_stats->time_dividor = 1000000.0f; /* ns -> ms */
 
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-            if (ImGui::BeginChild("gamescope_app_window", ImVec2(ImGui::GetWindowContentRegionWidth(), 50))) {
+            if (ImGui::BeginChild("gamescope_app_window", ImVec2(ImGui::GetContentRegionAvail().x, 50))) {
                 ImGui::PlotLines("", HUDElements.gamescope_debug_app.data(),
                         HUDElements.gamescope_debug_app.size(), 0,
                         NULL, min_time, max_time,
-                            ImVec2(ImGui::GetWindowContentRegionWidth(), 50));
+                            ImVec2(ImGui::GetContentRegionAvail().x, 50));
             }
             ImGui::PopStyleColor();
             ImGui::EndChild();
@@ -1163,11 +1163,11 @@ void HudElements::gamescope_frame_timing(){
             ImguiNextColumnFirstItem();
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
             ImGui::PushStyleColor(ImGuiCol_PlotLines, ImVec4(0,0,1,1));
-            if (ImGui::BeginChild("gamescope_latency_window", ImVec2(ImGui::GetWindowContentRegionWidth(), 50))) {
+            if (ImGui::BeginChild("gamescope_latency_window", ImVec2(ImGui::GetContentRegionAvail().x, 50))) {
                 ImGui::PlotLines("", HUDElements.gamescope_debug_latency.data(),
                         HUDElements.gamescope_debug_latency.size(), 0,
                         NULL, min_time, max_time,
-                        ImVec2(ImGui::GetWindowContentRegionWidth(), 50));
+                        ImVec2(ImGui::GetContentRegionAvail().x, 50));
             }
             ImGui::PopStyleColor(2);
             ImGui::EndChild();
@@ -1410,12 +1410,12 @@ void HudElements::graphs(){
         ImGui::PlotLines("", arr.data(),
                 arr.size(), 0,
                 NULL, HUDElements.min, HUDElements.max,
-                ImVec2(ImGui::GetWindowContentRegionWidth(), 50));
+                ImVec2(ImGui::GetContentRegionAvail().x, 50));
     } else {
         ImGui::PlotHistogram("", arr.data(),
             arr.size(), 0,
             NULL, HUDElements.min, HUDElements.max,
-            ImVec2(ImGui::GetWindowContentRegionWidth(), 50));
+            ImVec2(ImGui::GetContentRegionAvail().x, 50));
     }
     ImGui::Dummy(ImVec2(0.0f,5.0f));
     ImGui::PopStyleColor(1);
@@ -1627,7 +1627,7 @@ void HudElements::fex_stats()
         ImGui::PlotHistogram("", fex::fex_max_thread_loads.data(),
             fex::fex_max_thread_loads.size(), 0,
             NULL, 0, 100,
-            ImVec2(ImGui::GetWindowContentRegionWidth(), 50));
+            ImVec2(ImGui::GetContentRegionAvail().x, 50));
         ImGui::PopStyleColor(1 + (Warning ? 1 : 0));
     }
 
@@ -1641,7 +1641,7 @@ void HudElements::fex_stats()
         ImGui::PlotLines("", fex::fex_load_data.data(),
             fex::fex_load_data.size(), 0,
             NULL, 0, 100,
-            ImVec2(ImGui::GetWindowContentRegionWidth(), 50));
+            ImVec2(ImGui::GetContentRegionAvail().x, 50));
         ImGui::PopStyleColor(1);
     }
 #endif //HAVE_FEX
