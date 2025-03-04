@@ -101,7 +101,7 @@ static void writeSummary(string filename){
     float result;
     std::vector<float> fps_values;
     for (auto& data : sorted)
-      fps_values.push_back(data.fps);
+      fps_values.push_back(data.frametime);
 
     std::unique_ptr<fpsMetrics> fpsmetrics;
     std::vector<std::string> metrics {"0.001", "0.01", "0.97"};
@@ -336,7 +336,7 @@ void autostart_log(int sleep) {
 void Logger::calculate_benchmark_data(){
   vector<float> fps_values {};
   for (auto& point : m_log_array)
-    fps_values.push_back(point.fps);
+    fps_values.push_back(point.frametime);
 
   benchmark.percentile_data.clear();
 

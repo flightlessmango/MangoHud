@@ -254,7 +254,7 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
 #endif
    frametime = frametime_ms;
    fps = double(1000 / frametime_ms);
-   if (fpsmetrics) fpsmetrics->update(now, fps);
+   if (fpsmetrics) fpsmetrics->update(frametime_ms);
 
    if (elapsed >= params.fps_sampling_period) {
       if (!hw_update_thread)
