@@ -1958,15 +1958,6 @@ static VkResult overlay_CreateInstance(
 
       init_cpu_stats(instance_data->params);
 
-      // Adjust height for DXVK/VKD3D version number
-      if (engineName == "DXVK" || engineName == "VKD3D"){
-         if (instance_data->params.font_size){
-            instance_data->params.height += instance_data->params.font_size * instance_data->params.font_scale / 2;
-         } else {
-            instance_data->params.height += 24 * instance_data->params.font_scale / 2;
-         }
-      }
-
       instance_data->engine = engine;
       instance_data->engineName = engineName;
       instance_data->engineVersion = engineVersion;
