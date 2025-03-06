@@ -140,8 +140,13 @@ static void do_imgui_swap(void *dpy, void *drawable)
     static auto last_time = std::chrono::steady_clock::now();
     auto current_time = std::chrono::steady_clock::now();
 
+    // if bufferSize is 0 then glXQueryDrawable is probably not working
+    // this is the case with llvmpipe
+    unsigned int bufferSize;
+    glXQueryDrawable(dpy, drawable, GL_BUFFER_SIZE, &bufferSize);
+
     std::chrono::duration<double> elapsed_seconds = current_time - last_time;
-    if (HUDElements.vsync == 10 || elapsed_seconds.count() > 5.0)
+    if (bufferSize != 0 && (HUDElements.vsync == 10 || elapsed_seconds.count() > 5.0))
         glx.QueryDrawable(dpy, drawable, GLX_SWAP_INTERVAL_EXT, &HUDElements.vsync);
 
     GLint vp[4];
