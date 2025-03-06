@@ -80,7 +80,12 @@ static void writeSummary(string filename){
   SPDLOG_DEBUG("Writing summary log file [{}]", filename);
   std::ofstream out(filename, ios::out | ios::app);
   if (out){
-    out << "0.1% Min FPS," << "1% Min FPS," << "97% Percentile FPS," << "Average FPS," << "GPU Load," << "CPU Load," << "Average Frame Time," << "Average GPU Temp," << "Average CPU Temp," << "Average VRAM Used," << "Average RAM Used," << "Average Swap Used," << "Peak GPU Load," << "Peak CPU Load," << "Peak GPU Temp," << "Peak CPU Temp," << "Peak VRAM Used," << "Peak RAM Used," << "Peak Swap Used" << "\n";
+    out << "0.1% Min FPS," << "1% Min FPS," << "97% Percentile FPS," 
+        << "Average FPS," << "GPU Load," << "CPU Load," << "Average Frame Time,"
+        << "Average GPU Temp," << "Average CPU Temp," << "Average VRAM Used,"
+        << "Average RAM Used," << "Average Swap Used," << "Peak GPU Load,"
+        << "Peak CPU Load," << "Peak GPU Temp," << "Peak CPU Temp,"
+        << "Peak VRAM Used," << "Peak RAM Used," << "Peak Swap Used" << "\n";
     std::vector<logData> sorted = logArray;
     std::sort(sorted.begin(), sorted.end(), compareByFps);
     float total = 0.0f;
@@ -190,7 +195,10 @@ static void writeFileHeaders(ofstream& out){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_log_versioning])
       out << "--------------------FRAME METRICS--------------------" << endl;
 
-    out << "fps," << "frametime," << "cpu_load," << "cpu_power," << "gpu_load," << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock," << "gpu_vram_used," << "gpu_power," << "ram_used," << "swap_used," << "process_rss," << "elapsed" << endl;
+    out << "fps," << "frametime," << "cpu_load," << "cpu_power," << "gpu_load,"
+        << "cpu_temp," << "gpu_temp," << "gpu_core_clock," << "gpu_mem_clock,"
+        << "gpu_vram_used," << "gpu_power," << "ram_used," << "swap_used,"
+        << "process_rss," << "cpu_mhz," << "elapsed" << endl;
 
 }
 
@@ -216,6 +224,7 @@ void Logger::writeToFile(){
     output_file << logArray.back().ram_used << ",";
     output_file << logArray.back().swap_used << ",";
     output_file << logArray.back().process_rss << ",";
+    output_file << logArray.back().cpu_mhz << ",";
     output_file << std::chrono::duration_cast<std::chrono::nanoseconds>(logArray.back().previous).count() << "\n";
     output_file.flush();
   } else {

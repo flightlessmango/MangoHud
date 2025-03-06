@@ -18,6 +18,7 @@ struct logData{
   float frametime;
   float cpu_load;
   float cpu_power;
+  int cpu_mhz;
   int gpu_load;
   int cpu_temp;
   int gpu_temp;

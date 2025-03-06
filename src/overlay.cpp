@@ -119,11 +119,11 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
       cpuStats.UpdateCPUData();
 
 #ifdef __linux__
-      if (params.enabled[OVERLAY_PARAM_ENABLED_core_load] || params.enabled[OVERLAY_PARAM_ENABLED_cpu_mhz])
+      if (params.enabled[OVERLAY_PARAM_ENABLED_core_load] || params.enabled[OVERLAY_PARAM_ENABLED_cpu_mhz] || logger->is_active())
          cpuStats.UpdateCoreMhz();
       if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp] || logger->is_active() || params.enabled[OVERLAY_PARAM_ENABLED_graphs])
          cpuStats.UpdateCpuTemp();
-      if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_power])
+      if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_power] || logger->is_active())
          cpuStats.UpdateCpuPower();
 #endif
    }
@@ -165,6 +165,8 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
    currentLogData.cpu_load = cpuStats.GetCPUDataTotal().percent;
    currentLogData.cpu_temp = cpuStats.GetCPUDataTotal().temp;
    currentLogData.cpu_power = cpuStats.GetCPUDataTotal().power;
+   currentLogData.cpu_mhz = cpuStats.GetCPUDataTotal().cpu_mhz;
+
    // Save data for graphs
    if (graph_data.size() >= kMaxGraphEntries)
       graph_data.pop_front();
