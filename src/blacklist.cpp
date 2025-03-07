@@ -2,11 +2,13 @@
 #include <string>
 #include <algorithm>
 #include <spdlog/spdlog.h>
+#include <filesystem.h>
 
 #include "blacklist.h"
 #include "string_utils.h"
 #include "file_utils.h"
 
+namespace fs = ghc::filesystem;
 std::string global_proc_name;
 
 static std::string get_proc_name() {
@@ -63,11 +65,27 @@ static  std::vector<std::string> blacklist {
     "plutonium-launcher-win32.exe"
 };
 
+static bool check_gtk() {
+    fs::path path("/proc/self/map_files/");
+    for (auto& p : fs::directory_iterator(path)) {
+        auto filename = p.path().string();
+        auto sym = read_symlink(filename.c_str());
+        if (sym.find("gtk") != std::string::npos)
+            return true;
+    }
+
+    return false;
+}
+
 
 static bool check_blacklisted() {
     std::string proc_name = get_proc_name();
     global_proc_name = proc_name;
     bool blacklisted = std::find(blacklist.begin(), blacklist.end(), proc_name) != blacklist.end();
+
+    // if the app isn't blacklisted, check if the app uses GTK and blacklist anyway
+    if (!blacklisted)
+        blacklisted = check_gtk();
 
     static bool printed = false;
     if(blacklisted && !printed) {
