@@ -65,6 +65,7 @@ static  std::vector<std::string> blacklist {
     "plutonium-launcher-win32.exe"
 };
 
+#ifdef __linux__
 static bool check_gtk() {
     fs::path path("/proc/self/map_files/");
     for (auto& p : fs::directory_iterator(path)) {
@@ -76,16 +77,18 @@ static bool check_gtk() {
 
     return false;
 }
-
+#endif
 
 static bool check_blacklisted() {
     std::string proc_name = get_proc_name();
     global_proc_name = proc_name;
     bool blacklisted = std::find(blacklist.begin(), blacklist.end(), proc_name) != blacklist.end();
 
+#ifdef __linux__
     // if the app isn't blacklisted, check if the app uses GTK and blacklist anyway
     if (!blacklisted)
         blacklisted = check_gtk();
+#endif
 
     static bool printed = false;
     if(blacklisted && !printed) {
