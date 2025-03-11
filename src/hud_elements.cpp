@@ -901,6 +901,13 @@ void HudElements::media_player(){
         else
             SPDLOG_DEBUG("failed to acquire lock");
     }
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
+        ImguiNextColumnFirstItem();
+    }
+    if (!main_metadata.meta.playing) {
+        HUDElements.TextColored(HUDElements.colors.media_player, "(paused)");
+    }
+
     ImGui::PopFont();
 #endif
 }

@@ -481,8 +481,10 @@ void render_mpris_metadata(const struct overlay_params& params, mutexed_metadata
    if (meta.meta.valid) {
       auto color = ImGui::ColorConvertU32ToFloat4(params.media_player_color);
       ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,0));
-      ImGui::Dummy(ImVec2(0.0f, 20.0f));
-      //ImGui::PushFont(data.font1);
+
+      if (!params.enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
+         ImGui::Dummy(ImVec2(0.0f, 20.0f));
+      }
 
       if (meta.ticker.needs_recalc) {
          meta.ticker.formatted.clear();
@@ -529,11 +531,6 @@ void render_mpris_metadata(const struct overlay_params& params, mutexed_metadata
          HUDElements.TextColored(color, "%s", fmt.text.c_str());
       }
 
-      if (!meta.meta.playing) {
-         HUDElements.TextColored(color, "(paused)");
-      }
-
-      //ImGui::PopFont();
       ImGui::PopStyleVar();
    }
 }
