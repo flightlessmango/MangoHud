@@ -143,7 +143,7 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 			// giving up
 			metrics->current_gfxclk_mhz = 0;
 		}
-		
+
 		if( IS_VALID_METRIC(amdgpu_metrics->current_uclk) ) {
 			// prefered method
 			metrics->current_uclk_mhz = amdgpu_metrics->current_uclk;
@@ -285,6 +285,13 @@ void AMDGPU::get_sysfs_metrics() {
 	// TODO: on some gpus this will use the power1_input instead
 	// this value is instantaneous and should be averaged over time
 	// probably just average everything in this function to be safe
+#ifndef TEST_ONLY
+	if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power]) {
+		// NOTE: Do not read power1_average if it is not enabled, as some
+		// older GPUs may hang when reading the sysfs node.
+		metrics.powerUsage = 0;
+	} else
+#endif
 	if (sysfs_nodes.power_usage) {
 		rewind(sysfs_nodes.power_usage);
 		fflush(sysfs_nodes.power_usage);
