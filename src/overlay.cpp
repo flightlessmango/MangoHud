@@ -617,13 +617,13 @@ ImVec4 change_on_load_temp(LOAD_DATA& data, unsigned current)
       float x = (data.color_high.x - data.color_med.x) * diff;
       float y = (data.color_high.y - data.color_med.y) * diff;
       float z = (data.color_high.z - data.color_med.z) * diff;
-      return ImVec4(data.color_med.x + x, data.color_med.y + y, data.color_med.z + z, 1.0);
+      return ImVec4(data.color_med.x + x, data.color_med.y + y, data.color_med.z + z, HUDElements.params->alpha);
    } else {
       float diff = float(current) / float(data.med_load);
       float x = (data.color_med.x - data.color_low.x) * diff;
       float y = (data.color_med.y - data.color_low.y) * diff;
       float z = (data.color_med.z - data.color_low.z) * diff;
-      return ImVec4(data.color_low.x + x, data.color_low.y + y, data.color_low.z + z, 1.0);
+      return ImVec4(data.color_low.x + x, data.color_low.y + y, data.color_low.z + z, HUDElements.params->alpha);
    }
 }
 
