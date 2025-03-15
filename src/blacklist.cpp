@@ -40,7 +40,7 @@ static  std::vector<std::string> blacklist {
     "iexplore.exe",
     "InsurgencyEAC.exe",
     "Launcher", //Paradox Interactive Launcher
-    "LeagueClient.exe
+    "LeagueClient.exe",
     "LeagueClientUxRender.exe",
     "MarneLauncher.exe",
     "monado-service",
