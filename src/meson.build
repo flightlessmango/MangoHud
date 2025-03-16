@@ -59,7 +59,10 @@ vklayer_files = files(
   'config.cpp',
   'gpu.cpp',
   'blacklist.cpp',
-  'file_utils.cpp'
+  'file_utils.cpp',
+  'nvidia.cpp',
+  'gpu_fdinfo.cpp',
+  'amdgpu.cpp'
 )
 
 opengl_files  = []
@@ -83,18 +86,22 @@ if is_unixy
     'memory.cpp',
     'iostats.cpp',
     'notify.cpp',
-    'elfhacks.cpp',
-    'real_dlsym.cpp',
+    'elfhacks.c',
+    'real_dlsym.c',
     'pci_ids.cpp',
     'battery.cpp',
     'control.cpp',
     'device.cpp',
-    'amdgpu.cpp',
-    'intel.cpp',
-    'msm.cpp',
     'net.cpp',
-    'shell.cpp'
+    'shell.cpp',
   )
+
+  if get_option('with_fex')
+    pre_args += '-DHAVE_FEX'
+    vklayer_files += files(
+      'fex.cpp',
+    )
+  endif
 
   opengl_files = files(
     'gl/glad.c',
@@ -115,7 +122,6 @@ if is_unixy
   if nvml_h_found
     pre_args += '-DHAVE_NVML'
     vklayer_files += files(
-      'nvml.cpp',
       'loaders/loader_nvml.cpp',
     )
   endif
@@ -133,8 +139,7 @@ if is_unixy
 
     pre_args += '-DHAVE_XNVCTRL'
     vklayer_files += files(
-      'loaders/loader_nvctrl.cpp',
-      'nvctrl.cpp',
+      'loaders/loader_nvctrl.cpp'
     )
   endif
 
@@ -145,18 +150,17 @@ if is_unixy
       'loaders/loader_x11.cpp',
       'shared_x11.cpp',
     )
-  endif
 
     opengl_files += files(
       'loaders/loader_glx.cpp',
       'gl/inject_glx.cpp',
     )
+  endif
 
   if get_option('with_wayland').enabled()
     pre_args += '-DHAVE_WAYLAND'
 
     vklayer_files += files(
-      'wayland_hook.cpp',
       'wayland_keybinds.cpp'
     )
   endif
@@ -253,30 +257,6 @@ mangohud_opengl_shared_lib = shared_library(
   install: true
 )
 
-if is_unixy
-  mangohud_dlsym = shared_library(
-    'MangoHud_dlsym',
-    files(
-      'elfhacks.cpp',
-      'real_dlsym.cpp',
-      'hook_dlsym.cpp',
-    ),
-    c_args : [
-      pre_args,
-      ],
-    cpp_args : [
-      pre_args,
-      ],
-    gnu_symbol_visibility : 'hidden',
-    dependencies : [dep_dl],
-    include_directories : [inc_common],
-    link_args : link_args,
-    link_with: mangohud_static_lib,
-    install_dir : libdir_mangohud,
-    install : true
-  )
-endif
-
 if get_option('mangoapp')
   if not get_option('with_x11').enabled()
     error('mangoapp also needs \'with_x11\'')
@@ -326,30 +306,20 @@ mangoapp = executable(
   install : true
 )
 endif
-
-if get_option('mangoapp_layer')
-  mangoapp_layer = shared_library(
-    'MangoApp',
-    vk_enum_to_str,
+if is_unixy
+  mangohud_shim = shared_library(
+    'MangoHud_shim',
     files(
-      'app/layer.cpp',
+      'gl/shim.c',
+      'real_dlsym.c',
+      'elfhacks.c'
     ),
-    c_args : [
-      pre_args,
-      ],
-    cpp_args : [
-      pre_args,
-      ],
     dependencies : [
-      dep_vulkan,
-      json_dep
+      dep_dl
     ],
-    gnu_symbol_visibility : 'hidden',
     include_directories : [inc_common],
-    link_args : link_args,
-    install_tag : 'mangoapp',
     install_dir : libdir_mangohud,
-    install : true
+    install: true
   )
 endif
 
@@ -367,13 +337,3 @@ configure_file(input : '../bin/mangohud.in',
   install_dir : get_option('bindir'),
   install_tag : 'scripts',
 )
-
-if get_option('mangoapp_layer')
-  configure_file(input : 'app/layer.json.in',
-    output : 'libMangoApp.@0@.json'.format(host_machine.cpu_family()),
-    configuration : conf_data,
-    install : true,
-    install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
-    install_tag : 'mangoapp',
-  )
-endif

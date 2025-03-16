@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include <map>
 #include <imgui.h>
 #include "timing.hpp"
 #include <functional>
@@ -11,6 +12,7 @@
 #include "net.h"
 #include "overlay_params.h"
 #include "shell.h"
+#include "gpu.h"
 
 struct Function {
     std::function<void()> run;  // Using std::function instead of a raw function pointer for more flexibility
@@ -35,6 +37,7 @@ class HudElements{
         int place;
         int text_column = 1;
         int table_columns_count = 0;
+        pid_t g_gamescopePid = -1;
         int g_fsrUpscale = -1;
         int g_fsrSharpness = -1;
         Clock::time_point last_exec;
@@ -53,7 +56,7 @@ class HudElements{
         int hdr_status = 0;
         int refresh = 0;
         unsigned int vsync = 10;
-        
+
         enum display_servers {
             UNKNOWN,
             WAYLAND,
@@ -114,6 +117,7 @@ class HudElements{
         static void present_mode();
         static void network();
         static void _display_session();
+        static void fex_stats();
 
         void convert_colors(const struct overlay_params& params);
         void convert_colors(bool do_conv, const struct overlay_params& params);

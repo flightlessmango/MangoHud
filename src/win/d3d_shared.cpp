@@ -20,6 +20,6 @@ void init_d3d_shared(){
 }
 
 void d3d_run(){
-    check_keybinds(params, vendorID);
+    check_keybinds(params);
 	update_hud_info(sw_stats, params, vendorID);
 }

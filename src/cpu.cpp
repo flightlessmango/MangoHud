@@ -281,16 +281,18 @@ bool CPUStats::ReadcpuTempFile(int& temp) {
 }
 
 bool CPUStats::UpdateCpuTemp() {
-	if (cpu_type == "APU"){
-        m_cpuDataTotal.temp = gpu_info.apu_cpu_temp;
-        return true;
-    } else {
-        int temp = 0;
-		bool ret = ReadcpuTempFile(temp);
-		m_cpuDataTotal.temp = temp;
+    if (gpus)
+        for (auto gpu : gpus->available_gpus)
+            if (gpu->is_apu()) {
+                m_cpuDataTotal.temp = gpu->metrics.apu_cpu_temp;
+                return true;
+            }
 
-        return ret;
-    }
+    int temp = 0;
+    bool ret = ReadcpuTempFile(temp);
+    m_cpuDataTotal.temp = temp;
+
+    return ret;
 }
 
 static bool get_cpu_power_k10temp(CPUPowerData* cpuPowerData, float& power) {
@@ -419,8 +421,14 @@ static bool get_cpu_power_rapl(CPUPowerData* cpuPowerData, float& power) {
 }
 
 static bool get_cpu_power_amdgpu(float& power) {
-    power = gpu_info.apu_cpu_power;
-    return true;
+    if (gpus)
+        for (auto gpu : gpus->available_gpus)
+            if (gpu->is_apu()) {
+                power = gpu->metrics.apu_cpu_power;
+                return true;
+            }
+
+    return false;
 }
 
 bool CPUStats::UpdateCpuPower() {
@@ -520,6 +528,9 @@ bool CPUStats::GetCpuFile() {
         } else if (name == "it8603") {
             find_input(path, "temp", input, "temp1");
             break;
+        } else if (starts_with(name, "cpuss0_")) {
+            find_fallback_input(path, "temp1", input);
+            break;
         } else if (starts_with(name, "nct")) {
             // Only break if nct module has TSI0_TEMP node
             if (find_input(path, "temp", input, "TSI0_TEMP"))
@@ -529,6 +540,10 @@ bool CPUStats::GetCpuFile() {
             // Only break if module has CPU node
             if (find_input(path, "temp", input, "CPU"))
                 break;
+        } else if (name == "l_pcs") {
+            // E2K (Elbrus 2000) CPU temperature module
+            find_input(path, "temp", input, "Node 0 Max");
+            break;
         } else {
             path.clear();
         }

@@ -11,6 +11,8 @@
 #include "timing.hpp"
 #include "keybinds.h"
 
+void* wl_handle = nullptr;
+struct wl_display* wl_display_ptr = nullptr;
 struct wl_seat* seat = nullptr;
 struct wl_keyboard* keyboard = nullptr;
 struct xkb_context *context_xkb = nullptr;
@@ -29,7 +31,7 @@ struct wl_seat_listener seat_listener {
 
 static void registry_handle_global(void *data, struct wl_registry* registry, uint32_t name, const char *interface, uint32_t version)
 {
-   if(strcmp(interface, wl_seat_interface.name) == 0)
+   if(strcmp(interface, wl_seat_interface.name) == 0 && !seat)
    {
       seat = (struct wl_seat*)wl_registry_bind(registry, name, &wl_seat_interface, 5);
       wl_seat_add_listener(seat, &seat_listener, NULL);

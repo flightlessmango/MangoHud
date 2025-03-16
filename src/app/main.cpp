@@ -166,6 +166,9 @@ static void msg_read_thread(){
         if (msg_size != size_t(-1))
         {
             if (hdr->version == 1){
+                if (msg_size > offsetof(struct mangoapp_msg_v1, pid))
+                    HUDElements.g_gamescopePid = mangoapp_v1->pid;
+
                 if (msg_size > offsetof(struct mangoapp_msg_v1, visible_frametime_ns)){
                     bool should_new_frame = false;
                     if (mangoapp_v1->visible_frametime_ns != ~(0lu) && (!params.no_display || logger->is_active())) {
@@ -345,7 +348,6 @@ int main(int, char**)
     }
 
     HUDElements.vendorID = vendorID;
-    init_gpu_stats(vendorID, 0, params);
     init_system_info();
     sw_stats.engine = EngineTypes::GAMESCOPE;
     std::thread(msg_read_thread).detach();
@@ -357,25 +359,25 @@ int main(int, char**)
                     PropModeReplace, (unsigned char *)&value, 1);
     // Main loop
     while (!glfwWindowShouldClose(window)){
+        check_keybinds(params);
+
         if (!params.no_display){
             if (mangoapp_paused){
-                glfwRestoreWindow(window);
+                glfwShowWindow(window);
                 uint32_t value = 1;
                 XChangeProperty(x11_display, x11_window, overlay_atom, XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&value, 1);
                 XSync(x11_display, 0);
                 mangoapp_paused = false;
-                {
-                    amdgpu_run_thread = true;
-                    amdgpu_c.notify_one();
-                }
+                // resume all GPU threads
+                if (gpus)
+                    for (auto gpu : gpus->available_gpus)
+                        gpu->resume();
             }
             {
                 std::unique_lock<std::mutex> lk(mangoapp_m);
                 mangoapp_cv.wait(lk, []{return new_frame || params.no_display;});
                 new_frame = false;
             }
-
-            check_keybinds(params, vendorID);
             // Start the Dear ImGui frame
             {
                 if (render(window)) {
@@ -402,17 +404,27 @@ int main(int, char**)
 
             glfwSwapBuffers(window);
         } else if (!mangoapp_paused) {
-            glfwIconifyWindow(window);
+            glfwHideWindow(window);
             uint32_t value = 0;
             XChangeProperty(x11_display, x11_window, overlay_atom, XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&value, 1);
             XSync(x11_display, 0);
             mangoapp_paused = true;
-            {
-                amdgpu_run_thread = false;
-                amdgpu_c.notify_one();
-            }
-            std::unique_lock<std::mutex> lk(mangoapp_m);
-            mangoapp_cv.wait(lk, []{return !params.no_display;});
+            // pause all GPUs threads
+            if (gpus)
+                for (auto gpu : gpus->available_gpus)
+                    gpu->pause();
+
+            // If mangoapp is hidden, using mangoapp_cv.wait() causes a hang.
+            // Because of this hang, we can't detect if the user presses R_SHIFT + F12,
+            // which prevents mangoapp from being unhidden.
+            // To address this, replace mangoapp_cv.wait() with sleep().
+            //
+            // If severe power usage issues arise, find an alternative solution.
+
+            // std::unique_lock<std::mutex> lk(mangoapp_m);
+            // mangoapp_cv.wait(lk, []{return !params.no_display;});
+        } else {
+            usleep(100000);
         }
     }
 

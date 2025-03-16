@@ -11,7 +11,7 @@
 
 Clock::time_point last_f2_press, toggle_fps_limit_press, toggle_preset_press, last_f12_press, reload_cfg_press, last_upload_press;
 
-void check_keybinds(struct overlay_params& params, uint32_t vendorID){
+void check_keybinds(struct overlay_params& params){
    using namespace std::chrono_literals;
    auto now = Clock::now(); /* us */
    auto elapsedF2 = now - last_f2_press;

@@ -463,7 +463,7 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
    struct device_data *device_data = data->device;
    struct instance_data *instance_data = device_data->instance;
    update_hud_info(data->sw_stats, instance_data->params, device_data->properties.vendorID);
-   check_keybinds(instance_data->params, device_data->properties.vendorID);
+   check_keybinds(instance_data->params);
 #ifdef __linux__
    if (instance_data->params.control >= 0) {
       control_client_check(instance_data->params.control, instance_data->control_client, gpu.c_str());
@@ -1547,6 +1547,7 @@ static VkResult overlay_CreateSwapchainKHR(
          else {
             SPDLOG_DEBUG("Present mode is not supported: {}", HUDElements.presentModeMap[HUDElements.cur_present_mode]);
             HUDElements.cur_present_mode = VK_PRESENT_MODE_FIFO_KHR;
+            createInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
          }
       }
    }
@@ -1858,7 +1859,6 @@ static VkResult overlay_CreateDevice(
       gpu = device_data->properties.deviceName;
       SPDLOG_DEBUG("gpu: {}", gpu);
 #endif
-      init_gpu_stats(device_data->properties.vendorID, device_data->properties.deviceID, device_data->instance->params);
    }
 
    return result;
@@ -1957,15 +1957,6 @@ static VkResult overlay_CreateInstance(
 #endif
 
       init_cpu_stats(instance_data->params);
-
-      // Adjust height for DXVK/VKD3D version number
-      if (engineName == "DXVK" || engineName == "VKD3D"){
-         if (instance_data->params.font_size){
-            instance_data->params.height += instance_data->params.font_size * instance_data->params.font_scale / 2;
-         } else {
-            instance_data->params.height += 24 * instance_data->params.font_scale / 2;
-         }
-      }
 
       instance_data->engine = engine;
       instance_data->engineName = engineName;

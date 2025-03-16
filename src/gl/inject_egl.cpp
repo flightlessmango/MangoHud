@@ -10,8 +10,13 @@
 #include "mesa/util/os_time.h"
 #include "blacklist.h"
 #include "gl_hud.h"
+#ifdef HAVE_WAYLAND
+#include "wayland_hook.h"
+#endif
 
 using namespace MangoHud::GL;
+
+#define EGL_PLATFORM_WAYLAND_KHR          0x31D8
 
 EXPORT_C_(void *) eglGetProcAddress(const char* procName);
 
@@ -82,15 +87,68 @@ EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf)
     return res;
 }
 
+EXPORT_C_(void*) eglGetPlatformDisplay( unsigned int platform, void* native_display, const intptr_t* attrib_list);
+EXPORT_C_(void*) eglGetPlatformDisplay( unsigned int platform, void* native_display, const intptr_t* attrib_list)
+{
+    static void* (*pfn_eglGetPlatformDisplay)(unsigned int, void*, const intptr_t*) = nullptr;
+    if (!pfn_eglGetPlatformDisplay)
+        pfn_eglGetPlatformDisplay = reinterpret_cast<decltype(pfn_eglGetPlatformDisplay)>(get_egl_proc_address("eglGetPlatformDisplay"));
+
+#ifdef HAVE_WAYLAND
+    if(platform == EGL_PLATFORM_WAYLAND_KHR)
+    {
+        wl_display_ptr = (struct wl_display*)native_display;
+        HUDElements.display_server = HUDElements.display_servers::WAYLAND;
+        wl_handle = real_dlopen("libwayland-client.so", RTLD_LAZY);
+        init_wayland_data();
+    }
+#endif
+
+    return pfn_eglGetPlatformDisplay(platform, native_display, attrib_list);
+}
+
+EXPORT_C_(void*) eglGetDisplay( void* native_display );
+EXPORT_C_(void*) eglGetDisplay( void* native_display )
+{
+    static void* (*pfn_eglGetDisplay)(void*) = nullptr;
+    if (!pfn_eglGetDisplay)
+        pfn_eglGetDisplay = reinterpret_cast<decltype(pfn_eglGetDisplay)>(get_egl_proc_address("eglGetDisplay"));
+
+#ifdef HAVE_WAYLAND
+    try
+    {
+        void** display_ptr = (void**)native_display;
+        if (native_display)
+        {
+            wl_interface* iface = (wl_interface*)*display_ptr;
+            if(iface && strcmp(iface->name, wl_display_interface.name) == 0)
+            {
+                wl_display_ptr = (struct wl_display*)native_display;
+                HUDElements.display_server = HUDElements.display_servers::WAYLAND;
+                wl_handle = real_dlopen("libwayland-client.so", RTLD_LAZY);
+                init_wayland_data();
+            }
+        }
+    }
+    catch(...)
+    {
+    }
+#endif
+
+    return pfn_eglGetDisplay(native_display);
+}
+
 struct func_ptr {
    const char *name;
    void *ptr;
 };
 
-static std::array<const func_ptr, 2> name_to_funcptr_map = {{
+static std::array<const func_ptr, 4> name_to_funcptr_map = {{
 #define ADD_HOOK(fn) { #fn, (void *) fn }
    ADD_HOOK(eglGetProcAddress),
    ADD_HOOK(eglSwapBuffers),
+   ADD_HOOK(eglGetPlatformDisplay),
+   ADD_HOOK(eglGetDisplay)
 #undef ADD_HOOK
 }};
 

@@ -13,18 +13,16 @@ fi
 DISABLE_LD_PRELOAD="cs2.sh
 "
 
-MANGOHUD_LIB_NAME="@ld_libdir_mangohud@libMangoHud_opengl.so"
-
-if [ "$1" = "--dlsym" ]; then
-    MANGOHUD_LIB_NAME="@ld_libdir_mangohud@libMangoHud_dlsym.so:${MANGOHUD_LIB_NAME}"
-    shift  # shift will only be executed if $1 is "--dlsym"
-elif [ "$MANGOHUD_DLSYM" = "1" ]; then
-    MANGOHUD_LIB_NAME="@ld_libdir_mangohud@libMangoHud_dlsym.so:${MANGOHUD_LIB_NAME}"
-fi
+MANGOHUD_LIB_NAME="@ld_libdir_mangohud@libMangoHud_shim.so"
 
 if [ "$1" = "--version" ]; then
     echo @version@
     exit 0
+fi
+
+if [ "$1" = "--dlsym" ]; then
+    # no-op, dlsym enabled by default
+    shift
 fi
 
 # grab all arguments from command_line

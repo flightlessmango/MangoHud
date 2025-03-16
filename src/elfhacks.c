@@ -29,7 +29,7 @@
  *  \{
  */
 
-#ifdef __GLIBC__
+#if defined(__GLIBC__) && !(defined(__riscv) || defined(__mips__))
 # define ABS_ADDR(obj, ptr) (ptr)
 #else
 # define ABS_ADDR(obj, ptr) ((obj->addr) + (ptr))
@@ -83,7 +83,7 @@ int eh_find_callback(struct dl_phdr_info *info, size_t size, void *argptr)
 
 int eh_iterate_callback(struct dl_phdr_info *info, size_t size, void *argptr)
 {
-	struct eh_iterate_callback_args *args = (eh_iterate_callback_args *)argptr;
+	struct eh_iterate_callback_args *args = argptr;
 	eh_obj_t obj;
 	int ret = 0;
 

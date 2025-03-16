@@ -29,16 +29,17 @@
 #include "blacklist.h"
 #include "mesa/util/os_socket.h"
 #include "file_utils.h"
+#include "fex.h"
 
-#ifdef HAVE_X11
-#include <X11/keysym.h>
-#include "loaders/loader_x11.h"
+#if defined(HAVE_X11) || defined(HAVE_WAYLAND)
+#include <xkbcommon/xkbcommon.h>
 #endif
 
 #include "dbus_info.h"
 
 #include "app/mangoapp.h"
 #include "fps_metrics.h"
+#include "version.h"
 
 std::unique_ptr<fpsMetrics> fpsmetrics;
 std::mutex config_mtx;
@@ -131,22 +132,19 @@ parse_float(const char *str)
    return val;
 }
 
-#ifdef HAVE_X11
+#if defined(HAVE_X11) || defined(HAVE_WAYLAND)
 static std::vector<KeySym>
 parse_string_to_keysym_vec(const char *str)
 {
    std::vector<KeySym> keys;
-   if(get_libx11()->IsLoaded())
-   {
-      auto keyStrings = str_tokenize(str);
-      for (auto& ks : keyStrings) {
-         trim(ks);
-         KeySym xk = get_libx11()->XStringToKeysym(ks.c_str());
-         if (xk)
-            keys.push_back(xk);
-         else
-            SPDLOG_ERROR("Unrecognized key: '{}'", ks);
-      }
+   auto keyStrings = str_tokenize(str);
+   for (auto& ks : keyStrings) {
+      trim(ks);
+      xkb_keysym_t xk = xkb_keysym_from_name(ks.c_str(), XKB_KEYSYM_CASE_INSENSITIVE);
+      if (xk != XKB_KEY_NoSymbol)
+         keys.push_back(xk);
+      else
+         SPDLOG_ERROR("Unrecognized key: '{}'", ks);
    }
    return keys;
 }
@@ -293,6 +291,21 @@ parse_str_tokenize(const char *str, const std::string& delims = ",:+", bool btri
     return data;
 }
 
+static std::vector<unsigned>
+parse_gpu_list(const char *str) {
+
+   std::vector<unsigned int> result;
+   std::stringstream ss{std::string(str)};
+   std::string item;
+
+   while (std::getline(ss, item, ',')) {
+      unsigned int num = static_cast<unsigned int>(std::stoul(item));
+      result.push_back(num);
+   }
+
+   return result;
+}
+
 
 static unsigned
 parse_unsigned(const char *str)
@@ -342,39 +355,8 @@ parse_path(const char *str)
 static std::vector<std::string>
 parse_benchmark_percentiles(const char *str)
 {
+   SPDLOG_INFO("benchmark_percetile is obsolete and will be removed. Use fps_metrics instead");
    std::vector<std::string> percentiles;
-   auto tokens = str_tokenize(str);
-   for (auto& value : tokens) {
-      trim(value);
-
-      if (value == "AVG") {
-         percentiles.push_back(value);
-         continue;
-      }
-
-      float as_float;
-      size_t float_len = 0;
-
-      try {
-         as_float = parse_float(value, &float_len);
-      } catch (const std::invalid_argument&) {
-         SPDLOG_ERROR("invalid benchmark percentile: '{}'", value);
-         continue;
-      }
-
-      if (float_len != value.length()) {
-         SPDLOG_ERROR("invalid benchmark percentile: '{}'", value);
-         continue;
-      }
-
-      if (as_float > 100 || as_float < 0) {
-         SPDLOG_ERROR("benchmark percentile is not between 0 and 100 ({})", value);
-         continue;
-      }
-
-      percentiles.push_back(value);
-   }
-
    return percentiles;
 }
 
@@ -436,6 +418,43 @@ parse_fps_metrics(const char *str){
    return metrics;
 }
 
+static overlay_params::fex_stats_options
+parse_fex_stats(const char *str) {
+   overlay_params::fex_stats_options options {
+#ifdef HAVE_FEX
+      .enabled = fex::is_fex_capable(),
+#endif
+   };
+
+   auto tokens = str_tokenize(str);
+#define option_check(str, option) do { \
+      if (token == #str) options.option = true; \
+   } while (0)
+
+   // If we have any tokens then default disable.
+   if (!tokens.empty()) {
+      options.status = false;
+      options.app_type = false;
+      options.hot_threads = false;
+      options.jit_load = false;
+      options.sigbus_counts = false;
+      options.smc_counts = false;
+      options.softfloat_counts = false;
+   }
+
+   for (auto& token : tokens) {
+      option_check(status, status);
+      option_check(apptype, app_type);
+      option_check(hotthreads, hot_threads);
+      option_check(jitload, jit_load);
+      option_check(sigbus, sigbus_counts);
+      option_check(smc, smc_counts);
+      option_check(softfloat, softfloat_counts);
+   }
+
+   return options;
+}
+
 #define parse_width(s) parse_unsigned(s)
 #define parse_height(s) parse_unsigned(s)
 #define parse_vsync(s) parse_unsigned(s)
@@ -454,7 +473,6 @@ parse_fps_metrics(const char *str){
 #define parse_media_player_name(s) parse_str(s)
 #define parse_font_scale_media_player(s) parse_float(s)
 #define parse_cpu_text(s) parse_str(s)
-#define parse_gpu_text(s) parse_str(s)
 #define parse_fps_text(s) parse_str(s)
 #define parse_log_interval(s) parse_unsigned(s)
 #define parse_font_size(s) parse_float(s)
@@ -504,6 +522,7 @@ parse_fps_metrics(const char *str){
 #define parse_text_outline_thickness(s) parse_float(s)
 #define parse_device_battery(s) parse_str_tokenize(s)
 #define parse_network(s) parse_str_tokenize(s)
+#define parse_gpu_text(s) parse_str_tokenize(s)
 
 static bool
 parse_help(const char *str)
@@ -787,29 +806,53 @@ static void set_param_defaults(struct overlay_params *params){
    params->text_outline_thickness = 1.5;
 }
 
+static std::string verify_pci_dev(std::string pci_dev) {
+   uint32_t domain, bus, slot, func;
+
+   if (
+      sscanf(
+         pci_dev.c_str(), "%04x:%02x:%02x.%x",
+         &domain, &bus, &slot, &func
+      ) != 4) {
+      SPDLOG_ERROR("Failed to parse PCI device ID: '{}'", pci_dev);
+      return pci_dev;
+   }
+
+   std::stringstream ss;
+   ss << std::hex
+      << std::setw(4) << std::setfill('0') << domain << ":"
+      << std::setw(2) << bus << ":"
+      << std::setw(2) << slot << "."
+      << std::setw(1) << func;
+
+   SPDLOG_DEBUG("pci_dev = {}", ss.str());
+   return ss.str();
+}
+
 void
 parse_overlay_config(struct overlay_params *params,
                   const char *env, bool use_existing_preset)
 {
+   SPDLOG_DEBUG("Version: {}", MANGOHUD_VERSION);
    std::vector<int> default_preset = {-1, 0, 1, 2, 3, 4};
-   *params = {
-     .preset = use_existing_preset ? params->preset : default_preset
-   };
+   auto preset = std::move(params->preset);
+   *params = {};
+   params->preset = use_existing_preset ? std::move(preset) : default_preset;
    set_param_defaults(params);
    if (!use_existing_preset) {
       current_preset = params->preset[0];
    }
 
-#ifdef HAVE_X11
-   params->toggle_hud = { XK_Shift_R, XK_F12 };
-   params->toggle_hud_position = { XK_Shift_R, XK_F11 };
-   params->toggle_preset = { XK_Shift_R, XK_F10 };
-   params->reset_fps_metrics = { XK_Shift_R, XK_F9};
-   params->toggle_fps_limit = { XK_Shift_L, XK_F1 };
-   params->toggle_logging = { XK_Shift_L, XK_F2 };
-   params->reload_cfg = { XK_Shift_L, XK_F4 };
-   params->upload_log = { XK_Shift_L, XK_F3 };
-   params->upload_logs = { XK_Control_L, XK_F3 };
+#if defined(HAVE_X11) || defined(HAVE_WAYLAND)
+   params->toggle_hud = { XKB_KEY_Shift_R, XKB_KEY_F12 };
+   params->toggle_hud_position = { XKB_KEY_Shift_R, XKB_KEY_F11 };
+   params->toggle_preset = { XKB_KEY_Shift_R, XKB_KEY_F10 };
+   params->reset_fps_metrics = { XKB_KEY_Shift_R, XKB_KEY_F9};
+   params->toggle_fps_limit = { XKB_KEY_Shift_L, XKB_KEY_F1 };
+   params->toggle_logging = { XKB_KEY_Shift_L, XKB_KEY_F2 };
+   params->reload_cfg = { XKB_KEY_Shift_L, XKB_KEY_F4 };
+   params->upload_log = { XKB_KEY_Shift_L, XKB_KEY_F3 };
+   params->upload_logs = { XKB_KEY_Control_L, XKB_KEY_F3 };
 #endif
 
 #ifdef _WIN32
@@ -1014,6 +1057,16 @@ parse_overlay_config(struct overlay_params *params,
    if (HUDElements.net)
       HUDElements.net->should_reset = true;
 
+   if (!params->gpu_list.empty() && !params->pci_dev.empty()) {
+      SPDLOG_WARN(
+         "You have specified both gpu_list and pci_dev, "
+         "ignoring pci_dev."
+      );
+   }
+
+   if (!params->pci_dev.empty())
+      params->pci_dev = verify_pci_dev(params->pci_dev);
+
    {
       std::lock_guard<std::mutex> lock(config_mtx);
       config_ready = true;
@@ -1153,8 +1206,13 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
          add_to_options(params, "frame_timing_detailed", "1");
          add_to_options(params, "network", "1");
          add_to_options(params, "present_mode", "0");
-         if ( deviceID == 0x1435 || deviceID == 0x163f )
+         // Disable some options if steamdeck
+         if ( deviceID == 0x1435 || deviceID == 0x163f ) {
             add_to_options(params, "gpu_fan", "0");
+            add_to_options(params, "gpu_junction_temp", "0");
+            add_to_options(params, "gpu_voltage", "0");
+            add_to_options(params, "gpu_mem_temp", "0");
+         }
 
          break;
 

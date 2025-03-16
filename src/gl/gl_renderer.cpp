@@ -419,7 +419,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     GLint major = 0, minor = 0;
     GetOpenGLVersion(major, minor, g_IsGLES);
 
-    SPDLOG_INFO("GL version: {}.{} {}", major, minor, g_IsGLES ? "ES" : "");
+    SPDLOG_DEBUG("GL version: {}.{} {}", major, minor, g_IsGLES ? "ES" : "");
 
     if (!g_IsGLES) {
         // Not GL ES

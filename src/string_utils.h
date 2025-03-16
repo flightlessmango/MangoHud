@@ -14,6 +14,9 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#ifdef __LCC__
+    #pragma diag_suppress 3313  // Suppress unused function warnings
+#endif
 
 // https://stackoverflow.com/questions/216823/whats-the-best-way-to-trim-stdstring#217605
 // trim from start (in place)

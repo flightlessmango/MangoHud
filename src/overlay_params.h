@@ -200,6 +200,8 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(device_battery)              \
    OVERLAY_PARAM_CUSTOM(fps_metrics)                 \
    OVERLAY_PARAM_CUSTOM(network)                     \
+   OVERLAY_PARAM_CUSTOM(gpu_list)                    \
+   OVERLAY_PARAM_CUSTOM(fex_stats)                   \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -302,11 +304,12 @@ struct overlay_params {
    std::string time_format, output_folder, output_file;
    std::string pci_dev;
    std::string media_player_name;
-   std::string cpu_text, gpu_text, fps_text;
+   std::string cpu_text, fps_text;
    std::vector<std::string> blacklist;
    unsigned autostart_log;
    std::vector<std::string> media_player_format;
    std::vector<std::string> benchmark_percentiles;
+   std::vector<std::string> gpu_text;
    std::string font_file, font_file_text;
    uint32_t font_glyph_ranges;
    std::string custom_text_center;
@@ -326,6 +329,25 @@ struct overlay_params {
    std::vector<std::string> device_battery;
    std::vector<std::string> fps_metrics;
    std::vector<std::string> network;
+   std::vector<unsigned> gpu_list;
+
+   struct fex_stats_options {
+      bool enabled {false};
+
+      // Enabled Texts
+      bool status {true};
+      bool app_type {true};
+
+      // Graphs
+      bool hot_threads {true};
+      bool jit_load {true};
+
+      // Counts
+      bool sigbus_counts {true};
+      bool smc_counts {true};
+      bool softfloat_counts {true};
+   };
+   fex_stats_options fex_stats{};
 };
 
 const extern char *overlay_param_names[];

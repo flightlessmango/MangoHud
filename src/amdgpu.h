@@ -1,6 +1,4 @@
 #pragma once
-// #include <fstream>
-// #include <iostream>
 #include <stdio.h>
 #include <inttypes.h>
 #include <unistd.h>
@@ -11,12 +9,11 @@
 #include <vector>
 #include <sys/param.h>
 #include <algorithm>
+#include <atomic>
+#include <thread>
+#include "gpu_metrics_util.h"
 
-#define METRICS_UPDATE_PERIOD_MS 500
-#define METRICS_POLLING_PERIOD_MS 25
-#define METRICS_SAMPLE_COUNT (METRICS_UPDATE_PERIOD_MS/METRICS_POLLING_PERIOD_MS)
 #define NUM_HBM_INSTANCES 4
-
 #define UPDATE_METRIC_AVERAGE(FIELD) do { int value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer[s].FIELD; } amdgpu_common_metrics.FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
 #define UPDATE_METRIC_AVERAGE_FLOAT(FIELD) do { float value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer[s].FIELD; } amdgpu_common_metrics.FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
 #define UPDATE_METRIC_MAX(FIELD) do { int cur_max = metrics_buffer[0].FIELD; for (size_t s=1; s < METRICS_SAMPLE_COUNT; s++) { cur_max = MAX(cur_max, metrics_buffer[s].FIELD); }; amdgpu_common_metrics.FIELD = cur_max; } while(0)
@@ -232,6 +229,23 @@ struct gpu_metrics_v2_4 {
 	uint16_t			average_gfx_current;
 };
 
+struct amdgpu_files
+{
+    FILE *vram_total;
+    FILE *vram_used;
+    /* The following can be NULL, in that case we're using the gpu_metrics node */
+    FILE *busy;
+    FILE *temp;
+    FILE *junction_temp;
+    FILE *memory_temp;
+    FILE *core_clock;
+    FILE *memory_clock;
+    FILE *power_usage;
+    FILE *gtt_used;
+    FILE *fan;
+    FILE *gpu_voltage_soc;
+};
+
 /* This structure is used to communicate the latest values of the amdgpu metrics.
  * The direction of communication is amdgpu_polling_thread -> amdgpu_get_metrics().
  */
@@ -262,49 +276,51 @@ struct amdgpu_common_metrics {
 	uint16_t fan_speed;
 };
 
-bool amdgpu_verify_metrics(const std::string& path);
-void amdgpu_get_metrics(uint32_t deviceID);
 extern std::string metrics_path;
-extern std::condition_variable amdgpu_c;
-extern bool amdgpu_run_thread;
-void amdgpu_get_instant_metrics(struct amdgpu_common_metrics *metrics);
-void amdgpu_metrics_polling_thread();
-void amdgpu_get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT], bool &gpu_load_needs_dividing);
-void amdgpu_trottling_thread(std::vector<float> &power, std::vector<float> &thermal);
 
-class Throttling {
+class AMDGPU {
 	public:
-		std::vector<float> power;
-		std::vector<float> thermal;
-		int64_t indep_throttle_status;
+		bool is_apu = false;
+		std::shared_ptr<Throttling> throttling;
 
-		Throttling()
-			: power(200, 0.0f),
-			thermal(200, 0.0f) {}
+    	AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id);
 
-		void update(){
-			if (((indep_throttle_status >> 0) & 0xFF) != 0)
-				power.push_back(0.1);
-			else
-				power.push_back(0);
+		bool verify_metrics(const std::string& path);
+		void get_instant_metrics(struct amdgpu_common_metrics *metrics);
+		void get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT],
+								  bool &gpu_load_needs_dividing);
 
+        gpu_metrics copy_metrics() {
+            std::lock_guard<std::mutex> lock(metrics_mutex);
+            return metrics;
+        };
 
-			if (((indep_throttle_status >> 32) & 0xFFFF) != 0)
-				thermal.push_back(0.1);
-			else
-				thermal.push_back(0);
+        void pause() {
+            paused = true;
+            cond_var.notify_one();
+        };
 
-			power.erase(power.begin());
-			thermal.erase(thermal.begin());
-		}
+        void resume() {
+            paused = false;
+            cond_var.notify_one();
+        }
 
-		bool power_throttling(){
-			return std::find(power.begin(), power.end(), 0.1f) != power.end();
-		}
-
-		bool thermal_throttling(){
-			return std::find(thermal.begin(), thermal.end(), 0.1f) != thermal.end();
-		}
+	private:
+		std::string pci_dev;
+		std::string gpu_metrics_path;
+		uint32_t device_id;
+		uint32_t vendor_id;
+		std::condition_variable amdgpu_c;
+		std::thread thread;
+		struct amdgpu_files sysfs_nodes;
+		bool gpu_metrics_is_valid = false;
+		std::condition_variable cond_var;
+		std::atomic<bool> stop_thread{false};
+        std::atomic<bool> paused{false};
+		std::mutex metrics_mutex;
+		gpu_metrics metrics;
+		struct amdgpu_common_metrics amdgpu_common_metrics;
+	
+		void get_sysfs_metrics();
+		void metrics_polling_thread();
 };
-
-extern std::unique_ptr<Throttling> throttling;

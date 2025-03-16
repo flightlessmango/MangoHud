@@ -56,6 +56,11 @@ bool CPUStats::UpdateCPUData()
     m_cpuDataTotal.percent = Load;
     return true;
 }
+
+bool CPUStats::ReadcpuTempFile(int&) {
+    return false;
+}
+
 CPUStats::CPUStats()
 {
 }

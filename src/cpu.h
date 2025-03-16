@@ -11,6 +11,7 @@
 #include <windows.h>
 #endif
 #include "timing.hpp"
+#include "gpu.h"
 
 typedef struct CPUData_ {
    unsigned long long int totalTime;
@@ -171,7 +172,6 @@ public:
    const CPUData& GetCPUDataTotal() const {
       return m_cpuDataTotal;
    }
-   std::string cpu_type = "CPU";
 private:
    unsigned long long int m_boottime = 0;
    std::vector<CPUData> m_cpuData;

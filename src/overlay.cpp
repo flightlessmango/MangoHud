@@ -24,9 +24,8 @@
 #include "iostats.h"
 #include "amdgpu.h"
 #include "fps_metrics.h"
-#include "intel.h"
-#include "msm.h"
 #include "net.h"
+#include "fex.h"
 
 #ifdef __linux__
 #include <libgen.h>
@@ -93,7 +92,7 @@ void init_spdlog()
       }
 #ifndef DEBUG
    } else {
-      std::string log_level = "err";
+      std::string log_level = "info";
       transform(log_level.begin(), log_level.end(), log_level.begin(), ::tolower);
       spdlog::set_level(spdlog::level::from_str(log_level));
 #endif
@@ -114,34 +113,23 @@ void FpsLimiter(struct fps_limit& stats){
 
 void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
 {
-   update_fan();
+   if (params.enabled[OVERLAY_PARAM_ENABLED_fan])
+      update_fan();
    if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
       cpuStats.UpdateCPUData();
 
 #ifdef __linux__
-      if (params.enabled[OVERLAY_PARAM_ENABLED_core_load] || params.enabled[OVERLAY_PARAM_ENABLED_cpu_mhz])
+      if (params.enabled[OVERLAY_PARAM_ENABLED_core_load] || params.enabled[OVERLAY_PARAM_ENABLED_cpu_mhz] || logger->is_active())
          cpuStats.UpdateCoreMhz();
       if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp] || logger->is_active() || params.enabled[OVERLAY_PARAM_ENABLED_graphs])
          cpuStats.UpdateCpuTemp();
-      if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_power])
+      if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_power] || logger->is_active())
          cpuStats.UpdateCpuPower();
 #endif
    }
    if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || logger->is_active()) {
-      if (vendorID == 0x1002)
-         getAmdGpuInfo();
-#ifdef __linux__
-      if (gpu_metrics_exists)
-         amdgpu_get_metrics(deviceID);
-#endif
-      if (vendorID == 0x10de)
-         getNvidiaGpuInfo(params);
-#ifdef __linux__
-      if (vendorID== 0x8086)
-         if (intel) intel->update();
-      if (vendorID == 0x5143)
-         if (msm) msm->update();
-#endif
+      if (gpus)
+         gpus->get_metrics();
    }
 
 #ifdef __linux__
@@ -160,22 +148,25 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
    if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])
       getIoStats(g_io_stats);
 #endif
-
-   currentLogData.gpu_load = gpu_info.load;
-   currentLogData.gpu_temp = gpu_info.temp;
-   currentLogData.gpu_core_clock = gpu_info.CoreClock;
-   currentLogData.gpu_mem_clock = gpu_info.MemClock;
-   currentLogData.gpu_vram_used = gpu_info.memoryUsed;
-   currentLogData.gpu_power = gpu_info.powerUsage;
+   if (gpus && gpus->active_gpu()) {
+      currentLogData.gpu_load = gpus->active_gpu()->metrics.load;
+      currentLogData.gpu_temp = gpus->active_gpu()->metrics.temp;
+      currentLogData.gpu_core_clock = gpus->active_gpu()->metrics.CoreClock;
+      currentLogData.gpu_mem_clock = gpus->active_gpu()->metrics.MemClock;
+      currentLogData.gpu_vram_used = gpus->active_gpu()->metrics.memoryUsed;
+      currentLogData.gpu_power = gpus->active_gpu()->metrics.powerUsage;
+   }
 #ifdef __linux__
    currentLogData.ram_used = memused;
    currentLogData.swap_used = swapused;
-   currentLogData.process_rss = proc_mem.resident / float((2 << 29)); // GiB, consistent w/ other mem stats
+   currentLogData.process_rss = proc_mem_resident / float((2 << 29)); // GiB, consistent w/ other mem stats
 #endif
 
    currentLogData.cpu_load = cpuStats.GetCPUDataTotal().percent;
    currentLogData.cpu_temp = cpuStats.GetCPUDataTotal().temp;
    currentLogData.cpu_power = cpuStats.GetCPUDataTotal().power;
+   currentLogData.cpu_mhz = cpuStats.GetCPUDataTotal().cpu_mhz;
+
    // Save data for graphs
    if (graph_data.size() >= kMaxGraphEntries)
       graph_data.pop_front();
@@ -257,12 +248,15 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
       frametime_data.erase(frametime_data.begin());
    }
 #ifdef __linux__
-   if (throttling)
-      throttling->update();
+   if (gpus)
+      gpus->update_throttling();
+#endif
+#ifdef HAVE_FEX
+   fex::update_fex_stats();
 #endif
    frametime = frametime_ms;
    fps = double(1000 / frametime_ms);
-   if (fpsmetrics) fpsmetrics->update(now, fps);
+   if (fpsmetrics) fpsmetrics->update(frametime_ms);
 
    if (elapsed >= params.fps_sampling_period) {
       if (!hw_update_thread)
@@ -487,8 +481,10 @@ void render_mpris_metadata(const struct overlay_params& params, mutexed_metadata
    if (meta.meta.valid) {
       auto color = ImGui::ColorConvertU32ToFloat4(params.media_player_color);
       ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,0));
-      ImGui::Dummy(ImVec2(0.0f, 20.0f));
-      //ImGui::PushFont(data.font1);
+
+      if (!params.enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
+         ImGui::Dummy(ImVec2(0.0f, 20.0f));
+      }
 
       if (meta.ticker.needs_recalc) {
          meta.ticker.formatted.clear();
@@ -535,11 +531,6 @@ void render_mpris_metadata(const struct overlay_params& params, mutexed_metadata
          HUDElements.TextColored(color, "%s", fmt.text.c_str());
       }
 
-      if (!meta.meta.playing) {
-         HUDElements.TextColored(color, "(paused)");
-      }
-
-      //ImGui::PopFont();
       ImGui::PopStyleVar();
    }
 }
@@ -626,13 +617,13 @@ ImVec4 change_on_load_temp(LOAD_DATA& data, unsigned current)
       float x = (data.color_high.x - data.color_med.x) * diff;
       float y = (data.color_high.y - data.color_med.y) * diff;
       float z = (data.color_high.z - data.color_med.z) * diff;
-      return ImVec4(data.color_med.x + x, data.color_med.y + y, data.color_med.z + z, 1.0);
+      return ImVec4(data.color_med.x + x, data.color_med.y + y, data.color_med.z + z, HUDElements.params->alpha);
    } else {
       float diff = float(current) / float(data.med_load);
       float x = (data.color_med.x - data.color_low.x) * diff;
       float y = (data.color_med.y - data.color_low.y) * diff;
       float z = (data.color_med.z - data.color_low.z) * diff;
-      return ImVec4(data.color_low.x + x, data.color_low.y + y, data.color_low.z + z, 1.0);
+      return ImVec4(data.color_low.x + x, data.color_low.y + y, data.color_low.z + z, HUDElements.params->alpha);
    }
 }
 
@@ -764,216 +755,6 @@ struct pci_bus {
    int slot;
    int func;
 };
-
-void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_params& params)
-{
-   //if (!params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
-   //   return;
-
-   pci_bus pci;
-   bool pci_bus_parsed = false;
-   const char *pci_dev = nullptr;
-   if (!params.pci_dev.empty())
-      pci_dev = params.pci_dev.c_str();
-
-   // for now just checks if pci bus parses correctly, if at all necessary
-   if (pci_dev) {
-      if (sscanf(pci_dev, "%04x:%02x:%02x.%x",
-               &pci.domain, &pci.bus,
-               &pci.slot, &pci.func) == 4) {
-         pci_bus_parsed = true;
-         // reformat back to sysfs file name's and nvml's expected format
-         // so config file param's value format doesn't have to be as strict
-         std::stringstream ss;
-         ss << std::hex
-            << std::setw(4) << std::setfill('0') << pci.domain << ":"
-            << std::setw(2) << pci.bus << ":"
-            << std::setw(2) << pci.slot << "."
-            << std::setw(1) << pci.func;
-         params.pci_dev = ss.str();
-         pci_dev = params.pci_dev.c_str();
-         SPDLOG_DEBUG("PCI device ID: '{}'", pci_dev);
-      } else {
-         SPDLOG_ERROR("Failed to parse PCI device ID: '{}'", pci_dev);
-         SPDLOG_ERROR("Specify it as 'domain:bus:slot.func'");
-      }
-   }
-
-#ifdef __linux__
-   // NVIDIA
-   if (vendorID == 0x10de)
-      if(checkNvidia(pci_dev))
-         vendorID = 0x10de;
-
-   string path;
-   string drm = "/sys/class/drm/";
-
-   if (vendorID==0x8086){
-      auto dirs = ls(drm.c_str(), "card");
-      for (auto& dir : dirs) {
-         if (dir.find("-") != std::string::npos)
-             continue; // filter display adapters
-
-         FILE *fp;
-         string device = path + "/device/device";
-         if ((fp = fopen(device.c_str(), "r"))){
-            uint32_t temp = 0;
-            if (fscanf(fp, "%x", &temp) == 1) {
-               if (temp != reported_deviceID){
-                  fclose(fp);
-                  SPDLOG_DEBUG("DeviceID does not match vulkan report {:X}", reported_deviceID);
-                  continue;
-               }
-               deviceID = temp;
-            }
-            fclose(fp);
-         }
-
-         string vendor = path + "/device/vendor";
-         if ((fp = fopen(vendor.c_str(), "r"))){
-            uint32_t temp = 0;
-            if (fscanf(fp, "%x", &temp) != 1 || temp != 0x8086) {
-               fclose(fp);
-               continue;
-            }
-            fclose(fp);
-         }
-         path = drm + dir;
-         drm_dev = dir;
-         SPDLOG_DEBUG("Intel: using drm device {}", drm_dev);
-         intel = std::make_unique<Intel>();
-         break;
-      }
-   }
-
-   if (vendorID == 0x5143) {
-      auto dirs = ls(drm.c_str(), "card");
-      for (auto& dir : dirs) {
-         if (dir.find("-") != std::string::npos) {
-             continue; // filter display adapters
-         }
-         path = drm + dir;
-         drm_dev = dir;
-         SPDLOG_DEBUG("msm: using drm device {}", drm_dev);
-         msm = std::make_unique<MSM>();
-      }
-   }
-
-   if (vendorID == 0x1002
-       || gpu.find("Radeon") != std::string::npos
-       || gpu.find("AMD") != std::string::npos) {
-      string path;
-      string drm = "/sys/class/drm/";
-
-      auto dirs = ls(drm.c_str(), "card");
-      for (auto& dir : dirs) {
-         if (dir.find("-") != std::string::npos) {
-             continue; // filter display adapters
-         }
-         path = drm + dir;
-
-         SPDLOG_DEBUG("drm path check: {}", path);
-         if (pci_bus_parsed && pci_dev) {
-            string pci_device = read_symlink((path + "/device").c_str());
-            SPDLOG_DEBUG("PCI device symlink: '{}'", pci_device);
-            if (!ends_with(pci_device, pci_dev)) {
-               SPDLOG_DEBUG("skipping GPU, no PCI ID match");
-               continue;
-            }
-         }
-
-         FILE *fp;
-         string device = path + "/device/device";
-         if ((fp = fopen(device.c_str(), "r"))){
-            uint32_t temp = 0;
-            if (fscanf(fp, "%x", &temp) == 1) {
-               if (!pci_bus_parsed && reported_deviceID && temp != reported_deviceID){
-                  fclose(fp);
-                  SPDLOG_DEBUG("DeviceID does not match vulkan report {:X}", reported_deviceID);
-                  continue;
-               }
-               deviceID = temp;
-            }
-            fclose(fp);
-         }
-
-         string vendor = path + "/device/vendor";
-         if ((fp = fopen(vendor.c_str(), "r"))){
-            uint32_t temp = 0;
-            if (fscanf(fp, "%x", &temp) != 1 || temp != 0x1002) {
-               fclose(fp);
-               continue;
-            }
-            fclose(fp);
-         }
-
-         const std::string device_path = path + "/device";
-         const std::string gpu_metrics_path = device_path + "/gpu_metrics";
-         if (amdgpu_verify_metrics(gpu_metrics_path)) {
-            gpu_info.fan_rpm = true;
-            gpu_metrics_exists = true;
-            metrics_path = gpu_metrics_path;
-            throttling = std::make_unique<Throttling>();
-            SPDLOG_DEBUG("Using gpu_metrics of {}", gpu_metrics_path);
-         }
-
-         if (!amdgpu.vram_total)
-            amdgpu.vram_total = fopen((device_path + "/mem_info_vram_total").c_str(), "r");
-         if (!amdgpu.vram_used)
-            amdgpu.vram_used = fopen((device_path + "/mem_info_vram_used").c_str(), "r");
-         if (!amdgpu.gtt_used)
-            amdgpu.gtt_used = fopen((device_path + "/mem_info_gtt_used").c_str(), "r");
-
-         const std::string hwmon_path = device_path + "/hwmon/";
-         if (fs::exists(hwmon_path)){
-            const auto dirs = ls(hwmon_path.c_str(), "hwmon", LS_DIRS);
-            for (const auto& dir : dirs) {
-               if (!amdgpu.temp)
-                  amdgpu.temp = fopen((hwmon_path + dir + "/temp1_input").c_str(), "r");
-               if (!amdgpu.junction_temp)
-                  amdgpu.junction_temp = fopen((hwmon_path + dir + "/temp2_input").c_str(), "r");
-               if (!amdgpu.memory_temp)
-                  amdgpu.memory_temp = fopen((hwmon_path + dir + "/temp3_input").c_str(), "r");
-               if (!amdgpu.core_clock)
-                  amdgpu.core_clock = fopen((hwmon_path + dir + "/freq1_input").c_str(), "r");
-               if (!amdgpu.gpu_voltage_soc)
-                  amdgpu.gpu_voltage_soc = fopen((hwmon_path + dir + "/in0_input").c_str(), "r");
-            }
-
-            if (!metrics_path.empty())
-               break;
-
-            // The card output nodes - cardX-output, will point to the card node
-            // As such the actual metrics nodes will be missing.
-            amdgpu.busy = fopen((device_path + "/gpu_busy_percent").c_str(), "r");
-            if (!amdgpu.busy)
-               continue;
-
-            SPDLOG_DEBUG("using amdgpu path: {}", device_path);
-
-            for (const auto& dir : dirs) {
-               if (!amdgpu.memory_clock)
-                  amdgpu.memory_clock = fopen((hwmon_path + dir + "/freq2_input").c_str(), "r");
-               if (!amdgpu.power_usage)
-                  amdgpu.power_usage = fopen((hwmon_path + dir + "/power1_average").c_str(), "r");
-               if (!amdgpu.power_usage)
-                  amdgpu.power_usage = fopen((hwmon_path + dir + "/power1_input").c_str(), "r");
-               if (!amdgpu.fan)
-                  amdgpu.fan = fopen((hwmon_path + dir + "/fan1_input").c_str(), "r");
-            }
-         }
-         break;
-      }
-
-      // don't bother then
-      if (metrics_path.empty() && !amdgpu.busy && vendorID != 0x8086) {
-         params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = false;
-      }
-   }
-#endif
-   if (!params.permit_upload)
-      SPDLOG_DEBUG("Uploading is disabled (permit_upload = 0)");
-}
 
 void init_system_info(){
    #ifdef __linux__

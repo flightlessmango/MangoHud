@@ -20,7 +20,7 @@ struct metric_t {
 
 class fpsMetrics {
     private:
-        std::vector<std::pair<uint64_t, float>> fps_stats;
+        std::vector<float> frametimes;
         std::thread thread;
         std::mutex mtx;
         std::condition_variable cv;
@@ -28,8 +28,9 @@ class fpsMetrics {
         bool thread_init = false;
         bool terminate = false;
         bool resetting = false;
+        size_t max_size = 10000;
 
-        void calculate(){
+        void _thread() {
             thread_init = true;
             while (true){
                 std::unique_lock<std::mutex> lock(mtx);
@@ -38,99 +39,101 @@ class fpsMetrics {
                 if (terminate)
                     break;
 
-                std::vector<float> sorted_values;
-                for (const auto& p : fps_stats)
-                    sorted_values.push_back(p.second);
-
-                std::sort(sorted_values.begin(), sorted_values.end());
-
-                auto it = metrics.begin();
-                while (it != metrics.end()) {
-                    if (it->name == "AVG") {
-                        it->display_name = it->name;
-                        if (!fps_stats.empty()) {
-                            float sum = std::accumulate(fps_stats.begin(), fps_stats.end(), 0.0f,
-                                                        [](float acc, const std::pair<uint64_t, float>& p) {
-                                                            return acc + p.second;
-                                                        });
-                            it->value = sum / fps_stats.size();
-                        }
-                    } else {
-                        try {
-                            float val = std::stof(it->name);
-                            if (val <= 0 || val >= 1 ) {
-                                SPDLOG_DEBUG("Failed to use fps metric, it's out of range {}", it->name);
-                                it = metrics.erase(it);
-                                break;
-                            }
-                            float multiplied_val = val * 100;
-                            std::ostringstream stream;
-                            if (multiplied_val == static_cast<int>(multiplied_val)) {
-                                stream << std::fixed << std::setprecision(0) << multiplied_val << "%";
-                            } else {
-                                stream << std::fixed << std::setprecision(1) << multiplied_val << "%";
-                            }
-                            it->display_name = stream.str();
-                            uint64_t idx = val * sorted_values.size() - 1;
-                            if (idx >= sorted_values.size())
-                                break;
-
-                            it->value = sorted_values[idx];
-                        } catch (const std::invalid_argument& e) {
-                            SPDLOG_DEBUG("Failed to use fps metric value {}", it->name);
-                            it = metrics.erase(it);
-                        }
-                    }
-                    ++it;
-                }
+                calculate();
 
                 run = false;
             }
+        }
+
+        void calculate(){
+            std::vector<float> sorted_values = frametimes;
+            std::sort(sorted_values.begin(), sorted_values.end(), std::greater<float>());
+
+            auto it = metrics.begin();
+            while (it != metrics.end()) {
+                if (it->name == "AVG") {
+                    it->display_name = it->name;
+
+                    float sum = 0.0f;
+                    for (const auto& f : sorted_values)
+                        sum += f;
+
+                    float avg = 1000.f / (sum / sorted_values.size());
+                    it->value = avg;
+                } else {
+                    try {
+                        float val = std::stof(it->name);
+                        if (val <= 0.0f || val >= 1.0f) {
+                            SPDLOG_DEBUG("Failed to use fps metric, it's out of range {}", it->name);
+                            it = metrics.erase(it);
+                            continue;
+                        }
+
+                        // Format display name as a percentage
+                        float multiplied_val = val * 100;
+                        std::ostringstream stream;
+                        stream << std::fixed << std::setprecision(multiplied_val == static_cast<int>(multiplied_val) ? 0 : 1)
+                               << multiplied_val << "%";
+                        it->display_name = stream.str();
+                        uint64_t idx = val * sorted_values.size() - 1;
+                        if (idx >= sorted_values.size())
+                            break;
+
+                        it->value = 1000.f / sorted_values[idx];
+                    } catch (const std::invalid_argument& e) {
+                        SPDLOG_DEBUG("Failed to use fps metric value {}", it->name);
+                        it = metrics.erase(it);
+                        continue;
+                    }
+                }
+                ++it;
+            }
+        }
+
+        std::vector<metric_t> add_metrics_to_vector(std::vector<std::string> values) {
+            std::vector<metric_t> _metrics;
+            for (auto& val : values){
+                for(char& c : val) {
+                    c = std::toupper(static_cast<unsigned char>(c));
+                }
+                _metrics.push_back({val, 0.0f});
+            }
+            return _metrics;
         }
 
     public:
         std::vector<metric_t> metrics;
 
         fpsMetrics(std::vector<std::string> values){
-            // capitalize string
-            for (auto& val : values){
-                for(char& c : val) {
-                    c = std::toupper(static_cast<unsigned char>(c));
-                }
+            metrics = add_metrics_to_vector(values);
 
-                metrics.push_back({val, 0.0f});
-            }
-
-            if (!thread_init){
-                thread = std::thread(&fpsMetrics::calculate, this);
-            }
+            if (!thread_init)
+                thread = std::thread(&fpsMetrics::_thread, this);
         };
 
-        void update(uint64_t now, double fps){
+        fpsMetrics(std::vector<std::string> values, std::vector<float> only_frametime) {
+            metrics = add_metrics_to_vector(values);
+            for (auto& frametime : only_frametime)
+                frametimes.push_back(frametime);
+
+            calculate();
+        };
+
+        void update(float new_frametime) {
             if (resetting)
                 return;
 
-            if (fps > 0.0001)
-                fps_stats.push_back({now, fps});
+            if (new_frametime > 100000) return; // Ignore extremely long frames
 
-            uint64_t ten_minute_duration = 600000000000ULL; // 10 minutes in nanoseconds
+            // lock before modifying vector
+            std::lock_guard<std::mutex> lock(mtx);
 
-            // Check if the system's uptime is less than 10 minutes
-            if (now >= ten_minute_duration) {
-                uint64_t ten_minutes_ago = now - ten_minute_duration;
+            if (frametimes.size() >= max_size)
+                frametimes.erase(frametimes.begin());
 
-                fps_stats.erase(
-                    std::remove_if(
-                        fps_stats.begin(),
-                        fps_stats.end(),
-                        [ten_minutes_ago](const std::pair<uint64_t, float>& entry) {
-                            return entry.first < ten_minutes_ago;
-                        }
-                    ),
-                    fps_stats.end()
-                );
-            }
+            frametimes.push_back(new_frametime);
         }
+
 
         void update_thread(){
             if (resetting)
@@ -146,7 +149,7 @@ class fpsMetrics {
         void reset_metrics(){
             resetting = true;
             while (run){}
-            fps_stats.clear();
+            frametimes.clear();
             resetting = false;
         }
 
@@ -157,7 +160,8 @@ class fpsMetrics {
                 run = true;
             }
             cv.notify_one();
-            thread.join();
+            if (thread.joinable())
+                thread.join();
         }
 };
 

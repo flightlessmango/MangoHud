@@ -6,14 +6,15 @@
 
 #include <dlfcn.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include "real_dlsym.h"
 #include "elfhacks.h"
 
-void *(*__dlopen)(const char *, int) = nullptr;
-void *(*__dlsym)(void *, const char *) = nullptr;
-static bool print_dlopen = getenv("MANGOHUD_DEBUG_DLOPEN") != nullptr;
-static bool print_dlsym = getenv("MANGOHUD_DEBUG_DLSYM") != nullptr;
+void *(*__dlopen)(const char *, int) = NULL;
+void *(*__dlsym)(void *, const char *) = NULL;
+static bool print_dlopen;
+static bool print_dlsym;
 
 static void get_real_functions()
 {
@@ -29,6 +30,9 @@ static void get_real_functions()
         "*ld-musl-*.so*",
     };
 
+    print_dlopen = getenv("MANGOHUD_DEBUG_DLOPEN") != NULL;
+    print_dlsym = getenv("MANGOHUD_DEBUG_DLSYM") != NULL;
+
     for (size_t i = 0; i < sizeof(libs) / sizeof(*libs); i++)
     {
         ret = eh_find_obj(&libdl, libs[i]);
@@ -41,8 +45,8 @@ static void get_real_functions()
 
         if (__dlopen && __dlsym)
             break;
-        __dlopen = nullptr;
-        __dlsym = nullptr;
+        __dlopen = NULL;
+        __dlsym = NULL;
     }
 
     if (!__dlopen && !__dlsym)
@@ -58,7 +62,7 @@ static void get_real_functions()
  */
 void *real_dlopen(const char *filename, int flag)
 {
-    if (__dlopen == nullptr)
+    if (__dlopen == NULL)
         get_real_functions();
 
     void *result = __dlopen(filename, flag);
@@ -89,7 +93,7 @@ void *real_dlopen(const char *filename, int flag)
  */
 void *real_dlsym(void *handle, const char *symbol)
 {
-    if (__dlsym == nullptr)
+    if (__dlsym == NULL)
         get_real_functions();
 
     void *result = __dlsym(handle, symbol);
@@ -101,6 +105,5 @@ void *real_dlsym(void *handle, const char *symbol)
 }
 
 void* get_proc_address(const char* name) {
-    void (*func)() = (void (*)())real_dlsym(RTLD_NEXT, name);
-    return (void*)func;
+    return real_dlsym(RTLD_NEXT, name);
 }
