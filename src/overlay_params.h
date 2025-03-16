@@ -166,6 +166,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(io_color)                    \
    OVERLAY_PARAM_CUSTOM(text_color)                  \
    OVERLAY_PARAM_CUSTOM(wine_color)                  \
+   OVERLAY_PARAM_CUSTOM(horizontal_separator_color)  \
    OVERLAY_PARAM_CUSTOM(battery_color)               \
    OVERLAY_PARAM_CUSTOM(network_color)               \
    OVERLAY_PARAM_CUSTOM(alpha)                       \
@@ -278,7 +279,8 @@ struct overlay_params {
    int64_t log_duration, log_interval;
    unsigned cpu_color, gpu_color, vram_color, ram_color,
             engine_color, io_color, frametime_color, background_color,
-            text_color, wine_color, battery_color, network_color;
+            text_color, wine_color, battery_color, network_color,
+            horizontal_separator_color;
    std::vector<unsigned> gpu_load_color;
    std::vector<unsigned> cpu_load_color;
    std::vector<unsigned> gpu_load_value;

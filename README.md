@@ -412,6 +412,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `hide_fsr_sharpness`               | Hides the sharpness info for the `fsr` option (only available in gamescope)           |
 | `histogram`                        | Change FPS graph to histogram                                                         |
 | `horizontal`                       | Display Mangohud in a horizontal position                                             |
+| `horizontal_separator_color`       | Set the colors for the horizontal separators (horizontal layout only)                 |
 | `horizontal_stretch`               | Stretches the background to the screens width in `horizontal` mode                    |
 | `hud_compact`                      | Display compact version of MangoHud                                                   |
 | `hud_no_margin`                    | Remove margins around MangoHud                                                        |

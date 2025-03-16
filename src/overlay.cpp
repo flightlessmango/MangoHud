@@ -650,7 +650,8 @@ void horizontal_separator(struct overlay_params& params) {
    }
 
     // Draw the separator line
-    drawList->AddLine(startPos, endPos, params.vram_color, outlineThickness);
+    ImU32 separator_color = ImGui::ColorConvertFloat4ToU32(HUDElements.colors.horizontal_separator);
+    drawList->AddLine(startPos, endPos, separator_color, outlineThickness);
 
     ImGui::SameLine();
     ImGui::Spacing();
