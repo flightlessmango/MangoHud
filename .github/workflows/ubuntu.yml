@@ -25,7 +25,6 @@ jobs:
           mesa-common-dev \
           libcmocka-dev \
           libdbus-1-dev \
-          libglew-dev \
           libglfw3-dev \
           libwayland-dev \
           libxnvctrl-dev \

@@ -16,7 +16,6 @@
 #include "notify.h"
 #include "mangoapp.h"
 #include "mangoapp_proto.h"
-#include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include "amdgpu.h"
 #ifdef __linux__
@@ -308,16 +307,7 @@ int main(int, char**)
     Display *x11_display = glfwGetX11Display();
     Window x11_window = glfwGetX11Window(window);
     Atom overlay_atom = XInternAtom (x11_display, GamescopeOverlayProperty, False);
-    // Initialize OpenGL loader
-
-    bool err = glewInit() != GLEW_OK;
-
-    if (err)
-    {
-        fprintf(stderr, "Failed to initialize OpenGL loader!\n");
-        return 1;
-    }
-
+    
     // Setup Platform/Renderer backends
     int control_client = -1;
     parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"), false);

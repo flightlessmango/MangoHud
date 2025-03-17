@@ -261,7 +261,6 @@ if get_option('mangoapp')
   if not get_option('with_x11').enabled()
     error('mangoapp also needs \'with_x11\'')
   endif
-  pre_args += '-DIMGUI_IMPL_OPENGL_LOADER_GLEW'
   pre_args += '-DMANGOAPP'
   mangoapp = executable(
     'mangoapp',
@@ -287,7 +286,6 @@ if get_option('mangoapp')
       dep_wayland_client,
       glfw3_dep,
       json_dep,
-      glew_dep,
       implot_dep
     ],
     include_directories : [inc_common],

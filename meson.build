@@ -261,7 +261,6 @@ endif
 
 if get_option('mangoapp')
   glfw3_dep = dependency('glfw3')
-  glew_dep = dependency('glew')
 endif
 
 json_dep = dependency('nlohmann_json')
