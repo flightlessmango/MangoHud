@@ -135,6 +135,7 @@ class HudElements{
                 text,
                 media_player,
                 wine,
+                horizontal_separator,
                 battery,
                 gpu_load_low,
                 gpu_load_med,

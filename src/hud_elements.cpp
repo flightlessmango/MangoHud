@@ -88,6 +88,7 @@ void HudElements::convert_colors(const struct overlay_params& params)
     HUDElements.colors.text = convert(params.text_color);
     HUDElements.colors.media_player = convert(params.media_player_color);
     HUDElements.colors.wine = convert(params.wine_color);
+    HUDElements.colors.horizontal_separator = convert(params.horizontal_separator_color);
     HUDElements.colors.battery = convert(params.battery_color);
     HUDElements.colors.gpu_load_low = convert(params.gpu_load_color[0]);
     HUDElements.colors.gpu_load_med = convert(params.gpu_load_color[1]);
