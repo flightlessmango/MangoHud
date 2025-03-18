@@ -57,7 +57,7 @@ static  std::vector<std::string> blacklist {
     "steam",
     "Steam.exe",
     "steamwebhelper",
-    "steamwebhelper.exe"
+    "steamwebhelper.exe",
     "tabtip.exe",
     "UplayWebCore.exe",
     "vrcompositor",
