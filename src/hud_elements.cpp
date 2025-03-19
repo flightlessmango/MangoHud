@@ -290,6 +290,24 @@ void HudElements::gpu_stats(){
                 ImGui::PopFont();
             }
 
+            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_efficiency]) {
+                ImguiNextColumnOrNewRow();
+                float efficiency;
+                const char* efficiency_unit;
+                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_flip_efficiency]) {
+                    efficiency=gpu->metrics.powerUsage/HUDElements.sw_stats->fps;
+                    efficiency_unit="J/F";
+                } else {
+                    efficiency=HUDElements.sw_stats->fps/gpu->metrics.powerUsage;
+                    efficiency_unit="F/J";
+                }
+                right_aligned_text(text_color, HUDElements.ralign_width, "%.2f", efficiency);
+                ImGui::SameLine(0, 1.0f);
+                ImGui::PushFont(HUDElements.sw_stats->font1);
+                HUDElements.TextColored(HUDElements.colors.text, efficiency_unit);
+                ImGui::PopFont();
+            }
+
             if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_voltage]) {
                 ImguiNextColumnOrNewRow();
                 right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu->metrics.voltage);
