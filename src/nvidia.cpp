@@ -240,7 +240,7 @@ void NVIDIA::get_samples_and_copy() {
         cond_var.wait(lock, [this]() { return !paused || stop_thread; });
         GPU_UPDATE_METRIC_AVERAGE(load);
         GPU_UPDATE_METRIC_AVERAGE_FLOAT(powerUsage);
-        GPU_UPDATE_METRIC_AVERAGE_FLOAT(powerLimit);
+        GPU_UPDATE_METRIC_MAX(powerLimit);
         GPU_UPDATE_METRIC_AVERAGE(CoreClock);
         GPU_UPDATE_METRIC_AVERAGE(MemClock);
 
