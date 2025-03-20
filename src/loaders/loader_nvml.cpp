@@ -215,6 +215,19 @@ bool libnvml_loader::Load(const std::string& library_name) {
   }
 
 #if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
+  nvmlDeviceGetPowerManagementLimit =
+      reinterpret_cast<decltype(this->nvmlDeviceGetPowerManagementLimit)>(
+          dlsym(library_, "nvmlDeviceGetPowerManagementLimit"));
+#endif
+#if defined(LIBRARY_LOADER_NVML_H_DT_NEEDED)
+  nvmlDeviceGetPowerManagementLimit = &::nvmlDeviceGetPowerManagementLimit;
+#endif
+  if (!nvmlDeviceGetPowerManagementLimit) {
+    CleanUp(true);
+    return false;
+  }
+
+#if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
   nvmlUnitGetFanSpeedInfo =
       reinterpret_cast<decltype(this->nvmlUnitGetFanSpeedInfo)>(
           dlsym(library_, "nvmlUnitGetFanSpeedInfo"));

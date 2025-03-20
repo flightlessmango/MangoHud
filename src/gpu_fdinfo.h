@@ -170,6 +170,9 @@ public:
         hwmon_sensors["power"]     = { .rx = std::regex("power(\\d+)_input") };
         hwmon_sensors["energy"]    = { .rx = std::regex("energy(\\d+)_input") };
 
+        if (module == "i915" || module == "xe")
+            hwmon_sensors["power_limit"] = { .rx = std::regex("power(\\d+)_max") };
+
         find_hwmon_sensors();
 
         if (module == "i915")

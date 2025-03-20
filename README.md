@@ -408,6 +408,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `gpu_list`                         | List GPUs to display `gpu_list=0,1`                                                   |
 | `gpu_efficiency`                   | Display GPU efficiency in frames per joule                                            |
 | `flip_efficiency`                  | Flips GPU efficiency to joules per frame                                              |
+| `gpu_power_limit`                  | Display GPU power limit                                                               |
 | `hide_fsr_sharpness`               | Hides the sharpness info for the `fsr` option (only available in gamescope)           |
 | `histogram`                        | Change FPS graph to histogram                                                         |
 | `horizontal`                       | Display Mangohud in a horizontal position                                             |
