@@ -540,27 +540,31 @@ Example output:
 		<th></th>
 		<th>Nvidia</th>
 		<th>AMD</th>
-		<th colspan="2">Intel</th>
+		<th colspan="2">Intel Discrete</th>
+		<th>Intel Integrated</th>
 	</tr>
 	<tr>
-		<td></td>
-		<td></td>
-		<td></td>
+		<th></th>
+		<th></th>
+		<th></th>
 		<th>i915</th>
 		<th>xe</th>
+		<th>i915/xe</th>
 	</tr>
 	<tr>
 		<td>Usage%</td>
 		<td>🟢</td>
 		<td>🟢</td>
-		<td>🟢<sup>3</sup></td>
-		<td>🟢<sup>3</sup></td>
+		<td>🟢</td>
+		<td>🟢</td>
+		<td>🟢</td>
 	</tr>
 	<tr>
 		<td>Temperature</td>
 		<td>🟢</td>
 		<td>🟢</td>
-		<td>🟢<sup>1,2</sup></td>
+		<td>🟢</td>
+		<td>🟠</td>
 		<td>🔴</td>
 	</tr>
 	<tr>
@@ -569,25 +573,29 @@ Example output:
 		<td>🟢</td>
 		<td>🔴</td>
 		<td>🔴</td>
+		<td>🔴</td>
 	</tr>
 	<tr>
 		<td>Memory Temperature</td>
 		<td>🔴</td>
 		<td>🟢</td>
 		<td>🔴</td>
+		<td>🟠</td>
 		<td>🔴</td>
 	</tr>
 	<tr>
 		<td>Memory Used</td>
 		<td>🟢</td>
 		<td>🟢</td>
-		<td>🟢<sup>3</sup></td>
-		<td>🟢<sup>3</sup></td>
+		<td>🟢</td>
+		<td>🟢</td>
+		<td>🟢</td>
 	</tr>
 	<tr>
 		<td>Memory Total</td>
 		<td>🟢</td>
 		<td>🟢</td>
+		<td>🔴</td>
 		<td>🔴</td>
 		<td>🔴</td>
 	</tr>
@@ -597,9 +605,11 @@ Example output:
 		<td>🟢</td>
 		<td>🔴</td>
 		<td>🔴</td>
+		<td>🔴</td>
 	</tr>
 	<tr>
 		<td>Core Clock</td>
+		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
@@ -609,11 +619,13 @@ Example output:
 		<td>Power Usage</td>
 		<td>🟢</td>
 		<td>🟢</td>
-		<td>🟢<sup>2</sup></td>
-		<td>🟢<sup>2</sup></td>
+		<td>🟢</td>
+		<td>🟢</td>
+		<td>🔴</td>
 	</tr>
 	<tr>
 		<td>Throttling Status</td>
+		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
@@ -623,7 +635,8 @@ Example output:
 		<td>Fan Speed</td>
 		<td>🟢</td>
 		<td>🟢</td>
-		<td>🟢<sup>2</sup></td>
+		<td>🟢</td>
+		<td>🟠</td>
 		<td>🔴</td>
 	</tr>
 	<tr>
@@ -632,9 +645,12 @@ Example output:
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
+		<td>🔴</td>
 	</tr>
 </table>
 
-- 1 - requires linux 6.13+
-- 2 - integrated gpus are not supported
-- 3 - shows usage per-process, not total system usage
+- Temperature for `i915` requires **linux 6.13+**
+- Fan speed for `i915` requires **linux 6.12+**
+- GPU usage and memory usage for Intel shows usage of current process, not total system usage (it's an issue on intel's side)
+- Temperature, memory temperature and fan speed for `xe` will be available in **linux 6.15-6.16**
+- Integrated Intel GPUs are **limited** due to lack of hwmon interface (it's an issue on intel's side, [i915 source](https://github.com/torvalds/linux/blob/5fc31936081919a8572a3d644f3fbb258038f337/drivers/gpu/drm/i915/i915_hwmon.c#L914-L916), [xe source](https://github.com/torvalds/linux/blob/5fc31936081919a8572a3d644f3fbb258038f337/drivers/gpu/drm/xe/xe_hwmon.c#L824-L826))
