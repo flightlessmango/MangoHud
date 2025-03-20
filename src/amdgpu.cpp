@@ -301,6 +301,22 @@ void AMDGPU::get_sysfs_metrics() {
 		metrics.powerUsage = value / 1000000;
 	}
 
+#ifndef TEST_ONLY
+	if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power_limit]) {
+		// NOTE: Do not read power1_cap if it is not enabled, as some
+		// older GPUs may hang when reading the sysfs node.
+		metrics.powerLimit = 0;
+	} else
+#endif
+	if (sysfs_nodes.power_limit) {
+		rewind(sysfs_nodes.power_limit);
+		fflush(sysfs_nodes.power_limit);
+		if (fscanf(sysfs_nodes.power_limit, "%" PRId64, &value) != 1)
+			value = 0;
+
+		metrics.powerLimit = value / 1000000;
+	}
+
 	if (sysfs_nodes.fan) {
 		rewind(sysfs_nodes.fan);
 		fflush(sysfs_nodes.fan);
@@ -404,6 +420,7 @@ AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id) {
 			sysfs_nodes.gpu_voltage_soc = fopen((hwmon_path + dir + "/in0_input").c_str(), "r");
 			sysfs_nodes.memory_clock = fopen((hwmon_path + dir + "/freq2_input").c_str(), "r");
 			sysfs_nodes.power_usage = fopen((hwmon_path + dir + "/power1_average").c_str(), "r");
+			sysfs_nodes.power_limit = fopen((hwmon_path + dir + "/power1_cap").c_str(), "r");
 			sysfs_nodes.fan = fopen((hwmon_path + dir + "/fan1_input").c_str(), "r");
 		}
 	}

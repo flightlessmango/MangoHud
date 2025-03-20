@@ -241,6 +241,7 @@ struct amdgpu_files
     FILE *core_clock;
     FILE *memory_clock;
     FILE *power_usage;
+    FILE *power_limit;
     FILE *gtt_used;
     FILE *fan;
     FILE *gpu_voltage_soc;

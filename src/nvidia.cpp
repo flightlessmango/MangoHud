@@ -117,9 +117,11 @@ void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics) {
         }
 
         if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_power] || (logger && logger->is_active())) {
-            unsigned int power;
+            unsigned int power, limit;
             nvml.nvmlDeviceGetPowerUsage(device, &power);
+            nvml.nvmlDeviceGetPowerManagementLimit(device, &limit);
             metrics->powerUsage = power / 1000;
+            metrics->powerLimit = limit / 1000;
         }
 
         if (params->enabled[OVERLAY_PARAM_ENABLED_throttling_status]) {
@@ -237,6 +239,7 @@ void NVIDIA::get_samples_and_copy() {
         cond_var.wait(lock, [this]() { return !paused || stop_thread; });
         GPU_UPDATE_METRIC_AVERAGE(load);
         GPU_UPDATE_METRIC_AVERAGE_FLOAT(powerUsage);
+        GPU_UPDATE_METRIC_MAX(powerLimit);
         GPU_UPDATE_METRIC_AVERAGE(CoreClock);
         GPU_UPDATE_METRIC_AVERAGE(MemClock);
 

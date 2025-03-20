@@ -117,6 +117,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(display_server)                \
    OVERLAY_PARAM_BOOL(gpu_efficiency)                \
    OVERLAY_PARAM_BOOL(flip_efficiency)               \
+   OVERLAY_PARAM_BOOL(gpu_power_limit)               \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \

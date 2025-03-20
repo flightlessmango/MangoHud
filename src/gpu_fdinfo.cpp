@@ -608,6 +608,7 @@ void GPU_fdinfo::main_thread()
         metrics.load = get_gpu_load();
         metrics.memoryUsed = get_memory_used();
         metrics.powerUsage = get_power_usage();
+        metrics.powerLimit = hwmon_sensors["power_limit"].val / 1'000'000;
         metrics.CoreClock = get_gpu_clock();
         auto throttling = get_throttling_status();
         metrics.is_power_throttled = throttling & GPU_throttle_status::POWER;
