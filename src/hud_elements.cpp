@@ -286,7 +286,10 @@ void HudElements::gpu_stats(){
                     right_aligned_text(text_color, HUDElements.ralign_width, "%.1f", gpu->metrics.powerUsage);
                 ImGui::SameLine(0, 1.0f);
                 ImGui::PushFont(HUDElements.sw_stats->font1);
-                HUDElements.TextColored(HUDElements.colors.text, "W");
+                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power_limit])
+                    HUDElements.TextColored(HUDElements.colors.text, "/%.0fW", gpu->metrics.powerLimit);
+                else
+                    HUDElements.TextColored(HUDElements.colors.text, "W");
                 ImGui::PopFont();
             }
 
