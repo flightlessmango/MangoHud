@@ -30,7 +30,7 @@ A Vulkan and OpenGL overlay for monitoring FPS, temperatures, CPU/GPU load and m
   - [FPS logging](#fps-logging)
     - [Online visualization: FlightlessMango.com](#online-visualization-flightlessmangocom)
     - [Local visualization: `mangoplot`](#local-visualization-mangoplot)
-  - [Metrics support by GPU vendor](#metrics-support-by-gpu-vendor)
+  - [Metrics support by GPU vendor/driver](#metrics-support-by-gpu-vendordriver)
 
 ## Installation - Build From Source
 
@@ -536,7 +536,7 @@ Example output:
 
 <sub><sup>Overwatch 2, 5950X + 5700XT, low graphics preset, FHD, 50% render scale</sup></sub>
 
-## Metrics support by GPU vendor
+## Metrics support by GPU vendor/driver
 <table>
 	<tr>
 		<th></th>
@@ -544,6 +544,7 @@ Example output:
 		<th>AMD</th>
 		<th colspan="2">Intel Discrete</th>
 		<th>Intel Integrated</th>
+		<th>Panfrost driver</th>
 	</tr>
 	<tr>
 		<th></th>
@@ -552,9 +553,11 @@ Example output:
 		<th>i915</th>
 		<th>xe</th>
 		<th>i915/xe</th>
+		<th></th>
 	</tr>
 	<tr>
 		<td>Usage%</td>
+		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
@@ -568,11 +571,13 @@ Example output:
 		<td>🟢</td>
 		<td>🟠</td>
 		<td>🔴</td>
+		<td>🟢</td>
 	</tr>
 	<tr>
 		<td>Junction Temperature</td>
 		<td>🔴</td>
 		<td>🟢</td>
+		<td>🔴</td>
 		<td>🔴</td>
 		<td>🔴</td>
 		<td>🔴</td>
@@ -584,9 +589,11 @@ Example output:
 		<td>🔴</td>
 		<td>🟠</td>
 		<td>🔴</td>
+		<td>🔴</td>
 	</tr>
 	<tr>
 		<td>Memory Used</td>
+		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
@@ -600,6 +607,7 @@ Example output:
 		<td>🔴</td>
 		<td>🔴</td>
 		<td>🔴</td>
+		<td>🔴</td>
 	</tr>
 	<tr>
 		<td>Memory Clock</td>
@@ -608,9 +616,11 @@ Example output:
 		<td>🔴</td>
 		<td>🔴</td>
 		<td>🔴</td>
+		<td>🔴</td>
 	</tr>
 	<tr>
 		<td>Core Clock</td>
+		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
@@ -624,6 +634,7 @@ Example output:
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🔴</td>
+		<td>🔴</td>
 	</tr>
 	<tr>
 		<td>Throttling Status</td>
@@ -632,6 +643,7 @@ Example output:
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
+		<td>🔴</td>
 	</tr>
 	<tr>
 		<td>Fan Speed</td>
@@ -639,6 +651,7 @@ Example output:
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟠</td>
+		<td>🔴</td>
 		<td>🔴</td>
 	</tr>
 	<tr>
@@ -648,11 +661,16 @@ Example output:
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🔴</td>
+		<td>🔴</td>
 	</tr>
 </table>
 
+#### Intel notes
 - Temperature for `i915` requires **linux 6.13+**
 - Fan speed for `i915` requires **linux 6.12+**
-- GPU usage and memory usage for Intel shows usage of current process, not total system usage (it's an issue on intel's side)
+- GPU usage and memory usage shows usage of current process, not total system usage (it's an issue on intel's side)
 - Temperature, memory temperature and fan speed for `xe` will be available in **linux 6.15-6.16**
 - Integrated Intel GPUs are **limited** due to lack of hwmon interface (it's an issue on intel's side, [i915 source](https://github.com/torvalds/linux/blob/5fc31936081919a8572a3d644f3fbb258038f337/drivers/gpu/drm/i915/i915_hwmon.c#L914-L916), [xe source](https://github.com/torvalds/linux/blob/5fc31936081919a8572a3d644f3fbb258038f337/drivers/gpu/drm/xe/xe_hwmon.c#L824-L826))
+
+#### Panfrost notes
+- GPU usage requires `echo 1 | sudo tee /sys/class/drm/renderD*/device/profiling`

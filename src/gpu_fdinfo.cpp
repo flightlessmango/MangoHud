@@ -97,6 +97,9 @@ uint64_t GPU_fdinfo::get_gpu_time()
 {
     uint64_t total = 0;
 
+    if (module == "panfrost")
+        return get_gpu_time_panfrost();
+
     for (auto& fd : fdinfo_data) {
         auto time = fd[drm_engine_type];
 
@@ -104,6 +107,23 @@ uint64_t GPU_fdinfo::get_gpu_time()
             continue;
 
         total += std::stoull(time);
+    }
+
+    return total;
+}
+
+uint64_t GPU_fdinfo::get_gpu_time_panfrost() {
+    uint64_t total = 0;
+
+    for (auto& fd : fdinfo_data) {
+        auto frag = fd["drm-engine-fragment"];
+        auto vert = fd["drm-engine-vertex-tiler"];
+
+        if (!frag.empty())
+            total += std::stoull(frag);
+
+        if (!vert.empty())
+            total += std::stoull(vert);
     }
 
     return total;
@@ -131,7 +151,9 @@ void GPU_fdinfo::find_hwmon_sensors()
     std::string hwmon;
 
     if (module == "msm")
-        hwmon = find_msm_hwmon_dir();
+        hwmon = find_hwmon_sensor_dir("gpu");
+    else if (module == "panfrost")
+        hwmon = find_hwmon_sensor_dir("gpu_thermal");
     else
         hwmon = find_hwmon_dir();
 
@@ -207,7 +229,7 @@ std::string GPU_fdinfo::find_hwmon_dir() {
     return hwmon;
 }
 
-std::string GPU_fdinfo::find_msm_hwmon_dir() {
+std::string GPU_fdinfo::find_hwmon_sensor_dir(std::string name) {
     std::string d = "/sys/class/hwmon/";
 
     if (!fs::exists(d))
@@ -225,7 +247,7 @@ std::string GPU_fdinfo::find_msm_hwmon_dir() {
 
         std::getline(name_stream, name_content);
 
-        if (name_content.find("gpu") == std::string::npos)
+        if (name_content.find(name) == std::string::npos)
             continue;
 
         // return the first gpu sensor
@@ -328,6 +350,13 @@ int GPU_fdinfo::get_gpu_load()
     uint64_t now = os_time_get_nano();
     uint64_t gpu_time_now = get_gpu_time();
 
+    if (previous_time == 0) {
+        previous_gpu_time = gpu_time_now;
+        previous_time = now;
+
+        return 0;
+    }
+
     float delta_time = now - previous_time;
     float delta_gpu_time = gpu_time_now - previous_gpu_time;
 
@@ -339,7 +368,7 @@ int GPU_fdinfo::get_gpu_load()
     previous_gpu_time = gpu_time_now;
     previous_time = now;
 
-    return result;
+    return std::round(result);
 }
 
 void GPU_fdinfo::find_i915_gt_dir()
@@ -480,6 +509,9 @@ void GPU_fdinfo::load_xe_i915_throttle_reasons(
 
 int GPU_fdinfo::get_gpu_clock()
 {
+    if (module == "panfrost")
+        return get_gpu_clock_panfrost();
+
     if (!gpu_clock_stream.is_open())
         return 0;
 
@@ -493,6 +525,20 @@ int GPU_fdinfo::get_gpu_clock()
         return 0;
 
     return std::stoi(clock_str);
+}
+
+int GPU_fdinfo::get_gpu_clock_panfrost() {
+    if (fdinfo_data.empty())
+        return 0;
+
+    auto freq_str = fdinfo_data[0]["drm-curfreq-fragment"];
+
+    if (freq_str.empty())
+        return 0;
+
+    float freq = std::stoull(freq_str) / 1'000'000;
+
+    return std::round(freq);
 }
 
 bool GPU_fdinfo::check_throttle_reasons(

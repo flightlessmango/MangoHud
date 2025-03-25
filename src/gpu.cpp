@@ -76,6 +76,9 @@ GPUS::GPUS(overlay_params* params) : params(params) {
             if (line.find("DRIVER=msm_dpu") != std::string::npos) {
                 SPDLOG_DEBUG("MSM device found!");
                 vendor_id = 0x5143;
+            } else if (line.find("DRIVER=panfrost") != std::string::npos) {
+                SPDLOG_DEBUG("Panfrost device found!");
+                vendor_id = 0x1337; // what's panfrost vid?
             }
         }
 
