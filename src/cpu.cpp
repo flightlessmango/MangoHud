@@ -13,6 +13,10 @@
 #include "string_utils.h"
 #include "gpu.h"
 
+#ifndef TEST_ONLY
+#include "hud_elements.h"
+#endif
+
 #ifndef PROCDIR
 #define PROCDIR "/proc"
 #endif
@@ -151,6 +155,11 @@ bool CPUStats::Init()
             break;
         }
     } while(true);
+
+#ifndef TEST_ONLY
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_core_type])
+        get_cpu_cores_types();
+#endif
 
     m_inited = true;
     return UpdateCPUData();
@@ -689,6 +698,129 @@ bool CPUStats::InitCpuPowerData() {
 
     m_cpuPowerData.reset(cpuPowerData);
     return true;
+}
+
+void CPUStats::get_cpu_cores_types() {
+#if defined(__x86_64__) || defined(__i386__)
+    std::ifstream cpuinfo(PROCCPUINFOFILE);
+
+    if (!cpuinfo.is_open()) {
+        SPDLOG_ERROR("failed to open {}", PROCCPUINFOFILE);
+        return;
+    }
+
+    std::string vendor = "unknown";
+    for (std::string line; std::getline(cpuinfo, line);) {
+        if (line.empty() || line.find(":") + 1 == line.length())
+            continue;
+
+        std::string key = line.substr(0, line.find(":") - 1);
+        std::string val = line.substr(key.length() + 3);
+
+        if (key == "vendor_id") {
+            vendor = val;
+            break;
+        }
+    }
+
+    SPDLOG_INFO("cpu vendor: {}", vendor);
+
+    if (vendor == "GenuineIntel")
+        get_cpu_cores_types_intel();
+#endif
+
+#if defined(__arm__) || defined(__aarch64__)
+    get_cpu_cores_types_arm();
+#endif
+}
+
+void CPUStats::get_cpu_cores_types_intel() {
+    for (auto const& it : intel_cores) {
+        auto key = it.first;
+        auto file = it.second;
+
+        std::ifstream core_file(file);
+
+        if (!core_file.is_open()) {
+            SPDLOG_ERROR("failed to open core info file");
+            return;
+        }
+
+        std::string cpus;
+        std::getline(core_file, cpus);
+
+        std::regex rx("(\\d+)-(\\d+)");
+        std::smatch matches;
+
+        if (!std::regex_match(cpus, matches, rx) || matches.size() != 3)
+            continue;
+
+        int start = 0, end = 0;
+
+        try {
+            start = std::stoi(matches[1]);
+            end = std::stoi(matches[2]) + 1;
+        } catch (...) {
+            SPDLOG_ERROR("error parsing cpus \"{}\"", cpus);
+        }
+
+        for (int i = start; i < end; i++) {
+            for (size_t k = 0; k < m_cpuData.size(); k++) {
+                if (m_cpuData[k].cpu_id != i)
+                    continue;
+
+                m_cpuData[k].label = key;
+                break;
+            }
+        }
+    }
+}
+
+void CPUStats::get_cpu_cores_types_arm() {
+    std::ifstream cpuinfo(PROCCPUINFOFILE);
+
+    if (!cpuinfo.is_open()) {
+        SPDLOG_ERROR("failed to open {}", PROCCPUINFOFILE);
+        return;
+    }
+
+    uint8_t cur_core = 0;
+    bool detected_first_core = false;
+
+    for (std::string line; std::getline(cpuinfo, line);) {
+        if (line.empty() || line.find(":") + 1 == line.length())
+            continue;
+
+        auto key = line.substr(0, line.find(":") - 1);
+        auto val = line.substr(key.length() + 3);
+
+        if (key != "CPU part")
+            continue;
+
+        if (detected_first_core)
+            cur_core += 1;
+        else
+            detected_first_core = true;
+
+        std::string core_type;
+
+        try {
+            core_type = arm_cores.at(val);
+            SPDLOG_INFO("found {} core", core_type);
+        }
+        catch(const std::out_of_range& ex) {
+            SPDLOG_WARN("unknown cpu part {}", val);
+            continue;
+        }
+
+        // just in case
+        for (size_t i = 0; i < m_cpuData.size(); i++) {
+            if (m_cpuData[i].cpu_id != cur_core)
+                continue;
+
+            m_cpuData[i].label = core_type;
+        }
+    }
 }
 
 CPUStats cpuStats;

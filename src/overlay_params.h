@@ -32,6 +32,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_BOOL(frame_timing)                  \
    OVERLAY_PARAM_BOOL(core_load)                     \
    OVERLAY_PARAM_BOOL(core_bars)                     \
+   OVERLAY_PARAM_BOOL(core_type)                     \
    OVERLAY_PARAM_BOOL(cpu_temp)                      \
    OVERLAY_PARAM_BOOL(cpu_power)                     \
    OVERLAY_PARAM_BOOL(gpu_temp)                      \

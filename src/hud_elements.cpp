@@ -449,7 +449,12 @@ void HudElements::core_load(){
             HUDElements.TextColored(HUDElements.colors.cpu, "CPU");
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(HUDElements.sw_stats->font1);
-            HUDElements.TextColored(HUDElements.colors.cpu,"%i", cpuData.cpu_id);
+
+            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_core_type])
+                HUDElements.TextColored(HUDElements.colors.cpu, cpuData.label.c_str());
+            else
+                HUDElements.TextColored(HUDElements.colors.cpu, "%i", cpuData.cpu_id);
+
             ImGui::PopFont();
             ImguiNextColumnOrNewRow();
             auto text_color = HUDElements.colors.text;
