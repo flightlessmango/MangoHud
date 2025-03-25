@@ -45,6 +45,9 @@ class GPU {
 
                 if (vendor_id == 0x5143)
                     fdinfo = std::make_unique<GPU_fdinfo>("msm", pci_dev, drm_node);
+
+                if (vendor_id == 0x1337)
+                    fdinfo = std::make_unique<GPU_fdinfo>("panfrost", pci_dev, drm_node);
         }
 
         gpu_metrics get_metrics() {

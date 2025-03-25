@@ -74,7 +74,8 @@ private:
 
     int get_gpu_load();
     uint64_t get_gpu_time();
-    uint64_t previous_gpu_time, previous_time = 0;
+
+    uint64_t previous_gpu_time = 0, previous_time = 0;
 
     std::vector<uint64_t> xe_fdinfo_last_cycles;
     std::map<std::string, std::pair<uint64_t, uint64_t>> prev_xe_cycles;
@@ -84,7 +85,7 @@ private:
 
     void find_hwmon_sensors();
     std::string find_hwmon_dir();
-    std::string find_msm_hwmon_dir();
+    std::string find_hwmon_sensor_dir(std::string name);
     void get_current_hwmon_readings();
 
     float get_power_usage();
@@ -94,6 +95,9 @@ private:
     void find_i915_gt_dir();
     void find_xe_gt_dir();
     int get_gpu_clock();
+
+    uint64_t get_gpu_time_panfrost();
+    int get_gpu_clock_panfrost();
 
     std::ifstream throttle_status_stream;
     std::vector<std::ifstream> throttle_power_streams;
@@ -134,6 +138,9 @@ public:
         } else if (module == "msm") {
             // msm driver does not report vram usage
             drm_engine_type = "drm-engine-gpu";
+        } else if (module == "panfrost") {
+            drm_engine_type = "drm-engine-fragment";
+            drm_memory_type = "drm-resident-memory";
         }
 
         if (fdinfo_data.size() > 0 &&
