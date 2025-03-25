@@ -46,6 +46,8 @@ typedef struct CPUData_ {
    int temp;
    int cpu_mhz;
    float power;
+
+   std::string label = "unknown";
 } CPUData;
 
 enum {
@@ -165,6 +167,9 @@ public:
    bool GetCpuFile();
    bool InitCpuPowerData();
    double GetCPUPeriod() { return m_cpuPeriod; }
+   void get_cpu_cores_types();
+   void get_cpu_cores_types_intel();
+   void get_cpu_cores_types_arm();
 
    const std::vector<CPUData>& GetCPUData() const {
       return m_cpuData;
@@ -182,6 +187,38 @@ private:
    bool m_inited = false;
    FILE *m_cpuTempFile = nullptr;
    std::unique_ptr<CPUPowerData> m_cpuPowerData;
+
+   const std::map<std::string, std::string> intel_cores = {
+      {"P", "/sys/devices/cpu_core/cpus"},
+      {"E", "/sys/devices/cpu_atom/cpus"}
+   };
+
+   const std::map<std::string, std::string> arm_cores = {
+      // Performance cores
+      {"0xd07", "A57"},
+      {"0xd08", "A72"},
+      {"0xd09", "A73"},
+      {"0xd0a", "A75"},
+      {"0xd0b", "A76"},
+      {"0xd0c", "A77"},
+      {"0xd41", "A78"},
+      {"0xd44", "X1"},
+      {"0xd4d", "X2"},
+      {"0xd4e", "X3"},
+      {"0xd47", "A710"},
+      {"0xd4f", "A720"},
+      {"0xd4b", "X4"},
+
+      // Efficiency Cores
+      {"0xd03", "A53"},
+      {"0xd05", "A55"},
+      {"0xd46", "A510"},
+      {"0xd4a", "A520"},
+
+      // General-Purpose Cores
+      {"0xd04", "A35"},
+      {"0xd06", "A65"}
+   };
 };
 
 extern CPUStats cpuStats;
