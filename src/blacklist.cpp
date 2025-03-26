@@ -65,29 +65,6 @@ static  std::vector<std::string> blacklist {
     "wine-preloader",
 };
 
-#ifdef __linux__
-static bool check_gtk() {
-    fs::path path("/proc/self/map_files/");
-    // First check if we're using Proton, in that case it's probably a game
-    // and we probably want to show mangohud
-    for (auto& p : fs::directory_iterator(path)) {
-        auto filename = p.path().string();
-        auto sym = read_symlink(filename.c_str());
-        if (to_lower(sym).find("proton") != std::string::npos)
-            return false;
-    }
-
-    for (auto& p : fs::directory_iterator(path)) {
-        auto filename = p.path().string();
-        auto sym = read_symlink(filename.c_str());
-        if (sym.find("gtk") != std::string::npos)
-            return true;
-    }
-
-    return false;
-}
-#endif
-
 static bool check_blacklisted() {
     std::string proc_name = get_proc_name();
     global_proc_name = proc_name;
@@ -95,8 +72,9 @@ static bool check_blacklisted() {
 
 #ifdef __linux__
     // if the app isn't blacklisted, check if the app uses GTK and blacklist anyway
+    // unless we're using proton
     if (!blacklisted)
-        blacklisted = check_gtk();
+        blacklisted = lib_loaded("gtk") && !lib_loaded("proton")
 #endif
 
     static bool printed = false;

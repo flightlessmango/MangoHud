@@ -193,7 +193,7 @@ bool lib_loaded(const std::string& lib) {
     for (auto& p : fs::directory_iterator(path)) {
         auto file = p.path().string();
         auto sym = read_symlink(file.c_str());
-        if (sym.find(lib) != std::string::npos) {
+        if (to_lower(sym).find(lib) != std::string::npos) {
             return true;
         }
     }
