@@ -74,7 +74,7 @@ static bool check_blacklisted() {
     // if the app isn't blacklisted, check if the app uses GTK and blacklist anyway
     // unless we're using proton
     if (!blacklisted)
-        blacklisted = lib_loaded("gtk") && !lib_loaded("proton")
+        blacklisted = lib_loaded("gtk") && !lib_loaded("proton");
 #endif
 
     static bool printed = false;
