@@ -207,4 +207,11 @@ std::string remove_parentheses(const std::string& text) {
     return std::regex_replace(text, pattern, "");
 }
 
+std::string to_lower(const std::string& str) {
+    std::string lowered = str;
+    std::transform(lowered.begin(), lowered.end(), lowered.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    return lowered;
+}
+
 #endif // __linux__

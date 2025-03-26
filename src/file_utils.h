@@ -25,5 +25,6 @@ std::string get_data_dir();
 std::string get_config_dir();
 bool lib_loaded(const std::string& lib);
 std::string remove_parentheses(const std::string&);
+std::string to_lower(const std::string& str);
 
 #endif //MANGOHUD_FILE_UTILS_H
