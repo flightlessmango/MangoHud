@@ -554,7 +554,7 @@ bool CPUStats::GetCpuFile() {
             // E2K (Elbrus 2000) CPU temperature module
             find_input(path, "temp", input, "Node 0 Max");
             break;
-        } else if (std::regex_match(name, match, std::regex("cpu\\d+_thermal"))) {
+        } else if (std::regex_match(name, match, std::regex("cpu\\d*_thermal"))) {
             find_fallback_input(path, "temp1", input);
             break;
         } else {
