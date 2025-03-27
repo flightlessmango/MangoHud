@@ -153,7 +153,7 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
       currentLogData.gpu_temp = gpus->active_gpu()->metrics.temp;
       currentLogData.gpu_core_clock = gpus->active_gpu()->metrics.CoreClock;
       currentLogData.gpu_mem_clock = gpus->active_gpu()->metrics.MemClock;
-      currentLogData.gpu_vram_used = gpus->active_gpu()->metrics.memoryUsed;
+      currentLogData.gpu_vram_used = gpus->active_gpu()->metrics.sys_vram_used;
       currentLogData.gpu_power = gpus->active_gpu()->metrics.powerUsage;
    }
 #ifdef __linux__
