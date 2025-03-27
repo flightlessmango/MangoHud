@@ -66,15 +66,14 @@ NVIDIA::NVIDIA(const char* pciBusId) {
     }
 
 #endif
-#ifdef HAVE_NVML
-    if (nvml_available || nvctrl_available){
+
+    if (nvml_available || nvctrl_available) {
         throttling = std::make_shared<Throttling>(0x10de);
         std::thread thread(&NVIDIA::get_samples_and_copy, this);
         thread.detach();
     } else {
-        SPDLOG_INFO("NVML and NVCTRL are unavailable. Unable to get NVIDIA info. User is on DFSG version of mangohud?");
+        SPDLOG_WARN("NVML and NVCTRL are unavailable. Unable to get NVIDIA info. User is on DFSG version of mangohud?");
     }
-#endif
 }
 
 #ifdef HAVE_NVML
@@ -201,7 +200,7 @@ void NVIDIA::get_instant_metrics_xnvctrl(struct gpu_metrics *metrics) {
                             0,
                             NV_CTRL_TOTAL_DEDICATED_GPU_MEMORY,
                             &memtotal);
-        metrics->memoryTotal = memtotal;
+        metrics->memoryTotal = static_cast<float>(memtotal) / 1024.f;
 
         int64_t memused = 0;
         nvctrl.XNVCTRLQueryTargetAttribute64(display,
@@ -210,7 +209,7 @@ void NVIDIA::get_instant_metrics_xnvctrl(struct gpu_metrics *metrics) {
                             0,
                             NV_CTRL_USED_DEDICATED_GPU_MEMORY,
                             &memused);
-        metrics->memoryUsed = memused;
+        metrics->memoryUsed = static_cast<float>(memused) / 1024.f;
 
         metrics->fan_speed = NVIDIA::get_nvctrl_fan_speed();
     }
