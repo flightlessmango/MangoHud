@@ -30,22 +30,55 @@ class NVIDIA {
         };
 
 #ifdef HAVE_NVML
+        void nvml_get_process_info() {
+            if (!nvml_available)
+                return;
+
+            auto& nvml = get_libnvml_loader();
+            unsigned int infoCount = 0;
+
+            nvmlProcessInfo_t* cur_process_info = new nvmlProcessInfo_t[infoCount];
+            nvmlReturn_t ret = nvml.nvmlDeviceGetGraphicsRunningProcesses(device, &infoCount, cur_process_info);
+
+            if (ret != NVML_ERROR_INSUFFICIENT_SIZE)
+                return;
+
+            cur_process_info = new nvmlProcessInfo_t[infoCount];
+            ret = nvml.nvmlDeviceGetGraphicsRunningProcesses(device, &infoCount, cur_process_info);
+
+            if (ret != NVML_SUCCESS)
+                return;
+
+            process_info = cur_process_info;
+            process_info_len = infoCount;
+        };
+
         std::vector<int> pids() {
             std::vector<int> vec;
-            if(nvml_available) {
-                auto& nvml = get_libnvml_loader();
-                unsigned int infoCount = 0;
-                nvmlProcessInfo_t *process_info = new nvmlProcessInfo_t[infoCount];
-                nvml.nvmlDeviceGetGraphicsRunningProcesses(device, &infoCount, process_info);
-                process_info = new nvmlProcessInfo_t[infoCount];
-                nvml.nvmlDeviceGetGraphicsRunningProcesses(device, &infoCount, process_info);
-                for (size_t i = 0; i < infoCount; i++)
-                    vec.push_back(static_cast<int> (process_info[i].pid));
-            }
+
+            if (!process_info)
+                return vec;
+
+            for (size_t i = 0; i < process_info_len; i++)
+                vec.push_back(static_cast<int> (process_info[i].pid));
 
             return vec;
         };
-#endif
+
+        float get_proc_vram() {
+            if (!process_info)
+                return 0.f;
+
+            for (size_t i = 0; i < process_info_len; i++) {
+                if (static_cast<pid_t>(process_info[i].pid) != pid)
+                    continue;
+
+                return static_cast<float>(process_info[i].usedGpuMemory);
+            }
+
+            return 0.f;
+        };
+#endif        
 
         void pause() {
             paused = true;
@@ -66,8 +99,13 @@ class NVIDIA {
 #endif
 #ifdef HAVE_NVML
         nvmlDevice_t device;
+
+        nvmlProcessInfo_t* process_info = nullptr;
+        size_t process_info_len = 0;
+
         void get_instant_metrics_nvml(struct gpu_metrics *metrics);
-#endif
+#endif  
+        pid_t pid = getpid();
         std::mutex metrics_mutex;
         gpu_metrics metrics;
         std::thread thread;

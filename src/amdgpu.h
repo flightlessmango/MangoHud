@@ -13,6 +13,10 @@
 #include <thread>
 #include "gpu_metrics_util.h"
 
+#ifndef TEST_ONLY
+#include "gpu_fdinfo.h"
+#endif
+
 #define NUM_HBM_INSTANCES 4
 #define UPDATE_METRIC_AVERAGE(FIELD) do { int value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer[s].FIELD; } amdgpu_common_metrics.FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
 #define UPDATE_METRIC_AVERAGE_FLOAT(FIELD) do { float value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer[s].FIELD; } amdgpu_common_metrics.FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
@@ -321,7 +325,11 @@ class AMDGPU {
 		std::mutex metrics_mutex;
 		gpu_metrics metrics;
 		struct amdgpu_common_metrics amdgpu_common_metrics;
-	
+
+#ifndef TEST_ONLY
+		std::unique_ptr<GPU_fdinfo> fdinfo_helper;
+#endif
+
 		void get_sysfs_metrics();
 		void metrics_polling_thread();
 };

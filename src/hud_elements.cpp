@@ -543,9 +543,9 @@ void HudElements::vram(){
                 ImguiNextColumnOrNewRow();
                 // Add gtt_used to vram usage for APUs
                 if (gpu->is_apu())
-                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", gpu->metrics.memoryUsed + gpu->metrics.gtt_used);
+                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", gpu->metrics.sys_vram_used + gpu->metrics.gtt_used);
                 else
-                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", gpu->metrics.memoryUsed);
+                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", gpu->metrics.sys_vram_used);
                 if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
                     ImGui::SameLine(0,1.0f);
                     ImGui::PushFont(HUDElements.sw_stats->font1);
@@ -580,6 +580,33 @@ void HudElements::vram(){
             }
         }
     }
+}
+
+void HudElements::proc_vram() {
+    if (
+        !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_proc_vram] ||
+        !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats]
+    )
+        return;
+
+    if (!gpus)
+        gpus = std::make_unique<GPUS>(HUDElements.params);
+
+    ImguiNextColumnFirstItem();
+    HUDElements.TextColored(HUDElements.colors.vram, "PVRAM");
+    ImguiNextColumnOrNewRow();
+
+    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", gpus->active_gpu()->metrics.proc_vram_used);
+
+    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]) {
+        ImGui::SameLine(0, 1.0f);
+        ImGui::PushFont(HUDElements.sw_stats->font1);
+        HUDElements.TextColored(HUDElements.colors.text, "GiB");
+        ImGui::PopFont();
+    }
+
+    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
+        ImGui::TableNextRow();
 }
 
 void HudElements::ram(){
@@ -1790,6 +1817,8 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({io_stats, "io_stats", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_vram])
         ordered_functions.push_back({vram, "vram", value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_proc_vram])
+        ordered_functions.push_back({proc_vram, "proc_vram", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_ram])
         ordered_functions.push_back({ram, "ram", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_procmem])

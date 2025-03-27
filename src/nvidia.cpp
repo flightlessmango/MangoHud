@@ -82,6 +82,8 @@ void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics) {
     nvmlReturn_t response;
     auto& nvml = get_libnvml_loader();
     if (nvml_available) {
+        nvml_get_process_info();
+
         struct nvmlUtilization_st nvml_utilization;
         response = nvml.nvmlDeviceGetUtilizationRates(device, &nvml_utilization);
         if (response == NVML_ERROR_NOT_SUPPORTED) {
@@ -101,8 +103,11 @@ void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics) {
             struct nvmlMemory_st nvml_memory;
             nvml.nvmlDeviceGetMemoryInfo(device, &nvml_memory);
             metrics->memoryTotal = nvml_memory.total / (1024.f * 1024.f * 1024.f);
-            metrics->memoryUsed = nvml_memory.used / (1024.f * 1024.f * 1024.f);
+            metrics->sys_vram_used = nvml_memory.used / (1024.f * 1024.f * 1024.f);
         }
+
+        if (params->enabled[OVERLAY_PARAM_ENABLED_proc_vram])
+            metrics->proc_vram_used = get_proc_vram() / (1024.f * 1024.f * 1024.f);
 
         if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock] || (logger && logger->is_active())) {
             unsigned int core_clock;
@@ -211,7 +216,7 @@ void NVIDIA::get_instant_metrics_xnvctrl(struct gpu_metrics *metrics) {
                             0,
                             NV_CTRL_USED_DEDICATED_GPU_MEMORY,
                             &memused);
-        metrics->memoryUsed = static_cast<float>(memused) / 1024.f;
+        metrics->sys_vram_used = static_cast<float>(memused) / 1024.f;
 
         metrics->fan_speed = NVIDIA::get_nvctrl_fan_speed();
     }
@@ -221,6 +226,12 @@ void NVIDIA::get_instant_metrics_xnvctrl(struct gpu_metrics *metrics) {
 void NVIDIA::get_samples_and_copy() {
     struct gpu_metrics metrics_buffer[METRICS_SAMPLE_COUNT] {};
     while(!stop_thread) {
+#ifndef TEST_ONLY
+        if (HUDElements.g_gamescopePid > 0 && HUDElements.g_gamescopePid != pid) {
+            pid = HUDElements.g_gamescopePid;
+        }
+#endif
+
         for (size_t cur_sample_id=0; cur_sample_id < METRICS_SAMPLE_COUNT; cur_sample_id++) {
 #ifdef HAVE_NVML
         if (nvml_available)
@@ -246,7 +257,8 @@ void NVIDIA::get_samples_and_copy() {
         GPU_UPDATE_METRIC_AVERAGE(temp);
 
         GPU_UPDATE_METRIC_AVERAGE_FLOAT(memoryTotal);
-        GPU_UPDATE_METRIC_AVERAGE_FLOAT(memoryUsed);
+        GPU_UPDATE_METRIC_AVERAGE_FLOAT(sys_vram_used);
+        GPU_UPDATE_METRIC_AVERAGE_FLOAT(proc_vram_used);
 
         GPU_UPDATE_METRIC_MAX(is_power_throttled);
         GPU_UPDATE_METRIC_MAX(is_current_throttled);

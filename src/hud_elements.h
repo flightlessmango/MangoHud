@@ -82,6 +82,7 @@ class HudElements{
         static void core_load();
         static void io_stats();
         static void vram();
+        static void proc_vram();
         static void ram();
         static void procmem();
         static void fps();
