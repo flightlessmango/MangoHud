@@ -1783,6 +1783,8 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({vram, "vram", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_ram])
         ordered_functions.push_back({ram, "ram", value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_procmem])
+        ordered_functions.push_back({procmem, "procmem", value});
     if (!params->network.empty())
         ordered_functions.push_back({network, "network", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_battery])
