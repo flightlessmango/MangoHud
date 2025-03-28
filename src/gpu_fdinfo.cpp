@@ -579,6 +579,29 @@ int GPU_fdinfo::get_throttling_status()
     return reasons;
 }
 
+float GPU_fdinfo::amdgpu_helper_get_proc_vram() {
+#ifndef TEST_ONLY
+    if (HUDElements.g_gamescopePid > 0 && HUDElements.g_gamescopePid != pid)
+    {
+        pid = HUDElements.g_gamescopePid;
+        find_fd();
+    }
+#endif
+
+    // Recheck fds every 10secs, fixes Mass Effect 1, maybe some others too
+    {
+        auto t = os_time_get_nano() / 1'000'000;
+        if (t - fdinfo_last_update_ms >= 10'000) {
+            find_fd();
+            fdinfo_last_update_ms = t;
+        }
+    }
+
+    gather_fdinfo_data();
+
+    return get_memory_used();
+}
+
 void GPU_fdinfo::main_thread()
 {
     while (!stop_thread) {
@@ -606,7 +629,7 @@ void GPU_fdinfo::main_thread()
         get_current_hwmon_readings();
 
         metrics.load = get_gpu_load();
-        metrics.memoryUsed = get_memory_used();
+        metrics.proc_vram_used = get_memory_used();
         metrics.powerUsage = get_power_usage();
         metrics.powerLimit = hwmon_sensors["power_limit"].val / 1'000'000;
         metrics.CoreClock = get_gpu_clock();
@@ -622,11 +645,11 @@ void GPU_fdinfo::main_thread()
 
         SPDLOG_DEBUG(
             "pci_dev = {}, pid = {}, module = {}, "
-            "load = {}, mem = {}, power = {}, "
+            "load = {}, proc_vram = {}, power = {}, "
             "core = {}, temp = {}, fan = {}, "
             "voltage = {}",
             pci_dev, pid, module,
-            metrics.load, metrics.memoryUsed, metrics.powerUsage,
+            metrics.load, metrics.proc_vram_used, metrics.powerUsage,
             metrics.CoreClock, metrics.temp, metrics.fan_speed,
             metrics.voltage
         );

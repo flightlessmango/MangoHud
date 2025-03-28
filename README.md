@@ -435,6 +435,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `position=`                        | Location of the HUD: `top-left` (default), `top-right`, `middle-left`, `middle-right`, `bottom-left`, `bottom-right`, `top-center`, `bottom-center` |
 | `preset=`                          | Comma separated list of one or more presets. Default is `-1,0,1,2,3,4`. Available presets:<br>`0` (No Hud)<br> `1` (FPS Only)<br> `2` (Horizontal)<br> `3` (Extended)<br> `4` (Detailed)<br>User defined presets can be created by using a [presets.conf](data/presets.conf) file in `~/.config/MangoHud/`.                      |
 | `procmem`<br>`procmem_shared`, `procmem_virt`| Displays process' memory usage: resident, shared and/or virtual. `procmem` (resident) also toggles others off if disabled |
+| `proc_vram`                        | Display process' VRAM usage                                                           |
 | `ram`<br>`vram`                    | Display system RAM/VRAM usage                                                         |
 | `read_cfg`                         | Add to MANGOHUD_CONFIG as first parameter to also load config file. Otherwise only `MANGOHUD_CONFIG` parameters are used |
 | `reload_cfg=`                      | Change keybind for reloading the config. Default = `Shift_L+F4`                       |
@@ -595,7 +596,7 @@ Example output:
 		<td>🔴</td>
 	</tr>
 	<tr>
-		<td>Memory Used</td>
+		<td>Process VRAM</td>
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
@@ -604,7 +605,16 @@ Example output:
 		<td>🟢</td>
 	</tr>
 	<tr>
-		<td>Memory Total</td>
+		<td>System VRAM</td>
+		<td>🟢</td>
+		<td>🟢</td>
+		<td>🔴</td>
+		<td>🔴</td>
+		<td>🔴</td>
+		<td>🔴</td>
+	</tr>
+	<tr>
+		<td>Total VRAM</td>
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🔴</td>
