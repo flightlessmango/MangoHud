@@ -263,7 +263,6 @@ if get_option('mangoapp')
   glfw3_dep = dependency('glfw3')
 endif
 
-json_dep = dependency('nlohmann_json')
 subdir('src')
 
 if get_option('include_doc')

@@ -206,7 +206,6 @@ mangohud_static_lib = static_library(
     dep_pthread,
     dep_vulkan,
     windows_deps,
-    json_dep,
     implot_dep],
   include_directories : [inc_common],
   link_args : link_args,
@@ -248,7 +247,6 @@ mangohud_opengl_shared_lib = shared_library(
     dep_pthread,
     dep_vulkan,
     windows_deps,
-    json_dep,
     implot_dep],
   include_directories : [inc_common],
   link_args : link_args,
@@ -285,7 +283,6 @@ if get_option('mangoapp')
       dep_x11,
       dep_wayland_client,
       glfw3_dep,
-      json_dep,
       implot_dep
     ],
     include_directories : [inc_common],

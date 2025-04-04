@@ -26,8 +26,6 @@
 #include <GLFW/glfw3native.h>
 #include <X11/Xatom.h>
 
-#include "nlohmann/json.hpp"
-using json = nlohmann::json;
 using namespace std;
 
 static void glfw_error_callback(int error, const char* description)
@@ -187,18 +185,7 @@ static void msg_read_thread(){
                     } else {
                         steam_focused = false;
                     }
-                    // if (!steam_focused && mangoapp_v1->pid != previous_pid){
-                    //     string path = "/tmp/mangoapp/" + to_string(mangoapp_v1->pid) + ".json";
-                    //     ifstream i(path);
-                    //     if (i.fail()){
-                    //         sw_stats.engine = EngineTypes::GAMESCOPE;
-                    //     } else {
-                    //         json j;
-                    //         i >> j;
-                    //         sw_stats.engine = static_cast<EngineTypes> (j["engine"]);
-                    //     }
-                    //     previous_pid = mangoapp_v1->pid;
-                    // }
+
                     if (msg_size > offsetof(mangoapp_msg_v1, latency_ns))
                         gamescope_frametime(mangoapp_v1->app_frametime_ns, mangoapp_v1->latency_ns);
 
