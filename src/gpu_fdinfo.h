@@ -116,7 +116,10 @@ private:
         std::vector<std::ifstream> &throttle_reason_streams);
 
 public:
-    GPU_fdinfo(const std::string module, const std::string pci_dev, const std::string drm_node)
+    GPU_fdinfo(
+        const std::string module, const std::string pci_dev, const std::string drm_node,
+        const bool called_from_amdgpu_cpp=false
+    )
         : module(module)
         , pci_dev(pci_dev)
         , drm_node(drm_node)
@@ -164,6 +167,9 @@ public:
             drm_engine_type, drm_memory_type
         );
 
+        if (called_from_amdgpu_cpp)
+            return;
+
         hwmon_sensors["voltage"]   = { .rx = std::regex("in(\\d+)_input") };
         hwmon_sensors["fan_speed"] = { .rx = std::regex("fan(\\d+)_input") };
         hwmon_sensors["temp"]      = { .rx = std::regex("temp(\\d+)_input") };
@@ -200,4 +206,6 @@ public:
         paused = false;
         cond_var.notify_one();
     }
+
+    float amdgpu_helper_get_proc_vram();
 };

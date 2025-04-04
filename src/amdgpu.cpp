@@ -193,6 +193,10 @@ void AMDGPU::get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[ME
 		// then we replace with GPU metrics if it's available
 		get_sysfs_metrics();
 
+#ifndef TEST_ONLY
+		metrics.proc_vram_used = fdinfo_helper->amdgpu_helper_get_proc_vram();
+#endif
+
 		if (gpu_metrics_is_valid) {
 			UPDATE_METRIC_AVERAGE(gpu_load_percent);
 			UPDATE_METRIC_AVERAGE_FLOAT(average_gfx_power_w);
@@ -339,7 +343,7 @@ void AMDGPU::get_sysfs_metrics() {
 		fflush(sysfs_nodes.vram_used);
 		if (fscanf(sysfs_nodes.vram_used, "%" PRId64, &value) != 1)
 			value = 0;
-		metrics.memoryUsed = float(value) / (1024 * 1024 * 1024);
+		metrics.sys_vram_used = float(value) / (1024 * 1024 * 1024);
 	}
 	// On some GPUs SMU can sometimes return the wrong temperature.
 	// As HWMON is way more visible than the SMU metrics, let's always trust it as it is the most likely to work
@@ -426,6 +430,10 @@ AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id) {
 	}
 
 	throttling = std::make_shared<Throttling>(0x1002);
+#ifndef TEST_ONLY
+	fdinfo_helper = std::make_unique<GPU_fdinfo>("amdgpu", pci_dev, "", /*called_from_amdgpu_cpp=*/ true);
+#endif
+
 	std::thread thread(&AMDGPU::metrics_polling_thread, this);
 	thread.detach();
 }

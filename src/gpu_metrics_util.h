@@ -5,7 +5,8 @@ struct gpu_metrics {
     int temp;
     int junction_temp {-1};
     int memory_temp {-1};
-    float memoryUsed;
+    float sys_vram_used;
+    float proc_vram_used;
     float memoryTotal;
     int MemClock;
     int CoreClock;
@@ -24,7 +25,7 @@ struct gpu_metrics {
 
     gpu_metrics()
         : load(0), temp(0), junction_temp(0), memory_temp(0),
-          memoryUsed(0.0f), memoryTotal(0.0f), MemClock(0), CoreClock(0),
+          sys_vram_used(0.0f), proc_vram_used(0.0f), memoryTotal(0.0f), MemClock(0), CoreClock(0),
           powerUsage(0.0f), powerLimit(0.0f), apu_cpu_power(0.0f), apu_cpu_temp(0),
           is_power_throttled(false), is_current_throttled(false),
           is_temp_throttled(false), is_other_throttled(false),
