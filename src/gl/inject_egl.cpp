@@ -99,7 +99,7 @@ EXPORT_C_(void*) eglGetPlatformDisplay( unsigned int platform, void* native_disp
     {
         wl_display_ptr = (struct wl_display*)native_display;
         HUDElements.display_server = HUDElements.display_servers::WAYLAND;
-        wl_handle = real_dlopen("libwayland-client.so", RTLD_LAZY);
+        wl_handle = real_dlopen("libwayland-client.so.0", RTLD_LAZY);
         init_wayland_data();
     }
 #endif
@@ -125,7 +125,7 @@ EXPORT_C_(void*) eglGetDisplay( void* native_display )
             {
                 wl_display_ptr = (struct wl_display*)native_display;
                 HUDElements.display_server = HUDElements.display_servers::WAYLAND;
-                wl_handle = real_dlopen("libwayland-client.so", RTLD_LAZY);
+                wl_handle = real_dlopen("libwayland-client.so.0", RTLD_LAZY);
                 init_wayland_data();
             }
         }

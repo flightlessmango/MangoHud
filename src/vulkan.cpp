@@ -2034,7 +2034,7 @@ static VkResult overlay_CreateWaylandSurfaceKHR(
 {
    struct instance_data *instance_data = FIND(struct instance_data, instance);
    if (!wl_handle)
-      wl_handle = real_dlopen("libwayland-client.so", RTLD_LAZY);
+      wl_handle = real_dlopen("libwayland-client.so.0", RTLD_LAZY);
    wl_display_ptr = pCreateInfo->display;
    HUDElements.display_server = HUDElements.display_servers::WAYLAND;
    init_wayland_data();
