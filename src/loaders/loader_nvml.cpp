@@ -3,7 +3,6 @@
 
 #include "loader_nvml.h"
 #include <iostream>
-#include <memory>
 #include <spdlog/spdlog.h>
 
 // Put these sanity checks here so that they fire at most once
@@ -15,13 +14,13 @@
 #error both LIBRARY_LOADER_NVML_H_DLOPEN and LIBRARY_LOADER_NVML_H_DT_NEEDED defined
 #endif
 
-static std::unique_ptr<libnvml_loader> libnvml_;
+static std::shared_ptr<libnvml_loader> libnvml_;
 
-libnvml_loader& get_libnvml_loader()
+std::shared_ptr<libnvml_loader> get_libnvml_loader()
 {
     if (!libnvml_)
-        libnvml_ = std::make_unique<libnvml_loader>("libnvidia-ml.so.1");
-    return *libnvml_.get();
+        libnvml_ = std::make_shared<libnvml_loader>("libnvidia-ml.so.1");
+    return libnvml_;
 }
 
 libnvml_loader::libnvml_loader() : loaded_(false) {
@@ -37,7 +36,7 @@ bool libnvml_loader::Load(const std::string& library_name) {
   }
 
 #if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
-  library_ = dlopen(library_name.c_str(), RTLD_LAZY);
+  library_ = dlopen(library_name.c_str(), RTLD_LAZY | RTLD_NODELETE);
   if (!library_) {
     SPDLOG_ERROR("Failed to open " MANGOHUD_ARCH " {}: {}", library_name, dlerror());
     return false;

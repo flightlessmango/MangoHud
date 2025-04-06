@@ -31,20 +31,19 @@ class NVIDIA {
 
 #ifdef HAVE_NVML
         void nvml_get_process_info() {
-            if (!nvml_available)
+            if (!nvml_available || !nvml)
                 return;
 
-            auto& nvml = get_libnvml_loader();
             unsigned int infoCount = 0;
 
             nvmlProcessInfo_t* cur_process_info = new nvmlProcessInfo_t[infoCount];
-            nvmlReturn_t ret = nvml.nvmlDeviceGetGraphicsRunningProcesses(device, &infoCount, cur_process_info);
+            nvmlReturn_t ret = nvml->nvmlDeviceGetGraphicsRunningProcesses(device, &infoCount, cur_process_info);
 
             if (ret != NVML_ERROR_INSUFFICIENT_SIZE)
                 return;
 
             cur_process_info = new nvmlProcessInfo_t[infoCount];
-            ret = nvml.nvmlDeviceGetGraphicsRunningProcesses(device, &infoCount, cur_process_info);
+            ret = nvml->nvmlDeviceGetGraphicsRunningProcesses(device, &infoCount, cur_process_info);
 
             if (ret != NVML_SUCCESS)
                 return;
@@ -91,20 +90,6 @@ class NVIDIA {
         }
 
     private:
-#if defined(HAVE_XNVCTRL) && defined(HAVE_X11)
-        Display* display;
-        // std::unique_ptr<Display, std::function<void(Display*)>> display;
-        int num_coolers;
-        int64_t get_nvctrl_fan_speed();
-#endif
-#ifdef HAVE_NVML
-        nvmlDevice_t device;
-
-        nvmlProcessInfo_t* process_info = nullptr;
-        size_t process_info_len = 0;
-
-        void get_instant_metrics_nvml(struct gpu_metrics *metrics);
-#endif  
         pid_t pid = getpid();
         std::mutex metrics_mutex;
         gpu_metrics metrics;
@@ -112,10 +97,27 @@ class NVIDIA {
         std::condition_variable cond_var;
         std::atomic<bool> stop_thread{false};
         std::atomic<bool> paused{false};
+
+#ifdef HAVE_NVML
+        nvmlDevice_t device;
+
+        nvmlProcessInfo_t* process_info = nullptr;
+        size_t process_info_len = 0;
+
+        void get_instant_metrics_nvml(struct gpu_metrics *metrics);
+        std::shared_ptr<libnvml_loader> nvml = get_libnvml_loader();
+#endif
+
 #if defined(HAVE_XNVCTRL) && defined(HAVE_X11)
+        Display* display;
+        // std::unique_ptr<Display, std::function<void(Display*)>> display;
+        int num_coolers;
+        int64_t get_nvctrl_fan_speed();
+        std::shared_ptr<libnvctrl_loader> nvctrl = get_libnvctrl_loader();
+
         void get_instant_metrics_xnvctrl(struct gpu_metrics *metrics);
         void parse_token(std::string token, std::unordered_map<std::string, std::string>& options);
-        bool find_nv_x11(libnvctrl_loader& nvctrl, Display*& dpy);
-        char* get_attr_target_string(libnvctrl_loader& nvctrl, int attr, int target_type, int target_id);
+        bool find_nv_x11(Display*& dpy);
+        char* get_attr_target_string(int attr, int target_type, int target_id);
 #endif
 };
