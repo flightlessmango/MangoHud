@@ -14,7 +14,7 @@ bool libx11_loader::Load(const std::string& library_name) {
     return false;
   }
 
-  library_ = dlopen(library_name.c_str(), RTLD_LAZY);
+  library_ = dlopen(library_name.c_str(), RTLD_LAZY | RTLD_NODELETE);
   if (!library_) {
     SPDLOG_ERROR("Failed to open " MANGOHUD_ARCH " {}: {}", library_name, dlerror());
     return false;
