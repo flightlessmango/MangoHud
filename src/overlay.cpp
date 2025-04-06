@@ -452,6 +452,7 @@ void center_text(const std::string& text)
    ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2 )- (ImGui::CalcTextSize(text.c_str()).x / 2));
 }
 
+#ifdef HAVE_DBUS
 static float get_ticker_limited_pos(float pos, float tw, float& left_limit, float& right_limit)
 {
    //float cw = ImGui::GetContentRegionAvailWidth() * 3; // only table cell worth of width
@@ -473,7 +474,6 @@ static float get_ticker_limited_pos(float pos, float tw, float& left_limit, floa
    return new_pos_x;
 }
 
-#ifdef HAVE_DBUS
 void render_mpris_metadata(const struct overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing)
 {
    static const float overflow = 50.f /* 3333ms * 0.5 / 16.6667 / 2 (to edge and back) */;
