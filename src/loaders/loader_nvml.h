@@ -13,6 +13,7 @@
 
 #include <string>
 #include <dlfcn.h>
+#include <memory>
 
 class libnvml_loader {
  public:
@@ -58,5 +59,5 @@ class libnvml_loader {
   void operator=(const libnvml_loader&);
 };
 
-libnvml_loader& get_libnvml_loader();
+std::shared_ptr<libnvml_loader> get_libnvml_loader();
 #endif  // LIBRARY_LOADER_NVML_H

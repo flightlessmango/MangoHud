@@ -8,6 +8,7 @@
 
 #include <string>
 #include <dlfcn.h>
+#include <memory>
 
 class libnvctrl_loader {
  public:
@@ -41,5 +42,5 @@ class libnvctrl_loader {
   void operator=(const libnvctrl_loader&);
 };
 
-libnvctrl_loader& get_libnvctrl_loader();
+std::shared_ptr<libnvctrl_loader> get_libnvctrl_loader();
 #endif  // LIBRARY_LOADER_NVCTRL_H

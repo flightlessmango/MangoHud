@@ -28,18 +28,17 @@ void NVIDIA::parse_token(std::string token, std::unordered_map<std::string, std:
 
 NVIDIA::NVIDIA(const char* pciBusId) {
 #ifdef HAVE_NVML
-    auto& nvml = get_libnvml_loader();
-    if (nvml.IsLoaded()) {
-        nvmlReturn_t result = nvml.nvmlInit();
+    if (nvml && nvml->IsLoaded()) {
+        nvmlReturn_t result = nvml->nvmlInit();
         if (NVML_SUCCESS != result) {
-            SPDLOG_ERROR("Nvidia module initialization failed: {}", nvml.nvmlErrorString(result));
+            SPDLOG_ERROR("Nvidia module initialization failed: {}", nvml->nvmlErrorString(result));
             nvml_available = false;
         } else {
             nvml_available = true; // NVML initialized successfully
             if (pciBusId) {
-                result = nvml.nvmlDeviceGetHandleByPciBusId(pciBusId, &device);
+                result = nvml->nvmlDeviceGetHandleByPciBusId(pciBusId, &device);
                 if (NVML_SUCCESS != result) {
-                    SPDLOG_ERROR("Getting device handle by PCI bus ID failed: {}", nvml.nvmlErrorString(result));
+                    SPDLOG_ERROR("Getting device handle by PCI bus ID failed: {}", nvml->nvmlErrorString(result));
                     nvml_available = false; // Revert if getting device handle fails
                 }
             }
@@ -51,16 +50,15 @@ NVIDIA::NVIDIA(const char* pciBusId) {
     if (!get_libx11()->IsLoaded())
         SPDLOG_DEBUG("XNVCtrl: X11 not loaded");
 
-    auto& nvctrl = get_libnvctrl_loader();
-    if (!nvctrl.IsLoaded()) {
+    if (!nvctrl || !nvctrl->IsLoaded()) {
         SPDLOG_DEBUG("XNVCtrl loader failed to load");
         nvctrl_available = false;
     } else {
-        nvctrl_available = find_nv_x11(nvctrl, display);
+        nvctrl_available = find_nv_x11(display);
     }
 
-    if (nvctrl_available) {
-        nvctrl.XNVCTRLQueryTargetCount(display,
+    if (nvctrl && nvctrl_available) {
+        nvctrl->XNVCTRLQueryTargetCount(display,
             NV_CTRL_TARGET_TYPE_COOLER,
             &num_coolers);
     }
@@ -69,8 +67,7 @@ NVIDIA::NVIDIA(const char* pciBusId) {
 
     if (nvml_available || nvctrl_available) {
         throttling = std::make_shared<Throttling>(0x10de);
-        std::thread thread(&NVIDIA::get_samples_and_copy, this);
-        thread.detach();
+        thread = std::thread(&NVIDIA::get_samples_and_copy, this);
     } else {
         SPDLOG_WARN("NVML and NVCTRL are unavailable. Unable to get NVIDIA info. User is on DFSG version of mangohud?");
     }
@@ -80,12 +77,12 @@ NVIDIA::NVIDIA(const char* pciBusId) {
 void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics) {
     auto params = HUDElements.params;
     nvmlReturn_t response;
-    auto& nvml = get_libnvml_loader();
-    if (nvml_available) {
+
+    if (nvml && nvml_available) {
         nvml_get_process_info();
 
         struct nvmlUtilization_st nvml_utilization;
-        response = nvml.nvmlDeviceGetUtilizationRates(device, &nvml_utilization);
+        response = nvml->nvmlDeviceGetUtilizationRates(device, &nvml_utilization);
         if (response == NVML_ERROR_NOT_SUPPORTED) {
             if (nvml_available)
                 SPDLOG_ERROR("nvmlDeviceGetUtilizationRates failed, disabling nvml metrics");
@@ -95,13 +92,13 @@ void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics) {
 
         if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp] || (logger && logger->is_active())) {
             unsigned int temp;
-            nvml.nvmlDeviceGetTemperature(device, NVML_TEMPERATURE_GPU, &temp);
+            nvml->nvmlDeviceGetTemperature(device, NVML_TEMPERATURE_GPU, &temp);
             metrics->temp = temp;
         }
 
         if (params->enabled[OVERLAY_PARAM_ENABLED_vram] || (logger && logger->is_active())) {
             struct nvmlMemory_st nvml_memory;
-            nvml.nvmlDeviceGetMemoryInfo(device, &nvml_memory);
+            nvml->nvmlDeviceGetMemoryInfo(device, &nvml_memory);
             metrics->memoryTotal = nvml_memory.total / (1024.f * 1024.f * 1024.f);
             metrics->sys_vram_used = nvml_memory.used / (1024.f * 1024.f * 1024.f);
         }
@@ -111,27 +108,27 @@ void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics) {
 
         if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock] || (logger && logger->is_active())) {
             unsigned int core_clock;
-            nvml.nvmlDeviceGetClockInfo(device, NVML_CLOCK_GRAPHICS, &core_clock);
+            nvml->nvmlDeviceGetClockInfo(device, NVML_CLOCK_GRAPHICS, &core_clock);
             metrics->CoreClock = core_clock;
         }
 
         if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_mem_clock] || (logger && logger->is_active())) {
             unsigned int memory_clock;
-            nvml.nvmlDeviceGetClockInfo(device, NVML_CLOCK_MEM, &memory_clock);
+            nvml->nvmlDeviceGetClockInfo(device, NVML_CLOCK_MEM, &memory_clock);
             metrics->MemClock = memory_clock;
         }
 
         if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_power] || (logger && logger->is_active())) {
             unsigned int power, limit;
-            nvml.nvmlDeviceGetPowerUsage(device, &power);
-            nvml.nvmlDeviceGetPowerManagementLimit(device, &limit);
+            nvml->nvmlDeviceGetPowerUsage(device, &power);
+            nvml->nvmlDeviceGetPowerManagementLimit(device, &limit);
             metrics->powerUsage = power / 1000;
             metrics->powerLimit = limit / 1000;
         }
 
         if (params->enabled[OVERLAY_PARAM_ENABLED_throttling_status]) {
             unsigned long long nvml_throttle_reasons;
-            nvml.nvmlDeviceGetCurrentClocksThrottleReasons(device, &nvml_throttle_reasons);
+            nvml->nvmlDeviceGetCurrentClocksThrottleReasons(device, &nvml_throttle_reasons);
             metrics->is_temp_throttled = (nvml_throttle_reasons & 0x0000000000000060LL) != 0;
             metrics->is_power_throttled = (nvml_throttle_reasons & 0x000000000000008CLL) != 0;
             metrics->is_other_throttled = (nvml_throttle_reasons & 0x0000000000000112LL) != 0;
@@ -141,7 +138,7 @@ void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics) {
 
         if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_fan] || (logger && logger->is_active())){
             unsigned int fan_speed;
-            nvml.nvmlDeviceGetFanSpeed(device, &fan_speed);
+            nvml->nvmlDeviceGetFanSpeed(device, &fan_speed);
             metrics->fan_speed = fan_speed;
             metrics->fan_rpm = false;
         }
@@ -159,12 +156,11 @@ void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics) {
 void NVIDIA::get_instant_metrics_xnvctrl(struct gpu_metrics *metrics) {
     std::unordered_map<std::string, std::string> xnvctrl_params;
     std::string token;
-    auto& nvctrl = get_libnvctrl_loader();
 
     if (!display)
         nvctrl_available = false;
 
-    if (nvctrl_available && !nvml_available) {
+    if (nvctrl && nvctrl_available && !nvml_available) {
 
         int enums[] = {
             NV_CTRL_STRING_GPU_UTILIZATION,
@@ -173,7 +169,7 @@ void NVIDIA::get_instant_metrics_xnvctrl(struct gpu_metrics *metrics) {
         };
 
         for (size_t i=0; enums[i]; i++) {
-            char* str = get_attr_target_string(nvctrl, enums[i], NV_CTRL_TARGET_TYPE_GPU, 0);
+            char* str = get_attr_target_string(enums[i], NV_CTRL_TARGET_TYPE_GPU, 0);
             if (!str)
                 continue;
 
@@ -192,7 +188,7 @@ void NVIDIA::get_instant_metrics_xnvctrl(struct gpu_metrics *metrics) {
             metrics->MemClock = 0;
 
         int64_t temp = 0;
-        nvctrl.XNVCTRLQueryTargetAttribute64(display,
+        nvctrl->XNVCTRLQueryTargetAttribute64(display,
                             NV_CTRL_TARGET_TYPE_GPU,
                             0,
                             0,
@@ -201,7 +197,7 @@ void NVIDIA::get_instant_metrics_xnvctrl(struct gpu_metrics *metrics) {
         metrics->temp = temp;
 
         int64_t memtotal = 0;
-        nvctrl.XNVCTRLQueryTargetAttribute64(display,
+        nvctrl->XNVCTRLQueryTargetAttribute64(display,
                             NV_CTRL_TARGET_TYPE_GPU,
                             0,
                             0,
@@ -210,7 +206,7 @@ void NVIDIA::get_instant_metrics_xnvctrl(struct gpu_metrics *metrics) {
         metrics->memoryTotal = static_cast<float>(memtotal) / 1024.f;
 
         int64_t memused = 0;
-        nvctrl.XNVCTRLQueryTargetAttribute64(display,
+        nvctrl->XNVCTRLQueryTargetAttribute64(display,
                             NV_CTRL_TARGET_TYPE_GPU,
                             0,
                             0,
@@ -273,8 +269,7 @@ void NVIDIA::get_samples_and_copy() {
 int64_t NVIDIA::get_nvctrl_fan_speed(){
     int64_t fan_speed = 0;
     if (num_coolers >= 1) {
-        auto& nvctrl = get_libnvctrl_loader();
-        nvctrl.XNVCTRLQueryTargetAttribute64(display,
+        nvctrl->XNVCTRLQueryTargetAttribute64(display,
                             NV_CTRL_TARGET_TYPE_COOLER,
                             0,
                             0,
@@ -287,9 +282,9 @@ int64_t NVIDIA::get_nvctrl_fan_speed(){
 #endif
 
 #ifdef HAVE_XNVCTRL
-char* NVIDIA::get_attr_target_string(libnvctrl_loader& nvctrl, int attr, int target_type, int target_id) {
+char* NVIDIA::get_attr_target_string(int attr, int target_type, int target_id) {
     char* c = nullptr;
-    if (!nvctrl.XNVCTRLQueryTargetStringAttribute(NVIDIA::display, target_type, target_id, 0, attr, &c)) {
+    if (nvctrl && !nvctrl->XNVCTRLQueryTargetStringAttribute(NVIDIA::display, target_type, target_id, 0, attr, &c)) {
         SPDLOG_ERROR("Failed to query attribute '{}'", attr);
     }
     return c;
@@ -297,7 +292,7 @@ char* NVIDIA::get_attr_target_string(libnvctrl_loader& nvctrl, int attr, int tar
 #endif
 
 #if defined(HAVE_XNVCTRL) && defined(HAVE_X11)
-bool NVIDIA::find_nv_x11(libnvctrl_loader& nvctrl, Display*& dpy)
+bool NVIDIA::find_nv_x11(Display*& dpy)
 {
     const char *displayid = getenv("DISPLAY");
     auto libx11 = get_libx11();
@@ -305,7 +300,7 @@ bool NVIDIA::find_nv_x11(libnvctrl_loader& nvctrl, Display*& dpy)
         Display *d = libx11->XOpenDisplay(displayid);
         if (d) {
             int s = libx11->XDefaultScreen(d);
-            if (nvctrl.XNVCTRLIsNvScreen(d, s)) {
+            if (nvctrl && nvctrl->XNVCTRLIsNvScreen(d, s)) {
                 dpy = d;
                 SPDLOG_DEBUG("XNVCtrl is using display {}", displayid);
                 return true;

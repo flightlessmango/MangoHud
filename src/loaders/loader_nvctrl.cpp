@@ -1,6 +1,5 @@
 #include "loader_nvctrl.h"
 #include <iostream>
-#include <memory>
 #include <spdlog/spdlog.h>
 
 // Put these sanity checks here so that they fire at most once
@@ -12,13 +11,13 @@
 #error both LIBRARY_LOADER_NVCTRL_H_DLOPEN and LIBRARY_LOADER_NVCTRL_H_DT_NEEDED defined
 #endif
 
-static std::unique_ptr<libnvctrl_loader> libnvctrl_;
+static std::shared_ptr<libnvctrl_loader> libnvctrl_;
 
-libnvctrl_loader& get_libnvctrl_loader()
+std::shared_ptr<libnvctrl_loader> get_libnvctrl_loader()
 {
     if (!libnvctrl_)
-        libnvctrl_ = std::make_unique<libnvctrl_loader>("libXNVCtrl.so.0");
-    return *libnvctrl_.get();
+        libnvctrl_ = std::make_shared<libnvctrl_loader>("libXNVCtrl.so.0");
+    return libnvctrl_;
 }
 
 libnvctrl_loader::libnvctrl_loader() : loaded_(false) {
@@ -34,7 +33,7 @@ bool libnvctrl_loader::Load(const std::string& library_name) {
   }
 
 #if defined(LIBRARY_LOADER_NVCTRL_H_DLOPEN)
-  library_ = dlopen(library_name.c_str(), RTLD_LAZY);
+  library_ = dlopen(library_name.c_str(), RTLD_LAZY | RTLD_NODELETE);
   if (!library_) {
     SPDLOG_DEBUG("Failed to open " MANGOHUD_ARCH " {}: {}", library_name, dlerror());
     return false;
