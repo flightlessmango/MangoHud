@@ -256,7 +256,7 @@ void AMDGPU::metrics_polling_thread() {
 	// Set all the fields to 0 by default. Only done once as we're just replacing previous values after
 	memset(metrics_buffer, 0, sizeof(metrics_buffer));
 
-	while (1) {
+	while (!stop_thread) {
 #ifndef TEST_ONLY
 		if (HUDElements.params->no_display && !logger->is_active())
 			usleep(100000);
@@ -434,6 +434,5 @@ AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id) {
 	fdinfo_helper = std::make_unique<GPU_fdinfo>("amdgpu", pci_dev, "", /*called_from_amdgpu_cpp=*/ true);
 #endif
 
-	std::thread thread(&AMDGPU::metrics_polling_thread, this);
-	thread.detach();
+	thread = std::thread(&AMDGPU::metrics_polling_thread, this);
 }
