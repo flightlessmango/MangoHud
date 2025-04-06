@@ -290,6 +290,12 @@ class AMDGPU {
 
     	AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id);
 
+		~AMDGPU() {
+			stop_thread = true;
+			if (thread.joinable())
+				thread.join();
+		}
+
 		bool verify_metrics(const std::string& path);
 		void get_instant_metrics(struct amdgpu_common_metrics *metrics);
 		void get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT],
