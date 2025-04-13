@@ -650,7 +650,6 @@ bool CPUStats::InitCpuPowerData() {
 
     std::string name, path;
     std::string hwmon = "/sys/class/hwmon/";
-    bool intel = false;
 
     CPUPowerData* cpuPowerData = nullptr;
 
@@ -668,12 +667,10 @@ bool CPUStats::InitCpuPowerData() {
         } else if (name == "zenergy") {
             cpuPowerData = (CPUPowerData*)init_cpu_power_data_zenergy(path);
             break;
-        } else if (name == "coretemp") {
-            intel = true;
         }
     }
 
-    if (!cpuPowerData && intel) {
+    if (!cpuPowerData) {
         std::string powercap = "/sys/class/powercap/";
         auto powercap_dirs = ls(powercap.c_str());
         for (auto& dir : powercap_dirs) {
@@ -686,7 +683,7 @@ bool CPUStats::InitCpuPowerData() {
             }
         }
     }
-    if (!cpuPowerData && !intel) {
+    if (!cpuPowerData) {
         auto powerData = std::make_unique<CPUPowerData_amdgpu>();
         cpuPowerData = (CPUPowerData*)powerData.release();
     }

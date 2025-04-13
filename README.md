@@ -476,7 +476,7 @@ Because comma is also used as option delimiter and needs to be escaped for value
 
 *Note: Width and Height are set automatically based on the font_size, but can be overridden.*
 
-*Note: RAPL is currently used for Intel CPUs to show power draw with `cpu_power` which may be unreadable for non-root users due to [vulnerability](https://platypusattack.com/). The corresponding `energy_uj` file has to be readable by corresponding user, e.g. by running `chmod o+r /sys/class/powercap/intel-rapl\:0/energy_uj` as root, else the power shown will be **0 W**, though having the file readable may potentially be a security vulnerability persisting until system reboots.*
+*Note: RAPL is currently used for Intel and AMD Zen CPUs to show power draw with `cpu_power` which may be unreadable for non-root users due to [vulnerability](https://platypusattack.com/). The corresponding `energy_uj` file has to be readable by corresponding user, e.g. by running `chmod o+r /sys/class/powercap/intel-rapl\:0/energy_uj` as root, else the power shown will be **0 W**, though having the file readable may potentially be a security vulnerability persisting until system reboots.*
 
 *Note: The [zenpower3](https://git.exozy.me/a/zenpower3) or [zenergy](https://github.com/boukehaarsma23/zenergy) kernel driver must be installed to show the power draw of Ryzen CPUs.*
 
