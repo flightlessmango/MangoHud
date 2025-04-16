@@ -10,7 +10,9 @@ fi
 
 
 # Add exe names newline separated to the string to disable LD_PRELOAD
-DISABLE_LD_PRELOAD="cs2.sh
+DISABLE_LD_PRELOAD="
+cs2.sh
+RiseOfTheTombRaider.sh
 "
 
 MANGOHUD_LIB_NAME="@ld_libdir_mangohud@libMangoHud_shim.so"
