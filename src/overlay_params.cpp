@@ -1208,7 +1208,7 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
          add_to_options(params, "present_mode", "0");
 
          if (!gpus)
-         gpus = std::make_unique<GPUS>(HUDElements.params);
+            gpus = std::make_unique<GPUS>(HUDElements.params);
          
          // Disable some options if steamdeck
          for (auto gpu : gpus->available_gpus) {
@@ -1217,6 +1217,7 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
                add_to_options(params, "gpu_junction_temp", "0");
                add_to_options(params, "gpu_voltage", "0");
                add_to_options(params, "gpu_mem_temp", "0");
+               add_to_options(params, "gpu_efficiency", "0");
             }
          }
 
