@@ -1206,13 +1206,20 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
          add_to_options(params, "frame_timing_detailed", "1");
          add_to_options(params, "network", "1");
          add_to_options(params, "present_mode", "0");
+
+         if (!gpus)
+         gpus = std::make_unique<GPUS>(HUDElements.params);
+         
          // Disable some options if steamdeck
-         if ( deviceID == 0x1435 || deviceID == 0x163f ) {
-            add_to_options(params, "gpu_fan", "0");
-            add_to_options(params, "gpu_junction_temp", "0");
-            add_to_options(params, "gpu_voltage", "0");
-            add_to_options(params, "gpu_mem_temp", "0");
+         for (auto gpu : gpus->available_gpus) {
+            if (gpu->device_id == 0x1435 || gpu->device_id == 0x163f){
+               add_to_options(params, "gpu_fan", "0");
+               add_to_options(params, "gpu_junction_temp", "0");
+               add_to_options(params, "gpu_voltage", "0");
+               add_to_options(params, "gpu_mem_temp", "0");
+            }
          }
+
 
          break;
 

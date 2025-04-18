@@ -29,6 +29,7 @@ class GPU {
         bool is_active = false;
         std::string pci_dev;
         uint32_t vendor_id = 0;
+        uint32_t device_id = 0;
 
         GPU(std::string drm_node, uint32_t vendor_id, uint32_t device_id, const char* pci_dev)
             : drm_node(drm_node), pci_dev(pci_dev), vendor_id(vendor_id), device_id(device_id) {
@@ -114,7 +115,6 @@ class GPU {
         std::string vram_text();
 
     private:
-        uint32_t device_id;
         std::thread thread;
 
         int index_in_selected_gpus();
