@@ -120,8 +120,8 @@ void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics) {
             unsigned int power, limit;
             nvml.nvmlDeviceGetPowerUsage(device, &power);
             nvml.nvmlDeviceGetPowerManagementLimit(device, &limit);
-            metrics->powerUsage = power / 1000;
-            metrics->powerLimit = limit / 1000;
+            metrics->powerUsage = power / 1000.0f;
+            metrics->powerLimit = limit / 1000.0f;
         }
 
         if (params->enabled[OVERLAY_PARAM_ENABLED_throttling_status]) {
