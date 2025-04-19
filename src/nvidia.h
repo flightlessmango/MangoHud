@@ -11,8 +11,10 @@
 class NVIDIA {
     public:
         std::shared_ptr<Throttling> throttling;
-        bool nvml_available;
-        
+
+        bool nvml_available = false;
+        bool nvctrl_available = false;
+
         gpu_metrics copy_metrics() {
             std::lock_guard<std::mutex> lock(metrics_mutex);
             return metrics;
@@ -43,7 +45,7 @@ class NVIDIA {
 
             return vec;
         };
-#endif        
+#endif
 
         void pause() {
             paused = true;
@@ -66,9 +68,6 @@ class NVIDIA {
         nvmlDevice_t device;
         void get_instant_metrics_nvml(struct gpu_metrics *metrics);
 #endif
-        bool nvctrl_available;
-        bool failed;
-        
         std::mutex metrics_mutex;
         gpu_metrics metrics;
         std::thread thread;
