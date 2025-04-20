@@ -170,14 +170,31 @@ public:
         if (called_from_amdgpu_cpp)
             return;
 
-        hwmon_sensors["voltage"]   = { .rx = std::regex("in(\\d+)_input") };
-        hwmon_sensors["fan_speed"] = { .rx = std::regex("fan(\\d+)_input") };
-        hwmon_sensors["temp"]      = { .rx = std::regex("temp(\\d+)_input") };
-        hwmon_sensors["power"]     = { .rx = std::regex("power(\\d+)_input") };
-        hwmon_sensors["energy"]    = { .rx = std::regex("energy(\\d+)_input") };
+        // i915: Documentation/ABI/testing/sysfs-driver-intel-i915-hwmon
+        // xe  : Documentation/ABI/testing/sysfs-driver-intel-xe-hwmon
 
-        if (module == "i915" || module == "xe")
-            hwmon_sensors["power_limit"] = { .rx = std::regex("power(\\d+)_max") };
+        if (module == "i915") {
+            hwmon_sensors["voltage"]     = { .rx = std::regex("in(0)_input") };
+            hwmon_sensors["fan_speed"]   = { .rx = std::regex("fan(1)_input") };
+            hwmon_sensors["temp"]        = { .rx = std::regex("temp(1)_input") };
+            hwmon_sensors["energy"]      = { .rx = std::regex("energy(1)_input") };
+            hwmon_sensors["power_limit"] = { .rx = std::regex("power(1)_max") };
+        } else if (module == "xe") {
+            hwmon_sensors["voltage"]     = { .rx = std::regex("in(1)_input") };
+            // technically, there are 3 fan sensors, but just pick first one
+            hwmon_sensors["fan_speed"]   = { .rx = std::regex("fan(1)_input") };
+            hwmon_sensors["temp"]        = { .rx = std::regex("temp(2)_input") };
+            hwmon_sensors["vram_temp"]   = { .rx = std::regex("temp(3)_input") };
+            hwmon_sensors["energy"]    = { .rx = std::regex("energy(2)_input") };
+            hwmon_sensors["power_limit"] = { .rx = std::regex("power(2)_max") };
+        } else {
+            // For everyone else just guess
+            hwmon_sensors["voltage"]   = { .rx = std::regex("in(\\d+)_input") };
+            hwmon_sensors["fan_speed"] = { .rx = std::regex("fan(\\d+)_input") };
+            hwmon_sensors["temp"]      = { .rx = std::regex("temp(\\d+)_input") };
+            hwmon_sensors["power"]     = { .rx = std::regex("power(\\d+)_input") };
+            hwmon_sensors["energy"]    = { .rx = std::regex("energy(\\d+)_input") };
+        }
 
         find_hwmon_sensors();
 
