@@ -143,7 +143,7 @@ float GPU_fdinfo::get_memory_used()
     }
 
     // TODO: sometimes it's not KB, so add a check for that.
-    return (float)total / 1024 / 1024;
+    return static_cast<float>(total) / 1024 / 1024;
 }
 
 void GPU_fdinfo::find_hwmon_sensors()
@@ -281,7 +281,7 @@ void GPU_fdinfo::get_current_hwmon_readings()
 float GPU_fdinfo::get_power_usage()
 {
     if (!hwmon_sensors["power"].filename.empty())
-        return (float)hwmon_sensors["power"].val / 1'000'000;
+        return static_cast<float>(hwmon_sensors["power"].val) / 1'000'000;
 
     float now = hwmon_sensors["energy"].val;
 
@@ -291,7 +291,7 @@ float GPU_fdinfo::get_power_usage()
         this->last_power = now;
 
     float delta = now - this->last_power;
-    delta /= (float)METRICS_UPDATE_PERIOD_MS / 1000;
+    delta /= METRICS_UPDATE_PERIOD_MS / 1000.f;
 
     this->last_power = now;
 
@@ -332,7 +332,7 @@ int GPU_fdinfo::get_xe_load()
         if (delta_cycles <= 0 || delta_total_cycles <= 0)
             continue;
 
-        auto fd_load = (double)delta_cycles / delta_total_cycles * 100;
+        auto fd_load = static_cast<double>(delta_cycles) / delta_total_cycles * 100;
         load += fd_load;
     }
 
@@ -630,18 +630,24 @@ void GPU_fdinfo::main_thread()
 
         metrics.load = get_gpu_load();
         metrics.proc_vram_used = get_memory_used();
+
         metrics.powerUsage = get_power_usage();
-        metrics.powerLimit = hwmon_sensors["power_limit"].val / 1'000'000;
+        metrics.powerLimit = static_cast<float>(hwmon_sensors["power_limit"].val) / 1'000'000;
+
         metrics.CoreClock = get_gpu_clock();
-        auto throttling = get_throttling_status();
+        metrics.voltage = hwmon_sensors["voltage"].val;
+
+        metrics.temp = hwmon_sensors["temp"].val / 1000.f;
+        metrics.memory_temp = hwmon_sensors["vram_temp"].val / 1000.f;
+
+        metrics.fan_speed = hwmon_sensors["fan_speed"].val;
+        metrics.fan_rpm = true; // Fan data is pulled from hwmon
+
+        int throttling = get_throttling_status();
         metrics.is_power_throttled = throttling & GPU_throttle_status::POWER;
         metrics.is_current_throttled = throttling & GPU_throttle_status::CURRENT;
         metrics.is_temp_throttled = throttling & GPU_throttle_status::TEMP;
         metrics.is_other_throttled = throttling & GPU_throttle_status::OTHER;
-        metrics.temp = hwmon_sensors["temp"].val / 1000;
-        metrics.fan_speed = hwmon_sensors["fan_speed"].val;
-        metrics.voltage = hwmon_sensors["voltage"].val;
-        metrics.fan_rpm = true; // Fan data is pulled from hwmon
 
         SPDLOG_DEBUG(
             "pci_dev = {}, pid = {}, module = {}, "
