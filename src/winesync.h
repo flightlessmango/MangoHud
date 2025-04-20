@@ -1,6 +1,7 @@
 #include "file_utils.h"
 #include <filesystem.h>
 #include <string>
+#include <spdlog/spdlog.h>
 
 namespace fs = ghc::filesystem;
 
@@ -66,6 +67,8 @@ class WineSync {
                 if (method)
                     break;
             }
+
+            SPDLOG_DEBUG("Wine sync method: {}", methods[method]);
 #endif
         };
 
