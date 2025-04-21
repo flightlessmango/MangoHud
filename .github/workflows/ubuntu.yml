@@ -7,7 +7,7 @@ jobs:
     strategy:
       matrix:
         compiler: [clang, gcc]
-        os: [ubuntu-22.04]
+        os: [ubuntu-22.04 ubuntu-22.04-arm]
     runs-on: ${{ matrix.os }}
     steps:
     - name: 'Checkout'

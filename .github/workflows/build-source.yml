@@ -5,7 +5,10 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-22.04 ubuntu-22.04-arm]
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v3
@@ -29,6 +32,6 @@ jobs:
         uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
-          name: MangoHud-${{steps.git-vars.outputs.artifact-metadata}}
+          name: MangoHud-${{matrix.os}}-${{steps.git-vars.outputs.artifact-metadata}}
           path: ${{runner.workspace}}/MangoHud/build/MangoHud-*tar.gz
           retention-days: 30
