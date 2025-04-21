@@ -435,4 +435,5 @@ AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id) {
 #endif
 
 	thread = std::thread(&AMDGPU::metrics_polling_thread, this);
+	pthread_setname_np(thread.native_handle(), "amdgpu");
 }

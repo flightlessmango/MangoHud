@@ -204,6 +204,7 @@ public:
             find_xe_gt_dir();
 
         thread = std::thread(&GPU_fdinfo::main_thread, this);
+        pthread_setname_np(thread.native_handle(), "gpu_fdinfo");
     }
 
     ~GPU_fdinfo() {

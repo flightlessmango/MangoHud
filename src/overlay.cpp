@@ -189,6 +189,7 @@ struct hw_info_updater
    hw_info_updater()
    {
       thread = std::thread(&hw_info_updater::run, this);
+      pthread_setname_np(thread.native_handle(), "hw_info_updater");
    }
 
    ~hw_info_updater()
