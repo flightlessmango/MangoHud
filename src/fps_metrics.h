@@ -107,8 +107,10 @@ class fpsMetrics {
         fpsMetrics(std::vector<std::string> values){
             metrics = add_metrics_to_vector(values);
 
-            if (!thread_init)
+            if (!thread_init) {
                 thread = std::thread(&fpsMetrics::_thread, this);
+                pthread_setname_np(thread.native_handle(), "fps_metrics");
+            }
         };
 
         fpsMetrics(std::vector<std::string> values, std::vector<float> only_frametime) {

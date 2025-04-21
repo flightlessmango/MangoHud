@@ -268,6 +268,7 @@ void Logger::start_logging() {
 
   if(log_interval != 0){
     std::thread log_thread(&Logger::logging, this);
+    pthread_setname_np(log_thread.native_handle(), "logging");
     log_thread.detach();
   }
 }
