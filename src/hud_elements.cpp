@@ -592,17 +592,49 @@ void HudElements::proc_vram() {
     if (!gpus)
         gpus = std::make_unique<GPUS>(HUDElements.params);
 
+    auto gpu = gpus->active_gpu();
+
+    if (!gpu)
+        return;
+
     ImguiNextColumnFirstItem();
     HUDElements.TextColored(HUDElements.colors.vram, "PVRAM");
     ImguiNextColumnOrNewRow();
 
-    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", gpus->active_gpu()->metrics.proc_vram_used);
+    right_aligned_text(
+        HUDElements.colors.text, HUDElements.ralign_width, "%.1f", gpu->metrics.proc_vram_used
+    );
 
     if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]) {
         ImGui::SameLine(0, 1.0f);
         ImGui::PushFont(HUDElements.sw_stats->font1);
         HUDElements.TextColored(HUDElements.colors.text, "GiB");
         ImGui::PopFont();
+    }
+
+    // show only if vram is not enabled
+    if (
+        !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_vram] && 
+        HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_mem_temp]
+    ) {
+        ImguiNextColumnOrNewRow();
+
+        int temp;
+        std::string unit;
+
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit]) {
+            temp = HUDElements.convert_to_fahrenheit(gpu->metrics.memory_temp);
+            unit = "°F";
+        } else {
+            temp = gpu->metrics.memory_temp;
+            unit = "°C";
+        }
+
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", temp);
+
+        ImGui::SameLine(0, 1.0f);
+
+        HUDElements.TextColored(HUDElements.colors.text, unit.c_str());
     }
 
     if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
