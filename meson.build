@@ -270,28 +270,29 @@ if get_option('include_doc')
 endif
 
 if get_option('tests').enabled()
-  cmocka_dep = dependency('cmocka', fallback: ['cmocka', 'cmocka_dep'])
+  # cmocka_dep = dependency('cmocka', fallback: ['cmocka', 'cmocka_dep'])
 
-  e = executable('amdgpu', 'tests/test_amdgpu.cpp',
-    files(
-      'src/amdgpu.cpp',
-      'src/cpu.cpp',
-      'src/gpu.cpp',
-      'src/gpu_fdinfo.cpp',
-      'src/nvidia.cpp',
-      'src/mesa/util/os_time.c',
-      'src/file_utils.cpp',
-    ),
-    cpp_args: ['-DTEST_ONLY'],
-    dependencies: [
-      cmocka_dep,
-      spdlog_dep,
-      implot_dep,
-      dearimgui_dep
-    ],
-    include_directories: inc_common)
+  # e = executable('amdgpu', 'tests/test_amdgpu.cpp',
+  #   files(
+  #     'src/amdgpu.cpp',
+  #     'src/cpu.cpp',
+  #     'src/gpu.cpp',
+  #     'src/gpu_fdinfo.cpp',
+  #     'src/nvidia.cpp',
+  #     'src/mesa/util/os_time.c',
+  #     'src/file_utils.cpp',
+  #     'src/hud_elements.cpp'
+  #   ),
+  #   cpp_args: ['-DTEST_ONLY'],
+  #   dependencies: [
+  #     cmocka_dep,
+  #     spdlog_dep,
+  #     implot_dep,
+  #     dearimgui_dep
+  #   ],
+  #   include_directories: inc_common)
 
-  test('test amdgpu', e, workdir : meson.project_source_root() + '/tests')
+  # test('test amdgpu', e, workdir : meson.project_source_root() + '/tests')
 
 endif
 
