@@ -459,7 +459,7 @@ void dbus_manager::start_thread() {
     stop_thread();
     m_quit = false;
     m_thread = std::thread(&dbus_manager::dbus_thread, this);
-    pthread_setname_np(m_thread.native_handle(), "dbus");
+    pthread_setname_np(m_thread.native_handle(), "mangohud-dbus");
 }
 
 void dbus_manager::dbus_thread() {

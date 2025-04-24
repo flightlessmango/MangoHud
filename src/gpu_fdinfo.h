@@ -204,7 +204,8 @@ public:
             find_xe_gt_dir();
 
         thread = std::thread(&GPU_fdinfo::main_thread, this);
-        pthread_setname_np(thread.native_handle(), "gpu_fdinfo");
+        // "mangohud-gpufdinfo" wouldn't fit in the 15 byte limit
+        pthread_setname_np(thread.native_handle(), "mangohud-gpufd");
     }
 
     ~GPU_fdinfo() {

@@ -268,7 +268,8 @@ void Logger::start_logging() {
 
   if(log_interval != 0){
     std::thread log_thread(&Logger::logging, this);
-    pthread_setname_np(log_thread.native_handle(), "logging");
+    // "mangohud-logging" wouldn't fit in the 15 byte limit
+    pthread_setname_np(log_thread.native_handle(), "mangohud-log");
     log_thread.detach();
   }
 }

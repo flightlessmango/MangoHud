@@ -109,7 +109,8 @@ class fpsMetrics {
 
             if (!thread_init) {
                 thread = std::thread(&fpsMetrics::_thread, this);
-                pthread_setname_np(thread.native_handle(), "fps_metrics");
+                // "mangohud-fpsmetrics" wouldn't fit in the 15 byte limit
+                pthread_setname_np(thread.native_handle(), "mangohud-fpsmet");
             }
         };
 
