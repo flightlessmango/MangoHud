@@ -312,6 +312,7 @@ if is_unixy
     dependencies : [
       dep_dl
     ],
+    gnu_symbol_visibility : 'hidden',
     include_directories : [inc_common],
     install_dir : libdir_mangohud,
     install: true
