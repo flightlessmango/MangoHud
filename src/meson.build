@@ -248,6 +248,7 @@ mangohud_opengl_shared_lib = shared_library(
     dep_vulkan,
     windows_deps,
     implot_dep],
+  gnu_symbol_visibility : 'hidden',
   include_directories : [inc_common],
   link_args : link_args,
   link_with: mangohud_static_lib,
