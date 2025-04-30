@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "gl.h"
+#include "mesa/util/macros.h"
 #include "real_dlsym.h"
 #include <string.h>
 #include <stdbool.h>
@@ -180,10 +181,6 @@ static struct func_ptr hooks[] = {
     ADD_HOOK(eglGetProcAddress)
 };
 #undef ADD_HOOK
-
-#ifndef ARRAY_SIZE
-#define ARRAY_SIZE(arr) sizeof(arr)/sizeof(arr[0])
-#endif
 
 void* dlsym(void *handle, const char *name)
 {
