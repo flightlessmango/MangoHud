@@ -182,7 +182,7 @@ static struct func_ptr hooks[] = {
 };
 #undef ADD_HOOK
 
-void* dlsym(void *handle, const char *name)
+PUBLIC void* dlsym(void *handle, const char *name)
 {
     const char* dlsym_enabled = getenv("MANGOHUD_DLSYM");
     void* is_angle = real_dlsym(handle, "eglStreamPostD3DTextureANGLE");
