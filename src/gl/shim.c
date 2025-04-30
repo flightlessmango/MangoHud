@@ -132,13 +132,13 @@ static void loadMangoHud() {
 }
 
 #define CREATE_FWD_VOID(name, params, ...) \
-    void name params { \
+    PUBLIC void name params { \
         loadMangoHud(); \
         void (*p##name) params = real_dlsym(handle, #name); \
         if (p##name) p##name(__VA_ARGS__); \
     }
 #define CREATE_FWD(ret_type, name, params, ...) \
-    ret_type name params { \
+    PUBLIC ret_type name params { \
         loadMangoHud(); \
         ret_type (*p##name) params = real_dlsym(handle, #name); \
         if (p##name) return p##name(__VA_ARGS__); \
