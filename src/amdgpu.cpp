@@ -423,7 +423,17 @@ AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id) {
 			sysfs_nodes.core_clock = fopen((hwmon_path + dir + "/freq1_input").c_str(), "r");
 			sysfs_nodes.gpu_voltage_soc = fopen((hwmon_path + dir + "/in0_input").c_str(), "r");
 			sysfs_nodes.memory_clock = fopen((hwmon_path + dir + "/freq2_input").c_str(), "r");
-			sysfs_nodes.power_usage = fopen((hwmon_path + dir + "/power1_average").c_str(), "r");
+
+			for (std::string p : { "power1_average", "power1_input" }) {
+				std::string sensor = hwmon_path + dir + "/" + p;
+
+				if (!fs::exists(sensor))
+					continue;
+
+				sysfs_nodes.power_usage = fopen(sensor.c_str(), "r");
+				break;
+			}
+
 			sysfs_nodes.power_limit = fopen((hwmon_path + dir + "/power1_cap").c_str(), "r");
 			sysfs_nodes.fan = fopen((hwmon_path + dir + "/fan1_input").c_str(), "r");
 		}
