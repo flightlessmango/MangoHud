@@ -19,6 +19,7 @@
 class GPU {
     private:
         std::string is_i915_or_xe();
+        std::string msm_driver;
 
     public:
         gpu_metrics metrics;
@@ -31,8 +32,12 @@ class GPU {
         uint32_t vendor_id = 0;
         uint32_t device_id = 0;
 
-        GPU(std::string drm_node, uint32_t vendor_id, uint32_t device_id, const char* pci_dev)
-            : drm_node(drm_node), pci_dev(pci_dev), vendor_id(vendor_id), device_id(device_id) {
+        GPU(
+            std::string drm_node, uint32_t vendor_id, uint32_t device_id, const char* pci_dev,
+            std::string msm_driver = ""
+        )
+            : drm_node(drm_node), pci_dev(pci_dev), vendor_id(vendor_id), device_id(device_id),
+              msm_driver(msm_driver) {
                 if (vendor_id == 0x10de)
                     nvidia = std::make_unique<NVIDIA>(pci_dev);
 
@@ -45,7 +50,7 @@ class GPU {
                     fdinfo = std::make_unique<GPU_fdinfo>(is_i915_or_xe(), pci_dev, drm_node);
 
                 if (vendor_id == 0x5143)
-                    fdinfo = std::make_unique<GPU_fdinfo>("msm", pci_dev, drm_node);
+                    fdinfo = std::make_unique<GPU_fdinfo>(msm_driver, pci_dev, drm_node);
 
                 if (vendor_id == 0x1337)
                     fdinfo = std::make_unique<GPU_fdinfo>("panfrost", pci_dev, drm_node);

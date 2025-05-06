@@ -346,6 +346,8 @@ int GPU_fdinfo::get_gpu_load()
 {
     if (module == "xe")
         return get_xe_load();
+    else if (module == "kgsl")
+        return get_kgsl_load();
 
     uint64_t now = os_time_get_nano();
     uint64_t gpu_time_now = get_gpu_time();
@@ -602,6 +604,67 @@ float GPU_fdinfo::amdgpu_helper_get_proc_vram() {
     return get_memory_used();
 }
 
+void GPU_fdinfo::init_kgsl() {
+    const std::string sys_path = "/sys/class/kgsl/kgsl-3d0";
+
+    if (!fs::exists(sys_path)) {
+        SPDLOG_WARN("kgsl: {} is not found. kgsl stats will not work!", sys_path);
+        return;
+    }
+
+    for (std::string metric : {"gpu_busy_percentage", "temp", "clock_mhz" }) {
+        std::string p = sys_path + "/" + metric;
+
+        if (!fs::exists(p)) {
+            SPDLOG_WARN("kgsl: {} is not found", p);
+            continue;
+        }
+
+        SPDLOG_DEBUG("kgsl: {} found", p);
+
+        if (metric == "clock_mhz")
+            gpu_clock_stream.open(p);
+        else
+            kgsl_streams[metric].open(p);
+    }
+}
+
+int GPU_fdinfo::get_kgsl_load() {
+    std::ifstream* s = &kgsl_streams["gpu_busy_percentage"];
+
+    if (!s->is_open())
+        return 0;
+
+    std::string usage_str;
+
+    s->seekg(0);
+
+    std::getline(*s, usage_str);
+
+    if (usage_str.empty())
+        return 0;
+
+    return std::stoi(usage_str);
+}
+
+int GPU_fdinfo::get_kgsl_temp() {
+    std::ifstream* s = &kgsl_streams["temp"];
+
+    if (!s->is_open())
+        return 0;
+
+    std::string temp_str;
+
+    s->seekg(0);
+
+    std::getline(*s, temp_str);
+
+    if (temp_str.empty())
+        return 0;
+
+    return std::round(std::stoi(temp_str) / 1'000.f);
+}
+
 void GPU_fdinfo::main_thread()
 {
     while (!stop_thread) {
@@ -637,7 +700,11 @@ void GPU_fdinfo::main_thread()
         metrics.CoreClock = get_gpu_clock();
         metrics.voltage = hwmon_sensors["voltage"].val;
 
-        metrics.temp = hwmon_sensors["temp"].val / 1000.f;
+        if (module == "kgsl")
+            metrics.temp = get_kgsl_temp();
+        else
+            metrics.temp = hwmon_sensors["temp"].val / 1000.f;
+
         metrics.memory_temp = hwmon_sensors["vram_temp"].val / 1000.f;
 
         metrics.fan_speed = hwmon_sensors["fan_speed"].val;
