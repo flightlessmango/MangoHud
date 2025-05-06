@@ -71,18 +71,25 @@ GPUS::GPUS(overlay_params* params) : params(params) {
             }
         }
 
+        std::string msm_driver;
         if (!vendor_id) {
             auto line = read_line("/sys/class/drm/" + node_name + "/device/uevent" );
             if (line.find("DRIVER=msm_dpu") != std::string::npos) {
                 SPDLOG_DEBUG("MSM device found!");
                 vendor_id = 0x5143;
+                msm_driver = "msm";
+            } else if (line.find("DRIVER=msm_drm") != std::string::npos) {
+                SPDLOG_DEBUG("MSM kgsl device found!");
+                vendor_id = 0x5143;
+                msm_driver = "kgsl";
             } else if (line.find("DRIVER=panfrost") != std::string::npos) {
                 SPDLOG_DEBUG("Panfrost device found!");
                 vendor_id = 0x1337; // what's panfrost vid?
             }
         }
 
-        std::shared_ptr<GPU> ptr = std::make_shared<GPU>(node_name, vendor_id, device_id, pci_dev);
+        std::shared_ptr<GPU> ptr =
+            std::make_shared<GPU>(node_name, vendor_id, device_id, pci_dev, msm_driver);
 
         if (params->gpu_list.size() == 1 && params->gpu_list[0] == idx++)
             ptr->is_active = true;

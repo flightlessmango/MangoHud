@@ -115,6 +115,11 @@ private:
         std::vector<std::string> throttle_reasons,
         std::vector<std::ifstream> &throttle_reason_streams);
 
+    std::map<std::string, std::ifstream> kgsl_streams;
+    void init_kgsl();
+    int get_kgsl_load();
+    int get_kgsl_temp();
+
 public:
     GPU_fdinfo(
         const std::string module, const std::string pci_dev, const std::string drm_node,
@@ -144,6 +149,8 @@ public:
         } else if (module == "panfrost") {
             drm_engine_type = "drm-engine-fragment";
             drm_memory_type = "drm-resident-memory";
+        } else if (module == "kgsl") {
+            init_kgsl();
         }
 
         if (fdinfo_data.size() > 0 &&
