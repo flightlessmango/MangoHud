@@ -52,6 +52,7 @@ jobs:
           -D mangoapp=true
           -D mangohudctl=true
           -D tests=enabled
+          --werror
     - name: 'Build'
       run: meson compile -C ./builddir || ninja -C ./builddir
     - name: 'Install'
