@@ -607,8 +607,13 @@ float GPU_fdinfo::amdgpu_helper_get_proc_vram() {
 void GPU_fdinfo::init_kgsl() {
     const std::string sys_path = "/sys/class/kgsl/kgsl-3d0";
 
-    if (!fs::exists(sys_path)) {
-        SPDLOG_WARN("kgsl: {} is not found. kgsl stats will not work!", sys_path);
+    try {
+        if (!fs::exists(sys_path)) {
+            SPDLOG_WARN("kgsl: {} is not found. kgsl stats will not work!", sys_path);
+            return;
+        }
+    } catch (fs::filesystem_error& ex) {
+        SPDLOG_WARN("kgsl: {}", ex.what());
         return;
     }
 

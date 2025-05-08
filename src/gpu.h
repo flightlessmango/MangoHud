@@ -19,7 +19,6 @@
 class GPU {
     private:
         std::string is_i915_or_xe();
-        std::string msm_driver;
 
     public:
         gpu_metrics metrics;
@@ -123,6 +122,8 @@ class GPU {
         std::thread thread;
 
         int index_in_selected_gpus();
+
+        std::string msm_driver;
 };
 
 class GPUS {
