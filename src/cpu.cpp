@@ -516,6 +516,27 @@ static bool find_fallback_input(const std::string& path, const char* input_prefi
     return false;
 }
 
+static void check_thermal_zones(std::string& path, std::string& input) {
+    std::string sysfs_thermal = "/sys/class/thermal/";
+
+    if (!fs::exists(sysfs_thermal))
+        return;
+
+    for (auto& d : fs::directory_iterator(sysfs_thermal)) {
+        if (d.path().filename().string().substr(0, 12) != "thermal_zone")
+            continue;
+
+        std::string type = read_line(d / "type");
+        if (type.substr(0, 6) != "cpuss-")
+            continue;
+
+        path = d.path();
+        input = d / "temp";
+
+        return;
+    }
+}
+
 bool CPUStats::GetCpuFile() {
     if (m_cpuTempFile)
         return true;
@@ -567,6 +588,15 @@ bool CPUStats::GetCpuFile() {
             path.clear();
         }
     }
+
+    if (path.empty()) {
+        try {
+            check_thermal_zones(path, input);
+        } catch (fs::filesystem_error& ex) {
+            SPDLOG_DEBUG("check_thermal_zones: {}", ex.what());
+        }
+    }
+
     if (path.empty() || (!file_exists(input) && !find_fallback_input(path, "temp", input))) {
         SPDLOG_ERROR("Could not find cpu temp sensor location");
         return false;
