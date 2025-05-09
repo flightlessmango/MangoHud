@@ -537,6 +537,7 @@ parse_ftrace(const char *str) {
 #define parse_fps_text(s) parse_str(s)
 #define parse_log_interval(s) parse_unsigned(s)
 #define parse_font_size(s) parse_float(s)
+#define parse_font_size_secondary(s) parse_float(s)
 #define parse_font_size_text(s) parse_float(s)
 #define parse_font_scale(s) parse_float(s)
 #define parse_background_alpha(s) parse_float(s)
@@ -1036,12 +1037,18 @@ parse_overlay_config(struct overlay_params *params,
          params->width += 7 * params->font_size * params->font_scale;
    }
 
+   // If secondary font size not set, compute it from main font_size
+   if (!params->font_size_secondary)
+      params->font_size_secondary = params->font_size * 0.55f;
+
    params->font_params_hash = get_hash(params->font_size,
                                  params->font_size_text,
                                  params->no_small_font,
                                  params->font_file,
                                  params->font_file_text,
-                                 params->font_glyph_ranges
+                                 params->font_glyph_ranges,
+                                 params->font_scale,
+                                 params->font_size_secondary
                                 );
 
    // check if user specified an env for fps limiter instead

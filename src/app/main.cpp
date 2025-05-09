@@ -307,7 +307,7 @@ int main(int, char**)
     // Setup Platform/Renderer backends
     int control_client = -1;
     parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"), false);
-    create_fonts(nullptr, params, sw_stats.font1, sw_stats.font_text);
+    create_fonts(nullptr, params, sw_stats.font_small, sw_stats.font_text, sw_stats.font_secondary);
     HUDElements.convert_colors(params);
     init_cpu_stats(params);
     notifier.params = &params;
