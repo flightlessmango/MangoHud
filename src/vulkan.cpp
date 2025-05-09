@@ -719,7 +719,7 @@ static void check_fonts(struct swapchain_data* data)
    {
       SPDLOG_DEBUG("Recreating font image");
       VkDescriptorSet desc_set = (VkDescriptorSet)data->font_atlas->TexID;
-      create_fonts(data->font_atlas, instance_data->params, data->sw_stats.font1, data->sw_stats.font_text);
+      create_fonts(data->font_atlas, instance_data->params, data->sw_stats.font_small, data->sw_stats.font_text, data->sw_stats.font_secondary);
       unsigned char* pixels;
       int width, height;
       data->font_atlas->GetTexDataAsAlpha8(&pixels, &width, &height);
