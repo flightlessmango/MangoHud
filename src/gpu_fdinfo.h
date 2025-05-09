@@ -40,7 +40,6 @@ enum GPU_throttle_status : int {
 
 class GPU_fdinfo {
 private:
-    bool init = false;
     pid_t pid = getpid();
 
     const std::string module;
