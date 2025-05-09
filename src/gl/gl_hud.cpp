@@ -181,7 +181,7 @@ void imgui_create(void *ctx, const gl_wsi plat)
 
     ImGui_ImplOpenGL3_Init();
 
-    create_fonts(nullptr, params, sw_stats.font1, sw_stats.font_text);
+    create_fonts(nullptr, params, sw_stats.font_small, sw_stats.font_text, sw_stats.font_secondary);
     sw_stats.font_params_hash = params.font_params_hash;
 
     // Restore global context or ours might clash with apps that use Dear ImGui
@@ -229,7 +229,7 @@ void imgui_render(unsigned int width, unsigned int height)
     if (sw_stats.font_params_hash != params.font_params_hash)
     {
         sw_stats.font_params_hash = params.font_params_hash;
-        create_fonts(nullptr, params, sw_stats.font1, sw_stats.font_text);
+        create_fonts(nullptr, params, sw_stats.font_small, sw_stats.font_text, sw_stats.font_secondary);
         ImGui_ImplOpenGL3_CreateFontsTexture();
     }
 

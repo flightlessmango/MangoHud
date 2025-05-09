@@ -28,8 +28,9 @@ struct swapchain_stats {
    struct frame_stat stats_min, stats_max;
    struct frame_stat frames_stats[200];
 
-   ImFont* font1 = nullptr;
+   ImFont* font_small = nullptr;
    ImFont* font_text = nullptr;
+   ImFont* font_secondary = nullptr;
    size_t font_params_hash = 0;
    std::string time;
    double fps;
@@ -106,7 +107,7 @@ void check_keybinds(overlay_params& params);
 void init_system_info(void);
 void check_for_vkbasalt_and_gamemode();
 void FpsLimiter(struct fps_limit& stats);
-void create_fonts(ImFontAtlas* font_atlas, const overlay_params& params, ImFont*& small_font, ImFont*& text_font);
+void create_fonts(ImFontAtlas* font_atlas, const overlay_params& params, ImFont*& small_font, ImFont*& text_font, ImFont*& secondary_font);
 void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...);
 void center_text(const std::string& text);
 ImVec4 change_on_load_temp(LOAD_DATA& data, unsigned current);
