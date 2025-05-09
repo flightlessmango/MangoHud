@@ -135,6 +135,7 @@ struct Tracepoint;
    OVERLAY_PARAM_CUSTOM(no_small_font)               \
    OVERLAY_PARAM_CUSTOM(font_size)                   \
    OVERLAY_PARAM_CUSTOM(font_size_text)              \
+   OVERLAY_PARAM_CUSTOM(font_size_secondary)         \
    OVERLAY_PARAM_CUSTOM(font_scale)                  \
    OVERLAY_PARAM_CUSTOM(font_scale_media_player)     \
    OVERLAY_PARAM_CUSTOM(position)                    \
@@ -310,7 +311,7 @@ struct overlay_params {
    unsigned table_columns;
    bool no_small_font;
    float font_size, font_scale;
-   float font_size_text;
+   float font_size_text, font_size_secondary;
    float font_scale_media_player;
    float background_alpha, alpha;
    float cellpadding_y;
