@@ -11,8 +11,8 @@
 #include "real_dlsym.h"
 #include "elfhacks.h"
 
-void *(*__dlopen)(const char *, int) = NULL;
-void *(*__dlsym)(void *, const char *) = NULL;
+static void *(*__dlopen)(const char *, int) = NULL;
+static void *(*__dlsym)(void *, const char *) = NULL;
 static bool print_dlopen;
 static bool print_dlsym;
 
