@@ -378,8 +378,9 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `font_glyph_ranges`                | Specify extra font glyph ranges, comma separated: `korean`, `chinese`, `chinese_simplified`, `japanese`, `cyrillic`, `thai`, `vietnamese`, `latin_ext_a`, `latin_ext_b`. If you experience crashes or text is just squares, reduce font size or glyph ranges |
 | `font_scale=`                      | Set global font scale. Default is `1.0`                                               |
 | `font_scale_media_player`          | Change size of media player text relative to `font_size`                              |
-| `font_size=`                       | Customizable font size. Default is `24`                                              |
-| `font_size_text=`                  | Customizable font size for other text like media metadata. Default is `24`           |
+| `font_size=`                       | Customizable font size. Default is `24`                                               |
+| `font_size_secondary=`             | Customizable font size for secondary metrics. Default is `0.55 * font_size`.          |
+| `font_size_text=`                  | Customizable font size for other text like media metadata. Default is `24`            |
 | `fps_color_change`                 | Change the FPS text color depepending on the FPS value                                |
 | `fps_color=`                       | Choose the colors that the fps changes to when `fps_color_change` is enabled. Corresponds with fps_value. Default is `b22222,fdfd09,39f900`   |
 | `fps_limit_method`                 | If FPS limiter should wait before or after presenting a frame. Choose `late` (default) for the lowest latency or `early` for the smoothest frametimes |
