@@ -771,7 +771,7 @@ void init_system_info(){
       trim(cpu);
       kernel = exec("uname -r");
       trim(kernel);
-      os = exec("sed -n 's/PRETTY_NAME=\\(.*\\)/\\1/p' /etc/*-release");
+      os = exec("sed -n 's/PRETTY_NAME=\\(.*\\)/\\1/p' /etc/os-release");
       os.erase(remove(os.begin(), os.end(), '\"' ), os.end());
       trim(os);
       cpusched = read_line("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
