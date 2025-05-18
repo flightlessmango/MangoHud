@@ -78,8 +78,15 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		metrics->current_uclk_mhz = amdgpu_metrics->current_uclk;
 
 		metrics->gpu_temp_c = amdgpu_metrics->temperature_edge;
-		indep_throttle_status = amdgpu_metrics->indep_throttle_status;
 		metrics->fan_speed = amdgpu_metrics->current_fan_speed;
+
+		indep_throttle_status = amdgpu_metrics->indep_throttle_status;
+		bool temp_hotspot_flag = ((indep_throttle_status >> TEMP_HOTSPOT_BIT) & 1) == 1;
+		// ThrottlingPercentage for TEMP_HOTSPOT on RDNA 3 dGPU is almost always greater then or equal to 1.
+		// So the AMDGPU driver set the TEMP_HOTSPOT bit even in idle state.
+		if (temp_hotspot_flag && amdgpu_metrics->temperature_hotspot < 90) {
+			indep_throttle_status &= ~(1ull << TEMP_HOTSPOT_BIT);
+		}
 	} else if (header->format_revision == 2) {
 		// APUs
 		struct gpu_metrics_v2_3 *amdgpu_metrics = (struct gpu_metrics_v2_3 *) buf;
