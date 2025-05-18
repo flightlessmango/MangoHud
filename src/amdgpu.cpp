@@ -155,7 +155,8 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 			metrics->current_uclk_mhz = 0;
 		}
 
-		indep_throttle_status = amdgpu_metrics->indep_throttle_status;
+		if(header->content_revision >= 2)
+			indep_throttle_status = amdgpu_metrics->indep_throttle_status;
 	}
 
 	/* Throttling: See
