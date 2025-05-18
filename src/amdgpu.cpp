@@ -66,7 +66,7 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	}
 	fclose(f);
 
-	int64_t indep_throttle_status = 0;
+	uint64_t indep_throttle_status = 0;
 	if (header->format_revision == 1) {
 		// Desktop GPUs
 		struct gpu_metrics_v1_3 *amdgpu_metrics = (struct gpu_metrics_v1_3 *) buf;
