@@ -19,7 +19,7 @@ using namespace std::chrono_literals;
 #include <string>
 namespace fs = ghc::filesystem;
 
-GPUS::GPUS(overlay_params* params) : params(params) {
+GPUS::GPUS(const overlay_params* params) : params(params) {
     std::vector<std::string> gpu_entries;
 
     for (const auto& entry : fs::directory_iterator("/sys/class/drm")) {

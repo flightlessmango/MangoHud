@@ -130,9 +130,9 @@ class GPUS {
     public:
         std::vector<std::shared_ptr<GPU>> available_gpus;
         std::mutex mutex;
-        overlay_params* params;
+        const overlay_params* params;
 
-        GPUS(overlay_params* params);
+        GPUS(const overlay_params* params);
 
         void pause() {
             for (auto& gpu : available_gpus)
