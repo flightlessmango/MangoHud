@@ -62,7 +62,6 @@ static  std::vector<std::string> blacklist {
     "UplayWebCore.exe",
     "vrcompositor",
     "vulkandriverquery",
-    "wine-preloader",
 };
 
 static bool check_blacklisted() {
