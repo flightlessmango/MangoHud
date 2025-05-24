@@ -747,11 +747,6 @@ void init_cpu_stats(overlay_params& params)
                            && enabled[OVERLAY_PARAM_ENABLED_cpu_stats];
    enabled[OVERLAY_PARAM_ENABLED_cpu_temp] = cpuStats.GetCpuFile()
                            && enabled[OVERLAY_PARAM_ENABLED_cpu_temp];
-   if (!gpus)
-      gpus = std::make_unique<GPUS>(&params);
-
-   enabled[OVERLAY_PARAM_ENABLED_cpu_power] = cpuStats.InitCpuPowerData()
-                           && enabled[OVERLAY_PARAM_ENABLED_cpu_power];
 #endif
 }
 

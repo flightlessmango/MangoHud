@@ -676,6 +676,11 @@ static CPUPowerData_rapl* init_cpu_power_data_rapl(const std::string path) {
     if (!file_exists(energyCounterPath)) return nullptr;
 
     powerData->energyCounterFile = fopen(energyCounterPath.c_str(), "r");
+    if (!powerData->energyCounterFile) {
+        SPDLOG_DEBUG("Rapl: energy_uj is not accessible");
+        powerData->energyCounterFile = nullptr;
+        return nullptr;
+    }
 
     return powerData.release();
 }
@@ -684,6 +689,13 @@ bool CPUStats::InitCpuPowerData() {
     if(m_cpuPowerData != nullptr)
         return true;
 
+    // only try to find a valid method 5 times
+    static int retries = 0;
+    if (retries >= 5)
+        return true;
+
+    retries++;
+    
     std::string name, path;
     std::string hwmon = "/sys/class/hwmon/";
 
