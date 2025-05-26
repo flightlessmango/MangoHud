@@ -30,6 +30,7 @@
 #include "mesa/util/os_socket.h"
 #include "file_utils.h"
 #include "fex.h"
+#include "ftrace.h"
 
 #if defined(HAVE_X11) || defined(HAVE_WAYLAND)
 #include <xkbcommon/xkbcommon.h>
@@ -452,6 +453,66 @@ parse_fex_stats(const char *str) {
       option_check(softfloat, softfloat_counts);
    }
 
+   return options;
+}
+
+static overlay_params::ftrace_options
+parse_ftrace(const char *str) {
+   overlay_params::ftrace_options options;
+#ifdef HAVE_FTRACE
+   auto ftrace_params = str_tokenize(str, "+");
+   for (auto& param : ftrace_params) {
+      auto tokenized_param = str_tokenize(param, "/");
+      if (tokenized_param.empty()) {
+         SPDLOG_ERROR("Failed to parse ftrace parameter '{}'", param);
+         continue;
+      }
+
+      if (tokenized_param[0] == "histogram") {
+         if (tokenized_param.size() != 2) {
+            SPDLOG_ERROR("Failed to parse ftrace histogram parameter '{}'", param);
+            continue;
+         }
+
+         SPDLOG_DEBUG("Using ftrace histogram for '{}'", tokenized_param[1]);
+         options.tracepoints.push_back(std::make_shared<FTrace::Tracepoint>(
+            FTrace::Tracepoint {
+               .name = tokenized_param[1],
+               .type = FTrace::TracepointType::Histogram,
+            }));
+      } else if (tokenized_param[0] == "linegraph") {
+         if (tokenized_param.size() != 3) {
+            SPDLOG_ERROR("Failed to parse ftrace linegraph parameter '{}'", param);
+            continue;
+         }
+
+         SPDLOG_DEBUG("Using ftrace line graph for '{}'", tokenized_param[1]);
+         options.tracepoints.push_back(std::make_shared<FTrace::Tracepoint>(
+            FTrace::Tracepoint {
+               .name = tokenized_param[1],
+               .type = FTrace::TracepointType::LineGraph,
+               .field_name = tokenized_param[2],
+            }));
+      } else if (tokenized_param[0] == "label") {
+         if (tokenized_param.size() != 3) {
+            SPDLOG_ERROR("Failed to parse ftrace label parameter '{}'", param);
+            continue;
+         }
+
+         SPDLOG_DEBUG("Using ftrace label for '{}', label name '{}'", tokenized_param[1], tokenized_param[2]);
+         options.tracepoints.push_back(std::make_shared<FTrace::Tracepoint>(
+            FTrace::Tracepoint {
+               .name = tokenized_param[1],
+               .type = FTrace::TracepointType::Label,
+               .field_name = tokenized_param[2],
+            }));
+      } else {
+         SPDLOG_ERROR("Failed to parse ftrace parameter '{}'", param);
+      }
+   }
+
+   options.enabled = !options.tracepoints.empty();
+#endif // HAVE_FTRACE
    return options;
 }
 

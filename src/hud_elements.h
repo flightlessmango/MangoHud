@@ -119,6 +119,7 @@ class HudElements{
         static void network();
         static void _display_session();
         static void fex_stats();
+        static void ftrace();
 
         void convert_colors(const struct overlay_params& params);
         void convert_colors(bool do_conv, const struct overlay_params& params);
