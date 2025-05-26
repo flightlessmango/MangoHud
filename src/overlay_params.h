@@ -21,6 +21,12 @@ extern "C" {
 typedef unsigned long KeySym;
 #endif
 
+#ifdef HAVE_FTRACE
+namespace FTrace {
+struct Tracepoint;
+}
+#endif
+
 #define RGBGetBValue(rgb)   (rgb & 0x000000FF)
 #define RGBGetGValue(rgb)   ((rgb >> 8) & 0x000000FF)
 #define RGBGetRValue(rgb)   ((rgb >> 16) & 0x000000FF)
@@ -207,6 +213,7 @@ typedef unsigned long KeySym;
    OVERLAY_PARAM_CUSTOM(network)                     \
    OVERLAY_PARAM_CUSTOM(gpu_list)                    \
    OVERLAY_PARAM_CUSTOM(fex_stats)                   \
+   OVERLAY_PARAM_CUSTOM(ftrace)                      \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -364,6 +371,14 @@ struct overlay_params {
       bool softfloat_counts {true};
    };
    fex_stats_options fex_stats{};
+
+   struct ftrace_options {
+      bool enabled {false};
+#ifdef HAVE_FTRACE
+      std::vector<std::shared_ptr<FTrace::Tracepoint>> tracepoints;
+#endif
+   };
+   ftrace_options ftrace {};
 };
 
 const extern char *overlay_param_names[];

@@ -42,6 +42,10 @@ if ['linux', 'cygwin', 'gnu'].contains(host_machine.system())
   is_unixy = true
 endif
 
+if host_machine.system() == 'linux'
+  pre_args += '-DHAVE_FTRACE'
+endif
+
 if get_option('glibcxx_asserts')
   pre_args += '-D_GLIBCXX_ASSERTIONS'
 endif
