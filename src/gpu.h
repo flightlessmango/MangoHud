@@ -190,7 +190,7 @@ class GPUS {
 
             if (!params->pci_dev.empty()) {
                 for (auto &gpu : available_gpus) {
-                    if (gpu->pci_dev == params->pci_dev) {
+                    if (gpu && gpu->pci_dev == params->pci_dev) {
                         vec.push_back(gpu);
                         return vec;
                     }
