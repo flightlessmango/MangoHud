@@ -17,10 +17,11 @@ using namespace std::chrono_literals;
 #include <iostream>
 #include <filesystem>
 #include <string>
+#include <set>
 namespace fs = ghc::filesystem;
 
 GPUS::GPUS(const overlay_params* params) : params(params) {
-    std::vector<std::string> gpu_entries;
+    std::set<std::string> gpu_entries;
 
     for (const auto& entry : fs::directory_iterator("/sys/class/drm")) {
         if (!entry.is_directory())
@@ -33,17 +34,10 @@ GPUS::GPUS(const overlay_params* params) : params(params) {
             // Ensure the rest of the string after "renderD" is numeric
             std::string render_number = node_name.substr(7);
             if (std::all_of(render_number.begin(), render_number.end(), ::isdigit)) {
-                gpu_entries.push_back(node_name);  // Store the render entry
+                gpu_entries.insert(node_name);  // Store the render entry
             }
         }
     }
-
-    // Sort the entries based on the numeric value of the render number
-    std::sort(gpu_entries.begin(), gpu_entries.end(), [](const std::string& a, const std::string& b) {
-        int num_a = std::stoi(a.substr(7));
-        int num_b = std::stoi(b.substr(7));
-        return num_a < num_b;
-    });
 
     // Now process the sorted GPU entries
     uint8_t idx = 0, total_active = 0;
