@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "gl.h"
+#include "mesa/util/macros.h"
 #include "real_dlsym.h"
 #include <string.h>
 #include <stdbool.h>
@@ -131,13 +132,13 @@ static void loadMangoHud() {
 }
 
 #define CREATE_FWD_VOID(name, params, ...) \
-    void name params { \
+    PUBLIC void name params { \
         loadMangoHud(); \
         void (*p##name) params = real_dlsym(handle, #name); \
         if (p##name) p##name(__VA_ARGS__); \
     }
 #define CREATE_FWD(ret_type, name, params, ...) \
-    ret_type name params { \
+    PUBLIC ret_type name params { \
         loadMangoHud(); \
         ret_type (*p##name) params = real_dlsym(handle, #name); \
         if (p##name) return p##name(__VA_ARGS__); \
@@ -181,11 +182,7 @@ static struct func_ptr hooks[] = {
 };
 #undef ADD_HOOK
 
-#ifndef ARRAY_SIZE
-#define ARRAY_SIZE(arr) sizeof(arr)/sizeof(arr[0])
-#endif
-
-void* dlsym(void *handle, const char *name)
+PUBLIC void* dlsym(void *handle, const char *name)
 {
     const char* dlsym_enabled = getenv("MANGOHUD_DLSYM");
     void* is_angle = real_dlsym(handle, "eglStreamPostD3DTextureANGLE");
