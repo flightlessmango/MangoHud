@@ -1013,11 +1013,18 @@ void HudElements::resolution(){
 void HudElements::show_fps_limit(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_show_fps_limit]){
         int fps = 0;
+        const char* method = fps_limit_stats.method == FPS_LIMIT_METHOD_EARLY ? "early" : "late";
         if (fps_limit_stats.targetFrameTime.count())
             fps = 1000000000 / fps_limit_stats.targetFrameTime.count();
+        if(HUDElements.sw_stats->engine == EngineTypes::DXVK && getenv("DXVK_FRAME_RATE") != nullptr) {
+            int fpsDxvk = atoi(getenv("DXVK_FRAME_RATE"));
+            if(fpsDxvk > 0 && (!fps || fpsDxvk <= fps)) {
+                fps = fpsDxvk;
+                method = "dxvk";
+            }
+        }
         ImguiNextColumnFirstItem();
         ImGui::PushFont(HUDElements.sw_stats->font1);
-        const char* method = fps_limit_stats.method == FPS_LIMIT_METHOD_EARLY ? "early" : "late";
         HUDElements.TextColored(HUDElements.colors.engine, "%s (%s)","FPS limit",method);
         ImguiNextColumnOrNewRow();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", fps);
