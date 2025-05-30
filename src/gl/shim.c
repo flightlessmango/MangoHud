@@ -189,6 +189,11 @@ void* dlsym(void *handle, const char *name)
 {
     const char* dlsym_enabled = getenv("MANGOHUD_DLSYM");
     void* is_angle = real_dlsym(handle, "eglStreamPostD3DTextureANGLE");
+    // Consume error message if there was an error
+    if (!is_angle)
+    {
+        (void) dlerror();
+    }
     void* fn_ptr = real_dlsym(handle, name);
 
     if (!is_angle && fn_ptr && (!dlsym_enabled || dlsym_enabled[0] != '0'))
