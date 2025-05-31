@@ -43,6 +43,26 @@ GPUS::GPUS(const overlay_params* params) : params(params) {
     uint8_t idx = 0, total_active = 0;
 
     for (const auto& node_name : gpu_entries) {
+        const std::string driver = get_driver(node_name);
+
+        if (driver.empty()) {
+            SPDLOG_DEBUG("Failed to query driver name of node \"{}\"", node_name);
+            continue;
+        }
+
+        {
+            const std::string* d =
+                std::find(std::begin(supported_drivers), std::end(supported_drivers), driver);
+
+            if (d == std::end(supported_drivers)) {
+                SPDLOG_WARN(
+                    "node \"{}\" is using driver \"{}\" which is unsupported by MangoHud. Skipping...",
+                    node_name, driver
+                );
+                continue;
+            }
+        }
+
         std::string path = "/sys/class/drm/" + node_name;
         std::string device_address = get_pci_device_address(path);  // Store the result
         const char* pci_dev = device_address.c_str();
@@ -65,25 +85,8 @@ GPUS::GPUS(const overlay_params* params) : params(params) {
             }
         }
 
-        std::string msm_driver;
-        if (!vendor_id) {
-            auto line = read_line("/sys/class/drm/" + node_name + "/device/uevent" );
-            if (line.find("DRIVER=msm_dpu") != std::string::npos) {
-                SPDLOG_DEBUG("MSM device found!");
-                vendor_id = 0x5143;
-                msm_driver = "msm";
-            } else if (line.find("DRIVER=msm_drm") != std::string::npos) {
-                SPDLOG_DEBUG("MSM kgsl device found!");
-                vendor_id = 0x5143;
-                msm_driver = "kgsl";
-            } else if (line.find("DRIVER=panfrost") != std::string::npos) {
-                SPDLOG_DEBUG("Panfrost device found!");
-                vendor_id = 0x1337; // what's panfrost vid?
-            }
-        }
-
         std::shared_ptr<GPU> ptr =
-            std::make_shared<GPU>(node_name, vendor_id, device_id, pci_dev, msm_driver);
+            std::make_shared<GPU>(node_name, vendor_id, device_id, pci_dev, driver);
 
         if (params->gpu_list.size() == 1 && params->gpu_list[0] == idx++)
             ptr->is_active = true;
@@ -93,10 +96,16 @@ GPUS::GPUS(const overlay_params* params) : params(params) {
 
         available_gpus.emplace_back(ptr);
 
-        SPDLOG_DEBUG("GPU Found: node_name: {}, vendor_id: {:x} device_id: {:x} pci_dev: {}", node_name, vendor_id, device_id, pci_dev);
+        SPDLOG_DEBUG(
+            "GPU Found: node_name: {}, driver: {}, vendor_id: {:x} device_id: {:x} pci_dev: {}",
+            node_name, driver, vendor_id, device_id, pci_dev
+        );
 
         if (ptr->is_active) {
-            SPDLOG_INFO("Set {} as active GPU (id={:x}:{:x} pci_dev={})", node_name, vendor_id, device_id, pci_dev);
+            SPDLOG_INFO(
+                "Set {} as active GPU (driver={} id={:x}:{:x} pci_dev={})",
+                node_name, driver, vendor_id, device_id, pci_dev
+            );
             total_active++;
         }
     }
@@ -111,8 +120,8 @@ GPUS::GPUS(const overlay_params* params) : params(params) {
         SPDLOG_WARN(
             "You have more than 1 active GPU, check if you use both pci_dev "
             "and gpu_list. If you use fps logging, MangoHud will log only "
-            "this GPU: name = {}, vendor = {:x}, pci_dev = {}",
-            gpu->drm_node, gpu->vendor_id, gpu->pci_dev
+            "this GPU: name = {}, driver = {}, vendor = {:x}, pci_dev = {}",
+            gpu->drm_node, gpu->driver, gpu->vendor_id, gpu->pci_dev
         );
 
         break;
@@ -120,9 +129,8 @@ GPUS::GPUS(const overlay_params* params) : params(params) {
 
 }
 
-std::string GPU::is_i915_or_xe() {
-    std::string path = "/sys/bus/pci/devices/";
-    path += pci_dev + "/driver";
+std::string GPUS::get_driver(const std::string& node) {
+    std::string path = "/sys/class/drm/" + node + "/device/driver";
 
     if (!fs::exists(path)) {
         SPDLOG_ERROR("{} doesn't exist", path);
