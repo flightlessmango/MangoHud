@@ -185,16 +185,78 @@ static struct func_ptr hooks[] = {
 #define ARRAY_SIZE(arr) sizeof(arr)/sizeof(arr[0])
 #endif
 
+#include <stddef.h>
+
+// Glibc has nonconformance behaviour
+// which is Glibc clears dlerror if dlsym succeded instead
+// leaving it as it is as required by standard
+// Reference: https://pubs.opengroup.org/onlinepubs/009604299/functions/dlsym.html
+//
+// Lets disable dlerror override to avoid risking programs
+// which already relying on Glibc's behaviour so to keep
+// glibc's behaviour
+// while on conformance system such as Musl it fixes bugs
+#ifdef __GLIBC__
+# define USE_DLERROR_OVERRIDE 0
+#else
+# define USE_DLERROR_OVERRIDE 1
+#endif
+
+static _Thread_local char *error_override = NULL;
+static _Thread_local bool activate_override = false;
+
+char *dlerror(void)
+{
+    if (!USE_DLERROR_OVERRIDE)
+       return real_dlerror();
+    
+    if (activate_override)
+    {
+        // Deactivate the override for next call to allow
+        // real_dlerror to be used
+        activate_override = false;
+        return error_override;
+    } else if (error_override) {
+        // Free resources that was allocated for error override
+        // because the override is now deactivated
+        free(error_override);
+        error_override = NULL;
+    }
+
+    return real_dlerror();
+}
+
+static void save_and_consume_real_dlerror()
+{
+    if (!USE_DLERROR_OVERRIDE)
+       return;
+    
+    char* recent_error = real_dlerror();
+    if (!recent_error)
+    {
+        error_override = recent_error;
+        return;
+    }
+    
+    size_t error_length = strlen(recent_error);
+    error_override = malloc(error_length + 1);
+    memcpy(error_override, recent_error, error_length + 1);
+}
+
 void* dlsym(void *handle, const char *name)
 {
+    save_and_consume_real_dlerror();
     const char* dlsym_enabled = getenv("MANGOHUD_DLSYM");
     void* is_angle = real_dlsym(handle, "eglStreamPostD3DTextureANGLE");
     // Consume error message if there was an error
     if (!is_angle)
     {
-        (void) dlerror();
+        (void) real_dlerror();
     }
     void* fn_ptr = real_dlsym(handle, name);
+    // Activate override if there wasn't any new error
+    // from real_dlsym
+    activate_override = fn_ptr != NULL;
 
     if (!is_angle && fn_ptr && (!dlsym_enabled || dlsym_enabled[0] != '0'))
     {

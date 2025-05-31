@@ -10,6 +10,7 @@ extern "C" {
 void *real_dlopen(const char *filename, int flag);
 void* real_dlsym( void*, const char* );
 void* get_proc_address(const char* name);
+char* real_dlerror(void);
 #ifdef __cplusplus
 }
 #endif
