@@ -13,6 +13,7 @@
 
 void *(*__dlopen)(const char *, int) = NULL;
 void *(*__dlsym)(void *, const char *) = NULL;
+char *(*__dlerror)(void) = NULL;
 static bool print_dlopen;
 static bool print_dlsym;
 
@@ -41,17 +42,19 @@ static void get_real_functions()
 
         eh_find_sym(&libdl, "dlopen", (void **) &__dlopen);
         eh_find_sym(&libdl, "dlsym", (void **) &__dlsym);
+        eh_find_sym(&libdl, "dlerror", (void **) &__dlerror);
         eh_destroy_obj(&libdl);
 
-        if (__dlopen && __dlsym)
+        if (__dlopen && __dlsym && __dlerror)
             break;
         __dlopen = NULL;
         __dlsym = NULL;
+        __dlerror = NULL;
     }
 
-    if (!__dlopen && !__dlsym)
+    if (!__dlopen && !__dlsym && !__dlerror)
     {
-        fprintf(stderr, "MANGOHUD: Can't get dlopen() and dlsym()\n");
+        fprintf(stderr, "MANGOHUD: Can't get dlopen(), dlsym() and dlerror()\n");
         exit(ret ? ret : 1);
     }
 }
@@ -102,6 +105,13 @@ void *real_dlsym(void *handle, const char *symbol)
         printf("dlsym(%p, %s) = %p\n", handle, symbol, result);
 
     return result;
+}
+
+char* real_dlerror(void)
+{
+    if (__dlerror == NULL)
+        get_real_functions();
+    return __dlerror();
 }
 
 void* get_proc_address(const char* name) {
