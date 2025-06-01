@@ -17,15 +17,23 @@ typedef unsigned long KeySym;
 #if defined(HAVE_X11) || defined(HAVE_WAYLAND)
 static inline bool keys_are_pressed(const std::vector<KeySym>& keys)
 {
+    if (keys.size() == 0)
+        return false;
+
     #if defined(HAVE_WAYLAND)
     if(wl_display_ptr && wl_handle)
     {
         update_wl_queue();
 
-        if(wl_pressed_keys == keys)
-        {
-            return true;
+        if (wl_pressed_keys.size() != keys.size())
+            return false;
+
+        for (KeySym ks : keys) {
+            if (wl_pressed_keys.count(ks) == 0)
+                return false;
         }
+
+        return true;
     }
     #endif
 
@@ -47,7 +55,7 @@ static inline bool keys_are_pressed(const std::vector<KeySym>& keys)
                 pressed++;
         }
 
-        if (pressed > 0 && pressed == keys.size()) {
+        if (pressed == keys.size()) {
             return true;
         }
     }
