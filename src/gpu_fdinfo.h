@@ -142,14 +142,14 @@ public:
         } else if (module == "amdgpu") {
             drm_engine_type = "drm-engine-gfx";
             drm_memory_type = "drm-memory-vram";
-        } else if (module == "msm") {
+        } else if (module == "msm_dpu") {
             // msm driver does not report vram usage
             drm_engine_type = "drm-engine-gpu";
+        } else if (module == "msm_drm") {
+            init_kgsl();
         } else if (module == "panfrost") {
             drm_engine_type = "drm-engine-fragment";
             drm_memory_type = "drm-resident-memory";
-        } else if (module == "kgsl") {
-            init_kgsl();
         }
 
         if (fdinfo_data.size() > 0 &&
