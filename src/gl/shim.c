@@ -144,7 +144,15 @@ static void loadMangoHud() {
         return (ret_type)0; \
     }
 
+#ifdef HAVE_X11
 CREATE_FWD_VOID(glXSwapBuffers, (void* dpy, void* drawable), dpy, drawable)
+CREATE_FWD(int64_t, glXSwapBuffersMscOML,
+           (void* dpy, void* drawable, int64_t target_msc,
+            int64_t divisor, int64_t remainder),
+           dpy, drawable, target_msc, divisor, remainder)
+CREATE_FWD(void*, glXGetProcAddress, (const unsigned char* procName), procName)
+CREATE_FWD(void*, glXGetProcAddressARB, (const unsigned char* procName), procName)
+#endif
 CREATE_FWD(void*, eglGetDisplay, (void* native_dpy), native_dpy)
 CREATE_FWD(void*, eglGetPlatformDisplay,
     (unsigned int platform,
@@ -152,12 +160,6 @@ CREATE_FWD(void*, eglGetPlatformDisplay,
      const intptr_t* attrib_list),
      platform, native_display, attrib_list)
 CREATE_FWD(unsigned int, eglSwapBuffers, (void* dpy, void* surf), dpy, surf)
-CREATE_FWD(int64_t, glXSwapBuffersMscOML,
-    (void* dpy, void* drawable, int64_t target_msc,
-     int64_t divisor, int64_t remainder),
-     dpy, drawable, target_msc, divisor, remainder)
-CREATE_FWD(void*, glXGetProcAddress, (const unsigned char* procName), procName)
-CREATE_FWD(void*, glXGetProcAddressARB, (const unsigned char* procName), procName)
 CREATE_FWD(void*, eglGetProcAddress, (const char* procName), procName)
 
 #undef CREATE_FWD
@@ -170,10 +172,12 @@ struct func_ptr {
 
 #define ADD_HOOK(fn) { #fn, (void*)fn }
 static struct func_ptr hooks[] = {
+#ifdef HAVE_X11
     ADD_HOOK(glXGetProcAddress),
     ADD_HOOK(glXGetProcAddressARB),
     ADD_HOOK(glXSwapBuffers),
     ADD_HOOK(glXSwapBuffersMscOML),
+#endif
     ADD_HOOK(eglSwapBuffers),
     ADD_HOOK(eglGetPlatformDisplay),
     ADD_HOOK(eglGetDisplay),
