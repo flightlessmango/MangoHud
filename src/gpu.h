@@ -11,15 +11,13 @@
 #include <chrono>
 #include <regex>
 #include <iostream>
+#include <array>
 #include "amdgpu.h"
 #include "nvidia.h"
 #include "gpu_metrics_util.h"
 #include "gpu_fdinfo.h"
 
 class GPU {
-    private:
-        std::string is_i915_or_xe();
-
     public:
         gpu_metrics metrics;
         std::string drm_node;
@@ -30,29 +28,25 @@ class GPU {
         std::string pci_dev;
         uint32_t vendor_id = 0;
         uint32_t device_id = 0;
+        const std::string driver;
 
         GPU(
             std::string drm_node, uint32_t vendor_id, uint32_t device_id, const char* pci_dev,
-            std::string msm_driver = ""
+            std::string driver
         )
             : drm_node(drm_node), pci_dev(pci_dev), vendor_id(vendor_id), device_id(device_id),
-              msm_driver(msm_driver) {
+            driver(driver) {
                 if (vendor_id == 0x10de)
                     nvidia = std::make_unique<NVIDIA>(pci_dev);
 
                 if (vendor_id == 0x1002)
                     amdgpu = std::make_unique<AMDGPU>(pci_dev, device_id, vendor_id);
 
-                // For now we're only accepting one of these modules at once
-                // Might be possible that multiple can exist on a system in the future?
-                if (vendor_id == 0x8086)
-                    fdinfo = std::make_unique<GPU_fdinfo>(is_i915_or_xe(), pci_dev, drm_node);
-
-                if (vendor_id == 0x5143)
-                    fdinfo = std::make_unique<GPU_fdinfo>(msm_driver, pci_dev, drm_node);
-
-                if (vendor_id == 0x1337)
-                    fdinfo = std::make_unique<GPU_fdinfo>("panfrost", pci_dev, drm_node);
+                if (
+                    driver == "i915" || driver == "xe" || driver == "panfrost" ||
+                    driver == "msm_dpu" || driver == "msm_drm"
+                )
+                    fdinfo = std::make_unique<GPU_fdinfo>(driver, pci_dev, drm_node);
         }
 
         gpu_metrics get_metrics() {
@@ -122,8 +116,6 @@ class GPU {
         std::thread thread;
 
         int index_in_selected_gpus();
-
-        std::string msm_driver;
 };
 
 class GPUS {
@@ -204,6 +196,11 @@ class GPUS {
 
     private:
         std::string get_pci_device_address(const std::string& drm_card_path);
+        std::string get_driver(const std::string& node);
+
+        const std::array<std::string, 7> supported_drivers = {
+            "amdgpu", "nvidia", "i915", "xe", "panfrost", "msm_dpu", "msm_drm"
+        };
 };
 
 extern std::unique_ptr<GPUS> gpus;

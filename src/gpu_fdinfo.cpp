@@ -346,7 +346,7 @@ int GPU_fdinfo::get_gpu_load()
 {
     if (module == "xe")
         return get_xe_load();
-    else if (module == "kgsl")
+    else if (module == "msm_drm")
         return get_kgsl_load();
 
     uint64_t now = os_time_get_nano();
@@ -705,7 +705,7 @@ void GPU_fdinfo::main_thread()
         metrics.CoreClock = get_gpu_clock();
         metrics.voltage = hwmon_sensors["voltage"].val;
 
-        if (module == "kgsl")
+        if (module == "msm_drm")
             metrics.temp = get_kgsl_temp();
         else
             metrics.temp = hwmon_sensors["temp"].val / 1000.f;
