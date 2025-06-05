@@ -312,6 +312,12 @@ if is_unixy
     dependencies : [
       dep_dl
     ],
+    c_args : [
+      pre_args
+    ],
+    cpp_args : [
+      pre_args
+    ],
     include_directories : [inc_common],
     install_dir : libdir_mangohud,
     install: true
