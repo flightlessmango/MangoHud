@@ -26,6 +26,7 @@
 #include "fps_metrics.h"
 #include "net.h"
 #include "fex.h"
+#include "ftrace.h"
 
 #ifdef __linux__
 #include <libgen.h>
@@ -255,6 +256,13 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
 #endif
 #ifdef HAVE_FEX
    fex::update_fex_stats();
+#endif
+#ifdef HAVE_FTRACE
+   if (params.ftrace.enabled) {
+      if (!FTrace::object)
+         FTrace::object = std::make_unique<FTrace::FTrace>(params.ftrace);
+      FTrace::object->update();
+   }
 #endif
    frametime = frametime_ms;
    fps = double(1000 / frametime_ms);

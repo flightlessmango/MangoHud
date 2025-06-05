@@ -94,6 +94,7 @@ if is_unixy
     'device.cpp',
     'net.cpp',
     'shell.cpp',
+    'ftrace.cpp',
   )
 
   if get_option('with_fex')
