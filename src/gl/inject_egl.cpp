@@ -10,6 +10,7 @@
 #include "mesa/util/os_time.h"
 #include "blacklist.h"
 #include "gl_hud.h"
+#include "elfhacks.h"
 #ifdef HAVE_WAYLAND
 #include "wayland_hook.h"
 #endif
@@ -24,12 +25,26 @@ static void* get_egl_proc_address(const char* name) {
 
     void *func = nullptr;
     static void *(*pfn_eglGetProcAddress)(const char*) = nullptr;
+    const char *libs[] = {
+        "*libEGL.so.*",
+        "*libEGL_mesa.so.*",
+        "*libEGL_nvidia.so.*"
+    };
+
     if (!pfn_eglGetProcAddress) {
-        void *handle = real_dlopen("libEGL.so.1", RTLD_LAZY);
-        if (!handle) {
-            SPDLOG_ERROR("Failed to open " MANGOHUD_ARCH " libEGL.so.1: {}", dlerror());
-        } else {
-            pfn_eglGetProcAddress = reinterpret_cast<decltype(pfn_eglGetProcAddress)>(real_dlsym(handle, "eglGetProcAddress"));
+        eh_obj_t lib_egl;
+        int ret;
+
+        for (uint i = 0; i < sizeof(libs)/sizeof(*libs); i++)
+        {
+            ret = eh_find_obj(&lib_egl, libs[i]);
+
+            if (ret) continue;
+
+            eh_find_sym(&lib_egl, "eglGetProcAddress", (void **)&pfn_eglGetProcAddress);
+            eh_destroy_obj(&lib_egl);
+
+            if (pfn_eglGetProcAddress) break;
         }
     }
 
