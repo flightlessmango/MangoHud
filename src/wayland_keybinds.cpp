@@ -2,6 +2,7 @@
 #include <cstring>
 #include <array>
 #include <algorithm>
+#include <set>
 #include <unistd.h>
 #include <vector>
 #include <wayland-client.h>
@@ -19,7 +20,7 @@ struct xkb_context *context_xkb = nullptr;
 struct xkb_keymap *keymap_xkb = nullptr;
 struct xkb_state *state_xkb = nullptr;
 struct wl_event_queue* queue = nullptr;
-std::vector<KeySym> wl_pressed_keys {};
+std::set<KeySym> wl_pressed_keys {};
 
 static void seat_handle_capabilities(void *data, wl_seat *seat, uint32_t caps);
 static void seat_handle_name(void *data, struct wl_seat *seat, const char *name) {}
@@ -77,13 +78,11 @@ static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard, uint32_
 
    if(state)
    {
-      wl_pressed_keys.push_back(keysym);
+      wl_pressed_keys.insert(keysym);
    }
    else
    {
-      auto it = std::find(wl_pressed_keys.begin(), wl_pressed_keys.end(), keysym);
-      if(it != wl_pressed_keys.end())
-         wl_pressed_keys.erase(it);
+      wl_pressed_keys.erase(keysym);
    }
 }
 
