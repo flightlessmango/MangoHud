@@ -36,13 +36,13 @@ class NVIDIA {
 
             unsigned int infoCount = 0;
 
-            nvmlProcessInfo_t* cur_process_info = new nvmlProcessInfo_t[infoCount];
+            nvmlProcessInfo_v1_t* cur_process_info = new nvmlProcessInfo_v1_t[infoCount];
             nvmlReturn_t ret = nvml->nvmlDeviceGetGraphicsRunningProcesses(device, &infoCount, cur_process_info);
 
             if (ret != NVML_ERROR_INSUFFICIENT_SIZE)
                 return;
 
-            cur_process_info = new nvmlProcessInfo_t[infoCount];
+            cur_process_info = new nvmlProcessInfo_v1_t[infoCount];
             ret = nvml->nvmlDeviceGetGraphicsRunningProcesses(device, &infoCount, cur_process_info);
 
             if (ret != NVML_SUCCESS)
@@ -101,7 +101,7 @@ class NVIDIA {
 #ifdef HAVE_NVML
         nvmlDevice_t device;
 
-        nvmlProcessInfo_t* process_info = nullptr;
+        nvmlProcessInfo_v1_t* process_info = nullptr;
         size_t process_info_len = 0;
 
         void get_instant_metrics_nvml(struct gpu_metrics *metrics);
