@@ -29,14 +29,14 @@ void NVIDIA::parse_token(std::string token, std::unordered_map<std::string, std:
 NVIDIA::NVIDIA(const char* pciBusId) {
 #ifdef HAVE_NVML
     if (nvml && nvml->IsLoaded()) {
-        nvmlReturn_t result = nvml->nvmlInit();
+        nvmlReturn_t result = nvml->nvmlInit_v2();
         if (NVML_SUCCESS != result) {
             SPDLOG_ERROR("Nvidia module initialization failed: {}", nvml->nvmlErrorString(result));
             nvml_available = false;
         } else {
             nvml_available = true; // NVML initialized successfully
             if (pciBusId) {
-                result = nvml->nvmlDeviceGetHandleByPciBusId(pciBusId, &device);
+                result = nvml->nvmlDeviceGetHandleByPciBusId_v2(pciBusId, &device);
                 if (NVML_SUCCESS != result) {
                     SPDLOG_ERROR("Getting device handle by PCI bus ID failed: {}", nvml->nvmlErrorString(result));
                     nvml_available = false; // Revert if getting device handle fails

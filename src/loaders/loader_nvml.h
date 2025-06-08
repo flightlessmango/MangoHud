@@ -8,6 +8,7 @@
 #include <nvml.h>
 #else
 #include "nvml.h"
+typedef nvmlProcessInfo_t nvmlProcessInfo_v1_t;
 #endif
 #define LIBRARY_LOADER_NVML_H_DLOPEN
 

@@ -121,6 +121,7 @@ if is_unixy
 
   if nvml_h_found
     pre_args += '-DHAVE_NVML'
+    pre_args += '-DNVML_NO_UNVERSIONED_FUNC_DEFS'
     vklayer_files += files(
       'loaders/loader_nvml.cpp',
     )
