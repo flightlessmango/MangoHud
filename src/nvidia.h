@@ -36,43 +36,36 @@ class NVIDIA {
 
             unsigned int infoCount = 0;
 
-            nvmlProcessInfo_v1_t* cur_process_info = new nvmlProcessInfo_v1_t[infoCount];
-            nvmlReturn_t ret = nvml->nvmlDeviceGetGraphicsRunningProcesses(device, &infoCount, cur_process_info);
+            std::vector<nvmlProcessInfo_v1_t> cur_process_info(infoCount);
+            nvmlReturn_t ret = nvml->nvmlDeviceGetGraphicsRunningProcesses(device, &infoCount, cur_process_info.data());
 
             if (ret != NVML_ERROR_INSUFFICIENT_SIZE)
                 return;
 
-            cur_process_info = new nvmlProcessInfo_v1_t[infoCount];
-            ret = nvml->nvmlDeviceGetGraphicsRunningProcesses(device, &infoCount, cur_process_info);
+            cur_process_info.resize(infoCount);
+            ret = nvml->nvmlDeviceGetGraphicsRunningProcesses(device, &infoCount, cur_process_info.data());
 
             if (ret != NVML_SUCCESS)
                 return;
 
             process_info = cur_process_info;
-            process_info_len = infoCount;
         };
 
         std::vector<int> pids() {
             std::vector<int> vec;
 
-            if (!process_info)
-                return vec;
-
-            for (size_t i = 0; i < process_info_len; i++)
-                vec.push_back(static_cast<int> (process_info[i].pid));
+            for (const auto& proc : process_info)
+                vec.push_back(static_cast<int> (proc.pid));
 
             return vec;
         };
 
         float get_proc_vram() {
-            if (!process_info)
-                return 0.f;
-
-            for (size_t i = 0; i < process_info_len; i++) {
-                if (static_cast<pid_t>(process_info[i].pid) != pid)
+            for (const auto& proc : process_info) {
+                if (static_cast<pid_t>(proc.pid) != pid)
                     continue;
 
-                return static_cast<float>(process_info[i].usedGpuMemory);
+                return static_cast<float>(proc.usedGpuMemory);
             }
 
             return 0.f;
@@ -101,8 +94,7 @@ class NVIDIA {
 #ifdef HAVE_NVML
         nvmlDevice_t device;
 
-        nvmlProcessInfo_v1_t* process_info = nullptr;
-        size_t process_info_len = 0;
+        std::vector<nvmlProcessInfo_v1_t> process_info = {};
 
         void get_instant_metrics_nvml(struct gpu_metrics *metrics);
         std::shared_ptr<libnvml_loader> nvml = get_libnvml_loader();
