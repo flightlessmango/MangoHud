@@ -26,6 +26,7 @@
 #include "amdgpu.h"
 #include "fps_metrics.h"
 #include "fex.h"
+#include "ftrace.h"
 
 #define CHAR_CELSIUS    "\xe2\x84\x83"
 #define CHAR_FAHRENHEIT "\xe2\x84\x89"
@@ -1740,6 +1741,67 @@ void HudElements::fex_stats()
 #endif //HAVE_FEX
 }
 
+void HudElements::ftrace() {
+#ifdef HAVE_FTRACE
+    if (!HUDElements.params->ftrace.enabled || !FTrace::object)
+        return;
+
+    float width = (ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x);
+    float height = 100;
+
+    for (auto& tp : FTrace::object->tracepoints()) {
+        switch (tp->type) {
+        case FTrace::TracepointType::Histogram:
+        case FTrace::TracepointType::LineGraph:
+        {
+            char hash[40];
+            snprintf(hash, sizeof(hash), "##%s", tp->name.c_str());
+
+            ImGui::TableNextRow();
+            ImguiNextColumnFirstItem();
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
+            HUDElements.TextColored(HUDElements.colors.text, "ftrace %s: %s",
+                                    tp->type == FTrace::TracepointType::Histogram ? "histogram" : "line graph",
+                                    tp->name.c_str());
+            ImGui::Dummy(ImVec2(0.0f, real_font_size.y / 2));
+            if (tp->type == FTrace::TracepointType::LineGraph) {
+               HUDElements.TextColored(HUDElements.colors.text, "    parameter: %s", tp->field_name.c_str());
+               ImGui::Dummy(ImVec2(0.0f, real_font_size.y / 2));
+            }
+            ImGui::PopFont();
+            if (ImGui::BeginChild(tp->name.c_str(), ImVec2(width, height), false, ImGuiWindowFlags_NoDecoration)) {
+                if (tp->type == FTrace::TracepointType::Histogram) {
+                    ImGui::PlotHistogram(hash, FTrace::FTrace::get_plot_values, tp.get(), FTrace::Tracepoint::PLOT_DATA_CAPACITY, 0,
+                                         NULL, tp->data.plot.range.min, tp->data.plot.range.max, ImVec2(width, height));
+                } else {
+                    ImGui::PlotLines(hash, FTrace::FTrace::get_plot_values, tp.get(), FTrace::Tracepoint::PLOT_DATA_CAPACITY, 0,
+                                         NULL, tp->data.plot.range.min, tp->data.plot.range.max, ImVec2(width, height));
+                }
+            }
+            ImGui::EndChild();
+            break;
+        }
+        case FTrace::TracepointType::Label:
+        {
+            ImGui::TableNextRow();
+            ImguiNextColumnFirstItem();
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
+            HUDElements.TextColored(HUDElements.colors.text, "ftrace label: %s:", tp->name.c_str());
+            ImGui::Dummy(ImVec2(0.0f, real_font_size.y / 2));
+            HUDElements.TextColored(HUDElements.colors.text, "    %s=%s", tp->field_name.c_str(), tp->data.field_value.c_str());
+            ImGui::Dummy(ImVec2(0.0f, real_font_size.y / 2));
+            ImGui::PopFont();
+            break;
+        }
+        default:
+            unreachable("invalid tracepoint type");
+        }
+    }
+#endif // HAVE_FTRACE
+}
+
 void HudElements::sort_elements(const std::pair<std::string, std::string>& option) {
     const auto& param = option.first;
     const auto& value = option.second;
@@ -1790,6 +1852,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
         {"network", {network}},
         {"display_server", {_display_session}},
         {"fex_stats", {fex_stats}},
+        {"ftrace", {ftrace}},
     };
 
     auto check_param = display_params.find(param);
@@ -1924,6 +1987,10 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({_display_session, "display_session", value});
     if (params->fex_stats.enabled)
         ordered_functions.push_back({fex_stats, "fex_stats", value});
+#ifdef HAVE_FTRACE
+    if (params->ftrace.enabled)
+        ordered_functions.push_back({ftrace, "ftrace", value});
+#endif
 }
 
 void HudElements::update_exec(){
