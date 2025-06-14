@@ -156,6 +156,9 @@ static void msg_read_thread(){
     // uint32_t previous_pid = 0;
     const struct mangoapp_msg_header *hdr = (const struct mangoapp_msg_header*) raw_msg;
     const struct mangoapp_msg_v1 *mangoapp_v1 = (const struct mangoapp_msg_v1*) raw_msg;
+
+    uint32_t previous_game_pid = 0;
+
     while (1){
         // make sure that the message recieved is compatible
         // and that we're not trying to use variables that don't exist (yet)
@@ -163,8 +166,14 @@ static void msg_read_thread(){
         if (msg_size != size_t(-1))
         {
             if (hdr->version == 1){
-                if (msg_size > offsetof(struct mangoapp_msg_v1, pid))
+                if (msg_size > offsetof(struct mangoapp_msg_v1, pid)) {
                     HUDElements.g_gamescopePid = mangoapp_v1->pid;
+
+                    if (previous_game_pid != mangoapp_v1->pid) {
+                        previous_game_pid = mangoapp_v1->pid;
+                        check_for_vkbasalt_and_gamemode();
+                    }
+                }
 
                 if (msg_size > offsetof(struct mangoapp_msg_v1, visible_frametime_ns)){
                     bool should_new_frame = false;

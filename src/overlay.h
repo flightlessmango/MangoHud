@@ -104,6 +104,7 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID);
 void init_cpu_stats(overlay_params& params);
 void check_keybinds(overlay_params& params);
 void init_system_info(void);
+void check_for_vkbasalt_and_gamemode();
 void FpsLimiter(struct fps_limit& stats);
 void create_fonts(ImFontAtlas* font_atlas, const overlay_params& params, ImFont*& small_font, ImFont*& text_font);
 void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...);

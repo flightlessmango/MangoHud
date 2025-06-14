@@ -831,18 +831,8 @@ void init_system_info(){
       else {
            wineVersion = "";
       }
-      // check for gamemode and vkbasalt
-      fs::path path("/proc/self/map_files/");
-      for (auto& p : fs::directory_iterator(path)) {
-         auto filename = p.path().string();
-         auto sym = read_symlink(filename.c_str());
-         if (sym.find("gamemode") != std::string::npos)
-            HUDElements.gamemode_bol = true;
-         if (sym.find("vkbasalt") != std::string::npos)
-            HUDElements.vkbasalt_bol = true;
-         if (HUDElements.gamemode_bol && HUDElements.vkbasalt_bol)
-            break;
-      }
+
+      check_for_vkbasalt_and_gamemode();
 
       if (ld_preload)
          setenv("LD_PRELOAD", ld_preload, 1);
@@ -853,6 +843,31 @@ void init_system_info(){
       SPDLOG_DEBUG("Os:{}", os);
       SPDLOG_DEBUG("Driver:{}", driver);
       SPDLOG_DEBUG("CPU Scheduler:{}", cpusched);
+#endif
+}
+
+void check_for_vkbasalt_and_gamemode() {
+#ifdef __linux__
+   std::string pid =
+      HUDElements.g_gamescopePid != -1 ? std::to_string(HUDElements.g_gamescopePid) : "self";
+   std::string proc_path = "/proc/" + pid + "/map_files";
+
+   try {
+      fs::path path(proc_path);
+
+      for (auto& p : fs::directory_iterator(path)) {
+         auto filename = p.path().string();
+         auto sym = read_symlink(filename.c_str());
+         if (sym.find("gamemode") != std::string::npos)
+            HUDElements.gamemode_bol = true;
+         if (sym.find("vkbasalt") != std::string::npos)
+            HUDElements.vkbasalt_bol = true;
+         if (HUDElements.gamemode_bol && HUDElements.vkbasalt_bol)
+            break;
+      }
+   } catch (const ghc::filesystem::filesystem_error& ex) {
+      SPDLOG_DEBUG("{}", ex.what());
+   }
 #endif
 }
 
