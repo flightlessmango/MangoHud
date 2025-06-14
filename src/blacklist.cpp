@@ -43,6 +43,7 @@ static  std::vector<std::string> blacklist {
     "LeagueClient.exe",
     "LeagueClientUxRender.exe",
     "MarneLauncher.exe",
+    "MarvelRivals_Launcher.exe",
     "monado-service",
     "Origin.exe",
     "OriginThinSetupInternal.exe",
