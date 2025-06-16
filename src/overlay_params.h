@@ -258,6 +258,16 @@ enum overlay_param_enabled {
    OVERLAY_PARAM_ENABLED_MAX
 };
 
+/* avoid importing vulkan headers
+ * also combine colorspaces that use the same transfer function
+ */
+enum overlay_transfer_function {
+   NONE = 0,
+   SRGB = (1 << 0),
+   PQ = (1 << 1), /* HDR10 ST2084 */
+   HLG = (1 << 2) /* HDR10 */
+};
+
 struct overlay_params {
    bool enabled[OVERLAY_PARAM_ENABLED_MAX];
    enum overlay_param_position position;
@@ -335,6 +345,7 @@ struct overlay_params {
    std::vector<std::string> fps_metrics;
    std::vector<std::string> network;
    std::vector<unsigned> gpu_list;
+   int transfer_function;
 
    struct fex_stats_options {
       bool enabled {false};
