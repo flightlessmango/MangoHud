@@ -1263,51 +1263,68 @@ static void setup_swapchain_data_pipeline(struct swapchain_data *data)
 //      update_image_descriptor(data, data->font_image_view[0], data->descriptor_set);
 }
 
-// TODO probably needs colorspace check too
-static void convert_colors_vk(VkFormat format, struct swapchain_stats& sw_stats, struct overlay_params& params)
+static void convert_colors_vk(VkFormat format, VkColorSpaceKHR colorspace, struct swapchain_stats& sw_stats, struct overlay_params& params)
 {
-   bool do_conv = false;
-   switch (format) {
-      case VK_FORMAT_R8_SRGB:
-      case VK_FORMAT_R8G8_SRGB:
-      case VK_FORMAT_R8G8B8_SRGB:
-      case VK_FORMAT_B8G8R8_SRGB:
-      case VK_FORMAT_R8G8B8A8_SRGB:
-      case VK_FORMAT_B8G8R8A8_SRGB:
-      case VK_FORMAT_A8B8G8R8_SRGB_PACK32:
-      case VK_FORMAT_BC1_RGB_SRGB_BLOCK:
-      case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
-      case VK_FORMAT_BC2_SRGB_BLOCK:
-      case VK_FORMAT_BC3_SRGB_BLOCK:
-      case VK_FORMAT_BC7_SRGB_BLOCK:
-      case VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK:
-      case VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK:
-      case VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK:
-      case VK_FORMAT_ASTC_4x4_SRGB_BLOCK:
-      case VK_FORMAT_ASTC_5x4_SRGB_BLOCK:
-      case VK_FORMAT_ASTC_5x5_SRGB_BLOCK:
-      case VK_FORMAT_ASTC_6x5_SRGB_BLOCK:
-      case VK_FORMAT_ASTC_6x6_SRGB_BLOCK:
-      case VK_FORMAT_ASTC_8x5_SRGB_BLOCK:
-      case VK_FORMAT_ASTC_8x6_SRGB_BLOCK:
-      case VK_FORMAT_ASTC_8x8_SRGB_BLOCK:
-      case VK_FORMAT_ASTC_10x5_SRGB_BLOCK:
-      case VK_FORMAT_ASTC_10x6_SRGB_BLOCK:
-      case VK_FORMAT_ASTC_10x8_SRGB_BLOCK:
-      case VK_FORMAT_ASTC_10x10_SRGB_BLOCK:
-      case VK_FORMAT_ASTC_12x10_SRGB_BLOCK:
-      case VK_FORMAT_ASTC_12x12_SRGB_BLOCK:
-      case VK_FORMAT_PVRTC1_2BPP_SRGB_BLOCK_IMG:
-      case VK_FORMAT_PVRTC1_4BPP_SRGB_BLOCK_IMG:
-      case VK_FORMAT_PVRTC2_2BPP_SRGB_BLOCK_IMG:
-      case VK_FORMAT_PVRTC2_4BPP_SRGB_BLOCK_IMG:
-         do_conv = true;
+   /* TODO: Support more colorspacess */
+   switch (colorspace) {
+      case VK_COLOR_SPACE_HDR10_ST2084_EXT:
+         params.transfer_function = PQ;
          break;
+      case VK_COLOR_SPACE_HDR10_HLG_EXT:
+         params.transfer_function = HLG;
+         break;
+      case VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT:
+         params.transfer_function = SRGB;
+         break;
+      /* use no conversion for rest of the colorspaces */
       default:
+         params.transfer_function = NONE;
          break;
    }
 
-   HUDElements.convert_colors(do_conv, params);
+   if (params.transfer_function == NONE)
+   {
+      switch (format) {
+         case VK_FORMAT_R8_SRGB:
+         case VK_FORMAT_R8G8_SRGB:
+         case VK_FORMAT_R8G8B8_SRGB:
+         case VK_FORMAT_B8G8R8_SRGB:
+         case VK_FORMAT_R8G8B8A8_SRGB:
+         case VK_FORMAT_B8G8R8A8_SRGB:
+         case VK_FORMAT_A8B8G8R8_SRGB_PACK32:
+         case VK_FORMAT_BC1_RGB_SRGB_BLOCK:
+         case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
+         case VK_FORMAT_BC2_SRGB_BLOCK:
+         case VK_FORMAT_BC3_SRGB_BLOCK:
+         case VK_FORMAT_BC7_SRGB_BLOCK:
+         case VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK:
+         case VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK:
+         case VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK:
+         case VK_FORMAT_ASTC_4x4_SRGB_BLOCK:
+         case VK_FORMAT_ASTC_5x4_SRGB_BLOCK:
+         case VK_FORMAT_ASTC_5x5_SRGB_BLOCK:
+         case VK_FORMAT_ASTC_6x5_SRGB_BLOCK:
+         case VK_FORMAT_ASTC_6x6_SRGB_BLOCK:
+         case VK_FORMAT_ASTC_8x5_SRGB_BLOCK:
+         case VK_FORMAT_ASTC_8x6_SRGB_BLOCK:
+         case VK_FORMAT_ASTC_8x8_SRGB_BLOCK:
+         case VK_FORMAT_ASTC_10x5_SRGB_BLOCK:
+         case VK_FORMAT_ASTC_10x6_SRGB_BLOCK:
+         case VK_FORMAT_ASTC_10x8_SRGB_BLOCK:
+         case VK_FORMAT_ASTC_10x10_SRGB_BLOCK:
+         case VK_FORMAT_ASTC_12x10_SRGB_BLOCK:
+         case VK_FORMAT_ASTC_12x12_SRGB_BLOCK:
+         case VK_FORMAT_PVRTC1_2BPP_SRGB_BLOCK_IMG:
+         case VK_FORMAT_PVRTC1_4BPP_SRGB_BLOCK_IMG:
+         case VK_FORMAT_PVRTC2_2BPP_SRGB_BLOCK_IMG:
+         case VK_FORMAT_PVRTC2_4BPP_SRGB_BLOCK_IMG:
+            params.transfer_function = SRGB;
+            break;
+         default: break;
+      }
+   }
+
+   HUDElements.convert_colors(params.transfer_function != NONE, params);
 }
 
 static void setup_swapchain_data(struct swapchain_data *data,
@@ -1326,7 +1343,7 @@ static void setup_swapchain_data(struct swapchain_data *data,
 
    ImGui::GetIO().IniFilename = NULL;
    ImGui::GetIO().DisplaySize = ImVec2((float)data->width, (float)data->height);
-   convert_colors_vk(pCreateInfo->imageFormat, data->sw_stats, device_data->instance->params);
+   convert_colors_vk(pCreateInfo->imageFormat, pCreateInfo->imageColorSpace, data->sw_stats, device_data->instance->params);
 
    /* Render pass */
    VkAttachmentDescription attachment_desc = {};

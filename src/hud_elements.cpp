@@ -52,6 +52,78 @@ static ImVec4 SRGBToLinear(ImVec4 col)
     return col;
 }
 
+static float LinearToPQ(float in)
+{
+    const float m1 = 0.1593017578125f;
+    const float m2 = 78.84375f;
+    const float c1 = 0.8359375f;
+    const float c2 = 18.8515625f;
+    const float c3 = 18.6875f;
+    /* target 200 cd/m^2 as our maximum rather than 10000 cd/m^2 */
+    const float targetL = 200.f;
+    const float maxL = 10000.0f;
+
+    in = powf(in * (targetL / maxL), m1);
+    in = (c1 + c2 * in) / (1.0f + c3 * in);
+    return powf(in, m2);
+}
+
+static double dot(const ImVec4& a, const ImVec4& b)
+{
+    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+}
+
+static ImVec4 SRGBtoBT2020(ImVec4 col)
+{
+    const ImVec4 to2020[4] = {
+        {0.627392, 0.32903, 0.0432691, 0.0},
+        {0.0691229, 0.9195232, 0.0113204, 0.0},
+        {0.0164229, 0.088042, 0.8956166, 0.0},
+        {0.0, 0.0, 0.0, 1.0}
+    };
+
+    col.x = dot(to2020[0], col);
+    col.y = dot(to2020[1], col);
+    col.z = dot(to2020[2], col);
+    col.w = dot(to2020[3], col);
+
+    return col;
+}
+
+static ImVec4 LinearToPQ(ImVec4 col)
+{
+    col = SRGBtoBT2020(col);
+
+    col.x = LinearToPQ(col.x);
+    col.y = LinearToPQ(col.y);
+    col.z = LinearToPQ(col.z);
+
+    return col;
+}
+
+static float LinearToHLG(float in)
+{
+    const float a = 0.17883277f;
+    const float b = 0.28466892f;
+    const float c = 0.55991073f;
+
+    if (in <= 1.0f/12.0f)
+        return sqrtf(3.0f * in);
+    else
+        return a * logf(12.0f * in - b) + c;
+}
+
+static ImVec4 LinearToHLG(ImVec4 col)
+{
+    col = SRGBtoBT2020(col);
+
+    col.x = LinearToHLG(col.x);
+    col.y = LinearToHLG(col.y);
+    col.z = LinearToHLG(col.z);
+
+    return col;
+}
+
 template<typename T, typename R = float>
 R format_units(T value, const char*& unit)
 {
@@ -73,7 +145,20 @@ void HudElements::convert_colors(const struct overlay_params& params)
         ImVec4 fc = ImGui::ColorConvertU32ToFloat4(color);
         fc.w = params.alpha;
         if (HUDElements.colors.convert)
-            return SRGBToLinear(fc);
+        {
+            switch(params.transfer_function)
+            {
+                case PQ:
+                    fc = SRGBToLinear(fc);
+                    return LinearToPQ(fc);
+                case HLG:
+                    fc = SRGBToLinear(fc);
+                    return LinearToHLG(fc);
+                case SRGB:
+                    return SRGBToLinear(fc);
+                default: break;
+            }
+        }
         return fc;
     };
 
