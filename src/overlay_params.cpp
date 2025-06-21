@@ -983,6 +983,22 @@ parse_overlay_config(struct overlay_params *params,
                                  params->font_glyph_ranges
                                 );
 
+   // check if user specified an env for fps limiter instead
+   if (params->fps_limit.size() == 0 ||
+      (params->fps_limit.size() == 1 && params->fps_limit[0] == 0))
+   {
+      const char *env = getenv("MANGOHUD_FPS_LIMIT");
+      if (env)
+      {
+         try {
+            int fps = std::stoi(env);
+            if (params->fps_limit.size() == 0)
+               params->fps_limit.push_back(fps);
+            else
+               params->fps_limit[0] = fps;
+         } catch(...) {}
+      }
+   }
    // set frametime limit
    using namespace std::chrono;
    if (params->fps_limit.size() > 0 && params->fps_limit[0] > 0)
