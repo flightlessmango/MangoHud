@@ -5,7 +5,7 @@
 #include "IconsForkAwesome.h"
 #include "forkawesome.h"
 
-void create_fonts(ImFontAtlas* font_atlas, const overlay_params& params, ImFont*& small_font, ImFont*& text_font, ImFont*& secondary_font)
+void create_fonts(ImFontAtlas* font_atlas, const overlay_params& params, ImFont*& small_font, ImFont*& text_font)
 {
    auto& io = ImGui::GetIO();
    if (!font_atlas)
@@ -20,11 +20,6 @@ void create_fonts(ImFontAtlas* font_atlas, const overlay_params& params, ImFont*
    float font_size_text = params.font_size_text;
    if (font_size_text < FLT_EPSILON)
       font_size_text = font_size;
-
-   float font_size_secondary = params.font_size_secondary;
-   if (font_size_secondary > font_size || font_size_secondary < FLT_EPSILON)
-      font_size_secondary = font_size;
-
    static const ImWchar default_range[] =
    {
       0x0020, 0x00FF, // Basic Latin + Latin Supplement
@@ -70,24 +65,17 @@ void create_fonts(ImFontAtlas* font_atlas, const overlay_params& params, ImFont*
    builder.BuildRanges(&glyph_ranges);
 
    bool same_font = (params.font_file == params.font_file_text || params.font_file_text.empty());
-   bool text_same_size = (font_size == font_size_text);
-   bool secondary_same_size = (font_size == font_size_secondary);
+   bool same_size = (font_size == font_size_text);
 
    // ImGui takes ownership of the data, no need to free it
    if (!params.font_file.empty() && file_exists(params.font_file)) {
-      font_atlas->AddFontFromFileTTF(params.font_file.c_str(), font_size, nullptr, same_font && text_same_size ? glyph_ranges.Data : default_range);
+      font_atlas->AddFontFromFileTTF(params.font_file.c_str(), font_size, nullptr, same_font && same_size ? glyph_ranges.Data : default_range);
       font_atlas->AddFontFromMemoryCompressedBase85TTF(forkawesome_compressed_data_base85, font_size, &config, icon_ranges);
       if (params.no_small_font)
          small_font = font_atlas->Fonts[0];
       else {
          small_font = font_atlas->AddFontFromFileTTF(params.font_file.c_str(), font_size * 0.55f, nullptr, default_range);
          font_atlas->AddFontFromMemoryCompressedBase85TTF(forkawesome_compressed_data_base85, font_size * 0.55f, &config, icon_ranges);
-      }
-      if (secondary_same_size) {
-         secondary_font = font_atlas->Fonts[0];
-      } else {
-         secondary_font = font_atlas->AddFontFromFileTTF(params.font_file.c_str(), font_size_secondary, nullptr, default_range);
-         font_atlas->AddFontFromMemoryCompressedBase85TTF(forkawesome_compressed_data_base85, font_size_secondary, &config, icon_ranges);
       }
    } else {
       const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
@@ -99,19 +87,13 @@ void create_fonts(ImFontAtlas* font_atlas, const overlay_params& params, ImFont*
          small_font = font_atlas->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size * 0.55f, nullptr, default_range);
          font_atlas->AddFontFromMemoryCompressedBase85TTF(forkawesome_compressed_data_base85, font_size * 0.55f, &config, icon_ranges);
       }
-      if (secondary_same_size) {
-         secondary_font = font_atlas->Fonts[0];
-      } else {
-         secondary_font = font_atlas->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size_secondary, nullptr, default_range);
-         font_atlas->AddFontFromMemoryCompressedBase85TTF(forkawesome_compressed_data_base85, font_size_secondary, &config, icon_ranges);
-      }
    }
 
    auto font_file_text = params.font_file_text;
    if (font_file_text.empty())
       font_file_text = params.font_file;
 
-   if ((!same_font || !text_same_size) && file_exists(font_file_text))
+   if ((!same_font || !same_size) && file_exists(font_file_text))
       text_font = font_atlas->AddFontFromFileTTF(font_file_text.c_str(), font_size_text, nullptr, glyph_ranges.Data);
    else
       text_font = font_atlas->Fonts[0];
