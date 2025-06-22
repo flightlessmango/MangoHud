@@ -484,6 +484,24 @@ void HudElements::cpu_stats(){
             HUDElements.TextColored(HUDElements.colors.text, "W");
             ImGui::PopFont();
         }
+
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_efficiency]) {
+            ImguiNextColumnOrNewRow();
+            float efficiency;
+            const char* efficiency_unit;
+            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_flip_efficiency]) {
+                efficiency=cpuStats.GetCPUDataTotal().power/HUDElements.sw_stats->fps;
+                efficiency_unit="J/F";
+            } else {
+                efficiency=HUDElements.sw_stats->fps/cpuStats.GetCPUDataTotal().power;
+                efficiency_unit="F/J";
+            }
+            right_aligned_text(text_color, HUDElements.ralign_width, "%.2f", efficiency);
+            ImGui::SameLine(0, 1.0f);
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            HUDElements.TextColored(HUDElements.colors.text, efficiency_unit);
+            ImGui::PopFont();
+        }
     }
 }
 

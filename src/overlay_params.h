@@ -123,6 +123,7 @@ struct Tracepoint;
    OVERLAY_PARAM_BOOL(present_mode)                  \
    OVERLAY_PARAM_BOOL(time_no_label)                 \
    OVERLAY_PARAM_BOOL(display_server)                \
+   OVERLAY_PARAM_BOOL(cpu_efficiency)                \
    OVERLAY_PARAM_BOOL(gpu_efficiency)                \
    OVERLAY_PARAM_BOOL(flip_efficiency)               \
    OVERLAY_PARAM_BOOL(gpu_power_limit)               \
