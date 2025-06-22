@@ -358,6 +358,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `cpu_power`<br>`gpu_power`         | Display CPU/GPU draw in watts                                                         |
 | `cpu_temp`<br>`gpu_temp`<br>`gpu_junction_temp`<br>`gpu_mem_temp`           | Display current CPU/GPU temperature                                                  |
 | `cpu_text`<br>`gpu_text`           | Override CPU and GPU text. `gpu_text` is a list in case of multiple GPUs              |
+| `cpu_efficiency`                   | Display CPU efficiency in frames per joule                                            |
 | `custom_text_center`               | Display a custom text centered useful for a header e.g `custom_text_center=FlightLessMango Benchmarks` |
 | `custom_text`                      | Display a custom text e.g `custom_text=Fsync enabled`                                 |
 | `debug`                            | Shows the graph of gamescope app frametimes and latency (only on gamescope obviously) |
@@ -408,7 +409,6 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `gpu_voltage`                      | Display GPU voltage                                                                   |
 | `gpu_list`                         | List GPUs to display `gpu_list=0,1`                                                   |
 | `gpu_efficiency`                   | Display GPU efficiency in frames per joule                                            |
-| `flip_efficiency`                  | Flips GPU efficiency to joules per frame                                              |
 | `gpu_power_limit`                  | Display GPU power limit                                                               |
 | `hide_fsr_sharpness`               | Hides the sharpness info for the `fsr` option (only available in gamescope)           |
 | `histogram`                        | Change FPS graph to histogram                                                         |
@@ -472,6 +472,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `network`                          | Show network interfaces tx and rx kb/s. You can specify interface with `network=eth0` |
 | `fex_stats`                        | Show FEX-Emu statistics. Default = `status+apptype+hotthreads+jitload+sigbus+smc+softfloat` |
 | `ftrace`                           | Display information about trace events reported through ftrace                        |
+| `flip_efficiency`                  | Flips CPU and GPU efficiency to joules per frame                                      |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 Because comma is also used as option delimiter and needs to be escaped for values with a backslash, you can use `+` like `MANGOHUD_CONFIG=fps_limit=60+30+0` instead.
