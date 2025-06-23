@@ -7,6 +7,9 @@
 #include "fex.h"
 #include "hud_elements.h"
 #include "mesa/util/macros.h"
+#if defined(__x86_64__) || defined(__i386__)
+#include <immintrin.h>
+#endif
 
 namespace fex {
 const char* fex_status = "Not Found!";
@@ -176,6 +179,22 @@ static uint64_t get_cycle_counter_frequency() {
 }
 #endif
 
+#if defined(__x86_64__) || defined(__i386__)
+static void atomic_copy_thread_stats(fex_thread_stats *dest, const fex_thread_stats *src) {
+    // Use SSE to copy the thread stats to avoid tearing on 32-bit.
+    static_assert(sizeof(fex_thread_stats) % 16 == 0, "");
+    static_assert((sizeof(fex_thread_stats) / 16) == 3, "");
+    auto d = reinterpret_cast<__m128*>(dest);
+    auto s = reinterpret_cast<const __m128*>(src);
+    d[0] = s[0];
+    d[1] = s[1];
+    d[2] = s[2];
+}
+#else
+void atomic_copy_thread_stats(fex_thread_stats *dest, const fex_thread_stats *src) {
+    *dest = *src;
+}
+#endif
 static void destroy_shm() {
     munmap(g_stats.shm_base, g_stats.shm_size);
     close(g_stats.shm_fd);
@@ -322,7 +341,7 @@ void update_fex_stats() {
         const auto TID = __atomic_load_n(&stat->TID, __ATOMIC_RELAXED);
         if (TID != 0) {
             fex_stats::retained_stats &sampled_stats = g_stats.sampled_stats[TID];
-            memcpy(&sampled_stats.current, stat, sizeof(fex_thread_stats));
+            atomic_copy_thread_stats(&sampled_stats.current, stat);
             sampled_stats.last_seen = now;
         }
 

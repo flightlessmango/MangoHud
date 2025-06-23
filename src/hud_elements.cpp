@@ -1798,7 +1798,7 @@ void HudElements::fex_stats()
         ImguiNextColumnOrNewRow();
         ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
         ImguiNextColumnOrNewRow();
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%d - %.0f avg/s", fex::sigbus_counts.Count(), fex::sigbus_counts.Avg());
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%" PRIu64 " - %.0f avg/s", fex::sigbus_counts.Count(), fex::sigbus_counts.Avg());
     }
 
     if (HUDElements.params->fex_stats.smc_counts) {
@@ -1807,7 +1807,7 @@ void HudElements::fex_stats()
         ImguiNextColumnOrNewRow();
         ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
         ImguiNextColumnOrNewRow();
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%d - %.0f avg/s", fex::smc_counts.Count(), fex::smc_counts.Avg());
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%" PRIu64 " - %.0f avg/s", fex::smc_counts.Count(), fex::smc_counts.Avg());
     }
 
     if (HUDElements.params->fex_stats.softfloat_counts) {
@@ -1816,7 +1816,7 @@ void HudElements::fex_stats()
         ImguiNextColumnOrNewRow();
         ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
         ImguiNextColumnOrNewRow();
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%d - %.0f avg/s", fex::softfloat_counts.Count(), fex::softfloat_counts.Avg());
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%" PRIu64 " - %.0f avg/s", fex::softfloat_counts.Count(), fex::softfloat_counts.Avg());
     }
 
     ImGui::PopFont();
