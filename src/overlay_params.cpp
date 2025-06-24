@@ -253,11 +253,14 @@ parse_load_color(const char *str)
    std::vector<unsigned> load_colors;
    auto tokens = str_tokenize(str);
    std::string token;
+
    for (auto& token : tokens) {
       trim(token);
       load_colors.push_back(std::stoi(token, NULL, 16));
    }
-   while (load_colors.size() != 3) {
+
+   // pad vec with white color so we always have at least 3
+   while (load_colors.size() < 3) {
       load_colors.push_back(std::stoi("FFFFFF" , NULL, 16));
    }
 
