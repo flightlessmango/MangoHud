@@ -1743,13 +1743,9 @@ void HudElements::_display_session() {
     ImGui::PushFont(HUDElements.sw_stats->font_secondary);
     ImguiNextColumnFirstItem();
 
-    const char* title = "Displat server";
+    const char* title = "Display Server";
     HUDElements.TextColored(HUDElements.colors.engine, "%s", title);
     ImguiNextColumnOrNewRow();
-
-    // Jump a column if title is overflowing
-    if (ImGuiTextOverflow(title))
-        ImguiNextColumnOrNewRow();
 
     static std::map<display_servers, std::string> servers {
         {WAYLAND, {"WAYLAND"}},
