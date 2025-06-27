@@ -1900,14 +1900,17 @@ static VkResult overlay_CreateInstance(
    VkLayerInstanceCreateInfo *chain_info =
       get_instance_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
-   std::string engineVersion,engineName;
+   std::string engineVersion, engineName;
    enum EngineTypes engine = EngineTypes::UNKNOWN;
+   const char* pEngineName = nullptr;
+   if (pCreateInfo->pApplicationInfo)
+      pEngineName = pCreateInfo->pApplicationInfo->pEngineName;
+   if (pEngineName)
+   {
+      engineName = pEngineName;
+      global_engine_name = engineName;
+   }
    if (!is_blacklisted(true)) {
-      const char* pEngineName = nullptr;
-      if (pCreateInfo->pApplicationInfo)
-         pEngineName = pCreateInfo->pApplicationInfo->pEngineName;
-      if (pEngineName)
-         engineName = pEngineName;
       if (engineName == "DXVK" || engineName == "vkd3d") {
          int engineVer = pCreateInfo->pApplicationInfo->engineVersion;
          engineVersion = to_string(VK_VERSION_MAJOR(engineVer)) + "." + to_string(VK_VERSION_MINOR(engineVer)) + "." + to_string(VK_VERSION_PATCH(engineVer));

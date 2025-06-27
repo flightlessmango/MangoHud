@@ -10,6 +10,7 @@
 
 namespace fs = ghc::filesystem;
 std::string global_proc_name;
+std::string global_engine_name;
 
 static std::string get_proc_name() {
    // Note: It is possible to use GNU program_invocation_short_name.
@@ -65,17 +66,16 @@ static  std::vector<std::string> blacklist {
     "vulkandriverquery",
 };
 
+static std::vector<std::string> blacklist_engine {
+    "GTK"
+};
+
 static bool check_blacklisted() {
     std::string proc_name = get_proc_name();
+    std::string engine_name = global_engine_name;
     global_proc_name = proc_name;
     bool blacklisted = std::find(blacklist.begin(), blacklist.end(), proc_name) != blacklist.end();
-
-#ifdef __linux__
-    // if the app isn't blacklisted, check if the app uses GTK and blacklist anyway
-    // unless we're using proton
-    if (!blacklisted)
-        blacklisted = lib_loaded("gtk") && !lib_loaded("proton");
-#endif
+    blacklisted |= std::find(blacklist_engine.begin(), blacklist_engine.end(), engine_name) != blacklist_engine.end();
 
     static bool printed = false;
     if(blacklisted && !printed) {
