@@ -45,7 +45,6 @@ jobs:
     - name: 'Configure'
       run: meson setup ./builddir --prefix=/usr
           -D include_doc=true
-          -D with_xnvctrl=enabled
           -D with_x11=enabled
           -D with_wayland=enabled
           -D with_dbus=enabled

@@ -36,7 +36,7 @@ sha256sums=(
             "1c6b1462066a5452fa50c1da1dd47fed841f28232972c82d778f2962936568c7"
             )
 
-_build_args="-Dappend_libdir_mangohud=false -Dwith_xnvctrl=disabled -Dtests=disabled"
+_build_args="-Dappend_libdir_mangohud=false -Dtests=disabled"
 
 pkgver() {
   cd "$srcdir/mangohud"

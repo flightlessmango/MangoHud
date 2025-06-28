@@ -128,23 +128,6 @@ if is_unixy
     )
   endif
 
-  if get_option('with_xnvctrl').enabled()
-
-    if not get_option('with_x11').enabled()
-      error('XNVCtrl also needs \'with_x11\'')
-    endif
-
-    xnvctrl_h_found = cc.has_header('NVCtrl/NVCtrl.h')
-    if not xnvctrl_h_found
-      error('NVCtrl.h was not found. Disable with \'-Dwith_xnvctrl=disabled\' if gpu stats by XNVCtrl are not needed.')
-    endif
-
-    pre_args += '-DHAVE_XNVCTRL'
-    vklayer_files += files(
-      'loaders/loader_nvctrl.cpp'
-    )
-  endif
-
   if get_option('with_x11').enabled()
     pre_args += '-DHAVE_X11'
 
