@@ -55,7 +55,8 @@ enum {
    CPU_POWER_ZENPOWER,
    CPU_POWER_ZENERGY,
    CPU_POWER_RAPL,
-   CPU_POWER_AMDGPU
+   CPU_POWER_AMDGPU,
+   CPU_POWER_XGENE
 };
 
 struct CPUPowerData {
@@ -145,6 +146,20 @@ struct CPUPowerData_amdgpu : public CPUPowerData {
    CPUPowerData_amdgpu() {
       this->source = CPU_POWER_AMDGPU;
    };
+};
+
+
+struct CPUPowerData_xgene : public CPUPowerData {
+   CPUPowerData_xgene() {
+      this->source = CPU_POWER_XGENE;
+   };
+
+   ~CPUPowerData_xgene() {
+      if(this->powerFile)
+         fclose(this->powerFile);
+   };
+
+   FILE* powerFile {nullptr};
 };
 
 class CPUStats
