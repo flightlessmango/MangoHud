@@ -444,6 +444,23 @@ static bool get_cpu_power_amdgpu(float& power) {
     return false;
 }
 
+static bool get_cpu_power_xgene(CPUPowerData* cpuPowerData, float& power) {
+    CPUPowerData_xgene* powerData_xgene = (CPUPowerData_xgene*)cpuPowerData;
+    if (!powerData_xgene->powerFile)
+        return false;
+
+    rewind(powerData_xgene->powerFile);
+    fflush(powerData_xgene->powerFile);
+
+    uint64_t powerValue = 0;
+    if (fscanf(powerData_xgene->powerFile, "%" SCNu64, &powerValue) != 1)
+        return false;
+
+    power = (float) powerValue / 1000000.0f;
+
+    return true;
+}
+
 bool CPUStats::UpdateCpuPower() {
     InitCpuPowerData();
 
@@ -467,6 +484,9 @@ bool CPUStats::UpdateCpuPower() {
             break;
         case CPU_POWER_AMDGPU:
             if (!get_cpu_power_amdgpu(power)) return false;
+            break;
+        case CPU_POWER_XGENE:
+            if (!get_cpu_power_xgene(m_cpuPowerData.get(), power)) return false;
             break;
         default:
             return false;
@@ -584,6 +604,9 @@ bool CPUStats::GetCpuFile() {
         } else if (std::regex_match(name, match, std::regex("cpu\\d*_thermal"))) {
             find_fallback_input(path, "temp1", input);
             break;
+        } else if (name == "apm_xgene") {
+            find_input(path, "temp", input, "SoC Temperature");
+            break;
         } else {
             path.clear();
         }
@@ -685,6 +708,18 @@ static CPUPowerData_rapl* init_cpu_power_data_rapl(const std::string path) {
     return powerData.release();
 }
 
+static CPUPowerData_xgene* init_cpu_power_data_xgene(const std::string path) {
+    auto powerData = std::make_unique<CPUPowerData_xgene>();
+    std::string powerPath;
+
+    if(!find_input(path, "power", powerPath, "CPU power")) return nullptr;
+
+    SPDLOG_DEBUG("hwmon: using input: {}", powerPath);
+    powerData->powerFile = fopen(powerPath.c_str(), "r");
+
+    return powerData.release();
+}
+
 bool CPUStats::InitCpuPowerData() {
     if(m_cpuPowerData != nullptr)
         return true;
@@ -714,6 +749,9 @@ bool CPUStats::InitCpuPowerData() {
             break;
         } else if (name == "zenergy") {
             cpuPowerData = (CPUPowerData*)init_cpu_power_data_zenergy(path);
+            break;
+        } else if (name == "apm_xgene") {
+            cpuPowerData = (CPUPowerData*)init_cpu_power_data_xgene(path);
             break;
         }
     }
