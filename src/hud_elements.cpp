@@ -1952,6 +1952,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
         {"resolution", {resolution}},
         {"show_fps_limit", {show_fps_limit}},
         {"vram", {vram}},
+        {"proc_vram", {proc_vram}},
         {"ram", {ram}},
         {"fps", {fps}},
         {"gpu_name", {gpu_name}},
