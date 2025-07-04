@@ -25,10 +25,11 @@ static inline bool keys_are_pressed(const std::vector<KeySym>& keys)
     {
         update_wl_queue();
 
-        if (std::all_of(std::begin(keys), std::end(keys), [&](const auto& key) {
+        if (keys.size() == wl_pressed_keys.size() &&
+		    std::all_of(std::begin(keys), std::end(keys), [&](const auto& key) {
                 return wl_pressed_keys.count(key) != 0;
-        })) {
-                return true;
+            })) {
+            return true;
         }
     }
     #endif
