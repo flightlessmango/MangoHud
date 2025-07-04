@@ -75,7 +75,6 @@ Install necessary development packages.
 - glslang
 - libGL/libEGL (libglvnd, mesa-common-dev, mesa-libGL-devel etc)
 - X11 (libx11-dev)
-- XNVCtrl (libxnvctrl-dev), optional, use `-Dwith_xnvctrl=disabled` option with `meson` to disable
 - D-Bus (libdbus-1-dev), optional, use `-Dwith_dbus=disabled` option with `meson` to disable
 - wayland-client
 - xcbcommon
@@ -91,7 +90,6 @@ If distro's packaged `meson` is too old and gives build errors, install newer ve
 | Option        | Default | Description
 | --------      | ------- | -
 | with_nvml     | enabled    |Required for NVIDIA GPU metrics on wayland
-| with_xnvctrl  | enabled    |Required for NVIDIA GPU metrics on older GPUs
 | with_x11      | enabled    |Required for keybinds on x11
 | with_wayland  | enabled    |Required for keybinds on wayland
 | with_dbus     | enabled    |Required for using the media features
@@ -114,7 +112,7 @@ To just build it, execute:
 You can also pass arguments to meson:
 
 ```
-./build.sh build -Dwith_xnvctrl=disabled
+./build.sh build -Dwith_wayland=disabled
 ```
 
 Resulting files will be install to `./build/release` folder.
