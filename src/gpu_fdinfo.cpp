@@ -36,7 +36,15 @@ void GPU_fdinfo::find_fd()
         std::string driver, pdev, client_id;
 
         for (std::string line; std::getline(file, line);) {
-            auto key = line.substr(0, line.find(":"));
+            size_t colon = line.find(":");
+
+            if (line[0] == ' ' || line[0] == '\t')
+                continue;
+
+            if (colon == std::string::npos || colon + 2 >= line.length())
+                continue;
+
+            auto key = line.substr(0, colon);
             auto val = line.substr(key.length() + 2);
 
             if (key == "drm-driver")
@@ -86,6 +94,14 @@ void GPU_fdinfo::gather_fdinfo_data() {
         fdinfo[i].seekg(0);
 
         for (std::string line; std::getline(fdinfo[i], line);) {
+            size_t colon = line.find(":");
+
+            if (line[0] == ' ' || line[0] == '\t')
+                continue;
+
+            if (colon == std::string::npos || colon + 2 >= line.length())
+                continue;
+
             auto key = line.substr(0, line.find(":"));
             auto val = line.substr(key.length() + 2);
             fdinfo_data[i][key] = val;
