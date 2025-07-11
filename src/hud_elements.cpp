@@ -816,14 +816,14 @@ void HudElements::fps(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_only]){
         ImguiNextColumnFirstItem();
         if (HUDElements.params->fps_text.empty()){
-            if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact] || HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
-                if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names])
-                    HUDElements.TextColored(HUDElements.colors.engine, "%s", engines_short[HUDElements.sw_stats->engine]);
-                else
+            if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names])
+                if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hide_engine_names])
                     HUDElements.TextColored(HUDElements.colors.engine, "%s", "FPS");
-            else
-                if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names])
+                else
                     HUDElements.TextColored(HUDElements.colors.engine, "%s", engines_short[HUDElements.sw_stats->engine]);
+            else
+                if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hide_engine_names])
+                    HUDElements.TextColored(HUDElements.colors.engine, "%s", "FPS");
                 else
                     HUDElements.TextColored(HUDElements.colors.engine, "%s", engines[HUDElements.sw_stats->engine]);
         } else {
@@ -847,7 +847,7 @@ void HudElements::fps(){
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", HUDElements.sw_stats->fps);
         }
         ImGui::SameLine(0, 1.0f);
-        if(!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal]){
+        if(!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hide_fps_superscript]){
             ImGui::PushFont(HUDElements.sw_stats->font_small);
             HUDElements.TextColored(HUDElements.colors.text, "FPS");
             ImGui::PopFont();
