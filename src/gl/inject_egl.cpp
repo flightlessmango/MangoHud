@@ -105,43 +105,47 @@ EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf)
 EXPORT_C_(void*) eglGetPlatformDisplay( unsigned int platform, void* native_display, const intptr_t* attrib_list);
 EXPORT_C_(void*) eglGetPlatformDisplay( unsigned int platform, void* native_display, const intptr_t* attrib_list)
 {
+    void *ret;
     static void* (*pfn_eglGetPlatformDisplay)(unsigned int, void*, const intptr_t*) = nullptr;
+
     if (!pfn_eglGetPlatformDisplay)
         pfn_eglGetPlatformDisplay = reinterpret_cast<decltype(pfn_eglGetPlatformDisplay)>(get_egl_proc_address("eglGetPlatformDisplay"));
 
+    ret = pfn_eglGetPlatformDisplay(platform, native_display, attrib_list);
+
 #ifdef HAVE_WAYLAND
-    if(platform == EGL_PLATFORM_WAYLAND_KHR)
+    if (platform == EGL_PLATFORM_WAYLAND_KHR && ret)
     {
-        wl_display_ptr = (struct wl_display*)native_display;
         HUDElements.display_server = HUDElements.display_servers::WAYLAND;
-        wl_handle = real_dlopen("libwayland-client.so.0", RTLD_LAZY);
-        init_wayland_data();
+        init_wayland_data((struct wl_display*)native_display, ret);
     }
 #endif
 
-    return pfn_eglGetPlatformDisplay(platform, native_display, attrib_list);
+    return ret;
 }
 
 EXPORT_C_(void*) eglGetDisplay( void* native_display );
 EXPORT_C_(void*) eglGetDisplay( void* native_display )
 {
+    void *ret;
     static void* (*pfn_eglGetDisplay)(void*) = nullptr;
+
     if (!pfn_eglGetDisplay)
         pfn_eglGetDisplay = reinterpret_cast<decltype(pfn_eglGetDisplay)>(get_egl_proc_address("eglGetDisplay"));
+
+    ret = pfn_eglGetDisplay(native_display);
 
 #ifdef HAVE_WAYLAND
     try
     {
         void** display_ptr = (void**)native_display;
-        if (native_display)
+        if (native_display && ret)
         {
             wl_interface* iface = (wl_interface*)*display_ptr;
-            if(iface && strcmp(iface->name, wl_display_interface.name) == 0)
+            if (iface && strcmp(iface->name, wl_display_interface.name) == 0)
             {
-                wl_display_ptr = (struct wl_display*)native_display;
                 HUDElements.display_server = HUDElements.display_servers::WAYLAND;
-                wl_handle = real_dlopen("libwayland-client.so.0", RTLD_LAZY);
-                init_wayland_data();
+                init_wayland_data((struct wl_display*)native_display, ret);
             }
         }
     }
@@ -150,7 +154,26 @@ EXPORT_C_(void*) eglGetDisplay( void* native_display )
     }
 #endif
 
-    return pfn_eglGetDisplay(native_display);
+    return ret;
+}
+
+EXPORT_C_(int) eglTerminate(void *display);
+EXPORT_C_(int) eglTerminate(void *display)
+{
+    int ret;
+    static int (*pfn_eglTerminate)(void*) = nullptr;
+
+    if (!pfn_eglTerminate)
+        pfn_eglTerminate = reinterpret_cast<decltype(pfn_eglTerminate)>(get_egl_proc_address("eglTerminate"));
+
+    ret = pfn_eglTerminate(display);
+
+    if (ret)
+    {
+        wayland_data_unref(NULL, display);
+    }
+
+    return ret;
 }
 
 struct func_ptr {
@@ -158,12 +181,13 @@ struct func_ptr {
    void *ptr;
 };
 
-static std::array<const func_ptr, 4> name_to_funcptr_map = {{
+static std::array<const func_ptr, 5> name_to_funcptr_map = {{
 #define ADD_HOOK(fn) { #fn, (void *) fn }
    ADD_HOOK(eglGetProcAddress),
    ADD_HOOK(eglSwapBuffers),
    ADD_HOOK(eglGetPlatformDisplay),
-   ADD_HOOK(eglGetDisplay)
+   ADD_HOOK(eglGetDisplay),
+   ADD_HOOK(eglTerminate)
 #undef ADD_HOOK
 }};
 
