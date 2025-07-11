@@ -21,19 +21,12 @@ static inline bool keys_are_pressed(const std::vector<KeySym>& keys)
         return false;
 
     #if defined(HAVE_WAYLAND)
-    if(wl_display_ptr && wl_handle)
+    if (wl_handle)
     {
         update_wl_queue();
 
-        if (wl_pressed_keys.size() != keys.size())
-            return false;
-
-        for (KeySym ks : keys) {
-            if (wl_pressed_keys.count(ks) == 0)
-                return false;
-        }
-
-        return true;
+        if (wayland_has_keys_pressed(keys))
+           return true;
     }
     #endif
 
