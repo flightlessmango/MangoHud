@@ -43,11 +43,11 @@ void check_keybinds(struct overlay_params& params){
        keys_are_pressed(params.toggle_fps_limit)) {
       toggle_fps_limit_press = now;
       for (size_t i = 0; i < params.fps_limit.size(); i++){
-         uint32_t fps_limit = params.fps_limit[i];
+         double fps_limit = params.fps_limit[i];
          // current fps limit equals vector entry, use next / first
          if((fps_limit > 0 && fps_limit_stats.targetFrameTime == std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(1) / params.fps_limit[i]))
                || (fps_limit == 0 && fps_limit_stats.targetFrameTime == fps_limit_stats.targetFrameTime.zero())) {
-            uint32_t newFpsLimit = i+1 == params.fps_limit.size() ? params.fps_limit[0] : params.fps_limit[i+1];
+            double newFpsLimit = i+1 == params.fps_limit.size() ? params.fps_limit[0] : params.fps_limit[i+1];
             if(newFpsLimit > 0) {
                fps_limit_stats.targetFrameTime = std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(1) / newFpsLimit);
             } else {
