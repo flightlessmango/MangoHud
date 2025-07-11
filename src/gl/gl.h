@@ -27,6 +27,7 @@ unsigned int eglSwapBuffers( void*, void* );
 void* eglGetPlatformDisplay( unsigned int, void*, const intptr_t* );
 void* eglGetDisplay( void* );
 void* eglGetProcAddress( const char* );
+int eglTerminate( void* );
 
 #ifdef __cplusplus
 }
