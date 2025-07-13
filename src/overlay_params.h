@@ -111,6 +111,8 @@ struct Tracepoint;
    OVERLAY_PARAM_BOOL(gpu_fan)                       \
    OVERLAY_PARAM_BOOL(gpu_voltage)                   \
    OVERLAY_PARAM_BOOL(engine_short_names)            \
+   OVERLAY_PARAM_BOOL(hide_engine_names)             \
+   OVERLAY_PARAM_BOOL(hide_fps_superscript)          \
    OVERLAY_PARAM_BOOL(text_outline)                  \
    OVERLAY_PARAM_BOOL(temp_fahrenheit)               \
    OVERLAY_PARAM_BOOL(dynamic_frame_timing)          \
