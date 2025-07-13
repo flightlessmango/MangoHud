@@ -1559,6 +1559,7 @@ static VkResult overlay_CreateSwapchainKHR(
       VkResult result = fpGetPhysicalDeviceSurfacePresentModesKHR(device_data->physical_device, pCreateInfo->surface, &presentModeCount, presentModes.data());
 
       if (result == VK_SUCCESS) {
+         presentModes.resize(presentModeCount);
          if (IsPresentModeSupported(HUDElements.cur_present_mode, presentModes))
             SPDLOG_DEBUG("Present mode: {}", HUDElements.presentModeMap[HUDElements.cur_present_mode]);
          else {
