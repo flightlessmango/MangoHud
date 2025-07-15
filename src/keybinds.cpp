@@ -9,28 +9,22 @@
 #include "keybinds.h"
 #include "fps_metrics.h"
 
-Clock::time_point last_f2_press, toggle_fps_limit_press, toggle_preset_press, last_f12_press, reload_cfg_press, last_upload_press;
+bool prev_toggle_logging = false;
+bool prev_toggle_fps_limit = false;
+bool prev_toggle_preset = false;
+bool prev_toggle_hud = false;
+bool prev_reload_cfg = false;
+bool prev_upload_log = false;
+bool prev_upload_logs = false;
+bool prev_toggle_hud_position = false;
+bool prev_reset_fps_metrics = false;
 
 void check_keybinds(struct overlay_params& params){
    using namespace std::chrono_literals;
-   auto now = Clock::now(); /* us */
-   auto elapsedF2 = now - last_f2_press;
-   auto elapsedFpsLimitToggle = now - toggle_fps_limit_press;
-   auto elapsedPresetToggle = now - toggle_preset_press;
-   auto elapsedF12 = now - last_f12_press;
-   auto elapsedReloadCfg = now - reload_cfg_press;
-   auto elapsedUpload = now - last_upload_press;
 
-   static Clock::time_point last_check;
-   if (now - last_check < 100ms)
-      return;
-   last_check = now;
+   bool value;
 
-   const auto keyPressDelay = 400ms;
-
-   if (elapsedF2 >= keyPressDelay &&
-       keys_are_pressed(params.toggle_logging)) {
-      last_f2_press = now;
+   if ((value = keys_are_pressed(params.toggle_logging)) && value != prev_toggle_logging) {
       if (logger->is_active()) {
          logger->stop_logging();
       } else {
@@ -39,9 +33,9 @@ void check_keybinds(struct overlay_params& params){
       }
    }
 
-   if (elapsedFpsLimitToggle >= keyPressDelay &&
-       keys_are_pressed(params.toggle_fps_limit)) {
-      toggle_fps_limit_press = now;
+   prev_toggle_logging = value;
+
+   if ((value = keys_are_pressed(params.toggle_fps_limit)) && value != prev_toggle_fps_limit) {
       for (size_t i = 0; i < params.fps_limit.size(); i++){
          uint32_t fps_limit = params.fps_limit[i];
          // current fps limit equals vector entry, use next / first
@@ -58,9 +52,9 @@ void check_keybinds(struct overlay_params& params){
       }
    }
 
-   if (elapsedPresetToggle >= keyPressDelay &&
-       keys_are_pressed(params.toggle_preset)) {
-     toggle_preset_press = now;
+   prev_toggle_fps_limit = value;
+
+   if ((value = keys_are_pressed(params.toggle_preset)) && value != prev_toggle_preset) {
      size_t size = params.preset.size();
      for (size_t i = 0; i < size; i++){
        if(params.preset[i] == current_preset) {
@@ -71,41 +65,43 @@ void check_keybinds(struct overlay_params& params){
      }
    }
 
-   if (elapsedF12 >= keyPressDelay &&
-       keys_are_pressed(params.toggle_hud)) {
-      last_f12_press = now;
+   prev_toggle_preset = value;
+
+   if ((value = keys_are_pressed(params.toggle_hud)) && value != prev_toggle_hud) {
       params.no_display = !params.no_display;
    }
 
-   if (elapsedReloadCfg >= keyPressDelay &&
-       keys_are_pressed(params.reload_cfg)) {
+   prev_toggle_hud = value;
+
+   if ((value = keys_are_pressed(params.reload_cfg)) && value != prev_reload_cfg) {
       parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"), false);
       _params = &params;
-      reload_cfg_press = now;
    }
 
-   if (params.permit_upload && elapsedUpload >= keyPressDelay &&
-       keys_are_pressed(params.upload_log)) {
-      last_upload_press = now;
+   prev_reload_cfg = value;
+
+   if ((value = keys_are_pressed(params.upload_log)) && params.permit_upload && value != prev_upload_log) {
       logger->upload_last_log();
    }
 
-   if (params.permit_upload && elapsedUpload >= keyPressDelay &&
-       keys_are_pressed(params.upload_logs)) {
-      last_upload_press = now;
+   prev_upload_log = value;
+
+   if ((value = keys_are_pressed(params.upload_logs)) && params.permit_upload && value != prev_upload_logs) {
       logger->upload_last_logs();
    }
 
-   if (elapsedF12 >= keyPressDelay &&
-       keys_are_pressed(params.toggle_hud_position)) {
+   prev_upload_logs = value;
+
+   if ((value = keys_are_pressed(params.toggle_hud_position)) && value != prev_toggle_hud_position) {
       next_hud_position(params);
-      last_f12_press = now;
    }
 
-   if (elapsedF12 >= keyPressDelay &&
-       keys_are_pressed(params.reset_fps_metrics)) {
-      last_f12_press = now;
+   prev_toggle_hud_position = value;
+
+   if ((value = keys_are_pressed(params.reset_fps_metrics)) && value != prev_reset_fps_metrics) {
       if (fpsmetrics)
          fpsmetrics->reset_metrics();
    }
+
+   prev_reset_fps_metrics = value;
 }

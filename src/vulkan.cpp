@@ -2053,13 +2053,25 @@ static VkResult overlay_CreateWaylandSurfaceKHR(
    VkSurfaceKHR*                               pSurface
 )
 {
+   VkResult ret;
    struct instance_data *instance_data = FIND(struct instance_data, instance);
-   if (!wl_handle)
-      wl_handle = real_dlopen("libwayland-client.so.0", RTLD_LAZY);
-   wl_display_ptr = pCreateInfo->display;
    HUDElements.display_server = HUDElements.display_servers::WAYLAND;
-   init_wayland_data();
-   return instance_data->vtable.CreateWaylandSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
+   ret = instance_data->vtable.CreateWaylandSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
+   if (ret == VK_SUCCESS)
+      init_wayland_data(pCreateInfo->display, (void *) *pSurface);
+   return ret;
+}
+
+static void overlay_DestroySurfaceKHR(
+   VkInstance                                  instance,
+   VkSurfaceKHR                                surface,
+   const VkAllocationCallbacks*                pAllocator
+)
+{
+   struct instance_data *instance_data = FIND(struct instance_data, instance);
+
+   wayland_data_unref(NULL, (void *) surface);
+   instance_data->vtable.DestroySurfaceKHR(instance, surface, pAllocator);
 }
 #endif
 
@@ -2085,6 +2097,7 @@ static const struct {
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
    ADD_HOOK(CreateWaylandSurfaceKHR),
+   ADD_HOOK(DestroySurfaceKHR),
 #endif
    ADD_HOOK(CreateSwapchainKHR),
    ADD_HOOK(QueuePresentKHR),
