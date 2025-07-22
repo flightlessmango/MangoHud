@@ -22,6 +22,12 @@ bool prev_reset_fps_metrics = false;
 void check_keybinds(struct overlay_params& params){
    using namespace std::chrono_literals;
 
+   auto now = Clock::now();
+   static Clock::time_point last_check;
+   if (now - last_check < 50ms)
+      return;
+   last_check = now;
+
    bool value;
 
    if ((value = keys_are_pressed(params.toggle_logging)) && value != prev_toggle_logging) {
