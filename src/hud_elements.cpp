@@ -1126,9 +1126,9 @@ void HudElements::resolution(){
 
 void HudElements::show_fps_limit(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_show_fps_limit]){
-        int fps = 0;
+        double fps = 0;
         if (fps_limit_stats.targetFrameTime.count())
-            fps = 1000000000 / fps_limit_stats.targetFrameTime.count();
+            fps = 1000000000. / fps_limit_stats.targetFrameTime.count();
         ImguiNextColumnFirstItem();
         ImGui::PushFont(HUDElements.sw_stats->font_secondary);
         const char* method = fps_limit_stats.method == FPS_LIMIT_METHOD_EARLY ? "early" : "late";
@@ -1136,7 +1136,7 @@ void HudElements::show_fps_limit(){
         ImguiNextColumnOrNewRow();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", method);
         ImguiNextColumnOrNewRow();
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", fps);
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", fps);
         ImGui::PopFont();
     }
 }
