@@ -507,7 +507,7 @@ Not all vulkan vsync options may be supported on your device, you can check what
 - `Shift_L+F2` : Toggle Logging
 - `Shift_L+F4` : Reload Config
 - `Shift_R+F12` : Toggle Hud
-- `Shift_R+9` : Reset FPS metrics
+- `Shift_R+F9` : Reset FPS metrics
 
 ## Workarounds
 
