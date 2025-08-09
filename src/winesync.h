@@ -55,7 +55,7 @@ class WineSync {
                     method = syncMethods::NTSYNC;
                     else if (sym.find("fsync") != std::string::npos)
                         method = syncMethods::FSYNC;
-                    else if (sym.find("ntsync") != std::string::npos)
+                    else if (sym.find("/dev/ntsync") != std::string::npos)
                         method = syncMethods::NTSYNC;
                     else if (sym.find("esync") != std::string::npos)
                         method = syncMethods::ESYNC;
