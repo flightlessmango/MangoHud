@@ -1295,7 +1295,7 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
          add_to_options(params, "present_mode", "0");
 
          if (!gpus)
-            gpus = std::make_unique<GPUS>(params);
+            gpus = std::make_unique<GPUS>(&HUDElements.params);
          
          // Disable some options if steamdeck / other known handhelds
          for (auto gpu : gpus->available_gpus) {

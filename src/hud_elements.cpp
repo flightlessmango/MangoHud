@@ -277,7 +277,7 @@ void HudElements::version(){
 
 void HudElements::gpu_stats(){
     if (!gpus)
-        gpus = std::make_unique<GPUS>(HUDElements.params);
+        gpus = std::make_unique<GPUS>(&HUDElements.params);
 
     size_t i = 0;
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
@@ -631,7 +631,7 @@ void HudElements::io_stats(){
 
 void HudElements::vram(){
     if (!gpus)
-        gpus = std::make_unique<GPUS>(HUDElements.params);
+        gpus = std::make_unique<GPUS>(&HUDElements.params);
 
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_vram]){
         size_t i = 0;
@@ -698,7 +698,7 @@ void HudElements::proc_vram() {
         return;
 
     if (!gpus)
-        gpus = std::make_unique<GPUS>(HUDElements.params);
+        gpus = std::make_unique<GPUS>(&HUDElements.params);
 
     auto gpu = gpus->active_gpu();
 
@@ -966,7 +966,7 @@ static inline double TransformInverse_Custom(double v, void*) {
 void HudElements::frame_timing(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
         if (!gpus)
-            gpus = std::make_unique<GPUS>(HUDElements.params);
+            gpus = std::make_unique<GPUS>(&HUDElements.params);
 
         ImguiNextColumnFirstItem();
         ImGui::PushFont(HUDElements.sw_stats->font_small);
@@ -1468,7 +1468,7 @@ void HudElements::fan(){
 void HudElements::throttling_status(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_throttling_status]){
         if (!gpus)
-            gpus = std::make_unique<GPUS>(HUDElements.params);
+            gpus = std::make_unique<GPUS>(&HUDElements.params);
 
         auto gpu = gpus->active_gpu();
         if (!gpu)
@@ -1589,7 +1589,7 @@ void HudElements::graphs(){
             arr.push_back(float(it.gpu_vram_used));
         }
         if (!gpus)
-            gpus = std::make_unique<GPUS>(HUDElements.params);
+            gpus = std::make_unique<GPUS>(&HUDElements.params);
 
         auto gpu = gpus->active_gpu();
         if (!gpu)

@@ -122,9 +122,13 @@ class GPUS {
     public:
         std::vector<std::shared_ptr<GPU>> available_gpus;
         std::mutex mutex;
-        const overlay_params* params;
+        overlay_params* const* params_pointer;
 
-        GPUS(const overlay_params* params);
+        GPUS(overlay_params* const* params_pointer);
+
+        const overlay_params* params(){
+            return params_pointer ? *params_pointer : nullptr;
+        }
 
         void pause() {
             for (auto& gpu : available_gpus)
@@ -166,11 +170,11 @@ class GPUS {
             std::lock_guard<std::mutex> lock(mutex);
             std::vector<std::shared_ptr<GPU>> vec;
 
-            if (params->gpu_list.empty() && params->pci_dev.empty())
+            if (params()->gpu_list.empty() && params()->pci_dev.empty())
                 return available_gpus;
 
-            if (!params->gpu_list.empty()) {
-                for (unsigned index : params->gpu_list) {
+            if (!params()->gpu_list.empty()) {
+                for (unsigned index : params()->gpu_list) {
                     if (index < available_gpus.size()) {
                         if (available_gpus[index])
                             vec.push_back(available_gpus[index]);
@@ -180,9 +184,9 @@ class GPUS {
                 return vec;
             }
 
-            if (!params->pci_dev.empty()) {
+            if (!params()->pci_dev.empty()) {
                 for (auto &gpu : available_gpus) {
-                    if (gpu->pci_dev == params->pci_dev) {
+                    if (gpu->pci_dev == params()->pci_dev) {
                         vec.push_back(gpu);
                         return vec;
                     }

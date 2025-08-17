@@ -3,7 +3,7 @@
 
 namespace fs = ghc::filesystem;
 
-GPUS::GPUS(const overlay_params* params) : params(params) {
+GPUS::GPUS(overlay_params* const* params_pointer) : params_pointer(params_pointer) {
     std::set<std::string> gpu_entries;
 
     for (const auto& entry : fs::directory_iterator("/sys/class/drm")) {
@@ -71,10 +71,10 @@ GPUS::GPUS(const overlay_params* params) : params(params) {
         std::shared_ptr<GPU> ptr =
             std::make_shared<GPU>(node_name, vendor_id, device_id, pci_dev, driver);
 
-        if (params->gpu_list.size() == 1 && params->gpu_list[0] == idx++)
+        if (params()->gpu_list.size() == 1 && params()->gpu_list[0] == idx++)
             ptr->is_active = true;
 
-        if (!params->pci_dev.empty() && pci_dev == params->pci_dev)
+        if (!params()->pci_dev.empty() && pci_dev == params()->pci_dev)
             ptr->is_active = true;
 
         available_gpus.emplace_back(ptr);
@@ -168,14 +168,14 @@ std::string GPU::gpu_text() {
     if (gpus->selected_gpus().size() == 1) {
         // When there's exactly one selected GPU, return "GPU" without index
         gpu_text = "GPU";
-        if (gpus->params->gpu_text.size() > 0) {
-            gpu_text = gpus->params->gpu_text[0];
+        if (gpus->params()->gpu_text.size() > 0) {
+            gpu_text = gpus->params()->gpu_text[0];
         }
     } else if (gpus->selected_gpus().size() > 1) {
         // When there are multiple selected GPUs, use GPU+index or matching gpu_text
         gpu_text = "GPU" + std::to_string(index);
-        if (gpus->params->gpu_text.size() > index) {
-            gpu_text = gpus->params->gpu_text[index];
+        if (gpus->params()->gpu_text.size() > index) {
+            gpu_text = gpus->params()->gpu_text[index];
         }
     } else {
         // Default case for no selected GPUs
