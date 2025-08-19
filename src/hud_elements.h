@@ -20,7 +20,6 @@ struct Function {
     std::string value;
 };
 
-struct overlay_params;
 class HudElements{
     public:
         struct swapchain_stats *sw_stats;

@@ -29,6 +29,7 @@
 #include "ftrace.h"
 
 #ifdef __linux__
+#include "lsfg-vk.h"
 #include <libgen.h>
 #include <unistd.h>
 #endif
@@ -44,8 +45,8 @@ struct benchmark_stats benchmark;
 struct fps_limit fps_limit_stats {};
 ImVec2 real_font_size;
 std::deque<logData> graph_data;
-const char* engines[] = {"Unknown", "OpenGL", "VULKAN", "DXVK", "VKD3D", "DAMAVAND", "ZINK", "WINED3D", "Feral3D", "ToGL", "GAMESCOPE"};
-const char* engines_short[] = {"Unknown", "OGL", "VK", "DXVK", "VKD3D", "DV", "ZINK", "WD3D", "Feral3D", "ToGL", "GS"};
+const char* engines[] = {"Unknown", "OpenGL", "VULKAN", "DXVK", "VKD3D", "DAMAVAND", "ZINK", "WINED3D", "Feral3D", "ToGL", "GAMESCOPE", "LSFG-VK"};
+const char* engines_short[] = {"Unknown", "OGL", "VK", "DXVK", "VKD3D", "DV", "ZINK", "WD3D", "Feral3D", "ToGL", "GS", "LSFG"};
 overlay_params *_params {};
 double min_frametime, max_frametime;
 bool gpu_metrics_exists = false;
@@ -243,7 +244,7 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
    uint64_t now = os_time_get_nano(); /* ns */
    auto elapsed = now - sw_stats.last_fps_update; /* ns */
    float frametime_ms = frametime_ns / 1000000.f;
-
+    
    if (sw_stats.last_present_time) {
         sw_stats.frames_stats[f_idx].stats[OVERLAY_PLOTS_frame_timing] =
             frametime_ns;
@@ -279,7 +280,10 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
 #endif
 
       sw_stats.fps = 1000000000.0 * sw_stats.n_frames_since_update / elapsed;
-
+#ifdef __linux__
+      if (lsfg_ptr && lsfg_ptr->is_active() && !lsfg_ptr->mangohud_is_receiving_all_lsfg_frames)
+         sw_stats.fps += lsfg_ptr->current_fps();
+#endif
       if (params.enabled[OVERLAY_PARAM_ENABLED_time]) {
          std::time_t t = std::time(nullptr);
          std::stringstream time;
@@ -298,10 +302,22 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
       sw_stats.last_fps_update = now;
 
    }
-   auto min = std::min_element(frametime_data.begin(), frametime_data.end());
-   auto max = std::max_element(frametime_data.begin(), frametime_data.end());
-   min_frametime = min[0];
-   max_frametime = max[0];
+#ifdef __linux__
+   if (lsfg_ptr && lsfg_ptr->is_active()) {
+      min_frametime = lsfg_ptr->min_frametime();
+      max_frametime = lsfg_ptr->max_frametime();
+   } else {
+      auto min = std::min_element(frametime_data.begin(), frametime_data.end());
+      auto max = std::max_element(frametime_data.begin(), frametime_data.end());
+      min_frametime = min[0];
+      max_frametime = max[0];
+   }
+#else
+      auto min = std::min_element(frametime_data.begin(), frametime_data.end());
+      auto max = std::max_element(frametime_data.begin(), frametime_data.end());
+      min_frametime = min[0];
+      max_frametime = max[0];
+#endif
    // double min_time = UINT64_MAX, max_time = 0;
    // for (auto& stat : sw_stats.frames_stats ){
    //    min_time = MIN2(stat.stats[0], min_time);

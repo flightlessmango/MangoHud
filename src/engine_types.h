@@ -15,7 +15,8 @@ enum EngineTypes
    FERAL3D,
    TOGL,
 
-   GAMESCOPE
+   GAMESCOPE,
+   LSFG
 };
 
 extern const char* engines[];

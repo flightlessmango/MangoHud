@@ -22,6 +22,7 @@
 #include "blacklist.h"
 #ifdef __linux__
 #include "implot.h"
+#include "lsfg-vk.h"
 #endif
 #include "amdgpu.h"
 #include "fps_metrics.h"
@@ -1037,7 +1038,11 @@ void HudElements::frame_timing(){
                         ImPlot::SetupAxisScale(ImAxis_Y1, TransformForward_Custom, TransformInverse_Custom);
                         ImPlot::SetupAxesLimits(0, 200, min_time, max_time);
                         ImPlot::SetNextLineStyle(HUDElements.colors.frametime, 1.5);
+                        if (lsfg_ptr && lsfg_ptr->is_active()) {
+                            ImPlot::PlotLine("frametime line", lsfg_ptr->combined_frametimes, 200);
+                        } else {
                         ImPlot::PlotLine("frametime line", frametime_data.data(), frametime_data.size());
+                        }
                         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_throttling_status_graph] &&
                             gpus->active_gpu() && gpus->active_gpu()->throttling()){
                             ImPlot::SetNextLineStyle(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), 1.5);
