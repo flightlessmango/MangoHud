@@ -1105,6 +1105,8 @@ parse_overlay_config(struct overlay_params *params,
    auto real_size = params->font_size * params->font_scale;
    real_font_size = ImVec2(real_size, real_size / 2);
    HUDElements.params = params;
+   if (!gpus)
+      gpus = std::make_unique<GPUS>(&HUDElements.params);
 
    for (const auto& option : HUDElements.options) {
       SPDLOG_DEBUG("Param: '{}' = '{}'", option.first, option.second);
@@ -1293,9 +1295,6 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
          add_to_options(params, "frame_timing_detailed", "1");
          add_to_options(params, "network", "1");
          add_to_options(params, "present_mode", "0");
-
-         if (!gpus)
-            gpus = std::make_unique<GPUS>(&HUDElements.params);
          
          // Disable some options if steamdeck / other known handhelds
          for (auto gpu : gpus->available_gpus) {

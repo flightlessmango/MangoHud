@@ -291,13 +291,12 @@ bool CPUStats::ReadcpuTempFile(int& temp) {
 }
 
 bool CPUStats::UpdateCpuTemp() {
-    if (!gpus)
-        gpus = std::make_unique<GPUS>(&HUDElements.params);
-
-    for (auto gpu : gpus->available_gpus) {
-        if (gpu->is_apu()) {
-            m_cpuDataTotal.temp = gpu->metrics.apu_cpu_temp;
-            return true;
+    if (gpus) {
+        for (auto gpu : gpus->available_gpus) {
+            if (gpu->is_apu()) {
+                m_cpuDataTotal.temp = gpu->metrics.apu_cpu_temp;
+                return true;
+            }
         }
     }
 
