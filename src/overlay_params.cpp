@@ -963,6 +963,9 @@ parse_overlay_config(struct overlay_params *params,
       // clear options since we don't want config options to appear first
       params->options.clear();
       HUDElements.options.clear();
+      HUDElements.params = params;
+      if (!gpus)
+         gpus = std::make_unique<GPUS>(&HUDElements.params);
       // add preset options
       presets(current_preset, params);
       // potentially override preset options with config options
@@ -1104,9 +1107,6 @@ parse_overlay_config(struct overlay_params *params,
 
    auto real_size = params->font_size * params->font_scale;
    real_font_size = ImVec2(real_size, real_size / 2);
-   HUDElements.params = params;
-   if (!gpus)
-      gpus = std::make_unique<GPUS>(&HUDElements.params);
 
    for (const auto& option : HUDElements.options) {
       SPDLOG_DEBUG("Param: '{}' = '{}'", option.first, option.second);
