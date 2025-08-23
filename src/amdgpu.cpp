@@ -66,7 +66,7 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	}
 	fclose(f);
 
-	uint64_t indep_throttle_status = 0;
+	bool is_power=false, is_current=false, is_temp=false, is_other=false;
 	if (header->format_revision == 1) {
 		// Desktop GPUs
 		struct gpu_metrics_v1_3 *amdgpu_metrics = (struct gpu_metrics_v1_3 *) buf;
@@ -80,10 +80,15 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		metrics->gpu_temp_c = amdgpu_metrics->temperature_edge;
 		metrics->fan_speed = amdgpu_metrics->current_fan_speed;
 
-		indep_throttle_status = amdgpu_metrics->indep_throttle_status;
+		uint64_t indep = amdgpu_metrics->indep_throttle_status;
 		// RDNA 3 almost always shows the TEMP_HOTSPOT throtting flag,
 		// so clear that bit
-		indep_throttle_status &= ~(1ull << TEMP_HOTSPOT_BIT);
+		indep &= ~(1ull << TEMP_HOTSPOT_BIT);  // your existing quirk
+
+		is_power   = ((indep >> 0)  & 0xFF) != 0;
+		is_current = ((indep >> 16) & 0xFF) != 0;
+		is_temp    = ((indep >> 32) & 0xFFFF) != 0;
+		is_other   = ((indep >> 56) & 0xFF) != 0;
 	} else if (header->format_revision == 2) {
 		// APUs
 		struct gpu_metrics_v2_3 *amdgpu_metrics = (struct gpu_metrics_v2_3 *) buf;
@@ -159,19 +164,55 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 			metrics->current_uclk_mhz = 0;
 		}
 
-		if(header->content_revision >= 2)
-			indep_throttle_status = amdgpu_metrics->indep_throttle_status;
+		if(header->content_revision >= 2) {
+			uint64_t indep = amdgpu_metrics->indep_throttle_status;
+			is_power   = ((indep >> 0)  & 0xFF) != 0;
+			is_current = ((indep >> 16) & 0xFF) != 0;
+			is_temp    = ((indep >> 32) & 0xFFFF) != 0;
+			is_other   = ((indep >> 56) & 0xFF) != 0;
+		}
+	} else if (header->format_revision == 3) {
+		struct gpu_metrics_v3_0 *amdgpu_metrics = (struct gpu_metrics_v3_0 *) buf;
+
+		metrics->gpu_temp_c = amdgpu_metrics->temperature_gfx;
+		metrics->soc_temp_c = amdgpu_metrics->temperature_soc;
+
+		uint16_t cpu_temp = 0;
+
+		for (unsigned i = 0; i < ARRAY_SIZE(amdgpu_metrics->temperature_core); i++) {
+			if (!IS_VALID_METRIC(amdgpu_metrics->temperature_core[i]))
+				break;
+
+			cpu_temp = MAX(cpu_temp, amdgpu_metrics->temperature_core[i]);
+		}
+		metrics->apu_cpu_temp_c = cpu_temp;
+
+		metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
+		metrics->average_cpu_power_w = amdgpu_metrics->average_apu_power;
+		metrics->average_gfx_power_w = amdgpu_metrics->average_gfx_power;
+		metrics->current_gfxclk_mhz = amdgpu_metrics->average_gfxclk_frequency;
+		metrics->current_uclk_mhz = amdgpu_metrics->average_uclk_frequency;
+
+		is_temp    = (amdgpu_metrics->throttle_residency_thm_core ||
+					amdgpu_metrics->throttle_residency_thm_gfx  ||
+					amdgpu_metrics->throttle_residency_thm_soc);
+
+		is_power   = (amdgpu_metrics->throttle_residency_spl ||
+					amdgpu_metrics->throttle_residency_fppt ||
+					amdgpu_metrics->throttle_residency_sppt);
+
+		is_current = (amdgpu_metrics->throttle_residency_prochot != 0);
+		is_other   = false;
+
 	}
 
 	/* Throttling: See
 	https://elixir.bootlin.com/linux/latest/source/drivers/gpu/drm/amd/pm/swsmu/inc/amdgpu_smu.h
 	for the offsets */
-	metrics->is_power_throttled = ((indep_throttle_status >> 0) & 0xFF) != 0;
-	metrics->is_current_throttled = ((indep_throttle_status >> 16) & 0xFF) != 0;
-	metrics->is_temp_throttled = ((indep_throttle_status >> 32) & 0xFFFF) != 0;
-	metrics->is_other_throttled = ((indep_throttle_status >> 56) & 0xFF) != 0;
-	if (throttling)
-		throttling->indep_throttle_status = indep_throttle_status;
+	metrics->is_power_throttled   = is_power;
+	metrics->is_current_throttled = is_current;
+	metrics->is_temp_throttled    = is_temp;
+	metrics->is_other_throttled   = is_other;
 }
 
 void AMDGPU::get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT], bool &gpu_load_needs_dividing) {
