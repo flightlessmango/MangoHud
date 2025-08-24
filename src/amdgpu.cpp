@@ -11,60 +11,32 @@
 #include "logging.h"
 #include "mesa/util/macros.h"
 
-bool AMDGPU::verify_metrics(const std::string& path)
-{
-	metrics_table_header header {};
-	FILE *f;
-	f = fopen(path.c_str(), "rb");
-	if (!f) {
-		SPDLOG_DEBUG("Failed to read the metrics header of '{}'", path);
-		return false;
-	}
-
-	if (fread(&header, sizeof(header), 1, f) == 0)
-	{
-		SPDLOG_DEBUG("Failed to read the metrics header of '{}'", path);
-		return false;
-	}
-
-	switch (header.format_revision)
-	{
-		case 1: // v1_1, v1_2, v1_3
-			if(header.content_revision<=0 || header.content_revision>3)// v1_0, not naturally aligned
-				break;
-
-			return true;
-		case 2: // v2_1, v2_2, v2_3, v2_4
-			if(header.content_revision<=0 || header.content_revision>4)// v2_0, not naturally aligned
-				break;
-
-			this->is_apu = true;
-			return true;
-		default:
-			break;
-	}
-
-	SPDLOG_WARN("Unsupported gpu_metrics version: {}.{}", header.format_revision, header.content_revision);
-	return false;
-}
 
 #define IS_VALID_METRIC(FIELD) (FIELD != 0xffff)
 void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	FILE *f;
-	void *buf[MAX(sizeof(struct gpu_metrics_v1_3), sizeof(struct gpu_metrics_v2_4))/sizeof(void*)+1];
-	struct metrics_table_header* header = (metrics_table_header*)buf;
+	uint8_t buf[sizeof(struct gpu_metrics_v3_0)];  // big enough for v1.3/v2.4/v3.0
+	struct metrics_table_header *header = (struct metrics_table_header *)buf;
 
 	f = fopen(gpu_metrics_path.c_str(), "rb");
 	if (!f)
 		return;
 
-	// Read the whole file
-	if (fread(buf, sizeof(buf), 1, f) != 0) {
-		SPDLOG_DEBUG("amdgpu metrics file '{}' is larger than the buffer", gpu_metrics_path.c_str());
-		fclose(f);
+	size_t nread = fread(buf, 1, sizeof(buf), f);
+	fclose(f);
+
+	if (nread < sizeof(*header)) {
+		SPDLOG_DEBUG("amdgpu metrics file '{}' may be corrupted (read {} bytes, need at least {})",
+					gpu_metrics_path, nread, sizeof(*header));
 		return;
 	}
-	fclose(f);
+
+	if (nread == sizeof(buf)) {
+		// File may be larger than our buffer, so we might have truncated it
+		SPDLOG_DEBUG("amdgpu metrics file '{}' may be larger than the buffer ({} bytes)",
+					gpu_metrics_path, sizeof(buf));
+		return;
+	}
 
 	bool is_power=false, is_current=false, is_temp=false, is_other=false;
 	if (header->format_revision == 1) {
@@ -91,6 +63,7 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		is_other   = ((indep >> 56) & 0xFF) != 0;
 	} else if (header->format_revision == 2) {
 		// APUs
+		this->is_apu = true;
 		struct gpu_metrics_v2_3 *amdgpu_metrics = (struct gpu_metrics_v2_3 *) buf;
 
 		metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
@@ -172,6 +145,7 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 			is_other   = ((indep >> 56) & 0xFF) != 0;
 		}
 	} else if (header->format_revision == 3) {
+		this->is_apu = true;
 		struct gpu_metrics_v3_0 *amdgpu_metrics = (struct gpu_metrics_v3_0 *) buf;
 
 		metrics->gpu_temp_c = amdgpu_metrics->temperature_gfx;
@@ -452,7 +426,15 @@ AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id) {
 	this->vendor_id = vendor_id;
 	const std::string device_path = "/sys/bus/pci/devices/" + pci_dev;
 	gpu_metrics_path = device_path + "/gpu_metrics";
-	gpu_metrics_is_valid = verify_metrics(gpu_metrics_path);
+    // Just check that the metrics file exists and is readable
+    FILE *f = fopen(gpu_metrics_path.c_str(), "rb");
+    if (f) {
+        gpu_metrics_is_valid = true;
+        fclose(f);
+    } else {
+        gpu_metrics_is_valid = false;
+        SPDLOG_DEBUG("Failed to open gpu_metrics at '{}'", gpu_metrics_path);
+    }
 
 	sysfs_nodes.busy = fopen((device_path + "/gpu_busy_percent").c_str(), "r");
 	sysfs_nodes.vram_total = fopen((device_path + "/mem_info_vram_total").c_str(), "r");

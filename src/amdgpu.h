@@ -384,7 +384,6 @@ class AMDGPU {
 				thread.join();
 		}
 
-		bool verify_metrics(const std::string& path);
 		void get_instant_metrics(struct amdgpu_common_metrics *metrics);
 		void get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT],
 								  bool &gpu_load_needs_dividing);
