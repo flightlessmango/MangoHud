@@ -1101,7 +1101,7 @@ void HudElements::resolution(){
         if (ImGuiTextOverflow(title))
             ImguiNextColumnOrNewRow();
 
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "%.0fx%.0f", res.x, res.y);
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.5f, "%.0fx%.0f", res.x, res.y);
         ImGui::PopFont();
     }
 }
@@ -1690,7 +1690,9 @@ void HudElements::present_mode() {
     if (ImGuiTextOverflow(title))
         ImguiNextColumnOrNewRow();
 
-    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s\n", HUDElements.get_present_mode().c_str());
+
+    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.5f, "%s\n", HUDElements.get_present_mode().c_str());
+
     ImGui::PopFont();
 }
 
@@ -1729,12 +1731,16 @@ void HudElements::_display_session() {
     HUDElements.TextColored(HUDElements.colors.engine, "%s", title);
     ImguiNextColumnOrNewRow();
 
+    // Jump a column if title is overflowing
+    if (ImGuiTextOverflow(title))
+        ImguiNextColumnOrNewRow();
+
     static std::map<display_servers, std::string> servers {
         {WAYLAND, {"WAYLAND"}},
         {XWAYLAND, {"XWAYLAND"}},
         {XORG, {"XORG"}}
     };
-    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", servers[HUDElements.display_server].c_str());
+    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.5f, "%s", servers[HUDElements.display_server].c_str());
     ImGui::PopFont();
 }
 

@@ -1051,8 +1051,10 @@ parse_overlay_config(struct overlay_params *params,
    }
 
    // If secondary font size not set, compute it from main font_size
-   if (!params->font_size_secondary)
-      params->font_size_secondary = params->font_size * 0.55f;
+   if (!params->font_size_secondary) {
+      float coeff = params->no_small_font ? 1 : 0.55;
+      params->font_size_secondary = params->font_size * coeff;
+   }
 
    params->font_params_hash = get_hash(params->font_size,
                                  params->font_size_text,
