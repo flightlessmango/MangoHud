@@ -29,7 +29,7 @@ conf_data = configuration_data()
 
 conf_data.set('ld_libdir_mangohud_abs', libdir_mangohud)
 conf_data.set('ld_libdir_mangohud', ld_libdir_mangohud)
-conf_data.set('cpu_family', host_machine.cpu_family())
+conf_data.set('cpu_family', host_machine.cpu())
 conf_data.set('version', describe_ver)
 
 overlay_shaders = [
@@ -327,7 +327,7 @@ if is_unixy
 endif
 
 configure_file(input : 'mangohud.json.in',
-  output : '@0@.@1@.json'.format(meson.project_name(), host_machine.cpu_family()),
+  output : '@0@.@1@.json'.format(meson.project_name(), host_machine.cpu()),
   configuration : conf_data,
   install : true,
   install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
