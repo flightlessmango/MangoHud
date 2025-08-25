@@ -232,7 +232,7 @@ bool CPUStats::UpdateCPUData()
     if (cpu_count < m_cpuData.size())
         m_cpuData.resize(cpu_count);
 
-    m_cpuPeriod = (double)m_cpuData[0].totalPeriod / m_cpuData.size();
+    m_cpuPeriod = (float)m_cpuData[0].totalPeriod / m_cpuData.size();
     m_updatedCPUs = true;
     return ret;
 }
@@ -324,7 +324,7 @@ static bool get_cpu_power_k10temp(CPUPowerData* cpuPowerData, float& power) {
         power = (corePower + socPower) / 1000000;
         return true;
     }
-    voltagebased:
+voltagebased:
     if (!powerData_k10temp->coreVoltageFile || !powerData_k10temp->coreCurrentFile || !powerData_k10temp->socVoltageFile || !powerData_k10temp->socCurrentFile)
         return false;
     rewind(powerData_k10temp->coreVoltageFile);
@@ -394,7 +394,6 @@ static bool get_cpu_power_zenergy(CPUPowerData* cpuPowerData, float& power) {
     Clock::duration timeDiff = now - powerData_zenergy->lastCounterValueTime;
     int64_t timeDiffMicro = std::chrono::duration_cast<std::chrono::microseconds>(timeDiff).count();
     uint64_t energyCounterDiff = energyCounterValue - powerData_zenergy->lastCounterValue;
-
 
     if (powerData_zenergy->lastCounterValue > 0 && energyCounterValue > powerData_zenergy->lastCounterValue)
         power = (float) energyCounterDiff / (float) timeDiffMicro;
@@ -529,7 +528,7 @@ static bool find_fallback_input(const std::string& path, const char* input_prefi
         if (!ends_with(file, "_input"))
             continue;
         input = path + "/" + file;
-		SPDLOG_DEBUG("fallback cpu {} input: {}", input_prefix, input);
+        SPDLOG_DEBUG("fallback cpu {} input: {}", input_prefix, input);
         return true;
     }
     return false;
@@ -591,7 +590,6 @@ bool CPUStats::GetCpuFile() {
             // Only break if nct module has TSI0_TEMP node
             if (find_input(path, "temp", input, "TSI0_TEMP"))
                 break;
-
         } else if (name == "asusec") {
             // Only break if module has CPU node
             if (find_input(path, "temp", input, "CPU"))
@@ -605,6 +603,10 @@ bool CPUStats::GetCpuFile() {
             break;
         } else if (name == "apm_xgene") {
             find_input(path, "temp", input, "SoC Temperature");
+            break;
+        } else if (name == "package_thermal") {
+            // Support for ARM platforms like Rockchip with package_thermal sensor
+            find_fallback_input(path, "temp1", input);
             break;
         } else {
             path.clear();
@@ -729,7 +731,7 @@ bool CPUStats::InitCpuPowerData() {
         return true;
 
     retries++;
-    
+
     std::string name, path;
     std::string hwmon = "/sys/class/hwmon/";
 
@@ -779,7 +781,7 @@ bool CPUStats::InitCpuPowerData() {
             }
         }
     }
-    
+
     if(cpuPowerData == nullptr) {
         SPDLOG_ERROR("Failed to initialize CPU power data");
         return false;
