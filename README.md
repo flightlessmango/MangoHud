@@ -691,3 +691,4 @@ Example output:
 
 #### Panfrost notes
 - GPU usage requires `echo 1 | sudo tee /sys/class/drm/renderD*/device/profiling`
+- If your linux kenel is newer than 6.10  and using "Panthor" drm driver use `echo 3 | sudo tee /sys/bus/platform/drivers/panthor/[a-f0-9]*.gpu/profiling`
