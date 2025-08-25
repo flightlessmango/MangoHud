@@ -1,16 +1,14 @@
 #include "gpu_fdinfo.h"
-
 #ifndef TEST_ONLY
 #include "hud_elements.h"
 #endif
-
+#include <fstream>
 namespace fs = ghc::filesystem;
 
 void GPU_fdinfo::find_fd()
 {
     fdinfo.clear();
     fdinfo_data.clear();
-
     auto dir = std::string("/proc/") + std::to_string(pid) + "/fdinfo";
     auto path = fs::path(dir);
 
@@ -21,8 +19,6 @@ void GPU_fdinfo::find_fd()
         return;
     }
 
-    // Here we store client-ids, if ids match, we dont open this file,
-    // because it will have same readings and it becomes a duplicate
     std::set<std::string> client_ids;
     int total = 0;
 
@@ -92,7 +88,6 @@ void GPU_fdinfo::gather_fdinfo_data() {
     for (size_t i = 0; i < fdinfo.size(); i++) {
         fdinfo[i].clear();
         fdinfo[i].seekg(0);
-
         for (std::string line; std::getline(fdinfo[i], line);) {
             size_t colon = line.find(":");
 
@@ -112,9 +107,10 @@ void GPU_fdinfo::gather_fdinfo_data() {
 uint64_t GPU_fdinfo::get_gpu_time()
 {
     uint64_t total = 0;
-
     if (module == "panfrost")
         return get_gpu_time_panfrost();
+    if (module == "panthor")
+        return get_gpu_time_panthor();
 
     for (auto& fd : fdinfo_data) {
         auto time = fd[drm_engine_type];
@@ -130,7 +126,6 @@ uint64_t GPU_fdinfo::get_gpu_time()
 
 uint64_t GPU_fdinfo::get_gpu_time_panfrost() {
     uint64_t total = 0;
-
     for (auto& fd : fdinfo_data) {
         auto frag = fd["drm-engine-fragment"];
         auto vert = fd["drm-engine-vertex-tiler"];
@@ -145,10 +140,21 @@ uint64_t GPU_fdinfo::get_gpu_time_panfrost() {
     return total;
 }
 
+uint64_t GPU_fdinfo::get_gpu_time_panthor() {
+    uint64_t total = 0;
+    for (auto& fd : fdinfo_data) {
+        auto time = fd["drm-engine-panthor"];
+
+        if (!time.empty())
+            total += std::stoull(time);
+    }
+
+    return total;
+}
+
 float GPU_fdinfo::get_memory_used()
 {
     uint64_t total = 0;
-
     for (auto& fd : fdinfo_data) {
         auto mem = fd[drm_memory_type];
 
@@ -158,17 +164,15 @@ float GPU_fdinfo::get_memory_used()
         total += std::stoull(mem);
     }
 
-    // TODO: sometimes it's not KB, so add a check for that.
     return static_cast<float>(total) / 1024 / 1024;
 }
 
 void GPU_fdinfo::find_hwmon_sensors()
 {
     std::string hwmon;
-
     if (module == "msm")
         hwmon = find_hwmon_sensor_dir("gpu");
-    else if (module == "panfrost")
+    else if (module == "panfrost" || module == "panthor")
         hwmon = find_hwmon_sensor_dir("gpu_thermal");
     else
         hwmon = find_hwmon_dir();
@@ -228,7 +232,6 @@ void GPU_fdinfo::find_hwmon_sensors()
 
 std::string GPU_fdinfo::find_hwmon_dir() {
     std::string d = "/sys/class/drm/" + drm_node + "/device/hwmon";
-
     if (!fs::exists(d)) {
         SPDLOG_DEBUG("hwmon: hwmon directory \"{}\" doesn't exist", d);
         return "";
@@ -247,7 +250,6 @@ std::string GPU_fdinfo::find_hwmon_dir() {
 
 std::string GPU_fdinfo::find_hwmon_sensor_dir(std::string name) {
     std::string d = "/sys/class/hwmon/";
-
     if (!fs::exists(d))
         return "";
 
@@ -266,7 +268,6 @@ std::string GPU_fdinfo::find_hwmon_sensor_dir(std::string name) {
         if (name_content.find(name) == std::string::npos)
             continue;
 
-        // return the first gpu sensor
         return hwmon_dir;
     }
 
@@ -278,7 +279,6 @@ void GPU_fdinfo::get_current_hwmon_readings()
     for (auto& hs : hwmon_sensors) {
         auto key = hs.first;
         auto sensor = &hs.second;
-
         if (!sensor->stream.is_open())
             continue;
 
@@ -298,11 +298,8 @@ float GPU_fdinfo::get_power_usage()
 {
     if (!hwmon_sensors["power"].filename.empty())
         return static_cast<float>(hwmon_sensors["power"].val) / 1'000'000;
-
     float now = hwmon_sensors["energy"].val;
 
-    // Initialize value for the first time, otherwise delta will be very large
-    // and your gpu power usage will be like 1 million watts for a second.
     if (this->last_power == 0.f)
         this->last_power = now;
 
@@ -317,7 +314,6 @@ float GPU_fdinfo::get_power_usage()
 int GPU_fdinfo::get_xe_load()
 {
     double load = 0;
-
     for (auto& fd : fdinfo_data) {
         std::string client_id = fd["drm-client-id"];
         std::string cur_cycles_str = fd["drm-cycles-rcs"];
@@ -364,7 +360,6 @@ int GPU_fdinfo::get_gpu_load()
         return get_xe_load();
     else if (module == "msm_drm")
         return get_kgsl_load();
-
     uint64_t now = os_time_get_nano();
     uint64_t gpu_time_now = get_gpu_time();
 
@@ -392,8 +387,6 @@ int GPU_fdinfo::get_gpu_load()
 void GPU_fdinfo::find_i915_gt_dir()
 {
     std::string device = "/sys/bus/pci/devices/" + pci_dev + "/drm";
-
-    // Find first dir which starts with name "card"
     for (const auto& entry : fs::directory_iterator(device)) {
         auto path = entry.path().string();
 
@@ -409,14 +402,12 @@ void GPU_fdinfo::find_i915_gt_dir()
     if (!gpu_clock_stream.good())
         SPDLOG_WARN("Intel i915 gt dir: failed to open {}", device);
 
-    // Assuming gt0 since all recent GPUs have the RCS engine on gt0,
-    // and latest GPUs need Xe anyway
     auto throttle_folder = device + "/gt/gt0/throttle_";
     auto throttle_status_path = throttle_folder + "reason_status";
 
     throttle_status_stream.open(throttle_status_path);
     if (!throttle_status_stream.good()) {
-       SPDLOG_WARN("Intel i915 gt dir: failed to open {}", throttle_status_path);
+        SPDLOG_WARN("Intel i915 gt dir: failed to open {}", throttle_status_path);
     } else {
         load_xe_i915_throttle_reasons(throttle_folder,
                                       intel_throttle_power,
@@ -435,7 +426,6 @@ void GPU_fdinfo::find_i915_gt_dir()
 void GPU_fdinfo::find_xe_gt_dir()
 {
     std::string device = "/sys/bus/pci/devices/" + pci_dev + "/tile0";
-
     if (!fs::exists(device)) {
         SPDLOG_WARN(
             "\"{}\" doesn't exist. GPU clock will be unavailable.",
@@ -446,7 +436,6 @@ void GPU_fdinfo::find_xe_gt_dir()
 
     bool has_rcs = true;
 
-    // Check every "gt" dir if it has "engines/rcs" inside
     for (const auto& entry : fs::directory_iterator(device)) {
         auto path = entry.path().string();
 
@@ -464,7 +453,6 @@ void GPU_fdinfo::find_xe_gt_dir()
         has_rcs = true;
         device = path;
         break;
-
     }
 
     if (!has_rcs) {
@@ -486,7 +474,7 @@ void GPU_fdinfo::find_xe_gt_dir()
 
     throttle_status_stream.open(throttle_status_path);
     if (!throttle_status_stream.good()) {
-       SPDLOG_WARN("Intel xe gt dir: failed to open {}", throttle_status_path);
+        SPDLOG_WARN("Intel xe gt dir: failed to open {}", throttle_status_path);
     } else {
         load_xe_i915_throttle_reasons(throttle_folder,
                                       intel_throttle_power,
@@ -529,7 +517,8 @@ int GPU_fdinfo::get_gpu_clock()
 {
     if (module == "panfrost")
         return get_gpu_clock_panfrost();
-
+    if (module == "panthor")
+        return get_gpu_clock_panthor();
     if (!gpu_clock_stream.is_open())
         return 0;
 
@@ -543,6 +532,20 @@ int GPU_fdinfo::get_gpu_clock()
         return 0;
 
     return std::stoi(clock_str);
+}
+
+int GPU_fdinfo::get_gpu_clock_panthor() {
+    if (fdinfo_data.empty())
+        return 0;
+
+    auto freq_str = fdinfo_data[0]["drm-curfreq-panthor"];
+
+    if (freq_str.empty())
+        return 0;
+
+    float freq = std::stoull(freq_str) / 1'000'000;
+
+    return std::round(freq);
 }
 
 int GPU_fdinfo::get_gpu_clock_panfrost() {
@@ -566,7 +569,6 @@ bool GPU_fdinfo::check_throttle_reasons(
         std::string throttle_reason_str;
         throttle_reason_stream.seekg(0);
         std::getline(throttle_reason_stream, throttle_reason_str);
-
         if (throttle_reason_str == "1")
             return true;
     }
@@ -590,7 +592,7 @@ int GPU_fdinfo::get_throttling_status()
         check_throttle_reasons(throttle_power_streams) * GPU_throttle_status::POWER +
         check_throttle_reasons(throttle_current_streams) * GPU_throttle_status::CURRENT +
         check_throttle_reasons(throttle_temp_streams) * GPU_throttle_status::TEMP;
-    // No throttle reasons for OTHER currently
+
     if (reasons == 0)
         reasons |= GPU_throttle_status::OTHER;
 
@@ -605,14 +607,10 @@ float GPU_fdinfo::amdgpu_helper_get_proc_vram() {
         find_fd();
     }
 #endif
-
-    // Recheck fds every 10secs, fixes Mass Effect 1, maybe some others too
-    {
-        auto t = os_time_get_nano() / 1'000'000;
-        if (t - fdinfo_last_update_ms >= 10'000) {
-            find_fd();
-            fdinfo_last_update_ms = t;
-        }
+    auto t = os_time_get_nano() / 1'000'000;
+    if (t - fdinfo_last_update_ms >= 10'000) {
+        find_fd();
+        fdinfo_last_update_ms = t;
     }
 
     gather_fdinfo_data();
@@ -622,7 +620,6 @@ float GPU_fdinfo::amdgpu_helper_get_proc_vram() {
 
 void GPU_fdinfo::init_kgsl() {
     const std::string sys_path = "/sys/class/kgsl/kgsl-3d0";
-
     try {
         if (!fs::exists(sys_path)) {
             SPDLOG_WARN("kgsl: {} is not found. kgsl stats will not work!", sys_path);
@@ -652,7 +649,6 @@ void GPU_fdinfo::init_kgsl() {
 
 int GPU_fdinfo::get_kgsl_load() {
     std::ifstream* s = &kgsl_streams["gpu_busy_percentage"];
-
     if (!s->is_open())
         return 0;
 
@@ -670,7 +666,6 @@ int GPU_fdinfo::get_kgsl_load() {
 
 int GPU_fdinfo::get_kgsl_temp() {
     std::ifstream* s = &kgsl_streams["temp"];
-
     if (!s->is_open())
         return 0;
 
@@ -691,7 +686,6 @@ void GPU_fdinfo::main_thread()
     while (!stop_thread) {
         std::unique_lock<std::mutex> lock(metrics_mutex);
         cond_var.wait(lock, [this]() { return !paused || stop_thread; });
-
 #ifndef TEST_ONLY
         if (HUDElements.g_gamescopePid > 0 && HUDElements.g_gamescopePid != pid)
         {
@@ -699,14 +693,10 @@ void GPU_fdinfo::main_thread()
             find_fd();
         }
 #endif
-
-        // Recheck fds every 10secs, fixes Mass Effect 1, maybe some others too
-        {
-            auto t = os_time_get_nano() / 1'000'000;
-            if (t - fdinfo_last_update_ms >= 10'000) {
-                find_fd();
-                fdinfo_last_update_ms = t;
-            }
+        auto t = os_time_get_nano() / 1'000'000;
+        if (t - fdinfo_last_update_ms >= 10'000) {
+            find_fd();
+            fdinfo_last_update_ms = t;
         }
 
         gather_fdinfo_data();
@@ -729,7 +719,7 @@ void GPU_fdinfo::main_thread()
         metrics.memory_temp = hwmon_sensors["vram_temp"].val / 1000.f;
 
         metrics.fan_speed = hwmon_sensors["fan_speed"].val;
-        metrics.fan_rpm = true; // Fan data is pulled from hwmon
+        metrics.fan_rpm = true;
 
         int throttling = get_throttling_status();
         metrics.is_power_throttled = throttling & GPU_throttle_status::POWER;
