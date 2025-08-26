@@ -4,6 +4,7 @@
 #include "hud_elements.h"
 #endif
 
+#include <fstream>
 namespace fs = ghc::filesystem;
 
 void GPU_fdinfo::find_fd()
@@ -115,6 +116,8 @@ uint64_t GPU_fdinfo::get_gpu_time()
 
     if (module == "panfrost")
         return get_gpu_time_panfrost();
+    if (module == "panthor")
+        return get_gpu_time_panthor();
 
     for (auto& fd : fdinfo_data) {
         auto time = fd[drm_engine_type];
@@ -145,6 +148,18 @@ uint64_t GPU_fdinfo::get_gpu_time_panfrost() {
     return total;
 }
 
+uint64_t GPU_fdinfo::get_gpu_time_panthor() {
+    uint64_t total = 0;
+    for (auto& fd : fdinfo_data) {
+        auto time = fd["drm-engine-panthor"];
+
+        if (!time.empty())
+            total += std::stoull(time);
+    }
+
+    return total;
+}
+
 float GPU_fdinfo::get_memory_used()
 {
     uint64_t total = 0;
@@ -168,7 +183,7 @@ void GPU_fdinfo::find_hwmon_sensors()
 
     if (module == "msm")
         hwmon = find_hwmon_sensor_dir("gpu");
-    else if (module == "panfrost")
+    else if (module == "panfrost" || module == "panthor")
         hwmon = find_hwmon_sensor_dir("gpu_thermal");
     else
         hwmon = find_hwmon_dir();
@@ -529,7 +544,10 @@ int GPU_fdinfo::get_gpu_clock()
 {
     if (module == "panfrost")
         return get_gpu_clock_panfrost();
-
+    
+    if (module == "panthor")
+        return get_gpu_clock_panthor();
+    
     if (!gpu_clock_stream.is_open())
         return 0;
 
@@ -543,6 +561,20 @@ int GPU_fdinfo::get_gpu_clock()
         return 0;
 
     return std::stoi(clock_str);
+}
+
+int GPU_fdinfo::get_gpu_clock_panthor() {
+    if (fdinfo_data.empty())
+        return 0;
+
+    auto freq_str = fdinfo_data[0]["drm-curfreq-panthor"];
+
+    if (freq_str.empty())
+        return 0;
+
+    float freq = std::stoull(freq_str) / 1'000'000;
+
+    return std::round(freq);
 }
 
 int GPU_fdinfo::get_gpu_clock_panfrost() {
@@ -591,6 +623,7 @@ int GPU_fdinfo::get_throttling_status()
         check_throttle_reasons(throttle_current_streams) * GPU_throttle_status::CURRENT +
         check_throttle_reasons(throttle_temp_streams) * GPU_throttle_status::TEMP;
     // No throttle reasons for OTHER currently
+
     if (reasons == 0)
         reasons |= GPU_throttle_status::OTHER;
 
