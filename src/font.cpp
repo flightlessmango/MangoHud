@@ -25,6 +25,10 @@ void create_fonts(ImFontAtlas* font_atlas, const overlay_params& params, ImFont*
    if (font_size_secondary > font_size || font_size_secondary < FLT_EPSILON)
       font_size_secondary = font_size;
 
+   float font_size_small = params.font_size_small;
+   if (font_size_small > font_size || font_size_small < FLT_EPSILON)
+      font_size_small = font_size;
+
    static const ImWchar default_range[] =
    {
       0x0020, 0x00FF, // Basic Latin + Latin Supplement
@@ -80,8 +84,8 @@ void create_fonts(ImFontAtlas* font_atlas, const overlay_params& params, ImFont*
       if (params.no_small_font)
          small_font = font_atlas->Fonts[0];
       else {
-         small_font = font_atlas->AddFontFromFileTTF(params.font_file.c_str(), font_size * 0.55f, nullptr, default_range);
-         font_atlas->AddFontFromMemoryCompressedBase85TTF(forkawesome_compressed_data_base85, font_size * 0.55f, &config, icon_ranges);
+         small_font = font_atlas->AddFontFromFileTTF(params.font_file.c_str(), font_size_small, nullptr, default_range);
+         font_atlas->AddFontFromMemoryCompressedBase85TTF(forkawesome_compressed_data_base85, font_size_small, &config, icon_ranges);
       }
       if (secondary_same_size) {
          secondary_font = font_atlas->Fonts[0];
@@ -96,8 +100,8 @@ void create_fonts(ImFontAtlas* font_atlas, const overlay_params& params, ImFont*
       if (params.no_small_font)
          small_font = font_atlas->Fonts[0];
       else {
-         small_font = font_atlas->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size * 0.55f, nullptr, default_range);
-         font_atlas->AddFontFromMemoryCompressedBase85TTF(forkawesome_compressed_data_base85, font_size * 0.55f, &config, icon_ranges);
+         small_font = font_atlas->AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_size_small, nullptr, default_range);
+         font_atlas->AddFontFromMemoryCompressedBase85TTF(forkawesome_compressed_data_base85, font_size_small, &config, icon_ranges);
       }
       if (secondary_same_size) {
          secondary_font = font_atlas->Fonts[0];
