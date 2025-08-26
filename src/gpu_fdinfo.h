@@ -1,21 +1,26 @@
 #pragma once
+
 #include <inttypes.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+
 #include <cstdint>
 #include <thread>
 #include <atomic>
 #include <map>
 #include <set>
 #include <regex>
+
 #ifdef TEST_ONLY
 #include <../src/mesa/util/os_time.h>
 #else
 #include "mesa/util/os_time.h"
 #endif
+
 #include <spdlog/spdlog.h>
 #include <filesystem.h>
+
 #include "gpu_metrics_util.h"
 
 struct hwmon_sensor {
@@ -36,6 +41,7 @@ enum GPU_throttle_status : int {
 class GPU_fdinfo {
 private:
     pid_t pid = getpid();
+
     const std::string module;
     const std::string pci_dev;
     const std::string drm_node;
@@ -92,7 +98,7 @@ private:
     uint64_t get_gpu_time_panfrost();
     int get_gpu_clock_panfrost();
 
-    // 添加 Panthor 专用函数声明
+    // add panthor function declaration
     uint64_t get_gpu_time_panthor();
     int get_gpu_clock_panthor();
 
@@ -127,6 +133,7 @@ public:
         , drm_node(drm_node)
     {
         SPDLOG_DEBUG("GPU driver is \"{}\"", module);
+
         find_fd();
         gather_fdinfo_data();
 
@@ -140,7 +147,8 @@ public:
             drm_engine_type = "drm-engine-gfx";
             drm_memory_type = "drm-memory-vram";
         } else if (module == "msm_dpu") {
-            drm_engine_type = "drm-engine-gpu";
+            // msm driver does not report vram usage
+            drm_engine_type = "drm-engine-gpu";            
         } else if (module == "msm_drm") {
             init_kgsl();
         } else if (module == "panfrost") {
@@ -175,6 +183,9 @@ public:
         if (called_from_amdgpu_cpp)
             return;
 
+        // i915: Documentation/ABI/testing/sysfs-driver-intel-i915-hwmon
+        // xe  : Documentation/ABI/testing/sysfs-driver-intel-xe-hwmon
+
         if (module == "i915") {
             hwmon_sensors["voltage"]     = { .rx = std::regex("in(0)_input") };
             hwmon_sensors["fan_speed"]   = { .rx = std::regex("fan(1)_input") };
@@ -183,12 +194,14 @@ public:
             hwmon_sensors["power_limit"] = { .rx = std::regex("power(1)_max") };
         } else if (module == "xe") {
             hwmon_sensors["voltage"]     = { .rx = std::regex("in(1)_input") };
+            // technically, there are 3 fan sensors, but just pick first one
             hwmon_sensors["fan_speed"]   = { .rx = std::regex("fan(1)_input") };
             hwmon_sensors["temp"]        = { .rx = std::regex("temp(2)_input") };
             hwmon_sensors["vram_temp"]   = { .rx = std::regex("temp(3)_input") };
             hwmon_sensors["energy"]    = { .rx = std::regex("energy(2)_input") };
             hwmon_sensors["power_limit"] = { .rx = std::regex("power(2)_max") };
         } else {
+            // For everyone else just guess
             hwmon_sensors["voltage"]   = { .rx = std::regex("in(\\d+)_input") };
             hwmon_sensors["fan_speed"] = { .rx = std::regex("fan(\\d+)_input") };
             hwmon_sensors["temp"]      = { .rx = std::regex("temp(\\d+)_input") };
@@ -204,6 +217,7 @@ public:
             find_xe_gt_dir();
 
         thread = std::thread(&GPU_fdinfo::main_thread, this);
+        // "mangohud-gpufdinfo" wouldn't fit in the 15 byte limit
         pthread_setname_np(thread.native_handle(), "mangohud-gpufd");
     }
 
