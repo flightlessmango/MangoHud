@@ -98,8 +98,6 @@ private:
     uint64_t get_gpu_time_panfrost();
     int get_gpu_clock_panfrost();
 
-    // add panthor function declaration
-    uint64_t get_gpu_time_panthor();
     int get_gpu_clock_panthor();
 
     std::ifstream throttle_status_stream;
