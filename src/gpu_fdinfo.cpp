@@ -116,8 +116,6 @@ uint64_t GPU_fdinfo::get_gpu_time()
 
     if (module == "panfrost")
         return get_gpu_time_panfrost();
-    if (module == "panthor")
-        return get_gpu_time_panthor();
 
     for (auto& fd : fdinfo_data) {
         auto time = fd[drm_engine_type];
@@ -143,18 +141,6 @@ uint64_t GPU_fdinfo::get_gpu_time_panfrost() {
 
         if (!vert.empty())
             total += std::stoull(vert);
-    }
-
-    return total;
-}
-
-uint64_t GPU_fdinfo::get_gpu_time_panthor() {
-    uint64_t total = 0;
-    for (auto& fd : fdinfo_data) {
-        auto time = fd["drm-engine-panthor"];
-
-        if (!time.empty())
-            total += std::stoull(time);
     }
 
     return total;
