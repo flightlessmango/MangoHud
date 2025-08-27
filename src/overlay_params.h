@@ -216,6 +216,10 @@ struct Tracepoint;
    OVERLAY_PARAM_CUSTOM(gpu_list)                    \
    OVERLAY_PARAM_CUSTOM(fex_stats)                   \
    OVERLAY_PARAM_CUSTOM(ftrace)                      \
+   OVERLAY_PARAM_BOOL(otel)                          \
+   OVERLAY_PARAM_CUSTOM(otel_listen)                 \
+   OVERLAY_PARAM_CUSTOM(otel_interval)               \
+   OVERLAY_PARAM_CUSTOM(otel_startup_delay)          \
 
 enum overlay_param_position {
    LAYER_POSITION_TOP_LEFT,
@@ -355,6 +359,9 @@ struct overlay_params {
    std::vector<std::string> network;
    std::vector<unsigned> gpu_list;
    int transfer_function;
+   std::string otel_listen; // Listen interface:port for OTEL metrics, e.g. 0.0.0.0:16969
+   uint32_t otel_interval;  // Metric update interval in milliseconds
+   uint32_t otel_startup_delay; // Delay before starting OTEL server in seconds
 
    struct fex_stats_options {
       bool enabled {false};

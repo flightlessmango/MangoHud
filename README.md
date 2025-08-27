@@ -484,6 +484,67 @@ Because comma is also used as option delimiter and needs to be escaped for value
 
 *Note: The [zenpower3](https://git.exozy.me/a/zenpower3) or [zenergy](https://github.com/boukehaarsma23/zenergy) kernel driver must be installed to show the power draw of Ryzen CPUs.*
 
+## Metrics Exporter (OTel / Prometheus)
+
+MangoHud can expose a lightweight metrics endpoint suitable for scraping by Prometheus or any HTTP client and can be bridged into an OpenTelemetry (OTel) collector. This feature is independent of HUD visibility and logging; once enabled it runs for the lifetime of the process.
+
+Configuration options (in MangoHud.conf or via MANGOHUD_CONFIG):
+- otel                 Enable the exporter (0 = disabled, 1 = enabled). Default: 0 (disabled)
+- otel_listen          Listen host:port. Default: 0.0.0.0:16969 (binds all interfaces)
+- otel_interval        Sampling / refresh interval in milliseconds. Default: 1000
+- otel_startup_delay   Delay in seconds before starting exporter threads (helps avoid very-early init conflicts). Default: 0
+
+Example (config file):
+```
+otel=1
+otel_listen=127.0.0.1:16969
+otel_interval=2000
+```
+
+Example (environment variable, also reading a base config file):
+```
+MANGOHUD_CONFIG=read_cfg,otel,otel_listen=127.0.0.1:16969,otel_interval=1500
+```
+
+Endpoint:
+- URL: http://<host>:<port>/
+- Returns: Prometheus text exposition format (content-type: text/plain; version=0.0.4)
+
+Each metric includes constant labels:
+- pid  (numeric process id)
+- exec (executable name)
+
+Current metrics exposed (names subject to change while experimental):
+- mangohud_fps (gauge)
+- mangohud_frametime_ms (gauge)
+- mangohud_cpu_load_percent (gauge)
+- mangohud_gpu_load_percent (gauge)
+- mangohud_cpu_temp_celsius (gauge)
+- mangohud_gpu_temp_celsius (gauge)
+- mangohud_cpu_power_watts (gauge)
+- mangohud_gpu_power_watts (gauge)
+- mangohud_ram_used_mb (gauge)
+- mangohud_vram_used_mb (gauge)
+
+Prometheus scrape configuration snippet:
+```
+# prometheus.yml
+scrape_configs:
+  - job_name: 'mangohud'
+    static_configs:
+      - targets: ['localhost:16969']
+```
+
+Security considerations:
+- The default listen address 0.0.0.0 exposes metrics on all interfaces. If you do not want remote access, set otel_listen to 127.0.0.1:<port> or firewall the port.
+- No authentication is performed; only run on trusted networks.
+
+Performance notes:
+- Sampling is lightweight (string building + reading existing in-memory stats). Reduce otel_interval to lower overhead, increase for higher temporal resolution.
+- The HTTP server is single-threaded per connection (short-lived) and suitable for low scrape frequencies (e.g., every 5–30s).
+
+Status: Experimental. Metric set or field names may change. Feedback welcome.
+
 ## Vsync
 
 ### OpenGL Vsync
@@ -684,7 +745,7 @@ Example output:
 #### Intel notes
 - GPU temperature for `i915` requires **linux 6.13+**
 - Fan speed for `i915` requires **linux 6.12+**
-- GPU temperature and vram temperature for `xe` requires **linux 6.15+** 
+- GPU temperature and vram temperature for `xe` requires **linux 6.15+**
 - Fan speed for `xe` requires **linux 6.16+**
 - GPU usage and memory usage shows usage of current process, not total system usage (it's an issue on intel's side)
 - Integrated Intel GPUs are **limited** due to lack of hwmon interface (it's an issue on intel's side, [i915 source](https://github.com/torvalds/linux/blob/5fc31936081919a8572a3d644f3fbb258038f337/drivers/gpu/drm/i915/i915_hwmon.c#L914-L916), [xe source](https://github.com/torvalds/linux/blob/5fc31936081919a8572a3d644f3fbb258038f337/drivers/gpu/drm/xe/xe_hwmon.c#L824-L826))

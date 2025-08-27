@@ -276,8 +276,11 @@ void HudElements::version(){
 }
 
 void HudElements::gpu_stats(){
+    if (!gpus)
+        gpus = std::make_unique<GPUS>(&HUDElements.params);
+
     size_t i = 0;
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] && gpus){
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
         for (auto& gpu : gpus->selected_gpus()) {
             ImguiNextColumnFirstItem();
             HUDElements.TextColored(HUDElements.colors.gpu, "%s", gpu->gpu_text().c_str());
@@ -627,7 +630,10 @@ void HudElements::io_stats(){
 }
 
 void HudElements::vram(){
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_vram] && gpus){
+    if (!gpus)
+        gpus = std::make_unique<GPUS>(&HUDElements.params);
+
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_vram]){
         size_t i = 0;
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats]){
             for (auto& gpu : gpus->selected_gpus()) {
@@ -692,9 +698,10 @@ void HudElements::proc_vram() {
         return;
 
     if (!gpus)
-        return;
+        gpus = std::make_unique<GPUS>(&HUDElements.params);
 
     auto gpu = gpus->active_gpu();
+
     if (!gpu)
         return;
 
@@ -958,6 +965,9 @@ static inline double TransformInverse_Custom(double v, void*) {
 
 void HudElements::frame_timing(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
+        if (!gpus)
+            gpus = std::make_unique<GPUS>(&HUDElements.params);
+
         ImguiNextColumnFirstItem();
         ImGui::PushFont(HUDElements.sw_stats->font_small);
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
@@ -1029,7 +1039,7 @@ void HudElements::frame_timing(){
                         ImPlot::SetNextLineStyle(HUDElements.colors.frametime, 1.5);
                         ImPlot::PlotLine("frametime line", frametime_data.data(), frametime_data.size());
                         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_throttling_status_graph] &&
-                            gpus && gpus->active_gpu() && gpus->active_gpu()->throttling()){
+                            gpus->active_gpu() && gpus->active_gpu()->throttling()){
                             ImPlot::SetNextLineStyle(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), 1.5);
                             ImPlot::PlotLine("power line", gpus->active_gpu()->throttling()->power.data(), gpus->active_gpu()->throttling()->power.size());
                             ImPlot::SetNextLineStyle(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), 1.5);
@@ -1044,7 +1054,7 @@ void HudElements::frame_timing(){
         ImGui::EndChild();
 #ifdef __linux__
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_throttling_status_graph] &&
-            gpus && gpus->active_gpu() && gpus->active_gpu()->throttling()){
+            gpus->active_gpu() && gpus->active_gpu()->throttling()){
             ImGui::Dummy(ImVec2(0.0f, real_font_size.y / 2));
 
             if (gpus->active_gpu()->throttling()->power_throttling()) {
@@ -1456,7 +1466,10 @@ void HudElements::fan(){
 }
 
 void HudElements::throttling_status(){
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_throttling_status] && gpus){
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_throttling_status]){
+        if (!gpus)
+            gpus = std::make_unique<GPUS>(&HUDElements.params);
+
         auto gpu = gpus->active_gpu();
         if (!gpu)
             return;

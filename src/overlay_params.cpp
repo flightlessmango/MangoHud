@@ -588,6 +588,9 @@ parse_ftrace(const char *str) {
 #define parse_device_battery(s) parse_str_tokenize(s)
 #define parse_network(s) parse_str_tokenize(s)
 #define parse_gpu_text(s) parse_str_tokenize(s)
+#define parse_otel_listen(s) parse_str(s)
+#define parse_otel_interval(s) parse_unsigned(s)
+#define parse_otel_startup_delay(s) parse_unsigned(s)
 
 static bool
 parse_help(const char *str)
@@ -870,6 +873,11 @@ static void set_param_defaults(struct overlay_params *params){
    params->table_columns = 3;
    params->text_outline_color = 0x000000;
    params->text_outline_thickness = 1.5;
+   // OTEL defaults
+   params->enabled[OVERLAY_PARAM_ENABLED_otel] = false;
+   params->otel_listen = "0.0.0.0:16969";
+   params->otel_interval = 1000; // 1s
+   params->otel_startup_delay = 0; // no delay by default
 }
 
 static std::string verify_pci_dev(std::string pci_dev) {
@@ -963,9 +971,6 @@ parse_overlay_config(struct overlay_params *params,
       // clear options since we don't want config options to appear first
       params->options.clear();
       HUDElements.options.clear();
-      HUDElements.params = params;
-      if (!gpus)
-         gpus = std::make_unique<GPUS>(&HUDElements.params);
       // add preset options
       presets(current_preset, params);
       // potentially override preset options with config options
@@ -1107,6 +1112,7 @@ parse_overlay_config(struct overlay_params *params,
 
    auto real_size = params->font_size * params->font_scale;
    real_font_size = ImVec2(real_size, real_size / 2);
+   HUDElements.params = params;
 
    for (const auto& option : HUDElements.options) {
       SPDLOG_DEBUG("Param: '{}' = '{}'", option.first, option.second);
@@ -1295,6 +1301,9 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
          add_to_options(params, "frame_timing_detailed", "1");
          add_to_options(params, "network", "1");
          add_to_options(params, "present_mode", "0");
+
+         if (!gpus)
+            gpus = std::make_unique<GPUS>(&HUDElements.params);
          
          // Disable some options if steamdeck / other known handhelds
          for (auto gpu : gpus->available_gpus) {

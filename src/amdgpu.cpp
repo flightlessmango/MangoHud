@@ -11,34 +11,62 @@
 #include "logging.h"
 #include "mesa/util/macros.h"
 
+bool AMDGPU::verify_metrics(const std::string& path)
+{
+	metrics_table_header header {};
+	FILE *f;
+	f = fopen(path.c_str(), "rb");
+	if (!f) {
+		SPDLOG_DEBUG("Failed to read the metrics header of '{}'", path);
+		return false;
+	}
+
+	if (fread(&header, sizeof(header), 1, f) == 0)
+	{
+		SPDLOG_DEBUG("Failed to read the metrics header of '{}'", path);
+		return false;
+	}
+
+	switch (header.format_revision)
+	{
+		case 1: // v1_1, v1_2, v1_3
+			if(header.content_revision<=0 || header.content_revision>3)// v1_0, not naturally aligned
+				break;
+
+			return true;
+		case 2: // v2_1, v2_2, v2_3, v2_4
+			if(header.content_revision<=0 || header.content_revision>4)// v2_0, not naturally aligned
+				break;
+
+			this->is_apu = true;
+			return true;
+		default:
+			break;
+	}
+
+	SPDLOG_WARN("Unsupported gpu_metrics version: {}.{}", header.format_revision, header.content_revision);
+	return false;
+}
 
 #define IS_VALID_METRIC(FIELD) (FIELD != 0xffff)
 void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	FILE *f;
-	uint8_t buf[sizeof(struct gpu_metrics_v3_0)];  // big enough for v1.3/v2.4/v3.0
-	struct metrics_table_header *header = (struct metrics_table_header *)buf;
+	void *buf[MAX(sizeof(struct gpu_metrics_v1_3), sizeof(struct gpu_metrics_v2_4))/sizeof(void*)+1];
+	struct metrics_table_header* header = (metrics_table_header*)buf;
 
 	f = fopen(gpu_metrics_path.c_str(), "rb");
 	if (!f)
 		return;
 
-	size_t nread = fread(buf, 1, sizeof(buf), f);
+	// Read the whole file
+	if (fread(buf, sizeof(buf), 1, f) != 0) {
+		SPDLOG_DEBUG("amdgpu metrics file '{}' is larger than the buffer", gpu_metrics_path.c_str());
+		fclose(f);
+		return;
+	}
 	fclose(f);
 
-	if (nread < sizeof(*header)) {
-		SPDLOG_DEBUG("amdgpu metrics file '{}' may be corrupted (read {} bytes, need at least {})",
-					gpu_metrics_path, nread, sizeof(*header));
-		return;
-	}
-
-	if (nread == sizeof(buf)) {
-		// File may be larger than our buffer, so we might have truncated it
-		SPDLOG_DEBUG("amdgpu metrics file '{}' may be larger than the buffer ({} bytes)",
-					gpu_metrics_path, sizeof(buf));
-		return;
-	}
-
-	bool is_power=false, is_current=false, is_temp=false, is_other=false;
+	uint64_t indep_throttle_status = 0;
 	if (header->format_revision == 1) {
 		// Desktop GPUs
 		struct gpu_metrics_v1_3 *amdgpu_metrics = (struct gpu_metrics_v1_3 *) buf;
@@ -52,18 +80,12 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		metrics->gpu_temp_c = amdgpu_metrics->temperature_edge;
 		metrics->fan_speed = amdgpu_metrics->current_fan_speed;
 
-		uint64_t indep = amdgpu_metrics->indep_throttle_status;
+		indep_throttle_status = amdgpu_metrics->indep_throttle_status;
 		// RDNA 3 almost always shows the TEMP_HOTSPOT throtting flag,
 		// so clear that bit
-		indep &= ~(1ull << TEMP_HOTSPOT_BIT);  // your existing quirk
-
-		is_power   = ((indep >> 0)  & 0xFF) != 0;
-		is_current = ((indep >> 16) & 0xFF) != 0;
-		is_temp    = ((indep >> 32) & 0xFFFF) != 0;
-		is_other   = ((indep >> 56) & 0xFF) != 0;
+		indep_throttle_status &= ~(1ull << TEMP_HOTSPOT_BIT);
 	} else if (header->format_revision == 2) {
 		// APUs
-		this->is_apu = true;
 		struct gpu_metrics_v2_3 *amdgpu_metrics = (struct gpu_metrics_v2_3 *) buf;
 
 		metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
@@ -137,56 +159,19 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 			metrics->current_uclk_mhz = 0;
 		}
 
-		if(header->content_revision >= 2) {
-			uint64_t indep = amdgpu_metrics->indep_throttle_status;
-			is_power   = ((indep >> 0)  & 0xFF) != 0;
-			is_current = ((indep >> 16) & 0xFF) != 0;
-			is_temp    = ((indep >> 32) & 0xFFFF) != 0;
-			is_other   = ((indep >> 56) & 0xFF) != 0;
-		}
-	} else if (header->format_revision == 3) {
-		this->is_apu = true;
-		struct gpu_metrics_v3_0 *amdgpu_metrics = (struct gpu_metrics_v3_0 *) buf;
-
-		metrics->gpu_temp_c = amdgpu_metrics->temperature_gfx;
-		metrics->soc_temp_c = amdgpu_metrics->temperature_soc;
-
-		uint16_t cpu_temp = 0;
-
-		for (unsigned i = 0; i < ARRAY_SIZE(amdgpu_metrics->temperature_core); i++) {
-			if (!IS_VALID_METRIC(amdgpu_metrics->temperature_core[i]))
-				break;
-
-			cpu_temp = MAX(cpu_temp, amdgpu_metrics->temperature_core[i]);
-		}
-		metrics->apu_cpu_temp_c = cpu_temp;
-
-		metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
-		metrics->average_cpu_power_w = amdgpu_metrics->average_apu_power;
-		metrics->average_gfx_power_w = amdgpu_metrics->average_gfx_power;
-		metrics->current_gfxclk_mhz = amdgpu_metrics->average_gfxclk_frequency;
-		metrics->current_uclk_mhz = amdgpu_metrics->average_uclk_frequency;
-
-		is_temp    = (amdgpu_metrics->throttle_residency_thm_core ||
-					amdgpu_metrics->throttle_residency_thm_gfx  ||
-					amdgpu_metrics->throttle_residency_thm_soc);
-
-		is_power   = (amdgpu_metrics->throttle_residency_spl ||
-					amdgpu_metrics->throttle_residency_fppt ||
-					amdgpu_metrics->throttle_residency_sppt);
-
-		is_current = (amdgpu_metrics->throttle_residency_prochot != 0);
-		is_other   = false;
-
+		if(header->content_revision >= 2)
+			indep_throttle_status = amdgpu_metrics->indep_throttle_status;
 	}
 
 	/* Throttling: See
 	https://elixir.bootlin.com/linux/latest/source/drivers/gpu/drm/amd/pm/swsmu/inc/amdgpu_smu.h
 	for the offsets */
-	metrics->is_power_throttled   = is_power;
-	metrics->is_current_throttled = is_current;
-	metrics->is_temp_throttled    = is_temp;
-	metrics->is_other_throttled   = is_other;
+	metrics->is_power_throttled = ((indep_throttle_status >> 0) & 0xFF) != 0;
+	metrics->is_current_throttled = ((indep_throttle_status >> 16) & 0xFF) != 0;
+	metrics->is_temp_throttled = ((indep_throttle_status >> 32) & 0xFFFF) != 0;
+	metrics->is_other_throttled = ((indep_throttle_status >> 56) & 0xFF) != 0;
+	if (throttling)
+		throttling->indep_throttle_status = indep_throttle_status;
 }
 
 void AMDGPU::get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT], bool &gpu_load_needs_dividing) {
@@ -426,15 +411,7 @@ AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id) {
 	this->vendor_id = vendor_id;
 	const std::string device_path = "/sys/bus/pci/devices/" + pci_dev;
 	gpu_metrics_path = device_path + "/gpu_metrics";
-    // Just check that the metrics file exists and is readable
-    FILE *f = fopen(gpu_metrics_path.c_str(), "rb");
-    if (f) {
-        gpu_metrics_is_valid = true;
-        fclose(f);
-    } else {
-        gpu_metrics_is_valid = false;
-        SPDLOG_DEBUG("Failed to open gpu_metrics at '{}'", gpu_metrics_path);
-    }
+	gpu_metrics_is_valid = verify_metrics(gpu_metrics_path);
 
 	sysfs_nodes.busy = fopen((device_path + "/gpu_busy_percent").c_str(), "r");
 	sysfs_nodes.vram_total = fopen((device_path + "/mem_info_vram_total").c_str(), "r");
