@@ -689,6 +689,6 @@ Example output:
 - GPU usage and memory usage shows usage of current process, not total system usage (it's an issue on intel's side)
 - Integrated Intel GPUs are **limited** due to lack of hwmon interface (it's an issue on intel's side, [i915 source](https://github.com/torvalds/linux/blob/5fc31936081919a8572a3d644f3fbb258038f337/drivers/gpu/drm/i915/i915_hwmon.c#L914-L916), [xe source](https://github.com/torvalds/linux/blob/5fc31936081919a8572a3d644f3fbb258038f337/drivers/gpu/drm/xe/xe_hwmon.c#L824-L826))
 
-#### Panfrost notes
-- GPU usage requires `echo 1 | sudo tee /sys/class/drm/renderD*/device/profiling`
-- If your linux kenel is newer than 6.10 and using "Panthor" drm driver,requires `echo 3 | sudo tee /sys/class/drm/renderD*/device/profiling`
+#### Panfrost and Panthor notes
+- GPU usage requires `echo N | sudo tee /sys/class/drm/renderD*/device/profiling`
+  - Where N is a number, 1 for panfrost and 3 for panthor.
