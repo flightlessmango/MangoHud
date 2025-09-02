@@ -953,6 +953,10 @@ parse_overlay_config(struct overlay_params *params,
 
    bool read_cfg = params->enabled[OVERLAY_PARAM_ENABLED_read_cfg];
    bool env_contains_preset = params->options.find("preset") != params->options.end();
+   HUDElements.params = params;
+   if (!gpus)
+      gpus = std::make_unique<GPUS>(&HUDElements.params);
+
    if (!env || read_cfg) {
       parseConfigFile(*params);
 
@@ -963,9 +967,6 @@ parse_overlay_config(struct overlay_params *params,
       // clear options since we don't want config options to appear first
       params->options.clear();
       HUDElements.options.clear();
-      HUDElements.params = params;
-      if (!gpus)
-         gpus = std::make_unique<GPUS>(&HUDElements.params);
       // add preset options
       presets(current_preset, params);
       // potentially override preset options with config options
