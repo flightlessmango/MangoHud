@@ -27,9 +27,16 @@ endif
 
 conf_data = configuration_data()
 
+# On arm use cpu() to avoid filename collision (armel and armhf)
+if host_machine.cpu_family() == 'arm'
+  cpu_family = host_machine.cpu()
+else
+  cpu_family = host_machine.cpu_family()
+endif
+
 conf_data.set('ld_libdir_mangohud_abs', libdir_mangohud)
 conf_data.set('ld_libdir_mangohud', ld_libdir_mangohud)
-conf_data.set('cpu_family', host_machine.cpu_family())
+conf_data.set('cpu_family', cpu_family)
 conf_data.set('version', describe_ver)
 
 overlay_shaders = [
@@ -327,7 +334,7 @@ if is_unixy
 endif
 
 configure_file(input : 'mangohud.json.in',
-  output : '@0@.@1@.json'.format(meson.project_name(), host_machine.cpu_family()),
+  output : '@0@.@1@.json'.format(meson.project_name(), cpu_family),
   configuration : conf_data,
   install : true,
   install_dir : join_paths(get_option('datadir'), 'vulkan', 'implicit_layer.d'),
