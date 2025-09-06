@@ -15,7 +15,7 @@
 #define IS_VALID_METRIC(FIELD) (FIELD != 0xffff)
 void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	FILE *f;
-	uint8_t buf[sizeof(struct gpu_metrics_v3_0)];  // big enough for v1.3/v2.4/v3.0
+	uint8_t buf[sizeof(struct gpu_metrics_v3_0)+1];  // big enough for v1.3/v2.4/v3.0
 	struct metrics_table_header *header = (struct metrics_table_header *)buf;
 
 	f = fopen(gpu_metrics_path.c_str(), "rb");
@@ -148,8 +148,8 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		this->is_apu = true;
 		struct gpu_metrics_v3_0 *amdgpu_metrics = (struct gpu_metrics_v3_0 *) buf;
 
-		metrics->gpu_temp_c = amdgpu_metrics->temperature_gfx;
-		metrics->soc_temp_c = amdgpu_metrics->temperature_soc;
+		metrics->gpu_temp_c = amdgpu_metrics->temperature_gfx / 100;
+		metrics->soc_temp_c = amdgpu_metrics->temperature_soc / 100;
 
 		uint16_t cpu_temp = 0;
 
@@ -159,11 +159,11 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 
 			cpu_temp = MAX(cpu_temp, amdgpu_metrics->temperature_core[i]);
 		}
-		metrics->apu_cpu_temp_c = cpu_temp;
+		metrics->apu_cpu_temp_c = cpu_temp / 100;
 
 		metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
-		metrics->average_cpu_power_w = amdgpu_metrics->average_apu_power;
-		metrics->average_gfx_power_w = amdgpu_metrics->average_gfx_power;
+		metrics->average_cpu_power_w = amdgpu_metrics->average_apu_power / 1000.0;
+		metrics->average_gfx_power_w = amdgpu_metrics->average_gfx_power / 1000.0;
 		metrics->current_gfxclk_mhz = amdgpu_metrics->average_gfxclk_frequency;
 		metrics->current_uclk_mhz = amdgpu_metrics->average_uclk_frequency;
 
