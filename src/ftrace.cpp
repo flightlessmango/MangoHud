@@ -62,7 +62,7 @@ void FTrace::ftrace_thread()
 {
     struct {
         std::array<char, 4096> data;
-        unsigned size { 0 };
+        size_t size { 0 };
     } buffer;
 
     while (!stop_thread) {
@@ -85,7 +85,7 @@ void FTrace::ftrace_thread()
             SPDLOG_ERROR("FTrace: reading from trace_pipe failed: {}", strerror(errno));
             break;
         }
-        buffer.size += unsigned(size_read);
+        buffer.size += size_t(size_read);
 
         {
             char *it = buffer.data.begin();
