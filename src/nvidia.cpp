@@ -85,10 +85,12 @@ void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics) {
         struct nvmlUtilization_st nvml_utilization;
         response = nvml->nvmlDeviceGetUtilizationRates(device, &nvml_utilization);
         if (response == NVML_ERROR_NOT_SUPPORTED) {
-            if (nvml_available)
-                SPDLOG_ERROR("nvmlDeviceGetUtilizationRates failed, disabling nvml metrics");
+            SPDLOG_ERROR("nvmlDeviceGetUtilizationRates failed, disabling nvml metrics");
+
             nvml_available = false;
+            return;
         }
+
         metrics->load = nvml_utilization.gpu;
 
         if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp] || (logger && logger->is_active())) {
