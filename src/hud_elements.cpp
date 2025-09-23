@@ -1571,25 +1571,22 @@ void HudElements::graphs(){
         HUDElements.TextColored(HUDElements.colors.engine, "%s", "GPU Mem Clock");
     }
 
-    if (value == "vram"){
+    if (value == "vram" && gpus){
         for (auto& it : graph_data){
             arr.push_back(float(it.gpu_vram_used));
         }
-        if (!gpus)
-            gpus = std::make_unique<GPUS>(&HUDElements.params);
 
         auto gpu = gpus->active_gpu();
         if (!gpu)
             return;
-
+        
         HUDElements.max = gpu->metrics.memoryTotal;
         HUDElements.min = 0;
         HUDElements.TextColored(HUDElements.colors.engine, "%s", "VRAM");
     }
 #ifdef __linux__
     if (value == "ram"){
-        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram])
-            HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram] = true;
+
         for (auto& it : graph_data){
             arr.push_back(float(it.ram_used));
         }
@@ -1988,11 +1985,6 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
             ordered_functions.push_back({_exec, "exec", value});
             exec_list.push_back({int(ordered_functions.size() - 1), value});
         } else if (param == "graphs") {
-            // Handle graphs parameter
-            if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs]) {
-                HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs] = true;
-            }
-
             auto values = str_tokenize(value);
             for (auto& val : values) {
                 if (find(permitted_params.begin(), permitted_params.end(), val) != permitted_params.end()) {
@@ -2013,6 +2005,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
 void HudElements::legacy_elements(){
     string value = "NULL";
     ordered_functions.clear();
+
     if (params->enabled[OVERLAY_PARAM_ENABLED_time])
         ordered_functions.push_back({time, "time", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_version])

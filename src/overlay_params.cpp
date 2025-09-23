@@ -46,6 +46,7 @@ std::unique_ptr<fpsMetrics> fpsmetrics;
 std::mutex config_mtx;
 std::condition_variable config_cv;
 bool config_ready = false;
+static std::shared_ptr<const overlay_params> g_params;
 
 #if __cplusplus >= 201703L
 
@@ -953,9 +954,6 @@ parse_overlay_config(struct overlay_params *params,
 
    bool read_cfg = params->enabled[OVERLAY_PARAM_ENABLED_read_cfg];
    bool env_contains_preset = params->options.find("preset") != params->options.end();
-   HUDElements.params = params;
-   if (!gpus)
-      gpus = std::make_unique<GPUS>(&HUDElements.params);
 
    if (!env || read_cfg) {
       parseConfigFile(*params);
@@ -1113,15 +1111,6 @@ parse_overlay_config(struct overlay_params *params,
       SPDLOG_DEBUG("Param: '{}' = '{}'", option.first, option.second);
    }
 
-   if (params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout]) {
-      HUDElements.legacy_elements();
-   } else {
-      HUDElements.ordered_functions.clear();
-      for (auto& option : HUDElements.options) {
-         HUDElements.sort_elements(option);
-      }
-   }
-
    // Needs ImGui context but it is null here for OpenGL so just note it and update somewhere else
    HUDElements.colors.update = true;
    if (params->no_small_font)
@@ -1162,6 +1151,26 @@ parse_overlay_config(struct overlay_params *params,
       config_ready = true;
       config_cv.notify_one();
    }
+   
+   auto snapshot = std::make_shared<const overlay_params>(*params);
+   std::atomic_store_explicit(&g_params, std::move(snapshot), std::memory_order_release);
+   HUDElements.params = get_params();
+
+   if (!gpus)
+      gpus = std::make_unique<GPUS>();
+
+   if (params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout]) {
+      HUDElements.legacy_elements();
+   } else {
+      HUDElements.ordered_functions.clear();
+      for (auto& option : HUDElements.options) {
+         HUDElements.sort_elements(option);
+      }
+   }
+}
+
+std::shared_ptr<const overlay_params> get_params() {
+    return std::atomic_load_explicit(&g_params, std::memory_order_acquire);
 }
 
 bool parse_preset_config(int preset, struct overlay_params *params){

@@ -1,9 +1,10 @@
 #include "gpu.h"
 #include "file_utils.h"
+#include "hud_elements.h"
 
 namespace fs = ghc::filesystem;
 
-GPUS::GPUS(overlay_params* const* params_pointer) : params_pointer(params_pointer) {
+GPUS::GPUS() {
     std::set<std::string> gpu_entries;
 
     for (const auto& entry : fs::directory_iterator("/sys/class/drm")) {
@@ -193,6 +194,10 @@ std::string GPU::vram_text() {
     else
         vram_text = "VRAM";
     return vram_text;
+}
+
+std::shared_ptr<const overlay_params> GPUS::params() {
+    return HUDElements.params;
 }
 
 std::unique_ptr<GPUS> gpus = nullptr;

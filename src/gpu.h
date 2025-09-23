@@ -124,11 +124,9 @@ class GPUS {
         std::mutex mutex;
         overlay_params* const* params_pointer;
 
-        GPUS(overlay_params* const* params_pointer);
+        GPUS();
 
-        const overlay_params* params(){
-            return params_pointer ? *params_pointer : nullptr;
-        }
+        std::shared_ptr<const overlay_params> params();
 
         void pause() {
             for (auto& gpu : available_gpus)

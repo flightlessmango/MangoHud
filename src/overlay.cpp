@@ -674,7 +674,8 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       config_cv.wait(lock, []{ return config_ready; });
    }
    // data.engine = EngineTypes::GAMESCOPE;
-   HUDElements.sw_stats = &data; HUDElements.params = &params;
+   HUDElements.sw_stats = &data;
+   HUDElements.params = get_params();
    HUDElements.is_vulkan = is_vulkan;
    ImGui::GetIO().FontGlobalScale = params.font_scale;
    static float ralign_width = 0, old_scale = 0;
