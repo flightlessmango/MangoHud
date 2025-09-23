@@ -326,6 +326,19 @@ if is_unixy
   )
 endif
 
+if obs.found()
+  mangohud_obs = shared_module(
+    'mangohud_obs',
+    files(
+      'obs_studio.c'
+    ),
+    dependencies: [
+      obs
+    ],
+    include_directories: ['/usr/include/obs']
+  )
+endif
+
 configure_file(input : 'mangohud.json.in',
   output : '@0@.@1@.json'.format(meson.project_name(), host_machine.cpu_family()),
   configuration : conf_data,

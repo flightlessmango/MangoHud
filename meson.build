@@ -95,10 +95,12 @@ if is_unixy
   dbus_dep = dependency('dbus-1', required: get_option('with_dbus')).partial_dependency(compile_args : true, includes : true)
   dep_xkb = dependency('xkbcommon', required: get_option('with_x11').enabled() or get_option('with_wayland').enabled())
   vulkan_wsi_deps += dep_xkb
+  obs = dependency('obs-frontend-api')
 else
   dep_x11 = null_dep
   dep_wayland_client = null_dep
   dbus_dep = null_dep
+  obs = null_dep
 endif
 
 if dep_x11.found()
