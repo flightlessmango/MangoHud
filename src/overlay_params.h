@@ -282,7 +282,7 @@ struct overlay_params {
    enum overlay_param_position position;
    int control;
    uint32_t fps_sampling_period; /* ns */
-   std::vector<std::uint32_t> fps_limit;
+   std::vector<double> fps_limit;
    enum fps_limit_method fps_limit_method;
    bool help;
    bool no_display;
