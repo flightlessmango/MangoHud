@@ -396,6 +396,6 @@ void add_to_options(struct overlay_params *params, std::string option, std::stri
 extern std::mutex config_mtx;
 extern std::condition_variable config_cv;
 extern bool config_ready;
-std::shared_ptr<const overlay_params> get_params();
+std::shared_ptr<overlay_params> get_params();
 
 #endif /* MANGOHUD_OVERLAY_PARAMS_H */

@@ -12,6 +12,7 @@
 #include "overlay.h"
 #include "cpu.h"
 #include "gpu.h"
+#include "hud_elements.h"
 #include "memory.h"
 #include "timing.hpp"
 #include "fcat.h"
@@ -114,39 +115,40 @@ void FpsLimiter(struct fps_limit& stats){
 
 void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
 {
-   if (params.enabled[OVERLAY_PARAM_ENABLED_fan])
+   auto real_params = get_params();
+   if (real_params->enabled[OVERLAY_PARAM_ENABLED_fan])
       update_fan();
-   if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
+   if (real_params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
       cpuStats.UpdateCPUData();
 
 #ifdef __linux__
-      if (params.enabled[OVERLAY_PARAM_ENABLED_core_load] || params.enabled[OVERLAY_PARAM_ENABLED_cpu_mhz] || logger->is_active())
+      if (real_params->enabled[OVERLAY_PARAM_ENABLED_core_load] || real_params->enabled[OVERLAY_PARAM_ENABLED_cpu_mhz] || logger->is_active())
          cpuStats.UpdateCoreMhz();
-      if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp] || logger->is_active() || params.enabled[OVERLAY_PARAM_ENABLED_graphs])
+      if (real_params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp] || logger->is_active() || real_params->enabled[OVERLAY_PARAM_ENABLED_graphs])
          cpuStats.UpdateCpuTemp();
-      if (params.enabled[OVERLAY_PARAM_ENABLED_cpu_power] || logger->is_active())
+      if (real_params->enabled[OVERLAY_PARAM_ENABLED_cpu_power] || logger->is_active())
          cpuStats.UpdateCpuPower();
 #endif
    }
-   if (params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || logger->is_active()) {
+   if (real_params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || logger->is_active()) {
       if (gpus)
          gpus->get_metrics();
    }
 
 #ifdef __linux__
-   if (params.enabled[OVERLAY_PARAM_ENABLED_battery])
+   if (real_params->enabled[OVERLAY_PARAM_ENABLED_battery])
       Battery_Stats.update();
-   if (!params.device_battery.empty()) {
+   if (!real_params->device_battery.empty()) {
       device_update(params);
       if (device_found) {
             device_info();
       }
    }
-   if (params.enabled[OVERLAY_PARAM_ENABLED_ram] || params.enabled[OVERLAY_PARAM_ENABLED_swap] || logger->is_active())
+   if (real_params->enabled[OVERLAY_PARAM_ENABLED_ram] || real_params->enabled[OVERLAY_PARAM_ENABLED_swap] || logger->is_active())
       update_meminfo();
-   if (params.enabled[OVERLAY_PARAM_ENABLED_procmem])
+   if (real_params->enabled[OVERLAY_PARAM_ENABLED_procmem])
       update_procmem();
-   if (params.enabled[OVERLAY_PARAM_ENABLED_io_read] || params.enabled[OVERLAY_PARAM_ENABLED_io_write])
+   if (real_params->enabled[OVERLAY_PARAM_ENABLED_io_read] || real_params->enabled[OVERLAY_PARAM_ENABLED_io_write])
       getIoStats(g_io_stats);
 #endif
    if (gpus && gpus->active_gpu()) {
@@ -239,6 +241,7 @@ void stop_hw_updater()
 }
 
 void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const struct overlay_params& params, uint32_t vendorID, uint64_t frametime_ns){
+   auto real_params = get_params();
    uint32_t f_idx = sw_stats.n_frames % ARRAY_SIZE(sw_stats.frames_stats);
    uint64_t now = os_time_get_nano(); /* ns */
    auto elapsed = now - sw_stats.last_fps_update; /* ns */
@@ -258,9 +261,9 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
    fex::update_fex_stats();
 #endif
 #ifdef HAVE_FTRACE
-   if (params.ftrace.enabled) {
+   if (real_params->ftrace.enabled) {
       if (!FTrace::object)
-         FTrace::object = std::make_unique<FTrace::FTrace>(params.ftrace);
+         FTrace::object = std::make_unique<FTrace::FTrace>(real_params->ftrace);
       FTrace::object->update();
    }
 #endif
@@ -268,7 +271,7 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
    fps = double(1000 / frametime_ms);
    if (fpsmetrics) fpsmetrics->update(frametime_ms);
 
-   if (elapsed >= params.fps_sampling_period) {
+   if (elapsed >= real_params->fps_sampling_period) {
       if (!hw_update_thread)
          hw_update_thread = std::make_unique<hw_info_updater>();
       hw_update_thread->update(&params, vendorID);
@@ -280,15 +283,15 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
 
       sw_stats.fps = 1000000000.0 * sw_stats.n_frames_since_update / elapsed;
 
-      if (params.enabled[OVERLAY_PARAM_ENABLED_time]) {
+      if (real_params->enabled[OVERLAY_PARAM_ENABLED_time]) {
          std::time_t t = std::time(nullptr);
          std::stringstream time;
-         time << std::put_time(std::localtime(&t), params.time_format.c_str());
+         time << std::put_time(std::localtime(&t), real_params->time_format.c_str());
          sw_stats.time = time.str();
       }
 
-      if (params.autostart_log && logger && !logger->autostart_init) {
-         if ((std::chrono::steady_clock::now() - HUDElements.overlay_start) > std::chrono::seconds(params.autostart_log)){
+      if (real_params->autostart_log && logger && !logger->autostart_init) {
+         if ((std::chrono::steady_clock::now() - HUDElements.overlay_start) > std::chrono::seconds(real_params->autostart_log)){
             logger->start_logging();
             logger->autostart_init = true;
          }
@@ -309,7 +312,7 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
    // }
    // min_frametime = min_time / sw_stats.time_dividor;
    // max_frametime = max_time / sw_stats.time_dividor;
-   if (params.log_interval == 0){
+   if (real_params->log_interval == 0){
       logger->try_log();
    }
 
@@ -321,7 +324,7 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
 void update_hud_info(struct swapchain_stats& sw_stats, const struct overlay_params& params, uint32_t vendorID){
    uint64_t now = os_time_get_nano(); /* ns */
    uint64_t frametime_ns = now - sw_stats.last_present_time;
-   if (!params.no_display || logger->is_active())
+   if (!get_params()->no_display || logger->is_active())
       update_hud_info_with_frametime(sw_stats, params, vendorID, frametime_ns);
 }
 
@@ -675,48 +678,49 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    }
    // data.engine = EngineTypes::GAMESCOPE;
    HUDElements.sw_stats = &data;
-   HUDElements.params = get_params();
+   auto real_params = get_params();
+   HUDElements.params = real_params;
    HUDElements.is_vulkan = is_vulkan;
-   ImGui::GetIO().FontGlobalScale = params.font_scale;
+   ImGui::GetIO().FontGlobalScale = real_params->font_scale;
    static float ralign_width = 0, old_scale = 0;
    auto io = ImGui::GetIO();
-   if (params.enabled[OVERLAY_PARAM_ENABLED_fps_only]){
-      window_size = ImVec2((to_string(int(HUDElements.sw_stats->fps)).length() * ImGui::CalcTextSize("A").x) + 15.f, params.height);
-   } else if (params.enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
-      window_size = ImVec2(io.DisplaySize.x, params.height);
+   if (real_params->enabled[OVERLAY_PARAM_ENABLED_fps_only]){
+      window_size = ImVec2((to_string(int(HUDElements.sw_stats->fps)).length() * ImGui::CalcTextSize("A").x) + 15.f, get_params()->height);
+   } else if (real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
+      window_size = ImVec2(io.DisplaySize.x, real_params->height);
    } else {
-      window_size = ImVec2(params.width, params.height);
+      window_size = ImVec2(real_params->width, real_params->height);
    }
    unsigned height = io.DisplaySize.y;
    auto now = Clock::now();
 
-   if (old_scale != params.font_scale) {
+   if (old_scale != real_params->font_scale) {
       HUDElements.ralign_width = ralign_width = ImGui::CalcTextSize("A").x * 4 /* characters */;
-      old_scale = params.font_scale;
+      old_scale = real_params->font_scale;
    }
    ImGuiTableFlags table_flags = ImGuiTableFlags_NoClip;
-   if(params.enabled[OVERLAY_PARAM_ENABLED_horizontal])
+   if(real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
       table_flags = ImGuiTableFlags_NoClip | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_NoHostExtendX;
 
-   if (!params.no_display && !steam_focused && params.table_columns){
+   if (!real_params->no_display && !steam_focused && get_params()->table_columns){
       ImGui::Begin("Main", &gui_open, ImGuiWindowFlags_NoDecoration);
-      if (ImGui::BeginTable("hud", params.table_columns, table_flags )) {
+      if (ImGui::BeginTable("hud", real_params->table_columns, table_flags )) {
          HUDElements.place = 0;
          for (auto& func : HUDElements.ordered_functions){
-            if(!params.enabled[OVERLAY_PARAM_ENABLED_horizontal] && func.name != "exec")
+            if(!real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && func.name != "exec")
                ImGui::TableNextRow();
             func.run();
             HUDElements.place += 1;
-            if(!HUDElements.ordered_functions.empty() && params.enabled[OVERLAY_PARAM_ENABLED_horizontal] && HUDElements.ordered_functions.size() != (size_t)HUDElements.place)
+            if(!HUDElements.ordered_functions.empty() && real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && HUDElements.ordered_functions.size() != (size_t)HUDElements.place)
                horizontal_separator(params);
          }
 
-         if (params.enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
+         if (real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
             if (HUDElements.table_columns_count > 0 && HUDElements.table_columns_count < 65 )
-               params.table_columns = HUDElements.table_columns_count;
-            if(!params.enabled[OVERLAY_PARAM_ENABLED_horizontal_stretch]) {
-               float content_width = ImGui::GetContentRegionAvail().x - (params.table_columns * 64);
-               window_size = ImVec2(content_width, params.height);
+               real_params->table_columns = HUDElements.table_columns_count;
+            if(!real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal_stretch]) {
+               float content_width = ImGui::GetContentRegionAvail().x - (real_params->table_columns * 64);
+               window_size = ImVec2(content_width, real_params->height);
             }
          }
          ImGui::EndTable();
@@ -724,14 +728,14 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       }
 
       if(logger->is_active())
-         ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(data.main_window_pos.x + window_size.x - 15, data.main_window_pos.y + 15), 10, params.engine_color, 20);
+         ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(data.main_window_pos.x + window_size.x - 15, data.main_window_pos.y + 15), 10, real_params->engine_color, 20);
       window_size = ImVec2(window_size.x, ImGui::GetCursorPosY() + 10.0f);
       ImGui::End();
       if((now - logger->last_log_end()) < 12s && !logger->is_active())
          render_benchmark(data, params, window_size, height, now);
    }
 
-   if(params.enabled[OVERLAY_PARAM_ENABLED_fcat])
+   if(real_params->enabled[OVERLAY_PARAM_ENABLED_fcat])
      {
        fcatstatus.update(&params);
        auto window_corners = fcatstatus.get_overlay_corners();
@@ -907,10 +911,11 @@ void update_fan(){
       fan_speed = -1;
 }
 
-void next_hud_position(struct overlay_params& params){
-   if (params.position < (overlay_param_position::LAYER_POSITION_COUNT - 1)){
-      params.position = static_cast<overlay_param_position>(params.position + 1);
+void next_hud_position(){
+   auto params = get_params();
+   if (params->position < (overlay_param_position::LAYER_POSITION_COUNT - 1)){
+      params->position = static_cast<overlay_param_position>(params->position + 1);
    } else {
-      params.position = static_cast<overlay_param_position>(0);
+      params->position = static_cast<overlay_param_position>(0);
    }
 }

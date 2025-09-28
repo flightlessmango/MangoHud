@@ -23,7 +23,7 @@ struct Function {
 class HudElements{
     public:
         struct swapchain_stats *sw_stats;
-        std::shared_ptr<const overlay_params> params;
+        std::shared_ptr<overlay_params> params;
         struct exec_entry {
             int             pos;
             std::string     value;

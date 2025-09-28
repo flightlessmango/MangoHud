@@ -114,17 +114,17 @@ EXPORT_C_(int) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
             imgui_set_context(ctx, gl_wsi::GL_WSI_GLX);
             SPDLOG_DEBUG("GL ref count: {}", refcnt.load());
         }
-
+        auto real_params = get_params();
         // Afaik -1 only works with EXT version if it has GLX_EXT_swap_control_tear, maybe EGL_MESA_swap_control_tear someday
-        if (params.gl_vsync >= -1) {
+        if (real_params->gl_vsync >= -1) {
             if (glx.SwapIntervalEXT)
-                glx.SwapIntervalEXT(dpy, drawable, params.gl_vsync);
+                glx.SwapIntervalEXT(dpy, drawable, real_params->gl_vsync);
         }
-        if (params.gl_vsync >= 0) {
+        if (real_params->gl_vsync >= 0) {
             if (glx.SwapIntervalSGI)
-                glx.SwapIntervalSGI(params.gl_vsync);
+                glx.SwapIntervalSGI(real_params->gl_vsync);
             if (glx.SwapIntervalMESA)
-                glx.SwapIntervalMESA(params.gl_vsync);
+                glx.SwapIntervalMESA(real_params->gl_vsync);
         }
     }
 
@@ -155,7 +155,7 @@ static void do_imgui_swap(void *dpy, void *drawable)
 
         unsigned int width = -1, height = -1;
 
-        switch (params.gl_size_query)
+        switch (get_params()->gl_size_query)
         {
             case GL_SIZE_VIEWPORT:
                 glGetIntegerv (GL_VIEWPORT, vp);
@@ -227,8 +227,8 @@ EXPORT_C_(void) glXSwapIntervalEXT(void *dpy, void *draw, int interval) {
     if (!glx.SwapIntervalEXT)
         return;
 
-    if (!is_blacklisted() && params.gl_vsync >= 0)
-        interval = params.gl_vsync;
+    if (!is_blacklisted() && get_params()->gl_vsync >= 0)
+        interval = get_params()->gl_vsync;
 
     glx.SwapIntervalEXT(dpy, draw, interval);
 }
@@ -239,8 +239,8 @@ EXPORT_C_(int) glXSwapIntervalSGI(int interval) {
     if (!glx.SwapIntervalSGI)
         return -1;
 
-    if (!is_blacklisted() && params.gl_vsync >= 0)
-        interval = params.gl_vsync;
+    if (!is_blacklisted() && get_params()->gl_vsync >= 0)
+        interval = get_params()->gl_vsync;
 
     return glx.SwapIntervalSGI(interval);
 }
@@ -251,8 +251,8 @@ EXPORT_C_(int) glXSwapIntervalMESA(unsigned int interval) {
     if (!glx.SwapIntervalMESA)
         return -1;
 
-    if (!is_blacklisted() && params.gl_vsync >= 0)
-        interval = (unsigned int)params.gl_vsync;
+    if (!is_blacklisted() && get_params()->gl_vsync >= 0)
+        interval = (unsigned int)get_params()->gl_vsync;
 
     return glx.SwapIntervalMESA(interval);
 }
@@ -269,8 +269,8 @@ EXPORT_C_(int) glXGetSwapIntervalMESA() {
 
         if (first_call) {
             first_call = false;
-            if (params.gl_vsync >= 0) {
-                interval = params.gl_vsync;
+            if (get_params()->gl_vsync >= 0) {
+                interval = get_params()->gl_vsync;
                 glx.SwapIntervalMESA(interval);
             }
         }

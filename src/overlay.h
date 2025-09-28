@@ -87,7 +87,6 @@ extern struct benchmark_stats benchmark;
 extern ImVec2 real_font_size;
 extern std::string wineVersion;
 extern std::deque<logData> graph_data;
-extern overlay_params *_params;
 extern double min_frametime, max_frametime;
 extern bool steam_focused;
 extern int fan_speed;
@@ -121,7 +120,7 @@ extern int global_control_client;
 void render_mpris_metadata(const overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing);
 #endif
 void update_fan();
-void next_hud_position(struct overlay_params& params);
+void next_hud_position();
 void horizontal_separator(struct overlay_params& params);
 void RenderOutlinedText(const char* text, ImU32 textColor);
 #endif //MANGOHUD_OVERLAY_H

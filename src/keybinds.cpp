@@ -3,6 +3,7 @@
 #include <array>
 #include <algorithm>
 #include <unistd.h>
+#include "hud_elements.h"
 #include "overlay.h"
 #include "timing.hpp"
 #include "logging.h"
@@ -12,6 +13,7 @@
 Clock::time_point last_f2_press, toggle_fps_limit_press, toggle_preset_press, last_f12_press, reload_cfg_press, last_upload_press;
 
 void check_keybinds(struct overlay_params& params){
+   auto real_params = get_params();
    using namespace std::chrono_literals;
    auto now = Clock::now(); /* us */
    auto elapsedF2 = now - last_f2_press;
@@ -29,7 +31,7 @@ void check_keybinds(struct overlay_params& params){
    const auto keyPressDelay = 400ms;
 
    if (elapsedF2 >= keyPressDelay &&
-       keys_are_pressed(params.toggle_logging)) {
+       keys_are_pressed(real_params->toggle_logging)) {
       last_f2_press = now;
       if (logger->is_active()) {
          logger->stop_logging();
@@ -40,14 +42,14 @@ void check_keybinds(struct overlay_params& params){
    }
 
    if (elapsedFpsLimitToggle >= keyPressDelay &&
-       keys_are_pressed(params.toggle_fps_limit)) {
+       keys_are_pressed(real_params->toggle_fps_limit)) {
       toggle_fps_limit_press = now;
-      for (size_t i = 0; i < params.fps_limit.size(); i++){
-         float fps_limit = params.fps_limit[i];
+      for (size_t i = 0; i < real_params->fps_limit.size(); i++){
+         float fps_limit = real_params->fps_limit[i];
          // current fps limit equals vector entry, use next / first
-         if((fps_limit > 0 && fps_limit_stats.targetFrameTime == std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(1) / params.fps_limit[i]))
+         if((fps_limit > 0 && fps_limit_stats.targetFrameTime == std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(1) / real_params->fps_limit[i]))
                || (fps_limit == 0 && fps_limit_stats.targetFrameTime == fps_limit_stats.targetFrameTime.zero())) {
-            float newFpsLimit = i+1 == params.fps_limit.size() ? params.fps_limit[0] : params.fps_limit[i+1];
+            float newFpsLimit = i+1 == real_params->fps_limit.size() ? real_params->fps_limit[0] : real_params->fps_limit[i+1];
             if(newFpsLimit > 0) {
                fps_limit_stats.targetFrameTime = std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(1) / newFpsLimit);
             } else {
@@ -59,12 +61,12 @@ void check_keybinds(struct overlay_params& params){
    }
 
    if (elapsedPresetToggle >= keyPressDelay &&
-       keys_are_pressed(params.toggle_preset)) {
+       keys_are_pressed(real_params->toggle_preset)) {
      toggle_preset_press = now;
-     size_t size = params.preset.size();
+     size_t size = real_params->preset.size();
      for (size_t i = 0; i < size; i++){
-       if(params.preset[i] == current_preset) {
-         current_preset = params.preset[++i%size];
+       if(real_params->preset[i] == current_preset) {
+         current_preset = real_params->preset[++i%size];
          parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"), true);
          break;
        }
@@ -72,38 +74,38 @@ void check_keybinds(struct overlay_params& params){
    }
 
    if (elapsedF12 >= keyPressDelay &&
-       keys_are_pressed(params.toggle_hud)) {
+       keys_are_pressed(real_params->toggle_hud)) {
       last_f12_press = now;
-      params.no_display = !params.no_display;
+      printf("no display toggle\n");
+      real_params->no_display = !real_params->no_display;
    }
 
    if (elapsedReloadCfg >= keyPressDelay &&
-       keys_are_pressed(params.reload_cfg)) {
+       keys_are_pressed(real_params->reload_cfg)) {
       parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"), false);
-      _params = &params;
       reload_cfg_press = now;
    }
 
-   if (params.permit_upload && elapsedUpload >= keyPressDelay &&
-       keys_are_pressed(params.upload_log)) {
+   if (real_params->permit_upload && elapsedUpload >= keyPressDelay &&
+       keys_are_pressed(real_params->upload_log)) {
       last_upload_press = now;
       logger->upload_last_log();
    }
 
-   if (params.permit_upload && elapsedUpload >= keyPressDelay &&
-       keys_are_pressed(params.upload_logs)) {
+   if (real_params->permit_upload && elapsedUpload >= keyPressDelay &&
+       keys_are_pressed(real_params->upload_logs)) {
       last_upload_press = now;
       logger->upload_last_logs();
    }
 
    if (elapsedF12 >= keyPressDelay &&
-       keys_are_pressed(params.toggle_hud_position)) {
-      next_hud_position(params);
+       keys_are_pressed(real_params->toggle_hud_position)) {
+      next_hud_position();
       last_f12_press = now;
    }
 
    if (elapsedF12 >= keyPressDelay &&
-       keys_are_pressed(params.reset_fps_metrics)) {
+       keys_are_pressed(real_params->reset_fps_metrics)) {
       last_f12_press = now;
       if (fpsmetrics)
          fpsmetrics->reset_metrics();

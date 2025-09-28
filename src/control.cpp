@@ -16,7 +16,7 @@ static void parse_command(overlay_params &params,
                           const char *param, unsigned paramlen)
 {
    if (!strncmp(cmd, "hud", cmdlen)) {
-      params.no_display = !params.no_display;
+      get_params()->no_display = !get_params()->no_display;
    } else if (!strncmp(cmd, "logging", cmdlen)) {
       if (param && param[0])
       {

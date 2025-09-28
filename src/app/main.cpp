@@ -108,18 +108,19 @@ static void ctrl_thread(){
         }
         {
             std::lock_guard<std::mutex> lk(mangoapp_m);
+            auto real_params = get_params();
             switch (mangoapp_ctrl_v1->no_display){
                 case 0:
                     // Keep as-is
                     break;
                 case 1:
-                    params.no_display = 1;
+                    real_params->no_display = 1;
                     break;
                 case 2:
-                    params.no_display = 0;
+                    real_params->no_display = 0;
                     break;
                 case 3:
-                    params.no_display ? params.no_display = 0 : params.no_display = 1;
+                    real_params->no_display ? real_params->no_display = 0 : real_params->no_display = 1;
                     break;
             }
         }
@@ -176,18 +177,19 @@ static void msg_read_thread(){
                 }
 
                 if (msg_size > offsetof(struct mangoapp_msg_v1, visible_frametime_ns)){
+                    auto real_params = get_params();
                     bool should_new_frame = false;
-                    if (mangoapp_v1->visible_frametime_ns != ~(0lu) && (!params.no_display || logger->is_active())) {
+                    if (mangoapp_v1->visible_frametime_ns != ~(0lu) && (!real_params->no_display || logger->is_active())) {
                         update_hud_info_with_frametime(sw_stats, params, vendorID, mangoapp_v1->visible_frametime_ns);
                         should_new_frame = true;
                     }
 
                     if (msg_size > offsetof(mangoapp_msg_v1, fsrUpscale)){
                         HUDElements.g_fsrUpscale = mangoapp_v1->fsrUpscale;
-                        if (params.fsr_steam_sharpness < 0)
+                        if (real_params->fsr_steam_sharpness < 0)
                             HUDElements.g_fsrSharpness = mangoapp_v1->fsrSharpness;
                         else
-                        HUDElements.g_fsrSharpness = params.fsr_steam_sharpness - mangoapp_v1->fsrSharpness;
+                        HUDElements.g_fsrSharpness = real_params->fsr_steam_sharpness - mangoapp_v1->fsrSharpness;
                     }
                     if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam]){
                         steam_focused = get_prop("GAMESCOPE_FOCUSED_APP_GFX") == 769;
@@ -312,7 +314,7 @@ int main(int, char**)
     init_cpu_stats(params);
     notifier.params = &params;
     start_notifier(notifier);
-    window_size = ImVec2(params.width, params.height);
+    window_size = ImVec2(get_params()->width, get_params()->height);
     deviceName = (char*)glGetString(GL_RENDERER);
     sw_stats.deviceName = deviceName;
     SPDLOG_DEBUG("mangoapp deviceName: {}", deviceName);
@@ -338,7 +340,7 @@ int main(int, char**)
     sw_stats.engine = EngineTypes::GAMESCOPE;
     std::thread(msg_read_thread).detach();
     std::thread(ctrl_thread).detach();
-    if(!logger) logger = std::make_unique<Logger>(HUDElements.params);
+    if (!logger) logger = std::make_unique<Logger>(&params);
     Atom noFocusAtom = XInternAtom(x11_display, "GAMESCOPE_NO_FOCUS", False);
     uint32_t value = 1;
     XChangeProperty(x11_display, x11_window, noFocusAtom, XA_CARDINAL, 32,
@@ -347,7 +349,7 @@ int main(int, char**)
     while (!glfwWindowShouldClose(window)){
         check_keybinds(params);
 
-        if (!params.no_display){
+        if (!get_params()->no_display){
             if (mangoapp_paused){
                 glfwShowWindow(window);
                 uint32_t value = 1;
@@ -361,7 +363,7 @@ int main(int, char**)
             }
             {
                 std::unique_lock<std::mutex> lk(mangoapp_m);
-                mangoapp_cv.wait(lk, []{return new_frame || params.no_display;});
+                mangoapp_cv.wait(lk, []{return new_frame || get_params()->no_display;});
                 new_frame = false;
             }
             // Start the Dear ImGui frame
@@ -374,8 +376,8 @@ int main(int, char**)
                     render(window);
                 }
 
-                if (params.control >= 0) {
-                    control_client_check(params.control, control_client, deviceName);
+                if (get_params()->control >= 0) {
+                    control_client_check(get_params()->control, control_client, deviceName);
                     process_control_socket(control_client, params);
                 }
             }
@@ -408,7 +410,7 @@ int main(int, char**)
             // If severe power usage issues arise, find an alternative solution.
 
             // std::unique_lock<std::mutex> lk(mangoapp_m);
-            // mangoapp_cv.wait(lk, []{return !params.no_display;});
+            // mangoapp_cv.wait(lk, []{return !get_params()->no_display;});
         } else {
             usleep(100000);
         }

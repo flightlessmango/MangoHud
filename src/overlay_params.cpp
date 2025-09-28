@@ -46,7 +46,7 @@ std::unique_ptr<fpsMetrics> fpsmetrics;
 std::mutex config_mtx;
 std::condition_variable config_cv;
 bool config_ready = false;
-static std::shared_ptr<const overlay_params> g_params;
+static std::shared_ptr<overlay_params> g_params;
 
 #if __cplusplus >= 201703L
 
@@ -1155,7 +1155,7 @@ parse_overlay_config(struct overlay_params *params,
       config_cv.notify_one();
    }
    
-   auto snapshot = std::make_shared<const overlay_params>(*params);
+   auto snapshot = std::make_shared<overlay_params>(*params);
    std::atomic_store_explicit(&g_params, std::move(snapshot), std::memory_order_release);
    HUDElements.params = get_params();
 
@@ -1172,7 +1172,7 @@ parse_overlay_config(struct overlay_params *params,
    }
 }
 
-std::shared_ptr<const overlay_params> get_params() {
+std::shared_ptr<overlay_params> get_params() {
     return std::atomic_load_explicit(&g_params, std::memory_order_acquire);
 }
 

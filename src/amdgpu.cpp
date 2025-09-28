@@ -278,7 +278,7 @@ void AMDGPU::metrics_polling_thread() {
 
 	while (!stop_thread) {
 #ifndef TEST_ONLY
-		if (HUDElements.params->no_display && !logger->is_active())
+		if (get_params()->no_display && !logger->is_active())
 			usleep(100000);
 		else
 #endif
@@ -310,7 +310,7 @@ void AMDGPU::get_sysfs_metrics() {
 	// this value is instantaneous and should be averaged over time
 	// probably just average everything in this function to be safe
 #ifndef TEST_ONLY
-	if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power]) {
+	if (get_params()->enabled[OVERLAY_PARAM_ENABLED_gpu_power]) {
 		// NOTE: Do not read power1_average if it is not enabled, as some
 		// older GPUs may hang when reading the sysfs node.
 		metrics.powerUsage = 0;
@@ -326,7 +326,7 @@ void AMDGPU::get_sysfs_metrics() {
 	}
 
 #ifndef TEST_ONLY
-	if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power_limit]) {
+	if (!get_params()->enabled[OVERLAY_PARAM_ENABLED_gpu_power_limit]) {
 		// NOTE: Do not read power1_cap if it is not enabled, as some
 		// older GPUs may hang when reading the sysfs node.
 		metrics.powerLimit = 0;

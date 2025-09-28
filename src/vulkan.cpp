@@ -477,7 +477,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
    struct device_data *device_data = data->device;
    struct instance_data *instance_data = device_data->instance;
 
-   if (instance_data->params.no_display)
+   if (get_params()->no_display)
       return;
 
    ImGui::SetCurrentContext(data->imgui_context);
@@ -804,7 +804,7 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
    ImDrawData* draw_data = ImGui::GetDrawData();
    struct device_data *device_data = data->device;
 
-   if (!draw_data || draw_data->TotalVtxCount == 0 || device_data->instance->params.no_display)
+   if (!draw_data || draw_data->TotalVtxCount == 0 || get_params()->no_display)
       return nullptr;
 
    struct overlay_draw *draw = get_overlay_draw(data);
@@ -1963,8 +1963,6 @@ static VkResult overlay_CreateInstance(
       return result;
 
    parse_overlay_config(&instance_data->params, getenv("MANGOHUD_CONFIG"), false);
-   _params = &instance_data->params;
-
    //check for blacklist item in the config file
    for (auto& item : instance_data->params.blacklist) {
       add_blacklist(item);
