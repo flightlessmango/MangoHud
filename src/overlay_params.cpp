@@ -1067,7 +1067,7 @@ parse_overlay_config(struct overlay_params *params,
       if (env)
       {
          try {
-            int fps = std::stoi(env);
+            int fps = std::stof(env);
             if (params->fps_limit.size() == 0)
                params->fps_limit.push_back(fps);
             else
