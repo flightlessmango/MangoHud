@@ -203,24 +203,27 @@ parse_fps_sampling_period(const char *str)
    return strtol(str, NULL, 0) * 1000000; /* ms to ns */
 }
 
-static std::vector<std::uint32_t>
+static std::vector<float>
 parse_fps_limit(const char *str)
 {
-   std::vector<std::uint32_t> fps_limit;
+   std::vector<float> fps_limit;
    auto fps_limit_strings = str_tokenize(str);
 
    for (auto& value : fps_limit_strings) {
       trim(value);
 
-      uint32_t as_int;
+      float as_float;
       try {
-         as_int = static_cast<uint32_t>(std::stoul(value));
+         as_float = std::stof(value);
       } catch (const std::invalid_argument&) {
          SPDLOG_ERROR("invalid fps_limit value: '{}'", value);
          continue;
+      } catch (const std::out_of_range&) {
+         SPDLOG_ERROR("fps_limit value out of range: '{}'", value);
+         continue;
       }
 
-      fps_limit.push_back(as_int);
+      fps_limit.push_back(as_float);
    }
 
    return fps_limit;
