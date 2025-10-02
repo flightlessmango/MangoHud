@@ -22,6 +22,8 @@
 #include "blacklist.h"
 #ifdef __linux__
 #include "implot.h"
+#include <sys/mman.h>
+#include <ctime>
 #endif
 #include "amdgpu.h"
 #include "fps_metrics.h"
@@ -32,6 +34,8 @@
 #define CHAR_FAHRENHEIT "\xe2\x84\x89"
 
 using namespace std;
+
+bool obs_capture_recording = false;
 
 // Cut from https://github.com/ocornut/imgui/pull/2943
 // Probably move to ImGui
@@ -1113,7 +1117,51 @@ void HudElements::resolution(){
         ImGui::PopFont();
     }
 }
+void HudElements::obs_stats()
+{
+    ImguiNextColumnFirstItem();
+    HUDElements.TextColored(HUDElements.colors.text, "OBS");
+    int semval = 0;
 
+    sem_getvalue(obs_studio_stats_sem, &semval);
+    if(sem_trywait(obs_studio_stats_sem) < 0 && errno != EAGAIN)
+    {
+        fprintf(stderr, "%s\n", strerror(errno));
+    }
+    if(semval > 0 && !obs_capture_recording){
+        obs_capture_recording = true;
+        int fd;
+        if ((fd = shm_open(MANGOHUD_OBS_STATS_SHM, O_RDONLY, 0666)) < 0)
+        {
+            fprintf(stderr, "shm_open %s\n", strerror(errno));
+        }
+        if ((obs_studio_stats = static_cast<struct obs_studio_data*>(mmap(nullptr, sizeof(struct obs_studio_data), PROT_READ, MAP_SHARED, fd, 0))) == MAP_FAILED)
+        {
+            fprintf(stderr, "mmap %s\n", strerror(errno));
+        }
+    }else if(semval > 0 && obs_capture_recording)
+    {
+        obs_capture_recording = false;
+        obs_studio_stats = nullptr;
+    }
+
+    if(obs_capture_recording && obs_studio_stats)
+    {
+        char time[9];
+        time_t t = obs_studio_stats->time;
+        struct tm* tm = gmtime(&t);
+        strftime(time, sizeof(time), "%H:%M:%S", tm);
+
+        ImguiNextColumnOrNewRow();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", time);
+
+        ImguiNextColumnOrNewRow();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1fMiB", obs_studio_stats->bytes / 1024.0 / 1024.0);
+    }else {
+        ImguiNextColumnOrNewRow();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "Inactive");
+    }
+}
 void HudElements::show_fps_limit(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_show_fps_limit]){
         int fps = 0;
@@ -1965,6 +2013,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
         {"display_server", {_display_session}},
         {"fex_stats", {fex_stats}},
         {"ftrace", {ftrace}},
+        {"obs_stats", {obs_stats}},
     };
 
     auto check_param = display_params.find(param);
@@ -2099,6 +2148,7 @@ void HudElements::legacy_elements(){
     if (params->ftrace.enabled)
         ordered_functions.push_back({ftrace, "ftrace", value});
 #endif
+    ordered_functions.push_back({obs_stats, "obs_stats", value});
 }
 
 void HudElements::update_exec(){
