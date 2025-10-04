@@ -1819,36 +1819,48 @@ static VkResult overlay_CreateDevice(
    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
 
 
-   std::vector<const char*> enabled_extensions(pCreateInfo->ppEnabledExtensionNames,
-                                               pCreateInfo->ppEnabledExtensionNames +
-                                               pCreateInfo->enabledExtensionCount);
-
-   uint32_t extension_count;
-
-   instance_data->vtable.EnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extension_count, nullptr);
-
-   std::vector<VkExtensionProperties> available_extensions(extension_count);
-   instance_data->vtable.EnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extension_count, available_extensions.data());
-
-
-   bool can_get_driver_info = instance_data->api_version < VK_API_VERSION_1_1 ? false : true;
+   VkDeviceCreateInfo modified_create_info = {};
+   std::vector<const char *> modified_enabled_extensions;
+   bool can_get_driver_info = false;
 
    // VK_KHR_driver_properties became core in 1.2
-   if (instance_data->api_version < VK_API_VERSION_1_2 && can_get_driver_info) {
+   if (instance_data->api_version >= VK_API_VERSION_1_2) {
+      can_get_driver_info = true;
+
+   } else {
+      std::set<const char *> enabled_extensions(pCreateInfo->ppEnabledExtensionNames,
+                                                pCreateInfo->ppEnabledExtensionNames +
+                                                pCreateInfo->enabledExtensionCount);
+
+      uint32_t extension_count;
+      instance_data->vtable.EnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extension_count, nullptr);
+
+      std::vector<VkExtensionProperties> available_extensions(extension_count);
+      instance_data->vtable.EnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extension_count, available_extensions.data());
+
       for (auto& extension : available_extensions) {
          if (extension.extensionName == std::string(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME)) {
-            for (auto& enabled : enabled_extensions) {
-               if (enabled == std::string(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME))
-                  goto DONT;
-            }
-            enabled_extensions.push_back(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME);
-            DONT:
-            goto FOUND;
+            // VK_KHR_get_physical_device_properties2 became core in 1.1
+            if (instance_data->api_version < VK_API_VERSION_1_1)
+               enabled_extensions.insert(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+            enabled_extensions.insert(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME);
          }
+
+         can_get_driver_info = true;
+         break;
       }
-      can_get_driver_info = false;
-      FOUND:;
+
+      if (can_get_driver_info && enabled_extensions.size() > pCreateInfo->enabledExtensionCount) {
+         modified_create_info = *pCreateInfo;
+         modified_enabled_extensions.assign(enabled_extensions.begin(), enabled_extensions.end());
+         modified_create_info.ppEnabledExtensionNames = modified_enabled_extensions.data();
+         modified_create_info.enabledExtensionCount = modified_enabled_extensions.size();
+      }
    }
+
+
+   if (modified_create_info.sType)
+      pCreateInfo = &modified_create_info;
 
    VkResult result = fpCreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
    if (result != VK_SUCCESS) return result;
