@@ -707,6 +707,8 @@ set_parameters_from_options(struct overlay_params *params)
       params->enabled[OVERLAY_PARAM_ENABLED_retro] = 0;
       params->enabled[OVERLAY_PARAM_ENABLED_debug] = 0;
       params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_hide_engine_names] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_hide_fps_superscript] = 0;
       params->enabled[OVERLAY_PARAM_ENABLED_dynamic_frame_timing] = 0;
       params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit] = 0;
       params->enabled[OVERLAY_PARAM_ENABLED_duration] = false;
@@ -818,6 +820,8 @@ static void set_param_defaults(struct overlay_params *params){
    params->enabled[OVERLAY_PARAM_ENABLED_fcat] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_horizontal_stretch] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_hide_engine_names] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_hide_fps_superscript] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_text_outline] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_dynamic_frame_timing] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit] = false;
