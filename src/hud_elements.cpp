@@ -246,11 +246,14 @@ static void ImguiNextColumnOrNewRow(int column = -1)
 static bool ImGuiTextOverflow(const char* text) {
     return ImGui::CalcTextSize(text).x > ImGui::CalcItemWidth() + HUDElements.ralign_width / 2;
 }
-
+// This function is only used in battery and battery is not used in windows builds
+// Battery should probably be reworked to not use this func since nothing else needs it
+#ifdef __linux__
 static void ImGuiTableSetColumnIndex(int column)
 {
     ImGui::TableSetColumnIndex(std::max(0, std::min(column, ImGui::TableGetColumnCount() - 1)));
 }
+#endif
 
 void HudElements::time(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_time]){
