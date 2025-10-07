@@ -1544,6 +1544,9 @@ static VkResult overlay_CreateSwapchainKHR(
       HUDElements.cur_present_mode = HUDElements.presentModes[params.vsync];
       createInfo.presentMode = HUDElements.cur_present_mode;
    } else {
+      if (device_data->instance->params.vsync == 1000361000) {
+         createInfo.presentMode = VK_PRESENT_MODE_FIFO_LATEST_READY_KHR;
+      }
       HUDElements.cur_present_mode = createInfo.presentMode;
    }
 
