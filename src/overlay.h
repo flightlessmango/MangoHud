@@ -11,6 +11,7 @@
 #include "overlay_params.h"
 #include "hud_elements.h"
 #include "engine_types.h"
+#include <semaphore.h>
 
 #include "dbus_info.h"
 #include "logging.h"
@@ -92,6 +93,8 @@ extern bool steam_focused;
 extern int fan_speed;
 extern int current_preset;
 extern std::vector<float> frametime_data;
+extern struct obs_studio_data* obs_studio_stats;
+extern sem_t* obs_studio_stats_sem;
 
 void init_spdlog();
 void overlay_new_frame(const struct overlay_params& params);

@@ -62,7 +62,8 @@ vklayer_files = files(
   'file_utils.cpp',
   'nvidia.cpp',
   'gpu_fdinfo.cpp',
-  'amdgpu.cpp'
+  'amdgpu.cpp',
+  'obs_studio.cpp',
 )
 
 opengl_files  = []
@@ -323,6 +324,19 @@ if is_unixy
     include_directories : [inc_common],
     install_dir : libdir_mangohud,
     install: true
+  )
+endif
+
+if obs.found()
+  mangohud_obs = shared_module(
+    'mangohud_obs',
+    files(
+      'obs_plugin.c'
+    ),
+    dependencies: [
+      obs
+    ],
+    include_directories: ['/usr/include/obs']
   )
 endif
 
