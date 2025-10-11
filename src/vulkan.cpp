@@ -82,6 +82,7 @@ struct instance_data {
    enum EngineTypes engine;
    notify_thread notifier;
    int control_client;
+   bool has_props2;
 };
 
 /* Mapped from VkDevice */
@@ -1819,35 +1820,25 @@ static VkResult overlay_CreateDevice(
    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
 
 
-   std::vector<const char*> enabled_extensions(pCreateInfo->ppEnabledExtensionNames,
-                                               pCreateInfo->ppEnabledExtensionNames +
-                                               pCreateInfo->enabledExtensionCount);
-
-   uint32_t extension_count;
-
-   instance_data->vtable.EnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extension_count, nullptr);
-
-   std::vector<VkExtensionProperties> available_extensions(extension_count);
-   instance_data->vtable.EnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extension_count, available_extensions.data());
-
-
-   bool can_get_driver_info = instance_data->api_version < VK_API_VERSION_1_1 ? false : true;
+   bool can_get_driver_info = false;
 
    // VK_KHR_driver_properties became core in 1.2
-   if (instance_data->api_version < VK_API_VERSION_1_2 && can_get_driver_info) {
-      for (auto& extension : available_extensions) {
-         if (extension.extensionName == std::string(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME)) {
-            for (auto& enabled : enabled_extensions) {
-               if (enabled == std::string(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME))
-                  goto DONT;
-            }
-            enabled_extensions.push_back(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME);
-            DONT:
-            goto FOUND;
+   if (instance_data->api_version >= VK_API_VERSION_1_2) {
+      can_get_driver_info = true;
+
+   } else if (instance_data->has_props2) {
+      uint32_t device_extension_count;
+      instance_data->vtable.EnumerateDeviceExtensionProperties(physicalDevice, nullptr, &device_extension_count, nullptr);
+
+      std::vector<VkExtensionProperties> device_extensions(device_extension_count);
+      instance_data->vtable.EnumerateDeviceExtensionProperties(physicalDevice, nullptr, &device_extension_count, device_extensions.data());
+
+      for (const auto& ext : device_extensions) {
+         if (ext.extensionName == std::string(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME)) {
+            can_get_driver_info = true;
+            break;
          }
       }
-      can_get_driver_info = false;
-      FOUND:;
    }
 
    VkResult result = fpCreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
@@ -1867,8 +1858,15 @@ static VkResult overlay_CreateDevice(
    driverProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES;
    driverProps.pNext = nullptr;
    if (can_get_driver_info) {
-      VkPhysicalDeviceProperties2 deviceProps = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &driverProps};
-      instance_data->vtable.GetPhysicalDeviceProperties2(device_data->physical_device, &deviceProps);
+      // In Vulkan 1.0, use the KHR symbol which is guaranteed to be available if extension is.
+      auto get_props2 = (PFN_vkGetPhysicalDeviceProperties2) fpGetInstanceProcAddr(
+         instance_data->instance,
+         instance_data->api_version > VK_VERSION_1_0 ? "vkGetPhysicalDeviceProperties2"
+                                                     : "vkGetPhysicalDeviceProperties2KHR");
+      if (get_props2) {
+         VkPhysicalDeviceProperties2 deviceProps = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &driverProps};
+         get_props2(device_data->physical_device, &deviceProps);
+      }
    }
 
    if (!is_blacklisted()) {
@@ -1949,11 +1947,60 @@ static VkResult overlay_CreateInstance(
    // Advance the link info for the next element on the chain
    chain_info->u.pLayerInfo = chain_info->u.pLayerInfo->pNext;
 
+   const uint32_t api_version = pCreateInfo->pApplicationInfo ? pCreateInfo->pApplicationInfo->apiVersion : VK_API_VERSION_1_0;
+   bool has_props2 = false;
+
+   std::vector<const char *> modified_extensions(pCreateInfo->enabledExtensionCount);
+   VkInstanceCreateInfo modified_create_info = {};
+
+   if (api_version >= VK_API_VERSION_1_1) {
+      // Part of Vulkan core.
+      has_props2 = true;
+
+   } else {
+      for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
+         const char *ext = pCreateInfo->ppEnabledExtensionNames[i];
+         modified_extensions[i] = ext;
+         if (strcmp(ext, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME) == 0) {
+            has_props2 = true;
+            break;
+         }
+      }
+
+      // Enable VK_KHR_get_physical_device_properties2 if the application hasn't yet and
+      // it is supported.
+      if (!has_props2) {
+         PFN_vkEnumerateInstanceExtensionProperties fpEnumerateInstnaceExtensionProperties =
+            (PFN_vkEnumerateInstanceExtensionProperties)fpGetInstanceProcAddr(NULL, "vkEnumerateInstanceExtensionProperties");
+         uint32_t supported_extensions_count;
+         fpEnumerateInstnaceExtensionProperties(nullptr, &supported_extensions_count, nullptr);
+
+         std::vector<VkExtensionProperties> supported_extensions(supported_extensions_count);
+         fpEnumerateInstnaceExtensionProperties(nullptr, &supported_extensions_count, supported_extensions.data());
+
+         for (const auto& ext : supported_extensions) {
+            if (strcmp(ext.extensionName, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME) == 0) {
+               has_props2 = true;
+               break;
+            }
+         }
+
+         if (has_props2) {
+            modified_extensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+            modified_create_info = *pCreateInfo;
+            modified_create_info.enabledExtensionCount = modified_extensions.size();
+            modified_create_info.ppEnabledExtensionNames = modified_extensions.data();
+            pCreateInfo = &modified_create_info;
+         }
+      }
+   }
 
    VkResult result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);
    if (result != VK_SUCCESS) return result;
 
    struct instance_data *instance_data = new_instance_data(*pInstance);
+   instance_data->api_version = api_version;
+   instance_data->has_props2 = has_props2;
    vk_load_instance_commands(instance_data->instance,
                              fpGetInstanceProcAddr,
                              &instance_data->vtable);
@@ -1981,8 +2028,6 @@ static VkResult overlay_CreateInstance(
       instance_data->engineName = engineName;
       instance_data->engineVersion = engineVersion;
    }
-
-   instance_data->api_version = pCreateInfo->pApplicationInfo ? pCreateInfo->pApplicationInfo->apiVersion : VK_API_VERSION_1_0;
 
    return result;
 }
