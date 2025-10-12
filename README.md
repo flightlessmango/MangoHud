@@ -12,11 +12,11 @@ A Vulkan and OpenGL overlay for monitoring FPS, temperatures, CPU/GPU load and m
     - [Building with build script](#building-with-build-script)
   - [Installation - Pre-packaged binaries](#installation---pre-packaged-binaries)
     - [GitHub Releases](#github-releases)
-    - [Arch-based](#arch-based)
-    - [Debian-based or Ubuntu-based](#debian-based-or-ubuntu-based)
-    - [Fedora-based](#fedora-based)
-    - [Solus-based](#solus-based)
-    - [openSUSE-based](#opensuse-based)
+    - [Arch-based distributions](#arch-based-distributions)
+    - [Debian-based or Ubuntu-based distributions](#debian-based-or-ubuntu-based-distributions)
+    - [Fedora-based distributions](#fedora-based-distributions)
+    - [Solus-based distributions](#solus-based-distributions)
+    - [openSUSE-based distributions](#opensuse-based-distributions)
     - [Flatpak](#flatpak)
   - [Normal usage](#normal-usage)
   - [OpenGL](#opengl)
@@ -86,16 +86,16 @@ Python 3 libraries:
 
 Package names may be different depending on the distribution.
 
-If distribution's packaged Meson is too old and gives build errors, install a newer version with `pip` (usually `python3-pip`).
+If distribution's packaged Meson is too old and gives build errors, install a newer version with `pip` (usually a package named `python3-pip`).
 
 ### Meson options
 
 | Option        | Default | Description
 | --------      | ------- | -
-| with_nvml     | enabled    |Required for NVIDIA GPU metrics on wayland
+| with_nvml     | enabled    |Required for NVIDIA GPU metrics on Wayland
 | with_xnvctrl  | enabled    |Required for NVIDIA GPU metrics on older GPUs
-| with_x11      | enabled    |Required for keybinds on x11
-| with_wayland  | enabled    |Required for keybinds on wayland
+| with_x11      | enabled    |Required for keybinds on X11
+| with_wayland  | enabled    |Required for keybinds on Wayland
 | with_dbus     | enabled    |Required for using the media features
 | mangoapp      | false      |Includes mangoapp
 | mangohudctl   | false      |Include mangohudctl
@@ -190,7 +190,7 @@ then save the file and execute:
 sudo pacman -Syy
 ```
 
-### Debian-based or Ubuntu-based
+### Debian-based or Ubuntu-based distributions
 
 If you are using Debian 11 (Bullseye) or later, Ubuntu 21.10 (Impish) or later, or distribution derived from them, to install the [MangoHud](https://tracker.debian.org/pkg/mangohud) package, execute:
 
@@ -206,7 +206,7 @@ sudo apt install mangohud:i386
 
 The 32-bit package is not available on Ubuntu.
 
-### Fedora-based
+### Fedora-based distributions
 
 If you are using Fedora or a distribution derived from it, to install the [MangoHud](https://src.fedoraproject.org/rpms/mangohud) package, execute:
 
@@ -214,7 +214,7 @@ If you are using Fedora or a distribution derived from it, to install the [Mango
 sudo dnf install mangohud
 ```
 
-### Solus-based
+### Solus-based distributions
 
 If you are using Fedora or a distribution derived from it, to install the [MangoHud](https://src.fedoraproject.org/rpms/mangohud) package, execute:
 
@@ -222,7 +222,7 @@ If you are using Fedora or a distribution derived from it, to install the [Mango
 sudo eopkg it mangohud
 ```
 
-### openSUSE-based
+### openSUSE-based distributions
 
 If you are using OpenSUSE Leap or Tumbleweed or a distribution derived from them, to install the [MangoHud](https://src.fedoraproject.org/rpms/mangohud) package, execute:
 
@@ -254,9 +254,7 @@ sudo zypper install mangohud
 
 ### Flatpak
 
-If you are using Flatpaks, you will have to add the [Flathub repository](https://flatpak.org/setup/) for your specific distribution, and then, to install it, execute:
-
-For Flatpak:
+Add the [Flathub repository](https://flatpak.org/setup/) for your specific distribution. To install it, execute:
 
 ```
 flatpak install org.freedesktop.Platform.VulkanLayer.MangoHud
