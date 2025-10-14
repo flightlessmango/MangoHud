@@ -28,7 +28,7 @@ A Vulkan and OpenGL overlay for monitoring FPS, temperatures, CPU/GPU load and m
   - [Keybindings](#keybindings)
   - [Workarounds](#workarounds)
   - [FPS logging](#fps-logging)
-    - [Online visualization: FlightlessMango.com](#online-visualization-flightlessmangocom)
+    - [Online visualization: flightlessmango.com](#online-visualization-flightlessmangocom)
     - [Local visualization: `mangoplot`](#local-visualization-mangoplot)
   - [Metrics support by GPU vendor/driver](#metrics-support-by-gpu-vendordriver)
 
@@ -522,7 +522,7 @@ When you toggle logging (default keybind is `Shift_L+F2`), a file is created wit
 Log files can be visualized with two different tools: online and locally.
 
 ### Online visualization: flightlessmango.com
-Log files can be (batch) uploaded to [FlightlessMango.com](https://flightlessmango.com/games/user_benchmarks), which will then take care of creating a frametime graph and a summary with 1% min / average framerate / 97th percentile in a table form and a horizontal bar chart form.
+Log files can be (batch) uploaded to [flightlessmango.com](https://flightlessmango.com/games/user_benchmarks), which will then take care of creating a frametime graph and a summary with 1% min / average framerate / 97th percentile in a table form and a horizontal bar chart form.
 
 Notes:
 - Uploaded benchmarks are public: you can share them with anyone by simply giving them the link.
