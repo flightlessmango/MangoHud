@@ -88,15 +88,16 @@ If distribution's packaged Meson is too old and gives build errors, install a ne
 
 | Option        | Default | Description
 | --------      | ------- | -
-| with_nvml     | enabled    | Required for NVIDIA GPU metrics on Wayland
-| with_xnvctrl  | enabled    | Required for NVIDIA GPU metrics on older GPUs
-| with_x11      | enabled    | Required for keybinds on X11
-| with_wayland  | enabled    | Required for keybinds on Wayland
-| with_dbus     | enabled    | Required for using the media features
 | mangoapp      | false      | Includes mangoapp
 | mangohudctl   | false      | Includes mangohudctl
-| tests         | auto       | Includes tests
 | mangoplot     | true       | Includes mangoplot
+| tests         | auto       | Includes tests
+| with_dbus     | enabled    | Required for using the media features
+| with_nvml     | enabled    | Required for NVIDIA GPU metrics on Wayland
+| with_wayland  | enabled    | Required for keybinds on Wayland
+| with_x11      | enabled    | Required for keybinds on X11
+| with_xnvctrl  | enabled    | Required for NVIDIA GPU metrics on older GPUs
+
 
 ### Building with a build script
 
@@ -315,15 +316,15 @@ The priorities of different configuration files are:
 
 1. `/path/to/application/dir/MangoHud.conf`
 2. Per-application configuration in ~/.config/MangoHud:
-    1. `~/.config/MangoHud/<application_name>.conf` for native applications, where `<application_name>` is the case sensitive name of the executable
-    2. `~/.config/MangoHud/wine-<application_name>.conf` for Wine/Proton applications, where `<application_name>` is the case sensitive name of the executable without the `.exe` extension
+    1. `~/.config/MangoHud/<application_name>.conf` for native apps, where `<application_name>` is the case sensitive name of the executable
+    2. `~/.config/MangoHud/wine-<application_name>.conf` for Proton/Wine apps, where `<application_name>` is the case sensitive name of the executable without the `.exe` extension
 3. `~/.config/MangoHud/MangoHud.conf`
 
-If you start the game from the terminal with MangoHud enabled, MangoHud will print the configuration file names it is looking for.
+If you start the app from the terminal with MangoHud enabled, MangoHud will print the configuration file names it is looking for.
 
-You can find an example config in `/usr/share/doc/mangohud`.
+You can find an example configuration in `/usr/share/doc/mangohud`.
 
-[GOverlay](https://github.com/benjamimgois/goverlay) is a graphical user interface (GUI) application that can be used to manage the configuration.
+[GOverlay](https://github.com/benjamimgois/goverlay) is a GUI app that can be used to manage the Vulkan and OpenGL overlays including MangoHud.
 
 ---
 
