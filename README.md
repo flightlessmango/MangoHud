@@ -7,24 +7,24 @@ A Vulkan and OpenGL overlay for monitoring FPS, temperatures, CPU/GPU load and m
 ---
 
 - [MangoHud](#mangohud)
-  - [Installation - Build from source](#installation---build-from-source)
+  - [Installation by building from source](#installation-by-building-from-source)
     - [Dependencies](#dependencies)
-    - [Building with build script](#building-with-build-script)
-  - [Installation - Pre-packaged binaries](#installation---pre-packaged-binaries)
-    - [GitHub Releases](#github-releases)
+    - [Building with a build script](#building-with-a-build-script)
+  - [Installation with pre-packaged binaries](#installation-with-pre-packaged-binaries)
     - [Arch-based distributions](#arch-based-distributions)
     - [Debian-based or Ubuntu-based distributions](#debian-based-or-ubuntu-based-distributions)
+    - [Flatpak](#flatpak)
     - [Fedora-based distributions](#fedora-based-distributions)
+    - [GitHub Releases](#github-releases)
     - [Solus-based distributions](#solus-based-distributions)
     - [openSUSE-based distributions](#opensuse-based-distributions)
-    - [Flatpak](#flatpak)
   - [Normal usage](#normal-usage)
   - [OpenGL](#opengl)
   - [HUD configuration](#hud-configuration)
-    - [Environment Variables: **`MANGOHUD_CONFIG`**, **`MANGOHUD_CONFIGFILE`**, and **`MANGOHUD_PRESETSFILE`**](#environment-variables)
+    - [Environment variables: **`MANGOHUD_CONFIG`**, **`MANGOHUD_CONFIGFILE`**, and **`MANGOHUD_PRESETSFILE`**](#environment-variables)
   - [Vsync](#vsync)
-    - [OpenGL Vsync](#opengl-vsync)
     - [Vulkan Vsync](#vulkan-vsync)
+    - [OpenGL Vsync](#opengl-vsync)
   - [Keybindings](#keybindings)
   - [Workarounds](#workarounds)
   - [FPS logging](#fps-logging)
@@ -32,18 +32,16 @@ A Vulkan and OpenGL overlay for monitoring FPS, temperatures, CPU/GPU load and m
     - [Local visualization: `mangoplot`](#local-visualization-mangoplot)
   - [Metrics support by GPU vendor/driver](#metrics-support-by-gpu-vendordriver)
 
-## Installation - Build from source
+## Installation by building from source
 
----
-
-If you wish to compile MangoHud to keep up to date with any changes - first clone this repository and cd into it:
+Clone this repository and `cd` into it:
 
 ```
 git clone --recurse-submodules https://github.com/flightlessmango/MangoHud.git
 cd MangoHud
 ```
 
-Using Meson to install "manually":
+Using Meson to install manually:
 
 ```
 meson build
@@ -51,9 +49,9 @@ ninja -C build install
 ```
 
 By default, Meson should install MangoHud to `/usr/local`. Specify install prefix with `--prefix=/usr` if desired.
-Add `-Dappend_libdir_mangohud=false` option to meson to not append `mangohud` to libdir if desired (e.g. /usr/local/lib/mangohud).
+Add `-Dappend_libdir_mangohud=false` option to Meson to not append `mangohud` to libdir if desired.
 
-To install 32-bit build on 64-bit distribution, specify proper `libdir`: `lib32` for Arch-based distributions, `lib/i386-linux-gnu` on Debian-based distributions. RPM-based distributions usually install 32-bit libraries to `/usr/lib` and 64-bit to `/usr/lib64`.
+To install a 32-bit build on 64-bit distribution, specify proper `libdir`: `lib32` for Arch-based distributions, `lib/i386-linux-gnu` on Debian-based distributions. RPM-based distributions usually install 32-bit libraries to `/usr/lib` and 64-bit to `/usr/lib64`.
 You may have to change `PKG_CONFIG_PATH` to point to correct folders for your distribution.
 
 ```
@@ -66,19 +64,17 @@ ninja -C build32 install
 
 ### Dependencies
 
-Install necessary development packages.
+Install the necessary development packages.
 
-- gcc, g++
-- or gcc-multilib, g++-multilib for 32-bit support
-- meson >=0.54
-- ninja (ninja-build)
-- glslang
-- libGL/libEGL (libglvnd, mesa-common-dev, mesa-libGL-devel etc)
-- X11 (libx11-dev)
-- XNVCtrl (libxnvctrl-dev), optional, use `-Dwith_xnvctrl=disabled` option with `meson` to disable
-- D-Bus (libdbus-1-dev), optional, use `-Dwith_dbus=disabled` option with `meson` to disable
-- wayland-client
-- xcbcommon
+- D-Bus (`libdbus-1-dev`), optional, use `-Dwith_dbus=disabled` option with Meson to disable
+- `gcc`, `g++` for 64-bit support or `gcc-multilib`, `g++-multilib` for 32-bit support
+- `glslang`
+- `meson` >= 0.54
+- `ninja` (`ninja-build`)
+- `wayland-client`
+- X11 (`libx11-dev`)
+- `xcbcommon`
+- XNVCtrl (`libxnvctrl-dev`), optional, use `-Dwith_xnvctrl=disabled` option with Meson to disable
 
 Python 3 libraries:
 
@@ -92,18 +88,17 @@ If distribution's packaged Meson is too old and gives build errors, install a ne
 
 | Option        | Default | Description
 | --------      | ------- | -
-| with_nvml     | enabled    |Required for NVIDIA GPU metrics on Wayland
-| with_xnvctrl  | enabled    |Required for NVIDIA GPU metrics on older GPUs
-| with_x11      | enabled    |Required for keybinds on X11
-| with_wayland  | enabled    |Required for keybinds on Wayland
-| with_dbus     | enabled    |Required for using the media features
-| mangoapp      | false      |Includes mangoapp
-| mangohudctl   | false      |Include mangohudctl
-| tests         | auto       |Includes tests
-| mangoplot     | true       |Includes mangoplot
+| with_nvml     | enabled    | Required for NVIDIA GPU metrics on Wayland
+| with_xnvctrl  | enabled    | Required for NVIDIA GPU metrics on older GPUs
+| with_x11      | enabled    | Required for keybinds on X11
+| with_wayland  | enabled    | Required for keybinds on Wayland
+| with_dbus     | enabled    | Required for using the media features
+| mangoapp      | false      | Includes mangoapp
+| mangohudctl   | false      | Includes mangohudctl
+| tests         | auto       | Includes tests
+| mangoplot     | true       | Includes mangoplot
 
-
-### Building with build script
+### Building with a build script
 
 You can also use `build.sh` script to do some things automatically like install dependencies if your distribution is supported but it usually assumes you are running on the x86_64 architecture.
 
@@ -153,25 +148,19 @@ If you have built MangoHud before and suddenly it fails, you can try cleaning th
 
 Currently it just does `rm -fr build` and clears subprojects.
 
-__NOTE: If you are running an Ubuntu-based, Arch-based, Fedora-based, or openSUSE-based distro, the build script will automatically detect and prompt you to install missing build dependencies. If you run into any issues with this please report them!__
+__Note: If you are running an Arch-based, Fedora-based, openSUSE-based, or Ubuntu-based distribution, the build script will automatically detect and prompt you to install missing build dependencies. If you run into any issues with this please report them!__
 
-## Installation - Pre-packaged binaries
-
----
-
-### GitHub Releases
-
-If you do not wish to compile anything, simply download the file under [Releases](https://github.com/flightlessmango/MangoHud/releases), extract it, and from within the extracted folder in terminal, execute:
-
-```
-./mangohud-setup.sh install
-```
+## Installation with pre-packaged binaries
 
 ### Arch-based distributions
 
-If you are using an Arch-based distribution, install [`mangohud`](https://archlinux.org/packages/extra/x86_64/mangohud/) and [`lib32-mangohud`](https://archlinux.org/packages/multilib/x86_64/lib32-mangohud/) from the `extra`/`multilib` repository. [`mangohud-git`](https://aur.archlinux.org/packages/mangohud-git/) and [`lib32-mangohud-git`](https://aur.archlinux.org/packages/lib32-mangohud-git/) are available on the AUR.
+If you are using Arch Linux or a distribution derived from it, to install the [`mangohud`](https://archlinux.org/packages/extra/x86_64/mangohud/) package from the `extra` repository, execute:
 
-If you are building it by yourself, you need to enable the multilib repository, by editing the pacman configuration:
+```
+sudo pacman -S mangohud
+```
+
+If you are building it by yourself or want to install the [`lib32-mangohud`](https://archlinux.org/packages/multilib/x86_64/lib32-mangohud/) package for 32-bit app support, you need to enable and sync the `multilib` repository by editing the `pacman` configuration:
 
 ```
 sudo nano /etc/pacman.conf
@@ -190,6 +179,12 @@ then save the file and execute:
 sudo pacman -Syy
 ```
 
+After enabling and syncing the `multilib` repository, to install the 32-bit package, execute:
+
+```
+sudo pacman -S lib32-mangohud
+```
+
 ### Debian-based or Ubuntu-based distributions
 
 If you are using Debian 11 (Bullseye) or later, Ubuntu 21.10 (Impish) or later, or distribution derived from them, to install the [MangoHud](https://tracker.debian.org/pkg/mangohud) package, execute:
@@ -198,13 +193,13 @@ If you are using Debian 11 (Bullseye) or later, Ubuntu 21.10 (Impish) or later, 
 sudo apt install mangohud
 ```
 
-Optionally, if you also need MangoHud for 32-bit applications, on Debian you can execute:
+On Debian, to install the 32-bit MangoHud package for 32-bit app support, execute:
 
 ```
 sudo apt install mangohud:i386
 ```
 
-The 32-bit package is not available on Ubuntu.
+Ubuntu does not seem to have the 32-bit package.
 
 ### Fedora-based distributions
 
@@ -212,6 +207,34 @@ If you are using Fedora or a distribution derived from it, to install the [Mango
 
 ```
 sudo dnf install mangohud
+```
+
+### Flatpak
+
+If you are using Flatpaks, you will have to add the Flathub repository for your specific distribution, and then, to install it, execute:
+
+```
+flatpak install org.freedesktop.Platform.VulkanLayer.MangoHud
+```
+
+An environment variable override with the value `MANGOHUD=1` has to be set for each app you want to use the MangoHud Flatpak with. To set the the environment variable override for an app, execute:
+
+```
+flatpak override --env=MANGOHUD=1 --user [app ID]
+```
+
+To list the names and IDs of installed Flatpak apps, execute:
+
+```
+flatpak list --app --columns=name,application
+```
+
+### GitHub Releases
+
+If you do not wish to compile anything, simply download the file under [Releases](https://github.com/flightlessmango/MangoHud/releases), extract it, and from within the extracted folder in terminal, execute:
+
+```
+./mangohud-setup.sh install
 ```
 
 ### Solus-based distributions
@@ -224,43 +247,33 @@ sudo eopkg it mangohud
 
 ### openSUSE-based distributions
 
-If you are using OpenSUSE Leap or Tumbleweed or a distribution derived from them, to install the [MangoHud](https://src.fedoraproject.org/rpms/mangohud) package, execute:
+If you are using OpenSUSE Leap or Tumbleweed or a distribution derived from them, to install the [MangoHud](https://software.opensuse.org/package/mangohud) package, execute:
 
 ```
 sudo zypper in mangohud
 ````
 
-for 64-bit applications. To install the 32-bit version required for 32-bit application support, execute:
+To install the [32-bit MangoHud](https://software.opensuse.org/package/mangohud-32bit) package for 32-bit app support, execute:
 
 ```
-sudo zypper in mangohud
+sudo zypper in mangohud-32bit
 ````
 
 Leap does not seem to have the 32-bit MangoHud package.
 
-Leap 15.2
+To install the [MangoHud](https://software.opensuse.org/package/mangohud) package on Leap 15.2, execute:
 
 ```
 sudo zypper addrepo -f https://download.opensuse.org/repositories/games:tools/openSUSE_Leap_15.2/games:tools.repo
 sudo zypper install mangohud
 ```
 
-Leap 15.3
+To install the [MangoHud](https://software.opensuse.org/package/mangohud) package on Leap 15.3, execute:
 
 ```
 sudo zypper addrepo -f https://download.opensuse.org/repositories/games:tools/openSUSE_Leap_15.3/games:tools.repo
 sudo zypper install mangohud
 ```
-
-### Flatpak
-
-Add the [Flathub repository](https://flatpak.org/setup/) for your specific distribution. To install it, execute:
-
-```
-flatpak install org.freedesktop.Platform.VulkanLayer.MangoHud
-```
-
-An environment variable override with the value MANGOHUD=1 has to be set for each application you want to use the MangoHud Flatpak with.
 
 ## Normal usage
 
@@ -282,10 +295,10 @@ Or alternatively, add `MANGOHUD=1` to your shell profile (Vulkan only).
 
 ## OpenGL
 
-OpenGL games may also need `dlsym` hooking, which is now enabled by default. Set the `MANGOHUD_DLSYM` env to `0` to disable like `MANGOHUD_DLSYM=0 %command%` for Steam.
+OpenGL games may also need `dlsym` hooking, which is now enabled by default. Set the `MANGOHUD_DLSYM` environment variable to `0` to disable it.
 
 Some Linux native OpenGL games override LD_PRELOAD which stops MangoHud from working with them. You can sometimes fix this by editing LD_PRELOAD in the start script
-`LD_PRELOAD=/path/to/mangohud/lib/`
+`LD_PRELOAD=/path/to/mangohud/lib/`.
 
 ## Gamescope
 
@@ -294,7 +307,7 @@ To enable MangoHud with Gamescope, you need to install mangoapp.
 
 Using the normal MangoHud with Gamescope is not supported.
 
-## HUD configuration
+## Hud configuration
 
 MangoHud comes with a configuration file which can be used to set configuration options globally or per application. Usually it is installed as `/usr/share/doc/mangohud/MangoHud.conf.example`. You can also [get a copy from here](https://raw.githubusercontent.com/flightlessmango/MangoHud/master/data/MangoHud.conf).
 
@@ -306,11 +319,11 @@ The priorities of different configuration files are:
     2. `~/.config/MangoHud/wine-<application_name>.conf` for Wine/Proton applications, where `<application_name>` is the case sensitive name of the executable without the `.exe` extension
 3. `~/.config/MangoHud/MangoHud.conf`
 
-If you start the game from the terminal with MangoHud enabled (for example by starting Lutris from the terminal), MangoHud will print the config file names it is looking for.
+If you start the game from the terminal with MangoHud enabled, MangoHud will print the configuration file names it is looking for.
 
 You can find an example config in `/usr/share/doc/mangohud`.
 
-[GOverlay](https://github.com/benjamimgois/goverlay) is a GUI application that can be used to manage the configuration.
+[GOverlay](https://github.com/benjamimgois/goverlay) is a graphical user interface (GUI) application that can be used to manage the configuration.
 
 ---
 
@@ -382,7 +395,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `fps_color_change`                 | Change the FPS text color depending on the FPS value                                |
 | `fps_color=`                       | Choose the colors that the FPS changes to when `fps_color_change` is enabled. Corresponds with fps_value   |
 | `fps_limit_method`                 | If the FPS limiter should wait before or after presenting a frame. Choose `late` (default) for the lowest latency or `early` for the smoothest frametimes |
-| `fps_limit`                        | Limit the apps framerate. Comma-separated list of one or more FPS values. `0` means unlimited |
+| `fps_limit`                        | Limit the app's framerate. Comma-separated list of one or more FPS values. `0` means unlimited |
 | `fps_only`                         | Show FPS only. Not meant to be used with other display parameters                   |
 | `fps_sampling_period=`             | Time interval between two sampling points for gathering the FPS in milliseconds.   |
 | `fps_value`                        | Choose the break points where `fps_color_change` changes colors between |
@@ -418,7 +431,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `io_read`<br> `io_write`           | Show non-cached IO read/write, in MiB/s                                               |
 | `log_duration`                     | Set amount of time the logging will run for in seconds                              |
 | `log_interval`                     | Change the default log interval in milliseconds                       |
-| `log_versioning`                   | Adds more headers and information such as versioning to the log. This format is not yet supported on flightlessmango.com    |
+| `log_versioning`                   | Adds more headers and information such as versioning to the log. This format is not supported on flightlessmango.com (yet)    |
 | `media_player_format`              | Format media player metadata. Add extra text etc. Semi-colon breaks to new line. Defaults to `{title};{artist};{album}` |
 | `media_player_name`                | Force media player DBus service name without the `org.mpris.MediaPlayer2` part. If none is set, MangoHud tries to switch between currently playing players |
 | `media_player`                     | Show media player metadata                                                            |
@@ -435,7 +448,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `procmem`<br>`procmem_shared`, `procmem_virt`| Displays a process' memory usage: resident, shared and/or virtual. `procmem` (resident) also toggles others off if disabled |
 | `proc_vram`                        | Display a process' VRAM usage                                                           |
 | `ram`<br>`vram`                    | Display the system RAM/VRAM usage                                                         |
-| `read_cfg`                         | Add to MANGOHUD_CONFIG as the first parameter to also load a configuration file. Otherwise only `MANGOHUD_CONFIG` parameters are used |
+| `read_cfg`                         | Add to `MANGOHUD_CONFIG` as the first parameter to also load a configuration file. Otherwise only `MANGOHUD_CONFIG` parameters are used |
 | `reload_cfg=`                      | Change keybind for reloading the config. Default = `Shift_L+F4`                       |
 | `resolution`                       | Display the current resolution                                                        |
 | `retro`                            | Disable linear texture filtering                          |
@@ -468,7 +481,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `winesync`                         | Show which Wine sync method is in use                                                          |
 | `present_mode`                     | Shows current Vulkan [present mode](https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPresentModeKHR.html) or Vsync status in OpenGL  |
 | `network`                          | Show network interfaces tx and rx kb/s. You can specify the interface with by setting the interface as the value |
-| `fex_stats`                        | Show FEX-Emu statistics. |
+| `fex_stats`                        | Show FEX-Emu statistics |
 | `ftrace`                           | Display information about trace events reported through ftrace                        |
 | `flip_efficiency`                  | Flips CPU and GPU efficiency to joules per frame                                      |
 
@@ -482,13 +495,6 @@ Comma is also used as option delimiter and needs to be escaped for values with a
 
 ## Vsync
 
-### OpenGL Vsync
-
-- `-1` = Adaptive sync
-- `0`  = Off
-- `1`  = On
-- `n`  = Sync to refresh rate
-
 ### Vulkan Vsync
 
 - `0` = Adaptive sync (FIFO_RELAXED_KHR)
@@ -496,7 +502,14 @@ Comma is also used as option delimiter and needs to be escaped for values with a
 - `2` = Mailbox (VSync with uncapped FPS) (MAILBOX_KHR)
 - `3` = On (FIFO_KHR)
 
-Not all Vulkan vsync options may be supported on your device, you can check what your device supports here [vulkan.gpuinfo.org](https://vulkan.gpuinfo.org/listsurfacepresentmodes.php?platform=linux)
+### OpenGL Vsync
+
+- `-1` = Adaptive sync
+- `0`  = Off
+- `1`  = On
+- `n`  = Sync to refresh rate
+
+Not all Vulkan Vsync options may be supported on your device, you can check what your device supports here [vulkan.gpuinfo.org](https://vulkan.gpuinfo.org/listsurfacepresentmodes.php?platform=linux)
 
 ## Keybindings
 
@@ -519,16 +532,7 @@ You must set a valid path for `output_folder` in your configuration to store log
 
 When you toggle logging (default keybind is `Shift_L+F2`), a file is created with the game name plus a date and timestamp in your `output_folder`.
 
-Log files can be visualized with two different tools: online and locally.
-
-### Online visualization: flightlessmango.com
-Log files can be (batch) uploaded to [flightlessmango.com](https://flightlessmango.com/games/user_benchmarks), which will then take care of creating a frametime graph and a summary with 1% min / average framerate / 97th percentile in a table form and a horizontal bar chart form.
-
-Notes:
-- Uploaded benchmarks are public: you can share them with anyone by simply giving them the link.
-- Benchmark filenames are used as legend in the produced tables and graphs, they can be renamed after the upload.
-
-![GIF illustrating the log uploading process](assets/log_upload_example.gif)
+Log files can be visualized locally or online.
 
 ### Local visualization: `mangoplot`
 `mangoplot` is a plotting script that is shipped with `MangoHud`: on a given folder, it takes each log file, makes a 1D heatmap of its framerates, then stacks the heats maps vertically to form a 2D graph for easy visual comparison between benchmarks.
@@ -538,6 +542,15 @@ Example output:
 ![Overwatch 2 Windows 11 vs Linux](assets/Overwatch2-w11-vs-linux.svg)
 
 <sub><sup>Overwatch 2, 5950X + 5700XT, low graphics preset, FHD, 50% render scale</sup></sub>
+
+### Online visualization: flightlessmango.com
+Log files can be (batch) uploaded to [flightlessmango.com](https://flightlessmango.com/games/user_benchmarks), which will then take care of creating a frametime graph and a summary with 1% min or 97th percentile or average framerate in a horizontal bar chart and table form.
+
+Notes:
+- Uploaded benchmarks are public: you can share them with anyone by simply giving them the link.
+- Benchmark filenames are used as legend in the produced tables and graphs, they can be renamed after the upload.
+
+![GIF illustrating the log uploading process](assets/log_upload_example.gif)
 
 ## Metrics support by GPU vendor/driver
 <table>
@@ -678,12 +691,12 @@ Example output:
 </table>
 
 #### Intel notes
-- GPU temperature for `i915` requires **Linux 6.13+**
-- Fan speed for `i915` requires **Linux 6.12+**
-- GPU temperature and vram temperature for `xe` requires **Linux 6.15+** 
-- Fan speed for `xe` requires **Linux 6.16+**
-- GPU usage and memory usage shows usage of current process, not total system usage (it's an issue on Intel's side)
-- Integrated Intel GPUs are **limited** due to lack of the hwmon interface (it's an issue on Intel's side, [i915 source](https://github.com/torvalds/linux/blob/5fc31936081919a8572a3d644f3fbb258038f337/drivers/gpu/drm/i915/i915_hwmon.c#L914-L916), [xe source](https://github.com/torvalds/linux/blob/5fc31936081919a8572a3d644f3fbb258038f337/drivers/gpu/drm/xe/xe_hwmon.c#L824-L826))
+- GPU temperature for `i915` requires Linux 6.13+.
+- Fan speed for `i915` requires Linux 6.12+.
+- GPU temperature and vram temperature for `xe` requires Linux 6.15+.
+- Fan speed for `xe` requires Linux 6.16+.
+- GPU usage and memory usage shows usage of current process, not total system usage (it's an issue on Intel's side).
+- Integrated Intel GPUs are limited due to lack of the `hwmon` interface (it's an issue on Intel's side, [i915 source](https://github.com/torvalds/linux/blob/5fc31936081919a8572a3d644f3fbb258038f337/drivers/gpu/drm/i915/i915_hwmon.c#L914-L916), [xe source](https://github.com/torvalds/linux/blob/5fc31936081919a8572a3d644f3fbb258038f337/drivers/gpu/drm/xe/xe_hwmon.c#L824-L826)).
 
 #### Panfrost notes
-- GPU usage requires `echo 1 | sudo tee /sys/class/drm/renderD*/device/profiling`
+- GPU usage requires `echo 1 | sudo tee /sys/class/drm/renderD*/device/profiling`.
