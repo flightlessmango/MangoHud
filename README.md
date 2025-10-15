@@ -308,7 +308,7 @@ To enable MangoHud with Gamescope, you need to install mangoapp.
 
 Using the normal MangoHud with Gamescope is not supported.
 
-## Hud configuration
+## HUD configuration
 
 MangoHud comes with a configuration file which can be used to set configuration options globally or per application. Usually it is installed as `/usr/share/doc/mangohud/MangoHud.conf.example`. You can also [get a copy from here](https://raw.githubusercontent.com/flightlessmango/MangoHud/master/data/MangoHud.conf).
 
@@ -316,8 +316,8 @@ The priorities of different configuration files are:
 
 1. `/path/to/application/dir/MangoHud.conf`
 2. Per-application configuration in ~/.config/MangoHud:
-    1. `~/.config/MangoHud/<application_name>.conf` for native apps, where `<application_name>` is the case sensitive name of the executable
-    2. `~/.config/MangoHud/wine-<application_name>.conf` for Proton/Wine apps, where `<application_name>` is the case sensitive name of the executable without the `.exe` extension
+    1. `~/.config/MangoHud/<application_name>.conf` for native apps, where `<application_name>` is the case-sensitive name of the executable
+    2. `~/.config/MangoHud/wine-<application_name>.conf` for Wine/Proton apps, where `<application_name>` is the case-sensitive name of the executable without the `.exe` extension
 3. `~/.config/MangoHud/MangoHud.conf`
 
 If you start the app from the terminal with MangoHud enabled, MangoHud will print the configuration file names it is looking for.
@@ -475,7 +475,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `version`                          | Show current MangoHud version                                                         |
 | `vkbasalt`                         | Show if vkBasalt is on                                                                |
 | `vsync`<br> `gl_vsync`             | Set Vsync for Vulkan or OpenGL                                                        |
-| `vulkan_driver`                    | Display the used Vulkan driver's name (radv/amdgpu-pro/amdvlk)                                   |
+| `vulkan_driver`                    | Display the used Vulkan driver's name (amdgpu-pro/amdvlk/radv)                                   |
 | `width=`<br>`height=`              | Customizable HUD dimensions (in pixels)                                              |
 | `wine_color`                       | Change color of the Wine/Proton text                                                  |
 | `wine`                             | Show the current Wine or Proton version in use                                            |
@@ -559,8 +559,8 @@ Notes:
 		<th></th>
 		<th>NVIDIA</th>
 		<th>AMD</th>
-		<th colspan="2">Intel Discrete</th>
-		<th>Intel Integrated</th>
+		<th>Intel discrete</th>
+		<th>Intel integrated</th>
 		<th>Panfrost driver</th>
 	</tr>
 	<tr>
