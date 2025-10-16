@@ -39,7 +39,7 @@ enum class AppType : uint8_t {
 struct fex_stats_header {
     uint8_t Version;
     AppType app_type;
-    uint8_t _pad[2];
+    uint16_t thread_stats_size;
     char fex_version[48];
     // Atomic variables. std::atomic_ref isn't available until C++20, so need to use GCC builtin atomics to access.
     uint32_t Head;
@@ -60,6 +60,9 @@ struct fex_thread_stats {
     uint64_t AccumulatedFloatFallbackCount;
 };
 
+// This is guaranteed by FEX.
+static_assert(sizeof(fex_thread_stats) % 16 == 0, "");
+
 // Sampled stats information
 struct fex_stats {
     int pid {-1};
@@ -71,6 +74,7 @@ struct fex_stats {
     size_t page_size{};
 
     void* shm_base{};
+    size_t fex_thread_stats_size {};
     fex_stats_header* head{};
     fex_thread_stats* stats{};
 
@@ -179,22 +183,26 @@ static uint64_t get_cycle_counter_frequency() {
 }
 #endif
 
-#if defined(__x86_64__) || defined(__i386__)
 static void atomic_copy_thread_stats(fex_thread_stats *dest, const fex_thread_stats *src) {
-    // Use SSE to copy the thread stats to avoid tearing on 32-bit.
-    static_assert(sizeof(fex_thread_stats) % 16 == 0, "");
-    static_assert((sizeof(fex_thread_stats) / 16) == 3, "");
-    auto d = reinterpret_cast<__m128*>(dest);
-    auto s = reinterpret_cast<const __m128*>(src);
-    d[0] = s[0];
-    d[1] = s[1];
-    d[2] = s[2];
-}
+#if defined(__x86_64__) || defined(__i386__)
+    // For x86 platforms, XMM copies are atomic when aligned. So this guarantees single-copy atomicity.
+    // x86 has no equivalent of an true "atomic" 128-bit GPR loadstore until APX.
+    // For FEX emulating x86 platforms, this is also a guarantee for ARMv8.4 and newer.
+    using copy_type = __m128;
 #else
-void atomic_copy_thread_stats(fex_thread_stats *dest, const fex_thread_stats *src) {
-    *dest = *src;
-}
+    // For ARM64 platforms this is basically guaranteed to turn in to ldp+stp.
+    // For ARM8.4 this gives us single-copy atomicity guarantees.
+    using copy_type = __uint128_t;
 #endif
+
+    const auto elements_to_copy = g_stats.fex_thread_stats_size / sizeof(copy_type);
+    auto d_i = reinterpret_cast<copy_type*>(dest);
+    auto s_i = reinterpret_cast<const copy_type*>(src);
+    for (size_t i = 0; i < elements_to_copy; ++i) {
+        d_i[i] = s_i[i];
+    }
+}
+
 static void destroy_shm() {
     munmap(g_stats.shm_base, g_stats.shm_size);
     close(g_stats.shm_fd);
@@ -267,6 +275,14 @@ static void init_shm(int pid) {
     g_stats.previous_sample_period = std::chrono::steady_clock::now();
     g_stats.first_sample = true;
     g_stats.sampled_stats.clear();
+
+    g_stats.fex_thread_stats_size = sizeof(fex_thread_stats);
+
+    if (g_stats.head->thread_stats_size) {
+        // If thread stats size is provided, use that, as long as it is smaller than tracking size.
+        g_stats.fex_thread_stats_size = std::min<size_t>(g_stats.head->thread_stats_size, g_stats.fex_thread_stats_size);
+    }
+
     fex_version = std::string {header->fex_version, strnlen(header->fex_version, sizeof(header->fex_version))};
     sigbus_counts.account_time(g_stats.previous_sample_period);
     smc_counts.account_time(g_stats.previous_sample_period);
@@ -298,6 +314,12 @@ static void check_shm_update_necessary() {
     g_stats.shm_base = mmap(nullptr, new_shm_size, PROT_READ, MAP_SHARED, g_stats.shm_fd, 0);
     g_stats.head = reinterpret_cast<fex_stats_header*>(g_stats.shm_base);
     g_stats.stats = offset_to_stats(g_stats.shm_base, &g_stats.head->Head);
+    g_stats.fex_thread_stats_size = sizeof(fex_thread_stats);
+
+    if (g_stats.head->thread_stats_size) {
+        // If thread stats size is provided, use that, as long as it is smaller than tracking size.
+        g_stats.fex_thread_stats_size = std::min<size_t>(g_stats.head->thread_stats_size, g_stats.fex_thread_stats_size);
+    }
 }
 
 bool is_fex_pid_found() {
@@ -375,7 +397,7 @@ void update_fex_stats() {
         accumulate(total_smc_events, AccumulatedSMCEvents);
         accumulate(total_softfloat_events, AccumulatedFloatFallbackCount);
 
-        memcpy(&it->second.previous, &it->second.current, sizeof(fex_thread_stats));
+        memcpy(&it->second.previous, &it->second.current, g_stats.fex_thread_stats_size);
 
         total_jit_time += total_time;
         if ((now - it->second.last_seen) >= std::chrono::seconds(MAXIMUM_THREAD_WAIT_TIME)) {
