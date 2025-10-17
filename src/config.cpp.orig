@@ -128,34 +128,3 @@ void parseConfigFile(overlay_params& params) {
         return;
     }
 }
-
-// new feature: parse per-component font/color/size/uppercase keys
-static ImVec4 parse_color_to_imvec4(const std::string &val) {
-    if (val.size()>0 && val[0]=='#') {
-        std::string s = val.substr(1);
-        if (s.size()==6) s += "FF";
-        unsigned int rgba = 0;
-        std::stringstream ss; ss << std::hex << s; ss >> rgba;
-        float r = ((rgba >> 24) & 0xFF) / 255.0f;
-        float g = ((rgba >> 16) & 0xFF) / 255.0f;
-        float b = ((rgba >> 8) & 0xFF) / 255.0f;
-        float a = (rgba & 0xFF) / 255.0f;
-        return ImVec4(r,g,b,a);
-    }
-    return ImVec4(1,1,1,1);
-}
-
-// new feature: helper to set FontConfig fields from key/value
-static void set_font_cfg_from_kv(FontConfig &cfg, const std::string &prop, const std::string &value) {
-    if (prop == "font" || prop == "file") cfg.file = value;
-    else if (prop == "font_size" || prop == "size") {
-        try { cfg.size = std::stoi(value); } catch(...) { cfg.size = -1; }
-    }
-    else if (prop == "color") cfg.color = parse_color_to_imvec4(value);
-    else if (prop == "uppercase") {
-        std::string v = value;
-        for(auto &c : v) c = std::tolower(c);
-        cfg.uppercase = (v == "1" || v == "true" || v == "yes");
-    }
-}
-

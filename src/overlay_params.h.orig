@@ -412,6 +412,3 @@ extern bool config_ready;
 std::shared_ptr<overlay_params> get_params();
 
 #endif /* MANGOHUD_OVERLAY_PARAMS_H */
-
-// new feature: declaration for loading per-component fonts
-void load_per_component_fonts(ImGuiIO &io, overlay_config &conf, const std::string &base_path="");

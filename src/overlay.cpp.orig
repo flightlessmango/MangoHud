@@ -920,12 +920,3 @@ void next_hud_position(){
       params->position = static_cast<overlay_param_position>(0);
    }
 }
-
-// new feature: call new per-section draw helpers from overlay render
-// Insert these calls in the appropriate place in your render loop to render sections with per-component fonts/colors
-// Example usage (place inside the ImGui frame where HUD is drawn):
-// draw_gpu_section(conf);
-// draw_cpu_section(conf);
-// draw_fps_section(conf);
-// draw_frametime_section(conf);
-// draw_vkd3d_section(conf);
