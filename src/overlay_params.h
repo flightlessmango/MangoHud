@@ -166,6 +166,13 @@ struct Tracepoint;
    OVERLAY_PARAM_CUSTOM(offset_y)                    \
    OVERLAY_PARAM_CUSTOM(background_alpha)            \
    OVERLAY_PARAM_CUSTOM(time_format)                 \
+
+OVERLAY_PARAM_CUSTOM(cpu_label_font_size)      \
+OVERLAY_PARAM_CUSTOM(gpu_label_font_size)      \
+OVERLAY_PARAM_CUSTOM(vram_label_font_size)     \
+OVERLAY_PARAM_CUSTOM(ram_label_font_size)      \
+OVERLAY_PARAM_CUSTOM(custom_text_font_size)    \
+
    OVERLAY_PARAM_CUSTOM(io_read)                     \
    OVERLAY_PARAM_CUSTOM(io_write)                    \
    OVERLAY_PARAM_CUSTOM(cpu_color)                   \
@@ -318,6 +325,10 @@ struct overlay_params {
    float font_scale_media_player;
    float background_alpha, alpha;
    float cellpadding_y;
+
+float cpu_label_font_size, gpu_label_font_size, vram_label_font_size;
+float ram_label_font_size, custom_text_font_size;
+
    std::vector<KeySym> toggle_hud;
    std::vector<KeySym> toggle_preset;
    std::vector<KeySym> toggle_fps_limit;
