@@ -1116,7 +1116,29 @@ void HudElements::resolution(){
         ImGui::PopFont();
     }
 }
+void HudElements::obs()
+{
+    if(!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_obs])
+        return;
 
+    if(!HUDElements.obs_ptr)
+        HUDElements.obs_ptr = std::make_unique<ObsStudio>(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_obs_prefix_exe], global_proc_name.c_str());
+
+    HUDElements.obs_ptr->update();
+
+    ImGui::PushFont(HUDElements.sw_stats->font_secondary);
+
+    ImguiNextColumnFirstItem();
+    HUDElements.TextColored(HUDElements.colors.engine, "OBS");
+
+    ImguiNextColumnFirstItem();
+    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", HUDElements.obs_ptr->col1);
+
+    ImguiNextColumnFirstItem();
+    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", HUDElements.obs_ptr->col2);
+
+    ImGui::PopFont();
+}
 void HudElements::show_fps_limit(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_show_fps_limit]){
         int fps = 0;
@@ -1968,6 +1990,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
         {"display_server", {_display_session}},
         {"fex_stats", {fex_stats}},
         {"ftrace", {ftrace}},
+        {"obs", {obs}},
     };
 
     auto check_param = display_params.find(param);
@@ -2098,6 +2121,9 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({_display_session, "display_session", value});
     if (params->fex_stats.enabled)
         ordered_functions.push_back({fex_stats, "fex_stats", value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_obs])
+        ordered_functions.push_back({obs, "obs", value});
+
 #ifdef HAVE_FTRACE
     if (params->ftrace.enabled)
         ordered_functions.push_back({ftrace, "ftrace", value});
