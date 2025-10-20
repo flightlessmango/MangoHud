@@ -82,6 +82,7 @@ struct instance_data {
    enum EngineTypes engine;
    notify_thread notifier;
    int control_client;
+   uint32_t applicationVersion;
 };
 
 /* Mapped from VkDevice */
@@ -1582,6 +1583,7 @@ static VkResult overlay_CreateSwapchainKHR(
    swapchain_data->sw_stats.engineName    = device_data->instance->engineName;
    swapchain_data->sw_stats.engineVersion = device_data->instance->engineVersion;
    swapchain_data->sw_stats.engine        = device_data->instance->engine;
+   swapchain_data->sw_stats.applicationVersion = device_data->instance->applicationVersion;
 
    HUDElements.vendorID = prop.vendorID;
    std::stringstream ss;
@@ -1904,8 +1906,12 @@ static VkResult overlay_CreateInstance(
    std::string engineVersion, engineName;
    enum EngineTypes engine = EngineTypes::UNKNOWN;
    const char* pEngineName = nullptr;
-   if (pCreateInfo->pApplicationInfo)
+
+   struct instance_data *instance_data = new_instance_data(*pInstance); 
+   if (pCreateInfo->pApplicationInfo) {
       pEngineName = pCreateInfo->pApplicationInfo->pEngineName;
+      instance_data->applicationVersion = pCreateInfo->pApplicationInfo->applicationVersion;
+   }
    if (pEngineName)
    {
       engineName = pEngineName;
@@ -1953,7 +1959,6 @@ static VkResult overlay_CreateInstance(
    VkResult result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);
    if (result != VK_SUCCESS) return result;
 
-   struct instance_data *instance_data = new_instance_data(*pInstance);
    vk_load_instance_commands(instance_data->instance,
                              fpGetInstanceProcAddr,
                              &instance_data->vtable);

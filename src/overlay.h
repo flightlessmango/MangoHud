@@ -10,7 +10,6 @@
 #include "imgui_internal.h"
 #include "overlay_params.h"
 #include "hud_elements.h"
-#include "engine_types.h"
 
 #include "dbus_info.h"
 #include "logging.h"
@@ -20,6 +19,25 @@ struct frame_stat {
 };
 
 static const int kMaxGraphEntries = 50;
+
+enum EngineTypes
+{
+   UNKNOWN,
+
+   OPENGL,
+   VULKAN,
+
+   DXVK,
+   VKD3D,
+   DAMAVAND,
+   ZINK,
+
+   WINED3D,
+   FERAL3D,
+   TOGL,
+
+   GAMESCOPE
+};
 
 struct swapchain_stats {
    uint64_t n_frames;
@@ -38,7 +56,7 @@ struct swapchain_stats {
    unsigned n_frames_since_update;
    uint64_t last_fps_update;
    ImVec2 main_window_pos;
-
+   
    struct {
       int32_t major;
       int32_t minor;
@@ -54,6 +72,7 @@ struct swapchain_stats {
    std::string deviceName;
    std::string gpuName;
    std::string driverName;
+   uint32_t applicationVersion;
    enum EngineTypes engine;
 };
 
@@ -79,6 +98,39 @@ struct LOAD_DATA {
    unsigned med_load;
    unsigned high_load;
 };
+
+
+inline const char* engine_name(struct swapchain_stats& sw_stats) {
+   const char* engines[] = {"Unknown", "OpenGL", "VULKAN", "DXVK", "VKD3D", "DAMAVAND", "ZINK", "WINED3D", "Feral3D", "ToGL", "GAMESCOPE"};
+   const char* engines_short[] = {"Unknown", "OGL", "VK", "DXVK", "VKD3D", "DV", "ZINK", "WD3D", "Feral3D", "ToGL", "GS"};
+   auto engine = sw_stats.engine;
+   auto params = get_params();
+   auto& enabled = params->enabled;
+
+   // if fps_text is set, we ignore all other options
+   if (!params->fps_text.empty())
+      return params->fps_text.c_str();
+
+    const bool is_compact =
+        enabled[OVERLAY_PARAM_ENABLED_hud_compact] ||
+        enabled[OVERLAY_PARAM_ENABLED_horizontal];
+
+    const bool short_pref = enabled[OVERLAY_PARAM_ENABLED_engine_short_names];
+
+    if (is_compact && !short_pref)
+        return "FPS";
+
+    if (enabled[OVERLAY_PARAM_ENABLED_dx_api]) {
+        if (engine == EngineTypes::VKD3D) return "DX12";
+        if (engine == EngineTypes::DXVK) {
+            if (sw_stats.applicationVersion == 1) return "DX9";
+            if (sw_stats.applicationVersion == 2) return "DX11";
+            return "DX?";
+        }
+    }
+
+    return short_pref || is_compact ? engines_short[engine] : engines[engine];
+}
 
 extern struct fps_limit fps_limit_stats;
 extern uint32_t deviceID;

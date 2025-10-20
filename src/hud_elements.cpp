@@ -811,20 +811,7 @@ void HudElements::procmem()
 void HudElements::fps(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_only]){
         ImguiNextColumnFirstItem();
-        if (HUDElements.params->fps_text.empty()){
-            if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names])
-                if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hide_engine_names])
-                    HUDElements.TextColored(HUDElements.colors.engine, "%s", "FPS");
-                else
-                    HUDElements.TextColored(HUDElements.colors.engine, "%s", engines_short[HUDElements.sw_stats->engine]);
-            else
-                if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hide_engine_names])
-                    HUDElements.TextColored(HUDElements.colors.engine, "%s", "FPS");
-                else
-                    HUDElements.TextColored(HUDElements.colors.engine, "%s", engines[HUDElements.sw_stats->engine]);
-        } else {
-            HUDElements.TextColored(HUDElements.colors.engine, "%s", HUDElements.params->fps_text.c_str());
-        }
+        HUDElements.TextColored(HUDElements.colors.engine, "%s", engine_name(*HUDElements.sw_stats));
 
         ImguiNextColumnOrNewRow();
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_color_change]){
