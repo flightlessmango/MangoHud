@@ -78,7 +78,7 @@ Install necessary development packages.
 - XNVCtrl (libxnvctrl-dev), optional, use `-Dwith_xnvctrl=disabled` option with `meson` to disable
 - D-Bus (libdbus-1-dev), optional, use `-Dwith_dbus=disabled` option with `meson` to disable
 - wayland-client
-- xcbcommon
+- xkbcommon
 
 Python 3 libraries:
 
