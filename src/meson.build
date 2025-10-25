@@ -174,6 +174,27 @@ if is_unixy
       'loaders/loader_dbus.cpp',
     )
   endif
+
+  if obs.found() and get_option('with_obs').enabled()
+    pre_args += '-DHAVE_OBS'
+    vklayer_files += files(
+      'obs/obs_studio.cpp',
+      'obs/obs_shared.c',
+    )
+    mangohud_obs = shared_module(
+      'mangohud_obs',
+      files(
+        'obs/obs_plugin.c',
+        'obs/obs_shared.c'
+        ),
+      dependencies: [
+        obs
+        ],
+      include_directories: ['/usr/include/obs'],
+      install_dir : join_paths(get_option('prefix'), get_option('libdir'), 'obs-plugins'),
+      install : true,
+    )
+  endif
 endif
 
 link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL', '-lGL', '-static-libstdc++'])

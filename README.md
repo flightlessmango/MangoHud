@@ -474,6 +474,8 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `fex_stats`                        | Show FEX-Emu statistics. Default = `status+apptype+hotthreads+jitload+sigbus+smc+softfloat` |
 | `ftrace`                           | Display information about trace events reported through ftrace                        |
 | `flip_efficiency`                  | Flips CPU and GPU efficiency to joules per frame                                      |
+| `obs`                              | Show OBS statistics if MangoHUD was compiled with OBS support                         |
+| `obs_prefix_exe`                   | Prefix executable name to OBS recording file                                          |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 Because comma is also used as option delimiter and needs to be escaped for values with a backslash, you can use `+` like `MANGOHUD_CONFIG=fps_limit=60+30+0` instead.
