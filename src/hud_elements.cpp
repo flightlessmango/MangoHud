@@ -283,9 +283,12 @@ void HudElements::gpu_stats(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] && gpus){
         for (auto& gpu : gpus->selected_gpus()) {
             ImguiNextColumnFirstItem();
-            HUDElements.TextColored(HUDElements.colors.gpu, "%s", gpu->gpu_text().c_str());
+            if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_no_label])
+                HUDElements.TextColored(HUDElements.colors.gpu, "%s", gpu->gpu_text().c_str());
+            // advance only if we showed the label
+            if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_no_label])
+                ImguiNextColumnOrNewRow();
 
-            ImguiNextColumnOrNewRow();
             auto text_color = HUDElements.colors.text;
             if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_load_change]){
                 struct LOAD_DATA gpu_data = {
@@ -426,8 +429,11 @@ void HudElements::cpu_stats(){
         else
             cpu_text = HUDElements.params->cpu_text.c_str();
 
-        HUDElements.TextColored(HUDElements.colors.cpu, "%s", cpu_text);
-        ImguiNextColumnOrNewRow();
+        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_no_label])
+            HUDElements.TextColored(HUDElements.colors.cpu, "%s", cpu_text);
+        // advance only if we showed the label
+        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_no_label])
+            ImguiNextColumnOrNewRow();
         auto text_color = HUDElements.colors.text;
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_load_change]){
             int cpu_load_percent = int(cpuStats.GetCPUDataTotal().percent);
@@ -811,9 +817,12 @@ void HudElements::procmem()
 void HudElements::fps(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_only]){
         ImguiNextColumnFirstItem();
-        HUDElements.TextColored(HUDElements.colors.engine, "%s", engine_name(*HUDElements.sw_stats));
+        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_no_label])
+            HUDElements.TextColored(HUDElements.colors.engine, "%s", engine_name(*HUDElements.sw_stats));
+        // advance only if we showed the label
+        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_no_label])
+            ImguiNextColumnOrNewRow();
 
-        ImguiNextColumnOrNewRow();
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_color_change]){
             int fps = int(HUDElements.sw_stats->fps);
             struct LOAD_DATA fps_data = {
