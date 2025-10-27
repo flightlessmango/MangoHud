@@ -3,6 +3,7 @@
 #include <array>
 #include <thread>
 #include <vector>
+#include <unordered_map>
 #include <algorithm>
 #include <atomic>
 #include <cstring>
@@ -31,7 +32,10 @@ using namespace MangoHud::GL;
 
 static glx_loader glx;
 
-static std::atomic<int> refcnt (0);
+// single global lock, for simplicity
+static std::mutex global_lock;
+typedef std::lock_guard<std::mutex> scoped_lock;
+static std::unordered_map<void *, gl_context *> gl_contexts;
 
 static void* get_glx_proc_address(const char* name) {
     glx.Load();
@@ -64,72 +68,57 @@ bool glx_mesa_queryInteger(int attrib, unsigned int *value)
     return false;
 }
 
-EXPORT_C_(void *) glXCreateContext(void *dpy, void *vis, void *shareList, int direct)
+static gl_context *create_gl_context(void *ctx)
 {
-    glx.Load();
-    void *ctx = glx.CreateContext(dpy, vis, shareList, direct);
-    if (ctx)
-        refcnt++;
-    SPDLOG_DEBUG("{}: {}", __func__,  ctx);
-    return ctx;
+    gl_context *gl_ctx;
+
+    gl_ctx = (gl_context *)calloc(1, sizeof(*gl_ctx));
+    gl_ctx->ctx = ctx;
+    gl_contexts[ctx] = gl_ctx;
+    //SPDLOG_DEBUG("created gl_context {} for GLX context {}", (void *)gl_ctx, ctx);
+    return gl_ctx;
 }
 
-EXPORT_C_(void *) glXCreateContextAttribs(void *dpy, void *config,void *share_context, int direct, const int *attrib_list);
-EXPORT_C_(void *) glXCreateContextAttribs(void *dpy, void *config,void *share_context, int direct, const int *attrib_list)
+static void destroy_gl_context(gl_context *gl_ctx)
 {
-    glx.Load();
-    void *ctx = glx.CreateContextAttribs(dpy, config, share_context, direct, attrib_list);
-    if (ctx)
-        refcnt++;
-    SPDLOG_DEBUG("{}: {}", __func__,  ctx);
-    return ctx;
-}
-
-EXPORT_C_(void *) glXCreateContextAttribsARB(void *dpy, void *config,void *share_context, int direct, const int *attrib_list)
-{
-    glx.Load();
-    void *ctx = glx.CreateContextAttribsARB(dpy, config, share_context, direct, attrib_list);
-    if (ctx)
-        refcnt++;
-    SPDLOG_DEBUG("{}: {}", __func__,  ctx);
-    return ctx;
+    //SPDLOG_DEBUG("destroying gl_context {} for GLX context {}", (void *)gl_ctx, gl_ctx->ctx);
+    gl_contexts.erase(gl_ctx->ctx);
+    free(gl_ctx);
 }
 
 EXPORT_C_(void) glXDestroyContext(void *dpy, void *ctx)
 {
-    glx.Load();
-    glx.DestroyContext(dpy, ctx);
-    refcnt--;
-    if (refcnt <= 0)
-        imgui_shutdown();
-    SPDLOG_DEBUG("{}: {}", __func__,  ctx);
-}
+    ::scoped_lock lk(global_lock);
+    gl_context *gl_ctx = gl_contexts[ctx];
+    void *current_ctx, *draw, *read = nullptr;
+    int r;
 
-EXPORT_C_(int) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
+    SPDLOG_DEBUG("{}: {}", __func__, ctx);
     glx.Load();
-    SPDLOG_DEBUG("{}: {}, {}", __func__, drawable, ctx);
-    int ret = glx.MakeCurrent(dpy, drawable, ctx);
 
-    if (!is_blacklisted()) {
-        if (ret) {
-            imgui_set_context(ctx, gl_wsi::GL_WSI_GLX);
-            SPDLOG_DEBUG("GL ref count: {}", refcnt.load());
+    if (gl_ctx)
+    {
+        current_ctx = glx.GetCurrentContext();
+        draw = glx.GetCurrentDrawable();
+        if (glx.GetCurrentReadDrawable)
+            read = glx.GetCurrentReadDrawable();
+        //SPDLOG_DEBUG("gl_context {}, current_ctx {}, draw {}, read {}", (void *)gl_ctx, current_ctx, draw, read);
+        if (glx.MakeContextCurrent)
+            r = glx.MakeContextCurrent(dpy, draw, read, ctx);
+        else
+            r = glx.MakeCurrent(dpy, draw, ctx);
+        if (r)
+        {
+            imgui_shutdown(gl_ctx, gl_contexts.size() == 1);
+            if (glx.MakeContextCurrent)
+                glx.MakeContextCurrent(dpy, draw, read, current_ctx);
+            else
+                glx.MakeCurrent(dpy, draw, current_ctx);
         }
-        auto real_params = get_params();
-        // Afaik -1 only works with EXT version if it has GLX_EXT_swap_control_tear, maybe EGL_MESA_swap_control_tear someday
-        if (real_params->gl_vsync >= -1) {
-            if (glx.SwapIntervalEXT)
-                glx.SwapIntervalEXT(dpy, drawable, real_params->gl_vsync);
-        }
-        if (real_params->gl_vsync >= 0) {
-            if (glx.SwapIntervalSGI)
-                glx.SwapIntervalSGI(real_params->gl_vsync);
-            if (glx.SwapIntervalMESA)
-                glx.SwapIntervalMESA(real_params->gl_vsync);
-        }
+        destroy_gl_context(gl_ctx);
     }
 
-    return ret;
+    glx.DestroyContext(dpy, ctx);
 }
 
 #ifndef GLX_SWAP_INTERVAL_EXT
@@ -152,7 +141,14 @@ static void do_imgui_swap(void *dpy, void *drawable)
 
     GLint vp[4];
     if (!is_blacklisted()) {
-        imgui_create(glx.GetCurrentContext(), gl_wsi::GL_WSI_GLX);
+        ::scoped_lock lk(global_lock);
+        void *ctx = glx.GetCurrentContext();
+        gl_context *gl_ctx = gl_contexts[ctx];
+
+        //SPDLOG_TRACE("ctx {}, gl_ctx {}", ctx, (void *)gl_ctx);
+        if (!gl_ctx)
+            gl_ctx = create_gl_context(ctx);
+        imgui_create(gl_ctx, gl_wsi::GL_WSI_GLX);
 
         unsigned int width = -1, height = -1;
 
@@ -175,14 +171,55 @@ static void do_imgui_swap(void *dpy, void *drawable)
         }
 
         SPDLOG_TRACE("swap buffers: {}x{}", width, height);
-        imgui_render(width, height);
+        imgui_render(gl_ctx, width, height);
+    }
+}
+
+static void set_swap_interval(void* dpy, void* drawable, int interval)
+{
+    ::scoped_lock lk(global_lock);
+    void* ctx = glx.GetCurrentContext();
+    gl_context *gl_ctx = gl_contexts[ctx];
+
+    if (!is_blacklisted() || interval >= -1)
+    {
+        std::shared_ptr<overlay_params> real_params;
+
+        if (gl_ctx)
+        {
+            if (gl_ctx->swap_interval_set && interval < -1)
+                return;
+
+            if (!is_blacklisted())
+            {
+                imgui_create(gl_ctx, gl_wsi::GL_WSI_GLX);
+
+                real_params = get_params();
+            }
+        }
+        // Afaik -1 only works with EXT version if it has GLX_EXT_swap_control_tear, maybe EGL_MESA_swap_control_tear someday
+        if (glx.SwapIntervalEXT && ((real_params && real_params->gl_vsync >= -1) || (interval >= -1 && dpy && drawable)))
+        {
+            glx.SwapIntervalEXT(dpy, drawable, real_params && real_params->gl_vsync >= -1 ? real_params->gl_vsync : interval);
+        }
+        else if ((real_params && real_params->gl_vsync >= 0) || interval >= 0)
+        {
+            if (glx.SwapIntervalSGI)
+                glx.SwapIntervalSGI(real_params && real_params->gl_vsync >= 0 ? real_params->gl_vsync : interval);
+            if (glx.SwapIntervalMESA)
+                glx.SwapIntervalMESA(real_params && real_params->gl_vsync >= 0 ? real_params->gl_vsync : interval);
+        }
+        if (gl_ctx)
+            gl_ctx->swap_interval_set = true;
     }
 }
 
 EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
     glx.Load();
+    SPDLOG_DEBUG("{}: {}", __func__, drawable);
 
     do_imgui_swap(dpy, drawable);
+    set_swap_interval(dpy, drawable, -2);
     if (fps_limiter)
         fps_limiter->limit(true);
 
@@ -195,12 +232,14 @@ EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
 EXPORT_C_(int64_t) glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t target_msc, int64_t divisor, int64_t remainder)
 {
     glx.Load();
+    SPDLOG_DEBUG("{}: {}, {}, {}, {}", __func__, drawable, target_msc, divisor, remainder);
     if (!glx.SwapBuffersMscOML)
         return -1;
 
     do_imgui_swap(dpy, drawable);
-        if (fps_limiter)
-            fps_limiter->limit(true);
+    set_swap_interval(dpy, drawable, -2);
+    if (fps_limiter)
+        fps_limiter->limit(true);
 
     int64_t ret = glx.SwapBuffersMscOML(dpy, drawable, target_msc, divisor, remainder);
 
@@ -212,15 +251,12 @@ EXPORT_C_(int64_t) glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t targe
 }
 
 EXPORT_C_(void) glXSwapIntervalEXT(void *dpy, void *draw, int interval) {
-    SPDLOG_DEBUG("{}: {}", __func__, interval);
+    SPDLOG_DEBUG("{}: {}, {}", __func__, draw, interval);
     glx.Load();
     if (!glx.SwapIntervalEXT)
         return;
 
-    if (!is_blacklisted() && get_params()->gl_vsync >= 0)
-        interval = get_params()->gl_vsync;
-
-    glx.SwapIntervalEXT(dpy, draw, interval);
+    set_swap_interval(dpy, draw, interval);
 }
 
 EXPORT_C_(int) glXSwapIntervalSGI(int interval) {
@@ -229,10 +265,8 @@ EXPORT_C_(int) glXSwapIntervalSGI(int interval) {
     if (!glx.SwapIntervalSGI)
         return -1;
 
-    if (!is_blacklisted() && get_params()->gl_vsync >= 0)
-        interval = get_params()->gl_vsync;
-
-    return glx.SwapIntervalSGI(interval);
+    set_swap_interval(nullptr, nullptr, interval);
+    return 0;
 }
 
 EXPORT_C_(int) glXSwapIntervalMESA(unsigned int interval) {
@@ -241,10 +275,8 @@ EXPORT_C_(int) glXSwapIntervalMESA(unsigned int interval) {
     if (!glx.SwapIntervalMESA)
         return -1;
 
-    if (!is_blacklisted() && get_params()->gl_vsync >= 0)
-        interval = (unsigned int)get_params()->gl_vsync;
-
-    return glx.SwapIntervalMESA(interval);
+    set_swap_interval(nullptr, nullptr, interval);
+    return 0;
 }
 
 EXPORT_C_(int) glXGetSwapIntervalMESA() {
@@ -275,15 +307,11 @@ struct func_ptr {
    void *ptr;
 };
 
-static std::array<const func_ptr, 13> name_to_funcptr_map = {{
+static std::array<const func_ptr, 9> name_to_funcptr_map = {{
 #define ADD_HOOK(fn) { #fn, (void *) fn }
    ADD_HOOK(glXGetProcAddress),
    ADD_HOOK(glXGetProcAddressARB),
-   ADD_HOOK(glXCreateContextAttribs),
-   ADD_HOOK(glXCreateContextAttribsARB),
-   ADD_HOOK(glXCreateContext),
    ADD_HOOK(glXDestroyContext),
-   ADD_HOOK(glXMakeCurrent),
    ADD_HOOK(glXSwapBuffers),
    ADD_HOOK(glXSwapBuffersMscOML),
 

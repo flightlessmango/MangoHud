@@ -15,10 +15,9 @@ enum gl_wsi
 };
 
 void imgui_init();
-void imgui_create(void *ctx, const gl_wsi plat);
-void imgui_shutdown();
-void imgui_set_context(void *ctx, const gl_wsi plat);
-void imgui_render(unsigned int width, unsigned int height);
+void imgui_create(gl_context *ctx, const gl_wsi plat);
+void imgui_shutdown(gl_context *ctx, bool last);
+void imgui_render(gl_context *ctx, unsigned int width, unsigned int height);
 
 }} // namespace
 

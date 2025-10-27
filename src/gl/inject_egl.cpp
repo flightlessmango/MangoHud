@@ -1,5 +1,6 @@
 #include <iostream>
 #include <array>
+#include <unordered_map>
 #include <cstring>
 #include <dlfcn.h>
 #include <chrono>
@@ -18,7 +19,19 @@
 
 using namespace MangoHud::GL;
 
+#ifndef EGL_WIDTH
+#define EGL_HEIGHT  0x3056
+#define EGL_WIDTH   0x3057
+#define EGL_DRAW    0x3059
+#define EGL_READ    0x305A
+#endif
+
 #define EGL_PLATFORM_WAYLAND_KHR          0x31D8
+
+// single global lock, for simplicity
+static std::mutex global_lock;
+typedef std::lock_guard<std::mutex> scoped_lock;
+static std::unordered_map<void *, gl_context *> gl_contexts;
 
 EXPORT_C_(void *) eglGetProcAddress(const char* procName);
 
@@ -62,8 +75,65 @@ static void* get_egl_proc_address(const char* name) {
     return func;
 }
 
-EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf);
-EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf)
+static gl_context *create_gl_context(void *ctx)
+{
+    gl_context *gl_ctx;
+
+    gl_ctx = (gl_context *)calloc(1, sizeof(*gl_ctx));
+    gl_ctx->ctx = ctx;
+    gl_contexts[ctx] = gl_ctx;
+    //SPDLOG_DEBUG("created gl_context {} for GLX context {}", (void *)gl_ctx, ctx);
+    return gl_ctx;
+}
+
+static void destroy_gl_context(gl_context *gl_ctx)
+{
+    //SPDLOG_DEBUG("destroying gl_context {} for GLX context {}", (void *)gl_ctx, gl_ctx->ctx);
+    gl_contexts.erase(gl_ctx->ctx);
+    free(gl_ctx);
+}
+
+EXPORT_C_(unsigned int) eglDestroyContext(void* dpy, void* ctx);
+EXPORT_C_(unsigned int) eglDestroyContext(void* dpy, void* ctx)
+{
+    static unsigned int (*pfn_eglDestroyContext)(void* dpy, void* ctx) = nullptr;
+    ::scoped_lock lk(global_lock);
+    gl_context *gl_ctx = gl_contexts[ctx];
+    void *current_ctx, *draw, *read = nullptr;
+    int r;
+
+    if (!pfn_eglDestroyContext)
+        pfn_eglDestroyContext = reinterpret_cast<decltype(pfn_eglDestroyContext)>(get_egl_proc_address("eglDestroyContext"));
+
+    if (gl_ctx)
+    {
+        static void* (*pfn_eglGetCurrentContext)() = nullptr;
+        if (!pfn_eglGetCurrentContext)
+            pfn_eglGetCurrentContext = reinterpret_cast<decltype(pfn_eglGetCurrentContext)>(get_egl_proc_address("eglGetCurrentContext"));
+        static void* (*pfn_eglGetCurrentSurface)(int readdraw) = nullptr;
+        if (!pfn_eglGetCurrentSurface)
+            pfn_eglGetCurrentSurface = reinterpret_cast<decltype(pfn_eglGetCurrentSurface)>(get_egl_proc_address("eglGetCurrentSurface"));
+        static unsigned int (*pfn_eglMakeCurrent)(void* dpy, void* draw, void* read, void* ctx) = nullptr;
+        if (!pfn_eglMakeCurrent)
+            pfn_eglMakeCurrent = reinterpret_cast<decltype(pfn_eglMakeCurrent)>(get_egl_proc_address("eglMakeCurrent"));
+
+        current_ctx = pfn_eglGetCurrentContext();
+        draw = pfn_eglGetCurrentSurface(EGL_DRAW);
+        read = pfn_eglGetCurrentSurface(EGL_READ);
+        //SPDLOG_DEBUG("gl_context {}, current_ctx {}, draw {}, read {}", (void *)gl_ctx, current_ctx, draw, read);
+        r = pfn_eglMakeCurrent(dpy, draw, read, ctx);
+        if (r)
+        {
+            imgui_shutdown(gl_ctx, gl_contexts.size() == 1);
+            pfn_eglMakeCurrent(dpy, draw, read, current_ctx);
+        }
+        destroy_gl_context(gl_ctx);
+    }
+    return pfn_eglDestroyContext(dpy, ctx);
+}
+
+EXPORT_C_(unsigned int) eglSwapBuffers(void* dpy, void* surf);
+EXPORT_C_(unsigned int) eglSwapBuffers(void* dpy, void* surf)
 {
     static int (*pfn_eglSwapBuffers)(void*, void*) = nullptr;
     if (!pfn_eglSwapBuffers)
@@ -73,13 +143,21 @@ EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf)
         static int (*pfn_eglQuerySurface)(void* dpy, void* surface, int attribute, int *value) = nullptr;
         if (!pfn_eglQuerySurface)
             pfn_eglQuerySurface = reinterpret_cast<decltype(pfn_eglQuerySurface)>(get_egl_proc_address("eglQuerySurface"));
+        static void* (*pfn_eglGetCurrentContext)() = nullptr;
+        if (!pfn_eglGetCurrentContext)
+            pfn_eglGetCurrentContext = reinterpret_cast<decltype(pfn_eglGetCurrentContext)>(get_egl_proc_address("eglGetCurrentContext"));
+        ::scoped_lock lk(global_lock);
+        void* ctx = pfn_eglGetCurrentContext();
+        gl_context *gl_ctx = gl_contexts[ctx];
 
-        imgui_create(surf, gl_wsi::GL_WSI_EGL);
+        if (!gl_ctx)
+            gl_ctx = create_gl_context(ctx);
+        imgui_create(gl_ctx, gl_wsi::GL_WSI_EGL);
 
         int width=0, height=0;
-        if (pfn_eglQuerySurface(dpy, surf, 0x3056, &height) &&
-            pfn_eglQuerySurface(dpy, surf, 0x3057, &width))
-            imgui_render(width, height);
+        if (pfn_eglQuerySurface(dpy, surf, EGL_HEIGHT, &height) &&
+            pfn_eglQuerySurface(dpy, surf, EGL_WIDTH, &width))
+            imgui_render(gl_ctx, width, height);
 
         if (fps_limiter)
             fps_limiter->limit(true);
@@ -174,13 +252,14 @@ struct func_ptr {
    void *ptr;
 };
 
-static std::array<const func_ptr, 5> name_to_funcptr_map = {{
+static std::array<const func_ptr, 6> name_to_funcptr_map = {{
 #define ADD_HOOK(fn) { #fn, (void *) fn }
-   ADD_HOOK(eglGetProcAddress),
-   ADD_HOOK(eglSwapBuffers),
-   ADD_HOOK(eglGetPlatformDisplay),
-   ADD_HOOK(eglGetDisplay),
-   ADD_HOOK(eglTerminate)
+    ADD_HOOK(eglDestroyContext),
+    ADD_HOOK(eglGetDisplay),
+    ADD_HOOK(eglGetPlatformDisplay),
+    ADD_HOOK(eglGetProcAddress),
+    ADD_HOOK(eglSwapBuffers),
+    ADD_HOOK(eglTerminate)
 #undef ADD_HOOK
 }};
 
