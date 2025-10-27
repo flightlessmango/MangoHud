@@ -32,6 +32,9 @@ static glx_loader glx;
 
 static std::atomic<int> refcnt (0);
 
+static bool swap_interval_set = false;
+static void* last_ctx;
+
 static void* get_glx_proc_address(const char* name) {
     glx.Load();
 
@@ -114,18 +117,6 @@ EXPORT_C_(int) glXMakeCurrent(void* dpy, void* drawable, void* ctx) {
             imgui_set_context(ctx, gl_wsi::GL_WSI_GLX);
             SPDLOG_DEBUG("GL ref count: {}", refcnt.load());
         }
-        auto real_params = get_params();
-        // Afaik -1 only works with EXT version if it has GLX_EXT_swap_control_tear, maybe EGL_MESA_swap_control_tear someday
-        if (real_params->gl_vsync >= -1) {
-            if (glx.SwapIntervalEXT)
-                glx.SwapIntervalEXT(dpy, drawable, real_params->gl_vsync);
-        }
-        if (real_params->gl_vsync >= 0) {
-            if (glx.SwapIntervalSGI)
-                glx.SwapIntervalSGI(real_params->gl_vsync);
-            if (glx.SwapIntervalMESA)
-                glx.SwapIntervalMESA(real_params->gl_vsync);
-        }
     }
 
     return ret;
@@ -178,10 +169,42 @@ static void do_imgui_swap(void *dpy, void *drawable)
     }
 }
 
+static void set_swap_interval(void* dpy, void* drawable)
+{
+    glx.Load();
+
+    if (!is_blacklisted()) {
+        void* ctx = glx.GetCurrentContext();
+
+        if (ctx == last_ctx && swap_interval_set)
+            return;
+
+        imgui_create(ctx, gl_wsi::GL_WSI_GLX);
+
+        auto real_params = get_params();
+        SPDLOG_DEBUG("got params, gl_vsync {}", real_params->gl_vsync);
+        // Afaik -1 only works with EXT version if it has GLX_EXT_swap_control_tear, maybe EGL_MESA_swap_control_tear someday
+        if (real_params->gl_vsync >= -1) {
+            if (glx.SwapIntervalEXT && dpy && drawable)
+                glx.SwapIntervalEXT(dpy, drawable, real_params->gl_vsync);
+        }
+        if (real_params->gl_vsync >= 0) {
+            if (glx.SwapIntervalSGI)
+                glx.SwapIntervalSGI(real_params->gl_vsync);
+            if (glx.SwapIntervalMESA)
+                glx.SwapIntervalMESA(real_params->gl_vsync);
+        }
+        swap_interval_set = true;
+    }
+}
+
 EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
     glx.Load();
 
     do_imgui_swap(dpy, drawable);
+
+    set_swap_interval(dpy, drawable);
+
     using namespace std::chrono_literals;
     if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_EARLY){
         fps_limit_stats.frameStart = Clock::now();
@@ -203,6 +226,7 @@ EXPORT_C_(int64_t) glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t targe
         return -1;
 
     do_imgui_swap(dpy, drawable);
+    set_swap_interval(dpy, drawable);
     using namespace std::chrono_literals;
     if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_EARLY){
         fps_limit_stats.frameStart = Clock::now();
@@ -227,10 +251,8 @@ EXPORT_C_(void) glXSwapIntervalEXT(void *dpy, void *draw, int interval) {
     if (!glx.SwapIntervalEXT)
         return;
 
-    if (!is_blacklisted() && get_params()->gl_vsync >= 0)
-        interval = get_params()->gl_vsync;
-
-    glx.SwapIntervalEXT(dpy, draw, interval);
+    swap_interval_set = false;
+    set_swap_interval(dpy, draw);
 }
 
 EXPORT_C_(int) glXSwapIntervalSGI(int interval) {
@@ -239,10 +261,9 @@ EXPORT_C_(int) glXSwapIntervalSGI(int interval) {
     if (!glx.SwapIntervalSGI)
         return -1;
 
-    if (!is_blacklisted() && get_params()->gl_vsync >= 0)
-        interval = get_params()->gl_vsync;
-
-    return glx.SwapIntervalSGI(interval);
+    swap_interval_set = false;
+    set_swap_interval(nullptr, nullptr);
+    return 0;
 }
 
 EXPORT_C_(int) glXSwapIntervalMESA(unsigned int interval) {
@@ -251,10 +272,9 @@ EXPORT_C_(int) glXSwapIntervalMESA(unsigned int interval) {
     if (!glx.SwapIntervalMESA)
         return -1;
 
-    if (!is_blacklisted() && get_params()->gl_vsync >= 0)
-        interval = (unsigned int)get_params()->gl_vsync;
-
-    return glx.SwapIntervalMESA(interval);
+    swap_interval_set = false;
+    set_swap_interval(nullptr, nullptr);
+    return 0;
 }
 
 EXPORT_C_(int) glXGetSwapIntervalMESA() {
@@ -269,6 +289,8 @@ EXPORT_C_(int) glXGetSwapIntervalMESA() {
 
         if (first_call) {
             first_call = false;
+            void* ctx = glx.GetCurrentContext();
+            imgui_create(ctx, gl_wsi::GL_WSI_GLX);
             if (get_params()->gl_vsync >= 0) {
                 interval = get_params()->gl_vsync;
                 glx.SwapIntervalMESA(interval);

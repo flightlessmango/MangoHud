@@ -202,7 +202,7 @@ void imgui_set_context(void *ctx, const gl_wsi plat)
 {
     if (!ctx)
         return;
-    imgui_create(ctx, plat);
+    //imgui_create(ctx, plat);
 }
 
 void imgui_render(unsigned int width, unsigned int height)
