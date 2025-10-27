@@ -13,8 +13,11 @@ void glXSwapIntervalEXT(void*, void*, int);
 int glXSwapIntervalSGI(int);
 int glXSwapIntervalMESA(unsigned int);
 int glXGetSwapIntervalMESA(void);
+int glXMakeContextCurrent(void*, void*, void*, void*);
 int glXMakeCurrent(void*, void*, void*);
-void* glXGetCurrentContext();
+void *glXGetCurrentContext();
+void *glXGetCurrentDrawable();
+void *glXGetCurrentReadDrawable();
 void *glXCreateContextAttribsARB(void *dpy, void *config,void *share_context, int direct, const int *attrib_list);
 
 void* glXGetProcAddress(const unsigned char*);

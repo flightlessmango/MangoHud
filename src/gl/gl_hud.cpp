@@ -104,18 +104,16 @@ void imgui_init()
     init_cpu_stats(params);
 }
 
-//static
-void imgui_create(void *ctx, const gl_wsi plat)
+void imgui_create(gl_context *ctx, const gl_wsi plat)
 {
-    if (inited)
-        return;
-
+    //SPDLOG_DEBUG("ctx {}", (void *)ctx);
     if (!ctx)
         return;
 
-    imgui_shutdown();
+    if (inited)
+        return;
+
     imgui_init();
-    inited = true;
 
     if (!gladLoadGL())
         spdlog::error("Failed to initialize OpenGL context, crash incoming");
@@ -160,6 +158,7 @@ void imgui_create(void *ctx, const gl_wsi plat)
     IMGUI_CHECKVERSION();
     ImGuiContext *saved_ctx = ImGui::GetCurrentContext();
     state.imgui_ctx = ImGui::CreateContext();
+    ImGui::SetCurrentContext(state.imgui_ctx);
 #ifdef __linux__
     ImPlot::CreateContext();
 #endif
@@ -178,35 +177,36 @@ void imgui_create(void *ctx, const gl_wsi plat)
     ImGui::GetIO().IniFilename = NULL;
     ImGui::GetIO().DisplaySize = ImVec2(last_vp[2], last_vp[3]);
 
-    ImGui_ImplOpenGL3_Init();
+    ImGui_ImplOpenGL3_Init(ctx);
 
     create_fonts(nullptr, params, sw_stats.font_small, sw_stats.font_text, sw_stats.font_secondary);
     sw_stats.font_params_hash = params.font_params_hash;
+    inited = true;
 
     // Restore global context or ours might clash with apps that use Dear ImGui
     ImGui::SetCurrentContext(saved_ctx);
 }
 
-void imgui_shutdown()
+void imgui_shutdown(gl_context *ctx, bool last)
 {
+    //SPDLOG_DEBUG("destroying ctx {}, imgui_ctx {}, last {}", (void *)ctx, (void *)state.imgui_ctx, last);
     if (state.imgui_ctx) {
+        ImGuiContext *saved_ctx = ImGui::GetCurrentContext();
         ImGui::SetCurrentContext(state.imgui_ctx);
-        ImGui_ImplOpenGL3_Shutdown();
-        ImGui::DestroyContext(state.imgui_ctx);
-        state.imgui_ctx = nullptr;
+        ImGui_ImplOpenGL3_Shutdown(ctx);
+        if (last)
+        {
+            ImGui::DestroyContext(state.imgui_ctx);
+            state.imgui_ctx = nullptr;
+            inited = false;
+        }
+        ImGui::SetCurrentContext(saved_ctx);
     }
-    inited = false;
 }
 
-void imgui_set_context(void *ctx, const gl_wsi plat)
+void imgui_render(gl_context *ctx, unsigned int width, unsigned int height)
 {
-    if (!ctx)
-        return;
-    imgui_create(ctx, plat);
-}
-
-void imgui_render(unsigned int width, unsigned int height)
-{
+    //SPDLOG_DEBUG("imgui_ctx {}", (void *)state.imgui_ctx);
     if (!state.imgui_ctx)
         return;
 
@@ -229,10 +229,10 @@ void imgui_render(unsigned int width, unsigned int height)
     {
         sw_stats.font_params_hash = params.font_params_hash;
         create_fonts(nullptr, params, sw_stats.font_small, sw_stats.font_text, sw_stats.font_secondary);
-        ImGui_ImplOpenGL3_CreateFontsTexture();
+        ImGui_ImplOpenGL3_CreateFontsTexture(ctx);
     }
 
-    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplOpenGL3_NewFrame(ctx);
     ImGui::NewFrame();
     {
         std::lock_guard<std::mutex> lk(notifier.mutex);

@@ -25,16 +25,30 @@
 #ifndef MANGOHUD_IMGUI_IMPL_OPENGL3_H
 #define MANGOHUD_IMGUI_IMPL_OPENGL3_H
 
+#include <glad/glad.h>
+
 namespace MangoHud { namespace GL {
+
+struct gl_context
+{
+    void *ctx;
+    GLuint FontTexture = 0;
+    GLuint ShaderHandle = 0, VertHandle = 0, FragHandle = 0;
+    int AttribLocationTex = 0, AttribLocationProjMtx = 0;                                // Uniforms location
+    int AttribLocationVtxPos = 0, AttribLocationVtxUV = 0, AttribLocationVtxColor = 0; // Vertex attributes location
+    unsigned int VboHandle = 0, ElementsHandle = 0;
+    bool swap_interval_set = false;
+};
+
 
 void GetOpenGLVersion(int& major, int& minor, bool& isGLES);
 
 // Backend API
-IMGUI_IMPL_API bool     ImGui_ImplOpenGL3_Init(const char* glsl_version = nullptr);
-IMGUI_IMPL_API void     ImGui_ImplOpenGL3_Shutdown();
-IMGUI_IMPL_API void     ImGui_ImplOpenGL3_NewFrame();
+IMGUI_IMPL_API bool     ImGui_ImplOpenGL3_Init(gl_context* ctx, const char* glsl_version = nullptr);
+IMGUI_IMPL_API void     ImGui_ImplOpenGL3_Shutdown(gl_context* ctx);
+IMGUI_IMPL_API void     ImGui_ImplOpenGL3_NewFrame(gl_context* ctx);
 IMGUI_IMPL_API void     ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data);
-IMGUI_IMPL_API bool     ImGui_ImplOpenGL3_CreateFontsTexture();
+IMGUI_IMPL_API bool     ImGui_ImplOpenGL3_CreateFontsTexture(gl_context* ctx);
 
 // (Optional) Called by Init/NewFrame/Shutdown
 //IMGUI_IMPL_API bool     ImGui_ImplOpenGL3_CreateFontsTexture();

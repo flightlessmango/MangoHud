@@ -16,11 +16,14 @@ class glx_loader {
   decltype(&::glXCreateContextAttribsARB) CreateContextAttribs;
   decltype(&::glXCreateContextAttribsARB) CreateContextAttribsARB;
   decltype(&::glXDestroyContext) DestroyContext;
+  decltype(&::glXGetCurrentDrawable) GetCurrentDrawable;
+  decltype(&::glXGetCurrentReadDrawable) GetCurrentReadDrawable;
   decltype(&::glXSwapBuffers) SwapBuffers;
   decltype(&::glXSwapIntervalEXT) SwapIntervalEXT;
   decltype(&::glXSwapIntervalSGI) SwapIntervalSGI;
   decltype(&::glXSwapIntervalMESA) SwapIntervalMESA;
   decltype(&::glXGetSwapIntervalMESA) GetSwapIntervalMESA;
+  decltype(&::glXMakeContextCurrent) MakeContextCurrent;
   decltype(&::glXMakeCurrent) MakeCurrent;
   decltype(&::glXGetCurrentContext) GetCurrentContext;
   decltype(&::glXQueryDrawable) QueryDrawable;

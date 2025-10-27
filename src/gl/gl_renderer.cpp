@@ -81,30 +81,25 @@ namespace MangoHud { namespace GL {
 extern overlay_params params;
 
 // OpenGL Data
-static GLuint       g_GlVersion = 0;                // Extracted at runtime using GL_MAJOR_VERSION, GL_MINOR_VERSION queries.
-static char         g_GlslVersionString[32] = "";   // Specified by user or detected based on compile time GL settings.
-static GLuint       g_FontTexture = 0;
-static GLuint       g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
-static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;                                // Uniforms location
-static int          g_AttribLocationVtxPos = 0, g_AttribLocationVtxUV = 0, g_AttribLocationVtxColor = 0; // Vertex attributes location
-static unsigned int g_VboHandle = 0, g_ElementsHandle = 0;
-static bool         g_IsGLES = false;
+static gl_context* g_current_ctx;
+static GLuint      g_GlVersion = 0;                // Extracted at runtime using GL_MAJOR_VERSION, GL_MINOR_VERSION queries.
+static char        g_GlslVersionString[32] = "";   // Specified by user or detected based on compile time GL settings.
+static bool        g_IsGLES = false;
 
 // Functions
-static void ImGui_ImplOpenGL3_DestroyFontsTexture()
+static void ImGui_ImplOpenGL3_DestroyFontsTexture(gl_context *ctx)
 {
-    if (g_FontTexture)
+    if (ctx->FontTexture)
     {
         ImGuiIO& io = ImGui::GetIO();
-        glDeleteTextures(1, &g_FontTexture);
+        glDeleteTextures(1, &ctx->FontTexture);
         io.Fonts->SetTexID(0);
-        g_FontTexture = 0;
+        ctx->FontTexture = 0;
     }
 }
 
-bool ImGui_ImplOpenGL3_CreateFontsTexture()
+bool ImGui_ImplOpenGL3_CreateFontsTexture(gl_context *ctx)
 {
-    ImGui_ImplOpenGL3_DestroyFontsTexture();
     // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
     unsigned char* pixels;
@@ -115,8 +110,8 @@ bool ImGui_ImplOpenGL3_CreateFontsTexture()
 
     // Upload texture to graphics system
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
-    glGenTextures(1, &g_FontTexture);
-    glBindTexture(GL_TEXTURE_2D, g_FontTexture);
+    glGenTextures(1, &ctx->FontTexture);
+    glBindTexture(GL_TEXTURE_2D, ctx->FontTexture);
     if ((g_IsGLES && g_GlVersion >= 300) || (!g_IsGLES && g_GlVersion >= 210))
     {
         glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &last_unpack_buffer);
@@ -131,7 +126,7 @@ bool ImGui_ImplOpenGL3_CreateFontsTexture()
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, pixels);
 
     // Store our identifier
-    io.Fonts->SetTexID((ImTextureID)(intptr_t)g_FontTexture);
+    io.Fonts->SetTexID((ImTextureID)(intptr_t)ctx->FontTexture);
 
     // Restore state
     glBindTexture(GL_TEXTURE_2D, last_texture);
@@ -177,17 +172,8 @@ static bool CheckProgram(GLuint handle, const char* desc)
     return (GLboolean)status == GL_TRUE;
 }
 
-static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
+static bool    ImGui_ImplOpenGL3_CreateDeviceObjects(gl_context *ctx)
 {
-    // Backup GL state
-    GLint last_texture, last_array_buffer;
-    glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
-    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
-    //#ifndef IMGUI_IMPL_OPENGL_ES2
-    GLint last_vertex_array;
-    if (g_GlVersion >= 300)
-        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
-
     // Parse GLSL version string
     int glsl_version = 120;
     sscanf(g_GlslVersionString, "#version %d", &glsl_version);
@@ -326,60 +312,56 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     // Create shaders
     //const GLchar* vertex_shader_with_version[2] = { g_GlslVersionString, vertex_shader };
     const GLchar* vertex_shader_with_version[1] = { shader.c_str() };
-    g_VertHandle = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(g_VertHandle, 1, vertex_shader_with_version, NULL);
-    glCompileShader(g_VertHandle);
-    CheckShader(g_VertHandle, "vertex shader");
+    ctx->VertHandle = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(ctx->VertHandle, 1, vertex_shader_with_version, NULL);
+    glCompileShader(ctx->VertHandle);
+    CheckShader(ctx->VertHandle, "vertex shader");
 
     ss.str(""); ss.clear();
     ss << g_GlslVersionString << fragment_shader;
     shader = ss.str();
 
     const GLchar* fragment_shader_with_version[1] = { shader.c_str() };
-    g_FragHandle = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(g_FragHandle, 1, fragment_shader_with_version, NULL);
-    glCompileShader(g_FragHandle);
-    CheckShader(g_FragHandle, "fragment shader");
+    ctx->FragHandle = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(ctx->FragHandle, 1, fragment_shader_with_version, NULL);
+    glCompileShader(ctx->FragHandle);
+    CheckShader(ctx->FragHandle, "fragment shader");
 
-    g_ShaderHandle = glCreateProgram();
-    glAttachShader(g_ShaderHandle, g_VertHandle);
-    glAttachShader(g_ShaderHandle, g_FragHandle);
-    glLinkProgram(g_ShaderHandle);
-    CheckProgram(g_ShaderHandle, "shader program");
+    ctx->ShaderHandle = glCreateProgram();
+    glAttachShader(ctx->ShaderHandle, ctx->VertHandle);
+    glAttachShader(ctx->ShaderHandle, ctx->FragHandle);
+    glLinkProgram(ctx->ShaderHandle);
+    CheckProgram(ctx->ShaderHandle, "shader program");
+    SPDLOG_DEBUG("g_ShaderHandle {}", ctx->ShaderHandle);
 
-    g_AttribLocationTex = glGetUniformLocation(g_ShaderHandle, "Texture");
-    g_AttribLocationProjMtx = glGetUniformLocation(g_ShaderHandle, "ProjMtx");
-    g_AttribLocationVtxPos = glGetAttribLocation(g_ShaderHandle, "Position");
-    g_AttribLocationVtxUV = glGetAttribLocation(g_ShaderHandle, "UV");
-    g_AttribLocationVtxColor = glGetAttribLocation(g_ShaderHandle, "Color");
+    ctx->AttribLocationTex = glGetUniformLocation(ctx->ShaderHandle, "Texture");
+    ctx->AttribLocationProjMtx = glGetUniformLocation(ctx->ShaderHandle, "ProjMtx");
+    ctx->AttribLocationVtxPos = glGetAttribLocation(ctx->ShaderHandle, "Position");
+    ctx->AttribLocationVtxUV = glGetAttribLocation(ctx->ShaderHandle, "UV");
+    ctx->AttribLocationVtxColor = glGetAttribLocation(ctx->ShaderHandle, "Color");
+    SPDLOG_DEBUG("g_AttribLocationTex {}, g_AttribLocationProjMtx {}, g_AttribLocationVtxPos {}, g_AttribLocationVtxUV {}, g_AttribLocationVtxColor {}",
+                 ctx->AttribLocationTex, ctx->AttribLocationProjMtx, ctx->AttribLocationVtxPos, ctx->AttribLocationVtxUV, ctx->AttribLocationVtxColor);
 
     // Create buffers
-    glGenBuffers(1, &g_VboHandle);
-    glGenBuffers(1, &g_ElementsHandle);
+    glGenBuffers(1, &ctx->VboHandle);
+    glGenBuffers(1, &ctx->ElementsHandle);
 
-    ImGui_ImplOpenGL3_CreateFontsTexture();
-
-    // Restore modified GL state
-    glBindTexture(GL_TEXTURE_2D, last_texture);
-    glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
-    //#ifndef IMGUI_IMPL_OPENGL_ES2
-    if (g_GlVersion >= 300)
-        glBindVertexArray(last_vertex_array);
+    ImGui_ImplOpenGL3_CreateFontsTexture(ctx);
 
     return true;
 }
 
-static void    ImGui_ImplOpenGL3_DestroyDeviceObjects()
+static void    ImGui_ImplOpenGL3_DestroyDeviceObjects(gl_context *ctx)
 {
-    if (g_VboHandle)        { glDeleteBuffers(1, &g_VboHandle); g_VboHandle = 0; }
-    if (g_ElementsHandle)   { glDeleteBuffers(1, &g_ElementsHandle); g_ElementsHandle = 0; }
-    if (g_ShaderHandle && g_VertHandle) { glDetachShader(g_ShaderHandle, g_VertHandle); }
-    if (g_ShaderHandle && g_FragHandle) { glDetachShader(g_ShaderHandle, g_FragHandle); }
-    if (g_VertHandle)       { glDeleteShader(g_VertHandle); g_VertHandle = 0; }
-    if (g_FragHandle)       { glDeleteShader(g_FragHandle); g_FragHandle = 0; }
-    if (g_ShaderHandle)     { glDeleteProgram(g_ShaderHandle); g_ShaderHandle = 0; }
+    if (ctx->VboHandle)        { glDeleteBuffers(1, &ctx->VboHandle); ctx->VboHandle = 0; }
+    if (ctx->ElementsHandle)   { glDeleteBuffers(1, &ctx->ElementsHandle); ctx->ElementsHandle = 0; }
+    if (ctx->ShaderHandle && ctx->VertHandle) { glDetachShader(ctx->ShaderHandle, ctx->VertHandle); }
+    if (ctx->ShaderHandle && ctx->FragHandle) { glDetachShader(ctx->ShaderHandle, ctx->FragHandle); }
+    if (ctx->VertHandle)       { glDeleteShader(ctx->VertHandle); ctx->VertHandle = 0; }
+    if (ctx->FragHandle)       { glDeleteShader(ctx->FragHandle); ctx->FragHandle = 0; }
+    if (ctx->ShaderHandle)     { glDeleteProgram(ctx->ShaderHandle); ctx->ShaderHandle = 0; }
 
-    ImGui_ImplOpenGL3_DestroyFontsTexture();
+    ImGui_ImplOpenGL3_DestroyFontsTexture(ctx);
 }
 
 void GetOpenGLVersion(int& major, int& minor, bool& isGLES)
@@ -397,7 +379,10 @@ void GetOpenGLVersion(int& major, int& minor, bool& isGLES)
 
     version = (const char*) glGetString(GL_VERSION);
     if (!version)
+    {
+        SPDLOG_ERROR("couldn't get GL version string");
         return;
+    }
 
     //if (glGetError() == 0x500)
     {
@@ -414,8 +399,13 @@ void GetOpenGLVersion(int& major, int& minor, bool& isGLES)
     }
 }
 
-bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
+bool    ImGui_ImplOpenGL3_Init(gl_context* ctx, const char* glsl_version)
 {
+    if (ctx != g_current_ctx)
+    {
+        //SPDLOG_TRACE("switched to ctx {}", (void*)ctx);
+        g_current_ctx = ctx;
+    }
     GLint major = 0, minor = 0;
     GetOpenGLVersion(major, minor, g_IsGLES);
 
@@ -474,24 +464,30 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     return true;
 }
 
-void    ImGui_ImplOpenGL3_Shutdown()
+void    ImGui_ImplOpenGL3_Shutdown(gl_context* ctx)
 {
-    ImGui_ImplOpenGL3_DestroyDeviceObjects();
+    ImGui_ImplOpenGL3_DestroyDeviceObjects(ctx);
+    if (ctx == g_current_ctx)
+    {
+        //SPDLOG_TRACE("current_ctx {} destroyed", (void*)ctx);
+        g_current_ctx = nullptr;
+    }
 }
 
-void    ImGui_ImplOpenGL3_NewFrame()
+void    ImGui_ImplOpenGL3_NewFrame(gl_context* ctx)
 {
-    if (!g_ShaderHandle)
-        ImGui_ImplOpenGL3_CreateDeviceObjects();
-    else if (!glIsProgram(g_ShaderHandle)) { // TODO Got created in a now dead context?
-        SPDLOG_DEBUG("Recreating lost objects");
-        ImGui_ImplOpenGL3_CreateDeviceObjects();
+    if (ctx != g_current_ctx)
+    {
+        ImGuiIO& io = ImGui::GetIO();
+        //SPDLOG_TRACE("switched to ctx {}", (void*)ctx);
+        g_current_ctx = ctx;
+        io.Fonts->SetTexID((ImTextureID)(intptr_t)ctx->FontTexture);
     }
-
-    if (!glIsTexture(g_FontTexture)) {
-        SPDLOG_DEBUG("GL Texture lost? Regenerating.");
-        g_FontTexture = 0;
-        ImGui_ImplOpenGL3_CreateFontsTexture();
+    //SPDLOG_DEBUG("g_ShaderHandle {}", g_current_ctx->ShaderHandle);
+    if (!ctx->ShaderHandle)
+    {
+        SPDLOG_TRACE("No shader object, creating device objects");
+        ImGui_ImplOpenGL3_CreateDeviceObjects(ctx);
     }
 }
 
@@ -542,9 +538,9 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
         { 0.0f,         0.0f,        -1.0f,   0.0f },
         { (R+L)/(L-R),  (T+B)/(B-T),  0.0f,   1.0f },
     };
-    glUseProgram(g_ShaderHandle);
-    glUniform1i(g_AttribLocationTex, 0);
-    glUniformMatrix4fv(g_AttribLocationProjMtx, 1, GL_FALSE, &ortho_projection[0][0]);
+    glUseProgram(g_current_ctx->ShaderHandle);
+    glUniform1i(g_current_ctx->AttribLocationTex, 0);
+    glUniformMatrix4fv(g_current_ctx->AttribLocationProjMtx, 1, GL_FALSE, &ortho_projection[0][0]);
 
     if (g_GlVersion >= 330)
         glBindSampler(0, 0); // We use combined texture/sampler state. Applications using GL 3.3 may set that otherwise.
@@ -555,14 +551,14 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
         glBindVertexArray(vertex_array_object);
 
     // Bind vertex/index buffers and setup attributes for ImDrawVert
-    glBindBuffer(GL_ARRAY_BUFFER, g_VboHandle);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_ElementsHandle);
-    glEnableVertexAttribArray(g_AttribLocationVtxPos);
-    glEnableVertexAttribArray(g_AttribLocationVtxUV);
-    glEnableVertexAttribArray(g_AttribLocationVtxColor);
-    glVertexAttribPointer(g_AttribLocationVtxPos,   2, GL_FLOAT,         GL_FALSE, sizeof(ImDrawVert), (GLvoid*)IM_OFFSETOF(ImDrawVert, pos));
-    glVertexAttribPointer(g_AttribLocationVtxUV,    2, GL_FLOAT,         GL_FALSE, sizeof(ImDrawVert), (GLvoid*)IM_OFFSETOF(ImDrawVert, uv));
-    glVertexAttribPointer(g_AttribLocationVtxColor, 4, GL_UNSIGNED_BYTE, GL_TRUE,  sizeof(ImDrawVert), (GLvoid*)IM_OFFSETOF(ImDrawVert, col));
+    glBindBuffer(GL_ARRAY_BUFFER, g_current_ctx->VboHandle);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_current_ctx->ElementsHandle);
+    glEnableVertexAttribArray(g_current_ctx->AttribLocationVtxPos);
+    glEnableVertexAttribArray(g_current_ctx->AttribLocationVtxUV);
+    glEnableVertexAttribArray(g_current_ctx->AttribLocationVtxColor);
+    glVertexAttribPointer(g_current_ctx->AttribLocationVtxPos,   2, GL_FLOAT,         GL_FALSE, sizeof(ImDrawVert), (GLvoid*)IM_OFFSETOF(ImDrawVert, pos));
+    glVertexAttribPointer(g_current_ctx->AttribLocationVtxUV,    2, GL_FLOAT,         GL_FALSE, sizeof(ImDrawVert), (GLvoid*)IM_OFFSETOF(ImDrawVert, uv));
+    glVertexAttribPointer(g_current_ctx->AttribLocationVtxColor, 4, GL_UNSIGNED_BYTE, GL_TRUE,  sizeof(ImDrawVert), (GLvoid*)IM_OFFSETOF(ImDrawVert, col));
 }
 
 // OpenGL3 Render function.
@@ -631,6 +627,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
     ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
+    //SPDLOG_DEBUG("draw_data->CmdListsCount {}", draw_data->CmdListsCount);
     // Render command lists
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {

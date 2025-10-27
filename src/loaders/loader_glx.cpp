@@ -82,6 +82,18 @@ bool glx_loader::Load() {
     return false;
   }
 
+  GetCurrentDrawable =
+      reinterpret_cast<decltype(this->GetCurrentDrawable)>(
+          GetProcAddress((const unsigned char *)"glXGetCurrentDrawable"));
+  if (!GetCurrentDrawable) {
+    CleanUp(true);
+    return false;
+  }
+
+  GetCurrentReadDrawable =
+      reinterpret_cast<decltype(this->GetCurrentReadDrawable)>(
+          GetProcAddress((const unsigned char *)"glXGetCurrentReadDrawable"));
+
   SwapBuffers =
       reinterpret_cast<decltype(this->SwapBuffers)>(
           GetProcAddress((const unsigned char *)"glXSwapBuffers"));
@@ -118,6 +130,10 @@ bool glx_loader::Load() {
       reinterpret_cast<decltype(this->QueryDrawable)>(
           GetProcAddress((const unsigned char *)"glXQueryDrawable"));
 
+  MakeContextCurrent =
+      reinterpret_cast<decltype(this->MakeContextCurrent)>(
+          GetProcAddress((const unsigned char *)"glXMakeContextCurrent"));
+
   MakeCurrent =
       reinterpret_cast<decltype(this->MakeCurrent)>(
           GetProcAddress((const unsigned char *)"glXMakeCurrent"));
@@ -141,8 +157,8 @@ void glx_loader::CleanUp(bool unload) {
   SwapIntervalSGI = nullptr;
   SwapIntervalMESA = nullptr;
   QueryDrawable = nullptr;
+  MakeContextCurrent = nullptr;
   MakeCurrent = nullptr;
-
 }
 
 glx_loader glx;
