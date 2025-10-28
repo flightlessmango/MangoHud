@@ -195,8 +195,8 @@ void imgui_create(void *ctx, const gl_wsi plat)
 void imgui_shutdown()
 {
     if (state.imgui_ctx) {
-        ImGui::SetCurrentContext(state.imgui_ctx);
-        ImGui_ImplOpenGL3_Shutdown();
+        //ImGui::SetCurrentContext(state.imgui_ctx);
+        //ImGui_ImplOpenGL3_Shutdown();
         ImGui::DestroyContext(state.imgui_ctx);
         state.imgui_ctx = nullptr;
     }
