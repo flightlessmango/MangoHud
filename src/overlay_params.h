@@ -297,7 +297,7 @@ struct overlay_params {
    float round_corners;
    unsigned vsync;
    int gl_vsync;
-   int gl_bind_framebuffer {-1};
+   int gl_bind_framebuffer {0};
    enum gl_size_query gl_size_query {GL_SIZE_DRAWABLE};
    bool gl_dont_flip {false};
    int64_t log_duration, log_interval;
