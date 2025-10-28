@@ -144,7 +144,21 @@ static void do_imgui_swap(void *dpy, void *drawable)
     if (!is_blacklisted()) {
         void *ctx = glx.GetCurrentContext();
 
-        imgui_create(ctx, gl_wsi::GL_WSI_GLX);
+        if (ctx != last_ctx)
+        {
+            // if (0 && last_tid == pthread_self())
+            // {
+            //     int r = glx.MakeContextCurrent(dpy, last_ctx, last_draw, last_read);
+            //     if (r)
+            //     {
+            //         imgui_shutdown(last_ctx);
+            //         glx.MakeContextCurrent(ctx);
+            //     }
+            // }
+            imgui_create(ctx, gl_wsi::GL_WSI_GLX);
+            last_ctx = ctx;
+            swap_interval_set = false;
+        }
 
         unsigned int width = -1, height = -1;
 
