@@ -1177,7 +1177,11 @@ parse_overlay_config(struct overlay_params *params,
 }
 
 std::shared_ptr<overlay_params> get_params() {
-    return std::atomic_load_explicit(&g_params, std::memory_order_acquire);
+    for (;;) {
+        auto p = std::atomic_load_explicit(&g_params, std::memory_order_acquire);
+        if (p) return p;
+        std::this_thread::sleep_for(std::chrono::milliseconds(25));
+    }
 }
 
 bool parse_preset_config(int preset, struct overlay_params *params){
