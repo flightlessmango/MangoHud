@@ -386,7 +386,7 @@ int main(int, char**)
     // Main loop
     while (!glfwWindowShouldClose(window)){
         real_params = get_params();
-        check_keybinds(*real_params);
+        check_keybinds(*real_params, &control_client);
         if (!real_params->no_display && new_frame){
             if (mangoapp_paused){
                 glfwShowWindow(window);

@@ -287,6 +287,7 @@ struct overlay_params {
    bool enabled[OVERLAY_PARAM_ENABLED_MAX];
    enum overlay_param_position position;
    int control;
+   std::string control_path;
    uint32_t fps_sampling_period; /* ns */
    std::vector<float> fps_limit;
    enum fps_limit_method fps_limit_method;
@@ -393,7 +394,7 @@ struct overlay_params {
 const extern char *overlay_param_names[];
 
 void parse_overlay_config(struct overlay_params *params,
-                       const char *env, bool ignore_preset);
+                       const char *env, bool ignore_preset, int* control_client = nullptr);
 void presets(int preset, struct overlay_params *params, bool inherit=false);
 bool parse_preset_config(int preset, struct overlay_params *params);
 void add_to_options(struct overlay_params *params, std::string option, std::string value);

@@ -202,6 +202,9 @@ def control(args):
         conn.send(bytearray(':hud;', 'utf-8'))
     elif args.cmd == 'toggle-fcat':
         conn.send(bytearray(':fcat;', 'utf-8'))
+    elif args.cmd == 'set-fps-limit':
+        msg = ':set_fps_limit={};'.format(args.fps)
+        conn.send(bytearray(msg, 'utf-8'))
 
 def main():
     parser = argparse.ArgumentParser(description='MangoHud control client')
@@ -214,6 +217,8 @@ def main():
     commands.add_parser('start-logging')
     commands.add_parser('stop-logging')
     commands.add_parser('toggle-fcat')
+    set_fps_limit_parser = commands.add_parser('set-fps-limit')
+    set_fps_limit_parser.add_argument('fps', type=float, help='FPS limit value (0 for unlimited)')
 
     args = parser.parse_args()
 
