@@ -180,15 +180,6 @@ static bool CheckProgram(GLuint handle, const char* desc)
 
 static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
 {
-    // Backup GL state
-    GLint last_texture, last_array_buffer;
-    glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
-    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
-    //#ifndef IMGUI_IMPL_OPENGL_ES2
-    GLint last_vertex_array;
-    if (g_GlVersion >= 300)
-        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
-
     // Parse GLSL version string
     int glsl_version = 120;
     sscanf(g_GlslVersionString, "#version %d", &glsl_version);
@@ -359,13 +350,6 @@ static bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     glGenBuffers(1, &g_ElementsHandle);
 
     ImGui_ImplOpenGL3_CreateFontsTexture();
-
-    // Restore modified GL state
-    glBindTexture(GL_TEXTURE_2D, last_texture);
-    glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
-    //#ifndef IMGUI_IMPL_OPENGL_ES2
-    if (g_GlVersion >= 300)
-        glBindVertexArray(last_vertex_array);
 
     return true;
 }
