@@ -100,10 +100,13 @@ EXPORT_C_(void *) glXCreateContextAttribsARB(void *dpy, void *config,void *share
 EXPORT_C_(void) glXDestroyContext(void *dpy, void *ctx)
 {
     glx.Load();
-    glx.DestroyContext(dpy, ctx);
     refcnt--;
     if (refcnt <= 0)
+    {
+        //FIXME: make to-be-destroyed context current again first
         imgui_shutdown();
+    }
+    glx.DestroyContext(dpy, ctx);
     SPDLOG_DEBUG("{}: {}", __func__,  ctx);
 }
 
