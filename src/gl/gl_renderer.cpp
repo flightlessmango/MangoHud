@@ -81,6 +81,7 @@ namespace MangoHud { namespace GL {
 extern overlay_params params;
 
 // OpenGL Data
+static void*        current_ctx;
 static GLuint       g_GlVersion = 0;                // Extracted at runtime using GL_MAJOR_VERSION, GL_MINOR_VERSION queries.
 static char         g_GlslVersionString[32] = "";   // Specified by user or detected based on compile time GL settings.
 static GLuint       g_FontTexture = 0;
@@ -479,8 +480,14 @@ void    ImGui_ImplOpenGL3_Shutdown()
     ImGui_ImplOpenGL3_DestroyDeviceObjects();
 }
 
-void    ImGui_ImplOpenGL3_NewFrame()
+void    ImGui_ImplOpenGL3_NewFrame(void* ctx)
 {
+    if (ctx != current_ctx)
+    {
+        SPDLOG_TRACE("new ctx {}", ctx);
+        g_ShaderHandle = 0;
+        current_ctx = ctx;
+    }
     if (!g_ShaderHandle)
         ImGui_ImplOpenGL3_CreateDeviceObjects();
     else if (!glIsProgram(g_ShaderHandle)) { // TODO Got created in a now dead context?

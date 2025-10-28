@@ -210,7 +210,7 @@ void imgui_set_context(void *ctx, const gl_wsi plat)
     //imgui_create(ctx, plat);
 }
 
-void imgui_render(unsigned int width, unsigned int height)
+void imgui_render(void* ctx, unsigned int width, unsigned int height)
 {
     if (!state.imgui_ctx)
         return;
@@ -237,7 +237,7 @@ void imgui_render(unsigned int width, unsigned int height)
         ImGui_ImplOpenGL3_CreateFontsTexture();
     }
 
-    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplOpenGL3_NewFrame(ctx);
     ImGui::NewFrame();
     {
         std::lock_guard<std::mutex> lk(notifier.mutex);

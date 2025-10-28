@@ -142,7 +142,9 @@ static void do_imgui_swap(void *dpy, void *drawable)
 
     GLint vp[4];
     if (!is_blacklisted()) {
-        imgui_create(glx.GetCurrentContext(), gl_wsi::GL_WSI_GLX);
+        void *ctx = glx.GetCurrentContext();
+
+        imgui_create(ctx, gl_wsi::GL_WSI_GLX);
 
         unsigned int width = -1, height = -1;
 
@@ -165,7 +167,7 @@ static void do_imgui_swap(void *dpy, void *drawable)
         }
 
         SPDLOG_TRACE("swap buffers: {}x{}", width, height);
-        imgui_render(width, height);
+        imgui_render(ctx, width, height);
     }
 }
 
