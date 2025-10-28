@@ -6,7 +6,6 @@
 #include <imgui.h>
 #include "timing.hpp"
 #include <functional>
-#include "winesync.h"
 #include "vulkan/vulkan.h"
 #include <array>
 #include "net.h"
@@ -64,7 +63,6 @@ class HudElements{
         };
 
         display_servers display_server = UNKNOWN;
-        std::unique_ptr<WineSync> winesync_ptr = nullptr;
         std::unique_ptr<Net> net = nullptr;
 #ifdef __linux__
         std::unique_ptr<Shell> shell = nullptr;

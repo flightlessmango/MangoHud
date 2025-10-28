@@ -864,26 +864,11 @@ void init_system_info(){
 
 void check_for_vkbasalt_and_gamemode() {
 #ifdef __linux__
-   std::string pid =
-      HUDElements.g_gamescopePid != -1 ? std::to_string(HUDElements.g_gamescopePid) : "self";
-   std::string proc_path = "/proc/" + pid + "/map_files";
+   if (lib_loaded("gamemode", HUDElements.g_gamescopePid))
+      HUDElements.gamemode_bol = true;
 
-   try {
-      fs::path path(proc_path);
-
-      for (auto& p : fs::directory_iterator(path)) {
-         auto filename = p.path().string();
-         auto sym = read_symlink(filename.c_str());
-         if (sym.find("gamemode") != std::string::npos)
-            HUDElements.gamemode_bol = true;
-         if (sym.find("vkbasalt") != std::string::npos)
-            HUDElements.vkbasalt_bol = true;
-         if (HUDElements.gamemode_bol && HUDElements.vkbasalt_bol)
-            break;
-      }
-   } catch (const ghc::filesystem::filesystem_error& ex) {
-      SPDLOG_DEBUG("{}", ex.what());
-   }
+   if (lib_loaded("vkbasalt", HUDElements.g_gamescopePid))
+      HUDElements.vkbasalt_bol = true;
 #endif
 }
 

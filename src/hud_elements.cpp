@@ -27,6 +27,7 @@
 #include "fps_metrics.h"
 #include "fex.h"
 #include "ftrace.h"
+#include "winesync.h"
 
 #define CHAR_CELSIUS    "\xe2\x84\x83"
 #define CHAR_FAHRENHEIT "\xe2\x84\x89"
@@ -1652,15 +1653,17 @@ void HudElements::refresh_rate() {
 }
 
 void HudElements::winesync() {
-    if (!HUDElements.winesync_ptr)
-        HUDElements.winesync_ptr = std::make_unique<WineSync>();
+    static std::unique_ptr<WineSync> winesync_ptr = nullptr;
+    if (!winesync_ptr)
+        winesync_ptr = std::make_unique<WineSync>();
 
-    if (HUDElements.winesync_ptr->valid()) {
+    if (winesync_ptr->valid()) {
+        winesync_ptr->set_pid(HUDElements.g_gamescopePid);
         ImGui::PushFont(HUDElements.sw_stats->font_secondary);
         ImguiNextColumnFirstItem();
         HUDElements.TextColored(HUDElements.colors.engine, "%s", "WSYNC");
         ImguiNextColumnOrNewRow();
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", HUDElements.winesync_ptr->get_method().c_str());
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", winesync_ptr->get_method());
         ImGui::PopFont();
     }
 }

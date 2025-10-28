@@ -89,9 +89,9 @@ void imgui_init()
 
     if (sw_stats.engine != EngineTypes::ZINK){
         sw_stats.engine = OPENGL;
-        if (lib_loaded("wined3d"))
+        if (lib_loaded("wined3d", HUDElements.g_gamescopePid))
             sw_stats.engine = WINED3D;
-        if (lib_loaded("libtogl.so") || lib_loaded("libtogl_client.so"))
+        if (lib_loaded("libtogl.so", HUDElements.g_gamescopePid) || lib_loaded("libtogl_client.so", HUDElements.g_gamescopePid))
             sw_stats.engine = TOGL;
     }
 

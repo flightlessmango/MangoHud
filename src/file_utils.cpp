@@ -9,9 +9,6 @@
 #include <cstring>
 #include <string>
 #include <spdlog/spdlog.h>
-#include <filesystem.h>
-
-namespace fs = ghc::filesystem;
 
 #ifndef PROCDIR
 #define PROCDIR "/proc"
@@ -188,17 +185,25 @@ std::string get_config_dir()
     return path;
 }
 
-bool lib_loaded(const std::string& lib) {
-    fs::path path(PROCDIR "/self/map_files/");
-    for (auto& p : fs::directory_iterator(path)) {
-        auto file = p.path().string();
-        auto sym = read_symlink(file.c_str());
-        if (to_lower(sym).find(lib) != std::string::npos) {
-            return true;
+bool lib_loaded(const std::string& lib, pid_t pid) {
+
+   std::string who = pid != -1 ? std::to_string(pid) : "self";
+   auto paths = { fs::path("/proc") / who / "map_files",
+            fs::path("/proc") / who / "fd" };
+    for (auto& path : paths) {
+        if (dir_exists(path.string())) {
+            for (auto& p : fs::directory_iterator(path)) {
+                auto file = p.path().string();
+                auto sym = read_symlink(file.c_str());
+                if (to_lower(sym).find(lib) != std::string::npos) {
+                    return true;
+                }
+            }
+        } else {
+            SPDLOG_DEBUG("tried to access path that doesn't exist {}", path.string());
         }
     }
     return false;
-
 }
 
 std::string remove_parentheses(const std::string& text) {
