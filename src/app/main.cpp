@@ -25,6 +25,8 @@
 #define GLFW_EXPOSE_NATIVE_X11
 #include <GLFW/glfw3native.h>
 #include <X11/Xatom.h>
+#include <X11/Xlib.h>
+#include <poll.h>
 
 using namespace std;
 
@@ -46,8 +48,27 @@ std::condition_variable mangoapp_cv;
 static uint8_t raw_msg[1024] = {0};
 static uint32_t screenWidth, screenHeight;
 
+static bool x_connection_ok(Display* dpy) {
+    if (!dpy)
+        return false;
+
+    int fd = XConnectionNumber(dpy);
+    if (fd < 0)
+        return false;
+
+    pollfd p{fd, 0, 0};
+    if (poll(&p, 1, 0) < 0)
+        return false;
+
+    return (p.revents & (POLLERR | POLLHUP | POLLNVAL)) == 0;
+}
+
 static unsigned int get_prop(const char* propName){
     Display *x11_display = glfwGetX11Display();
+    // Make sure Xorg display is still there before continuing
+    if (!x_connection_ok(x11_display))
+        return -1;
+
     Atom gamescope_focused = XInternAtom(x11_display, propName, false);
     auto scr = DefaultScreen(x11_display);
     auto root = RootWindow(x11_display, scr);
