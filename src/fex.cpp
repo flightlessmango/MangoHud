@@ -215,11 +215,6 @@ static void destroy_shm() {
 }
 
 static void init_shm(int pid) {
-    if (g_stats.shm_fd != -1) {
-        // Destroy first if the FD changed.
-        destroy_shm();
-    }
-
     // Initialize global hardware stats.
     g_stats.cycle_counter_frequency = get_cycle_counter_frequency();
     g_stats.hardware_concurrency = std::thread::hardware_concurrency();
@@ -263,6 +258,11 @@ static void init_shm(int pid) {
         // If the version read doesn't match the implementation then we can't read.
         fex_status = "version mismatch";
         goto err;
+    }
+
+    if (g_stats.shm_fd != -1) {
+        // Destroy first if the FD changed.
+        destroy_shm();
     }
 
     // Cache off the information, we have successfully loaded the stats SHM.
