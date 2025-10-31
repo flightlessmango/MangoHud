@@ -65,6 +65,7 @@ static notify_thread notifier;
 static bool cfg_inited = false;
 static ImVec2 window_size;
 static bool inited = false;
+static void* last_ctx;
 overlay_params params {};
 
 // seems to quit by itself though
@@ -107,15 +108,19 @@ void imgui_init()
 //static
 void imgui_create(void *ctx, const gl_wsi plat)
 {
-    if (inited)
+    if (!ctx)
         return;
 
-    if (!ctx)
+    if (ctx != last_ctx)
+	inited = false;
+
+    if (inited)
         return;
 
     imgui_shutdown();
     imgui_init();
     inited = true;
+    last_ctx = ctx;
 
     if (!gladLoadGL())
         spdlog::error("Failed to initialize OpenGL context, crash incoming");
@@ -190,8 +195,8 @@ void imgui_create(void *ctx, const gl_wsi plat)
 void imgui_shutdown()
 {
     if (state.imgui_ctx) {
-        ImGui::SetCurrentContext(state.imgui_ctx);
-        ImGui_ImplOpenGL3_Shutdown();
+        //ImGui::SetCurrentContext(state.imgui_ctx);
+        //ImGui_ImplOpenGL3_Shutdown();
         ImGui::DestroyContext(state.imgui_ctx);
         state.imgui_ctx = nullptr;
     }
@@ -202,10 +207,10 @@ void imgui_set_context(void *ctx, const gl_wsi plat)
 {
     if (!ctx)
         return;
-    imgui_create(ctx, plat);
+    //imgui_create(ctx, plat);
 }
 
-void imgui_render(unsigned int width, unsigned int height)
+void imgui_render(void* ctx, unsigned int width, unsigned int height)
 {
     if (!state.imgui_ctx)
         return;
@@ -232,7 +237,7 @@ void imgui_render(unsigned int width, unsigned int height)
         ImGui_ImplOpenGL3_CreateFontsTexture();
     }
 
-    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplOpenGL3_NewFrame(ctx);
     ImGui::NewFrame();
     {
         std::lock_guard<std::mutex> lk(notifier.mutex);

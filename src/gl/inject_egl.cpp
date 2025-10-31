@@ -61,6 +61,8 @@ static void* get_egl_proc_address(const char* name) {
     return func;
 }
 
+static void* (*pfn_eglGetCurrentContext)() = nullptr;
+
 EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf);
 EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf)
 {
@@ -69,6 +71,9 @@ EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf)
         pfn_eglSwapBuffers = reinterpret_cast<decltype(pfn_eglSwapBuffers)>(get_egl_proc_address("eglSwapBuffers"));
 
     if (!is_blacklisted()) {
+        if (!pfn_eglGetCurrentContext)
+            pfn_eglGetCurrentContext = reinterpret_cast<decltype(pfn_eglGetCurrentContext)>(get_egl_proc_address("eglGetCurrentContext"));
+        void* ctx = pfn_eglGetCurrentContext();
         static int (*pfn_eglQuerySurface)(void* dpy, void* surface, int attribute, int *value) = nullptr;
         if (!pfn_eglQuerySurface)
             pfn_eglQuerySurface = reinterpret_cast<decltype(pfn_eglQuerySurface)>(get_egl_proc_address("eglQuerySurface"));
@@ -78,7 +83,7 @@ EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf)
         int width=0, height=0;
         if (pfn_eglQuerySurface(dpy, surf, 0x3056, &height) &&
             pfn_eglQuerySurface(dpy, surf, 0x3057, &width))
-            imgui_render(width, height);
+            imgui_render(ctx, width, height);
 
         using namespace std::chrono_literals;
         if (fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_EARLY){
