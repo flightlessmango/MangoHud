@@ -12,6 +12,7 @@
 #include "overlay_params.h"
 #include "shell.h"
 #include "gpu.h"
+#include "obs/obs_studio.h"
 
 struct Function {
     std::function<void()> run;  // Using std::function instead of a raw function pointer for more flexibility
@@ -64,6 +65,7 @@ class HudElements{
 
         display_servers display_server = UNKNOWN;
         std::unique_ptr<Net> net = nullptr;
+        std::unique_ptr<ObsStudio> obs_ptr = nullptr;
 #ifdef __linux__
         std::unique_ptr<Shell> shell = nullptr;
 #endif
@@ -117,6 +119,7 @@ class HudElements{
         static void _display_session();
         static void fex_stats();
         static void ftrace();
+        static void obs();
 
         void convert_colors(const struct overlay_params& params);
         void convert_colors(bool do_conv, const struct overlay_params& params);
