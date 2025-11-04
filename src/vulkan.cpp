@@ -415,7 +415,7 @@ static void destroy_swapchain_data(struct swapchain_data *data)
 static struct overlay_draw *get_overlay_draw(struct swapchain_data *data, unsigned image_idx)
 {
    struct device_data *device_data = data->device;
-   struct overlay_draw *draw = data->draws.size() >= image_idx ?
+   struct overlay_draw *draw = data->draws.size() <= image_idx ?
                                nullptr : data->draws[image_idx];
 
    VkSemaphoreCreateInfo sem_info = {};
