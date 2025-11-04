@@ -76,15 +76,6 @@ struct swapchain_stats {
    enum EngineTypes engine;
 };
 
-struct fps_limit {
-   Clock::time_point frameStart;
-   Clock::time_point frameEnd;
-   Clock::duration targetFrameTime;
-   Clock::duration frameOverhead;
-   Clock::duration sleepTime;
-   enum fps_limit_method method;
-};
-
 struct benchmark_stats {
    float total;
    std::vector<float> fps_data;
@@ -132,7 +123,6 @@ inline const char* engine_name(struct swapchain_stats& sw_stats) {
     return short_pref || is_compact ? engines_short[engine] : engines[engine];
 }
 
-extern struct fps_limit fps_limit_stats;
 extern uint32_t deviceID;
 
 extern struct benchmark_stats benchmark;
@@ -157,7 +147,6 @@ void init_cpu_stats(overlay_params& params);
 void check_keybinds(overlay_params& params);
 void init_system_info(void);
 void check_for_vkbasalt_and_gamemode();
-void FpsLimiter(struct fps_limit& stats);
 void create_fonts(ImFontAtlas* font_atlas, const overlay_params& params, ImFont*& small_font, ImFont*& text_font, ImFont*& secondary_font);
 void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...);
 void center_text(const std::string& text);

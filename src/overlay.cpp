@@ -42,7 +42,6 @@ uint32_t deviceID;
 bool gui_open = false;
 bool fcat_open = false;
 struct benchmark_stats benchmark;
-struct fps_limit fps_limit_stats {};
 ImVec2 real_font_size;
 std::deque<logData> graph_data;
 overlay_params *_params {};
@@ -98,17 +97,6 @@ void init_spdlog()
 #endif
    }
 
-}
-
-void FpsLimiter(struct fps_limit& stats){
-   stats.sleepTime = stats.targetFrameTime - (stats.frameStart - stats.frameEnd);
-   if (stats.sleepTime > stats.frameOverhead) {
-      auto adjustedSleep = stats.sleepTime - stats.frameOverhead;
-      this_thread::sleep_for(adjustedSleep);
-      stats.frameOverhead = ((Clock::now() - stats.frameStart) - adjustedSleep);
-      if (stats.frameOverhead > stats.targetFrameTime / 2)
-         stats.frameOverhead = Clock::duration(0);
-   }
 }
 
 void update_hw_info(const struct overlay_params& params, uint32_t vendorID)

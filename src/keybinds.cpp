@@ -9,6 +9,7 @@
 #include "logging.h"
 #include "keybinds.h"
 #include "fps_metrics.h"
+#include "fps_limiter.h"
 
 Clock::time_point last_f2_press, toggle_fps_limit_press, toggle_preset_press, last_f12_press, reload_cfg_press, last_upload_press;
 
@@ -44,20 +45,7 @@ void check_keybinds(struct overlay_params& params){
    if (elapsedFpsLimitToggle >= keyPressDelay &&
        keys_are_pressed(real_params->toggle_fps_limit)) {
       toggle_fps_limit_press = now;
-      for (size_t i = 0; i < real_params->fps_limit.size(); i++){
-         float fps_limit = real_params->fps_limit[i];
-         // current fps limit equals vector entry, use next / first
-         if((fps_limit > 0 && fps_limit_stats.targetFrameTime == std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(1) / real_params->fps_limit[i]))
-               || (fps_limit == 0 && fps_limit_stats.targetFrameTime == fps_limit_stats.targetFrameTime.zero())) {
-            float newFpsLimit = i+1 == real_params->fps_limit.size() ? real_params->fps_limit[0] : real_params->fps_limit[i+1];
-            if(newFpsLimit > 0) {
-               fps_limit_stats.targetFrameTime = std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(1) / newFpsLimit);
-            } else {
-               fps_limit_stats.targetFrameTime = {};
-            }
-            break;
-         }
-      }
+      fps_limiter->next_limit();
    }
 
    if (elapsedPresetToggle >= keyPressDelay &&

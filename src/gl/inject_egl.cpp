@@ -14,6 +14,7 @@
 #ifdef HAVE_WAYLAND
 #include "wayland_hook.h"
 #endif
+#include "../fps_limiter.h"
 
 using namespace MangoHud::GL;
 
@@ -80,23 +81,15 @@ EXPORT_C_(unsigned int) eglSwapBuffers( void* dpy, void* surf)
             pfn_eglQuerySurface(dpy, surf, 0x3057, &width))
             imgui_render(width, height);
 
-        using namespace std::chrono_literals;
-        if (fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_EARLY){
-            fps_limit_stats.frameStart = Clock::now();
-            FpsLimiter(fps_limit_stats);
-            fps_limit_stats.frameEnd = Clock::now();
-        }
+        if (fps_limiter)
+            fps_limiter->limit(true);
     }
 
     int res = pfn_eglSwapBuffers(dpy, surf);
 
     if (!is_blacklisted()) {
-        using namespace std::chrono_literals;
-        if (fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_LATE){
-            fps_limit_stats.frameStart = Clock::now();
-            FpsLimiter(fps_limit_stats);
-            fps_limit_stats.frameEnd = Clock::now();
-        }
+        if (fps_limiter)
+            fps_limiter->limit(false);
     }
 
     return res;

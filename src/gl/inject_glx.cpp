@@ -20,6 +20,7 @@
 #include <glad/glad.h>
 #include "gl_hud.h"
 #include "../config.h"
+#include "../fps_limiter.h"
 
 using namespace MangoHud::GL;
 
@@ -182,18 +183,13 @@ EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
     glx.Load();
 
     do_imgui_swap(dpy, drawable);
-    using namespace std::chrono_literals;
-    if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_EARLY){
-        fps_limit_stats.frameStart = Clock::now();
-        FpsLimiter(fps_limit_stats);
-        fps_limit_stats.frameEnd = Clock::now();
-    }
+    if (fps_limiter)
+        fps_limiter->limit(true);
+
     glx.SwapBuffers(dpy, drawable);
-    if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_LATE){
-        fps_limit_stats.frameStart = Clock::now();
-        FpsLimiter(fps_limit_stats);
-        fps_limit_stats.frameEnd = Clock::now();
-    }
+    if (!is_blacklisted())
+        if (fps_limiter)
+            fps_limiter->limit(false);
 }
 
 EXPORT_C_(int64_t) glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t target_msc, int64_t divisor, int64_t remainder)
@@ -203,20 +199,14 @@ EXPORT_C_(int64_t) glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t targe
         return -1;
 
     do_imgui_swap(dpy, drawable);
-    using namespace std::chrono_literals;
-    if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_EARLY){
-        fps_limit_stats.frameStart = Clock::now();
-        FpsLimiter(fps_limit_stats);
-        fps_limit_stats.frameEnd = Clock::now();
-    }
+        if (fps_limiter)
+            fps_limiter->limit(true);
 
     int64_t ret = glx.SwapBuffersMscOML(dpy, drawable, target_msc, divisor, remainder);
 
-    if (!is_blacklisted() && fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_LATE){
-        fps_limit_stats.frameStart = Clock::now();
-        FpsLimiter(fps_limit_stats);
-        fps_limit_stats.frameEnd = Clock::now();
-    }
+    if (!is_blacklisted())
+        if (fps_limiter)
+            fps_limiter->limit(true);
 
     return ret;
 }

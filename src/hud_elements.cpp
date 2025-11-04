@@ -28,6 +28,7 @@
 #include "fex.h"
 #include "ftrace.h"
 #include "winesync.h"
+#include "fps_limiter.h"
 
 #define CHAR_CELSIUS    "\xe2\x84\x83"
 #define CHAR_FAHRENHEIT "\xe2\x84\x89"
@@ -1107,18 +1108,17 @@ void HudElements::resolution(){
 
 void HudElements::show_fps_limit(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_show_fps_limit]){
-        int fps = 0;
-        if (fps_limit_stats.targetFrameTime.count())
-            fps = 1000000000 / fps_limit_stats.targetFrameTime.count();
-        ImguiNextColumnFirstItem();
-        ImGui::PushFont(HUDElements.sw_stats->font_secondary);
-        const char* method = fps_limit_stats.method == FPS_LIMIT_METHOD_EARLY ? "early" : "late";
-        HUDElements.TextColored(HUDElements.colors.engine, "%s","FPS limit");
-        ImguiNextColumnOrNewRow();
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", method);
-        ImguiNextColumnOrNewRow();
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", fps);
-        ImGui::PopFont();
+        if (fps_limiter && fps_limiter->active) {
+            ImguiNextColumnFirstItem();
+            ImGui::PushFont(HUDElements.sw_stats->font_secondary);
+            const char* method = fps_limiter->use_early ? "early" : "late";
+            HUDElements.TextColored(HUDElements.colors.engine, "%s","FPS limit");
+            ImguiNextColumnOrNewRow();
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", method);
+            ImguiNextColumnOrNewRow();
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", fps_limiter->current_limit());
+            ImGui::PopFont();
+        }
     }
 }
 

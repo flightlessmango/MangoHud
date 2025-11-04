@@ -58,6 +58,7 @@
 #ifdef __linux__
 #include <dlfcn.h>
 #include "implot.h"
+#include "fps_limiter.h"
 #endif
 
 using namespace std;
@@ -1640,12 +1641,8 @@ static VkResult overlay_QueuePresentKHR(
     VkQueue                                     queue,
     const VkPresentInfoKHR*                     pPresentInfo)
 {
-   using namespace std::chrono_literals;
-   if (fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_EARLY){
-      fps_limit_stats.frameStart = Clock::now();
-      FpsLimiter(fps_limit_stats);
-      fps_limit_stats.frameEnd = Clock::now();
-   }
+   if (fps_limiter)
+      fps_limiter->limit(true);
 
    struct queue_data *queue_data = FIND(struct queue_data, queue);
 
@@ -1689,11 +1686,8 @@ static VkResult overlay_QueuePresentKHR(
          result = chain_result;
    }
 
-   if (fps_limit_stats.targetFrameTime > 0s && fps_limit_stats.method == FPS_LIMIT_METHOD_LATE){
-      fps_limit_stats.frameStart = Clock::now();
-      FpsLimiter(fps_limit_stats);
-      fps_limit_stats.frameEnd = Clock::now();
-   }
+   if (fps_limiter)
+      fps_limiter->limit(false);
 
    return result;
 }

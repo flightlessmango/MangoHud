@@ -31,6 +31,7 @@
 #include "file_utils.h"
 #include "fex.h"
 #include "ftrace.h"
+#include "fps_limiter.h"
 
 #if defined(HAVE_X11) || defined(HAVE_WAYLAND)
 #include <xkbcommon/xkbcommon.h>
@@ -47,6 +48,7 @@ std::mutex config_mtx;
 std::condition_variable config_cv;
 bool config_ready = false;
 static std::shared_ptr<overlay_params> g_params;
+std::shared_ptr<fpsLimiter> fps_limiter;
 
 #if __cplusplus >= 201703L
 
@@ -1079,14 +1081,6 @@ parse_overlay_config(struct overlay_params *params,
          } catch(...) {}
       }
    }
-   // set frametime limit
-   using namespace std::chrono;
-   if (params->fps_limit.size() > 0 && params->fps_limit[0] > 0)
-      fps_limit_stats.targetFrameTime = duration_cast<Clock::duration>(duration<double>(1) / params->fps_limit[0]);
-   else
-      fps_limit_stats.targetFrameTime = {};
-
-   fps_limit_stats.method = params->fps_limit_method;
 
 #ifdef HAVE_DBUS
    if (params->enabled[OVERLAY_PARAM_ENABLED_media_player]) {
@@ -1162,6 +1156,8 @@ parse_overlay_config(struct overlay_params *params,
    auto snapshot = std::make_shared<overlay_params>(*params);
    std::atomic_store_explicit(&g_params, std::move(snapshot), std::memory_order_release);
    HUDElements.params = get_params();
+
+   fps_limiter = std::make_unique<fpsLimiter>(params->fps_limit_method ? false : true);
 
    if (!gpus)
       gpus = std::make_unique<GPUS>();
