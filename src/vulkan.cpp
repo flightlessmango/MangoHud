@@ -166,7 +166,7 @@ struct swapchain_data {
 
    VkCommandPool command_pool;
 
-   std::list<overlay_draw *> draws; /* List of struct overlay_draw */
+   std::vector<overlay_draw *> draws; /* vector of struct overlay_draw */
 
    bool font_uploaded;
    VkImage font_image;
@@ -412,20 +412,20 @@ static void destroy_swapchain_data(struct swapchain_data *data)
    delete data;
 }
 
-static struct overlay_draw *get_overlay_draw(struct swapchain_data *data)
+static struct overlay_draw *get_overlay_draw(struct swapchain_data *data, unsigned image_idx)
 {
    struct device_data *device_data = data->device;
-   struct overlay_draw *draw = data->draws.empty() ?
-      nullptr : data->draws.front();
+   struct overlay_draw *draw = data->draws.size() >= image_idx ?
+                               nullptr : data->draws[image_idx];
 
    VkSemaphoreCreateInfo sem_info = {};
    sem_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-   if (draw && device_data->vtable.GetFenceStatus(device_data->device, draw->fence) == VK_SUCCESS) {
+   if (draw) {
+      VK_CHECK(device_data->vtable.WaitForFences(device_data->device, 1,
+                                                 &draw->fence, VK_TRUE, ~0ull));
       VK_CHECK(device_data->vtable.ResetFences(device_data->device,
                                                1, &draw->fence));
-      data->draws.pop_front();
-      data->draws.push_back(draw);
       return draw;
    }
 
@@ -809,7 +809,7 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
    if (!draw_data || draw_data->TotalVtxCount == 0 || get_params()->no_display)
       return nullptr;
 
-   struct overlay_draw *draw = get_overlay_draw(data);
+   struct overlay_draw *draw = get_overlay_draw(data, image_index);
 
    device_data->vtable.ResetCommandBuffer(draw->command_buffer, 0);
 
