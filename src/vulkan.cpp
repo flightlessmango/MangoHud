@@ -58,8 +58,8 @@
 #ifdef __linux__
 #include <dlfcn.h>
 #include "implot.h"
-#include "fps_limiter.h"
 #endif
+#include "fps_limiter.h"
 
 using namespace std;
 
