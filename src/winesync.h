@@ -8,7 +8,7 @@
 namespace fs = ghc::filesystem;
 class WineSync {
     private:
-        const std::unordered_map<std::string, std::string> methods {
+        inline static const std::unordered_map<std::string, std::string> methods {
             {"NONE", "NONE"},
             {"winesync", "Wserver"},
             {"esync", "Esync"},
@@ -31,9 +31,9 @@ class WineSync {
                 return;
             }
 
-            for (auto& p : methods) {
-                if (lib_loaded(p.first, pid)) {
-                    method = p.first;
+            for (auto& [key, val] : methods) {
+                if (lib_loaded(key, pid)) {
+                    method = key;
                     break;
                 }
             }
