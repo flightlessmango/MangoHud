@@ -1312,21 +1312,22 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
          add_to_options(params, "frame_timing_detailed", "1");
          add_to_options(params, "network", "1");
          add_to_options(params, "present_mode", "0");
-         
+
          // Disable some options if steamdeck / other known handhelds
-         if (gpus) {
-            for (auto gpu : gpus->available_gpus) {
-               if (gpu->device_id == 0x1435 || gpu->device_id == 0x163f || gpu->device_id == 0x1681 || gpu->device_id == 0x15bf){
-                  add_to_options(params, "gpu_fan", "0");
-                  add_to_options(params, "gpu_junction_temp", "0");
-                  add_to_options(params, "gpu_voltage", "0");
-                  add_to_options(params, "gpu_mem_temp", "0");
-                  add_to_options(params, "gpu_efficiency", "0");
-               }
-               // Rembrandt and Phoenix APUs (Z1, Z1E, Z2 Go)
-               if (gpu->device_id == 0x1681 || gpu->device_id == 0x15bf){
-                  add_to_options(params, "gpu_power_limit", "0");
-               }
+         if (!gpus)
+            gpus = std::make_unique<GPUS>();
+
+         for (auto gpu : gpus->available_gpus) {
+            if (gpu->device_id == 0x1435 || gpu->device_id == 0x163f || gpu->device_id == 0x1681 || gpu->device_id == 0x15bf){
+               add_to_options(params, "gpu_fan", "0");
+               add_to_options(params, "gpu_junction_temp", "0");
+               add_to_options(params, "gpu_voltage", "0");
+               add_to_options(params, "gpu_mem_temp", "0");
+               add_to_options(params, "gpu_efficiency", "0");
+            }
+            // Rembrandt and Phoenix APUs (Z1, Z1E, Z2 Go)
+            if (gpu->device_id == 0x1681 || gpu->device_id == 0x15bf){
+               add_to_options(params, "gpu_power_limit", "0");
             }
          }
 
