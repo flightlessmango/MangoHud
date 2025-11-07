@@ -91,36 +91,45 @@ struct LOAD_DATA {
 };
 
 
-inline const char* engine_name(struct swapchain_stats& sw_stats) {
-   const char* engines[] = {"Unknown", "OpenGL", "VULKAN", "DXVK", "VKD3D", "DAMAVAND", "ZINK", "WINED3D", "Feral3D", "ToGL", "GAMESCOPE"};
-   const char* engines_short[] = {"Unknown", "OGL", "VK", "DXVK", "VKD3D", "DV", "ZINK", "WD3D", "Feral3D", "ToGL", "GS"};
+inline const char* engine_name(const swapchain_stats& sw_stats) {
+   const char* engines[] = {
+      "Unknown", "OpenGL", "VULKAN", "DXVK", "VKD3D", "DAMAVAND",
+      "ZINK", "WINED3D", "Feral3D", "ToGL", "GAMESCOPE"
+   };
+   const char* engines_short[] = {
+      "Unknown", "OGL", "VK", "DXVK", "VKD3D", "DV",
+       "ZINK", "WD3D", "Feral3D", "ToGL", "GS"
+   };
+
    auto engine = sw_stats.engine;
    auto params = get_params();
-   auto& enabled = params->enabled;
+   if (!params)
+      return "Unknown";
 
-   // if fps_text is set, we ignore all other options
    if (!params->fps_text.empty())
       return params->fps_text.c_str();
 
-    const bool is_compact =
-        enabled[OVERLAY_PARAM_ENABLED_hud_compact] ||
-        enabled[OVERLAY_PARAM_ENABLED_horizontal];
+   auto& en = params->enabled;
 
-    const bool short_pref = enabled[OVERLAY_PARAM_ENABLED_engine_short_names];
+   if (en[OVERLAY_PARAM_ENABLED_hide_engine_names])
+      return "FPS";
 
-    if (is_compact && !short_pref)
-        return "FPS";
+   if (en[OVERLAY_PARAM_ENABLED_dx_api]) {
+      if (engine == EngineTypes::VKD3D)
+         return "DX12";
 
-    if (enabled[OVERLAY_PARAM_ENABLED_dx_api]) {
-        if (engine == EngineTypes::VKD3D) return "DX12";
-        if (engine == EngineTypes::DXVK) {
-            if (sw_stats.applicationVersion == 1) return "DX9";
-            if (sw_stats.applicationVersion == 2) return "DX11";
-            return "DX?";
-        }
-    }
+      if (engine == EngineTypes::DXVK) {
+         if (sw_stats.applicationVersion == 1)
+            return "DX9";
 
-    return short_pref || is_compact ? engines_short[engine] : engines[engine];
+         if (sw_stats.applicationVersion == 2)
+            return "DX11";
+
+         return "DX?";
+      }
+   }
+
+   return en[OVERLAY_PARAM_ENABLED_engine_short_names] ? engines_short[engine] : engines[engine];
 }
 
 extern uint32_t deviceID;
