@@ -26,7 +26,7 @@ struct Tracepoint {
     TracepointType type;
     std::string field_name;
 
-    static constexpr unsigned PLOT_DATA_CAPACITY = 256;
+    static constexpr unsigned PLOT_DATA_CAPACITY = 200;
 
     struct CollectionValue {
         float f { 0 };
