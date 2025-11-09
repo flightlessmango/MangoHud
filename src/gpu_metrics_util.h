@@ -53,7 +53,7 @@ class Throttling {
         uint32_t vendor_id;
         // CORE, HOTSPOT, SOC bits
         // trying to roughly match the bits that are exposed in v3
-        uint64_t indep_temp_mask = (1ULL << 33 | 1ULL << 36 || 1ULL << 37);
+        uint64_t indep_temp_mask = ((1ULL << 33) | (1ULL << 36) | (1ULL << 37));
 
 		Throttling(uint32_t vendor_id)
 			: power(200, 0.0f),
