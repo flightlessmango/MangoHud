@@ -61,6 +61,8 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		is_current = ((indep >> 16) & 0xFF) != 0;
 		is_temp    = ((indep >> 32) & 0xFFFF) != 0;
 		is_other   = ((indep >> 56) & 0xFF) != 0;
+		if (throttling)
+			throttling->indep_throttle_status = indep;
 	} else if (header->format_revision == 2) {
 		// APUs
 		this->is_apu = true;
@@ -143,6 +145,8 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 			is_current = ((indep >> 16) & 0xFF) != 0;
 			is_temp    = ((indep >> 32) & 0xFFFF) != 0;
 			is_other   = ((indep >> 56) & 0xFF) != 0;
+			if (throttling)
+				throttling->indep_throttle_status = indep;
 		}
 	} else if (header->format_revision == 3) {
 		this->is_apu = true;
@@ -166,18 +170,44 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		metrics->average_gfx_power_w = amdgpu_metrics->average_gfx_power / 1000.0;
 		metrics->current_gfxclk_mhz = amdgpu_metrics->average_gfxclk_frequency;
 		metrics->current_uclk_mhz = amdgpu_metrics->average_uclk_frequency;
+		
+		if (previous_metrics.common_header.structure_size == 0) {
+			previous_metrics = *amdgpu_metrics;
+			is_temp = false;
+			is_power = false;
+			is_current = false;
+			is_other = false;
+			if (throttling) {
+				throttling->use_v3 = true;
+				throttling->v3_power.store(false);
+				throttling->v3_thermal.store(false);
+			}
+			return;	
+		} else {
+			uint32_t d_thm_core = V3_THROTTLING_DELTA(thm_core);
+			uint32_t d_thm_gfx  = V3_THROTTLING_DELTA(thm_gfx);
+			uint32_t d_thm_soc  = V3_THROTTLING_DELTA(thm_soc);
+			uint32_t d_spl      = V3_THROTTLING_DELTA(spl);
+			uint32_t d_fppt     = V3_THROTTLING_DELTA(fppt);
+			uint32_t d_sppt     = V3_THROTTLING_DELTA(sppt);
+			uint32_t d_prochot  = V3_THROTTLING_DELTA(prochot);
+			is_temp = (d_thm_core | d_thm_gfx | d_thm_soc | d_prochot) > 0;
+			is_power = (d_spl | d_fppt | d_sppt) > 0;
+			// there is no current throttling flags in v3_0
+			is_current = false;
+			// also no "other" throttling in v3_0
+			is_other = false;
 
-		is_temp    = (amdgpu_metrics->throttle_residency_thm_core ||
-					amdgpu_metrics->throttle_residency_thm_gfx  ||
-					amdgpu_metrics->throttle_residency_thm_soc);
+			previous_metrics = *amdgpu_metrics;
 
-		is_power   = (amdgpu_metrics->throttle_residency_spl ||
-					amdgpu_metrics->throttle_residency_fppt ||
-					amdgpu_metrics->throttle_residency_sppt);
-
-		is_current = (amdgpu_metrics->throttle_residency_prochot != 0);
-		is_other   = false;
-
+			if (throttling) {
+				throttling->use_v3 = true;
+				// we only check spl, this attempts to match how we handle it in v1 and v2
+				// as close as we can
+				throttling->v3_power.store(d_spl > 0);
+				throttling->v3_thermal.store(is_temp);
+			}
+		}
 	}
 
 	/* Throttling: See

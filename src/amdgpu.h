@@ -418,6 +418,9 @@ class AMDGPU {
 		std::mutex metrics_mutex;
 		gpu_metrics metrics;
 		struct amdgpu_common_metrics amdgpu_common_metrics;
+		struct gpu_metrics_v3_0 previous_metrics{};
+		#define V3_THROTTLING_DELTA(name) \
+		((amdgpu_metrics)->throttle_residency_##name - (previous_metrics).throttle_residency_##name)
 
 #ifndef TEST_ONLY
 		std::unique_ptr<GPU_fdinfo> fdinfo_helper;
