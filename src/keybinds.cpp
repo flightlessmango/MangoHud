@@ -64,7 +64,6 @@ void check_keybinds(struct overlay_params& params){
    if (elapsedF12 >= keyPressDelay &&
        keys_are_pressed(real_params->toggle_hud)) {
       last_f12_press = now;
-      printf("no display toggle\n");
       real_params->no_display = !real_params->no_display;
    }
 
