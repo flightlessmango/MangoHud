@@ -29,6 +29,7 @@ int64_t glXSwapBuffersMscOML(void* dpy, void* drawable, int64_t target_msc, int6
 unsigned int eglSwapBuffers( void*, void* );
 void* eglGetPlatformDisplay( unsigned int, void*, const intptr_t* );
 void* eglGetDisplay( void* );
+unsigned int eglDestroyContext( void*, void* );
 void* eglGetProcAddress( const char* );
 int eglTerminate( void* );
 

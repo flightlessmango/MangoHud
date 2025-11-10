@@ -150,6 +150,7 @@ CREATE_FWD(int64_t, glXSwapBuffersMscOML,
            (void* dpy, void* drawable, int64_t target_msc,
             int64_t divisor, int64_t remainder),
            dpy, drawable, target_msc, divisor, remainder)
+CREATE_FWD_VOID(glXDestroyContext, (void *dpy, void *ctx), dpy, ctx)
 CREATE_FWD(void*, glXGetProcAddress, (const unsigned char* procName), procName)
 CREATE_FWD(void*, glXGetProcAddressARB, (const unsigned char* procName), procName)
 #endif
@@ -162,6 +163,7 @@ CREATE_FWD(void*, eglGetPlatformDisplay,
 CREATE_FWD(unsigned int, eglSwapBuffers, (void* dpy, void* surf), dpy, surf)
 CREATE_FWD(void*, eglGetProcAddress, (const char* procName), procName)
 CREATE_FWD(int, eglTerminate, (void *display), display)
+CREATE_FWD(unsigned int, eglDestroyContext, (void *dpy, void *ctx), dpy, ctx)
 
 #undef CREATE_FWD
 #undef CREATE_FWD_VOID
@@ -176,9 +178,11 @@ static struct func_ptr hooks[] = {
 #ifdef HAVE_X11
     ADD_HOOK(glXGetProcAddress),
     ADD_HOOK(glXGetProcAddressARB),
+    ADD_HOOK(glXDestroyContext),
     ADD_HOOK(glXSwapBuffers),
     ADD_HOOK(glXSwapBuffersMscOML),
 #endif
+    ADD_HOOK(eglDestroyContext),
     ADD_HOOK(eglSwapBuffers),
     ADD_HOOK(eglGetPlatformDisplay),
     ADD_HOOK(eglGetDisplay),
