@@ -281,8 +281,19 @@ void Logger::stop_logging() {
   if (log_thread.joinable()) log_thread.join();
 
   calculate_benchmark_data();
-  output_file.close();
-  writeSummary(m_log_files.back());
+  try {
+      if (output_file.is_open()) {
+          output_file.close();
+      }
+  } catch (...) {
+    SPDLOG_INFO("Something went wrong when closing output_file");
+  }
+
+  if (!m_log_files.empty())
+    writeSummary(m_log_files.back());
+  else
+    SPDLOG_INFO("Can't write summary because m_log_files is empty");
+
   clear_log_data();
 #ifdef __linux__
   control_client_check(HUDElements.params->control, global_control_client, gpu.c_str());
