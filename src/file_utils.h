@@ -2,11 +2,13 @@
 #ifndef MANGOHUD_FILE_UTILS_H
 #define MANGOHUD_FILE_UTILS_H
 
+#include <array>
+#include <cinttypes>
+#include <filesystem.h>
+#include <regex>
 #include <string>
 #include <vector>
-#include <regex>
-#include <array>
-#include <filesystem.h>
+
 namespace fs = ghc::filesystem;
 
 enum LS_FLAGS
@@ -30,5 +32,25 @@ std::string get_config_dir();
 bool lib_loaded(const std::string& lib, pid_t pid);
 std::string remove_parentheses(const std::string&);
 std::string to_lower(const std::string& str);
+
+
+/** Read a single value from sysfs file */
+static inline int read_as_int(FILE* f, int d = 0) {
+    rewind(f);
+    fflush(f);
+    int v;
+    if (fscanf(f, "%d" , &v) != 1)
+        return d;
+    return v;
+}
+
+static inline int64_t read_as_int64(FILE* f, int64_t d = 0) {
+    rewind(f);
+    fflush(f);
+    int64_t v;
+    if (fscanf(f, "%" PRId64, &v) != 1)
+        return d;
+    return v;
+}
 
 #endif //MANGOHUD_FILE_UTILS_H
