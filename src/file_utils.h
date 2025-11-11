@@ -34,21 +34,25 @@ std::string remove_parentheses(const std::string&);
 std::string to_lower(const std::string& str);
 
 
-/** Read a single value from sysfs file */
-static inline int read_as_int(FILE* f, int d = 0) {
-    rewind(f);
-    fflush(f);
-    int v;
-    if (fscanf(f, "%d" , &v) != 1)
-        return d;
-    return v;
+namespace detail {
+
+    // using template specialization to let the compiler figure it out
+    template<typename T> const char* type_to_fmt();
+    template<> inline const char* type_to_fmt<int>() { return "%d"; }
+    template<> inline const char* type_to_fmt<int64_t>() { return "%" PRIi64; }
+    template<> inline const char* type_to_fmt<uint64_t>() { return "%" SCNi64; }
+    template<> inline const char* type_to_fmt<float>() { return "%f"; }
+    template<> inline const char* type_to_fmt<double>() { return "%lf"; }
+
 }
 
-static inline int64_t read_as_int64(FILE* f, int64_t d = 0) {
+/** Read a single value from sysfs file */
+template<typename ValueType>
+ValueType read_as(FILE* f, ValueType d = 0) {
     rewind(f);
     fflush(f);
-    int64_t v;
-    if (fscanf(f, "%" PRId64, &v) != 1)
+    ValueType v;
+    if (fscanf(f, detail::type_to_fmt<ValueType>(), &v) != 1)
         return d;
     return v;
 }
