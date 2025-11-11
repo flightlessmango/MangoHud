@@ -4,6 +4,7 @@
 
 #include <cinttypes>
 #include <filesystem.h>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -44,12 +45,12 @@ namespace detail {
 
 /** Read a single value from sysfs file */
 template<typename ValueType>
-ValueType read_as(FILE* f, ValueType d = 0) {
+std::optional<ValueType> read_as(FILE* f) {
     rewind(f);
     fflush(f);
     ValueType v;
     if (fscanf(f, detail::type_to_fmt<ValueType>(), &v) != 1)
-        return d;
+        return {};
     return v;
 }
 

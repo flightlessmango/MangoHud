@@ -328,10 +328,10 @@ void AMDGPU::metrics_polling_thread() {
 
 void AMDGPU::get_sysfs_metrics() {
 	if (sysfs_nodes.busy)
-		metrics.load = read_as<int>(sysfs_nodes.busy);
+		metrics.load = read_as<int>(sysfs_nodes.busy).value_or(0);
 
 	if (sysfs_nodes.memory_clock)
-		metrics.MemClock = read_as<int64_t>(sysfs_nodes.memory_clock) / 1000000;
+		metrics.MemClock = read_as<int64_t>(sysfs_nodes.memory_clock).value_or(0) / 1000000;
 
 	// TODO: on some gpus this will use the power1_input instead
 	// this value is instantaneous and should be averaged over time
@@ -344,7 +344,7 @@ void AMDGPU::get_sysfs_metrics() {
 	} else
 #endif
 	if (sysfs_nodes.power_usage)
-		metrics.powerUsage = read_as<int64_t>(sysfs_nodes.power_usage) / 1000000;
+		metrics.powerUsage = read_as<int64_t>(sysfs_nodes.power_usage).value_or(0) / 1000000;
 
 #ifndef TEST_ONLY
 	if (!get_params()->enabled[OVERLAY_PARAM_ENABLED_gpu_power_limit]) {
@@ -354,38 +354,38 @@ void AMDGPU::get_sysfs_metrics() {
 	} else
 #endif
 	if (sysfs_nodes.power_limit)
-		metrics.powerLimit = read_as<int64_t>(sysfs_nodes.power_limit) / 1000000;
+		metrics.powerLimit = read_as<int64_t>(sysfs_nodes.power_limit).value_or(0) / 1000000;
 
 	if (sysfs_nodes.fan) {
-		metrics.fan_speed = read_as<int64_t>(sysfs_nodes.fan);
+		metrics.fan_speed = read_as<int64_t>(sysfs_nodes.fan).value_or(0);
 		metrics.fan_rpm = true;
 	}
 
 	if (sysfs_nodes.vram_total)
-		metrics.memoryTotal = float(read_as<int64_t>(sysfs_nodes.vram_total)) / (1024 * 1024 * 1024);
+		metrics.memoryTotal = float(read_as<int64_t>(sysfs_nodes.vram_total).value_or(0)) / (1024 * 1024 * 1024);
 
 	if (sysfs_nodes.vram_used)
-		metrics.sys_vram_used = float(read_as<int64_t>(sysfs_nodes.vram_used)) / (1024 * 1024 * 1024);
+		metrics.sys_vram_used = float(read_as<int64_t>(sysfs_nodes.vram_used).value_or(0)) / (1024 * 1024 * 1024);
 
 	// On some GPUs SMU can sometimes return the wrong temperature.
 	// As HWMON is way more visible than the SMU metrics, let's always trust it as it is the most likely to work
 	if (sysfs_nodes.core_clock)
-		metrics.CoreClock = read_as<int64_t>(sysfs_nodes.core_clock) / 1000000;
+		metrics.CoreClock = read_as<int64_t>(sysfs_nodes.core_clock).value_or(0) / 1000000;
 
 	if (sysfs_nodes.temp)
-		metrics.temp = read_as<int>(sysfs_nodes.temp) / 1000;
+		metrics.temp = read_as<int>(sysfs_nodes.temp).value_or(0) / 1000;
 
 	if (sysfs_nodes.junction_temp)
-		metrics.junction_temp = read_as<int>(sysfs_nodes.junction_temp) / 1000;
+		metrics.junction_temp = read_as<int>(sysfs_nodes.junction_temp).value_or(0) / 1000;
 
 	if (sysfs_nodes.memory_temp)
-		metrics.memory_temp = read_as<int>(sysfs_nodes.memory_temp) / 1000;
+		metrics.memory_temp = read_as<int>(sysfs_nodes.memory_temp).value_or(0) / 1000;
 
 	if (sysfs_nodes.gtt_used)
-		metrics.gtt_used = float(read_as<int64_t>(sysfs_nodes.gtt_used)) / (1024 * 1024 * 1024);
+		metrics.gtt_used = float(read_as<int64_t>(sysfs_nodes.gtt_used).value_or(0)) / (1024 * 1024 * 1024);
 
 	if (sysfs_nodes.gpu_voltage_soc)
-		metrics.voltage = read_as<int64_t>(sysfs_nodes.gpu_voltage_soc);
+		metrics.voltage = read_as<int64_t>(sysfs_nodes.gpu_voltage_soc).value_or(0);
 }
 
 AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id) {
