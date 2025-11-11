@@ -11,6 +11,28 @@
 #include "logging.h"
 #include "mesa/util/macros.h"
 
+namespace {
+
+	inline int read_as_int(FILE* f) {
+		rewind(f);
+		fflush(f);
+		int v;
+		if (fscanf(f, "%d" , &v) != 1)
+			return 0;
+		return v;
+	}
+
+	inline int64_t read_as_int64(FILE* f) {
+		rewind(f);
+		fflush(f);
+		int64_t v;
+		if (fscanf(f, "%" PRId64, &v) != 1)
+			return 0;
+		return v;
+	}
+
+}
+
 
 #define IS_VALID_METRIC(FIELD) (FIELD != 0xffff)
 void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
@@ -327,24 +349,11 @@ void AMDGPU::metrics_polling_thread() {
 }
 
 void AMDGPU::get_sysfs_metrics() {
-    int64_t value = 0;
-	if (sysfs_nodes.busy) {
-		rewind(sysfs_nodes.busy);
-		fflush(sysfs_nodes.busy);
-		int value = 0;
-		if (fscanf(sysfs_nodes.busy, "%d", &value) != 1)
-			value = 0;
-		metrics.load = value;
-	}
+	if (sysfs_nodes.busy)
+		metrics.load = read_as_int(sysfs_nodes.busy);
 
-	if (sysfs_nodes.memory_clock) {
-		rewind(sysfs_nodes.memory_clock);
-		fflush(sysfs_nodes.memory_clock);
-		if (fscanf(sysfs_nodes.memory_clock, "%" PRId64, &value) != 1)
-			value = 0;
-
-		metrics.MemClock = value / 1000000;
-	}
+	if (sysfs_nodes.memory_clock)
+		metrics.MemClock = read_as_int64(sysfs_nodes.memory_clock) / 1000000;
 
 	// TODO: on some gpus this will use the power1_input instead
 	// this value is instantaneous and should be averaged over time
@@ -356,14 +365,8 @@ void AMDGPU::get_sysfs_metrics() {
 		metrics.powerUsage = 0;
 	} else
 #endif
-	if (sysfs_nodes.power_usage) {
-		rewind(sysfs_nodes.power_usage);
-		fflush(sysfs_nodes.power_usage);
-		if (fscanf(sysfs_nodes.power_usage, "%" PRId64, &value) != 1)
-			value = 0;
-
-		metrics.powerUsage = value / 1000000;
-	}
+	if (sysfs_nodes.power_usage)
+		metrics.powerUsage = read_as_int64(sysfs_nodes.power_usage) / 1000000;
 
 #ifndef TEST_ONLY
 	if (!get_params()->enabled[OVERLAY_PARAM_ENABLED_gpu_power_limit]) {
@@ -372,92 +375,39 @@ void AMDGPU::get_sysfs_metrics() {
 		metrics.powerLimit = 0;
 	} else
 #endif
-	if (sysfs_nodes.power_limit) {
-		rewind(sysfs_nodes.power_limit);
-		fflush(sysfs_nodes.power_limit);
-		if (fscanf(sysfs_nodes.power_limit, "%" PRId64, &value) != 1)
-			value = 0;
-
-		metrics.powerLimit = value / 1000000;
-	}
+	if (sysfs_nodes.power_limit)
+		metrics.powerLimit = read_as_int64(sysfs_nodes.power_limit) / 1000000;
 
 	if (sysfs_nodes.fan) {
-		rewind(sysfs_nodes.fan);
-		fflush(sysfs_nodes.fan);
-		if (fscanf(sysfs_nodes.fan, "%" PRId64, &value) != 1)
-			value = 0;
-		metrics.fan_speed = value;
+		metrics.fan_speed = read_as_int64(sysfs_nodes.fan);
 		metrics.fan_rpm = true;
 	}
 
-	if (sysfs_nodes.vram_total) {
-		rewind(sysfs_nodes.vram_total);
-		fflush(sysfs_nodes.vram_total);
-		if (fscanf(sysfs_nodes.vram_total, "%" PRId64, &value) != 1)
-			value = 0;
-		metrics.memoryTotal = float(value) / (1024 * 1024 * 1024);
-	}
+	if (sysfs_nodes.vram_total)
+		metrics.memoryTotal = float(read_as_int64(sysfs_nodes.vram_total)) / (1024 * 1024 * 1024);
 
-	if (sysfs_nodes.vram_used) {
-		rewind(sysfs_nodes.vram_used);
-		fflush(sysfs_nodes.vram_used);
-		if (fscanf(sysfs_nodes.vram_used, "%" PRId64, &value) != 1)
-			value = 0;
-		metrics.sys_vram_used = float(value) / (1024 * 1024 * 1024);
-	}
+	if (sysfs_nodes.vram_used)
+		metrics.sys_vram_used = float(read_as_int64(sysfs_nodes.vram_used)) / (1024 * 1024 * 1024);
+
 	// On some GPUs SMU can sometimes return the wrong temperature.
 	// As HWMON is way more visible than the SMU metrics, let's always trust it as it is the most likely to work
-	if (sysfs_nodes.core_clock) {
-		rewind(sysfs_nodes.core_clock);
-		fflush(sysfs_nodes.core_clock);
-		if (fscanf(sysfs_nodes.core_clock, "%" PRId64, &value) != 1)
-			value = 0;
+	if (sysfs_nodes.core_clock)
+		metrics.CoreClock = read_as_int64(sysfs_nodes.core_clock) / 1000000;
 
-		metrics.CoreClock = value / 1000000;
-	}
+	if (sysfs_nodes.temp)
+		metrics.temp = read_as_int(sysfs_nodes.temp) / 1000;
 
-	if (sysfs_nodes.temp){
-		rewind(sysfs_nodes.temp);
-		fflush(sysfs_nodes.temp);
-		int value = 0;
-		if (fscanf(sysfs_nodes.temp, "%d", &value) != 1)
-			value = 0;
-		metrics.temp = value / 1000;
-	}
+	if (sysfs_nodes.junction_temp)
+		metrics.junction_temp = read_as_int(sysfs_nodes.junction_temp) / 1000;
 
-	if (sysfs_nodes.junction_temp){
-		rewind(sysfs_nodes.junction_temp);
-		fflush(sysfs_nodes.junction_temp);
-		int value = 0;
-		if (fscanf(sysfs_nodes.junction_temp, "%d", &value) != 1)
-			value = 0;
-		metrics.junction_temp = value / 1000;
-	}
+	if (sysfs_nodes.memory_temp)
+		metrics.memory_temp = read_as_int(sysfs_nodes.memory_temp) / 1000;
 
-	if (sysfs_nodes.memory_temp){
-		rewind(sysfs_nodes.memory_temp);
-		fflush(sysfs_nodes.memory_temp);
-		int value = 0;
-		if (fscanf(sysfs_nodes.memory_temp, "%d", &value) != 1)
-			value = 0;
-		metrics.memory_temp = value / 1000;
-	}
+	if (sysfs_nodes.gtt_used)
+		metrics.gtt_used = float(read_as_int64(sysfs_nodes.gtt_used)) / (1024 * 1024 * 1024);
 
-	if (sysfs_nodes.gtt_used) {
-		rewind(sysfs_nodes.gtt_used);
-		fflush(sysfs_nodes.gtt_used);
-		if (fscanf(sysfs_nodes.gtt_used, "%" PRId64, &value) != 1)
-			value = 0;
-		metrics.gtt_used = float(value) / (1024 * 1024 * 1024);
-	}
-
-	if (sysfs_nodes.gpu_voltage_soc) {
-		rewind(sysfs_nodes.gpu_voltage_soc);
-		fflush(sysfs_nodes.gpu_voltage_soc);
-		if (fscanf(sysfs_nodes.gpu_voltage_soc, "%" PRId64, &value) != 1)
-			value = 0;
-		metrics.voltage = value;
-	}
+	if (sysfs_nodes.gpu_voltage_soc)
+		metrics.voltage = read_as_int64(sysfs_nodes.gpu_voltage_soc);
 }
 
 AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id) {
