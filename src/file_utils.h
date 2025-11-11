@@ -2,14 +2,10 @@
 #ifndef MANGOHUD_FILE_UTILS_H
 #define MANGOHUD_FILE_UTILS_H
 
-#include <array>
 #include <cinttypes>
 #include <filesystem.h>
-#include <regex>
 #include <string>
 #include <vector>
-
-namespace fs = ghc::filesystem;
 
 enum LS_FLAGS
 {
