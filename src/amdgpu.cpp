@@ -6,33 +6,11 @@
 #include "amdgpu.h"
 #include "gpu.h"
 #include "cpu.h"
+#include "file_utils.h"
 #include "overlay.h"
 #include "hud_elements.h"
 #include "logging.h"
 #include "mesa/util/macros.h"
-
-namespace {
-
-	inline int read_as_int(FILE* f) {
-		rewind(f);
-		fflush(f);
-		int v;
-		if (fscanf(f, "%d" , &v) != 1)
-			return 0;
-		return v;
-	}
-
-	inline int64_t read_as_int64(FILE* f) {
-		rewind(f);
-		fflush(f);
-		int64_t v;
-		if (fscanf(f, "%" PRId64, &v) != 1)
-			return 0;
-		return v;
-	}
-
-}
-
 
 #define IS_VALID_METRIC(FIELD) (FIELD != 0xffff)
 void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
