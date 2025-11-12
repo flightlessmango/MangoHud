@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v3
@@ -13,17 +13,15 @@ jobs:
         run: |
           set -x
           sudo dpkg --add-architecture i386
-          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-          echo "deb [signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages focal main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
           sudo apt update
           sudo apt -y install gcc-multilib g++-multilib ninja-build python3-setuptools \
                               python3-wheel mesa-common-dev libxnvctrl-dev libdbus-1-dev \
-                              python3-numpy python3-matplotlib unzip hub libxkbcommon-dev libwayland-dev wget unzip \
-                              libxkbcommon-dev:i386 libwayland-dev:i386 gh
-          sudo pip3 --no-input install 'meson>=0.60' mako
+                              python3-numpy python3-matplotlib unzip libxkbcommon-dev libwayland-dev wget unzip \
+                              libxkbcommon-dev:i386 libwayland-dev:i386 gh python3-mako meson pkgconf pkg-config
           wget https://github.com/KhronosGroup/glslang/releases/download/SDK-candidate-26-Jul-2020/glslang-master-linux-Release.zip
           unzip glslang-master-linux-Release.zip bin/glslangValidator
           sudo install -m755 bin/glslangValidator /usr/local/bin/
+          command -v pkg-config && pkg-config --version
       - name: Prepare Artifact Git Info
         shell: bash
         run: |
