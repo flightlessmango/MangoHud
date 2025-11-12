@@ -111,8 +111,15 @@ inline const char* engine_name(const swapchain_stats& sw_stats) {
 
    auto& en = params->enabled;
 
-   if (en[OVERLAY_PARAM_ENABLED_hide_engine_names])
+   if (en[OVERLAY_PARAM_ENABLED_hide_engine_names]) {
+      en[OVERLAY_PARAM_ENABLED_hide_fps_superscript] = true;
       return "FPS";
+   }
+
+   if (en[OVERLAY_PARAM_ENABLED_horizontal] && !en[OVERLAY_PARAM_ENABLED_engine_short_names]) {
+      en[OVERLAY_PARAM_ENABLED_hide_fps_superscript] = true;
+      return "FPS";
+   }
 
    if (en[OVERLAY_PARAM_ENABLED_dx_api]) {
       if (engine == EngineTypes::VKD3D)
