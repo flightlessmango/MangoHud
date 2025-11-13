@@ -1570,7 +1570,7 @@ void HudElements::graphs(){
         auto gpu = gpus->active_gpu();
         if (!gpu)
             return;
-        
+
         HUDElements.max = gpu->metrics.memoryTotal;
         HUDElements.min = 0;
         HUDElements.TextColored(HUDElements.colors.engine, "%s", "VRAM");
@@ -1685,7 +1685,7 @@ void HudElements::present_mode() {
     if (ImGuiTextOverflow(title))
         ImguiNextColumnOrNewRow();
 
-    HUDElements.TextColored(HUDElements.colors.text, "%s\n", HUDElements.get_present_mode().c_str());
+    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s\n", HUDElements.get_present_mode().c_str());
     ImGui::PopFont();
 }
 
