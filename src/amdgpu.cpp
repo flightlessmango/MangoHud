@@ -18,8 +18,7 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	uint8_t buf[sizeof(struct gpu_metrics_v3_0)+1];  // big enough for v1.3/v2.4/v3.0
 	struct metrics_table_header *header = (struct metrics_table_header *)buf;
 
-	// f = fopen(gpu_metrics_path.c_str(), "rb");
-	f = fopen("/home/crz/Downloads/gpu_metrics.bin", "rb");
+	f = fopen(gpu_metrics_path.c_str(), "rb");
 	if (!f)
 		return;
 
