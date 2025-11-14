@@ -18,7 +18,8 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	uint8_t buf[sizeof(struct gpu_metrics_v3_0)+1];  // big enough for v1.3/v2.4/v3.0
 	struct metrics_table_header *header = (struct metrics_table_header *)buf;
 
-	f = fopen(gpu_metrics_path.c_str(), "rb");
+	// f = fopen(gpu_metrics_path.c_str(), "rb");
+	f = fopen("/home/crz/Downloads/gpu_metrics.bin", "rb");
 	if (!f)
 		return;
 
@@ -145,7 +146,7 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 			is_current = ((indep >> 16) & 0xFF) != 0;
 			is_temp    = ((indep >> 32) & 0xFFFF) != 0;
 			is_other   = ((indep >> 56) & 0xFF) != 0;
-			if (throttling)
+		if (throttling)
 				throttling->indep_throttle_status = indep;
 		}
 	} else if (header->format_revision == 3) {
@@ -166,7 +167,8 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		metrics->apu_cpu_temp_c = cpu_temp / 100;
 
 		metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
-		metrics->average_cpu_power_w = amdgpu_metrics->average_apu_power / 1000.0;
+		// average_apu_power includes gfx_power so remove that from cpu_power
+		metrics->average_cpu_power_w = (amdgpu_metrics->average_apu_power - amdgpu_metrics->average_gfx_power) / 1000.0;
 		metrics->average_gfx_power_w = amdgpu_metrics->average_gfx_power / 1000.0;
 		metrics->current_gfxclk_mhz = amdgpu_metrics->average_gfxclk_frequency;
 		metrics->current_uclk_mhz = amdgpu_metrics->average_uclk_frequency;
