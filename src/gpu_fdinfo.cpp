@@ -14,7 +14,7 @@ void GPU_fdinfo::find_fd()
     auto dir = std::string("/proc/") + std::to_string(pid) + "/fdinfo";
     auto path = fs::path(dir);
 
-    SPDLOG_DEBUG("fdinfo_dir = {}", dir);
+    SPDLOG_TRACE("fdinfo_dir = {}", dir);
 
     if (!fs::exists(path)) {
         SPDLOG_DEBUG("{} does not exist", path.string());
@@ -57,7 +57,7 @@ void GPU_fdinfo::find_fd()
 
         if (!driver.empty() && driver == module) {
             total++;
-            SPDLOG_DEBUG(
+            SPDLOG_TRACE(
                 "driver = \"{}\", pdev = \"{}\", "
                 "client_id = \"{}\", client_id_exists = \"{}\"",
                 driver, pdev,
