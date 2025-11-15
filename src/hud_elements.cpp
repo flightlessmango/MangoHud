@@ -1619,6 +1619,7 @@ void HudElements::exec_name(){
 
 void HudElements::fps_metrics(){
     for (auto& metric : fpsmetrics->metrics){
+        ImGui::TableNextRow();
         ImguiNextColumnFirstItem();
         HUDElements.TextColored(HUDElements.colors.engine, "%s", metric.display_name.c_str());
         ImguiNextColumnOrNewRow();
