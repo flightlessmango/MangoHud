@@ -76,7 +76,7 @@ void GPU_fdinfo::find_fd()
         open_fdinfo_fd(fd_path);
     }
 
-    SPDLOG_DEBUG(
+    SPDLOG_TRACE(
         "Found {} total fds. Opened {} unique fds.",
         total,
         fdinfo.size()
