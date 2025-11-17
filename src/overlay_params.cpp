@@ -422,9 +422,7 @@ parse_fps_metrics(const char *str){
       metrics.push_back(token);
    }
 
-   fpsmetrics.release();
    fpsmetrics = std::make_unique<fpsMetrics>(metrics);
-
    return metrics;
 }
 
