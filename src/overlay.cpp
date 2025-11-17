@@ -666,7 +666,9 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    // data.engine = EngineTypes::GAMESCOPE;
    HUDElements.sw_stats = &data;
    auto real_params = get_params();
-   HUDElements.params = real_params;
+   if (real_params)
+      HUDElements.params = real_params;
+
    HUDElements.is_vulkan = is_vulkan;
    ImGui::GetIO().FontGlobalScale = real_params->font_scale;
    static float ralign_width = 0, old_scale = 0;
