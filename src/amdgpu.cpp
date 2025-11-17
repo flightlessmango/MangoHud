@@ -167,7 +167,10 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 
 		metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
 		// average_apu_power includes gfx_power so remove that from cpu_power
-		metrics->average_cpu_power_w = (amdgpu_metrics->average_apu_power - amdgpu_metrics->average_gfx_power) / 1000.0;
+		int64_t apu_power = amdgpu_metrics->average_apu_power;
+		int64_t gfx_power = amdgpu_metrics->average_gfx_power;
+		metrics->average_cpu_power_w = float(apu_power - gfx_power) / 1000.0;
+		if (metrics->average_cpu_power_w < 0) metrics->average_cpu_power_w = 0;
 		metrics->average_gfx_power_w = amdgpu_metrics->average_gfx_power / 1000.0;
 		metrics->current_gfxclk_mhz = amdgpu_metrics->average_gfxclk_frequency;
 		metrics->current_uclk_mhz = amdgpu_metrics->average_uclk_frequency;
