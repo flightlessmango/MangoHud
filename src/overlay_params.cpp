@@ -1153,7 +1153,6 @@ parse_overlay_config(struct overlay_params *params,
    
    auto snapshot = std::make_shared<overlay_params>(*params);
    std::atomic_store_explicit(&g_params, std::move(snapshot), std::memory_order_release);
-   HUDElements.params = get_params();
 
    fps_limiter = std::make_unique<fpsLimiter>(params->fps_limit_method ? false : true);
 
@@ -1161,7 +1160,7 @@ parse_overlay_config(struct overlay_params *params,
       gpus = std::make_unique<GPUS>();
 
    if (params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout]) {
-      HUDElements.legacy_elements();
+      HUDElements.legacy_elements(params);
    } else {
       HUDElements.ordered_functions.clear();
       for (auto& option : HUDElements.options) {

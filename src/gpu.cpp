@@ -197,7 +197,7 @@ std::string GPU::vram_text() {
 }
 
 std::shared_ptr<const overlay_params> GPUS::params() {
-    return HUDElements.params;
+    return get_params();
 }
 
 std::unique_ptr<GPUS> gpus = nullptr;

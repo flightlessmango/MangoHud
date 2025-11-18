@@ -76,7 +76,7 @@ NVIDIA::NVIDIA(const char* pciBusId) {
 
 #ifdef HAVE_NVML
 void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics) {
-    auto params = HUDElements.params;
+    auto params = get_params();
     nvmlReturn_t response;
 
     if (nvml && nvml_available) {

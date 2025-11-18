@@ -111,7 +111,8 @@ static void writeSummary(string filename){
     std::unique_ptr<fpsMetrics> fpsmetrics;
     std::vector<std::string> metrics {"0.001", "0.01", "0.97"};
     fpsmetrics = std::make_unique<fpsMetrics>(metrics, fps_values);
-    for (auto& metric : fpsmetrics->metrics)
+    auto metrics_copy = fpsmetrics->copy_metrics();
+    for (auto& metric : metrics_copy)
       out << metric.value << ",";
 
     fpsmetrics.reset();
@@ -182,7 +183,8 @@ static void writeSummary(string filename){
 }
 
 static void writeFileHeaders(ofstream& out){
-      if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_log_versioning]){
+    auto params = get_params();  
+    if (params->enabled[OVERLAY_PARAM_ENABLED_log_versioning]){
       printf("log versioning");
       out << "v1" << endl;
       out << MANGOHUD_VERSION << endl;
@@ -192,7 +194,7 @@ static void writeFileHeaders(ofstream& out){
     out << "os," << "cpu," << "gpu," << "ram," << "kernel," << "driver," << "cpuscheduler" << endl;
     out << os << "," << cpu << "," << gpu << "," << ram << "," << kernel << "," << driver << "," << cpusched << endl;
 
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_log_versioning])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_log_versioning])
       out << "--------------------FRAME METRICS--------------------" << endl;
 
     out << "fps," << "frametime," << "cpu_load," << "cpu_power," << "gpu_load,"
@@ -296,7 +298,7 @@ void Logger::stop_logging() {
 
   clear_log_data();
 #ifdef __linux__
-  control_client_check(HUDElements.params->control, global_control_client, gpu.c_str());
+  control_client_check(get_params()->control, global_control_client, gpu.c_str());
   const char * cmd = "LoggingFinished";
   control_send(global_control_client, cmd, strlen(cmd), 0, 0);
 #endif
@@ -364,11 +366,13 @@ void Logger::calculate_benchmark_data(){
 
   std::vector<std::string> metrics {"0.97", "avg", "0.01", "0.001"};
   std::unique_ptr<fpsMetrics> fpsmetrics;
-  if (!HUDElements.params->fps_metrics.empty())
-    metrics = HUDElements.params->fps_metrics;
+  auto params = get_params();
+  if (!params->fps_metrics.empty())
+    metrics = params->fps_metrics;
     
   fpsmetrics = std::make_unique<fpsMetrics>(metrics, fps_values);
-  for (auto& metric : fpsmetrics->metrics)
+  auto metrics_copy = fpsmetrics->copy_metrics();
+  for (auto& metric : metrics_copy)
     benchmark.percentile_data.push_back({metric.display_name, metric.value});
 
   fpsmetrics.reset();

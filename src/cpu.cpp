@@ -158,7 +158,7 @@ bool CPUStats::Init()
     } while(true);
 
 #ifndef TEST_ONLY
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_core_type])
+    if (get_params()->enabled[OVERLAY_PARAM_ENABLED_core_type])
         get_cpu_cores_types();
 #endif
 

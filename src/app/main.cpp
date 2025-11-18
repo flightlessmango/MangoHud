@@ -212,7 +212,7 @@ static void msg_read_thread(){
                         else
                         HUDElements.g_fsrSharpness = real_params->fsr_steam_sharpness - mangoapp_v1->fsrSharpness;
                     }
-                    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam]){
+                    if (!get_params()->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam]){
                         steam_focused = get_prop("GAMESCOPE_FOCUSED_APP_GFX") == 769;
                     } else {
                         steam_focused = false;

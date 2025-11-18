@@ -2,6 +2,7 @@
 #include "hud_elements.h"
 
 Net::Net() {
+    auto params = get_params();
     should_reset = false;
     fs::path net_dir(NETDIR);
     if (fs::exists(net_dir) && fs::is_directory(net_dir)) {
@@ -11,11 +12,11 @@ Net::Net() {
                 if (val == "lo")
                     continue;
 
-                if (!HUDElements.params->network.empty() && HUDElements.params->network.front() == "1") {
+                if (!params->network.empty() && params->network.front() == "1") {
                     interfaces.push_back({entry.path().filename().string(), 0, 0});
-                } else if (!HUDElements.params->network.empty()){
-                    auto it = std::find(HUDElements.params->network.begin(), HUDElements.params->network.end(), val);
-                    if (it != HUDElements.params->network.end())
+                } else if (!params->network.empty()){
+                    auto it = std::find(params->network.begin(), params->network.end(), val);
+                    if (it != params->network.end())
                         interfaces.push_back({entry.path().filename().string(), 0, 0});
                 }
             }
