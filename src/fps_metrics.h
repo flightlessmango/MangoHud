@@ -29,6 +29,7 @@ class fpsMetrics {
         bool terminate = false;
         bool resetting = false;
         size_t max_size = 10000;
+        std::vector<metric_t> metrics;
 
         void _thread() {
             thread_init = true;
@@ -102,8 +103,6 @@ class fpsMetrics {
         }
 
     public:
-        std::vector<metric_t> metrics;
-
         fpsMetrics(std::vector<std::string> values){
             metrics = add_metrics_to_vector(values);
 
@@ -154,6 +153,11 @@ class fpsMetrics {
             while (run){}
             frametimes.clear();
             resetting = false;
+        }
+
+        std::vector<metric_t> copy_metrics() {
+            std::lock_guard<std::mutex> lock(mtx);
+            return metrics;
         }
 
         ~fpsMetrics(){
