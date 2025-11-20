@@ -90,8 +90,6 @@ void Shell::writeCommand(std::string command) {
 }
 
 Shell::~Shell() {
-    if (write(to_shell[1], "exit\n", 5) == -1)
-        SPDLOG_ERROR("Failed exit shell");
     close(to_shell[1]);
     close(from_shell[0]);
     waitpid(shell_pid, nullptr, 0);
