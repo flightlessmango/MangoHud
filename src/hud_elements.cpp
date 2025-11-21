@@ -2101,6 +2101,13 @@ void HudElements::legacy_elements(const overlay_params* temp_params){
 
 void HudElements::update_exec(){
 #ifdef __linux__
+    // TODO: exec needs a rewrite using as using fork() is not safe in multithread.
+    // We should probably use posix_spawn instead.
+    // This currently stalls games using feral launcher.
+    // For now don't init shell unless we have some exec options.
+    if (exec_list.empty())
+        return;
+
     if (!HUDElements.shell)
         HUDElements.shell = std::make_unique<Shell>();
 
