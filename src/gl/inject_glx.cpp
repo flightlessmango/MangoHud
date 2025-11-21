@@ -216,7 +216,7 @@ static void set_swap_interval(void* dpy, void* drawable, int interval)
 
 EXPORT_C_(void) glXSwapBuffers(void* dpy, void* drawable) {
     glx.Load();
-    SPDLOG_DEBUG("{}: {}", __func__, drawable);
+    SPDLOG_TRACE("{}: {}", __func__, drawable);
 
     do_imgui_swap(dpy, drawable);
     set_swap_interval(dpy, drawable, -2);
