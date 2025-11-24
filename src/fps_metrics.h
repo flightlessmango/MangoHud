@@ -47,6 +47,9 @@ class fpsMetrics {
         }
 
         void calculate(){
+            if (frametimes.empty())
+                return; 
+
             std::vector<float> sorted_values = frametimes;
             std::sort(sorted_values.begin(), sorted_values.end(), std::greater<float>());
 
