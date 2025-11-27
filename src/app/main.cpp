@@ -182,7 +182,7 @@ static void msg_read_thread(){
     uint32_t previous_game_pid = 0;
 
     while (1){
-        // make sure that the message recieved is compatible
+        // make sure that the message received is compatible
         // and that we're not trying to use variables that don't exist (yet)
         size_t msg_size = msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 1, 0);
         if (msg_size != size_t(-1))
