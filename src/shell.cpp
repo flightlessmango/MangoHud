@@ -24,7 +24,7 @@ std::string Shell::readOutput() {
         last_line = line;
     }
 
-    SPDLOG_DEBUG("Shell: recieved output: {}", last_line);
+    SPDLOG_DEBUG("Shell: received output: {}", last_line);
     return last_line;
 }
 
