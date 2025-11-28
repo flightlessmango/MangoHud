@@ -239,10 +239,12 @@ EXPORT_C_(int) eglTerminate(void *display)
 
     ret = pfn_eglTerminate(display);
 
+#ifdef HAVE_WAYLAND
     if (ret)
     {
         wayland_data_unref(NULL, display);
     }
+#endif
 
     return ret;
 }
