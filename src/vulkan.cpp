@@ -58,6 +58,7 @@
 #ifdef __linux__
 #include <dlfcn.h>
 #include "implot.h"
+#include "lsfg-vk.h"
 #endif
 #include "fps_limiter.h"
 
@@ -464,9 +465,11 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
 {
    struct device_data *device_data = data->device;
    struct instance_data *instance_data = device_data->instance;
-   update_hud_info(data->sw_stats, instance_data->params, device_data->properties.vendorID);
    check_keybinds(instance_data->params);
 #ifdef __linux__
+   // When using lsfg we call this from our lsfg class instead
+   if (!lsfg_ptr)
+      update_hud_info(data->sw_stats, instance_data->params, device_data->properties.vendorID);
    if (instance_data->params.control >= 0) {
       control_client_check(instance_data->params.control, instance_data->control_client, gpu.c_str());
       process_control_socket(instance_data->control_client, instance_data->params);
@@ -2040,6 +2043,16 @@ static void overlay_DestroyInstance(
       stop_notifier(instance_data->notifier);
 #endif
    destroy_instance_data(instance_data);
+}
+
+swapchain_stats* get_swapchain_stats_from_swapchain(VkSwapchainKHR swapchain) {
+    swapchain_data* data = FIND(swapchain_data, swapchain);
+    if (!data) {
+      SPDLOG_DEBUG("No swapchain_data found for {}", (void*)swapchain);
+      return nullptr;
+    }
+
+    return &data->sw_stats;
 }
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR

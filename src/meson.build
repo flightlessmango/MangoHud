@@ -95,6 +95,7 @@ if is_unixy
     'net.cpp',
     'shell.cpp',
     'ftrace.cpp',
+    'lsfg-vk.cpp'
   )
 
   if get_option('with_fex')

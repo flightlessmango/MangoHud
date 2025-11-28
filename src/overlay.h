@@ -36,7 +36,8 @@ enum EngineTypes
    FERAL3D,
    TOGL,
 
-   GAMESCOPE
+   GAMESCOPE,
+   LSFG
 };
 
 struct swapchain_stats {
@@ -94,11 +95,11 @@ struct LOAD_DATA {
 inline const char* engine_name(const swapchain_stats& sw_stats) {
    const char* engines[] = {
       "Unknown", "OpenGL", "VULKAN", "DXVK", "VKD3D", "DAMAVAND",
-      "ZINK", "WINED3D", "Feral3D", "ToGL", "GAMESCOPE"
+      "ZINK", "WINED3D", "Feral3D", "ToGL", "GAMESCOPE", "LSFG-VK"
    };
    const char* engines_short[] = {
       "Unknown", "OGL", "VK", "DXVK", "VKD3D", "DV",
-       "ZINK", "WD3D", "Feral3D", "ToGL", "GS"
+       "ZINK", "WD3D", "Feral3D", "ToGL", "GS", "LSFG"
    };
 
    auto engine = sw_stats.engine;
@@ -180,4 +181,5 @@ void update_fan();
 void next_hud_position();
 void horizontal_separator(struct overlay_params& params);
 void RenderOutlinedText(const char* text, ImU32 textColor);
+extern swapchain_stats* get_swapchain_stats_from_swapchain(VkSwapchainKHR swapchain);
 #endif //MANGOHUD_OVERLAY_H

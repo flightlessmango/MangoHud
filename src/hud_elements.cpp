@@ -22,6 +22,7 @@
 #include "blacklist.h"
 #ifdef __linux__
 #include "implot.h"
+#include "lsfg-vk.h"
 #endif
 #include "amdgpu.h"
 #include "fps_metrics.h"
@@ -839,7 +840,7 @@ void HudElements::fps(){
         }
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_frametime]){
             ImguiNextColumnOrNewRow();
-            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", 1000 / HUDElements.sw_stats->fps);
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", 1000.0 / HUDElements.sw_stats->fps);
             ImGui::SameLine(0, 1.0f);
             ImGui::PushFont(HUDElements.sw_stats->font_small);
             HUDElements.TextColored(HUDElements.colors.text, "ms");
@@ -849,6 +850,24 @@ void HudElements::fps(){
         ImguiNextColumnOrNewRow();
         HUDElements.TextColored(HUDElements.colors.engine, "%s", HUDElements.sw_stats->engineName.c_str());
     }
+#ifdef __linux__
+    if (lsfg_ptr){
+        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
+            ImGui::TableNextRow();
+        ImguiNextColumnFirstItem();
+        HUDElements.TextColored(HUDElements.colors.engine, "%s", "REAL FPS");
+        ImguiNextColumnOrNewRow();
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", lsfg_ptr->real_fps);
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_frametime]){
+            ImguiNextColumnOrNewRow();
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", 1000.0 / lsfg_ptr->real_fps);
+            ImGui::SameLine(0, 1.0f);
+            ImGui::PushFont(HUDElements.sw_stats->font_small);
+            HUDElements.TextColored(HUDElements.colors.text, "ms");
+            ImGui::PopFont();
+        }
+    }
+#endif
 }
 
 void HudElements::fps_only(){

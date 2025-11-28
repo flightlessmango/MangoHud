@@ -30,6 +30,7 @@
 #include "ftrace.h"
 
 #ifdef __linux__
+#include "lsfg-vk.h"
 #include <libgen.h>
 #include <unistd.h>
 #endif
@@ -268,8 +269,11 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
 #endif
 
       sw_stats.fps = 1000000000.0 * sw_stats.n_frames_since_update / elapsed;
-
-      if (real_params->enabled[OVERLAY_PARAM_ENABLED_time]) {
+#ifdef __linux__
+      if (lsfg_ptr)
+         lsfg_ptr->update_display_fps(now);
+#endif
+      if (params.enabled[OVERLAY_PARAM_ENABLED_time]) {
          std::time_t t = std::time(nullptr);
          std::stringstream time;
          time << std::put_time(std::localtime(&t), real_params->time_format.c_str());
@@ -287,17 +291,12 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
       sw_stats.last_fps_update = now;
 
    }
+
    auto min = std::min_element(frametime_data.begin(), frametime_data.end());
    auto max = std::max_element(frametime_data.begin(), frametime_data.end());
    min_frametime = min[0];
    max_frametime = max[0];
-   // double min_time = UINT64_MAX, max_time = 0;
-   // for (auto& stat : sw_stats.frames_stats ){
-   //    min_time = MIN2(stat.stats[0], min_time);
-   //    max_time = MAX2(stat.stats[0], min_time);
-   // }
-   // min_frametime = min_time / sw_stats.time_dividor;
-   // max_frametime = max_time / sw_stats.time_dividor;
+
    if (real_params->log_interval == 0){
       logger->try_log();
    }
