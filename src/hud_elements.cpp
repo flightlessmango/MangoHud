@@ -2000,43 +2000,44 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
     return;
 }
 
-void HudElements::legacy_elements(const overlay_params* temp_params){
+void HudElements::legacy_elements(){
+    auto params = get_params();
     string value = "NULL";
     ordered_functions.clear();
 
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_time])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_time])
         ordered_functions.push_back({time, "time", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_version])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_version])
         ordered_functions.push_back({version, "version", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
         ordered_functions.push_back({gpu_stats, "gpu_stats", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats])
         ordered_functions.push_back({cpu_stats, "cpu_stats", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_core_load])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_core_load])
         ordered_functions.push_back({core_load, "core_load", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_io_read] || temp_params->enabled[OVERLAY_PARAM_ENABLED_io_write])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_io_read] || params->enabled[OVERLAY_PARAM_ENABLED_io_write])
         ordered_functions.push_back({io_stats, "io_stats", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_vram])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_vram])
         ordered_functions.push_back({vram, "vram", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_proc_vram])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_proc_vram])
         ordered_functions.push_back({proc_vram, "proc_vram", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_ram])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_ram])
         ordered_functions.push_back({ram, "ram", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_procmem])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_procmem])
         ordered_functions.push_back({procmem, "procmem", value});
-    if (!temp_params->network.empty())
+    if (!params->network.empty())
         ordered_functions.push_back({network, "network", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_battery])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_battery])
         ordered_functions.push_back({battery, "battery", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_fan])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_fan])
         ordered_functions.push_back({fan, "fan", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_fsr])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_fsr])
         ordered_functions.push_back({gamescope_fsr, "gamescope_fsr", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_hdr])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_hdr])
         ordered_functions.push_back({hdr, "hdr", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_throttling_status])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_throttling_status])
         ordered_functions.push_back({throttling_status, "throttling_status", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_fps])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_fps])
         ordered_functions.push_back({fps, "fps", value});
     for (const auto& pair : options) {
         if (pair.first.find("graphs") != std::string::npos) {
@@ -2047,54 +2048,54 @@ void HudElements::legacy_elements(const overlay_params* temp_params){
             }
         }
     }
-    if (!temp_params->fps_metrics.empty())
+    if (!params->fps_metrics.empty())
         ordered_functions.push_back({fps_metrics, "fps_metrics", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_fps_only])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_fps_only])
         ordered_functions.push_back({fps_only, "fps_only", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_engine_version])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_engine_version])
         ordered_functions.push_back({engine_version, "engine_version", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_gpu_name])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_name])
         ordered_functions.push_back({gpu_name, "gpu_name", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_vulkan_driver])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_vulkan_driver])
         ordered_functions.push_back({vulkan_driver, "vulkan_driver", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_arch])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_arch])
         ordered_functions.push_back({arch, "arch", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_wine])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_wine])
         ordered_functions.push_back({wine, "wine", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_frame_timing])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_frame_timing])
         ordered_functions.push_back({frame_timing, "frame_timing", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_frame_count])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_frame_count])
         ordered_functions.push_back({frame_count, "frame_count", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_debug] && !params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_debug] && !params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
         ordered_functions.push_back({gamescope_frame_timing, "gamescope_frame_timing", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_gamemode])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_gamemode])
         ordered_functions.push_back({gamemode, "gamemode", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_vkbasalt])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_vkbasalt])
         ordered_functions.push_back({vkbasalt, "vkbasalt", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_show_fps_limit])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_show_fps_limit])
         ordered_functions.push_back({show_fps_limit, "show_fps_limit", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_resolution])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_resolution])
         ordered_functions.push_back({resolution, "resolution", value});
-    if (!temp_params->device_battery.empty() )
+    if (!params->device_battery.empty() )
         ordered_functions.push_back({device_battery, "device_battery", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_media_player])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_media_player])
         ordered_functions.push_back({media_player, "media_player", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_exec_name])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_exec_name])
         ordered_functions.push_back({exec_name, "exec_name", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_duration])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_duration])
         ordered_functions.push_back({duration, "duration", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_winesync])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_winesync])
         ordered_functions.push_back({winesync, "winesync", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_present_mode])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_present_mode])
         ordered_functions.push_back({present_mode, "present_mode", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_refresh_rate])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_refresh_rate])
         ordered_functions.push_back({refresh_rate, "refresh_rate", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_display_server])
+    if (params->enabled[OVERLAY_PARAM_ENABLED_display_server])
         ordered_functions.push_back({_display_session, "display_session", value});
-    if (temp_params->fex_stats.enabled)
+    if (params->fex_stats.enabled)
         ordered_functions.push_back({fex_stats, "fex_stats", value});
 #ifdef HAVE_FTRACE
-    if (temp_params->ftrace.enabled)
+    if (params->ftrace.enabled)
         ordered_functions.push_back({ftrace, "ftrace", value});
 #endif
 }
