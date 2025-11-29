@@ -1,0 +1,10 @@
+{
+    global:
+        #if defined(HAVE_X11)
+        mangohud_find_glx_ptr;
+        #endif
+        #if defined(HAVE_WAYLAND)
+        mangohud_find_egl_ptr;
+        #endif
+    local: *;
+};
