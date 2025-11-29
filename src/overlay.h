@@ -129,7 +129,7 @@ inline const char* engine_name(const swapchain_stats& sw_stats) {
          if (sw_stats.applicationVersion == 1)
             return "DX9";
 
-         if (sw_stats.applicationVersion == 2)
+         if (sw_stats.applicationVersion == 0)
             return "DX11";
 
          return "DX?";
