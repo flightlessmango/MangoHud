@@ -758,7 +758,7 @@ bool CPUStats::InitCpuPowerData() {
     if (!cpuPowerData) {
         if (gpus) {
             for (auto gpu : gpus->available_gpus) {
-                if (gpu->vendor_id == 0x1002 && gpu->is_apu()) {
+                if (gpu->vendor_id == 0x1002 && gpu->is_apu() && gpu->get_metrics().apu_cpu_power > 0) {
                     auto powerData = std::make_unique<CPUPowerData_amdgpu>();
                     cpuPowerData = (CPUPowerData*)powerData.release();
                 }
