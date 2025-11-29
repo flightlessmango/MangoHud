@@ -715,6 +715,9 @@ set_parameters_from_options(struct overlay_params *params)
       params->enabled[OVERLAY_PARAM_ENABLED_core_bars] = false;
       params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = read_cfg;
       params->enabled[OVERLAY_PARAM_ENABLED_time_no_label] = false;
+      params->enabled[OVERLAY_PARAM_ENABLED_cpu_no_label] = false;
+      params->enabled[OVERLAY_PARAM_ENABLED_gpu_no_label] = false;
+      params->enabled[OVERLAY_PARAM_ENABLED_fps_no_label] = false;
       params->enabled[OVERLAY_PARAM_ENABLED_core_type] = false;
       params->options.erase("full");
    }
