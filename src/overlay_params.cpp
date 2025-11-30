@@ -305,11 +305,12 @@ static std::vector<unsigned>
 parse_gpu_list(const char *str) {
 
    std::vector<unsigned int> result;
-   std::stringstream ss{std::string(str)};
-   std::string item;
+   auto gpu_list_strings = str_tokenize(str);
 
-   while (std::getline(ss, item, ',')) {
-      unsigned int num = static_cast<unsigned int>(std::stoul(item));
+   for (auto& value : gpu_list_strings) {
+      trim(value);
+
+      unsigned int num = stoul(value);
       result.push_back(num);
    }
 
