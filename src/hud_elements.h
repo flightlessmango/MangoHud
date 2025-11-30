@@ -69,7 +69,7 @@ class HudElements{
 #endif
 
         void sort_elements(const std::pair<std::string, std::string>& option);
-        void legacy_elements();
+        void legacy_elements(const overlay_params* temp_params);
         void update_exec();
         int convert_to_fahrenheit(int celsius);
         static void version();
