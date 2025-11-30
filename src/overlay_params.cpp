@@ -1310,7 +1310,7 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
          add_to_options(params, "network", "1");
          add_to_options(params, "present_mode", "0");
          add_to_options(params, "proc_vram", "0");
-         add_to_options(params, "proc_ram", "0");
+         add_to_options(params, "procmem", "0");
          add_to_options(params, "display_server", "0");
          add_to_options(params, "gpu_efficiency", "0");
          add_to_options(params, "cpu_efficiency", "0");
