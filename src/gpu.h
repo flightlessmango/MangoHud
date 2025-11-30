@@ -124,7 +124,7 @@ class GPUS {
         std::mutex mutex;
         overlay_params* const* params_pointer;
 
-        GPUS();
+        explicit GPUS(const overlay_params* init_params = nullptr);
 
         std::shared_ptr<const overlay_params> params();
 
@@ -199,6 +199,7 @@ class GPUS {
     private:
         std::string get_pci_device_address(const std::string& drm_card_path);
         std::string get_driver(const std::string& node);
+        const overlay_params* early_params;
 
         const std::array<std::string, 7> supported_drivers = {
             "amdgpu", "nvidia", "i915", "xe", "panfrost", "msm_dpu", "msm_drm"

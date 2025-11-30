@@ -4,8 +4,9 @@
 
 namespace fs = ghc::filesystem;
 
-GPUS::GPUS() {
+GPUS::GPUS(const overlay_params* init_params) : early_params(init_params) {
     std::set<std::string> gpu_entries;
+    auto params = init_params ? init_params : get_params().get();
 
     for (const auto& entry : fs::directory_iterator("/sys/class/drm")) {
         if (!entry.is_directory())
@@ -72,10 +73,10 @@ GPUS::GPUS() {
         std::shared_ptr<GPU> ptr =
             std::make_shared<GPU>(node_name, vendor_id, device_id, pci_dev, driver);
 
-        if (params()->gpu_list.size() == 1 && params()->gpu_list[0] == idx++)
+        if (params->gpu_list.size() == 1 && params->gpu_list[0] == idx++)
             ptr->is_active = true;
 
-        if (!params()->pci_dev.empty() && pci_dev == params()->pci_dev)
+        if (!params->pci_dev.empty() && pci_dev == params->pci_dev)
             ptr->is_active = true;
 
         available_gpus.emplace_back(ptr);

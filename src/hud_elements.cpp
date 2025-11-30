@@ -2065,7 +2065,7 @@ void HudElements::legacy_elements(const overlay_params* temp_params){
         ordered_functions.push_back({frame_timing, "frame_timing", value});
     if (temp_params->enabled[OVERLAY_PARAM_ENABLED_frame_count])
         ordered_functions.push_back({frame_count, "frame_count", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_debug] && !params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
+    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_debug] && !temp_params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
         ordered_functions.push_back({gamescope_frame_timing, "gamescope_frame_timing", value});
     if (temp_params->enabled[OVERLAY_PARAM_ENABLED_gamemode])
         ordered_functions.push_back({gamemode, "gamemode", value});

@@ -1160,7 +1160,7 @@ parse_overlay_config(struct overlay_params *params,
       gpus = std::make_unique<GPUS>();
 
    if (params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout]) {
-      HUDElements.legacy_elements(params);
+      HUDElements.legacy_elements(get_params().get());
    } else {
       HUDElements.ordered_functions.clear();
       for (auto& option : HUDElements.options) {
@@ -1317,7 +1317,7 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
 
          // Disable some options if steamdeck / other known handhelds
          if (!gpus)
-            gpus = std::make_unique<GPUS>();
+            gpus = std::make_unique<GPUS>(params);
 
          for (auto gpu : gpus->available_gpus) {
             if (gpu->device_id == 0x1435 || gpu->device_id == 0x163f || gpu->device_id == 0x1681 || gpu->device_id == 0x15bf){
