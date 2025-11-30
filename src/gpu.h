@@ -122,9 +122,8 @@ class GPUS {
     public:
         std::vector<std::shared_ptr<GPU>> available_gpus;
         std::mutex mutex;
-        overlay_params* const* params_pointer;
 
-        explicit GPUS(const overlay_params* init_params = nullptr);
+        explicit GPUS(const overlay_params* early_params = nullptr);
 
         std::shared_ptr<const overlay_params> params();
 

@@ -4,9 +4,9 @@
 
 namespace fs = ghc::filesystem;
 
-GPUS::GPUS(const overlay_params* init_params) : early_params(init_params) {
+GPUS::GPUS(const overlay_params* early_params) : early_params(early_params) {
     std::set<std::string> gpu_entries;
-    auto params = init_params ? init_params : get_params().get();
+    auto params = early_params ? early_params : get_params().get();
 
     for (const auto& entry : fs::directory_iterator("/sys/class/drm")) {
         if (!entry.is_directory())
