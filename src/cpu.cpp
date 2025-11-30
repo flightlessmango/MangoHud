@@ -108,8 +108,10 @@ CPUStats::CPUStats()
 
 CPUStats::~CPUStats()
 {
-    if (m_cpuTempFile)
+    if (m_cpuTempFile) {
         fclose(m_cpuTempFile);
+        m_cpuTempFile = nullptr;
+    }
 }
 
 bool CPUStats::Init()

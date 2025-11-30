@@ -236,7 +236,11 @@ void AMDGPU::get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[ME
 				metrics_buffer[cur_sample_id].gpu_load_percent /= 100;
 			}
 
-			usleep(METRICS_POLLING_PERIOD_MS * 1000);
+			// frequently check if thread should stop so we don't get stuck for 500ms
+			for (int ms = 0; ms < METRICS_POLLING_PERIOD_MS; ms++) {
+				if (stop_thread) break;
+				usleep(1000);
+			}
 		}
 
 		if (stop_thread) break;
