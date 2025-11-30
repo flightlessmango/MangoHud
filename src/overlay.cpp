@@ -82,7 +82,7 @@ void init_spdlog()
    if (getenv("MANGOHUD_LOG_LEVEL")) {
       std::string log_level = getenv("MANGOHUD_LOG_LEVEL");
       vector<string> levels;
-      levels = {"off","info","err","debug"};
+      levels = {"trace","debug","info","warning","error","critical","off"};
       for (auto & element : levels) {
          transform(log_level.begin(), log_level.end(), log_level.begin(), ::tolower);
          if(log_level == element ) {
