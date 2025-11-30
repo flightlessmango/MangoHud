@@ -4,7 +4,7 @@
 
 namespace fs = ghc::filesystem;
 
-GPUS::GPUS(const overlay_params* early_params) : early_params(early_params) {
+GPUS::GPUS(const overlay_params* early_params) {
     std::set<std::string> gpu_entries;
     auto params = early_params ? early_params : get_params().get();
 
