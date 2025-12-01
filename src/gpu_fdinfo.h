@@ -97,7 +97,7 @@ private:
     int get_gpu_clock();
 
     uint64_t get_gpu_time_panfrost();
-    int get_gpu_clock_panfrost();
+    int get_gpu_clock_mali();
 
     std::ifstream throttle_status_stream;
     std::vector<std::ifstream> throttle_power_streams;
@@ -150,6 +150,9 @@ public:
             init_kgsl();
         } else if (module == "panfrost") {
             drm_engine_type = "drm-engine-fragment";
+            drm_memory_type = "drm-resident-memory";
+        } else if (module == "panthor") {
+            drm_engine_type = "drm-engine-panthor";
             drm_memory_type = "drm-resident-memory";
         }
 

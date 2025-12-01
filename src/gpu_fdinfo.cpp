@@ -168,7 +168,7 @@ void GPU_fdinfo::find_hwmon_sensors()
 
     if (module == "msm")
         hwmon = find_hwmon_sensor_dir("gpu");
-    else if (module == "panfrost")
+    else if (module == "panfrost" || module == "panthor")
         hwmon = find_hwmon_sensor_dir("gpu_thermal");
     else
         hwmon = find_hwmon_dir();
@@ -527,8 +527,8 @@ void GPU_fdinfo::load_xe_i915_throttle_reasons(
 
 int GPU_fdinfo::get_gpu_clock()
 {
-    if (module == "panfrost")
-        return get_gpu_clock_panfrost();
+    if (module == "panfrost" || module == "panthor")
+        return get_gpu_clock_mali();
 
     if (!gpu_clock_stream.is_open())
         return 0;
@@ -545,11 +545,18 @@ int GPU_fdinfo::get_gpu_clock()
     return std::stoi(clock_str);
 }
 
-int GPU_fdinfo::get_gpu_clock_panfrost() {
+int GPU_fdinfo::get_gpu_clock_mali() {
     if (fdinfo_data.empty())
         return 0;
 
-    auto freq_str = fdinfo_data[0]["drm-curfreq-fragment"];
+    std::string key;
+
+    if (module == "panfrost")
+        key = "drm-curfreq-fragment";
+    else if (module == "panthor")
+        key = "drm-curfreq-panthor";
+
+    std::string freq_str = fdinfo_data[0][key];
 
     if (freq_str.empty())
         return 0;
