@@ -155,11 +155,20 @@ float GPU_fdinfo::get_memory_used()
         if (mem.empty())
             continue;
 
-        total += std::stoull(mem);
+        std::string unit = mem.substr(mem.rfind(" ") + 1);
+        uint64_t val = std::stoull(mem);
+
+        if (unit == "KiB")
+            val *= 1024;
+        else if (unit == "MiB")
+            val *= 1024 * 1024;
+        else if (unit == "GiB")
+            val *= 1024 * 1024 * 1024;
+
+        total += val;
     }
 
-    // TODO: sometimes it's not KB, so add a check for that.
-    return static_cast<float>(total) / 1024 / 1024;
+    return static_cast<float>(total) / 1024 / 1024 / 1024;
 }
 
 void GPU_fdinfo::find_hwmon_sensors()
