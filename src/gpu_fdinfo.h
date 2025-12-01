@@ -11,6 +11,7 @@
 #include <map>
 #include <set>
 #include <regex>
+#include <sstream>
 
 #ifdef TEST_ONLY
 #include <../src/mesa/util/os_time.h>
