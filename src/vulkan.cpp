@@ -1521,12 +1521,35 @@ static struct overlay_draw *before_present(struct swapchain_data *swapchain_data
    return draw;
 }
 
-static bool IsPresentModeSupported(VkPresentModeKHR targetPresentMode, const std::vector<VkPresentModeKHR>& supportedPresentModes) {
-   for (const auto& mode : supportedPresentModes)
-      if (mode == targetPresentMode)
-         return true;
+static bool is_present_mode_supported(VkPhysicalDevice device, VkSurfaceKHR surface, VkPresentModeKHR targetPresentMode)
+{
+   struct instance_data *instance_data = FIND(struct instance_data, device);
 
-    return false;  // Not found
+   PFN_vkGetPhysicalDeviceSurfacePresentModesKHR fpGetPhysicalDeviceSurfacePresentModesKHR =
+   (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR) instance_data->vtable.GetInstanceProcAddr(instance_data->instance, "vkGetPhysicalDeviceSurfacePresentModesKHR");
+
+   if (fpGetPhysicalDeviceSurfacePresentModesKHR != NULL) {
+      uint32_t presentModeCount = 0;
+      VkResult result;
+      result = fpGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, NULL);
+      if (result != VK_SUCCESS) {
+         SPDLOG_ERROR("Failed to get presentModeCount: vkGetPhysicalDeviceSurfacePresentModesKHR with {}", vk_Result_to_str(result));
+         return false;
+      }
+      std::vector<VkPresentModeKHR> presentModes(presentModeCount);
+      presentModes.resize(presentModeCount);
+      result = fpGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, presentModes.data());
+
+      if (result == VK_SUCCESS) {
+         for (const auto& mode : presentModes)
+            if (mode == targetPresentMode)
+               return true;
+      }
+      else {
+         SPDLOG_ERROR("Failed to get presentModes: vkGetPhysicalDeviceSurfacePresentModesKHR failed with {}", vk_Result_to_str(result));
+      }
+   }
+   return false;
 }
 
 static VkResult overlay_CreateSwapchainKHR(
@@ -1540,37 +1563,20 @@ static VkResult overlay_CreateSwapchainKHR(
    createInfo.imageUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
    struct device_data *device_data = FIND(struct device_data, device);
-   auto params = device_data->instance->params;
+   const auto& params = device_data->instance->params;
 
-   if (device_data->instance->params.vsync < 4) {
-      HUDElements.cur_present_mode = HUDElements.presentModes[params.vsync];
-      createInfo.presentMode = HUDElements.cur_present_mode;
-   } else {
-      HUDElements.cur_present_mode = createInfo.presentMode;
-   }
-
-   struct instance_data *instance_data =
-      FIND(struct instance_data, device_data->physical_device);
-
-   PFN_vkGetPhysicalDeviceSurfacePresentModesKHR fpGetPhysicalDeviceSurfacePresentModesKHR =
-   (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR) instance_data->vtable.GetInstanceProcAddr(instance_data->instance, "vkGetPhysicalDeviceSurfacePresentModesKHR");
-
-   if (fpGetPhysicalDeviceSurfacePresentModesKHR != NULL) {
-      uint32_t presentModeCount;
-      std::vector<VkPresentModeKHR> presentModes(6);
-      VkResult result = fpGetPhysicalDeviceSurfacePresentModesKHR(device_data->physical_device, pCreateInfo->surface, &presentModeCount, presentModes.data());
-
-      if (result == VK_SUCCESS) {
-         presentModes.resize(presentModeCount);
-         if (IsPresentModeSupported(HUDElements.cur_present_mode, presentModes))
-            SPDLOG_DEBUG("Present mode: {}", HUDElements.presentModeMap[HUDElements.cur_present_mode]);
-         else {
-            SPDLOG_DEBUG("Present mode is not supported: {}", HUDElements.presentModeMap[HUDElements.cur_present_mode]);
-            HUDElements.cur_present_mode = VK_PRESENT_MODE_FIFO_KHR;
-            createInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
-         }
+   if (params.vsync < 4) {
+      VkPresentModeKHR target_present_mode = HUDElements.presentModes[params.vsync];
+      if (is_present_mode_supported(device_data->physical_device, createInfo.surface, target_present_mode)) {
+         createInfo.presentMode = target_present_mode;
+      }
+      else {
+         SPDLOG_WARN("Present mode is not supported: {}", HUDElements.presentModeMap[target_present_mode]);
       }
    }
+
+   HUDElements.cur_present_mode = createInfo.presentMode;
+   SPDLOG_DEBUG("Present mode : {}", HUDElements.presentModeMap[HUDElements.cur_present_mode]);
 
    VkResult result = device_data->vtable.CreateSwapchainKHR(device, &createInfo, pAllocator, pSwapchain);
    if (result != VK_SUCCESS) return result;
