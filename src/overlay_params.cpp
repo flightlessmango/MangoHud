@@ -199,6 +199,24 @@ parse_preset(const char *str)
   return presets;
 }
 
+static std::map<std::string, std::string> parse_cpu_custom_temp_sensor(const std::string str) {
+   size_t pos = str.find(",");
+   std::map<std::string, std::string> map;
+
+   if (pos != std::string::npos && pos != str.length() - 1) {
+      map["hwmon_name"] = str.substr(0, pos);
+      map["hwmon_input"] = str.substr(pos + 1);
+   }
+
+   SPDLOG_DEBUG(
+      "cpu_custom_temp_sensor: name=\"{}\" input=\"{}\"",
+      map["hwmon_name"],
+      map["hwmon_input"]
+   );
+
+   return map;
+}
+
 static uint32_t
 parse_fps_sampling_period(const char *str)
 {
