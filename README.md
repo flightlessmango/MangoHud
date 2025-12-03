@@ -357,6 +357,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `cpu_mhz`                          | Show the CPUs current MHz                                                             |
 | `cpu_power`<br>`gpu_power`         | Display CPU/GPU draw in watts                                                         |
 | `cpu_temp`<br>`gpu_temp`<br>`gpu_junction_temp`<br>`gpu_mem_temp`           | Display current CPU/GPU temperature                                                  |
+| `cpu_custom_temp_sensor`           | Use custom hwmon sensor for cpu temperature. e.g `cpu_custom_temp_sensor=cpuss0_2,temp3_input`.|
 | `cpu_text`<br>`gpu_text`           | Override CPU and GPU text. `gpu_text` is a list in case of multiple GPUs              |
 | `cpu_efficiency`                   | Display CPU efficiency in frames per joule                                            |
 | `custom_text_center`               | Display a custom text centered useful for a header e.g `custom_text_center=FlightLessMango Benchmarks` |

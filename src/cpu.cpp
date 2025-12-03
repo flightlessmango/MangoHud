@@ -572,11 +572,18 @@ bool CPUStats::GetCpuFile() {
         name = read_line(path + "/name");
         SPDLOG_DEBUG("hwmon: sensor name: {}", name);
 
-        if (name == "coretemp") {
+        std::map<std::string, std::string> custom_sensor = get_params()->cpu_custom_temp_sensor;
+
+        if (!custom_sensor["hwmon_name"].empty() && !custom_sensor["hwmon_input"].empty()) {
+            if (name != custom_sensor["hwmon_name"])
+                continue;
+
+            find_fallback_input(path, custom_sensor["hwmon_input"].c_str(), input);
+            break;
+        } else if (name == "coretemp") {
             find_input(path, "temp", input, "Package id 0");
             break;
-        }
-        else if ((name == "zenpower" || name == "k10temp")) {
+        } else if ((name == "zenpower" || name == "k10temp")) {
             if (!find_input(path, "temp", input, "Tdie"))
                 find_input(path, "temp", input, "Tctl");
             break;
