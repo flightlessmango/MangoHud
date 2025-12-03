@@ -181,7 +181,7 @@ static void set_swap_interval(void* dpy, void* drawable, int interval)
     void* ctx = glx.GetCurrentContext();
     gl_context *gl_ctx = gl_contexts[ctx];
 
-    if (!is_blacklisted() || interval >= -1)
+    if (!is_blacklisted() || interval >= 0)
     {
         std::shared_ptr<overlay_params> real_params;
 
@@ -197,12 +197,14 @@ static void set_swap_interval(void* dpy, void* drawable, int interval)
                 real_params = get_params();
             }
         }
-        // Afaik -1 only works with EXT version if it has GLX_EXT_swap_control_tear, maybe EGL_MESA_swap_control_tear someday
-        if (glx.SwapIntervalEXT && ((real_params && real_params->gl_vsync >= -1) || (interval >= -1 && dpy && drawable)))
-        {
-            glx.SwapIntervalEXT(dpy, drawable, real_params && real_params->gl_vsync >= -1 ? real_params->gl_vsync : interval);
-        }
-        else if ((real_params && real_params->gl_vsync >= 0) || interval >= 0)
+
+        // Disabled: -1 is outside of the GLX_SWAP_INTERVAL_EXT spec and will crash with BadValue in Zink.
+        // Original code kept for reference:
+        // if (glx.SwapIntervalEXT && ((real_params && real_params->gl_vsync >= -1) || (interval >= -1 && dpy && drawable)))
+        // {
+        //     glx.SwapIntervalEXT(dpy, drawable, real_params && real_params->gl_vsync >= -1 ? real_params->gl_vsync : interval);
+        // }
+        if ((real_params && real_params->gl_vsync >= 0) || interval >= 0)
         {
             if (glx.SwapIntervalSGI)
                 glx.SwapIntervalSGI(real_params && real_params->gl_vsync >= 0 ? real_params->gl_vsync : interval);
