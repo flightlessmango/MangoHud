@@ -628,13 +628,14 @@ bool CPUStats::GetCpuFile() {
         }
     }
 
-    if (path.empty() || (!file_exists(input) && !find_fallback_input(path, "temp", input))) {
+    if (input.empty() || !file_exists(input)) {
         SPDLOG_ERROR("Could not find cpu temp sensor location");
         return false;
-    } else {
-        SPDLOG_DEBUG("hwmon: using input: {}", input);
-        m_cpuTempFile = fopen(input.c_str(), "r");
     }
+
+    SPDLOG_INFO("hwmon: using input: {}", input);
+    m_cpuTempFile = fopen(input.c_str(), "r");
+
     return true;
 }
 
