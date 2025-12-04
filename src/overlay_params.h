@@ -281,44 +281,25 @@ enum overlay_transfer_function {
 };
 
 struct overlay_params {
-   bool enabled[OVERLAY_PARAM_ENABLED_MAX];
-   enum overlay_param_position position;
-   int control;
-   uint32_t fps_sampling_period; /* ns */
-   std::vector<float> fps_limit;
-   enum fps_limit_method fps_limit_method;
-   bool help;
-   bool no_display;
-   bool full;
-   bool io_read, io_write, io_stats;
-   unsigned width;
-   unsigned height;
-   int offset_x, offset_y;
-   float round_corners;
-   unsigned vsync;
-   int gl_vsync;
-   int gl_bind_framebuffer {0};
-   enum gl_size_query gl_size_query {GL_SIZE_DRAWABLE};
-   bool gl_dont_flip {false};
+   // 8-byte types
    int64_t log_duration, log_interval;
-   unsigned cpu_color, gpu_color, vram_color, ram_color,
-            engine_color, io_color, frametime_color, background_color,
-            text_color, wine_color, battery_color, network_color,
-            horizontal_separator_color;
+   size_t font_params_hash;
+   double font_size, font_scale;
+   double font_size_text, font_size_secondary;
+   double font_scale_media_player;
+   double background_alpha, alpha;
+   double cellpadding_y;
+   double text_outline_thickness;
+   double round_corners;
+
+   // pointers and complex types (usually 8 bytes on 64-bit)
+   std::vector<float> fps_limit;
    std::vector<unsigned> gpu_load_color;
    std::vector<unsigned> cpu_load_color;
    std::vector<unsigned> gpu_load_value;
    std::vector<unsigned> cpu_load_value;
    std::vector<unsigned> fps_color;
    std::vector<unsigned> fps_value;
-   unsigned media_player_color;
-   unsigned table_columns;
-   bool no_small_font;
-   float font_size, font_scale;
-   float font_size_text, font_size_secondary;
-   float font_scale_media_player;
-   float background_alpha, alpha;
-   float cellpadding_y;
    std::vector<KeySym> toggle_hud;
    std::vector<KeySym> toggle_preset;
    std::vector<KeySym> toggle_fps_limit;
@@ -333,31 +314,58 @@ struct overlay_params {
    std::string media_player_name;
    std::string cpu_text, fps_text;
    std::vector<std::string> blacklist;
-   unsigned autostart_log;
    std::vector<std::string> media_player_format;
    std::vector<std::string> benchmark_percentiles;
    std::vector<std::string> gpu_text;
    std::string font_file, font_file_text;
-   uint32_t font_glyph_ranges;
    std::string custom_text_center;
    std::string custom_text;
    std::string config_file_path;
    std::unordered_map<std::string,std::string> options;
-   int permit_upload;
-   int fsr_steam_sharpness;
-   unsigned short fcat_screen_edge;
-   unsigned short fcat_overlay_width;
-   int picmip;
-   int af;
    std::vector<int> preset;
-   size_t font_params_hash;
-   unsigned text_outline_color;
-   float text_outline_thickness;
    std::vector<std::string> device_battery;
    std::vector<std::string> fps_metrics;
    std::vector<std::string> network;
    std::vector<unsigned> gpu_list;
+
+   // 4-byte types
+   uint32_t fps_sampling_period; /* ns */
+   uint32_t font_glyph_ranges;
+   unsigned width, height;
+   int offset_x, offset_y;
+   unsigned vsync;
+   int gl_vsync;
+   int gl_bind_framebuffer {0};
+   unsigned cpu_color, gpu_color, vram_color, ram_color,
+            engine_color, io_color, frametime_color, background_color,
+            text_color, wine_color, battery_color, network_color,
+            horizontal_separator_color;
+   unsigned media_player_color;
+   unsigned table_columns;
+   unsigned autostart_log;
+   int permit_upload;
+   int fsr_steam_sharpness;
+   int picmip;
+   int af;
+   unsigned text_outline_color;
    int transfer_function;
+   enum overlay_param_position position;
+   int control;
+   enum fps_limit_method fps_limit_method;
+   enum gl_size_query gl_size_query {GL_SIZE_DRAWABLE};
+
+   // 2-byte types
+   unsigned short fcat_screen_edge;
+   unsigned short fcat_overlay_width;
+
+   // 1-byte types (and bools)
+   bool enabled[OVERLAY_PARAM_ENABLED_MAX];
+   bool help;
+   bool no_display;
+   bool full;
+   bool io_read, io_write, io_stats;
+   bool gl_dont_flip {false};
+   bool no_small_font;
 
    struct fex_stats_options {
       bool enabled {false};
