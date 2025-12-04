@@ -43,18 +43,17 @@ class GPU_fdinfo {
 private:
     pid_t pid = getpid();
 
+    std::atomic<bool> stop_thread { false };
+    std::atomic<bool> paused { false };
+    struct gpu_metrics metrics;
+    mutable std::mutex metrics_mutex;
+
     const std::string module;
     const std::string pci_dev;
     const std::string drm_node;
 
     std::thread thread;
     std::condition_variable cond_var;
-
-    std::atomic<bool> stop_thread { false };
-    std::atomic<bool> paused { false };
-
-    struct gpu_metrics metrics;
-    mutable std::mutex metrics_mutex;
 
     std::vector<std::ifstream> fdinfo;
     uint64_t fdinfo_last_update_ms = 0;
