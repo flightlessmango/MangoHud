@@ -21,40 +21,6 @@ struct Function {
 
 class HudElements{
     public:
-        struct swapchain_stats *sw_stats;
-        std::shared_ptr<overlay_params> params;
-        struct exec_entry {
-            int             pos;
-            std::string     value;
-            std::string     ret;
-        };
-        float ralign_width;
-        float old_scale;
-        float res_width, res_height;
-        bool is_vulkan = true, gamemode_bol = false, vkbasalt_bol = false;
-        int place;
-        int text_column = 1;
-        int table_columns_count = 0;
-        pid_t g_gamescopePid = -1;
-        int g_fsrUpscale = -1;
-        int g_fsrSharpness = -1;
-        Clock::time_point last_exec;
-        std::vector<std::pair<std::string, std::string>> options;
-        std::vector<Function> ordered_functions;
-        std::vector<float> gamescope_debug_latency {};
-        std::vector<float> gamescope_debug_app {};
-        int min, max, gpu_core_max, gpu_mem_max, cpu_temp_max, gpu_temp_max;
-        const std::vector<std::string> permitted_params = {
-            "gpu_load", "cpu_load", "gpu_core_clock", "gpu_mem_clock",
-            "vram", "ram", "cpu_temp", "gpu_temp"
-        };
-        std::vector<exec_entry> exec_list;
-        std::chrono::steady_clock::time_point overlay_start = std::chrono::steady_clock::now();
-        uint32_t vendorID;
-        int hdr_status = 0;
-        int refresh = 0;
-        unsigned int vsync = 10;
-
         enum display_servers {
             UNKNOWN,
             WAYLAND,
@@ -62,12 +28,53 @@ class HudElements{
             XORG
         };
 
-        display_servers display_server = UNKNOWN;
+        struct exec_entry {
+            int             pos;
+            std::string     value;
+            std::string     ret;
+        };
+
+        // 8-byte members
+        struct swapchain_stats *sw_stats;
+        std::shared_ptr<overlay_params> params;
+        Clock::time_point last_exec;
+        std::chrono::steady_clock::time_point overlay_start = std::chrono::steady_clock::now();
         std::unique_ptr<Net> net = nullptr;
 #ifdef __linux__
         std::unique_ptr<Shell> shell = nullptr;
 #endif
+        std::vector<std::pair<std::string, std::string>> options;
+        std::vector<Function> ordered_functions;
+        std::vector<float> gamescope_debug_latency {};
+        std::vector<float> gamescope_debug_app {};
+        const std::vector<std::string> permitted_params = {
+            "gpu_load", "cpu_load", "gpu_core_clock", "gpu_mem_clock",
+            "vram", "ram", "cpu_temp", "gpu_temp"
+        };
+        std::vector<exec_entry> exec_list;
+        VkPresentModeKHR cur_present_mode;
 
+        // 4-byte members
+        float ralign_width;
+        float old_scale;
+        float res_width, res_height;
+        int place;
+        int text_column = 1;
+        int table_columns_count = 0;
+        pid_t g_gamescopePid = -1;
+        int g_fsrUpscale = -1;
+        int g_fsrSharpness = -1;
+        int min, max, gpu_core_max, gpu_mem_max, cpu_temp_max, gpu_temp_max;
+        uint32_t vendorID;
+        int hdr_status = 0;
+        int refresh = 0;
+        unsigned int vsync = 10;
+        display_servers display_server = UNKNOWN;
+
+        // 1-byte members (booleans)
+        bool is_vulkan = true, gamemode_bol = false, vkbasalt_bol = false;
+
+        // Methods
         void sort_elements(const std::pair<std::string, std::string>& option);
         void legacy_elements(const overlay_params* temp_params);
         void update_exec();
@@ -167,8 +174,6 @@ class HudElements{
             {VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR, "DEMAND"},
             {VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR, "CONTINUOUS"}
         };
-
-        VkPresentModeKHR cur_present_mode;
 
         std::string get_present_mode(){
             if (is_vulkan)
