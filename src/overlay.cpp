@@ -166,10 +166,10 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
 
 struct hw_info_updater
 {
-   bool quit = false;
    std::thread thread {};
    const struct overlay_params* params = nullptr;
    uint32_t vendorID;
+   bool quit = false;
    bool update_hw_info_thread = false;
 
    std::condition_variable cv_hwupdate;
