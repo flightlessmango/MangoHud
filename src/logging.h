@@ -59,21 +59,22 @@ public:
   void upload_last_log();
   void upload_last_logs();
   void calculate_benchmark_data();
-  std::string output_folder;
+
   const int64_t log_interval;
   const int64_t log_duration;
+  std::string output_folder;
   bool autostart_init = false;
 
 private:
+  bool m_logging_on;
+  bool m_values_valid;
+
   std::vector<logData> m_log_array;
   std::vector<std::string> m_log_files;
-  Clock::time_point m_log_start;
-  Clock::time_point m_log_end;
-  bool m_logging_on;
-
   std::mutex m_values_valid_mtx;
   std::condition_variable m_values_valid_cv;
-  bool m_values_valid;
+  Clock::time_point m_log_start;
+  Clock::time_point m_log_end;
 };
 
 extern std::unique_ptr<Logger> logger;
