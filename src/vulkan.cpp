@@ -78,8 +78,8 @@ struct instance_data {
    struct vk_instance_dispatch_table vtable;
    VkInstance instance;
    struct overlay_params params;
-   uint32_t api_version;
    string engineName, engineVersion;
+   uint32_t api_version;
    enum EngineTypes engine;
    notify_thread notifier;
    int control_client;
@@ -149,6 +149,13 @@ struct swapchain_data {
    unsigned width, height;
    VkFormat format;
 
+   bool font_uploaded;
+   VkImage font_image;
+   VkImageView font_image_view;
+   VkDeviceMemory font_mem;
+   VkBuffer upload_font_buffer;
+   VkDeviceMemory upload_font_buffer_mem;
+
    std::vector<VkImage> images;
    std::vector<VkImageView> image_views;
    std::vector<VkFramebuffer> framebuffers;
@@ -167,13 +174,6 @@ struct swapchain_data {
    VkCommandPool command_pool;
 
    std::vector<overlay_draw *> draws; /* vector of struct overlay_draw */
-
-   bool font_uploaded;
-   VkImage font_image;
-   VkImageView font_image_view;
-   VkDeviceMemory font_mem;
-   VkBuffer upload_font_buffer;
-   VkDeviceMemory upload_font_buffer_mem;
 
    /**/
    ImGuiContext* imgui_context;
