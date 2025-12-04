@@ -415,8 +415,11 @@ static void destroy_swapchain_data(struct swapchain_data *data)
 static struct overlay_draw *get_overlay_draw(struct swapchain_data *data, unsigned image_idx)
 {
    struct device_data *device_data = data->device;
-   struct overlay_draw *draw = data->draws.size() <= image_idx ?
-                               nullptr : data->draws[image_idx];
+   const size_t images_count = data->images.size();
+   if (data->draws.size() < images_count) {
+      data->draws.resize(images_count, nullptr);
+   }
+   struct overlay_draw *draw = data->draws[image_idx];
 
    VkSemaphoreCreateInfo sem_info = {};
    sem_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -455,7 +458,7 @@ static struct overlay_draw *get_overlay_draw(struct swapchain_data *data, unsign
    VK_CHECK(device_data->vtable.CreateSemaphore(device_data->device, &sem_info,
                                                 NULL, &draw->cross_engine_semaphore));
 
-   data->draws.push_back(draw);
+   data->draws[image_idx] = draw;
 
    return draw;
 }
@@ -1467,6 +1470,7 @@ static void shutdown_swapchain_data(struct swapchain_data *data)
    struct device_data *device_data = data->device;
 
    for (auto draw : data->draws) {
+      if (!draw) continue;
       device_data->vtable.DestroySemaphore(device_data->device, draw->cross_engine_semaphore, NULL);
       device_data->vtable.DestroySemaphore(device_data->device, draw->semaphore, NULL);
       device_data->vtable.DestroyFence(device_data->device, draw->fence, NULL);
