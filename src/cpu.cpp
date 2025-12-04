@@ -848,24 +848,43 @@ void CPUStats::get_cpu_cores_types_intel() {
         std::string cpus;
         std::getline(core_file, cpus);
 
-        std::regex rx("(\\d+)-(\\d+)");
-        std::smatch matches;
-
-        if (!std::regex_match(cpus, matches, rx) || matches.size() != 3)
+        if (cpus.empty())
             continue;
 
-        int start = 0, end = 0;
+        std::vector<std::string> chunks;
 
-        try {
-            start = std::stoi(matches[1]);
-            end = std::stoi(matches[2]) + 1;
-        } catch (...) {
-            SPDLOG_ERROR("error parsing cpus \"{}\"", cpus);
+        // split string by comma
+        size_t pos;
+        while((pos = cpus.find(',')) != std::string::npos) {
+            chunks.push_back(cpus.substr(0, pos));
+            cpus = cpus.substr(pos + 1);
         }
 
-        for (int i = start; i < end; i++) {
+        chunks.push_back(cpus);
+
+        std::vector<int> cores;
+
+        // if chunk doesn't contain dash, then it's just a core number,
+        // else it's a range, so we parse start and end of the range
+        // and insert all core numbers to vector.
+        for (const std::string& ch : chunks) {
+            size_t dash_pos = ch.find('-');
+
+            if (dash_pos == std::string::npos) {
+                cores.push_back(std::stoi(ch));
+            } else {
+                int start = std::stoi(ch.substr(0, dash_pos));
+                int end = std::stoi(ch.substr(dash_pos + 1));
+
+                for (int i = start; i < end + 1; i++)
+                    cores.push_back(i);
+            }
+        }
+
+        for (const int core : cores) {
+            // this for loop is here just in case m_cpuData is not sorted.
             for (size_t k = 0; k < m_cpuData.size(); k++) {
-                if (m_cpuData[k].cpu_id != i)
+                if (m_cpuData[k].cpu_id != core)
                     continue;
 
                 m_cpuData[k].label = key;
