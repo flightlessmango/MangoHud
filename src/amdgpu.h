@@ -404,6 +404,10 @@ class AMDGPU {
         }
 
 	private:
+		bool gpu_metrics_is_valid = false;
+		std::atomic<bool> stop_thread{false};
+		std::atomic<bool> paused{false};
+		struct amdgpu_common_metrics amdgpu_common_metrics;
 		std::string pci_dev;
 		std::string gpu_metrics_path;
 		uint32_t device_id;
@@ -411,13 +415,9 @@ class AMDGPU {
 		std::condition_variable amdgpu_c;
 		std::thread thread;
 		struct amdgpu_files sysfs_nodes = {};
-		bool gpu_metrics_is_valid = false;
 		std::condition_variable cond_var;
-		std::atomic<bool> stop_thread{false};
-        std::atomic<bool> paused{false};
 		std::mutex metrics_mutex;
 		gpu_metrics metrics;
-		struct amdgpu_common_metrics amdgpu_common_metrics;
 		struct gpu_metrics_v3_0 previous_metrics{};
 		#define V3_THROTTLING_DELTA(name) \
 		((amdgpu_metrics)->throttle_residency_##name - (previous_metrics).throttle_residency_##name)

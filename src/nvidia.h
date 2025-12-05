@@ -91,19 +91,10 @@ class NVIDIA {
         std::atomic<bool> stop_thread{false};
         std::atomic<bool> paused{false};
 
-#ifdef HAVE_NVML
-        nvmlDevice_t device;
-
-        std::vector<nvmlProcessInfo_v1_t> process_info = {};
-
-        void get_instant_metrics_nvml(struct gpu_metrics *metrics);
-        std::shared_ptr<libnvml_loader> nvml = get_libnvml_loader();
-#endif
-
 #if defined(HAVE_XNVCTRL) && defined(HAVE_X11)
+        int num_coolers;
         Display* display;
         // std::unique_ptr<Display, std::function<void(Display*)>> display;
-        int num_coolers;
         int64_t get_nvctrl_fan_speed();
         std::shared_ptr<libnvctrl_loader> nvctrl = get_libnvctrl_loader();
 
@@ -111,5 +102,14 @@ class NVIDIA {
         void parse_token(std::string token, std::unordered_map<std::string, std::string>& options);
         bool find_nv_x11(Display*& dpy);
         char* get_attr_target_string(int attr, int target_type, int target_id);
+#endif
+
+#ifdef HAVE_NVML
+        nvmlDevice_t device;
+
+        std::vector<nvmlProcessInfo_v1_t> process_info = {};
+
+        void get_instant_metrics_nvml(struct gpu_metrics *metrics);
+        std::shared_ptr<libnvml_loader> nvml = get_libnvml_loader();
 #endif
 };

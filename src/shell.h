@@ -15,8 +15,8 @@ private:
     int from_shell[2];
     pid_t shell_pid;
     bool success;
-    struct stat stat_buffer;
     bool runtime = false;
+    struct stat stat_buffer;
 
 #ifdef __linux__
     void setNonBlocking(int fd) {

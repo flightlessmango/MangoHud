@@ -16,8 +16,8 @@ class WineSync {
             {"ntsync", "NTsync"},
         };
 
-        pid_t pid;
         std::string method = "NONE";
+        pid_t pid;
         bool inside_wine = true;
     public:
         void determine_sync_variant() {

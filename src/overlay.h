@@ -40,23 +40,33 @@ enum EngineTypes
 };
 
 struct swapchain_stats {
+   // 8-byte types
    uint64_t n_frames;
-   enum overlay_plots stat_selector;
    double time_dividor;
-   struct frame_stat stats_min, stats_max;
-   struct frame_stat frames_stats[200];
-
    ImFont* font_small = nullptr;
    ImFont* font_text = nullptr;
    ImFont* font_secondary = nullptr;
    size_t font_params_hash = 0;
-   std::string time;
    double fps;
    uint64_t last_present_time;
-   unsigned n_frames_since_update;
    uint64_t last_fps_update;
    ImVec2 main_window_pos;
-   
+
+   // Potentially large or complex types
+   struct frame_stat stats_min, stats_max;
+   struct frame_stat frames_stats[200];
+   std::string time;
+   std::string engineName;
+   std::string engineVersion;
+   std::string deviceName;
+   std::string gpuName;
+   std::string driverName;
+
+   // 4-byte types
+   enum overlay_plots stat_selector;
+   unsigned n_frames_since_update;
+   uint32_t applicationVersion;
+   enum EngineTypes engine;
    struct {
       int32_t major;
       int32_t minor;
@@ -67,13 +77,6 @@ struct swapchain_stats {
       int32_t minor;
       int32_t patch;
    } version_vk;
-   std::string engineName;
-   std::string engineVersion;
-   std::string deviceName;
-   std::string gpuName;
-   std::string driverName;
-   uint32_t applicationVersion;
-   enum EngineTypes engine;
 };
 
 struct benchmark_stats {
