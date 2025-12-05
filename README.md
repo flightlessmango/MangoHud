@@ -381,6 +381,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `font_scale_media_player`          | Change size of media player text relative to `font_size`                              |
 | `font_size=`                       | Customizable font size. Default is `24`                                               |
 | `font_size_secondary=`             | Customizable font size for secondary metrics. Default is `0.55 * font_size`.          |
+| `font_size_small=`                 | Customizable font size for small text (like units). Default is `0.55 * font_size`.    |
 | `font_size_text=`                  | Customizable font size for other text like media metadata. Default is `24`            |
 | `fps_color_change`                 | Change the FPS text color depepending on the FPS value                                |
 | `fps_color=`                       | Choose the colors that the fps changes to when `fps_color_change` is enabled. Corresponds with fps_value. Default is `b22222,fdfd09,39f900`   |
