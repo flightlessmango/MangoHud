@@ -87,7 +87,7 @@ static char        g_GlslVersionString[32] = "";   // Specified by user or detec
 static bool        g_IsGLES = false;
 
 // Functions
-static void ImGui_ImplOpenGL3_DestroyFontsTexture(gl_context *ctx)
+void ImGui_ImplOpenGL3_DestroyFontsTexture(gl_context *ctx)
 {
     if (ctx->FontTexture)
     {
@@ -106,7 +106,14 @@ bool ImGui_ImplOpenGL3_CreateFontsTexture(gl_context *ctx)
     int width, height;
     io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
 
-    GLint last_texture, last_unpack_buffer;
+    // OpenGL specification defaults, overwritten by glGet but initialized just in case.
+    GLint last_texture = 0;
+    GLint last_unpack_buffer = 0;
+    GLint last_unpack_row_length = 0;
+    GLint last_unpack_skip_pixels = 0;
+    GLint last_unpack_skip_rows = 0;
+    GLint last_unpack_alignment = 4;
+
 
     // Upload texture to graphics system
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
@@ -116,12 +123,20 @@ bool ImGui_ImplOpenGL3_CreateFontsTexture(gl_context *ctx)
     {
         glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &last_unpack_buffer);
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+
+        glGetIntegerv(GL_UNPACK_ROW_LENGTH, &last_unpack_row_length);
+        glGetIntegerv(GL_UNPACK_SKIP_PIXELS, &last_unpack_skip_pixels);
+        glGetIntegerv(GL_UNPACK_SKIP_ROWS, &last_unpack_skip_rows);
+        // Values here are OpenGL specification default
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+        glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+        glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
     }
+    glGetIntegerv(GL_UNPACK_ALIGNMENT, &last_unpack_alignment);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4); // OpenGL specification default
+
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    //#ifdef GL_UNPACK_ROW_LENGTH
-    if (g_IsGLES || g_GlVersion >= 200)
-        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, pixels);
 
@@ -131,7 +146,13 @@ bool ImGui_ImplOpenGL3_CreateFontsTexture(gl_context *ctx)
     // Restore state
     glBindTexture(GL_TEXTURE_2D, last_texture);
     if ((g_IsGLES && g_GlVersion >= 300) || (!g_IsGLES && g_GlVersion >= 210))
+    {
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, last_unpack_buffer);
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, last_unpack_row_length);
+        glPixelStorei(GL_UNPACK_SKIP_PIXELS, last_unpack_skip_pixels);
+        glPixelStorei(GL_UNPACK_SKIP_ROWS, last_unpack_skip_rows);
+    }
+    glPixelStorei(GL_UNPACK_ALIGNMENT, last_unpack_alignment);
 
     return true;
 }

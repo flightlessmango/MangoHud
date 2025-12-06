@@ -48,6 +48,7 @@ IMGUI_IMPL_API bool     ImGui_ImplOpenGL3_Init(gl_context* ctx, const char* glsl
 IMGUI_IMPL_API void     ImGui_ImplOpenGL3_Shutdown(gl_context* ctx);
 IMGUI_IMPL_API void     ImGui_ImplOpenGL3_NewFrame(gl_context* ctx);
 IMGUI_IMPL_API void     ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data);
+IMGUI_IMPL_API void     ImGui_ImplOpenGL3_DestroyFontsTexture(gl_context* ctx);
 IMGUI_IMPL_API bool     ImGui_ImplOpenGL3_CreateFontsTexture(gl_context* ctx);
 
 // (Optional) Called by Init/NewFrame/Shutdown
