@@ -1,14 +1,17 @@
-#include <spdlog/spdlog.h>
-#include <map>
+#include <array>
 #include <fstream>
+#include <map>
+#include <spdlog/spdlog.h>
 #include <string>
 #include <unistd.h>
-#include <array>
+#include <vector>
 
 #include "memory.h"
+#include "file_utils.h"
 #include "hud_elements.h"
 
 float memused, memmax, swapused;
+int mem_temp;
 uint64_t proc_mem_resident, proc_mem_shared, proc_mem_virt;
 
 void update_meminfo() {
@@ -29,6 +32,33 @@ void update_meminfo() {
     memmax = meminfo["MemTotal"];
     memused = meminfo["MemTotal"] - meminfo["MemAvailable"];
     swapused = meminfo["SwapTotal"] - meminfo["SwapFree"];
+}
+
+void update_mem_temp() {
+    static bool inited = false;
+    static std::vector<std::ifstream> mem_temp_files;
+
+    if (!inited) {
+        inited = true;
+        std::string path = "/sys/class/hwmon/";
+        auto dirs = ls(path.c_str(), "hwmon", LS_DIRS);
+        for (auto &dir : dirs) {
+            if (read_line(path + dir + "/name") == "spd5118")
+                mem_temp_files.emplace_back(path + dir + "/temp1_input");
+        }
+        if (mem_temp_files.empty())
+            SPDLOG_ERROR("failed to find known ram temp sensors");
+    }
+
+    int temp = 0;
+    for (auto &file : mem_temp_files) {
+        int _temp;
+        file.clear();
+        file.seekg(0);
+        if ((file >> _temp) && _temp > temp)
+            temp = _temp;
+    }
+    mem_temp = temp / 1000;
 }
 
 void update_procmem()
