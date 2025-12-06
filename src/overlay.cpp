@@ -132,6 +132,8 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
    }
    if (real_params->enabled[OVERLAY_PARAM_ENABLED_ram] || real_params->enabled[OVERLAY_PARAM_ENABLED_swap] || logger->is_active())
       update_meminfo();
+   if (real_params->enabled[OVERLAY_PARAM_ENABLED_ram_temp])
+      update_mem_temp();
    if (real_params->enabled[OVERLAY_PARAM_ENABLED_procmem])
       update_procmem();
    if (real_params->enabled[OVERLAY_PARAM_ENABLED_io_read] || real_params->enabled[OVERLAY_PARAM_ENABLED_io_write])

@@ -438,6 +438,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `procmem`<br>`procmem_shared`, `procmem_virt`| Displays process' memory usage: resident, shared and/or virtual. `procmem` (resident) also toggles others off if disabled |
 | `proc_vram`                        | Display process' VRAM usage                                                           |
 | `ram`<br>`vram`                    | Display system RAM/VRAM usage                                                         |
+| `ram_temp`                         | Display RAM temperature (only supports DDR5 with `spd5118` driver)                    |
 | `read_cfg`                         | Add to MANGOHUD_CONFIG as first parameter to also load config file. Otherwise only `MANGOHUD_CONFIG` parameters are used |
 | `reload_cfg=`                      | Change keybind for reloading the config. Default = `Shift_L+F4`                       |
 | `resolution`                       | Display the current resolution                                                        |
