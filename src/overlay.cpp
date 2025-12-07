@@ -718,7 +718,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
 
       if(logger->is_active())
          ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(data.main_window_pos.x + window_size.x - 15, data.main_window_pos.y + 15), 10, real_params->engine_color, 20);
-      window_size = ImVec2(window_size.x, ImGui::GetCursorPosY() + 10.0f);
+      window_size = ImVec2(window_size.x, ImGui::GetCursorPosY() + 11.0f);
       ImGui::End();
       if((now - logger->last_log_end()) < 12s && !logger->is_active())
          render_benchmark(data, params, window_size, height, now);

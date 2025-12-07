@@ -298,10 +298,16 @@ static bool render(GLFWwindow* window) {
     render_imgui(sw_stats, params, window_size, true);
     get_atom_info();
     overlay_end_frame();
-    if (screenWidth && screenHeight)
-        glfwSetWindowSize(window, screenWidth, screenHeight);
+    static bool window_size_changed = false;
+    window_size_changed = last_window_size.x != window_size.x || last_window_size.y != window_size.y;
+    if (window_size_changed) {
+        if (get_params()->enabled[OVERLAY_PARAM_ENABLED_horizontal] && screenWidth)
+            glfwSetWindowSize(window, screenWidth, window_size.y);
+        else
+            glfwSetWindowSize(window, window_size.x, window_size.y);
+    }
     ImGui::EndFrame();
-    return last_window_size.x != window_size.x || last_window_size.y != window_size.y;
+    return window_size_changed;
 }
 
 int main(int, char**)
