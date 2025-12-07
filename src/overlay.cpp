@@ -405,28 +405,34 @@ void position_layer(struct swapchain_stats& data, const struct overlay_params& p
    }
 }
 
-void RenderOutlinedText(const char* text, ImU32 textColor) {
-   ImGuiWindow* window = ImGui::GetCurrentWindow();
-   ImGuiContext& g = *GImGui;
-   const ImGuiStyle& style = g.Style;
+void RenderOutlinedText(const char* text, ImU32 textColor)
+{
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (!window || !text || !text[0]) return;
 
-   float outlineThickness = HUDElements.params->text_outline_thickness;
-   ImVec2 textSize = ImGui::CalcTextSize(text);
-   ImU32 outlineColor = ImGui::ColorConvertFloat4ToU32(HUDElements.colors.text_outline);
-   ImVec2 pos = window->DC.CursorPos;
+    ImGuiContext& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
 
-   ImDrawList* drawList = ImGui::GetWindowDrawList();
+    ImFont* font = ImGui::GetFont();
+    float fontSize = ImGui::GetFontSize();
+    ImVec2 pos = window->DC.CursorPos;
 
-   if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_text_outline] && outlineThickness > 0.0f) {
-      drawList->AddText(ImGui::GetFont(), ImGui::GetFontSize(), ImVec2(pos.x - outlineThickness, pos.y), outlineColor, text);
-      drawList->AddText(ImGui::GetFont(), ImGui::GetFontSize(), ImVec2(pos.x + outlineThickness, pos.y), outlineColor, text);
-      drawList->AddText(ImGui::GetFont(), ImGui::GetFontSize(), ImVec2(pos.x, pos.y - outlineThickness), outlineColor, text);
-      drawList->AddText(ImGui::GetFont(), ImGui::GetFontSize(), ImVec2(pos.x, pos.y + outlineThickness), outlineColor, text);
-   }
+    ImDrawList* draw = ImGui::GetWindowDrawList();
 
-   drawList->AddText(ImGui::GetFont(), ImGui::GetFontSize(), pos, textColor, text);
+    float t = HUDElements.params->text_outline_thickness;
+    bool outlineEnabled = HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_text_outline] && t > 0.0f;
 
-   ImGui::ItemSize(textSize, style.FramePadding.y);
+    if (outlineEnabled)
+    {
+        ImU32 oc = ImGui::ColorConvertFloat4ToU32(HUDElements.colors.text_outline);
+        draw->AddText(font, fontSize, ImVec2(pos.x - t, pos.y - t), oc, text);
+        draw->AddText(font, fontSize, ImVec2(pos.x + t, pos.y + t), oc, text);
+    }
+
+    draw->AddText(font, fontSize, pos, textColor, text);
+
+    ImVec2 size = ImGui::CalcTextSize(text);
+    ImGui::ItemSize(size, style.FramePadding.y);
 }
 
 void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...)
@@ -627,31 +633,34 @@ ImVec4 change_on_load_temp(LOAD_DATA& data, unsigned current)
    }
 }
 
-void horizontal_separator(struct overlay_params& params) {
+void horizontal_separator(struct overlay_params& params)
+{
     ImGui::SameLine();
     ImGui::Spacing();
     ImGui::SameLine();
 
     ImDrawList* drawList = ImGui::GetWindowDrawList();
     ImVec2 cursorPos = ImGui::GetCursorScreenPos();
-    ImVec2 startPos(cursorPos.x - 5, cursorPos.y + 2);
-    ImVec2 endPos(startPos.x, cursorPos.y + params.font_size * 0.85);
 
-    float outlineThickness = 1.0f;
+    float barHalfWidth = 0.5f;
+    ImVec2 barMin(cursorPos.x - 5.0f - barHalfWidth,
+                  cursorPos.y + 2.0f);
+    ImVec2 barMax(barMin.x + barHalfWidth * 2.0f,
+                  cursorPos.y + params.font_size * 0.85f);
 
-   if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_text_outline]){
-      // Draw the black outline
-      drawList->AddLine(ImVec2(startPos.x - outlineThickness, startPos.y), ImVec2(startPos.x - outlineThickness, endPos.y), IM_COL32_BLACK, outlineThickness + 2);
-      drawList->AddLine(ImVec2(startPos.x + outlineThickness, startPos.y), ImVec2(startPos.x + outlineThickness, endPos.y), IM_COL32_BLACK, outlineThickness + 2);
-      drawList->AddLine(ImVec2(startPos.x - outlineThickness, startPos.y - outlineThickness/2), ImVec2(startPos.x + outlineThickness, startPos.y - outlineThickness/2), IM_COL32_BLACK, outlineThickness + 2);
-      drawList->AddLine(ImVec2(startPos.x - outlineThickness, endPos.y + outlineThickness/2), ImVec2(startPos.x + outlineThickness, endPos.y + outlineThickness/2), IM_COL32_BLACK, outlineThickness + 2);
-   } else {
-      outlineThickness *= 2;
-   }
+    ImU32 sepColor = ImGui::ColorConvertFloat4ToU32(HUDElements.colors.horizontal_separator);
 
-    // Draw the separator line
-    ImU32 separator_color = ImGui::ColorConvertFloat4ToU32(HUDElements.colors.horizontal_separator);
-    drawList->AddLine(startPos, endPos, separator_color, outlineThickness);
+    if (params.enabled[OVERLAY_PARAM_ENABLED_text_outline]) {
+        float outline = 1.0f;
+
+        ImVec2 outerMin(barMin.x - outline, barMin.y - outline);
+        ImVec2 outerMax(barMax.x + outline, barMax.y + outline);
+        drawList->AddRectFilled(outerMin, outerMax, IM_COL32_BLACK);
+
+        drawList->AddRectFilled(barMin, barMax, sepColor);
+    } else {
+        drawList->AddRectFilled(barMin, barMax, sepColor);
+    }
 
     ImGui::SameLine();
     ImGui::Spacing();
@@ -701,7 +710,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             func.run();
             HUDElements.place += 1;
             if(!HUDElements.ordered_functions.empty() && real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && HUDElements.ordered_functions.size() != (size_t)HUDElements.place)
-               horizontal_separator(params);
+               horizontal_separator(*real_params);
          }
 
          if (real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
