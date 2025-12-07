@@ -854,11 +854,17 @@ void init_system_info(){
 
 void check_for_vkbasalt_and_gamemode() {
 #ifdef __linux__
+   static bool checked = false;
+   if (checked)
+      return;
+
    if (lib_loaded("gamemode", HUDElements.g_gamescopePid))
       HUDElements.gamemode_bol = true;
 
    if (lib_loaded("vkbasalt", HUDElements.g_gamescopePid))
       HUDElements.vkbasalt_bol = true;
+
+   checked = true;
 #endif
 }
 
