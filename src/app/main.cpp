@@ -290,6 +290,12 @@ static bool render(GLFWwindow* window) {
         HUDElements.convert_colors(params);
 
     ImVec2 last_window_size = window_size;
+    if (sw_stats.font_params_hash != params.font_params_hash)
+    {
+        sw_stats.font_params_hash = params.font_params_hash;
+        create_fonts(nullptr, params, sw_stats.font_small, sw_stats.font_text, sw_stats.font_secondary);
+        ImGui_ImplOpenGL3_CreateFontsTexture();
+    }
     ImGui_ImplGlfw_NewFrame();
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
@@ -325,6 +331,8 @@ int main(int, char**)
 
     glfwWindowHint(GLFW_RESIZABLE, 1);
     glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, 1);
+    glfwWindowHint(GLFW_DEPTH_BITS,   0);
+    glfwWindowHint(GLFW_STENCIL_BITS, 0);
 
     // Create window with graphics context
     GLFWwindow* window = init(glsl_version);
