@@ -17,7 +17,6 @@
 #include "mangoapp.h"
 #include "mangoapp_proto.h"
 #include <GLFW/glfw3.h>
-#include "amdgpu.h"
 #ifdef __linux__
 #include "implot.h"
 #endif
@@ -212,7 +211,7 @@ static void msg_read_thread(){
                         else
                         HUDElements.g_fsrSharpness = real_params->fsr_steam_sharpness - mangoapp_v1->fsrSharpness;
                     }
-                    if (!get_params()->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam]){
+                    if (!real_params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam]){
                         steam_focused = get_prop("GAMESCOPE_FOCUSED_APP_GFX") == 769;
                     } else {
                         steam_focused = false;
@@ -285,7 +284,7 @@ static void get_atom_info(){
     HUDElements.refresh = get_prop("GAMESCOPE_DISPLAY_REFRESH_RATE_FEEDBACK");
 }
 
-static bool render(GLFWwindow* window) {
+static bool render(GLFWwindow* window, overlay_params& real_params) {
     if (HUDElements.colors.update)
         HUDElements.convert_colors(params);
 
@@ -299,15 +298,15 @@ static bool render(GLFWwindow* window) {
     ImGui_ImplGlfw_NewFrame();
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
-    overlay_new_frame(params);
-    position_layer(sw_stats, params, window_size);
-    render_imgui(sw_stats, params, window_size, true);
+    overlay_new_frame(real_params);
+    position_layer(sw_stats, real_params, window_size);
+    render_imgui(sw_stats, real_params, window_size, true);
     get_atom_info();
     overlay_end_frame();
     static bool window_size_changed = false;
     window_size_changed = last_window_size.x != window_size.x || last_window_size.y != window_size.y;
     if (window_size_changed) {
-        if (get_params()->enabled[OVERLAY_PARAM_ENABLED_horizontal] && screenWidth)
+        if (real_params.enabled[OVERLAY_PARAM_ENABLED_horizontal] && screenWidth)
             glfwSetWindowSize(window, screenWidth, window_size.y);
         else
             glfwSetWindowSize(window, window_size.x, window_size.y);
@@ -349,7 +348,8 @@ int main(int, char**)
     init_cpu_stats(params);
     notifier.params = &params;
     start_notifier(notifier);
-    window_size = ImVec2(get_params()->width, get_params()->height);
+    auto real_params = get_params();
+    window_size = ImVec2(real_params->width, real_params->height);
     deviceName = (char*)glGetString(GL_RENDERER);
     sw_stats.deviceName = deviceName;
     SPDLOG_DEBUG("mangoapp deviceName: {}", deviceName);
@@ -383,8 +383,8 @@ int main(int, char**)
     // Main loop
     while (!glfwWindowShouldClose(window)){
         check_keybinds(params);
-
-        if (!get_params()->no_display){
+        real_params = get_params();
+        if (!real_params->no_display){
             if (mangoapp_paused){
                 glfwShowWindow(window);
                 uint32_t value = 1;
@@ -398,21 +398,23 @@ int main(int, char**)
             }
             {
                 std::unique_lock<std::mutex> lk(mangoapp_m);
-                mangoapp_cv.wait(lk, []{return new_frame || get_params()->no_display;});
+                mangoapp_cv.wait(lk, [&] {
+                    return new_frame || (real_params && real_params->no_display);
+                });
                 new_frame = false;
             }
             // Start the Dear ImGui frame
             {
-                if (render(window)) {
+                if (render(window, *real_params)) {
                     // If we need to resize our window, give it another couple of rounds for the
                     // stupid display size stuff to propagate through ImGUI (using NDC and scaling
                     // in GL makes me a very unhappy boy.)
-                    render(window);
-                    render(window);
+                    render(window, *real_params);
+                    render(window, *real_params);
                 }
 
-                if (get_params()->control >= 0) {
-                    control_client_check(get_params()->control, control_client, deviceName);
+                if (real_params->control >= 0) {
+                    control_client_check(real_params->control, control_client, deviceName);
                     process_control_socket(control_client, params);
                 }
             }
