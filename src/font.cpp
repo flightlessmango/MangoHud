@@ -39,7 +39,9 @@ void create_fonts(ImFontAtlas* font_atlas, const overlay_params& params, ImFont*
     config.MergeMode = true;
     // ImGui changed OversampleH default to 2, but it appears to sometimes cause
     // crashing issues in 32bit applications.
-    config.OversampleH = 3;
+    config.OversampleH = 0;
+    config.OversampleV = 0;
+    config.PixelSnapH = true;
     static const ImWchar icon_ranges[] = { ICON_MIN_FK, ICON_MAX_FK, 0 };
 
    ImVector<ImWchar> glyph_ranges;
