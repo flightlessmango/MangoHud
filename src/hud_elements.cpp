@@ -750,9 +750,13 @@ void HudElements::proc_vram() {
 
 void HudElements::ram(){
 #ifdef __linux__
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram]){
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram] ||
+        HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram_temp]) {
         ImguiNextColumnFirstItem();
         HUDElements.TextColored(HUDElements.colors.ram, "RAM");
+    }
+
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram]) {
         ImguiNextColumnOrNewRow();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", memused);
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
@@ -770,6 +774,21 @@ void HudElements::ram(){
         ImGui::PushFont(HUDElements.sw_stats->font_small);
         HUDElements.TextColored(HUDElements.colors.text, "GiB");
         ImGui::PopFont();
+    }
+
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram_temp]) {
+        ImguiNextColumnOrNewRow();
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit])
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", HUDElements.convert_to_fahrenheit(mem_temp));
+        else
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", mem_temp);
+        ImGui::SameLine(0, 1.0f);
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact])
+            HUDElements.TextColored(HUDElements.colors.text, "°");
+        else if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit])
+            HUDElements.TextColored(HUDElements.colors.text, "°F");
+        else
+            HUDElements.TextColored(HUDElements.colors.text, "°C");
     }
 #endif
 }
