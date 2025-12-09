@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <condition_variable>
 #include <mutex>
+#include <map>
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,6 +41,7 @@ struct Tracepoint;
    OVERLAY_PARAM_BOOL(core_bars)                     \
    OVERLAY_PARAM_BOOL(core_type)                     \
    OVERLAY_PARAM_BOOL(cpu_temp)                      \
+   OVERLAY_PARAM_CUSTOM(cpu_custom_temp_sensor)      \
    OVERLAY_PARAM_BOOL(cpu_power)                     \
    OVERLAY_PARAM_BOOL(gpu_temp)                      \
    OVERLAY_PARAM_BOOL(gpu_junction_temp)             \
@@ -333,6 +335,7 @@ struct overlay_params {
    std::string pci_dev;
    std::string media_player_name;
    std::string cpu_text, fps_text;
+   std::map<std::string, std::string> cpu_custom_temp_sensor;
    std::vector<std::string> blacklist;
    unsigned autostart_log;
    std::vector<std::string> media_player_format;
