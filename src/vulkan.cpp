@@ -59,6 +59,7 @@
 #include <dlfcn.h>
 #include "implot.h"
 #endif
+#include "imgui_utils.h"
 #include "fps_limiter.h"
 
 using namespace std;
@@ -175,8 +176,8 @@ struct swapchain_data {
    VkBuffer upload_font_buffer;
    VkDeviceMemory upload_font_buffer_mem;
 
-   /**/
-   ImGuiContext* imgui_context;
+   struct imgui_contexts imgui_contexts;
+
    ImFontAtlas* font_atlas;
    ImVec2 window_size;
 
@@ -485,7 +486,9 @@ static void compute_swapchain_display(struct swapchain_data *data)
    if (get_params()->no_display)
       return;
 
-   ImGui::SetCurrentContext(data->imgui_context);
+   auto saved_imgui_context = get_current_imgui_contexts();
+   make_imgui_contexts_current(data->imgui_contexts);
+
    if (HUDElements.colors.update)
       HUDElements.convert_colors(instance_data->params);
 
@@ -500,6 +503,7 @@ static void compute_swapchain_display(struct swapchain_data *data)
    ImGui::EndFrame();
    ImGui::Render();
 
+   make_imgui_contexts_current(saved_imgui_context);
 }
 
 static uint32_t vk_memory_type(struct device_data *data,
@@ -806,11 +810,17 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
                                                      unsigned n_wait_semaphores,
                                                      unsigned image_index)
 {
+   auto saved_imgui_context = get_current_imgui_contexts();
+   make_imgui_contexts_current(data->imgui_contexts);
+
    ImDrawData* draw_data = ImGui::GetDrawData();
    struct device_data *device_data = data->device;
 
    if (!draw_data || draw_data->TotalVtxCount == 0 || get_params()->no_display)
+   {
+      make_imgui_contexts_current(saved_imgui_context);
       return nullptr;
+   }
 
    struct overlay_draw *draw = get_overlay_draw(data, image_index);
 
@@ -1058,6 +1068,7 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
       device_data->vtable.QueueSubmit(device_data->graphic_queue->queue, 1, &submit_info, draw->fence);
    }
 
+   make_imgui_contexts_current(saved_imgui_context);
    return draw;
 }
 
@@ -1340,11 +1351,10 @@ static void setup_swapchain_data(struct swapchain_data *data,
    data->height = pCreateInfo->imageExtent.height;
    data->format = pCreateInfo->imageFormat;
 
-   data->imgui_context = ImGui::CreateContext(data->font_atlas);
-#ifdef __linux__
-   ImPlot::CreateContext();
-#endif
-   ImGui::SetCurrentContext(data->imgui_context);
+   if (!data->imgui_contexts.imgui)
+      data->imgui_contexts = create_imgui_contexts(data->font_atlas);
+   auto saved_imgui_contexts = get_current_imgui_contexts();
+   make_imgui_contexts_current(data->imgui_contexts);
 
    ImGui::GetIO().IniFilename = NULL;
    ImGui::GetIO().DisplaySize = ImVec2((float)data->width, (float)data->height);
@@ -1451,6 +1461,8 @@ static void setup_swapchain_data(struct swapchain_data *data,
    VK_CHECK(device_data->vtable.CreateCommandPool(device_data->device,
                                                   &cmd_buffer_pool_info,
                                                   NULL, &data->command_pool));
+
+   make_imgui_contexts_current(saved_imgui_contexts);
 }
 
 static void shutdown_swapchain_font(struct swapchain_data *data)
@@ -1502,7 +1514,7 @@ static void shutdown_swapchain_data(struct swapchain_data *data)
    shutdown_swapchain_font(data);
 
    IM_DELETE(data->font_atlas);
-   ImGui::DestroyContext(data->imgui_context);
+   destroy_imgui_contexts(data->imgui_contexts);
 }
 
 static struct overlay_draw *before_present(struct swapchain_data *swapchain_data,
