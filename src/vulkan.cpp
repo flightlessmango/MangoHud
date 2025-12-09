@@ -1483,6 +1483,7 @@ static void shutdown_swapchain_data(struct swapchain_data *data)
 
    for (auto draw : data->draws) {
       if (!draw) continue;
+      device_data->vtable.FreeCommandBuffers(device_data->device, data->command_pool, 1, &draw->command_buffer);
       device_data->vtable.DestroySemaphore(device_data->device, draw->cross_engine_semaphore, NULL);
       device_data->vtable.DestroySemaphore(device_data->device, draw->semaphore, NULL);
       device_data->vtable.DestroyFence(device_data->device, draw->fence, NULL);
