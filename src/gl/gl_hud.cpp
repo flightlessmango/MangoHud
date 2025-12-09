@@ -11,6 +11,7 @@
 #ifdef __linux__
 #include <implot.h>
 #endif
+#include "imgui_utils.h"
 #include "gl_hud.h"
 #include "file_utils.h"
 #include "notify.h"
@@ -51,13 +52,9 @@ struct GLVec
     }
 };
 
-struct state {
-    ImGuiContext *imgui_ctx = nullptr;
-};
-
 static GLVec last_vp {}, last_sb {};
 swapchain_stats sw_stats {};
-static state state;
+static struct imgui_contexts imgui_contexts;
 static uint32_t vendorID;
 static std::string deviceName;
 
@@ -156,12 +153,13 @@ void imgui_create(gl_context *ctx, const gl_wsi plat)
     SPDLOG_DEBUG("gpu: {}", gpu);
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
-    ImGuiContext *saved_ctx = ImGui::GetCurrentContext();
-    state.imgui_ctx = ImGui::CreateContext();
-    ImGui::SetCurrentContext(state.imgui_ctx);
-#ifdef __linux__
-    ImPlot::CreateContext();
-#endif
+
+    if (!imgui_contexts.imgui)
+        imgui_contexts =  create_imgui_contexts();
+
+    auto saved_imgui_contexts = get_current_imgui_contexts();
+    make_imgui_contexts_current(imgui_contexts);
+
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
@@ -184,30 +182,29 @@ void imgui_create(gl_context *ctx, const gl_wsi plat)
     inited = true;
 
     // Restore global context or ours might clash with apps that use Dear ImGui
-    ImGui::SetCurrentContext(saved_ctx);
+    make_imgui_contexts_current(saved_imgui_contexts);
 }
 
 void imgui_shutdown(gl_context *ctx, bool last)
 {
     //SPDLOG_DEBUG("destroying ctx {}, imgui_ctx {}, last {}", (void *)ctx, (void *)state.imgui_ctx, last);
-    if (state.imgui_ctx) {
-        ImGuiContext *saved_ctx = ImGui::GetCurrentContext();
-        ImGui::SetCurrentContext(state.imgui_ctx);
+    if (imgui_contexts.imgui) {
+        auto saved_imgui_contexts = get_current_imgui_contexts();
+        make_imgui_contexts_current(imgui_contexts);
         ImGui_ImplOpenGL3_Shutdown(ctx);
+        make_imgui_contexts_current(saved_imgui_contexts);
         if (last)
         {
-            ImGui::DestroyContext(state.imgui_ctx);
-            state.imgui_ctx = nullptr;
+            destroy_imgui_contexts(imgui_contexts);
             inited = false;
         }
-        ImGui::SetCurrentContext(saved_ctx);
     }
 }
 
 void imgui_render(gl_context *ctx, unsigned int width, unsigned int height)
 {
     //SPDLOG_DEBUG("imgui_ctx {}", (void *)state.imgui_ctx);
-    if (!state.imgui_ctx)
+    if (!imgui_contexts.imgui)
         return;
 
     static int control_client = -1;
@@ -219,8 +216,9 @@ void imgui_render(gl_context *ctx, unsigned int width, unsigned int height)
     check_keybinds(params);
     update_hud_info(sw_stats, params, vendorID);
 
-    ImGuiContext *saved_ctx = ImGui::GetCurrentContext();
-    ImGui::SetCurrentContext(state.imgui_ctx);
+    auto saved_imgui_contexts = get_current_imgui_contexts();
+    make_imgui_contexts_current(imgui_contexts);
+
     ImGui::GetIO().DisplaySize = ImVec2(width, height);
     if (HUDElements.colors.update)
         HUDElements.convert_colors(params);
@@ -247,7 +245,7 @@ void imgui_render(gl_context *ctx, unsigned int width, unsigned int height)
         ImGui_ImplOpenGL3_CreateFontsTexture(ctx);
     }
 
-    ImGui::SetCurrentContext(saved_ctx);
+    make_imgui_contexts_current(saved_imgui_contexts);
 }
 
 }} // namespaces
