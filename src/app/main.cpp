@@ -289,7 +289,6 @@ static bool render(GLFWwindow* window, overlay_params& real_params) {
     if (HUDElements.colors.update)
         HUDElements.convert_colors(params);
 
-    ImVec2 last_window_size = window_size;
     if (sw_stats.font_params_hash != params.font_params_hash)
     {
         sw_stats.font_params_hash = params.font_params_hash;
@@ -305,14 +304,16 @@ static bool render(GLFWwindow* window, overlay_params& real_params) {
     get_atom_info();
     overlay_end_frame();
     static bool window_size_changed = false;
-    window_size_changed = last_window_size.x != window_size.x || last_window_size.y != window_size.y;
-    if (window_size_changed) {
-        if (real_params.enabled[OVERLAY_PARAM_ENABLED_horizontal] && screenWidth)
-            glfwSetWindowSize(window, screenWidth, window_size.y);
-        else
-            glfwSetWindowSize(window, window_size.x, window_size.y);
-    }
+    int w, h;
+    glfwGetWindowSize(window, &w, &h);
+    window_size_changed = w != window_size.x || h != window_size.y;
+    if (real_params.enabled[OVERLAY_PARAM_ENABLED_horizontal])
+        glfwSetWindowSize(window, screenWidth, window_size.y);
+    else
+        glfwSetWindowSize(window, window_size.x, window_size.y);
+
     ImGui::EndFrame();
+
     return window_size_changed;
 }
 
