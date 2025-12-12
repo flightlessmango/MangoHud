@@ -46,6 +46,7 @@ std::mutex mangoapp_m;
 std::condition_variable mangoapp_cv;
 static uint8_t raw_msg[1024] = {0};
 static uint32_t screenWidth, screenHeight;
+static std::atomic_bool g_x_dead{false};
 
 static bool x_connection_ok(Display* dpy) {
     if (!dpy)
@@ -63,10 +64,15 @@ static bool x_connection_ok(Display* dpy) {
 }
 
 static unsigned int get_prop(const char* propName){
+    if (g_x_dead.load())
+        return -1;
+
     Display *x11_display = glfwGetX11Display();
     // Make sure Xorg display is still there before continuing
-    if (!x_connection_ok(x11_display))
+    if (!x_connection_ok(x11_display)) {
+        g_x_dead.store(true);
         return -1;
+    }
 
     Atom gamescope_focused = XInternAtom(x11_display, propName, false);
     auto scr = DefaultScreen(x11_display);
@@ -80,14 +86,9 @@ static unsigned int get_prop(const char* propName){
                             &n, &left, ( unsigned char** )&data);
 
     if (result == Success && data != NULL){
-        bool *found = nullptr;
         unsigned int i;
         memcpy(&i, data, sizeof(unsigned int));
         XFree((void *) data);
-        if ( found != nullptr )
-        {
-            *found = true;
-        }
         return i;
     }
     return -1;
