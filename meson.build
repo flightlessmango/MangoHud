@@ -226,11 +226,15 @@ imgui_options = [
   'vulkan=disabled',
   'glfw=disabled',
   'sdl2=disabled',
+  'sdl3=disabled',
   'osx=disabled',
   'win=disabled',
   'allegro5=disabled',
   'webgpu=disabled',
-  'sdl_renderer=disabled'
+  'sdl2_renderer=disabled',
+  'sdl3_renderer=disabled',
+  'osx=disabled',
+  'win=disabled'
 ]
 
 sizeof_ptr = cc.sizeof('void*')
@@ -246,14 +250,14 @@ if get_option('mangoapp')
     'glfw=enabled',
   ]
 endif
-dearimgui_dep = dependency('imgui', fallback: ['imgui'], required: true, default_options: imgui_options)
 
-if is_unixy
-implot_dep = dependency('implot', fallback: ['implot'], required: true, default_options: ['default_library=static'])
-else
-implot_dep = null_dep
-implot_lib = static_library('nulllib', [])
-endif
+imgui_sp = subproject('imgui', default_options: imgui_options)
+dearimgui_dep = imgui_sp.get_variable('imgui_dep')
+
+meson.override_dependency('imgui', dearimgui_dep)
+
+implot_sp = subproject('implot', default_options: ['default_library=static'])
+implot_dep = implot_sp.get_variable('implot_dep')
 
 spdlog_options = [
   'default_library=static',
