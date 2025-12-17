@@ -1,4 +1,3 @@
-# encoding=utf-8
 # Copyright © 2017 Intel Corporation
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,13 +20,15 @@
 
 """Create enum to string functions for vulkan using vk.xml."""
 
-from __future__ import print_function
 import argparse
+import functools
 import os
+import re
 import textwrap
 import xml.etree.ElementTree as et
 
 from mako.template import Template
+from vk_extensions import Extension, filter_api, get_all_required
 
 COPYRIGHT = textwrap.dedent(u"""\
     * Copyright © 2017 Intel Corporation
@@ -58,7 +59,8 @@ C_TEMPLATE = Template(textwrap.dedent(u"""\
      */
 
     #include <string.h>
-    #include <vulkan/vulkan.h>
+    #include <vulkan/vulkan_core.h>
+    #include <vulkan/vk_layer.h>
     #include "../src/mesa/util/macros.h"
     #include "vk_enum_to_str.h"
 
@@ -70,16 +72,38 @@ C_TEMPLATE = Template(textwrap.dedent(u"""\
     const char *
     vk_${enum.name[2:]}_to_str(${enum.name} input)
     {
-        #pragma GCC diagnostic push
-        #pragma GCC diagnostic ignored "-Wswitch"
-        switch(input) {
-        % for v in sorted(enum.values.keys()):
-            case ${v}:
-                return "${enum.values[v]}";
-        % endfor
+        switch((int64_t)input) {
+    % for v in sorted(enum.values.keys()):
+        case ${v}:
+            return "${enum.values[v]}";
+    % endfor
+        case ${enum.max_enum_name}: return "${enum.max_enum_name}";
+        default:
+            return "Unknown ${enum.name} value.";
         }
-        #pragma GCC diagnostic pop
-        unreachable("Undefined enum value.");
+    }
+
+      % if enum.guard:
+#endif
+      % endif
+    %endfor
+
+    % for enum in bitmasks:
+
+      % if enum.guard:
+#ifdef ${enum.guard}
+      % endif
+    const char *
+    vk_${enum.name[2:]}_to_str(${enum.name} input)
+    {
+        switch((int64_t)input) {
+    % for v in sorted(enum.values.keys()):
+        case ${v}:
+            return "${enum.values[v]}";
+    % endfor
+        default:
+            return "Unknown ${enum.name} value.";
+        }
     }
 
       % if enum.guard:
@@ -89,9 +113,7 @@ C_TEMPLATE = Template(textwrap.dedent(u"""\
 
     size_t vk_structure_type_size(const struct VkBaseInStructure *item)
     {
-        #pragma GCC diagnostic push
-        #pragma GCC diagnostic ignored "-Wswitch"
-        switch(item->sType) {
+        switch((int)item->sType) {
     % for struct in structs:
         % if struct.extension is not None and struct.extension.define is not None:
     #ifdef ${struct.extension.define}
@@ -101,50 +123,26 @@ C_TEMPLATE = Template(textwrap.dedent(u"""\
         case ${struct.stype}: return sizeof(${struct.name});
         % endif
     %endfor
+        case VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO: return sizeof(VkLayerInstanceCreateInfo);
+        case VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO: return sizeof(VkLayerDeviceCreateInfo);
+        default:
+            UNREACHABLE("Undefined struct type.");
         }
-        #pragma GCC diagnostic pop
-        unreachable("Undefined struct type.");
     }
 
-    void vk_load_instance_commands(VkInstance instance,
-                                   PFN_vkGetInstanceProcAddr gpa,
-                                   struct vk_instance_dispatch_table *table)
+    const char *
+    vk_ObjectType_to_ObjectName(VkObjectType type)
     {
-        memset(table, 0, sizeof(*table));
-        table->GetInstanceProcAddr = gpa;
-    % for cmd in commands:
-        % if not cmd.device_entrypoint and cmd.name != 'vkGetInstanceProcAddr':
-            % if cmd.extension is not None and cmd.extension.define is not None:
-    #ifdef ${cmd.extension.define}
-        table->${cmd.name[2:]} = (PFN_${cmd.name}) gpa(instance, "${cmd.name}");
-    #endif
-            % else:
-        table->${cmd.name[2:]} = (PFN_${cmd.name}) gpa(instance, "${cmd.name}");
-            % endif
-        % endif
-    %endfor
+        switch((int)type) {
+    % for object_type in sorted(object_types[0].enum_to_name.keys()):
+        case ${object_type}:
+            return "${object_types[0].enum_to_name[object_type]}";
+    % endfor
+        default:
+            return "Unknown VkObjectType value.";
+        }
     }
-
-    void vk_load_device_commands(VkDevice device,
-                                 PFN_vkGetDeviceProcAddr gpa,
-                                 struct vk_device_dispatch_table *table)
-    {
-        memset(table, 0, sizeof(*table));
-        table->GetDeviceProcAddr = gpa;
-    % for cmd in commands:
-        % if cmd.device_entrypoint and cmd.name != 'vkGetDeviceProcAddr':
-            % if cmd.extension is not None and cmd.extension.define is not None:
-    #ifdef ${cmd.extension.define}
-        table->${cmd.name[2:]} = (PFN_${cmd.name}) gpa(device, "${cmd.name}");
-    #endif
-            % else:
-        table->${cmd.name[2:]} = (PFN_${cmd.name}) gpa(device, "${cmd.name}");
-            % endif
-        % endif
-    %endfor
-    }
-    """),
-    output_encoding='utf-8')
+    """))
 
 H_TEMPLATE = Template(textwrap.dedent(u"""\
     /* Autogenerated file -- do not edit
@@ -157,14 +155,9 @@ H_TEMPLATE = Template(textwrap.dedent(u"""\
     #define MESA_VK_ENUM_TO_STR_H
 
     #include <vulkan/vulkan.h>
-
     #ifdef __cplusplus
     extern "C" {
     #endif
-
-    % for ext in extensions:
-    #define _${ext.name}_number (${ext.number})
-    % endfor
 
     % for enum in enums:
       % if enum.guard:
@@ -176,47 +169,88 @@ H_TEMPLATE = Template(textwrap.dedent(u"""\
       % endif
     % endfor
 
+    % for enum in bitmasks:
+      % if enum.guard:
+#ifdef ${enum.guard}
+      % endif
+    const char * vk_${enum.name[2:]}_to_str(${enum.name} input);
+      % if enum.guard:
+#endif
+      % endif
+    % endfor
+
     size_t vk_structure_type_size(const struct VkBaseInStructure *item);
 
-    struct vk_instance_dispatch_table {
-        PFN_vkGetInstanceProcAddr GetInstanceProcAddr;
-    % for cmd in commands:
-        % if not cmd.device_entrypoint and cmd.name != 'vkGetInstanceProcAddr':
-            % if cmd.extension is not None and cmd.extension.define is not None:
-    #ifdef ${cmd.extension.define}
-        PFN_${cmd.name} ${cmd.name[2:]};
-    #endif
-            % else:
-        PFN_${cmd.name} ${cmd.name[2:]};
-            % endif
-        % endif
-    %endfor
-    };
-
-    struct vk_device_dispatch_table {
-        PFN_vkGetDeviceProcAddr GetDeviceProcAddr;
-    % for cmd in commands:
-        % if cmd.device_entrypoint and cmd.name != 'vkGetDeviceProcAddr':
-            % if cmd.extension is not None and cmd.extension.define is not None:
-    #ifdef ${cmd.extension.define}
-        PFN_${cmd.name} ${cmd.name[2:]};
-    #endif
-            % else:
-        PFN_${cmd.name} ${cmd.name[2:]};
-            % endif
-        % endif
-    %endfor
-    };
-
-    void vk_load_instance_commands(VkInstance instance, PFN_vkGetInstanceProcAddr gpa, struct vk_instance_dispatch_table *table);
-    void vk_load_device_commands(VkDevice device, PFN_vkGetDeviceProcAddr gpa, struct vk_device_dispatch_table *table);
+    const char * vk_ObjectType_to_ObjectName(VkObjectType type);
 
     #ifdef __cplusplus
     } /* extern "C" */
     #endif
 
-    #endif"""),
-    output_encoding='utf-8')
+    #endif
+    """))
+
+
+H_DEFINE_TEMPLATE = Template(textwrap.dedent(u"""\
+    /* Autogenerated file -- do not edit
+     * generated by ${file}
+     *
+     ${copyright}
+     */
+
+    #ifndef MESA_VK_ENUM_DEFINES_H
+    #define MESA_VK_ENUM_DEFINES_H
+
+    #include <vulkan/vulkan_core.h>
+    #ifdef __cplusplus
+    extern "C" {
+    #endif
+
+    % for ext in extensions:
+    #define _${ext.name}_number (${ext.number})
+    % endfor
+
+    % for enum in bitmasks:
+      % if enum.bitwidth > 32:
+        <% continue %>
+      % endif
+      % if enum.guard:
+#ifdef ${enum.guard}
+      % endif
+    #define ${enum.all_bits_name()} ${hex(enum.all_bits_value())}u
+      % if enum.guard:
+#endif
+      % endif
+    % endfor
+
+    % for enum in bitmasks:
+      % if enum.bitwidth < 64:
+        <% continue %>
+      % endif
+    /* Redefine bitmask values of ${enum.name} */
+      % if enum.guard:
+#ifdef ${enum.guard}
+      % endif
+      % for n, v in enum.name_to_value.items():
+    #define ${n} (${hex(v)}ULL)
+      % endfor
+      % if enum.guard:
+#endif
+      % endif
+    % endfor
+
+    static inline VkFormatFeatureFlags
+    vk_format_features2_to_features(VkFormatFeatureFlags2 features2)
+    {
+       return features2 & VK_ALL_FORMAT_FEATURE_FLAG_BITS;
+    }
+
+    #ifdef __cplusplus
+    } /* extern "C" */
+    #endif
+
+    #endif
+    """))
 
 
 class NamedFactory(object):
@@ -246,17 +280,47 @@ class VkExtension(object):
         self.define = define
 
 
+def CamelCase_to_SHOUT_CASE(s):
+   return (s[:1] + re.sub(r'(?<![A-Z])([A-Z])', r'_\1', s[1:])).upper()
+
+def compute_max_enum_name(s):
+    if s == "VkSwapchainImageUsageFlagBitsANDROID":
+        return "VK_SWAPCHAIN_IMAGE_USAGE_FLAG_BITS_MAX_ENUM"
+    if s == "VkTensorTilingARM":
+        return "VK_TENSOR_TILING_MAX_ENUM_ARM"
+    max_enum_name = CamelCase_to_SHOUT_CASE(s)
+    last_prefix = max_enum_name.rsplit('_', 1)[-1]
+    # Those special prefixes need to be always at the end
+    if last_prefix in ['AMD', 'AMDX', 'EXT', 'INTEL', 'KHR', 'NV', 'LUNARG', 'QCOM', 'MSFT', 'ARM'] :
+        max_enum_name = "_".join(max_enum_name.split('_')[:-1])
+        max_enum_name = max_enum_name + "_MAX_ENUM_" + last_prefix
+    else:
+        max_enum_name = max_enum_name + "_MAX_ENUM"
+
+    return max_enum_name
+
 class VkEnum(object):
     """Simple struct-like class representing a single Vulkan Enum."""
 
-    def __init__(self, name, values=None):
+    def __init__(self, name, bitwidth=32, values=None):
         self.name = name
+        self.max_enum_name = compute_max_enum_name(name)
+        self.bitwidth = bitwidth
         self.extension = None
         # Maps numbers to names
         self.values = values or dict()
         self.name_to_value = dict()
         self.guard = None
         self.name_to_alias_list = {}
+
+    def all_bits_name(self):
+        assert self.name.startswith('Vk')
+        assert re.search(r'FlagBits[A-Z]*$', self.name)
+
+        return 'VK_ALL_' + CamelCase_to_SHOUT_CASE(self.name[2:])
+
+    def all_bits_value(self):
+        return functools.reduce(lambda a,b: a | b, self.values.keys(), 0)
 
     def add_value(self, name, value=None,
                   extnum=None, offset=None, alias=None,
@@ -266,7 +330,7 @@ class VkEnum(object):
             if alias not in self.name_to_value:
                 # We don't have this alias yet.  Just record the alias and
                 # we'll deal with it later.
-                alias_list = self.name_to_alias_list.get(alias, [])
+                alias_list = self.name_to_alias_list.setdefault(alias, [])
                 alias_list.append(name);
                 return
 
@@ -288,7 +352,7 @@ class VkEnum(object):
         # Now that the value has been fully added, resolve aliases, if any.
         if name in self.name_to_alias_list:
             for alias in self.name_to_alias_list[name]:
-                add_value(alias, value)
+                self.add_value(alias, value)
             del self.name_to_alias_list[name]
 
     def add_value_from_xml(self, elem, extension=None):
@@ -296,6 +360,9 @@ class VkEnum(object):
         if 'value' in elem.attrib:
             self.add_value(elem.attrib['name'],
                            value=int(elem.attrib['value'], base=0))
+        elif 'bitpos' in elem.attrib:
+            self.add_value(elem.attrib['name'],
+                           value=(1 << int(elem.attrib['bitpos'], base=0)))
         elif 'alias' in elem.attrib:
             self.add_value(elem.attrib['name'], alias=elem.attrib['alias'])
         else:
@@ -313,15 +380,6 @@ class VkEnum(object):
         self.guard = g
 
 
-class VkCommand(object):
-    """Simple struct-like class representing a single Vulkan command"""
-
-    def __init__(self, name, device_entrypoint=False):
-        self.name = name
-        self.device_entrypoint = device_entrypoint
-        self.extension = None
-
-
 class VkChainStruct(object):
     """Simple struct-like class representing a single Vulkan struct identified with a VkStructureType"""
     def __init__(self, name, stype):
@@ -337,8 +395,15 @@ def struct_get_stype(xml_node):
             return member.get('values')
     return None
 
+class VkObjectType(object):
+    """Simple struct-like class representing a single Vulkan object type"""
+    def __init__(self, name):
+        self.name = name
+        self.enum_to_name = dict()
 
-def parse_xml(cmd_factory, enum_factory, ext_factory, struct_factory, filename):
+
+def parse_xml(enum_factory, ext_factory, struct_factory, bitmask_factory,
+              obj_type_factory, filename, beta):
     """Parse the XML file. Accumulate results into the factories.
 
     This parser is a memory efficient iterative XML parser that returns a list
@@ -346,31 +411,59 @@ def parse_xml(cmd_factory, enum_factory, ext_factory, struct_factory, filename):
     """
 
     xml = et.parse(filename)
+    api = 'vulkan'
+
+    required_types = get_all_required(xml, 'type', api, beta)
 
     for enum_type in xml.findall('./enums[@type="enum"]'):
-        enum = enum_factory(enum_type.attrib['name'])
-        for value in enum_type.findall('./enum'):
-            enum.add_value_from_xml(value)
-
-    for value in xml.findall('./feature/require/enum[@extends]'):
-        enum = enum_factory.get(value.attrib['extends'])
-        if enum is not None:
-            enum.add_value_from_xml(value)
-
-    for command in xml.findall('./commands/command'):
-        name = command.find('./proto/name')
-        if name is not None and "ANDROID" in name.text:
+        if not filter_api(enum_type, api):
             continue
-        first_arg = command.find('./param/type')
-        # Some commands are alias KHR -> nonKHR, ignore those
-        if name is not None:
-            cmd_factory(name.text,
-                        device_entrypoint=(first_arg.text in ('VkDevice', 'VkCommandBuffer', 'VkQueue')))
+
+        type_name = enum_type.attrib['name']
+        if not type_name in required_types:
+            continue
+
+        enum = enum_factory(type_name)
+        for value in enum_type.findall('./enum'):
+            if filter_api(value, api):
+                enum.add_value_from_xml(value)
+
+    # For bitmask we only add the Enum selected for convenience.
+    for enum_type in xml.findall('./enums[@type="bitmask"]'):
+        if not filter_api(enum_type, api):
+            continue
+
+        type_name = enum_type.attrib['name']
+        if not type_name in required_types:
+            continue
+
+        bitwidth = int(enum_type.attrib.get('bitwidth', 32))
+        enum = bitmask_factory(type_name, bitwidth=bitwidth)
+        for value in enum_type.findall('./enum'):
+            if filter_api(value, api):
+                enum.add_value_from_xml(value)
+
+    for feature in xml.findall('./feature'):
+        if not api in feature.attrib['api'].split(','):
+            continue
+
+        for value in feature.findall('./require/enum[@extends]'):
+            extends = value.attrib['extends']
+            enum = enum_factory.get(extends)
+            if enum is not None:
+                enum.add_value_from_xml(value)
+            enum = bitmask_factory.get(extends)
+            if enum is not None:
+                enum.add_value_from_xml(value)
 
     for struct_type in xml.findall('./types/type[@category="struct"]'):
-        name = struct_type.attrib['name']
-        if name is not None and "ANDROID" in name:
+        if not filter_api(struct_type, api):
             continue
+
+        name = struct_type.attrib['name']
+        if name not in required_types:
+            continue
+
         stype = struct_get_stype(struct_type)
         if stype is not None:
             struct_factory(name, stype=stype)
@@ -381,67 +474,103 @@ def parse_xml(cmd_factory, enum_factory, ext_factory, struct_factory, filename):
         define = platform.attrib['protect']
         platform_define[name] = define
 
-    for ext_elem in xml.findall('./extensions/extension[@supported="vulkan"]'):
-        define = None
-        if "platform" in ext_elem.attrib:
-            define = platform_define[ext_elem.attrib['platform']]
-        extension = ext_factory(ext_elem.attrib['name'],
-                                number=int(ext_elem.attrib['number']),
-                                define=define)
+    for ext_elem in xml.findall('./extensions/extension'):
+        ext = Extension.from_xml(ext_elem)
+        if api not in ext.supported:
+            continue
 
-        for value in ext_elem.findall('./require/enum[@extends]'):
-            enum = enum_factory.get(value.attrib['extends'])
-            if enum is not None:
-                enum.add_value_from_xml(value, extension)
-        for t in ext_elem.findall('./require/type'):
-            struct = struct_factory.get(t.attrib['name'])
-            if struct is not None:
-                struct.extension = extension
+        define = platform_define.get(ext.platform, None)
+        extension = ext_factory(ext.name, number=ext.number, define=define)
+
+        for req_elem in ext_elem.findall('./require'):
+            if not filter_api(req_elem, api):
+                continue
+
+            for value in req_elem.findall('./enum[@extends]'):
+                extends = value.attrib['extends']
+                enum = enum_factory.get(extends)
+                if enum is not None:
+                    enum.add_value_from_xml(value, extension)
+                enum = bitmask_factory.get(extends)
+                if enum is not None:
+                    enum.add_value_from_xml(value, extension)
+
+            for t in req_elem.findall('./type'):
+                struct = struct_factory.get(t.attrib['name'])
+                if struct is not None:
+                    struct.extension = extension
 
         if define:
             for value in ext_elem.findall('./require/type[@name]'):
                 enum = enum_factory.get(value.attrib['name'])
                 if enum is not None:
                     enum.set_guard(define)
+                enum = bitmask_factory.get(value.attrib['name'])
+                if enum is not None:
+                    enum.set_guard(define)
 
-        for t in ext_elem.findall('./require/command'):
-            command = cmd_factory.get(t.attrib['name'])
-            if command is not None:
-                command.extension = extension
+    obj_type_enum = enum_factory.get("VkObjectType")
+    obj_types = obj_type_factory("VkObjectType")
+    for object_type in xml.findall('./types/type[@category="handle"]'):
+        for object_name in object_type.findall('./name'):
+            # Convert to int to avoid undefined enums
+            enum = object_type.attrib['objtypeenum']
+
+            # Annoyingly, object types are hard to filter by API so just
+            # look for whether or not we can find the enum name in the
+            # VkObjectType enum.
+            if enum not in obj_type_enum.name_to_value:
+                continue
+
+            enum_val = obj_type_enum.name_to_value[enum]
+            obj_types.enum_to_name[enum_val] = object_name.text
 
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--beta', required=True, help='Enable beta extensions.')
     parser.add_argument('--xml', required=True,
                         help='Vulkan API XML files',
                         action='append',
                         dest='xml_files')
-    parser.add_argument('--outdir',
-                        help='Directory to put the generated files in',
+    parser.add_argument('--out-c',
+                        help='Output C file',
+                        required=True)
+    parser.add_argument('--out-h',
+                        help='Output H file',
+                        required=True)
+    parser.add_argument('--out-d',
+                        help='Output defines H file',
                         required=True)
 
     args = parser.parse_args()
 
-    command_factory = NamedFactory(VkCommand)
     enum_factory = NamedFactory(VkEnum)
     ext_factory = NamedFactory(VkExtension)
     struct_factory = NamedFactory(VkChainStruct)
+    obj_type_factory = NamedFactory(VkObjectType)
+    bitmask_factory = NamedFactory(VkEnum)
+
     for filename in args.xml_files:
-        parse_xml(command_factory, enum_factory, ext_factory, struct_factory, filename)
-    commands = sorted(command_factory.registry.values(), key=lambda e: e.name)
+        parse_xml(enum_factory, ext_factory, struct_factory, bitmask_factory,
+                  obj_type_factory, filename, args.beta)
     enums = sorted(enum_factory.registry.values(), key=lambda e: e.name)
     extensions = sorted(ext_factory.registry.values(), key=lambda e: e.name)
     structs = sorted(struct_factory.registry.values(), key=lambda e: e.name)
+    bitmasks = sorted(bitmask_factory.registry.values(), key=lambda e: e.name)
+    object_types = sorted(obj_type_factory.registry.values(), key=lambda e: e.name)
 
-    for template, file_ in [(C_TEMPLATE, os.path.join(args.outdir, 'vk_enum_to_str.c')),
-                            (H_TEMPLATE, os.path.join(args.outdir, 'vk_enum_to_str.h'))]:
-        with open(file_, 'wb') as f:
+    for template, file_ in [(C_TEMPLATE, args.out_c),
+                            (H_TEMPLATE, args.out_h),
+                            (H_DEFINE_TEMPLATE, args.out_d)]:
+        with open(file_, 'w', encoding='utf-8') as f:
             f.write(template.render(
                 file=os.path.basename(__file__),
-                commands=commands,
                 enums=enums,
                 extensions=extensions,
                 structs=structs,
+                bitmasks=bitmasks,
+                object_types=object_types,
                 copyright=COPYRIGHT))
 
 

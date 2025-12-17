@@ -186,6 +186,8 @@ mangohud_static_lib = static_library(
   files('vulkan.cpp'),
   util_files,
   vk_enum_to_str,
+  vk_dispatch_table,
+  vk_extensions,
   vklayer_files,
   overlay_spv,
   c_args : [

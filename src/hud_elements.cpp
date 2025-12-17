@@ -1931,7 +1931,7 @@ void HudElements::ftrace() {
             break;
         }
         default:
-            unreachable("invalid tracepoint type");
+            UNREACHABLE("invalid tracepoint type");
         }
     }
 #endif // HAVE_FTRACE

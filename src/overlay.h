@@ -56,7 +56,7 @@ struct swapchain_stats {
    unsigned n_frames_since_update;
    uint64_t last_fps_update;
    ImVec2 main_window_pos;
-   
+
    struct {
       int32_t major;
       int32_t minor;

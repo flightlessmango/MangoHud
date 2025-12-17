@@ -170,26 +170,46 @@ else
   dep_rt = null_dep
 endif
 
-# Commented code can be used if mangohud start using latest SDK Vulkan-Headers
-# Allowing user to build mangohud using system Vulkan-Headers
-#if not dependency('VulkanHeaders').found()
+if not dependency('VulkanHeaders').found()
   vkh_sp = subproject('vulkan-headers')
   vk_api_xml = vkh_sp.get_variable('vulkan_api_xml')
   dep_vulkan = vkh_sp.get_variable('vulkan_headers_dep')
-#else
-#  dep_vulkan = dependency('VulkanHeaders', required: true)
-#  vk_api_xml = files('/usr/share/vulkan/registry/vk.xml')
-#endif
-
-
+else
+ dep_vulkan = dependency('VulkanHeaders', required: true)
+ vk_api_xml = files('/usr/share/vulkan/registry/vk.xml')
+endif
 
 vk_enum_to_str = custom_target(
   'vk_enum_to_str',
   input : ['bin/gen_enum_to_str.py', vk_api_xml],
-  output : ['vk_enum_to_str.c', 'vk_enum_to_str.h'],
+  output : ['vk_enum_to_str.c', 'vk_enum_to_str.h', 'vk_enum_defines.h'],
   command : [
     prog_python, '@INPUT0@', '--xml', '@INPUT1@',
-    '--outdir', meson.current_build_dir()
+    '--out-c', '@OUTPUT0@',
+    '--out-h', '@OUTPUT1@',
+    '--out-d', '@OUTPUT2@',
+    '--beta', 'false'
+  ],
+)
+
+vk_dispatch_table = custom_target(
+  'vk_dispatch_table',
+  input : ['bin/vk_dispatch_table_gen.py', vk_api_xml],
+  output : ['vk_dispatch_table.c', 'vk_dispatch_table.h'],
+  command : [
+    prog_python, '@INPUT0@', '--xml', '@INPUT1@',
+    '--out-c', '@OUTPUT0@', '--out-h', '@OUTPUT1@',
+    '--beta', 'false'
+  ],
+)
+
+vk_extensions = custom_target(
+  'vk_extensions',
+  input : ['bin/vk_extensions_gen.py', vk_api_xml],
+  output : ['vk_extensions.c', 'vk_extensions.h'],
+  command : [
+    prog_python, '@INPUT0@', '--xml', '@INPUT1@',
+    '--out-c', '@OUTPUT0@', '--out-h', '@OUTPUT1@'
   ],
 )
 

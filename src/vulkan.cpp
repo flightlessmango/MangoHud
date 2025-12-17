@@ -45,6 +45,7 @@
 #include <vulkan/vk_layer.h>
 #include <vulkan/vk_util.h>
 #include "vk_enum_to_str.h"
+#include "vk_dispatch_table.h"
 
 #include "overlay.h"
 #include "notify.h"
@@ -77,6 +78,7 @@ namespace MangoHud { namespace GL {
 /* Mapped from VkInstace/VkPhysicalDevice */
 struct instance_data {
    struct vk_instance_dispatch_table vtable;
+   struct vk_physical_device_dispatch_table pd_vtable;
    VkInstance instance;
    struct overlay_params params;
    uint32_t api_version;
@@ -235,7 +237,7 @@ static VkLayerInstanceCreateInfo *get_instance_chain_info(const VkInstanceCreate
           ((VkLayerInstanceCreateInfo *) item)->function == func)
          return (VkLayerInstanceCreateInfo *) item;
    }
-   unreachable("instance chain info not found");
+   UNREACHABLE("instance chain info not found");
    return NULL;
 }
 
@@ -247,7 +249,7 @@ static VkLayerDeviceCreateInfo *get_device_chain_info(const VkDeviceCreateInfo *
           ((VkLayerDeviceCreateInfo *) item)->function == func)
          return (VkLayerDeviceCreateInfo *)item;
    }
-   unreachable("device chain info not found");
+   UNREACHABLE("device chain info not found");
    return NULL;
 }
 
@@ -337,11 +339,11 @@ static void device_map_queues(struct device_data *data,
 
    struct instance_data *instance_data = data->instance;
    uint32_t n_family_props;
-   instance_data->vtable.GetPhysicalDeviceQueueFamilyProperties(data->physical_device,
+   instance_data->pd_vtable.GetPhysicalDeviceQueueFamilyProperties(data->physical_device,
                                                                 &n_family_props,
                                                                 NULL);
    std::vector<VkQueueFamilyProperties> family_props(n_family_props);
-   instance_data->vtable.GetPhysicalDeviceQueueFamilyProperties(data->physical_device,
+   instance_data->pd_vtable.GetPhysicalDeviceQueueFamilyProperties(data->physical_device,
                                                                 &n_family_props,
                                                                 family_props.data());
 
@@ -511,7 +513,7 @@ static uint32_t vk_memory_type(struct device_data *data,
                                uint32_t type_bits)
 {
     VkPhysicalDeviceMemoryProperties prop;
-    data->instance->vtable.GetPhysicalDeviceMemoryProperties(data->physical_device, &prop);
+    data->instance->pd_vtable.GetPhysicalDeviceMemoryProperties(data->physical_device, &prop);
     for (uint32_t i = 0; i < prop.memoryTypeCount; i++)
         if ((prop.memoryTypes[i].propertyFlags & properties) == properties && type_bits & (1<<i))
             return i;
@@ -1844,10 +1846,10 @@ static VkResult overlay_CreateDevice(
 
    uint32_t extension_count;
 
-   instance_data->vtable.EnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extension_count, nullptr);
+   instance_data->pd_vtable.EnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extension_count, nullptr);
 
    std::vector<VkExtensionProperties> available_extensions(extension_count);
-   instance_data->vtable.EnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extension_count, available_extensions.data());
+   instance_data->pd_vtable.EnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extension_count, available_extensions.data());
 
 
    bool can_get_driver_info = instance_data->api_version < VK_API_VERSION_1_1 ? false : true;
@@ -1873,10 +1875,14 @@ static VkResult overlay_CreateDevice(
    if (result != VK_SUCCESS) return result;
 
    struct device_data *device_data = new_device_data(*pDevice, instance_data);
+   vk_device_dispatch_table_load(&device_data->vtable,
+                              fpGetDeviceProcAddr, *pDevice);
    device_data->physical_device = physicalDevice;
-   vk_load_device_commands(*pDevice, fpGetDeviceProcAddr, &device_data->vtable);
+   vk_instance_dispatch_table_load(&instance_data->vtable,
+                                   fpGetInstanceProcAddr,
+                                   instance_data->instance);
 
-   instance_data->vtable.GetPhysicalDeviceProperties(device_data->physical_device,
+   instance_data->pd_vtable.GetPhysicalDeviceProperties(device_data->physical_device,
                                                      &device_data->properties);
 
    VkLayerDeviceCreateInfo *load_data_info =
@@ -1887,7 +1893,7 @@ static VkResult overlay_CreateDevice(
    driverProps.pNext = nullptr;
    if (can_get_driver_info) {
       VkPhysicalDeviceProperties2 deviceProps = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &driverProps};
-      instance_data->vtable.GetPhysicalDeviceProperties2(device_data->physical_device, &deviceProps);
+      instance_data->pd_vtable.GetPhysicalDeviceProperties2(device_data->physical_device, &deviceProps);
    }
 
    if (!is_blacklisted()) {
@@ -1924,7 +1930,7 @@ static VkResult overlay_CreateInstance(
    enum EngineTypes engine = EngineTypes::UNKNOWN;
    const char* pEngineName = nullptr;
 
-   struct instance_data *instance_data = new_instance_data(*pInstance); 
+   struct instance_data *instance_data = new_instance_data(*pInstance);
    if (pCreateInfo->pApplicationInfo) {
       pEngineName = pCreateInfo->pApplicationInfo->pEngineName;
       instance_data->applicationVersion = pCreateInfo->pApplicationInfo->applicationVersion;
@@ -1975,10 +1981,12 @@ static VkResult overlay_CreateInstance(
 
    VkResult result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);
    if (result != VK_SUCCESS) return result;
-
-   vk_load_instance_commands(instance_data->instance,
-                             fpGetInstanceProcAddr,
-                             &instance_data->vtable);
+   vk_instance_dispatch_table_load(&instance_data->vtable,
+                                   fpGetInstanceProcAddr,
+                                   instance_data->instance);
+   vk_physical_device_dispatch_table_load(&instance_data->pd_vtable,
+                                          fpGetInstanceProcAddr,
+                                          instance_data->instance);
    instance_data_map_physical_devices(instance_data, true);
 
    if (is_blacklisted())
@@ -2095,9 +2103,9 @@ static void overlay_DestroySurfaceKHR(
 }
 #endif
 
-extern "C" VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetDeviceProcAddr(VkDevice dev,
+extern "C" PUBLIC VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetDeviceProcAddr(VkDevice dev,
                                                                              const char *funcName);
-extern "C" VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetInstanceProcAddr(VkInstance instance,
+extern "C" PUBLIC VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetInstanceProcAddr(VkInstance instance,
                                                                                const char *funcName);
 
 static const struct {
@@ -2151,7 +2159,7 @@ static void *find_ptr(const char *name)
    return NULL;
 }
 
-extern "C" VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetDeviceProcAddr(VkDevice dev,
+extern "C" PUBLIC VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetDeviceProcAddr(VkDevice dev,
                                                                              const char *funcName)
 {
    init_spdlog();
@@ -2165,7 +2173,7 @@ extern "C" VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetD
    return device_data->vtable.GetDeviceProcAddr(dev, funcName);
 }
 
-extern "C" VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetInstanceProcAddr(VkInstance instance,
+extern "C" PUBLIC VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetInstanceProcAddr(VkInstance instance,
                                                                                const char *funcName)
 {
    init_spdlog();

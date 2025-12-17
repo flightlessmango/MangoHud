@@ -189,7 +189,7 @@ void FTrace::handle_ftrace_entry(std::string entry)
          break;
       }
       default:
-         unreachable("invalid tracepoint type");
+         UNREACHABLE("invalid tracepoint type");
       }
    }
 }
@@ -233,7 +233,7 @@ void FTrace::update()
          break;
       }
       default:
-         unreachable("invalid tracepoint type");
+         UNREACHABLE("invalid tracepoint type");
       }
 
       value = { };
