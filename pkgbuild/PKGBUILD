@@ -17,8 +17,8 @@ source=(
         "imgui_1.89.9-1_patch.zip::https://wrapdb.mesonbuild.com/v2/imgui_1.89.9-1/get_patch"
         "spdlog-1.14.1.tar.gz::https://github.com/gabime/spdlog/archive/refs/tags/v1.14.1.tar.gz"
         "spdlog_1.14.1-1_patch.zip::https://wrapdb.mesonbuild.com/v2/spdlog_1.14.1-1/get_patch"
-        "vulkan-headers-1.2.158.tar.gz::https://github.com/KhronosGroup/Vulkan-Headers/archive/v1.2.158.tar.gz"
-        "vulkan-headers-1.2.158-2-wrap.zip::https://wrapdb.mesonbuild.com/v2/vulkan-headers_1.2.158-2/get_patch"
+        "vulkan-headers-1.3.283.tar.gz::https://github.com/KhronosGroup/Vulkan-Headers/archive/v1.3.283.tar.gz"
+        "vulkan-headers-1.3.283-1-wrap.zip::https://wrapdb.mesonbuild.com/v2/vulkan-headers_1.3.283-1/get_patch"
         "implot-0.16.zip::https://github.com/epezent/implot/archive/refs/tags/v0.16.zip"
         "implot_0.16-1_patch.zip::https://wrapdb.mesonbuild.com/v2/implot_0.16-1/get_patch"
         )
@@ -30,8 +30,8 @@ sha256sums=(
             '9b21290c597d76bf8d4eeb3f9ffa024b11d9ea6c61e91d648ccc90b42843d584'
             '1586508029a7d0670dfcb2d97575dcdc242d3868a259742b69f100801ab4e16b'
             'ae878e732330ea1048f90d7e117c40c0cd2a6fb8ae5492c7955818ce3aaade6c'
-            "53361271cfe274df8782e1e47bdc9e61b7af432ba30acbfe31723f9df2c257f3"
-            "860358cf5e73f458cd1e88f8c38116d123ab421d5ce2e4129ec38eaedd820e17"
+            "a76ff77815012c76abc9811215c2167128a73a697bcc23948e858d1f7dd54a85"
+            "00e30d35117ae90a19b5b8878746fceaf31b41778b817ca9e6b3ae6063be8233"
             "24f772c688f6b8a6e19d7efc10e4923a04a915f13d487b08b83553aa62ae1708"
             "1c6b1462066a5452fa50c1da1dd47fed841f28232972c82d778f2962936568c7"
             )
@@ -52,7 +52,7 @@ prepare() {
   # meson subprojects
   ln -sv "$srcdir/imgui-1.89.9" subprojects
   ln -sv "$srcdir/spdlog-1.14.1" subprojects
-  ln -sv "$srcdir/Vulkan-Headers-1.2.158" subprojects
+  ln -sv "$srcdir/Vulkan-Headers-1.3.283" subprojects
   ln -sv "$srcdir/implot-0.16" subprojects
 }
 
