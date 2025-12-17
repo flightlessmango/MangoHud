@@ -170,14 +170,16 @@ else
   dep_rt = null_dep
 endif
 
-if not dependency('VulkanHeaders').found()
+# Commented code can be used if mangohud start using latest SDK Vulkan-Headers
+# Allowing user to build mangohud using system Vulkan-Headers
+# if not dependency('VulkanHeaders').found()
   vkh_sp = subproject('vulkan-headers')
   vk_api_xml = vkh_sp.get_variable('vulkan_api_xml')
   dep_vulkan = vkh_sp.get_variable('vulkan_headers_dep')
-else
- dep_vulkan = dependency('VulkanHeaders', required: true)
- vk_api_xml = files('/usr/share/vulkan/registry/vk.xml')
-endif
+# else
+#  dep_vulkan = dependency('VulkanHeaders', required: true)
+#  vk_api_xml = files('/usr/share/vulkan/registry/vk.xml')
+# endif
 
 vk_enum_to_str = custom_target(
   'vk_enum_to_str',

@@ -7,7 +7,7 @@ jobs:
     strategy:
       matrix:
         compiler: [clang, gcc]
-        os: [ubuntu-22.04]
+        os: [ubuntu-24.04]
     runs-on: ${{ matrix.os }}
     steps:
     - name: 'Checkout'
@@ -28,8 +28,8 @@ jobs:
           libglfw3-dev \
           libwayland-dev \
           libxnvctrl-dev \
-          libxkbcommon-dev
-        sudo pip3 install 'meson>=0.60'
+          libxkbcommon-dev \
+          meson
     - name: 'Install clang'
       if:  ${{ (matrix.compiler == 'clang') }}
       run: |

@@ -14,9 +14,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -x
-          sudo apt update
-          sudo apt -y install gcc g++ ninja-build python3-pip python3-setuptools python3-wheel pkg-config mesa-common-dev libx11-dev libxnvctrl-dev libdbus-1-dev glslang-tools hub libxkbcommon-dev libwayland-dev wget unzip
-          sudo pip3 --no-input install 'meson>=0.60' mako
+          apt update
+          apt -y install gcc g++ ninja-build python3-pip python3-setuptools \
+                         python3-wheel pkg-config mesa-common-dev libx11-dev \
+                         libxnvctrl-dev libdbus-1-dev glslang-tools hub libxkbcommon-dev \
+                         libwayland-dev wget unzip python3-mako meson
           ./build-source.sh
           assets=()
           for asset in ./MangoHud-*-Source*.tar.*; do

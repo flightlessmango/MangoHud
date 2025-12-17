@@ -282,7 +282,6 @@ void HudElements::version(){
 }
 
 void HudElements::gpu_stats(){
-    size_t i = 0;
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] && gpus){
         for (auto& gpu : gpus->selected_gpus()) {
             ImguiNextColumnFirstItem();
@@ -415,7 +414,6 @@ void HudElements::gpu_stats(){
             }
             if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
                 ImGui::TableNextRow();
-            i++;
         }
     }
 }
