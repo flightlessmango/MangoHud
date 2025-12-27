@@ -1,0 +1,10 @@
+hud_table:
+  cols: 3
+  rows:
+    - [ {text: GPU, color: "00ff00asdf"}, {value: GPU.LOAD, unit: "%", precision: 0}, {value: GPU.TEMP, unit: "°C", precision: 0}, {value: GPU.TEMP, unit: "°C", precision: 0} ]
+    - [ null, {value: GPU.CLOCK, unit: "MHz", precision: 0}, {value: GPU.POWER, unit: "W", precision: 0}
+    - [ {text: CPU, color: "00bfff"}, {value: CPU.LOAD, unit: "%", precision: 0}, {value: CPU.TEMP, unit: "°C", precision: 0} ]
+    - [ null, {value: CPU.CLOCK, unit: "MHz", precision: 0}, null ]
+    - [ {text: VRAM, color: "aa66ff"}, {value: VRAM.USED, unit: "GiB", precision: 1}, {value: VRAM.CLOCK, unit: "MHz", precision: 0} ]
+    - [ {text: RAM, color: "ff66cc"}, {value: RAM.USED, unit: "GiB", precision: 1}, null ]
+    - [ {text: VKD3D, color: "ff3333"}, {value: FPS, unit: "FPS", precision: 0}, {value: FRAMETIME, unit: "ms", precision: 1} ]
