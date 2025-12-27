@@ -1,0 +1,4 @@
+[wrap-git]
+url = https://github.com/charles-lunarg/vk-bootstrap.git
+revision = v1.4.335
+depth = 1
