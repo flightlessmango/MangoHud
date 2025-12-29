@@ -149,7 +149,7 @@ void HudElements::convert_colors(const struct overlay_params& params)
         fc.w = params.alpha;
         if (HUDElements.colors.convert)
         {
-            switch(params.transfer_function)
+            switch (params.transfer_function)
             {
                 case PQ:
                     fc = SRGBToLinear(fc);
