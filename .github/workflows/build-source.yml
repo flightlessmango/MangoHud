@@ -1,5 +1,6 @@
 name: Build source tars
 on:
+  workflow_dispatch:
   release:
     types: [published]
 
@@ -14,8 +15,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -x
-          apt update
-          apt -y install gcc g++ ninja-build python3-pip python3-setuptools \
+          sudo apt update
+          sudo apt -y install gcc g++ ninja-build python3-pip python3-setuptools \
                          python3-wheel pkg-config mesa-common-dev libx11-dev \
                          libxnvctrl-dev libdbus-1-dev glslang-tools hub libxkbcommon-dev \
                          libwayland-dev wget unzip python3-mako meson
