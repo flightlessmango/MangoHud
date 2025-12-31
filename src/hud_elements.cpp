@@ -1742,6 +1742,9 @@ void HudElements::network() {
 }
 
 void HudElements::_display_session() {
+    if (not HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_display_server])
+        return;
+
     ImGui::PushFont(HUDElements.sw_stats->font_secondary);
     ImguiNextColumnFirstItem();
 
