@@ -1,0 +1,12 @@
+# in base
+{
+  global:
+    overlay_GetInstanceProcAddr;
+    overlay_GetDeviceProcAddr;
+    glX*;
+    egl*;
+    dlsym;
+    mangohud_find_glx_ptr;
+    mangohud_find_egl_ptr;
+  local: *;
+};
