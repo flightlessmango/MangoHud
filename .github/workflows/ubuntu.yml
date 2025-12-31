@@ -15,21 +15,12 @@ jobs:
     - name: 'Install prerequisites'
       run: |
         sudo apt-get update
-        sudo apt-get install -y \
-          appstream \
-          glslang-tools \
-          ninja-build \
-          python3-mako \
-          python3-setuptools \
-          python3-wheel \
-          mesa-common-dev \
-          libcmocka-dev \
-          libdbus-1-dev \
-          libglfw3-dev \
-          libwayland-dev \
-          libxnvctrl-dev \
-          libxkbcommon-dev \
-          meson
+          source ./build_deps.sh
+          DEPS_NO_I386="$(printf '%s' "$DEPS_DEBIAN" \
+              | tr ',' '\n' \
+              | grep -v ':i386' \
+              | tr '\n' ' ')"
+          sudo apt -o Acquire::Queue-Mode=access -y install $DEPS_NO_I386
     - name: 'Install clang'
       if:  ${{ (matrix.compiler == 'clang') }}
       run: |

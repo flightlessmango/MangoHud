@@ -15,10 +15,12 @@ jobs:
         run: |
           set -x
           apt update
-          apt -y install gcc g++ ninja-build python3-pip python3-setuptools \
-                         python3-wheel pkg-config mesa-common-dev libx11-dev \
-                         libxnvctrl-dev libdbus-1-dev glslang-tools hub libxkbcommon-dev \
-                         libwayland-dev wget unzip python3-mako meson
+          source ./build_deps.sh
+          DEPS_NO_I386="$(printf '%s' "$DEPS_DEBIAN" \
+              | tr ',' '\n' \
+              | grep -v ':i386' \
+              | tr '\n' ' ')"
+          sudo apt -o Acquire::Queue-Mode=access -y install hub $DEPS_NO_I386
           ./build-source.sh
           assets=()
           for asset in ./MangoHud-*-Source*.tar.*; do

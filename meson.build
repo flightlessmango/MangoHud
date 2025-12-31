@@ -3,7 +3,7 @@ project('MangoHud',
   version : 'v0.8.2',
   license : 'MIT',
   meson_version: '>=0.60.0',
-  default_options : ['buildtype=release', 'c_std=c99', 'cpp_std=c++17', 'warning_level=2']
+  default_options : ['buildtype=release', 'c_std=c99', 'cpp_std=c++20', 'warning_level=2']
 )
 
 cc = meson.get_compiler('c')
@@ -23,9 +23,8 @@ pre_args = [
   '-D__STDC_CONSTANT_MACROS',
   '-D__STDC_FORMAT_MACROS',
   '-D__STDC_LIMIT_MACROS',
-  '-DPACKAGE_VERSION="@0@"'.format(meson.project_version()),
-  '-DSPDLOG_COMPILED_LIB'
-]
+  '-DPACKAGE_VERSION="@0@"'.format(meson.project_version())
+  ]
 
 if get_option('buildtype') == 'debug'
   pre_args += '-DDEBUG'
@@ -114,10 +113,6 @@ if is_unixy and not dep_x11.found() and not dep_wayland_client.found()
   error('At least one of "with_x11" and "with_wayland" should be enabled')
 endif
 
-inc_common = [
-    include_directories('include'),
-]
-
 dep_pthread = dependency('threads')
 
 add_project_arguments(
@@ -132,6 +127,8 @@ add_project_arguments(
     '-fno-math-errno',
     '-fno-trapping-math',
     '-Wno-missing-field-initializers',
+    '-fdiagnostics-absolute-paths',
+    # '-Wshadow'
   ]), language : ['c'],
 )
 
@@ -145,6 +142,8 @@ add_project_arguments(
     '-fno-trapping-math',
     '-Wno-non-virtual-dtor',
     '-Wno-missing-field-initializers',
+    '-fdiagnostics-absolute-paths',
+    # '-Wshadow'
   ]), language : ['cpp'],
 )
 
@@ -170,16 +169,14 @@ else
   dep_rt = null_dep
 endif
 
-# Commented code can be used if mangohud start using latest SDK Vulkan-Headers
-# Allowing user to build mangohud using system Vulkan-Headers
-# if not dependency('VulkanHeaders').found()
-  vkh_sp = subproject('vulkan-headers')
-  vk_api_xml = vkh_sp.get_variable('vulkan_api_xml')
-  dep_vulkan = vkh_sp.get_variable('vulkan_headers_dep')
-# else
-#  dep_vulkan = dependency('VulkanHeaders', required: true)
-#  vk_api_xml = files('/usr/share/vulkan/registry/vk.xml')
-# endif
+vkh_sp = subproject('vulkan-headers')
+vk_api_xml = vkh_sp.get_variable('vulkan_api_xml')
+vulkan_headers_dep = vkh_sp.get_variable('vulkan_headers_dep')
+vulkan_lib = cc.find_library('vulkan', required: true)
+vulkan_dep = declare_dependency(
+  dependencies: [vulkan_headers_dep, vulkan_lib]
+)
+meson.override_dependency('vulkan', vulkan_dep)
 
 vk_enum_to_str = custom_target(
   'vk_enum_to_str',
@@ -225,7 +222,7 @@ imgui_options = [
   'dx12=disabled',
   'metal=disabled',
   'opengl=disabled',
-  'vulkan=disabled',
+  'vulkan=enabled',
   'glfw=disabled',
   'sdl2=disabled',
   'sdl3=disabled',
@@ -246,12 +243,12 @@ elif sizeof_ptr == 4
   pre_args += '-DMANGOHUD_ARCH="32bit"'
 endif
 
-if get_option('mangoapp')
-  imgui_options += [
-    'opengl=enabled',
-    'glfw=enabled',
-  ]
-endif
+# if get_option('mangoapp')
+#   imgui_options += [
+#     'opengl=enabled',
+#     'glfw=enabled',
+#   ]
+# endif
 
 imgui_sp = subproject('imgui', default_options: imgui_options)
 dearimgui_dep = imgui_sp.get_variable('imgui_dep')
@@ -270,8 +267,7 @@ spdlog_options = [
   'std_format=disabled'
 ]
 
-spdlog_dep = dependency('spdlog', required: false)
-
+spdlog_dep = dependency('spdlog', required: true)
 if get_option('use_system_spdlog').disabled() or not spdlog_dep.found()
     if get_option('use_system_spdlog').enabled()
       warning('spdlog dependency not found following back to submodule')
@@ -279,6 +275,7 @@ if get_option('use_system_spdlog').disabled() or not spdlog_dep.found()
     spdlog_sp = subproject('spdlog', default_options: spdlog_options)
     spdlog_dep = spdlog_sp.get_variable('spdlog_dep')
 endif
+spdlog_dep = spdlog_sp.get_variable('spdlog_dep')
 
 if ['windows', 'mingw'].contains(host_machine.system())
   minhook_dep = dependency('minhook', fallback: ['minhook', 'minhook_dep'], required: true)
@@ -289,15 +286,56 @@ else
   windows_deps = null_dep
 endif
 
-if get_option('mangoapp')
-  glfw3_dep = dependency('glfw3')
+git = find_program('git', required: false)
+if git.found()
+  git_describe = run_command([git, 'describe', '--tags', '--dirty=+'], check: false)
+endif
+if git.found() and git_describe.returncode() == 0
+  describe_ver = git_describe.stdout().strip()
+else
+  describe_ver = meson.project_version()
 endif
 
-subdir('src')
+if get_option('dynamic_string_tokens')
+  ld_prefix = get_option('prefix') + '/\$LIB/'
+else
+  ld_prefix = join_paths(get_option('prefix') ,get_option('libdir')) + '/'
+endif
+
+if get_option('append_libdir_mangohud')
+  libdir_mangohud = join_paths(get_option('prefix'), get_option('libdir'), 'mangohud')
+  ld_libdir_mangohud = ld_prefix + 'mangohud/'
+else
+  libdir_mangohud = join_paths(get_option('prefix'), get_option('libdir'))
+  ld_libdir_mangohud = ld_prefix
+endif
+
+# if get_option('mangoapp')
+  # glfw3_dep = dependency('glfw3')
+# endif
+inc_common = [
+  include_directories('include'),
+  include_directories('server'),
+  include_directories('utils'),
+  include_directories('client'),
+]
+subdir('utils')
+vkbootstrap_dep = subproject('vk-bootstrap').get_variable('vkbootstrap_dep')
+libdrm_dep = dependency('libdrm')
+subdir('render')
+subdir('ipc')
+if get_option('with_server')
+  subdir('server')
+endif
+subdir('client')
+
+# subdir('src')
 
 if get_option('include_doc')
   subdir('data')
 endif
+
+# cmocka_dep = dependency('cmocka', fallback: ['cmocka', 'cmocka_dep'])
 
 if get_option('tests').enabled()
   # cmocka_dep = dependency('cmocka', fallback: ['cmocka', 'cmocka_dep'])

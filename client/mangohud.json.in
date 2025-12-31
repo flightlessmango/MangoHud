@@ -1,0 +1,20 @@
+{
+    "file_format_version" : "1.0.0",
+    "layer" : {
+      "name": "VK_LAYER_MANGOHUD_overlay_@cpu_family@",
+      "type": "GLOBAL",
+      "api_version": "1.3.221",
+      "library_path": "@ld_libdir_mangohud_abs@/libMangoHud.so",
+      "implementation_version": "1",
+      "description": "MangoHud",
+      "functions": {
+         "vkNegotiateLoaderLayerInterfaceVersion": "vkNegotiateLoaderLayerInterfaceVersion"
+      },
+      "enable_environment": {
+        "MANGOHUD": "1"
+      },
+      "disable_environment": {
+        "DISABLE_MANGOHUD": "1"
+      }
+    }
+}

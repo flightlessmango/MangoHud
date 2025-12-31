@@ -186,6 +186,8 @@ struct swapchain_data {
    struct swapchain_stats sw_stats;
 };
 
+
+
 // single global lock, for simplicity
 std::mutex global_lock;
 typedef std::lock_guard<std::mutex> scoped_lock;

@@ -1,0 +1,47 @@
+name: Build debug release package
+
+on:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build tools
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo dpkg --add-architecture i386
+          sudo apt update
+          source ./build_deps.sh
+          sudo apt -o Acquire::Queue-Mode=access -y install ${DEPS_DEBIAN//,/ }
+      - name: Prepare artifact variables
+        id: git-vars
+        shell: bash
+        run: |
+          set -euxo pipefail
+          short_sha="$(git rev-parse --short=12 "$GITHUB_SHA")"
+          # For push events, this is the branch or tag name without refs/* prefix
+          ref_name="${GITHUB_REF_NAME}"
+
+          artifact_name="MangoHud-debug-${ref_name}-${short_sha}-${GITHUB_RUN_NUMBER}"
+          echo "artifact-name=$artifact_name" >> "$GITHUB_OUTPUT"
+
+      - name: Build and package
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./build-source.sh
+          ./build.sh build_dbg -Dwerror=true package release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.git-vars.outputs.artifact-name }}
+          path: build/MangoHud-*.tar.gz
+          if-no-files-found: error
+          retention-days: 30

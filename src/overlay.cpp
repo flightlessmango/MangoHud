@@ -240,6 +240,7 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
             frametime_ns;
       frametime_data.push_back(frametime_ms);
       frametime_data.erase(frametime_data.begin());
+      frametime_data.data();
    }
 #ifdef __linux__
    if (gpus)

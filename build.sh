@@ -151,8 +151,9 @@ configure() {
     if [[ ! -f "build/meson32/build.ninja" && "$MACHINE" = "x86_64" ]]; then
         export CC="gcc -m32"
         export CXX="g++ -m32"
+        export LDFLAGS=-m32
         export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH_32}"
-        meson setup build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false $@ ${CONFIGURE_OPTS}
+        meson setup build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false -Dwith_server=false $@ ${CONFIGURE_OPTS}
     fi
 }
 
@@ -163,7 +164,7 @@ build() {
     DESTDIR="$PWD/build/release" ninja -C build/meson64 install
 
     if [ "$MACHINE" = "x86_64" ]; then
-        DESTDIR="$PWD/build/release" ninja -C build/meson32 install
+        DESTDIR="$PWD/build/release"/ ninja -C build/meson32 install
     fi
 
     sed -i 's:/usr/\\$LIB:/usr/lib/mangohud/\\$LIB:g' "$PWD/build/release/usr/bin/mangohud"
@@ -194,6 +195,7 @@ uninstall() {
     rm -rfv "/usr/lib/mangohud"
     rm -rfv "/usr/share/doc/mangohud"
     rm -fv "/usr/share/man/man1/mangohud.1"
+    rm -fv "/usr/bin/mangohud-server"
     rm -fv "/usr/share/vulkan/implicit_layer.d/mangohud.json"
     rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.json"
     rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json"
@@ -229,12 +231,12 @@ install() {
 
     echo DEFAULTLIB: $DEFAULTLIB
     /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud.so /usr/lib/mangohud/lib64/libMangoHud.so
-    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud_opengl.so /usr/lib/mangohud/lib64/libMangoHud_opengl.so
-    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud_shim.so /usr/lib/mangohud/lib64/libMangoHud_shim.so
+    # /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud_opengl.so /usr/lib/mangohud/lib64/libMangoHud_opengl.so
+    # /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud_shim.so /usr/lib/mangohud/lib64/libMangoHud_shim.so
     if [ "$MACHINE" = "x86_64" ]; then
       /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud.so /usr/lib/mangohud/lib32/libMangoHud.so
-      /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud_opengl.so /usr/lib/mangohud/lib32/libMangoHud_opengl.so
-      /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud_shim.so /usr/lib/mangohud/lib32/libMangoHud_shim.so
+    #   /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud_opengl.so /usr/lib/mangohud/lib32/libMangoHud_opengl.so
+    #   /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud_shim.so /usr/lib/mangohud/lib32/libMangoHud_shim.so
     fi
 
     /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json
@@ -242,6 +244,7 @@ install() {
     /usr/bin/install -Dvm644 ./build/release/usr/share/man/man1/mangohud.1 /usr/share/man/man1/mangohud.1
     /usr/bin/install -Dvm644 ./build/release/usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
     /usr/bin/install -vm755  ./build/release/usr/bin/mangohud /usr/bin/mangohud
+    /usr/bin/install -vm755  ./build/release/usr/bin/mangohud-server /usr/bin/mangohud-server
     /usr/bin/install -vm755  ./build/release/usr/bin/mangoplot /usr/bin/mangoplot
 
     ln -sv $DEFAULTLIB /usr/lib/mangohud/lib
@@ -288,7 +291,7 @@ reinstall() {
 
 clean() {
     rm -rf "build"
-    rm -rf subprojects/*/
+    find subprojects -mindepth 1 -maxdepth 1 -type d ! -name packagefiles -exec rm -rf -- {} +
 }
 
 usage() {

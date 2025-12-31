@@ -14,14 +14,8 @@ jobs:
           set -x
           sudo dpkg --add-architecture i386
           sudo apt update
-          sudo apt -y install gcc-multilib g++-multilib ninja-build python3-setuptools \
-                              python3-wheel mesa-common-dev libxnvctrl-dev libdbus-1-dev \
-                              python3-numpy python3-matplotlib unzip libxkbcommon-dev libwayland-dev wget unzip \
-                              libxkbcommon-dev:i386 libwayland-dev:i386 gh python3-mako meson pkgconf pkg-config
-          wget https://github.com/KhronosGroup/glslang/releases/download/SDK-candidate-26-Jul-2020/glslang-master-linux-Release.zip
-          unzip glslang-master-linux-Release.zip bin/glslangValidator
-          sudo install -m755 bin/glslangValidator /usr/local/bin/
-          command -v pkg-config && pkg-config --version
+          source ./build_deps.sh
+          sudo apt -o Acquire::Queue-Mode=access -y install ${DEPS_DEBIAN//,/ }
       - name: Prepare Artifact Git Info
         shell: bash
         run: |
@@ -39,15 +33,23 @@ jobs:
       - name: Build and package
         run: |
           ./build-source.sh
-          ./build.sh build -Dwerror=true package release
+          if [ -d /out ]; then
+            ./build.sh build_dbg -Dwerror=true package release
+          else
+            ./build.sh build -Dwerror=true package release
+          fi
       - name: Upload assets to release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tag_name="${GITHUB_REF##*/}"
-          for pkg in ./build/*.tar.*; do
-            gh release upload "$tag_name" "$pkg" --clobber
-          done
+          if [ -d /out ]; then
+            cp ./build/*.tar.* /out
+          else
+            tag_name="${GITHUB_REF##*/}"
+            for pkg in ./build/*.tar.*; do
+              gh release upload "$tag_name" "$pkg" --clobber
+            done
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

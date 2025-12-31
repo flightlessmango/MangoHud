@@ -15,7 +15,7 @@ cs2.sh
 RiseOfTheTombRaider.sh
 "
 
-MANGOHUD_LIB_NAME="@ld_libdir_mangohud@libMangoHud_shim.so"
+MANGOHUD_LIB_NAME="@ld_libdir_mangohud@libMangoHud.so"
 
 if [ "$1" = "--version" ]; then
     echo @version@
@@ -39,6 +39,11 @@ for exe in $DISABLE_LD_PRELOAD; do
         break
     fi
 done
+# TODO This is experimental and we might break steam overlay
+is_proton=false
+if [ -n "${STEAM_COMPAT_PROTON-}" ] || [ -n "${STEAM_COMPAT_DATA_PATH-}" ]; then
+    is_proton=true
+fi
 
 if [ "$disable_preload" = true ]; then
     exec env MANGOHUD=1 "$@"
@@ -51,7 +56,11 @@ else
         (*)
             # Preload using the plain filenames of the libs, the dynamic linker will
             # figure out whether the 32 or 64 bit version should be used
-            LD_PRELOAD="${LD_PRELOAD:+$LD_PRELOAD:}${MANGOHUD_LIB_NAME}"
+            if [ "$is_proton" = true ]; then
+                LD_PRELOAD="${LD_PRELOAD:+$LD_PRELOAD:}${MANGOHUD_LIB_NAME}"
+            else
+                LD_PRELOAD="${MANGOHUD_LIB_NAME}${LD_PRELOAD:+$LD_PRELOAD:}"
+            fi
     esac
 
     exec env MANGOHUD=1 LD_PRELOAD="${LD_PRELOAD}" "$@"

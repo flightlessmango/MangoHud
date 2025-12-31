@@ -19,7 +19,7 @@ jobs:
           echo "ParallelDownloads = 10" >> /etc/pacman.conf
           echo "\n" && echo "[multilib]" >> /etc/pacman.conf
           echo "Include = /etc/pacman.d/mirrorlist" >> /etc/pacman.conf
-          pacman -Syu base-devel sudo meson python-mako glslang hub python-numpy python-matplotlib --noconfirm
+          pacman -Syu base-devel --noconfirm
       - name: makepkg
         run: |
           useradd -m builduser

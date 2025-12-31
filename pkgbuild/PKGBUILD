@@ -1,26 +1,28 @@
 # Maintainer: Simon Hallsten <flightlessmangoyt@gmail.com>
 
 pkgname=('mangohud' 'lib32-mangohud')
-pkgver=0.8.2.r31.gd8686742
+pkgver=0.8.2.r38.gfb35df5c
 pkgrel=1
 pkgdesc="Vulkan and OpenGL overlay to display performance information"
 arch=('x86_64')
-makedepends=('dbus' 'gcc' 'meson' 'python-mako' 'libx11' 'lib32-libx11' 'git' 'pkgconf' 'vulkan-headers')
+makedepends=('dbus' 'gcc' 'meson' 'python-mako' 'libx11' 'lib32-libx11' 'git' 'pkgconf')
 depends=('glslang' 'libglvnd' 'lib32-libglvnd' 'glfw-x11' 'python-numpy' 'python-matplotlib'
-         'libxrandr' 'libxkbcommon' 'lib32-libxkbcommon')
+         'libxrandr' 'libxkbcommon' 'lib32-libxkbcommon' 'spdlog' 'yaml-cpp'
+         'vulkan-icd-loader' 'lib32-vulkan-icd-loader' 'appstream' 'lib32-systemd')
 replaces=('vulkan-mesa-layer-mango')
 license=('MIT')
 source=(
-        "mangohud"::"git+https://github.com/flightlessmango/MangoHud.git#branch=master"
+        "mangohud"::"git+https://github.com/flightlessmango/MangoHud.git#branch=server2"
         "mangohud-minhook"::"git+https://github.com/flightlessmango/minhook.git"
         "imgui-1.91.6.tar.gz::https://github.com/ocornut/imgui/archive/refs/tags/v1.91.6.tar.gz"
         "imgui_1.91.6-3_patch.zip::https://wrapdb.mesonbuild.com/v2/imgui_1.91.6-3/get_patch"
         "spdlog-1.14.1.tar.gz::https://github.com/gabime/spdlog/archive/refs/tags/v1.14.1.tar.gz"
         "spdlog_1.14.1-1_patch.zip::https://wrapdb.mesonbuild.com/v2/spdlog_1.14.1-1/get_patch"
-        "vulkan-headers-1.3.283.tar.gz::https://github.com/KhronosGroup/Vulkan-Headers/archive/v1.3.283.tar.gz"
+        "vulkan-headers-1.4.335.tar.gz::https://github.com/KhronosGroup/Vulkan-Headers/archive/v1.4.335.tar.gz"
         "vulkan-headers-1.3.283-1-wrap.zip::https://wrapdb.mesonbuild.com/v2/vulkan-headers_1.3.283-1/get_patch"
         "implot-0.16.zip::https://github.com/epezent/implot/archive/refs/tags/v0.16.zip"
         "implot_0.16-1_patch.zip::https://wrapdb.mesonbuild.com/v2/implot_0.16-1/get_patch"
+        "vkroots"::"git+https://github.com/misyltoad/vkroots.git#commit=5106d8a0df95de66cc58dc1ea37e69c99afc9540"
         )
 
 sha256sums=(
@@ -30,10 +32,11 @@ sha256sums=(
             '2f7977114ba07d06559aaf8890a92a4ebd25186592d4447954605aaf2244634d'
             '1586508029a7d0670dfcb2d97575dcdc242d3868a259742b69f100801ab4e16b'
             'ae878e732330ea1048f90d7e117c40c0cd2a6fb8ae5492c7955818ce3aaade6c'
-            "a76ff77815012c76abc9811215c2167128a73a697bcc23948e858d1f7dd54a85"
+            "8ee39bee575bdccc1ecacd0bdb26f181841de35d7409a3eca468c6b622daa2f1"
             "00e30d35117ae90a19b5b8878746fceaf31b41778b817ca9e6b3ae6063be8233"
             "24f772c688f6b8a6e19d7efc10e4923a04a915f13d487b08b83553aa62ae1708"
             "1c6b1462066a5452fa50c1da1dd47fed841f28232972c82d778f2962936568c7"
+            'SKIP'
             )
 
 _build_args="-Dappend_libdir_mangohud=false -Dwith_xnvctrl=disabled -Dtests=disabled"
@@ -52,8 +55,12 @@ prepare() {
   # meson subprojects
   ln -sv "$srcdir/imgui-1.91.6" subprojects
   ln -sv "$srcdir/spdlog-1.14.1" subprojects
-  ln -sv "$srcdir/Vulkan-Headers-1.3.283" subprojects
+  ln -sv "$srcdir/Vulkan-Headers-1.4.335" subprojects
   ln -sv "$srcdir/implot-0.16" subprojects
+  ln -sv "$srcdir/vkroots" subprojects
+  git clone https://github.com/charles-lunarg/vk-bootstrap subprojects/vk-bootstrap
+  cp subprojects/packagefiles/vk-bootstrap/* subprojects/vk-bootstrap/
+  cp subprojects/packagefiles/Vulkan-Headers-1.4.335/* subprojects/Vulkan-Headers-1.4.335/
 }
 
 build() {
@@ -70,6 +77,7 @@ build() {
     --libdir=lib32 \
     -Dmangoapp=false \
     -Dmangohudctl=false \
+    -Dwith_server=false \
     ${_build_args}
 
   ninja -C build32
@@ -79,6 +87,7 @@ package_mangohud() {
   provides=("mangohud")
   conflicts=('mangohud-common')
   DESTDIR="${pkgdir}" ninja -C build64 install
+  setcap cap_dac_read_search,cap_perfmon=ep ${pkgdir}/usr/bin/mangohud-server
 }
 
 package_lib32-mangohud() {
@@ -86,5 +95,6 @@ package_lib32-mangohud() {
   DESTDIR="${pkgdir}" ninja -C build32 install
   rm -rf "$pkgdir/usr/bin"
   rm -rf "$pkgdir/usr/share"
-  install -m644 -Dt "$pkgdir/usr/share/vulkan/implicit_layer.d" "$srcdir/build32/src/MangoHud.x86.json"
+  rm -rf "$pkgdir/usr/include"
+  install -m644 -Dt "$pkgdir/usr/share/vulkan/implicit_layer.d" "$srcdir/build32/client/MangoHud.x86.json"
 }
