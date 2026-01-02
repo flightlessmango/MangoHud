@@ -475,6 +475,8 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `fex_stats`                        | Show FEX-Emu statistics. Default = `status+apptype+hotthreads+jitload+sigbus+smc+softfloat` |
 | `ftrace`                           | Display information about trace events reported through ftrace                        |
 | `flip_efficiency`                  | Flips CPU and GPU efficiency to joules per frame                                      |
+| `obs`                              | Show OBS statistics if MangoHud was compiled with OBS support                         |
+| `obs_prefix_exe`                   | Prefix executable name to OBS recording file                                          |
 
 Example: `MANGOHUD_CONFIG=cpu_temp,gpu_temp,position=top-right,height=500,font_size=32`
 Because comma is also used as option delimiter and needs to be escaped for values with a backslash, you can use `+` like `MANGOHUD_CONFIG=fps_limit=60+30+0` instead.
@@ -685,7 +687,7 @@ Example output:
 #### Intel notes
 - GPU temperature for `i915` requires **linux 6.13+**
 - Fan speed for `i915` requires **linux 6.12+**
-- GPU temperature and vram temperature for `xe` requires **linux 6.15+** 
+- GPU temperature and vram temperature for `xe` requires **linux 6.15+**
 - Fan speed for `xe` requires **linux 6.16+**
 - GPU usage and memory usage shows usage of current process, not total system usage (it's an issue on intel's side)
 - Integrated Intel GPUs are **limited** due to lack of hwmon interface (it's an issue on intel's side, [i915 source](https://github.com/torvalds/linux/blob/5fc31936081919a8572a3d644f3fbb258038f337/drivers/gpu/drm/i915/i915_hwmon.c#L914-L916), [xe source](https://github.com/torvalds/linux/blob/5fc31936081919a8572a3d644f3fbb258038f337/drivers/gpu/drm/xe/xe_hwmon.c#L824-L826))
