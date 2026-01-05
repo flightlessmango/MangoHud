@@ -701,7 +701,12 @@ void HudElements::proc_vram() {
     size_t idx = 0;
     for (const std::shared_ptr<GPU>& gpu : gpus->selected_gpus()) {
         ImguiNextColumnFirstItem();
-        HUDElements.TextColored(HUDElements.colors.vram, "PVRAM%i", idx++);
+
+        if (gpus->selected_gpus().size() > 1)
+            HUDElements.TextColored(HUDElements.colors.vram, "PVRAM%i", idx++);
+        else
+            HUDElements.TextColored(HUDElements.colors.vram, "PVRAM");
+
         ImguiNextColumnOrNewRow();
 
         right_aligned_text(
