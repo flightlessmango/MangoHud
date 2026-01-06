@@ -17,7 +17,8 @@ jobs:
           sudo apt -y install gcc-multilib g++-multilib ninja-build python3-setuptools \
                               python3-wheel mesa-common-dev libxnvctrl-dev libdbus-1-dev \
                               python3-numpy python3-matplotlib unzip libxkbcommon-dev libwayland-dev wget unzip \
-                              libxkbcommon-dev:i386 libwayland-dev:i386 gh python3-mako meson pkgconf pkg-config
+                              libxkbcommon-dev:i386 libwayland-dev:i386 gh python3-mako meson pkgconf pkg-config \
+                              libobs-dev
           wget https://github.com/KhronosGroup/glslang/releases/download/SDK-candidate-26-Jul-2020/glslang-master-linux-Release.zip
           unzip glslang-master-linux-Release.zip bin/glslangValidator
           sudo install -m755 bin/glslangValidator /usr/local/bin/
