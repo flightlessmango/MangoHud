@@ -1159,6 +1159,8 @@ parse_overlay_config(struct overlay_params *params,
    if (HUDElements.net)
       HUDElements.net->should_reset = true;
 
+   // If both options are specified, GPUS::selected_gpus() is going
+   // to return only GPUs listed in gpu_list
    if (!params->gpu_list.empty() && !params->pci_dev.empty()) {
       SPDLOG_WARN(
          "You have specified both gpu_list and pci_dev, "
