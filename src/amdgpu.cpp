@@ -295,7 +295,9 @@ void AMDGPU::get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[ME
 			metrics.is_temp_throttled = amdgpu_common_metrics.is_temp_throttled;
 			metrics.is_other_throttled = amdgpu_common_metrics.is_other_throttled;
 
-			metrics.fan_speed = amdgpu_common_metrics.fan_speed;
+			// Set only if gpu_metrics has value larger than 0, otherwise use hwmon
+			if (amdgpu_common_metrics.fan_speed > 0)
+				metrics.fan_speed = amdgpu_common_metrics.fan_speed;
 		}
 	}
 }
