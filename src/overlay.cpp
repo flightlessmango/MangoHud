@@ -333,6 +333,7 @@ float get_time_stat(void *_data, int _idx)
 void overlay_new_frame(const struct overlay_params& params)
 {
    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+   ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(4,4));
    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8,-3));
    ImGui::PushStyleVar(ImGuiStyleVar_Alpha, params.alpha);
    if (!params.enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
@@ -345,7 +346,7 @@ void overlay_new_frame(const struct overlay_params& params)
 
 void overlay_end_frame()
 {
-   ImGui::PopStyleVar(4);
+   ImGui::PopStyleVar(5);
 }
 
 void position_layer(struct swapchain_stats& data, const struct overlay_params& params, const ImVec2& window_size)
