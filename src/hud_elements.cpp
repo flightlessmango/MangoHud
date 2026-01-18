@@ -1267,24 +1267,15 @@ void HudElements::battery(){
                     char time_buffer[32];
                     snprintf(time_buffer, sizeof(time_buffer), "%02d:%02d", static_cast<int>(hours), static_cast<int>(minutes));
 
-                    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
-                        ImGui::TableNextRow();
-                        ImGui::NextColumn();
-                        ImGui::PushFont(HUDElements.sw_stats->font_small);
-                        ImGuiTableSetColumnIndex(0);
-                        HUDElements.TextColored(HUDElements.colors.text, "%s", "Remaining Time");
-                        ImGui::PopFont();
-                        ImGuiTableSetColumnIndex(2);
-                    } else {
-                        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
-                            ImguiNextColumnOrNewRow();
-
-                        ImguiNextColumnOrNewRow();
-                    }
-                    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact])
-                        ImGuiTableSetColumnIndex(0);
-
-                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", time_buffer);
+                    ImguiNextColumnOrNewRow();
+                    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", time_buffer);
+                    else
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.25f, "%s", time_buffer);
+                    ImGui::SameLine(0, 1.0f);
+                    ImGui::PushFont(HUDElements.sw_stats->font_small);
+                    HUDElements.TextColored(HUDElements.colors.text, "REM");
+                    ImGui::PopFont();
                 }
             } else {
                 ImguiNextColumnOrNewRow();
