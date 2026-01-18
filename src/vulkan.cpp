@@ -62,6 +62,90 @@
 #endif
 #include "imgui_utils.h"
 #include "fps_limiter.h"
+#include <unordered_set>
+
+class queueLimiter {
+public:
+    std::atomic<uint64_t> waits{0};
+    std::atomic<uint64_t> waited_ns{0};
+    std::atomic<uint64_t> max_depth_seen{0};
+    std::deque<VkFence> in_flight;
+
+    void throttle_before_submit(vk_device_dispatch_table& vtable, VkDevice device) {
+        if (max_in_flight == 0)
+            return;
+
+        auto depth = (uint64_t)in_flight.size();
+        uint64_t prev_max = max_depth_seen.load(std::memory_order_relaxed);
+        while (depth > prev_max && !max_depth_seen.compare_exchange_weak(prev_max, depth));
+
+        while (in_flight.size() >= max_in_flight) {
+            VkFence oldest = in_flight.front();
+            if (oldest == VK_NULL_HANDLE) {
+                in_flight.pop_front();
+                continue;
+            }
+
+            if (vtable.GetFenceStatus(device, oldest) == VK_NOT_READY) {
+                int64_t t0 = os_time_get_nano();
+                vtable.WaitForFences(device, 1, &oldest, VK_TRUE, UINT64_MAX);
+                int64_t t1 = os_time_get_nano();
+
+                waits.fetch_add(1, std::memory_order_relaxed);
+                waited_ns.fetch_add((uint64_t)(t1 - t0), std::memory_order_relaxed);
+            }
+
+            vtable.ResetFences(device, 1, &oldest);
+            in_flight.pop_front();
+        }
+    }
+
+    VkResult mark_after_submit(vk_device_dispatch_table& vtable, VkDevice device, VkQueue queue) {
+        if (max_in_flight == 0)
+            return VK_SUCCESS;
+
+        VkFence f = get_fence(vtable, device);
+        if (f == VK_NULL_HANDLE)
+            return VK_SUCCESS;
+
+        VkSubmitInfo si{};
+        si.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+        VkResult r = vtable.QueueSubmit(queue, 1, &si, f);
+        if (r == VK_SUCCESS) {
+            in_flight.push_back(f);
+
+            auto depth = (uint64_t)in_flight.size();
+            uint64_t prev_max = max_depth_seen.load(std::memory_order_relaxed);
+            while (depth > prev_max && !max_depth_seen.compare_exchange_weak(prev_max, depth));
+        }
+        return r;
+    }
+
+private:
+    uint32_t max_in_flight = 1;
+    std::vector<VkFence> pool;
+    size_t pool_cursor = 0;
+
+    VkFence get_fence(vk_device_dispatch_table vtable, VkDevice device) {
+        if (pool.empty()) {
+            pool.resize(8, VK_NULL_HANDLE);
+
+            VkFenceCreateInfo ci{};
+            ci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+            for (auto& f : pool) {
+                if (vtable.CreateFence(device, &ci, nullptr, &f) != VK_SUCCESS)
+                    f = VK_NULL_HANDLE;
+            }
+        }
+
+        VkFence f = pool[pool_cursor++ % pool.size()];
+        return f;
+    }
+} q_limit;
+std::unordered_set<VkQueue> present_queues;
+std::mutex present_queues_mtx;
 
 using namespace std;
 
@@ -1666,6 +1750,21 @@ static VkResult overlay_QueuePresentKHR(
     VkQueue                                     queue,
     const VkPresentInfoKHR*                     pPresentInfo)
 {
+   {
+      std::lock_guard lock(present_queues_mtx);
+      present_queues.insert(queue);
+   }
+
+   static uint64_t present_counter = 0;
+   present_counter++;
+   if ((present_counter % 300) == 0) {
+      uint64_t w = q_limit.waits.load();
+      uint64_t ns = q_limit.waited_ns.load();
+      uint64_t md = q_limit.max_depth_seen.load();
+      SPDLOG_INFO("queueLimiter: waits={}, waited_ms={:.3f}, max_depth={}, inflight={}",
+                  w, (double)ns / 1e6, md, q_limit.in_flight.size());
+   }
+
    if (fps_limiter)
       fps_limiter->limit(true);
 
@@ -1814,7 +1913,27 @@ static VkResult overlay_QueueSubmit(
    struct queue_data *queue_data = FIND(struct queue_data, queue);
    struct device_data *device_data = queue_data->device;
 
-   return device_data->vtable.QueueSubmit(queue, submitCount, pSubmits, fence);
+   bool is_present_queue = false;
+   {
+      std::lock_guard lock(present_queues_mtx);
+      is_present_queue = (present_queues.find(queue) != present_queues.end());
+   }
+
+   if (is_present_queue) {
+      q_limit.throttle_before_submit(device_data->vtable, queue_data->device->device);
+   }
+
+   VkResult r = device_data->vtable.QueueSubmit(queue, submitCount, pSubmits, fence);
+   if (r != VK_SUCCESS)
+      return r;
+
+   if (is_present_queue) {
+      VkResult r2 = q_limit.mark_after_submit(device_data->vtable, queue_data->device->device, queue);
+      if (r2 != VK_SUCCESS)
+            return r2;
+   }
+
+   return VK_SUCCESS;
 }
 
 static VkResult overlay_CreateDevice(
