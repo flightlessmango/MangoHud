@@ -1351,7 +1351,7 @@ void HudElements::gamescope_frame_timing(){
 
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
             if (ImGui::BeginChild("gamescope_app_window", ImVec2((ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x), 50))) {
-                ImGui::PlotLines("", HUDElements.gamescope_debug_app.data(),
+                ImGui::PlotLines("gamescope debug lines", HUDElements.gamescope_debug_app.data(),
                         HUDElements.gamescope_debug_app.size(), 0,
                         NULL, min_time, max_time,
                             ImVec2((ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x), 50));
@@ -1376,7 +1376,7 @@ void HudElements::gamescope_frame_timing(){
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
             ImGui::PushStyleColor(ImGuiCol_PlotLines, ImVec4(0,0,1,1));
             if (ImGui::BeginChild("gamescope_latency_window", ImVec2((ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x), 50))) {
-                ImGui::PlotLines("", HUDElements.gamescope_debug_latency.data(),
+                ImGui::PlotLines("gamescope debug latency lines", HUDElements.gamescope_debug_latency.data(),
                         HUDElements.gamescope_debug_latency.size(), 0,
                         NULL, min_time, max_time,
                         ImVec2((ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x), 50));
