@@ -88,53 +88,70 @@ float BatteryStats::getPercent()
 }
 
 float BatteryStats::getPower() {
-    float current = 0;
-    float voltage = 0;
-    for(int i = 0; i < batt_count; i++) {
+    float power_w = 0.0f;
+
+    for (int i = 0; i < batt_count; i++) {
         string syspath = battPath[i];
-        string current_power = syspath + "/current_now";
-        string current_voltage = syspath + "/voltage_now";
+        string current_now = syspath + "/current_now";
+        string voltage_now = syspath + "/voltage_now";
         string power_now = syspath + "/power_now";
         string status = syspath + "/status";
 
-        std::ifstream input(status);
-        std::string line;
-        if(std::getline(input,line)) {
-            current_status= line;
-            state[i]=current_status;
-        }
-
-        if (state[i] == "Charging" ||  state[i] == "Unknown" || state[i] == "Full") {
-            return 0;
-        }
-
-        if (fs::exists(current_power)) {
-            std::ifstream input(current_power);
+        {
+            std::ifstream input(status);
             std::string line;
-            if(std::getline(input,line)) {
-                current += (stof(line) / 1000000);
-            }
-            std::ifstream input2(current_voltage);
-            if(std::getline(input2, line)) {
-                voltage += (stof(line) / 1000000);
+            if (std::getline(input, line)) {
+                current_status = line;
+                state[i] = current_status;
             }
         }
-        else {
+
+        if (state[i] == "Charging" || state[i] == "Unknown" || state[i] == "Full") {
+            // TODO if we have multiple batteries, we will return 0 if just one of them is charging
+            return 0.0f;
+        }
+
+        // Prefer power_now (µW) when available.
+        if (fs::exists(power_now)) {
             std::ifstream input(power_now);
             std::string line;
-            if(std::getline(input,line)) {
-                current += (stof(line) / 1000000);
-                voltage = 1;
+            if (std::getline(input, line)) {
+                power_w += std::fabs(stof(line)) / 1000000.0f;
             }
+            continue;
+        }
+
+        if (fs::exists(current_now) && fs::exists(voltage_now)) {
+            float i_ua = 0.0f;
+            float v_uv = 0.0f;
+
+            {
+                std::ifstream input(current_now);
+                std::string line;
+                if (std::getline(input, line)) {
+                    i_ua = stof(line);
+                }
+            }
+            {
+                std::ifstream input(voltage_now);
+                std::string line;
+                if (std::getline(input, line)) {
+                    v_uv = stof(line);
+                }
+            }
+
+            power_w += (std::fabs(i_ua) * std::fabs(v_uv)) * 1e-12f;
         }
     }
-    return current * voltage;
+
+    return power_w;
 }
 
-float BatteryStats::getTimeRemaining(){
-    float current = 0;
-    float charge = 0;
-    for(int i = 0; i < batt_count; i++) {
+float BatteryStats::getTimeRemaining() {
+    float current = 0.0f;
+    float charge = 0.0f;
+
+    for (int i = 0; i < batt_count; i++) {
         string syspath = battPath[i];
         string current_now = syspath + "/current_now";
         string charge_now = syspath + "/charge_now";
@@ -145,52 +162,82 @@ float BatteryStats::getTimeRemaining(){
         if (fs::exists(current_now)) {
             std::ifstream input(current_now);
             std::string line;
-            if(std::getline(input, line)){
-                current_now_vec.push_back(stof(line));
+            if (std::getline(input, line)) {
+                current_now_vec.push_back(std::fabs(stof(line)));
             }
-        } else if (fs::exists(power_now)){
-            float voltage = 0;
-            float power = 0;
-            std::ifstream input_power(power_now);
-            std::ifstream input_voltage(voltage_now);
-            std::string line;
-            if(std::getline(input_voltage, line)){
-                voltage = stof(line);
+        } else if (fs::exists(power_now) && fs::exists(voltage_now)) {
+            float voltage = 0.0f;
+            float power = 0.0f;
+
+            {
+                std::ifstream input_voltage(voltage_now);
+                std::string line;
+                if (std::getline(input_voltage, line)) {
+                    voltage = stof(line);
+                }
             }
-            if(std::getline(input_power, line)){
-                power = stof(line);
+            {
+                std::ifstream input_power(power_now);
+                std::string line;
+                if (std::getline(input_power, line)) {
+                    power = stof(line);
+                }
             }
-            current_now_vec.push_back(power / voltage);
+
+            if (voltage > 0.0f) {
+                // (µW / µV) = µA
+                current_now_vec.push_back(std::fabs(power) / voltage);
+            }
         }
-        if (fs::exists(charge_now)){
-            std::string line;
+
+        if (fs::exists(charge_now)) {
             std::ifstream input(charge_now);
-            if(std::getline(input, line)){
+            std::string line;
+            if (std::getline(input, line)) {
                 charge += stof(line);
             }
-        }
-        else if (fs::exists(energy_now)) {
-            float energy = 0;
-            float voltage = 0;
-            std::string line;
-            std::ifstream input_energy(energy_now);
-            std::ifstream input_voltage(voltage_now);
-            if(std::getline(input_energy, line)){
-                energy = stof(line);
+        } else if (fs::exists(energy_now) && fs::exists(voltage_now)) {
+            float energy = 0.0f;
+            float voltage = 0.0f;
+
+            {
+                std::ifstream input_energy(energy_now);
+                std::string line;
+                if (std::getline(input_energy, line)) {
+                    energy = stof(line);
+                }
             }
-            if(std::getline(input_voltage, line)){
-                voltage = stof(line);
+            {
+                std::ifstream input_voltage(voltage_now);
+                std::string line;
+                if (std::getline(input_voltage, line)) {
+                    voltage = stof(line);
+                }
             }
-            charge += energy / voltage;
+
+            if (voltage > 0.0f) {
+                // (µWh / µV) = µAh
+                charge += energy / voltage;
+            }
         }
-        if (current_now_vec.size() > 25)
+
+        if (current_now_vec.size() > 25) {
             current_now_vec.erase(current_now_vec.begin());
+        }
     }
 
-    for(auto& current_now : current_now_vec){
-        current += current_now;
+    if (current_now_vec.empty()) {
+        return 0.0f;
     }
-    current /= current_now_vec.size();
+
+    for (const auto& current_now_sample : current_now_vec) {
+        current += current_now_sample;
+    }
+    current /= static_cast<float>(current_now_vec.size());
+
+    if (current <= 0.0f) {
+        return 0.0f;
+    }
 
     return charge / current;
 }
