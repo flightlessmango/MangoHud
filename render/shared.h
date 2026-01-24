@@ -5,6 +5,11 @@
 #include "poll.h"
 #include "imgui.h"
 
+static constexpr const char* kBusName = "io.mangohud.socket";
+static constexpr const char* kObjPath = "/io/mangohud/socket";
+static constexpr const char* kIface   = "io.mangohud.socket1";
+static constexpr uint32_t kProtoVersion = 1;
+
 __attribute__((unused))
 static bool sync_fd_signaled(int fd) {
     if (fd < 0) return false;
@@ -90,9 +95,7 @@ struct clientRes {
     bool            initialized     = false;
 
     float           fps_limit       = 0;
-    bool            initial_fence   = false;
-
-    clientRes(std::string client_id_) : client_id(client_id_) {}
+    bool            initial_fence   = true;
 
     void reset();
 

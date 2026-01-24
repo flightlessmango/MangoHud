@@ -1,6 +1,5 @@
 #pragma once
 #include <systemd/sd-bus.h>
-#include "proto.h"
 #include <deque>
 #include "imgui.h"
 #include <atomic>
@@ -8,23 +7,8 @@
 #include <string>
 #include <mutex>
 #include <spdlog/spdlog.h>
-
-struct Fdinfo {
-    uint64_t modifier = 0;
-    uint32_t dmabuf_offset = 0;
-    uint32_t stride = 0;
-    uint32_t fourcc = 0;
-    uint64_t plane_size = 0;
-
-    uint32_t w = 0;
-    uint32_t h = 0;
-    int64_t server_render_minor = 0;
-
-    int gbm_fd = -1;
-    int opaque_fd = -1;
-    uint64_t opaque_size = 0;
-    uint64_t opaque_offset = 0;
-};
+#include "spdlog_forward.h"
+#include "client.h"
 
 class IPCClient {
 public:
@@ -42,6 +26,7 @@ public:
     IPCClient(int64_t renderMinor_, std::string pEngineName_) :
               renderMinor(renderMinor_), pEngineName(pEngineName_) {
         SPDLOG_DEBUG("init dbus client");
+        wake_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
         thread = std::thread(&IPCClient::bus_thread, this);
     }
 
@@ -49,11 +34,11 @@ public:
     void stop();
 
     void add_to_queue(uint64_t now) {
-        {
-            std::unique_lock lock(samples_mtx);
-            samples.push_back({seq, now});
-            seq++;
-        }
+        std::unique_lock lock(samples_mtx);
+        samples.push_back({seq, now});
+        seq++;
+        uint64_t one = 1;
+        (void)write(wake_fd, &one, sizeof(one));
     }
 
     void drain_queue();
@@ -63,18 +48,24 @@ public:
     void queue_fence(int fd) {
         std::lock_guard lock(fences_mtx);
         fences.push_back(std::move(fd));
+        uint64_t one = 1;
+        (void)write(wake_fd, &one, sizeof(one));
     }
+    bool on_connect();
     ~IPCClient() {
         stop();
     }
 
 private:
-    static int on_dmabuf_ready(sd_bus_message* m, void* userdata, sd_bus_error* ret_error);
-    static int on_fence_ready(sd_bus_message* m, void* userdata, sd_bus_error* ret_error);
+    static int on_dmabuf(sd_bus_message* m, void* userdata, sd_bus_error* ret_error);
+    static int on_fence(sd_bus_message* m, void* userdata, sd_bus_error* ret_error);
     static int on_config(sd_bus_message* m, void* userdata, sd_bus_error* ret_error);
     void bus_thread();
-    bool handshake();
     static int on_server_owner_changed(sd_bus_message* m, void* userdata, sd_bus_error*);
+    bool connect_bus();
+    void disconnect_bus();
+    bool run_bus();
+    int request_fd_from_server();
 
     std::atomic<bool> quit{false};
     std::thread thread;
@@ -88,6 +79,7 @@ private:
     sd_bus_slot* dmabuf_slot = nullptr;
     sd_bus_slot* fence_slot = nullptr;
     sd_bus_slot* config_slot = nullptr;
-    sd_bus_slot* server_watch = nullptr;
+    int wake_fd;
+    int socket_fd = -1;
     int pending_acquire_fd = -1;
 };

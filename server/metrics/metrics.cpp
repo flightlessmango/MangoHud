@@ -2,7 +2,6 @@
 #include "memory.hpp"
 #include <variant>
 #include <sys/stat.h>
-#include "../../ipc/proto.h"
 #include "../common/table_structs.h"
 #include "string_utils.h"
 
@@ -78,20 +77,20 @@ void Metrics::update() {
 void Metrics::update_client() {
     while (!stop.load()) {
         MetricTable new_metrics;
-        for (auto& [name, client] : ipc.clients) {
+        for (auto& [pid, client] : ipc.clients) {
             std::vector<float> frametimes;
             float avg_fps;
             {
                 std::lock_guard lock(client->m);
                 frametimes.assign(client->frametimes.begin(), client->frametimes.end());
                 avg_fps = client->avg_fps_from_samples();
-                new_metrics[name]["ENGINE_NAME"] = {engine_name(client->pEngineName)};
+                new_metrics[std::to_string(client->pid)]["ENGINE_NAME"] = {engine_name(client->pEngineName)};
             }
             // TODO fps and frametime updates should match other metrics at 500ms
             // frametimes should still be this fast
-            new_metrics[name]["FPS"] = {int(round(avg_fps)), "FPS"};
-            new_metrics[name]["FRAMETIME"] = {1000.f / avg_fps, "ms"};
-            new_metrics[name]["FRAMETIMES"] = {frametimes};
+            new_metrics[std::to_string(client->pid)]["FPS"] = {int(round(avg_fps)), "FPS"};
+            new_metrics[std::to_string(client->pid)]["FRAMETIME"] = {1000.f / avg_fps, "ms"};
+            new_metrics[std::to_string(client->pid)]["FRAMETIMES"] = {frametimes};
         }
 
         {
@@ -103,7 +102,7 @@ void Metrics::update_client() {
     }
 }
 
-Metric Metrics::get(const char* a, const char* b, const std::string& name)
+Metric Metrics::get(const char* a, const char* b, const pid_t pid = 0)
 {
     Metric null_out;
     if (!a || !b) {
@@ -114,9 +113,9 @@ Metric Metrics::get(const char* a, const char* b, const std::string& name)
     std::lock_guard<std::mutex> lock(m);
 
     const auto* outer = &metrics;
-
-    if (std::strcmp(a, "GLOBAL") == 0 && !name.empty()) {
-        a = name.c_str();
+    std::string str = std::to_string(pid);
+    if (std::strcmp(a, "GLOBAL") == 0 && pid > 0) {
+        a = str.c_str();
         outer = &client_metrics;
     }
 
@@ -139,14 +138,14 @@ void Metrics::populate_tables() {
             local = table;
         }
         std::lock_guard clients_lock(ipc.clients_mtx);
-        for (auto& [name, client] : ipc.clients) {
+        for (auto& [pid, client] : ipc.clients) {
             std::lock_guard client_lock(client->resources.m);
-            client->resources.table = assign_values(*local, client->pid, name);
+            client->resources.table = assign_values(*local, client->pid);
         }
     }
 }
 
-hudTable Metrics::assign_values(hudTable& t, pid_t& pid, std::string client_name = {}) {
+hudTable Metrics::assign_values(hudTable& t, pid_t& pid) {
     hudTable render_table;
     render_table.cols = t.cols;
     render_table.rows.reserve(t.rows.size());
@@ -176,7 +175,7 @@ hudTable Metrics::assign_values(hudTable& t, pid_t& pid, std::string client_name
                 out.vec = color.get(vc.color);
                 float value = 0;
                 int i_value = 0;
-                Metric metric = get(vc.ref.a.c_str(), vc.ref.b.c_str(), client_name);
+                Metric metric = get(vc.ref.a.c_str(), vc.ref.b.c_str(), pid);
                 if (!metric.val)
                     continue;
 
@@ -213,7 +212,7 @@ hudTable Metrics::assign_values(hudTable& t, pid_t& pid, std::string client_name
             if (std::holds_alternative<GraphCell>(c)) {
                 auto& gc = std::get<GraphCell>(c);
                 std::vector<float> data;
-                Metric metric = get(gc.ref.a.c_str(), gc.ref.b.c_str(), client_name);
+                Metric metric = get(gc.ref.a.c_str(), gc.ref.b.c_str(), pid);
                 if (metric.val && std::holds_alternative<std::vector<float>>(*metric.val))
                     out.data = std::get<std::vector<float>>(*metric.val);
 

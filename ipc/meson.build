@@ -6,7 +6,8 @@ ipc_inc = include_directories('.')
 ipc_lib = static_library(
   'ipc',
   files('ipc.cpp',
-        'ipc_client.cpp'),
+        'ipc_client.cpp',
+        'client.cpp'),
   dependencies: [systemd_dep,
                  spdlog_dep,
                  dearimgui_dep,

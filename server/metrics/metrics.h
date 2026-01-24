@@ -29,8 +29,7 @@ public:
     std::shared_ptr<hudTable> table;
     Metrics(IPCServer& ipc);
     void update();
-    Metric get(const char* a, const char* b,
-                                   const std::string& name = {});
+    Metric get(const char* a, const char* b, const pid_t pid);
     void update_table();
     void populate_tables();
     void update_client();
@@ -62,7 +61,7 @@ private:
     bool sig_changed(const configSig& a, const configSig& b);
     bool reload_config();
 
-    hudTable assign_values(hudTable& t, pid_t& pid, std::string client_name);
+    hudTable assign_values(hudTable& t, pid_t& pid);
     void format_into(std::string& dst, const char* fmt, ...) const;
     std::string engine_name(const std::string& engine) ;
 };

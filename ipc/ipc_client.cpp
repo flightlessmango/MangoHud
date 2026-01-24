@@ -1,24 +1,27 @@
 #include "ipc.h"
 #include "ipc_client.h"
+#include "spdlog.h"
 
-int IPCClient::on_fence_ready(sd_bus_message* m, void* userdata, sd_bus_error*) {
+int IPCClient::on_fence(sd_bus_message* m, void* userdata, sd_bus_error*) {
     auto* self = static_cast<IPCClient*>(userdata);
     int msg_fd = -1;
     int r = sd_bus_message_read(m, "h", &msg_fd);
     if (r < 0) {
-        SPDLOG_ERROR("FenceReady parse: {} ({})", r , strerror(-r));
+        SPDLOG_ERROR("fence: {} ({})", r , strerror(-r));
         return 0;
     }
 
     int owned_fd = ::dup(msg_fd);
     if (owned_fd < 0) {
-        SPDLOG_ERROR("dup fence failed: {})", r , strerror(errno));
+        SPDLOG_ERROR("dup fence: {})", r , strerror(errno));
         return 0;
     }
 
     {
         std::lock_guard lock(self->m);
-        if (self->pending_acquire_fd >= 0) ::close(self->pending_acquire_fd);
+        if (self->pending_acquire_fd >= 0)
+            ::close(self->pending_acquire_fd);
+
         self->pending_acquire_fd = owned_fd;
     }
 
@@ -26,7 +29,7 @@ int IPCClient::on_fence_ready(sd_bus_message* m, void* userdata, sd_bus_error*) 
 }
 
 int IPCClient::on_config(sd_bus_message* m, void* userdata, sd_bus_error*) {
-    printf("got config\n");
+    SPDLOG_DEBUG("got config");
     auto* self = static_cast<IPCClient*>(userdata);
     double fps_limit = 0;
     int r = sd_bus_message_read(m, "d", &fps_limit);
@@ -43,83 +46,18 @@ int IPCClient::on_config(sd_bus_message* m, void* userdata, sd_bus_error*) {
     return 0;
 }
 
-bool IPCClient::init() {
-    int r = sd_bus_open_user(&bus);
-    if (r < 0) {
-        fprintf(stderr, "sd_bus_open_user: %d (%s)\n", r, strerror(-r));
-        return false;
-    }
-
-    sd_bus_set_method_call_timeout(bus, 5ULL * 1000ULL * 1000ULL);
-
-    std::string match =
-        "type='signal',"
-        "sender='org.freedesktop.DBus',"
-        "path='/org/freedesktop/DBus',"
-        "interface='org.freedesktop.DBus',"
-        "member='NameOwnerChanged',"
-        "arg0='" + std::string(kBusName) + "'";
-
-    sd_bus_add_match(bus, &server_watch, match.c_str(), on_server_owner_changed, this);
-    if (r < 0) {
-        SPDLOG_ERROR("match server_watch failed: {} ({}) busName: {} ObjPath: {} Iface: {}", r, strerror(-r), kBusName, kObjPath, kIface);
-        return false;
-    }
-
-    std::string match_dmabuf =
-        "type='signal',"
-        "sender='" + std::string(kBusName) + "',"
-        "path='" + std::string(kObjPath) + "',"
-        "interface='" + std::string(kIface) + "',"
-        "member='DmabufReady'";
-
-    r = sd_bus_add_match(bus, &dmabuf_slot, match_dmabuf.c_str(), &IPCClient::on_dmabuf_ready, this);
-    if (r < 0) {
-        SPDLOG_ERROR("match dmabuf failed: {} ({}) busName: {} ObjPath: {} Iface: {}", r, strerror(-r), kBusName, kObjPath, kIface);
-        return false;
-    }
-
-    std::string match_fence =
-        "type='signal',"
-        "sender='" + std::string(kBusName) + "',"
-        "path='" + std::string(kObjPath) + "',"
-        "interface='" + std::string(kIface) + "',"
-        "member='FenceReady'";
-
-    r = sd_bus_add_match(bus, &fence_slot, match_fence.c_str(), &IPCClient::on_fence_ready, this);
-    if (r < 0) {
-        SPDLOG_ERROR("match fence failed: {} ({}) busName: {} ObjPath: {} Iface: {}", r, strerror(-r), kBusName, kObjPath, kIface);
-        return false;
-    }
-
-    std::string match_config =
-        "type='signal',"
-        "sender='" + std::string(kBusName) + "',"
-        "path='" + std::string(kObjPath) + "',"
-        "interface='" + std::string(kIface) + "',"
-        "member='Config'";
-
-    r = sd_bus_add_match(bus, &config_slot, match_config.c_str(), &IPCClient::on_config, this);
-    if (r < 0) {
-        SPDLOG_ERROR("match config failed: {} ({}) busName: {} ObjPath: {} Iface: {}", r, strerror(-r), kBusName, kObjPath, kIface);
-        return false;
-    }
-
-    quit.store(false);
-    return true;
-}
-
-int IPCClient::on_dmabuf_ready(sd_bus_message* m, void* userdata, sd_bus_error*) {
+int IPCClient::on_dmabuf(sd_bus_message* m, void* userdata, sd_bus_error*) {
     auto* self = static_cast<IPCClient*>(userdata);
     SPDLOG_DEBUG("got dmabuf");
 
     int gbm_fd = -1;
     int opaque_fd = -1;
+    bool has_gbm = false;
     Fdinfo fdinfo;
 
     int r = sd_bus_message_read(
         m,
-        "tuuutuuxhhtt",
+        "tuuutuuxbhhtt",
         &fdinfo.modifier,
         &fdinfo.dmabuf_offset,
         &fdinfo.stride,
@@ -128,6 +66,7 @@ int IPCClient::on_dmabuf_ready(sd_bus_message* m, void* userdata, sd_bus_error*)
         &fdinfo.w,
         &fdinfo.h,
         &fdinfo.server_render_minor,
+        &has_gbm,
         &gbm_fd,
         &opaque_fd,
         &fdinfo.opaque_size,
@@ -135,13 +74,13 @@ int IPCClient::on_dmabuf_ready(sd_bus_message* m, void* userdata, sd_bus_error*)
     );
 
     if (r < 0) {
-        fprintf(stderr, "DmabufReady parse: %d (%s)\n", r, strerror(-r));
+        fprintf(stderr, "dmabuf parse: %d (%s)\n", r, strerror(-r));
         return 0;
     }
 
     int owned_dma = dup(gbm_fd);
     if (owned_dma < 0) {
-        fprintf(stderr, "DmabufReady dup dma fd: %d (%s)\n", -errno, strerror(errno));
+        fprintf(stderr, "dmabuf dup dma fd: %d (%s)\n", -errno, strerror(errno));
         return 0;
     }
     fdinfo.gbm_fd = owned_dma;
@@ -158,60 +97,184 @@ int IPCClient::on_dmabuf_ready(sd_bus_message* m, void* userdata, sd_bus_error*)
     return 0;
 }
 
-void IPCClient::bus_thread() {
-    uint64_t next_send = 0;
-    const uint64_t period = 1000000000ULL / 90;
+void IPCClient::disconnect_bus() {
+    if (dmabuf_slot) {
+        sd_bus_slot_unref(dmabuf_slot);
+        dmabuf_slot = nullptr;
+    }
+    if (fence_slot) {
+        sd_bus_slot_unref(fence_slot);
+        fence_slot = nullptr;
+    }
+    if (config_slot) {
+        sd_bus_slot_unref(config_slot);
+        config_slot = nullptr;
+    }
+    if (bus) {
+        sd_bus_unref(bus);
+        bus = nullptr;
+    }
+}
 
-    if (!init())
-        SPDLOG_ERROR("dbus init failed\n");
+bool IPCClient::connect_bus() {
+    int fd = request_fd_from_server();
+    if (fd < 0)
+        return false;
 
-    handshake();
-    int r = 0;
+    sd_bus *b = nullptr;
+    int r = sd_bus_new(&b);
+    if (r < 0) {
+        SPDLOG_ERROR("sd_bus_new: {} ({})", r, strerror(-r));
+        return false;
+    }
+
+    r = sd_bus_set_fd(b, fd, fd);
+    if (r < 0) {
+        SPDLOG_ERROR("sd_bus_set_fd: {} ({})", r, strerror(-r));
+        sd_bus_unref(b);
+        return false;
+    }
+
+    r = sd_bus_start(b);
+    if (r < 0) {
+        SPDLOG_ERROR("sd_bus_start: {} ({})", r, strerror(-r));
+        sd_bus_unref(b);
+        return false;
+    }
+
+    std::string match_dmabuf =
+        "type='signal',"
+        "path='" + std::string(kObjPath) + "',"
+        "interface='" + std::string(kIface) + "',"
+        "member='dmabuf'";
+
+    r = sd_bus_add_match(b, &dmabuf_slot, match_dmabuf.c_str(), &IPCClient::on_dmabuf, this);
+    if (r < 0) {
+        SPDLOG_ERROR("match dmabuf: {} ({})", r, strerror(-r));
+        sd_bus_unref(b);
+        return false;
+    }
+
+    std::string match_fence =
+        "type='signal',"
+        "path='" + std::string(kObjPath) + "',"
+        "interface='" + std::string(kIface) + "',"
+        "member='fence'";
+
+    r = sd_bus_add_match(b, &fence_slot, match_fence.c_str(), &IPCClient::on_fence, this);
+    if (r < 0) {
+        SPDLOG_ERROR("match fence: {} ({})", r, strerror(-r));
+        sd_bus_unref(b);
+        return false;
+    }
+
+    std::string match_config =
+        "type='signal',"
+        "path='" + std::string(kObjPath) + "',"
+        "interface='" + std::string(kIface) + "',"
+        "member='config'";
+
+    r = sd_bus_add_match(b, &config_slot, match_config.c_str(), &IPCClient::on_config, this);
+    if (r < 0) {
+        SPDLOG_ERROR("match config: {} ({})", r, strerror(-r));
+        sd_bus_unref(b);
+        return false;
+    }
+
+    bus = b;
+    return true;
+}
+
+bool IPCClient::run_bus() {
     while (!quit.load()) {
-        uint64_t now = os_time_get_nano();
-        if (next_send == 0) next_send = now + period;
+        int fd = sd_bus_get_fd(bus);
+        if (fd < 0) {
+            return false;
+        }
 
-        for (;;) {
-            r = sd_bus_process(bus, nullptr);
-            if (r < 0)
-                SPDLOG_ERROR("bus_process failed: {} ({})", r, strerror(-r));
+        int events = sd_bus_get_events(bus);
+        if (events < 0) {
+            return false;
+        }
 
-            if (r <= 0)
+        pollfd pfds[2]{};
+        pfds[0].fd = fd;
+        pfds[0].events = static_cast<short>(events);
+
+        pfds[1].fd = wake_fd;
+        pfds[1].events = POLLIN;
+
+        int pr = poll(pfds, 2, -1);
+        if (pr < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            return false;
+        }
+
+        if (pfds[1].revents & POLLIN) {
+            uint64_t v = 0;
+            (void)read(wake_fd, &v, sizeof(v));
+
+            if (quit.load())
                 break;
         }
 
-        if (need_reconnect.exchange(false))
-            handshake();
-
-        now = os_time_get_nano();
-        if (now >= next_send) {
-            do {
-                push_queue();
-                next_send += period;
-            } while (now >= next_send);
+        if (pfds[0].revents & (POLLHUP | POLLERR | POLLNVAL)) {
+            return false;
         }
 
-        std::deque<int> local_fences;
-        {
-            std::lock_guard lock(fences_mtx);
-            local_fences.swap(fences);
-        }
-        for (auto& fence : local_fences)
-            send_release_fence(fence);
+        for (;;) {
+            int rr = sd_bus_process(bus, nullptr);
 
-        uint64_t wait_ns = (next_send > now) ? (next_send - now) : 0;
+            push_queue();
 
-        r = sd_bus_wait(bus, wait_ns / 1000);
-        if (r < 0) {
-            SPDLOG_ERROR("bus_wait failed: {} ({}) wait_ns: {}", r, strerror(-r), wait_ns);
-            break;
+            std::deque<int> local;
+            {
+                std::lock_guard lock(fences_mtx);
+                local.swap(fences);
+            }
+            for (auto& fence : local)
+                send_release_fence(fence);
+
+            if (rr < 0)
+                return false;
+
+            if (rr == 0)
+                break;
         }
     }
-    SPDLOG_DEBUG("IPC server quit");
+    return true;
+}
+
+void IPCClient::bus_thread() {
+    quit.store(false);
+    while (!quit.load()) {
+        disconnect_bus();
+
+        if (!connect_bus()) {
+            sleep(1);
+            continue;
+        }
+
+        SPDLOG_DEBUG("IPC connected");
+        on_connect();
+
+        run_bus();
+
+        if (!quit.load())
+            SPDLOG_DEBUG("IPC disconnected, reconnecting");
+    }
+
+    disconnect_bus();
+    SPDLOG_DEBUG("IPC client thread exit");
 }
 
 void IPCClient::stop() {
     quit.store(true);
+    uint64_t one = 1;
+    (void)write(wake_fd, &one, sizeof(one));
+
     if (thread.joinable()) thread.join();
 
     if (dmabuf_slot) sd_bus_slot_unref(dmabuf_slot), dmabuf_slot = nullptr;
@@ -226,89 +289,53 @@ void IPCClient::stop() {
         fdinfo.opaque_fd = -1;
 }
 
-bool IPCClient::handshake() {
-    sd_bus_error error = SD_BUS_ERROR_NULL;
-    sd_bus_message* reply = nullptr;
-
-    auto cleanup = [&] {
-        if (reply) sd_bus_message_unref(reply);
-        sd_bus_error_free(&error);
-    };
-
+bool IPCClient::on_connect() {
     std::lock_guard<std::mutex> lock(bus_mtx);
-    int r = sd_bus_call_method(
+
+    if (!bus) {
+        return false;
+    }
+
+    int r = sd_bus_emit_signal(
         bus,
-        kBusName,
         kObjPath,
         kIface,
-        "Handshake",
-        &error,
-        &reply,
+        "on_connect",
         "sx",
         pEngineName.c_str(),
-        renderMinor
+        (int64_t)renderMinor
     );
 
     if (r < 0) {
-        SPDLOG_ERROR("Failed to send handshake {} ({})", r, strerror(-r));
-        cleanup();
+        SPDLOG_ERROR("on_connect signal send {} ({})", r, strerror(-r));
         return false;
     }
 
-    uint32_t proto = 0;
-    r = sd_bus_message_read(reply, "u", &proto);
-    if (r < 0) {
-        SPDLOG_ERROR("Handshake read failed {} ({})", r, strerror(-r));
-        cleanup();
-        return false;
-    }
-
-    SPDLOG_INFO("Handshake OK");
-    cleanup();
+    SPDLOG_INFO("on_connect signal sent");
     return true;
 }
 
-int IPCClient::on_server_owner_changed(sd_bus_message* m, void* userdata, sd_bus_error*) {
-    auto* self = static_cast<IPCClient*>(userdata);
-
-    const char *name = nullptr, *old_owner = nullptr, *new_owner = nullptr;
-    int r = sd_bus_message_read(m, "sss", &name, &old_owner, &new_owner);
-    if (r < 0) return 0;
-
-    if (!name || strcmp(name, kBusName) != 0) return 0;
-
-    if (new_owner && new_owner[0] == '\0') {
-        SPDLOG_DEBUG("Server went away");
-
-        self->need_reconnect.store(true);
-    } else {
-        self->need_reconnect.store(true);
-    }
-
-    return 0;
-}
-
 int IPCClient::push_queue() {
+    if (samples.empty())
+        return 0;
+
     std::deque<Sample> out;
     {
         std::lock_guard<std::mutex> lock(samples_mtx);
         out.swap(samples);
     }
 
-    if (out.empty())
-        return 0;
-
     sd_bus_message* m = nullptr;
 
-    int r = sd_bus_message_new_method_call(bus, &m, kBusName, kObjPath, kIface, "FrameSamples");
+    int r = sd_bus_message_new_signal(bus, &m, kObjPath, kIface, "frame_samples");
     if (r < 0) {
-        SPDLOG_ERROR("push_queue: new_method_call failed {} ({})", r, strerror(-r));
-        return r < 0 ? r : -EIO;
+        SPDLOG_ERROR("push_queue: new_signal {} ({})", r, strerror(-r));
+        return r;
     }
 
     r = sd_bus_message_open_container(m, 'a', "(tt)");
     if (r < 0) {
-        SPDLOG_ERROR("push_queue: open_container failed {} ({})", r, strerror(-r));
+        SPDLOG_ERROR("push_queue: open_container {} ({})", r, strerror(-r));
         sd_bus_message_unref(m);
         return r;
     }
@@ -316,7 +343,7 @@ int IPCClient::push_queue() {
     for (auto& [seq, now] : out) {
         r = sd_bus_message_append(m, "(tt)", (uint64_t)seq, (uint64_t)now);
         if (r < 0) {
-            SPDLOG_ERROR("push_queue: append failed {} ({})", r, strerror(-r));
+            SPDLOG_ERROR("push_queue: append {} ({})", r, strerror(-r));
             sd_bus_message_unref(m);
             return r;
         }
@@ -324,14 +351,14 @@ int IPCClient::push_queue() {
 
     r = sd_bus_message_close_container(m);
     if (r < 0) {
-        SPDLOG_ERROR("push_queue: close_container failed {} ({})", r, strerror(-r));
+        SPDLOG_ERROR("push_queue: close_container {} ({})", r, strerror(-r));
         sd_bus_message_unref(m);
         return r;
     }
 
     r = sd_bus_send(bus, m, nullptr);
     if (r < 0) {
-        SPDLOG_ERROR("push_queue: sd_bus_send failed {} ({})", r, strerror(-r));
+        SPDLOG_ERROR("push_queue: sd_bus_send {} ({})", r, strerror(-r));
         sd_bus_message_unref(m);
         return r;
     }
@@ -341,31 +368,28 @@ int IPCClient::push_queue() {
 }
 
 int IPCClient::send_release_fence(int fd) {
-    if (fd < 0) return 0;
-    sd_bus_message* m = nullptr;
+    std::lock_guard<std::mutex> lock(bus_mtx);
 
-    int r = sd_bus_message_new_method_call(bus, &m, kBusName, kObjPath, kIface, "ReleaseFence");
+    if (!bus)
+        return false;
+
+    int r = sd_bus_emit_signal(
+        bus,
+        kObjPath,
+        kIface,
+        "release_fence",
+        "h",
+        fd
+    );
+
+    close (fd);
+
     if (r < 0) {
-        SPDLOG_ERROR("send_release: new_method_call failed {} ({})", r, strerror(-r));
-        ::close(fd);
-        return r;
+        SPDLOG_ERROR("release_fence signal send {} ({})", r, strerror(-r));
+        return false;
     }
 
-    r = sd_bus_message_append(m, "h", fd);
-    if (r < 0) {
-        SPDLOG_ERROR("send_release: append failed {} ({})", r, strerror(-r));
-        sd_bus_message_unref(m);
-        ::close(fd);
-        return r;
-    }
-    ::close(fd);
-
-    r = sd_bus_send(bus, m, nullptr);
-    if (r < 0) {
-        SPDLOG_ERROR("send_release: send failed {} ({})", r, strerror(-r));
-    }
-    sd_bus_message_unref(m);
-    return r < 0 ? r : 0;
+    return true;
 }
 
 int IPCClient::ready_frame() {
@@ -376,5 +400,50 @@ int IPCClient::ready_frame() {
     int fd = pending_acquire_fd;
     pending_acquire_fd = -1;
     return fd;
+}
+
+int IPCClient::request_fd_from_server() {
+    if (socket_fd >= 0)
+        close(socket_fd);
+
+    sd_bus *bus_ = nullptr;
+    int r = sd_bus_open_user(&bus_);
+    if (r < 0) {
+        SPDLOG_ERROR("sd_bus_open_user {} ({})", r, strerror(-r));
+        return r;
+    }
+
+    sd_bus_message *reply = nullptr;
+    r = sd_bus_call_method(bus_, kBusName, kObjPath, kIface, "request_fd", nullptr, &reply, "");
+    if (r < 0) {
+        if (r != -113)
+            SPDLOG_ERROR("sd_bus_call_method: {} ({})", r, strerror(-r));
+
+        sd_bus_unref(bus_);
+        return r;
+    }
+
+    int fd_msg = -1;
+    r = sd_bus_message_read(reply, "h", &fd_msg);
+    if (r < 0) {
+        SPDLOG_ERROR("sd_bus_message_read {} ({})", r, strerror(-r));
+        sd_bus_message_unref(reply);
+        sd_bus_unref(bus_);
+        return r;
+    }
+
+    int fd_copy = dup(fd_msg);
+    if (fd_copy < 0) {
+        SPDLOG_ERROR("dup failed {} ({})", errno, strerror(errno));
+        sd_bus_message_unref(reply);
+        sd_bus_unref(bus_);
+        return -errno;
+    }
+
+    sd_bus_message_unref(reply);
+    sd_bus_unref(bus_);
+
+    socket_fd = fd_copy;
+    return socket_fd;
 }
 
