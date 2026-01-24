@@ -6,6 +6,9 @@
 #include "mesa/os_time.h"
 #include "vulkan.h"
 #include "fps_limiter.h"
+#include "spdlog_forward.h"
+#include <spdlog/sinks/stdout_color_sinks.h>
+static std::shared_ptr<spdlog::logger> logger;
 
 std::string pEngineName;
 uint32_t renderMinor = 0;
@@ -79,6 +82,11 @@ public:
         const VkAllocationCallbacks*    pAllocator,
         VkInstance*                     pInstance)
     {
+        if (!logger)
+            logger = spdlog::stderr_color_mt("MANGOHUD");
+
+        spdlog::set_default_logger(logger);
+        spdlog::set_level(spdlog::level::debug);
         const char* engine = "";
         if (pCreateInfo && pCreateInfo->pApplicationInfo && pCreateInfo->pApplicationInfo->pEngineName)
             engine = pCreateInfo->pApplicationInfo->pEngineName;
