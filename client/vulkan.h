@@ -210,11 +210,8 @@ public:
     std::unordered_map<VkSwapchainKHR, std::shared_ptr<swapchain_data>> swapchains;
     PFN_vkSetDebugUtilsObjectNameEXT g_vkSetDebugUtilsObjectNameEXT = nullptr;
 
-    OverlayVK(int renderMinor, std::string pEngineName,
-                PFN_vkSetDeviceLoaderData loader_data_) : loader_data(loader_data_) {
-            spdlog::set_level(spdlog::level::debug);
+    OverlayVK(PFN_vkSetDeviceLoaderData loader_data_) : loader_data(loader_data_) {
             SPDLOG_INFO("Vulkan overlay init");
-            ipc = std::make_unique<IPCClient>(renderMinor, pEngineName);
     }
 
     bool draw(const vkroots::VkDeviceDispatch* d, VkSwapchainKHR swapchain,

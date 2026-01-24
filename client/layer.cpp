@@ -8,7 +8,7 @@
 #include "fps_limiter.h"
 
 std::string pEngineName;
-uint32_t renderMinor;
+uint32_t renderMinor = 0;
 static auto& queue_family = *new std::unordered_map<VkQueue, uint32_t>();
 static auto& q_family_mtx = *new std::mutex();
 PFN_vkSetDeviceLoaderData g_set_device_loader_data = nullptr;
@@ -70,27 +70,7 @@ public:
             fprintf(stderr, "failed to get device loader data\n");
             fprintf(stderr, "we will get validation errors\n");
         }
-
-        VkResult r = dispatch->CreateDevice(physicalDevice, &ci, pAllocator, pDevice);
-        if (r == VK_SUCCESS) {
-            VkPhysicalDeviceDrmPropertiesEXT drm_props{};
-            drm_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRM_PROPERTIES_EXT;
-            drm_props.pNext = nullptr;
-
-            VkPhysicalDeviceProperties2KHR props2{};
-            props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-            props2.pNext = &drm_props;
-
-            auto fpGetPhysicalDeviceProperties2KHR =
-                reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2KHR>(
-                    dispatch->GetInstanceProcAddr(dispatch->Instance, "vkGetPhysicalDeviceProperties2KHR"));
-
-            fpGetPhysicalDeviceProperties2KHR(physicalDevice, &props2);
-            if (drm_props.hasPrimary)
-                renderMinor = drm_props.renderMinor;
-        }
-
-        return r;
+        return dispatch->CreateDevice(physicalDevice, &ci, pAllocator, pDevice);
     }
 
     static VkResult CreateInstance(
@@ -252,7 +232,7 @@ public:
             }
         }
 
-        if (!overlay_vk) overlay_vk = std::make_shared<OverlayVK>(renderMinor, pEngineName, g_set_device_loader_data);
+        if (!overlay_vk) overlay_vk = std::make_shared<OverlayVK>(g_set_device_loader_data);
         {
             std::lock_guard lock(overlay_vk->swapchain_mtx);
             overlay_vk->swapchains[*pSwapchain] = sc;
@@ -290,6 +270,27 @@ public:
         //                 w, (double)ns / 1e6, md, fps_limiter->q_limiter->in_flight.size());
         // }
 
+        if (!renderMinor) {
+            VkPhysicalDeviceDrmPropertiesEXT drm_props{};
+            drm_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRM_PROPERTIES_EXT;
+            drm_props.pNext = nullptr;
+
+            VkPhysicalDeviceProperties2KHR props2{};
+            props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+            props2.pNext = &drm_props;
+
+            auto fpGetPhysicalDeviceProperties2KHR =
+                reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2KHR>(
+                    pDispatch->pPhysicalDeviceDispatch->pInstanceDispatch->GetInstanceProcAddr(
+                    pDispatch->pPhysicalDeviceDispatch->Instance, "vkGetPhysicalDeviceProperties2KHR"));
+
+            fpGetPhysicalDeviceProperties2KHR(pDispatch->PhysicalDevice, &props2);
+            if (drm_props.hasPrimary)
+                renderMinor = drm_props.renderMinor;
+
+            SPDLOG_DEBUG("renderMinor: {}", renderMinor);
+        }
+
         if (!fps_limiter)
             fps_limiter = std::make_unique<fpsLimiter>(false);
 
@@ -300,7 +301,8 @@ public:
 
         fps_limiter->limit(true);
 
-        if (!overlay_vk) overlay_vk = std::make_shared<OverlayVK>(renderMinor, pEngineName, g_set_device_loader_data);
+        if (!overlay_vk) overlay_vk = std::make_shared<OverlayVK>(g_set_device_loader_data);
+        if (!overlay_vk->ipc) overlay_vk->ipc = std::make_unique<IPCClient>(renderMinor, pEngineName);
         overlay_vk->ipc->add_to_queue(os_time_get_nano());
         // TODO Probably don't do this every frame
         fps_limiter->set_fps_limit(overlay_vk->ipc->fps_limit);

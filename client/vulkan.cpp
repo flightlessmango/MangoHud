@@ -29,7 +29,8 @@ bool OverlayVK::draw(const vkroots::VkDeviceDispatch* d, VkSwapchainKHR swapchai
     if (ext && !release_fence) {
         acquire_fd = ipc->ready_frame();
         can_refresh = (acquire_fd >= 0);
-        close(acquire_fd);
+        if (can_refresh)
+            close(acquire_fd);
     }
 
     if (ipc->needs_import.load() && can_refresh) {
