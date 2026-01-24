@@ -295,7 +295,8 @@ void ImGuiCtx::draw(clientRes& r) {
         std::lock_guard lock(r.m);
         local_table = r.table;
     }
-
+    ImGui::SetCurrentContext(imgui);
+    ImPlot::SetCurrentContext(implot);
     ImGuiIO& io = ImGui::GetIO();
     io.IniFilename = nullptr;
     io.BackendPlatformName = "headless";
@@ -369,14 +370,17 @@ void ImGuiCtx::draw(clientRes& r) {
     uint32_t w = calculate_width(local_table, layout);
     uint32_t h = ImGui::GetCursorPosY() + style.WindowPadding.y +
                  style.ItemSpacing.y + style.CellPadding.y;
-    if (w != r.w || h != r.h) {
-        r.w = w;
-        r.h = h;
-        r.reinit_dmabuf = true;
-    }
 
     ImGui::End();
     ImGui::Render();
+
+    if (w != r.w || h != r.h) {
+        SPDLOG_DEBUG("resizing image from: {} {} to {} {}", r.w, r.h, w, h);
+        r.w = w;
+        r.h = h;
+        r.reinit_dmabuf = true;
+        draw(r);
+    }
 }
 
 void ImGuiCtx::RenderOutlinedText(ImVec4 textColor, const char* text) {
@@ -441,7 +445,8 @@ void ImGuiCtx::teardown() {
 
     vkDeviceWaitIdle(device);
     {
-        std::lock_guard<std::mutex> lock(mtx);
+        ImGui::SetCurrentContext(imgui);
+        ImPlot::SetCurrentContext(implot);
         ImGui_ImplVulkan_Shutdown();
 
         if (implot) {
