@@ -3,14 +3,19 @@
 #include "ipc.h"
 #include "vulkan_ctx.h"
 #include "metrics/metrics.h"
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 class MangoHudServer {
 public:
     std::unordered_map<uint32_t, std::shared_ptr<VkCtx>> vk_contexts;
     std::mutex vk_ctx_m;
+    std::shared_ptr<spdlog::logger> logger;
 
     MangoHudServer() {
         // TODO Don't force debug
+        logger = spdlog::stderr_color_mt("MANGOHUD");
+        spdlog::set_default_logger(logger);
         spdlog::set_level(spdlog::level::debug);
         ipc     = std::make_unique<IPCServer>(this);
         metrics = std::make_unique<Metrics>(*ipc);
@@ -18,6 +23,9 @@ public:
     }
 
     void queue_frame(clientRes& r, uint32_t renderer) {
+        if (renderer == 0)
+            return;
+
         std::lock_guard<std::mutex> lock(vk_ctx_m);
         auto& ctx = vk_contexts[renderer];
         if (!ctx)
@@ -34,7 +42,6 @@ public:
 private:
     std::unique_ptr<IPCServer> ipc;
     std::unique_ptr<Metrics> metrics;
-
     std::atomic<bool> stop {false};
 
     VkCtx* vk(uint32_t id) {
@@ -58,19 +65,25 @@ private:
     }
 
     void prune_vk_contexts() {
-        std::lock_guard lock(ipc->clients_mtx);
-        std::lock_guard<std::mutex> lock_vk(vk_ctx_m);
-        if (ipc->clients.size() == 0) {
-            vk_contexts.clear();
-            return;
+        std::vector<std::shared_ptr<VkCtx>> doomed;
+        std::unordered_set<int64_t> used;
+        {
+            std::lock_guard lock(ipc->clients_mtx);
+            for (auto& [pid, client] : ipc->clients)
+                used.insert(client->renderMinor);
         }
 
-        for (auto& [renderer, vk] : vk_contexts) {
-            for (auto& [name, client] : ipc->clients) {
-                if (client->renderMinor == renderer)
-                    continue;
-
-                vk.reset();
+        if (used.empty()) {
+            std::lock_guard<std::mutex> lock_vk(vk_ctx_m);
+            vk_contexts.clear();
+        } else {
+            std::lock_guard<std::mutex> lock_vk(vk_ctx_m);
+            for (auto it = vk_contexts.begin(); it != vk_contexts.end();) {
+                if (used.find(it->first) == used.end()) {
+                    doomed.push_back(std::move(it->second));
+                    it = vk_contexts.erase(it);
+                }
+                it++;
             }
         }
     }
