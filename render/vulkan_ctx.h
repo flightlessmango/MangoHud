@@ -12,7 +12,7 @@ public:
     std::unique_ptr<ImGuiCtx> imgui;
 
     VkCtx(int64_t renderMinor) : renderMinor(renderMinor) {
-        SPDLOG_DEBUG("VkCtx init: renderMinor: {}", renderMinor);
+        SPDLOG_DEBUG("VkCtx init with renderMinor: {}", renderMinor);
         init(true);
         imgui = std::make_unique<ImGuiCtx>(device, physicalDevice, instance,
                                           graphicsQueue, graphicsQueueFamilyIndex, fmt);
@@ -42,7 +42,7 @@ private:
     int64_t renderMinor;
     std::mutex m;
     std::deque<clientRes*> frame_queue;
-    bool use_dmabuf = false;
+    bool use_dmabuf = true;
 
     void init(bool enableValidation);
     int phys_fd();

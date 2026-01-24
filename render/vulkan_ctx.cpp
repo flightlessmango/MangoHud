@@ -206,6 +206,12 @@ clientRes& VkCtx::init_client(clientRes& r) {
     if (!create_opaque(r))
         fprintf(stderr, "failed to create opaque fd\n");
 
+    // TODO run imgui->draw once to calculate the initial width/height
+    // this is currently a double lock so we need to redesign this a bit
+    // we want to do this so we don't end up always pushing two dmabufs on connect
+    // and when the the overlay changes
+    // imgui->draw(r);
+
     r.send_dmabuf = true;
     r.initialized = true;
     return r;
@@ -615,8 +621,10 @@ void VkCtx::submit(clientRes& r) {
 
     {
         std::lock_guard lock(r.m);
-        if (r.acquire_fd >= 0)
+        if (r.acquire_fd >= 0) {
             close(r.acquire_fd);
+            r.acquire_fd = -1;
+        }
 
         r.acquire_fd = out_fd;
         out_fd = -1;
@@ -718,8 +726,7 @@ void VkCtx::queue_frame(clientRes& r) {
     if (!r.initialized)
         init_client(r);
 
-    if (r.table.cols > 0)
-        frame_queue.push_back(&r);
+    frame_queue.push_back(&r);
 }
 
 std::deque<clientRes*> VkCtx::drain_queue() {
