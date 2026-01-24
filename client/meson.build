@@ -12,8 +12,6 @@ foreach s : ['overlay.frag', 'overlay.vert']
 endforeach
 
 vkroots_dep = subproject('vkroots').get_variable('vkroots_dep')
-gl_dep = dependency('gl')
-egl_dep = dependency('egl')
 vulkan_layer = shared_library(
     'MangoHud',
     files('layer.cpp',
@@ -29,15 +27,11 @@ vulkan_layer = shared_library(
                    vkroots_dep,
                    ipc_dep,
                    dearimgui_dep,
-                   egl_dep,
-                   utils_dep,
-                   ipc_dep,
-                   gl_dep,
-                   vkbootstrap_dep],
+                   dependency('egl'),
+                   dependency('gl')],
     include_directories: inc_common,
     install: true,
     link_args: ['-static-libstdc++'],
-    cpp_args: ['-DVK_LOADER_LAYER_INTERFACE_VERSION=2']
 )
 
 conf_data = configuration_data()
