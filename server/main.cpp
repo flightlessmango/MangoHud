@@ -19,9 +19,13 @@ void MangoHudServer::loop() {
         if (metrics && metrics->table) {
             {
                 std::lock_guard lock(ipc->clients_mtx);
-                for (auto& [name, client] : ipc->clients) {
+                for (auto& [pid, client] : ipc->clients) {
+                    auto& r = client->resources;
+                    if (r.send_dmabuf)
+                        client->send_dmabuf();
+
                     if (client->ready_frame()) {
-                        auto& r = client->resources;
+                        client->send_fence();
                         std::lock_guard lock_r(r.m);
                         if (r.reinit_dmabuf) {
                             r.reset();
@@ -29,23 +33,23 @@ void MangoHudServer::loop() {
                         }
 
                         queue_frame(r, client->renderMinor);
-                        if (r.send_dmabuf)
-                            ipc->queue_dmabuf(&r);
-
-                        if (get_cfg() && get_cfg()->config_changed.load()) {
-                            ipc->queue_configs();
-                            get_cfg()->config_changed.store(false);
-                        }
                     }
                 }
             }
 
+            if (get_cfg() && get_cfg()->config_changed.load()) {
+                for (auto& [pid, client] : ipc->clients)
+                    client->send_config();
+
+                get_cfg()->config_changed.store(false);
+            }
             // TODO we need to hammer out the sync logic more
             // there's a mix of mutex, fence and semaphores when we
             // probably only need a semaphore per client
             frames = drain_all_queues();
-            ipc->notify_frame_ready(frames);
+            // ipc->notify_frame_ready(frames);
 
+            ipc->prune_clients();
             prune_vk_contexts();
         }
 
@@ -57,14 +61,14 @@ void MangoHudServer::loop() {
         // const uint64_t now_ns = os_time_get_nano();
         // if (now_ns - last_report_ns >= 2000'000'000ULL) {
         //     const double avg_ms = acc_frames ? (acc_work_ns / 1'000'000.0) / static_cast<double>(acc_frames) : 0.0;
-        //     SPDLOG_DEBUG("avg work: {:.3f} ms ({} frames / 2s)", avg_ms, acc_frames);
+        //     // SPDLOG_DEBUG("avg work: {:.3f} ms ({} frames / 2s)", avg_ms, acc_frames);
 
         //     acc_work_ns = 0;
         //     acc_frames = 0;
         //     last_report_ns = now_ns;
         // }
 
-        const int64_t sleep_us = 16000 - static_cast<int64_t>(work_ns / 1000);
+        const int64_t sleep_us = 7000 - static_cast<int64_t>(work_ns / 1000);
         if (sleep_us > 0)
             usleep(static_cast<useconds_t>(sleep_us));
     }
