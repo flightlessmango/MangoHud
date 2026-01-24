@@ -1,6 +1,5 @@
 #include "ipc.h"
 #include "ipc_client.h"
-#include "spdlog.h"
 
 int IPCClient::on_fence(sd_bus_message* m, void* userdata, sd_bus_error*) {
     auto* self = static_cast<IPCClient*>(userdata);

@@ -6,7 +6,6 @@
 #include "mesa/os_time.h"
 #include "vulkan.h"
 #include "fps_limiter.h"
-#include "spdlog_forward.h"
 #include <spdlog/sinks/stdout_color_sinks.h>
 static std::shared_ptr<spdlog::logger> logger;
 

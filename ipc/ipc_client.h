@@ -7,7 +7,6 @@
 #include <string>
 #include <mutex>
 #include <spdlog/spdlog.h>
-#include "spdlog_forward.h"
 #include "client.h"
 
 class IPCClient {
