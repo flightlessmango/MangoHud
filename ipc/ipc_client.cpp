@@ -261,8 +261,10 @@ void IPCClient::bus_thread() {
 
         run_bus();
 
-        if (!quit.load())
+        if (!quit.load()) {
+            connected.store(false);
             SPDLOG_DEBUG("IPC disconnected, reconnecting");
+        }
     }
 
     disconnect_bus();
@@ -311,11 +313,12 @@ bool IPCClient::on_connect() {
     }
 
     SPDLOG_INFO("on_connect signal sent");
+    connected.store(true);
     return true;
 }
 
 int IPCClient::push_queue() {
-    if (samples.empty())
+    if (samples.empty() || !connected.load())
         return 0;
 
     std::deque<Sample> out;

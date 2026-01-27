@@ -4,6 +4,8 @@ bool OverlayVK::draw(const vkroots::VkDeviceDispatch* d, VkSwapchainKHR swapchai
             uint32_t family, uint32_t image_count, uint32_t img_idx,
             VkPresentInfoKHR* pPresentInfo, VkQueue queue)
 {
+    if (!ipc->connected.load())
+        return true;
 
     dispatch = d;
     if (ipc->fdinfo.gbm_fd < 0)

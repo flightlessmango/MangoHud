@@ -11,8 +11,8 @@
 
 class IPCClient {
 public:
-    std::atomic<bool> need_reconnect{false};
     std::atomic<bool> needs_import{false};
+    std::atomic<bool> connected{false};
     std::mutex m;
     uint64_t seq = 0;
     Fdinfo fdinfo;
