@@ -41,11 +41,20 @@ bool Client::ready_frame_blocking() {
 }
 
 int Client::on_stop_event(sd_event_source *s, int fd, uint32_t revents, void *userdata) {
-    (void)s;
     (void)revents;
+    (void)userdata;
 
     uint64_t v = 0;
-    (void)read(fd, &v, sizeof(v));
+    for (;;) {
+        ssize_t n = read(fd, &v, sizeof(v));
+        if (n > 0) {
+            break;
+        }
+        if (n == -1 && errno == EINTR) {
+            continue;
+        }
+        break;
+    }
 
     sd_event *e = sd_event_source_get_event(s);
     sd_event_exit(e, 0);
