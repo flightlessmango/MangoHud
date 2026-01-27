@@ -12,7 +12,9 @@
 #include "mesa/os_time.h"
 #include <GL/glx.h>
 #include <GL/glxext.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
+static std::shared_ptr<spdlog::logger> logger;
 std::unique_ptr<OverlayGL> overlay;
 
 EXPORT_C_(EGLBoolean)eglSwapBuffers(EGLDisplay dpy, EGLSurface surf) {
@@ -121,6 +123,12 @@ static const auto name_to_funcptr_map = std::array{
 
 extern "C" void* dlsym(void* handle, const char* symbol)
 {
+    if (!logger) {
+        logger = spdlog::stderr_color_mt("MANGOHUD_GL");
+        spdlog::set_default_logger(logger);
+        spdlog::set_level(spdlog::level::debug);
+    }
+
     for (const auto& f : name_to_funcptr_map)
         if (std::strcmp(symbol, f.name) == 0) return f.ptr;
 
