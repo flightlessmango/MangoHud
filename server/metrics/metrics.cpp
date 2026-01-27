@@ -19,7 +19,9 @@ Metrics::Metrics(IPCServer& ipc) : ipc(ipc){
     configPath = get_config_dir() + "/MangoHud/MangoHud.yml";
     table = parse_hud_table(configPath.c_str());
     client_thread     = std::thread(&Metrics::update_client, this);
+    pthread_setname_np(client_thread.native_handle(), "update_client");
     thread            = std::thread(&Metrics::update, this);
+    pthread_setname_np(thread.native_handle(), "update_metrics");
 }
 
 void Metrics::update_table() {
@@ -29,6 +31,12 @@ void Metrics::update_table() {
     std::lock_guard lock(m);
     SPDLOG_INFO("Config changed");
     table = parse_hud_table(configPath.c_str());
+
+    {
+        std::lock_guard lock_clients(ipc.clients_mtx);
+        for (auto& client : ipc.clients)
+            client->send_config();
+    }
 }
 
 void Metrics::update() {
@@ -77,20 +85,23 @@ void Metrics::update() {
 void Metrics::update_client() {
     while (!stop.load()) {
         MetricTable new_metrics;
-        for (auto& [pid, client] : ipc.clients) {
-            std::vector<float> frametimes;
-            float avg_fps;
-            {
-                std::lock_guard lock(client->m);
-                frametimes.assign(client->frametimes.begin(), client->frametimes.end());
-                avg_fps = client->avg_fps_from_samples();
-                new_metrics[std::to_string(client->pid)]["ENGINE_NAME"] = {engine_name(client->pEngineName)};
+        {
+            std::lock_guard clients_lock(ipc.clients_mtx);
+            for (auto& client : ipc.clients) {
+                std::vector<float> frametimes;
+                float avg_fps;
+                {
+                    std::lock_guard lock(client->m);
+                    frametimes.assign(client->frametimes.begin(), client->frametimes.end());
+                    avg_fps = client->avg_fps_from_samples();
+                    new_metrics[std::to_string(client->pid)]["ENGINE_NAME"] = {engine_name(client->pEngineName)};
+                }
+                // TODO fps and frametime updates should match other metrics at 500ms
+                // frametimes should still be this fast
+                new_metrics[std::to_string(client->pid)]["FPS"] = {int(round(avg_fps)), "FPS"};
+                new_metrics[std::to_string(client->pid)]["FRAMETIME"] = {1000.f / avg_fps, "ms"};
+                new_metrics[std::to_string(client->pid)]["FRAMETIMES"] = {frametimes};
             }
-            // TODO fps and frametime updates should match other metrics at 500ms
-            // frametimes should still be this fast
-            new_metrics[std::to_string(client->pid)]["FPS"] = {int(round(avg_fps)), "FPS"};
-            new_metrics[std::to_string(client->pid)]["FRAMETIME"] = {1000.f / avg_fps, "ms"};
-            new_metrics[std::to_string(client->pid)]["FRAMETIMES"] = {frametimes};
         }
 
         {
@@ -137,21 +148,29 @@ void Metrics::populate_tables() {
             std::lock_guard lock(m);
             local = table;
         }
-        std::lock_guard clients_lock(ipc.clients_mtx);
-        for (auto& [pid, client] : ipc.clients) {
-            std::lock_guard client_lock(client->resources.m);
-            client->resources.table = assign_values(*local, client->pid);
+            std::unordered_map<pid_t, std::shared_ptr<clientRes>> client_res;
+        {
+            std::lock_guard lock(ipc.clients_mtx);
+            for (auto& client : ipc.clients)
+                client_res.emplace(client->pid, client->resources);
+        }
+
+        {
+            for (auto& [pid, r] : client_res) {
+                std::lock_guard lock(r->table_m);
+                r->table = assign_values(local.get(), pid);
+            }
         }
     }
 }
 
-hudTable Metrics::assign_values(hudTable& t, pid_t& pid) {
-    hudTable render_table;
-    render_table.cols = t.cols;
-    render_table.rows.reserve(t.rows.size());
-    for (auto& row : t.rows) {
+std::shared_ptr<hudTable> Metrics::assign_values(hudTable* t, pid_t pid) {
+    auto render_table = std::make_shared<hudTable>();
+    render_table->cols = t->cols;
+    render_table->rows.reserve(t->rows.size());
+    for (auto& row : t->rows) {
         std::vector<MaybeCell> parsed_row;
-        parsed_row.reserve(t.cols);
+        parsed_row.reserve(t->cols);
         for (auto& cell : row) {
             TextCell out {};
             if (!cell.has_value()) {
@@ -221,7 +240,7 @@ hudTable Metrics::assign_values(hudTable& t, pid_t& pid) {
             }
 
         }
-        render_table.rows.push_back(std::move(parsed_row));
+        render_table->rows.push_back(std::move(parsed_row));
     }
 
     return render_table;

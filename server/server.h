@@ -8,7 +8,7 @@
 
 class MangoHudServer {
 public:
-    std::unordered_map<uint32_t, std::shared_ptr<VkCtx>> vk_contexts;
+    std::vector<std::weak_ptr<VkCtx>> vk_contexts;
     std::mutex vk_ctx_m;
     std::shared_ptr<spdlog::logger> logger;
 
@@ -22,15 +22,25 @@ public:
         loop();
     }
 
-    void queue_frame(clientRes& r, uint32_t renderer) {
-        if (renderer == 0)
-            return;
-
+    std::shared_ptr<VkCtx> vk(uint32_t id) {
         std::lock_guard<std::mutex> lock(vk_ctx_m);
-        auto& ctx = vk_contexts[renderer];
-        if (!ctx)
-            ctx = std::make_unique<VkCtx>(renderer);
-        ctx->queue_frame(r);
+
+        for (auto it = vk_contexts.begin(); it != vk_contexts.end(); ) {
+            if (it->expired()) {
+                it = vk_contexts.erase(it);
+                continue;
+            }
+
+            auto ctx = it->lock();
+            if (ctx && ctx->renderMinor == id)
+                return ctx;
+
+            ++it;
+        }
+
+        auto ctx = std::make_shared<VkCtx>(id);
+        vk_contexts.push_back(ctx);
+        return ctx;
     }
 
     ~MangoHudServer() {
@@ -43,48 +53,4 @@ private:
     std::unique_ptr<IPCServer> ipc;
     std::unique_ptr<Metrics> metrics;
     std::atomic<bool> stop {false};
-
-    VkCtx* vk(uint32_t id) {
-        std::lock_guard<std::mutex> lock(vk_ctx_m);
-        auto& ctx = vk_contexts[id];
-        if (!ctx)
-            ctx = std::make_unique<VkCtx>(id);
-
-        return ctx.get();
-    }
-
-    std::deque<clientRes*> drain_all_queues() {
-        std::deque<clientRes*> out;
-        std::lock_guard<std::mutex> lock(vk_ctx_m);
-        for (auto& [render, vk_] : vk_contexts)
-            for (auto res : vk_->drain_queue())
-                // don't append if we didn't produce a frame anyway
-                if (!res->reinit_dmabuf) out.push_back(res);
-
-        return out;
-    }
-
-    void prune_vk_contexts() {
-        std::vector<std::shared_ptr<VkCtx>> doomed;
-        std::unordered_set<int64_t> used;
-        {
-            std::lock_guard lock(ipc->clients_mtx);
-            for (auto& [pid, client] : ipc->clients)
-                used.insert(client->renderMinor);
-        }
-
-        if (used.empty()) {
-            std::lock_guard<std::mutex> lock_vk(vk_ctx_m);
-            vk_contexts.clear();
-        } else {
-            std::lock_guard<std::mutex> lock_vk(vk_ctx_m);
-            for (auto it = vk_contexts.begin(); it != vk_contexts.end();) {
-                if (used.find(it->first) == used.end()) {
-                    doomed.push_back(std::move(it->second));
-                    it = vk_contexts.erase(it);
-                }
-                it++;
-            }
-        }
-    }
 };

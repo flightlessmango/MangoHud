@@ -36,8 +36,17 @@ public:
         std::unique_lock lock(samples_mtx);
         samples.push_back({seq, now});
         seq++;
-        uint64_t one = 1;
-        (void)write(wake_fd, &one, sizeof(one));
+
+        if (last_push == 0) {
+            last_push = now;
+            return;
+        }
+
+        if (now - last_push >= 7'000'000) {
+            uint64_t one = 1;
+            (void)write(wake_fd, &one, sizeof(one));
+            last_push = now;
+        }
     }
 
     void drain_queue();
@@ -81,4 +90,5 @@ private:
     int wake_fd;
     int socket_fd = -1;
     int pending_acquire_fd = -1;
+    uint64_t last_push = 0;
 };

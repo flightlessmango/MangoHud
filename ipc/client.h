@@ -4,6 +4,9 @@
 #include <string>
 #include <memory>
 #include <thread>
+#include <functional>
+#include <queue>
+#include <memory>
 #include <systemd/sd-bus.h>
 #include "../render/shared.h"
 #include <poll.h>
@@ -36,12 +39,14 @@ struct Fdinfo {
 };
 
 class IPCServer;
+class MangoHudServer;
 class Client {
 public:
     pid_t pid;
     mutable std::mutex m;
     mutable std::shared_ptr<hudTable> table;
     std::deque<Sample> samples;
+    std::mutex samples_m;
     std::deque<float> frametimes;
     std::string name;
     uint64_t n_frames = 0;
@@ -52,23 +57,17 @@ public:
     bool have_prev = false;
     std::string pEngineName;
     int64_t renderMinor = 0;
-    clientRes resources;
+    std::shared_ptr<clientRes> resources;
     IPCServer* ipc;
+    MangoHudServer* server;
     sd_bus* bus;
     sd_bus_slot* slot;
-    bool active = true;
+    std::atomic<bool> active {true};
 
-    Client(pid_t pid_, IPCServer* ipc_, sd_bus* bus_) : pid(pid_),
-           frametimes(200, 0.0f), ipc(ipc_), bus(bus_)
+    Client(pid_t pid_, IPCServer* ipc_, MangoHudServer* server_, sd_bus* bus_)
+           : pid(pid_), frametimes(200, 0.0f), resources(std::make_shared<clientRes>()),
+           ipc(ipc_), server(server_), bus(bus_)
     {
-        // int r = sd_bus_add_object_vtable(bus, &slot, kObjPath, kIface, vtable, this);
-        // if (r < 0) {
-        //     SPDLOG_ERROR("sd_bus_add_object_vtable failed {} ({}) pid={}", r, strerror(-r), (int)pid);
-        //     active = false;
-        // }
-
-        stop_eventfd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
-
         std::string match_handshake =
             "type='signal',"
             "path='" + std::string(kObjPath) + "',"
@@ -106,10 +105,11 @@ public:
         }
 
         thread = std::thread(&Client::dbus_thread, this);
-        dead_t = std::thread(&Client::check_dead, this);
+        run_t =  std::thread(&Client::run, this);
     }
 
     float avg_fps_from_samples() {
+        std::lock_guard lock(samples_m);
         if (samples.size() < 2) return previous_fps;
 
         const auto& b = samples.back();
@@ -130,51 +130,30 @@ public:
     }
 
     bool ready_frame();
-    bool send_dmabuf();
-    bool send_config();
-    bool send_fence();
+    void send_dmabuf();
+    void send_config();
+    void send_fence();
     static int on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_error);
     void set_dead();
 
-    ~Client() {
-        stop.store(true);
-        if (stop_eventfd >= 0) {
-            uint64_t one = 1;
-            for (;;) {
-                ssize_t n = write(stop_eventfd, &one, sizeof(one));
-                if (n == (ssize_t)sizeof(one)) break;
-                if (n < 0 && errno == EINTR) continue;
-                break;
-            }
-        }
-
-        sd_event *e = event;
-        if (e) {
-            sd_event_exit(e, 0);
-        }
-
-        if (thread.joinable())
-            thread.join();
-
-        if (dead_t.joinable())
-            dead_t.join();
-
-        if (bus)
-            sd_bus_unref(bus);
-
-        if (resources.release_fd >= 0) ::close(resources.release_fd);
-
-    }
+    ~Client();
 
 private:
+    std::shared_ptr<VkCtx> vk;
     std::thread thread;
     std::atomic<bool> stop {false};
     sd_bus_slot* handshake_slot;
     sd_bus_slot* release_fence_slot;
     sd_bus_slot* frame_samples_slot;
-    int stop_eventfd;
-    std::thread dead_t;
-    sd_event *event = nullptr;
+    std::thread run_t;
+    sd_event* event = nullptr;
+    sd_event_source* stop_src = nullptr;
+    sd_event_source* work_src = nullptr;
+    int stop_eventfd = -1;
+    int work_eventfd = -1;
+
+    std::mutex work_mtx;
+    std::queue<std::function<void()>> work_q;
 
     static inline const sd_bus_vtable vtable[] = {
         SD_BUS_VTABLE_START(0),
@@ -184,17 +163,12 @@ private:
     bool ready_frame_blocking();
     void queue_frame();
     void dbus_thread();
+    void run();
+
     static int release_fence(sd_bus_message* m, void* userdata, sd_bus_error*);
     static int frame_samples(sd_bus_message* m, void* userdata, sd_bus_error*);
     static int on_bus_disconnected(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
     static int on_stop_event(sd_event_source *s, int fd, uint32_t revents, void *userdata);
-
-    void check_dead() {
-        while (!stop.load()) {
-            if (kill(pid, 0) != 0)
-                set_dead();
-
-            sleep(0.1);
-        }
-    }
+    static int on_work_event(sd_event_source *s, int fd, uint32_t revents, void *userdata);
+    void post(std::function<void()> fn);
 };

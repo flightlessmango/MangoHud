@@ -18,7 +18,7 @@
 class MangoHudServer;
 class IPCServer {
 public:
-    std::unordered_map<pid_t, std::unique_ptr<Client>> clients;
+    std::vector<std::shared_ptr<Client>> clients;
     std::mutex clients_mtx;
     std::set<int> dead_clients;
     std::mutex dead_clients_mtx;

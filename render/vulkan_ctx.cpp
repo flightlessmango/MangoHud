@@ -176,31 +176,34 @@ uint32_t VkCtx::compatible_bits_for_dmabuf_import(VkImage image, int import_fd) 
     return imgBits & fdProps.memoryTypeBits;
 }
 
-clientRes& VkCtx::init_client(clientRes& r) {
-    if (!r.w) r.w = 500;
-    if (!r.h) r.h = 500;
-    r.device = device;
-    r.server_render_minor = renderMinor;
+void VkCtx::init_client(clientRes* r) {
+    if (!r->w) r->w = 500;
+    if (!r->h) r->h = 500;
+    if (!device)
+        return;
+
+    r->device = device;
+    r->server_render_minor = renderMinor;
 
     if (use_dmabuf) {
         if (!create_gbm_buffer(r)) {
             fprintf(stderr, "failed to create gbm buffer\n");
             fprintf(stderr, "we can't create dmabuf, bailing\n");
-            return r;
+            return;
         }
 
 
         if (!create_dmabuf(r)) {
             fprintf(stderr, "failed to create dmabuf image\n");
             fprintf(stderr, "bailing\n");
-            return r;
+            return;
         }
     }
 
     if (!create_src(r)) {
         fprintf(stderr, "failed to create src image\n");
         fprintf(stderr, "we can't create dmabuf, bailing\n");
-        return r;
+        return;
     }
 
     if (!create_opaque(r))
@@ -212,50 +215,49 @@ clientRes& VkCtx::init_client(clientRes& r) {
     // and when the the overlay changes
     // imgui->draw(r);
 
-    r.send_dmabuf = true;
-    r.initialized = true;
-    return r;
+    r->send_dmabuf = true;
+    r->initialized = true;
 }
 
-bool VkCtx::create_src(clientRes& r) {
-    create_image(NULL, r, r.src,
+bool VkCtx::create_src(clientRes* r) {
+    create_image(NULL, r, r->src,
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
                 VK_IMAGE_TILING_OPTIMAL, 0);
     allocate_memory(
-        r.src,
-        r.src_mem,
+        r->src,
+        r->src_mem,
         r,
         nullptr,
         false,           // external
         false,           // import_dmabuf
         0                // handleType (ignored)
     );
-    create_view(r.src, r.src_mem, r.src_view, fmt);
+    create_view(r->src, r->src_mem, r->src_view, fmt);
     return true;
 }
 
-bool VkCtx::create_dmabuf(clientRes& r) {
+bool VkCtx::create_dmabuf(clientRes* r) {
     VkSubresourceLayout plane0{
-        .offset = r.gbm.offset,
+        .offset = r->gbm.offset,
         .size = 0,
-        .rowPitch = r.gbm.stride,
+        .rowPitch = r->gbm.stride,
         .arrayPitch = 0,
         .depthPitch = 0,
     };
 
     VkImageDrmFormatModifierExplicitCreateInfoEXT drmExplicit{
         .sType = VK_STRUCTURE_TYPE_IMAGE_DRM_FORMAT_MODIFIER_EXPLICIT_CREATE_INFO_EXT,
-        .drmFormatModifier = r.gbm.modifier,
+        .drmFormatModifier = r->gbm.modifier,
         .drmFormatModifierPlaneCount = 1,
         .pPlaneLayouts = &plane0,
     };
 
-    create_image(&drmExplicit, r, r.dmabuf,
+    create_image(&drmExplicit, r, r->dmabuf,
                     VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                     VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT, VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT);
     allocate_memory(
-        r.dmabuf,
-        r.dmabuf_mem,
+        r->dmabuf,
+        r->dmabuf_mem,
         r,
         nullptr,         // allocSize
         true,            // external
@@ -263,25 +265,25 @@ bool VkCtx::create_dmabuf(clientRes& r) {
         VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT
     );
 
-    create_view(r.dmabuf, r.dmabuf_mem, r.dmabuf_view, fmt);
+    create_view(r->dmabuf, r->dmabuf_mem, r->dmabuf_view, fmt);
     return true;
 }
 
-bool VkCtx::create_opaque(clientRes& r) {
-    create_image(NULL, r, r.opaque,
+bool VkCtx::create_opaque(clientRes* r) {
+    create_image(NULL, r, r->opaque,
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
                 VK_IMAGE_TILING_OPTIMAL, VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT);
     allocate_memory(
-        r.opaque,
-        r.opaque_mem,
+        r->opaque,
+        r->opaque_mem,
         r,
-        &r.opaque_size,
+        &r->opaque_size,
         true,            // external
         false,           // import_dmabuf
         VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT
     );
-    create_view(r.opaque, r.opaque_mem, r.opaque_view, fmt);
-    r.opaque_fd = export_opaquefd(r.opaque_mem);
+    create_view(r->opaque, r->opaque_mem, r->opaque_view, fmt);
+    r->opaque_fd = export_opaquefd(r->opaque_mem);
     return true;
 }
 
@@ -300,41 +302,41 @@ int VkCtx::export_opaquefd(VkDeviceMemory mem){
     return fd;
 }
 
-bool VkCtx::create_gbm_buffer(clientRes& r) {
-    r.gbm.fourcc = DRM_FORMAT_ARGB8888;
-    r.gbm.dev = gbm_create_device(phys_fd());
+bool VkCtx::create_gbm_buffer(clientRes* r) {
+    r->gbm.fourcc = DRM_FORMAT_ARGB8888;
+    r->gbm.dev = gbm_create_device(phys_fd());
     const uint64_t linear = DRM_FORMAT_MOD_LINEAR;
 
-    r.gbm.bo = gbm_bo_create_with_modifiers(r.gbm.dev, r.w, r.h, r.gbm.fourcc, &linear, 1);
-    if (!r.gbm.bo) {
-        r.gbm.bo = gbm_bo_create(r.gbm.dev, r.w, r.h, r.gbm.fourcc, GBM_BO_USE_RENDERING);
-        if (!r.gbm.bo) {
+    r->gbm.bo = gbm_bo_create_with_modifiers(r->gbm.dev, r->w, r->h, r->gbm.fourcc, &linear, 1);
+    if (!r->gbm.bo) {
+        r->gbm.bo = gbm_bo_create(r->gbm.dev, r->w, r->h, r->gbm.fourcc, GBM_BO_USE_RENDERING);
+        if (!r->gbm.bo) {
             fprintf(stderr, "gbm_bo_create(_with_modifiers) failed\n");
             return false;
         }
     }
 
-    if (!r.gbm.bo) {
+    if (!r->gbm.bo) {
         fprintf(stderr, "gbm_bo_create_with_modifiers failed\n");
         return false;
     }
 
-    r.gbm.fd = gbm_bo_get_fd(r.gbm.bo);
-    if (r.gbm.fd < 0) {
+    r->gbm.fd = gbm_bo_get_fd(r->gbm.bo);
+    if (r->gbm.fd < 0) {
         fprintf(stderr, "Failed to get gbm fd\n");
         return false;
     }
 
-    r.gbm.modifier = gbm_bo_get_modifier(r.gbm.bo);
-    r.gbm.stride   = gbm_bo_get_stride_for_plane(r.gbm.bo, 0);
-    r.gbm.offset   = gbm_bo_get_offset(r.gbm.bo, 0);
-    r.gbm.plane_size = (uint64_t)r.gbm.stride * (uint64_t)r.h;
-    r.gbm.renderMinor = renderMinor;
+    r->gbm.modifier = gbm_bo_get_modifier(r->gbm.bo);
+    r->gbm.stride   = gbm_bo_get_stride_for_plane(r->gbm.bo, 0);
+    r->gbm.offset   = gbm_bo_get_offset(r->gbm.bo, 0);
+    r->gbm.plane_size = (uint64_t)r->gbm.stride * (uint64_t)r->h;
+    r->gbm.renderMinor = renderMinor;
 
     return true;
 }
 
-bool VkCtx::create_image(VkImageDrmFormatModifierExplicitCreateInfoEXT* drm, clientRes& r, VkImage& image,
+bool VkCtx::create_image(VkImageDrmFormatModifierExplicitCreateInfoEXT* drm, clientRes* r, VkImage& image,
                          VkImageUsageFlags usage, VkImageTiling tiling, VkExternalMemoryHandleTypeFlags handle) {
     VkExternalMemoryImageCreateInfo extImg{
         .sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO,
@@ -348,7 +350,7 @@ bool VkCtx::create_image(VkImageDrmFormatModifierExplicitCreateInfoEXT* drm, cli
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = VK_IMAGE_TYPE_2D,
         .format = fmt,
-        .extent = {r.w, r.h, 1},
+        .extent = {r->w, r->h, 1},
         .mipLevels = 1,
         .arrayLayers = 1,
         .samples = VK_SAMPLE_COUNT_1_BIT,
@@ -365,7 +367,7 @@ bool VkCtx::create_image(VkImageDrmFormatModifierExplicitCreateInfoEXT* drm, cli
     return ret == VK_SUCCESS;
 }
 
-bool VkCtx::allocate_memory(VkImage image, VkDeviceMemory& memory, clientRes& r,
+bool VkCtx::allocate_memory(VkImage image, VkDeviceMemory& memory, clientRes* r,
                             VkDeviceSize* allocSize, bool external, bool import_dmabuf,
                             VkExternalMemoryHandleTypeFlags handleType) {
     VkImageMemoryRequirementsInfo2 info2{
@@ -431,7 +433,7 @@ bool VkCtx::allocate_memory(VkImage image, VkDeviceMemory& memory, clientRes& r,
     VkImportMemoryFdInfoKHR importInfo{ VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR };
 
     if (import_dmabuf) {
-        import_fd = dup(r.gbm.fd);
+        import_fd = dup(r->gbm.fd);
         if (import_fd < 0) {
             vkDestroyImage(device, image, nullptr);
             return false;
@@ -514,13 +516,11 @@ bool VkCtx::create_view(VkImage image, VkDeviceMemory memory, VkImageView& view,
     return ret == VK_SUCCESS;
 }
 
-void VkCtx::submit(clientRes& r) {
-    {
-        std::lock_guard lock(m);
-        imgui->draw(r);
-    }
+void VkCtx::submit(std::shared_ptr<clientRes>& r) {
+    std::lock_guard lock(m);
+    imgui->draw(r);
     // if window size changed we need to recreate the images, bail.
-    if (r.reinit_dmabuf)
+    if (r->reinit_dmabuf)
         return;
 
     auto& cmd = imgui->cmd;
@@ -539,12 +539,12 @@ void VkCtx::submit(clientRes& r) {
     bi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     vkBeginCommandBuffer(cmd, &bi);
 
-    transition_image(cmd, r.src, r.src_layout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-    r.src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    transition_image(cmd, r->src, r->src_layout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    r->src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
     VkClearValue clear{};
     VkRenderingAttachmentInfo colorAtt{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
-    colorAtt.imageView = r.src_view;
+    colorAtt.imageView = r->src_view;
     colorAtt.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     colorAtt.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAtt.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -556,7 +556,7 @@ void VkCtx::submit(clientRes& r) {
 
     VkRenderingInfo ri{VK_STRUCTURE_TYPE_RENDERING_INFO};
     ri.renderArea.offset = {0, 0};
-    ri.renderArea.extent = {r.w, r.h};
+    ri.renderArea.extent = {r->w, r->h};
     ri.layerCount = 1;
     ri.colorAttachmentCount = 1;
     ri.pColorAttachments = &colorAtt;
@@ -565,13 +565,13 @@ void VkCtx::submit(clientRes& r) {
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
     vkCmdEndRendering(cmd);
 
-    transition_image(cmd, r.src, r.src_layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-    r.src_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    transition_image(cmd, r->src, r->src_layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    r->src_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
     if (use_dmabuf)
-        copy_to_dst(r.dmabuf, r.dmabuf_layout, VK_IMAGE_LAYOUT_GENERAL, r);
+        copy_to_dst(r->dmabuf, r->dmabuf_layout, VK_IMAGE_LAYOUT_GENERAL, r.get());
 
-    copy_to_dst(r.opaque, r.opaque_layout, VK_IMAGE_LAYOUT_GENERAL, r);
+    copy_to_dst(r->opaque, r->opaque_layout, VK_IMAGE_LAYOUT_GENERAL, r.get());
 
     vkEndCommandBuffer(cmd);
 
@@ -598,10 +598,7 @@ void VkCtx::submit(clientRes& r) {
     si.signalSemaphoreCount = 1;
     si.pSignalSemaphores = &releaseSem;
 
-    {
-        std::lock_guard lock(m);
-        vkQueueSubmit(graphicsQueue, 1, &si, fence);
-    }
+    vkQueueSubmit(graphicsQueue, 1, &si, fence);
 
     VkSemaphoreGetFdInfoKHR fdinfo{
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR,
@@ -620,13 +617,13 @@ void VkCtx::submit(clientRes& r) {
     }
 
     {
-        std::lock_guard lock(r.m);
-        if (r.acquire_fd >= 0) {
-            close(r.acquire_fd);
-            r.acquire_fd = -1;
+        std::lock_guard lock(r->m);
+        if (r->acquire_fd >= 0) {
+            close(r->acquire_fd);
+            r->acquire_fd = -1;
         }
 
-        r.acquire_fd = out_fd;
+        r->acquire_fd = out_fd;
         out_fd = -1;
     }
 
@@ -702,44 +699,22 @@ void VkCtx::transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout o
                          1, &b);
 }
 
-void VkCtx::copy_to_dst(VkImage dst, VkImageLayout& curLayout, VkImageLayout finalLayout, clientRes& r) {
+void VkCtx::copy_to_dst(VkImage dst, VkImageLayout& curLayout, VkImageLayout finalLayout, clientRes* r) {
     auto& cmd = imgui->cmd;
-
     transition_image(cmd, dst, curLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     VkImageCopy region{};
     region.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
     region.dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
-    region.extent = {r.w, r.h, 1};
+    region.extent = {r->w, r->h, 1};
 
     vkCmdCopyImage(cmd,
-        r.src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        r->src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
         dst,  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         1, &region);
 
     transition_image(cmd, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, finalLayout);
     curLayout = finalLayout;
-}
-
-void VkCtx::queue_frame(clientRes& r) {
-    std::lock_guard lock(m);
-    if (!r.initialized)
-        init_client(r);
-
-    frame_queue.push_back(&r);
-}
-
-std::deque<clientRes*> VkCtx::drain_queue() {
-    std::deque<clientRes*> local;
-    {
-        std::lock_guard lock(m);
-        local.swap(frame_queue);
-    }
-
-    for (auto& r : local)
-        submit(*r);
-
-    return local;
 }
 
 VkCtx::~VkCtx() {

@@ -26,7 +26,7 @@ public:
     ImGuiCtx(VkDevice device_, VkPhysicalDevice phys_, VkInstance instance,
                 VkQueue queue_, uint32_t queue_idx_, VkFormat fmt_);
     bool init();
-    void draw(clientRes& r);
+    void draw(std::shared_ptr<clientRes>& r);
 
     void teardown();
     ~ImGuiCtx() {
@@ -60,11 +60,11 @@ private:
                                 VkImage image,
                                 VkImageLayout oldLayout,
                                 VkImageLayout newLayout);
-    uint32_t calculate_width(const hudTable& table, const HudLayout& L);
+    uint32_t calculate_width(const HudLayout& L);
     void right_aligned(const ImVec4& col, float off_x, const char *fmt, ...);
     void RenderOutlinedText(ImVec4 textColor, const char* text);
     void draw_value_with_unit(int col_index, const TextCell& tc, const ImVec4& unit_col, const HudLayout& L);
     void draw_graph_plot(const TextCell& tc);
     void draw_graph_header(const TextCell& tc);
-    HudLayout build_layout(const hudTable& table);
+    HudLayout build_layout(std::shared_ptr<hudTable>& table);
 };

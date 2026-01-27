@@ -61,7 +61,7 @@ private:
     bool sig_changed(const configSig& a, const configSig& b);
     bool reload_config();
 
-    hudTable assign_values(hudTable& t, pid_t& pid);
+    std::shared_ptr<hudTable> assign_values(hudTable* t, pid_t pid);
     void format_into(std::string& dst, const char* fmt, ...) const;
     std::string engine_name(const std::string& engine) ;
 };

@@ -62,7 +62,7 @@ void ImGuiCtx::right_aligned(const ImVec4& col, float off_x, const char* fmt, ..
     RenderOutlinedText(col, buffer);
 }
 
-uint32_t ImGuiCtx::calculate_width(const hudTable& table, const HudLayout& L) {
+uint32_t ImGuiCtx::calculate_width(const HudLayout& L) {
     const ImGuiStyle& style = ImGui::GetStyle();
     const int cols = L.cols;
 
@@ -206,9 +206,9 @@ void ImGuiCtx::draw_graph_plot(const TextCell& tc) {
     ImGui::PopID();
 }
 
-HudLayout ImGuiCtx::build_layout(const hudTable& table) {
+HudLayout ImGuiCtx::build_layout(std::shared_ptr<hudTable>& table) {
     HudLayout L{};
-    L.cols = table.cols;
+    L.cols = table->cols;
 
     unit_gap = 1.0f;
 
@@ -221,7 +221,7 @@ HudLayout ImGuiCtx::build_layout(const hudTable& table) {
 
     float max_col0_w = 0.0f;
 
-    for (const auto& row : table.rows) {
+    for (const auto& row : table->rows) {
         if (!row.empty() && row[0].has_value()) {
             const Cell& v0 = *row[0];
             if (const auto* tc0 = std::get_if<TextCell>(&v0)) {
@@ -289,25 +289,25 @@ HudLayout ImGuiCtx::build_layout(const hudTable& table) {
     return L;
 }
 
-void ImGuiCtx::draw(clientRes& r) {
-    hudTable local_table;
+void ImGuiCtx::draw(std::shared_ptr<clientRes>& r) {
+    std::shared_ptr<hudTable> local_table;
     {
-        std::lock_guard lock(r.m);
-        local_table = r.table;
+        std::lock_guard lock(r->table_m);
+        local_table = r->table;
     }
     ImGui::SetCurrentContext(imgui);
     ImPlot::SetCurrentContext(implot);
     ImGuiIO& io = ImGui::GetIO();
     io.IniFilename = nullptr;
     io.BackendPlatformName = "headless";
-    io.DisplaySize = {float(r.w), float(r.h)};
+    io.DisplaySize = {float(r->w), float(r->h)};
     io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
-    io.DeltaTime = 1.0f / 60.0f;
+    io.DeltaTime = 1.0f / 144.0f;
 
     ImGui_ImplVulkan_NewFrame();
     ImGui::NewFrame();
 
-    ImGui::SetNextWindowSize({float(r.w), float(r.h)});
+    ImGui::SetNextWindowSize({float(r->w), float(r->h)});
     ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
     ImGui::SetNextWindowBgAlpha(0.5f);
 
@@ -326,11 +326,11 @@ void ImGuiCtx::draw(clientRes& r) {
     ImGui::Begin("HUD", nullptr, w_flags);
     HudLayout layout = build_layout(local_table);
 
-    const int cols = local_table.cols;
+    const int cols = local_table->cols;
     if (cols > 0 && ImGui::BeginTable("overlay", cols, ImGuiTableFlags_NoClip)) {
         ImGui::PushFont(fonts->text_font);
 
-        for (auto& row : local_table.rows) {
+        for (auto& row : local_table->rows) {
             ImGui::TableNextRow();
             for (int c = 0; c < cols; c++) {
                 ImGui::TableSetColumnIndex(c);
@@ -367,18 +367,18 @@ void ImGuiCtx::draw(clientRes& r) {
         ImGui::EndTable();
     }
 
-    uint32_t w = calculate_width(local_table, layout);
+    uint32_t w = calculate_width(layout);
     uint32_t h = ImGui::GetCursorPosY() + style.WindowPadding.y +
                  style.ItemSpacing.y + style.CellPadding.y;
 
     ImGui::End();
     ImGui::Render();
 
-    if (w != r.w || h != r.h) {
-        SPDLOG_DEBUG("resizing image from: {} {} to {} {}", r.w, r.h, w, h);
-        r.w = w;
-        r.h = h;
-        r.reinit_dmabuf = true;
+    if (w != r->w || h != r->h) {
+        SPDLOG_DEBUG("resizing image from: {} {} to {} {}", r->w, r->h, w, h);
+        r->w = w;
+        r->h = h;
+        r->reinit_dmabuf = true;
         draw(r);
     }
 }

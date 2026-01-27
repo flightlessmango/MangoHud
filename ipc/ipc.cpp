@@ -7,11 +7,11 @@
 #include <mutex>
 #include <unordered_map>
 #include <vulkan/vulkan.h>
+#include <sys/socket.h>
 #include "ipc.h"
 #include "ipc_client.h"
 #include "../server/config.h"
 #include "../server/server.h"
-#include <socket.h>
 
 IPCServer::IPCServer(MangoHudServer* server_) : server(server_) {
     SPDLOG_DEBUG("init IPCServer");
@@ -34,23 +34,29 @@ IPCServer::~IPCServer() {
 }
 
 void IPCServer::prune_clients() {
-    std::set<int> to_prune;
+    std::vector<std::shared_ptr<Client>> clients_;
     {
-        std::lock_guard lock(dead_clients_mtx);
-        if (dead_clients.empty())
-            return;
-
-        to_prune.swap(dead_clients);
+        std::lock_guard lock(clients_mtx);
+        clients_ = clients;
     }
 
-    std::vector<std::unique_ptr<Client>> doomed;
-    std::lock_guard lock_clients(clients_mtx);
-    for (const auto& dead : to_prune) {
-        auto it = clients.find(dead);
-        if (it != clients.end()) {
-            doomed.push_back(std::move(it->second));
-            clients.erase(it);
-            SPDLOG_DEBUG("Client disconnected {}", dead);
+    int num_dead = 0;
+    for (auto& client : clients_) {
+        if (kill(client->pid, 0) != 0 || !client->active.load()) {
+            client->active.store(false);
+            num_dead++;
+        }
+    }
+
+    if (num_dead == 0) return;
+
+    std::lock_guard lock(clients_mtx);
+    for (auto it = clients.begin(); it != clients.end(); ) {
+        if (!(*it)->active.load()) {
+            SPDLOG_DEBUG("Client disconnected {}", (*it)->pid);
+            it = clients.erase(it);
+        } else {
+            ++it;
         }
     }
 }
@@ -116,13 +122,9 @@ int IPCServer::on_request_fd(sd_bus_message *m, void *userdata, sd_bus_error *) 
     }
 
     {
+        self->prune_clients();
         std::lock_guard lock(self->clients_mtx);
-        auto it = self->clients.find(pid);
-        if (it != self->clients.end()) {
-            it->second.reset();
-            self->clients.erase(it);
-        }
-        self->clients.emplace(pid, std::make_unique<Client>(pid, self, client_bus));
+        self->clients.push_back(std::make_shared<Client>(pid, self, self->server, client_bus));
     }
 
     r = sd_bus_reply_method_return(m, "h", client_fd);

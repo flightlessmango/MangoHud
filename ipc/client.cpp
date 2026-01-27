@@ -1,41 +1,42 @@
 #include "client.h"
 #include "ipc.h"
+#include "server.h"
+#include "../render/vulkan_ctx.h"
 
 class IPCServer;
 
 clientRes::~clientRes() {
-    destroy_client_res(device, *this);
+    destroy_client_res(this);
 }
 
-void clientRes::reset() {
-    destroy_client_res(device, *this);
+void clientRes::reinit() {
+    destroy_client_res(this);
     send_dmabuf = false;
     reinit_dmabuf = false;
     initialized = false;
     initial_fence = true;
+    vk->init_client(this);
 }
 
 bool Client::ready_frame() {
-    std::lock_guard lock(resources.m);
-    if (resources.release_fd < 0 && resources.initial_fence)
+    if (resources->release_fd < 0 && resources->initial_fence)
         return true;
 
-    if (!sync_fd_signaled(resources.release_fd)) return false;
+    if (!sync_fd_signaled(resources->release_fd)) return false;
 
-    ::close(resources.release_fd);
-    resources.release_fd = -1;
+    ::close(resources->release_fd);
+    resources->release_fd = -1;
     return true;
 }
 
 bool Client::ready_frame_blocking() {
-    std::lock_guard lock(resources.m);
-    if (resources.release_fd < 0 && !resources.initial_fence)
+    if (resources->release_fd < 0 && !resources->initial_fence)
         return true;
 
-    if (!synd_fd_blocking(resources.release_fd)) return false;
+    if (!synd_fd_blocking(resources->release_fd)) return false;
 
-    ::close(resources.release_fd);
-    resources.release_fd = -1;
+    ::close(resources->release_fd);
+    resources->release_fd = -1;
     return true;
 }
 
@@ -63,7 +64,14 @@ int Client::on_bus_disconnected(sd_bus_message *m, void *userdata, sd_bus_error 
 }
 
 void Client::dbus_thread() {
+    pthread_setname_np(pthread_self(), ("c_dbus " + std::to_string(pid)).substr(0, 15).c_str());
     send_config();
+
+    stop_eventfd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+    if (stop_eventfd < 0) { set_dead(); return; }
+
+    work_eventfd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+    if (work_eventfd < 0) { set_dead(); return; }
 
     event = nullptr;
     int r = sd_event_new(&event);
@@ -82,7 +90,7 @@ void Client::dbus_thread() {
         return;
     }
 
-    sd_event_source *stop_src = nullptr;
+    stop_src = nullptr;
     r = sd_event_add_io(event, &stop_src, stop_eventfd, EPOLLIN, &Client::on_stop_event, this);
     if (r < 0) {
         SPDLOG_ERROR("sd_event_add_io(stop_eventfd) {} ({})", r, strerror(-r));
@@ -92,18 +100,30 @@ void Client::dbus_thread() {
         return;
     }
 
-    r = sd_event_loop(event);
-    if (r < 0 && !stop.load())
-        SPDLOG_ERROR("sd_event_loop {} ({})", r, strerror(-r));
+    if (work_eventfd < 0) {
+        SPDLOG_ERROR("eventfd(work) failed ({})", strerror(errno));
+        set_dead();
+        return;
+    }
 
-    sd_event_source_unref(stop_src);
-    sd_event_unref(event);
-    event = nullptr;
+    work_src = nullptr;
+    r = sd_event_add_io(event, &work_src, work_eventfd, EPOLLIN, &Client::on_work_event, this);
+    if (r < 0) {
+        SPDLOG_ERROR("sd_event_add_io(work_eventfd) {} ({})", r, strerror(-r));
+        set_dead();
+        return;
+    }
+
+    while (!stop.load()) {
+        int r = sd_event_loop(event);
+        if (r < 0 && !stop.load())
+            SPDLOG_ERROR("sd_event_loop {} ({})", r, strerror(-r));
+    }
 }
 
 int Client::on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_error) {
-    SPDLOG_DEBUG("on_connect");
     auto* self = static_cast<Client*>(userdata);
+    SPDLOG_DEBUG("Client connected {}", self->pid);
     const char* EngineName = "";
     int64_t renderMinor;
     int r = sd_bus_message_read(m, "sx", &EngineName, &renderMinor);
@@ -118,143 +138,150 @@ int Client::on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_erro
     return 0;
 }
 
-bool Client::send_dmabuf(){
+void Client::send_dmabuf(){
     Fdinfo fdinfo;
     {
-        resources.send_dmabuf       = false;
-        fdinfo.modifier             = resources.gbm.modifier;
-        fdinfo.dmabuf_offset        = resources.gbm.offset;
-        fdinfo.stride               = resources.gbm.stride;
-        fdinfo.fourcc               = resources.gbm.fourcc;
-        fdinfo.plane_size           = resources.gbm.plane_size;
-        fdinfo.w                    = resources.w;
-        fdinfo.h                    = resources.h;
-        fdinfo.server_render_minor  = resources.server_render_minor;
-        fdinfo.opaque_fd            = resources.opaque_fd;
-        fdinfo.opaque_size          = resources.opaque_size;
-        fdinfo.opaque_offset        = resources.opaque_offset;
-        if (resources.gbm.fd < 0) {
+        std::lock_guard lock(resources->m);
+        resources->send_dmabuf       = false;
+        fdinfo.modifier             = resources->gbm.modifier;
+        fdinfo.dmabuf_offset        = resources->gbm.offset;
+        fdinfo.stride               = resources->gbm.stride;
+        fdinfo.fourcc               = resources->gbm.fourcc;
+        fdinfo.plane_size           = resources->gbm.plane_size;
+        fdinfo.w                    = resources->w;
+        fdinfo.h                    = resources->h;
+        fdinfo.server_render_minor  = resources->server_render_minor;
+        fdinfo.opaque_fd            = resources->opaque_fd;
+        fdinfo.opaque_size          = resources->opaque_size;
+        fdinfo.opaque_offset        = resources->opaque_offset;
+        if (resources->gbm.fd < 0) {
             fdinfo.has_gbm  = false;
             fdinfo.gbm_fd = open("/dev/null", O_RDONLY);
         } else {
             fdinfo.has_gbm = true;
-            fdinfo.gbm_fd = resources.gbm.fd;
+            fdinfo.gbm_fd = resources->gbm.fd;
         }
     }
 
-    sd_bus_message* msg = nullptr;
-    int ret = sd_bus_message_new_signal(bus, &msg, kObjPath, kIface, "dmabuf");
+    post([this, fdinfo]() {
+        sd_bus_message* msg = nullptr;
+        int ret = sd_bus_message_new_signal(bus, &msg, kObjPath, kIface, "dmabuf");
 
-    SPDLOG_DEBUG("has_gbm={} gbm_fd={} opaque_fd={}",
-             (int)fdinfo.has_gbm, fdinfo.gbm_fd, fdinfo.opaque_fd);
+        SPDLOG_DEBUG("has_gbm={} gbm_fd={} opaque_fd={}",
+                (int)fdinfo.has_gbm, fdinfo.gbm_fd, fdinfo.opaque_fd);
 
-    if (ret < 0) {
-        SPDLOG_DEBUG("failed to set signal {}", ret);
-        return false;
-    }
+        if (ret < 0) {
+            SPDLOG_DEBUG("failed to set signal {}", ret);
+            return;
+        }
 
-    ret = sd_bus_message_append(
-        msg,
-        "tuuutuuxbhhtt",
-        fdinfo.modifier,
-        fdinfo.dmabuf_offset,
-        fdinfo.stride,
-        fdinfo.fourcc,
-        fdinfo.plane_size,
-        fdinfo.w,
-        fdinfo.h,
-        fdinfo.server_render_minor,
-        (int)fdinfo.has_gbm,
-        fdinfo.gbm_fd,
-        fdinfo.opaque_fd,
-        fdinfo.opaque_size,
-        fdinfo.opaque_offset
-    );
+        ret = sd_bus_message_append(
+            msg,
+            "tuuutuuxbhhtt",
+            fdinfo.modifier,
+            fdinfo.dmabuf_offset,
+            fdinfo.stride,
+            fdinfo.fourcc,
+            fdinfo.plane_size,
+            fdinfo.w,
+            fdinfo.h,
+            fdinfo.server_render_minor,
+            (int)fdinfo.has_gbm,
+            fdinfo.gbm_fd,
+            fdinfo.opaque_fd,
+            fdinfo.opaque_size,
+            fdinfo.opaque_offset
+        );
 
-    if (ret < 0) {
-        SPDLOG_DEBUG("failed to append to message {} ({})", ret, strerror(-ret));
+        if (ret < 0) {
+            SPDLOG_DEBUG("failed to append to message {} ({})", ret, strerror(-ret));
+            sd_bus_message_unref(msg);
+            return;
+        }
+
+        ret = sd_bus_send(bus, msg, nullptr);
         sd_bus_message_unref(msg);
-        return false;
-    }
-
-    ret = sd_bus_send(bus, msg, nullptr);
-    sd_bus_message_unref(msg);
-    if (ret < 0) {
-        set_dead();
-        SPDLOG_DEBUG("failed to send message {}", ret);
-        return false;
-    }
-
-    return ret < 0 ? ret : 0;
+        if (ret < 0) {
+            set_dead();
+            SPDLOG_DEBUG("failed to send message {}", ret);
+            return;
+        }
+    });
 }
 
-bool Client::send_config() {
-    sd_bus_message* msg = nullptr;
-
-    int r = sd_bus_message_new_signal(bus, &msg, kObjPath, kIface, "config");
-
-    if (r < 0) {
-        SPDLOG_DEBUG("failed to set signal {}", r);
-        return false;
-    }
-
+void Client::send_config() {
+    // TODO we should reorder so config will be up before ipc anyway
+    // Or just quit if not available and mark that the client hasn't
+    // gotten a config yet
     while (!get_cfg())
         sleep(1);
 
-    r = sd_bus_message_append(msg, "d", get_cfg()->get<double>("fps_limit"));
-    SPDLOG_DEBUG("sent fps_limit: {}", get_cfg()->get<double>("fps_limit"));
+    const double fps_limit = cfg->get<double>("fps_limit");
 
-    if (r < 0) {
-        SPDLOG_DEBUG("failed to append to message {}", r);
+    post([this, fps_limit]() {
+        sd_bus_message* msg = nullptr;
+
+        int r = sd_bus_message_new_signal(bus, &msg, kObjPath, kIface, "config");
+
+        if (r < 0) {
+            SPDLOG_DEBUG("failed to set signal {}", r);
+            return;
+        }
+
+        r = sd_bus_message_append(msg, "d", fps_limit);
+        SPDLOG_DEBUG("sent fps_limit: {}", fps_limit);
+
+        if (r < 0) {
+            SPDLOG_DEBUG("failed to append to message {}", r);
+            sd_bus_message_unref(msg);
+            return;
+        }
+
+        r = sd_bus_send(bus, msg, nullptr);
         sd_bus_message_unref(msg);
-        return false;
-    }
-
-    r = sd_bus_send(bus, msg, nullptr);
-    sd_bus_message_unref(msg);
-    if (r < 0) {
-        set_dead();
-        SPDLOG_DEBUG("failed to send message {}", r);
-        return false;
-    }
-
-    return true;
+        if (r < 0) {
+            set_dead();
+            SPDLOG_DEBUG("failed to send message {}", r);
+            return;
+        }
+    });
 }
 
-bool Client::send_fence() {
-    if (resources.acquire_fd < 0)
-        return false;
+void Client::send_fence() {
+    if (resources->acquire_fd < 0)
+        return;
 
-    sd_bus_message* msg = nullptr;
+    post([this]() {
+        sd_bus_message* msg = nullptr;
 
-    int r = sd_bus_message_new_signal(bus, &msg, kObjPath, kIface, "fence");
+        int r = sd_bus_message_new_signal(bus, &msg, kObjPath, kIface, "fence");
 
-    if (r < 0) {
-        SPDLOG_ERROR("sd_bus_message_new_signal {} ({})", r, strerror(-r));
-        close(resources.acquire_fd);
-        return false;
-    }
+        if (r < 0) {
+            SPDLOG_ERROR("sd_bus_message_new_signal {} ({})", r, strerror(-r));
+            close(resources->acquire_fd);
+            return;
+        }
 
-    r = sd_bus_message_append(msg, "h", resources.acquire_fd);
-    close(resources.acquire_fd);
-    if (r < 0) {
-        SPDLOG_ERROR("sd_bus_message_append {} ({})", r, strerror(-r));
+        r = sd_bus_message_append(msg, "h", resources->acquire_fd);
+        close(resources->acquire_fd);
+        if (r < 0) {
+            SPDLOG_ERROR("sd_bus_message_append {} ({})", r, strerror(-r));
+            sd_bus_message_unref(msg);
+            return;
+        }
+
+        r = sd_bus_send(bus, msg, nullptr);
         sd_bus_message_unref(msg);
-        return false;
-    }
+        if (r < 0) {
+            if (r != -107)
+                SPDLOG_ERROR("sd_bus_send {} ({})", r, strerror(-r));
 
-    r = sd_bus_send(bus, msg, nullptr);
-    sd_bus_message_unref(msg);
-    if (r < 0) {
-        if (r != -107)
-            SPDLOG_ERROR("sd_bus_send {} ({})", r, strerror(-r));
+            return;
+        }
 
-        return false;
-    }
-
-    resources.initial_fence = false;
-    resources.acquire_fd = -1;
-    return true;
+        resources->initial_fence = false;
+        resources->acquire_fd = -1;
+    });
 }
 
 int Client::release_fence(sd_bus_message* m, void* userdata, sd_bus_error*) {
@@ -267,14 +294,14 @@ int Client::release_fence(sd_bus_message* m, void* userdata, sd_bus_error*) {
     if (msg_fd < 0) return -EINVAL;
 
     {
-        std::lock_guard lock(self->resources.m);
+        std::lock_guard lock(self->resources->m);
         int fd = dup(msg_fd);
-        if (self->resources.release_fd >= 0) {
-            ::close(self->resources.release_fd);
-            self->resources.release_fd = -1;
+        if (self->resources->release_fd >= 0) {
+            ::close(self->resources->release_fd);
+            self->resources->release_fd = -1;
         }
 
-        self->resources.release_fd = fd;
+        self->resources->release_fd = fd;
     }
     return 0;
 }
@@ -289,6 +316,7 @@ int Client::frame_samples(sd_bus_message* m, void* userdata, sd_bus_error* ret_e
         r = sd_bus_message_read(m, "(tt)", &seq, &t_ns);
         if (r < 0) return r;
         if (r == 0) break;
+        std::lock_guard lock(self->samples_m);
         self->samples.push_back({seq, t_ns});
 
         // 500ms windows
@@ -322,31 +350,109 @@ int Client::frame_samples(sd_bus_message* m, void* userdata, sd_bus_error* ret_e
 }
 
 void Client::set_dead() {
+    active.store(false);
+}
+
+void Client::post(std::function<void()> fn) {
     {
-        std::lock_guard lock(ipc->clients_mtx);
-        auto it = ipc->clients.find(pid);
-        if (it == ipc->clients.end())
-            return;
+        std::lock_guard<std::mutex> lock(work_mtx);
+        work_q.push(std::move(fn));
     }
 
-    {
-        std::lock_guard lock(ipc->dead_clients_mtx);
-        active = false;
-        ipc->dead_clients.insert(pid);
+    uint64_t one = 1;
+    ssize_t n = write(work_eventfd, &one, sizeof(one));
+    (void)n;
+}
+
+int Client::on_work_event(sd_event_source *s, int fd, uint32_t revents, void *userdata) {
+    auto *self = static_cast<Client*>(userdata);
+    if (!self->active.load())
+        return 0;
+
+    uint64_t v = 0;
+    while (read(fd, &v, sizeof(v)) == sizeof(v)) {}
+
+    for (;;) {
+        std::function<void()> fn;
+        {
+            std::lock_guard<std::mutex> lock(self->work_mtx);
+            if (!self->active.load() || self->work_q.empty())
+                break;
+            fn = std::move(self->work_q.front());
+            self->work_q.pop();
+        }
+        fn();
+    }
+
+    return 0;
+}
+
+void Client::run() {
+    pthread_setname_np(pthread_self(), ("c_run " + std::to_string(pid)).substr(0, 15).c_str());
+    while (!stop.load()) {
+        if (ready_frame_blocking() && renderMinor > 0) {
+            if (!resources->vk) resources->vk = server->vk(renderMinor);
+            if (!resources->initialized)
+                resources->vk->init_client(resources.get());
+
+            if (resources->reinit_dmabuf)
+                resources->reinit();
+
+            if (resources->table) {
+                resources->vk->submit(resources);
+
+                if (resources->send_dmabuf)
+                    send_dmabuf();
+
+                send_fence();
+            }
+        }
     }
 }
 
-void Client::queue_frame() {
-    // TODO revisit this, let clients queue their own frames
-    // while (!stop.load()) {
-    //     if (ready_frame_blocking()) {
-    //         auto& r = resources;
-    //         if (r.reinit_dmabuf)
-    //             r.reset();
+Client::~Client() {
+    {
+        std::lock_guard lock(samples_m);
+        samples.clear();
+        frametimes.clear();
+    }
+    std::lock_guard lock(m);
 
-    //         server->queue_frame(r, renderMinor);
-    //         if (r.send_dmabuf)
-    //             ipc->queue_dmabuf(&r);
-    //     }
-    // }
+    stop.store(true);
+    uint64_t one = 1;
+    (void)!write(stop_eventfd, &one, sizeof(one));
+
+    if (thread.joinable())
+        thread.join();
+
+    if (run_t.joinable())
+        run_t.join();
+
+    destroy_client_res(resources.get());
+
+    sd_event_source_disable_unref(stop_src);
+    stop_src = nullptr;
+
+    sd_event_source_disable_unref(work_src);
+    work_src = nullptr;
+
+    sd_bus_detach_event(bus);
+
+    sd_event_unref(event);
+    event = nullptr;
+
+    if (bus) {
+        sd_bus_unref(bus);
+        bus = nullptr;
+    }
+
+    if (work_eventfd >= 0) {
+        close(work_eventfd);
+        work_eventfd = -1;
+    }
+
+    if (stop_eventfd >= 0) {
+        close(stop_eventfd);
+        stop_eventfd = -1;
+    }
 }

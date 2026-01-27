@@ -115,7 +115,7 @@ private:
         case String:
             return n.as<std::string>();
         }
-        throw std::runtime_error("unhandled Kind");
+        throw std::runtime_error("unhandled Spec");
     }
 };
 
