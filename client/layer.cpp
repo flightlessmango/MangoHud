@@ -6,9 +6,9 @@
 #include "mesa/os_time.h"
 #include "vulkan.h"
 #include "fps_limiter.h"
+#include <vulkan/vk_enum_string_helper.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 static std::shared_ptr<spdlog::logger> logger;
-
 std::string pEngineName;
 uint32_t renderMinor = 0;
 static auto& queue_family = *new std::unordered_map<VkQueue, uint32_t>();
@@ -16,6 +16,16 @@ static auto& q_family_mtx = *new std::mutex();
 PFN_vkSetDeviceLoaderData g_set_device_loader_data = nullptr;
 std::shared_ptr<OverlayVK> overlay_vk;
 std::unique_ptr<fpsLimiter> fps_limiter;
+std::unique_ptr<presentLimiter> present_limiter;
+
+static bool ChainHasSType(const void* head, VkStructureType sType) {
+    for (auto* it = (const VkBaseInStructure*)head; it; it = it->pNext) {
+        if (it->sType == sType) {
+            return true;
+        }
+    }
+    return false;
+}
 
 class VkInstanceOverrides {
 public:
@@ -26,6 +36,7 @@ public:
         const VkAllocationCallbacks* pAllocator,
         VkDevice* pDevice)
     {
+
         std::vector<const char*> exts;
         exts.reserve((pCreateInfo ? pCreateInfo->enabledExtensionCount : 0) + 8);
 
@@ -50,6 +61,8 @@ public:
         add("VK_KHR_sampler_ycbcr_conversion");
         add("VK_KHR_image_format_list");
         add("VK_KHR_maintenance1");
+        add("VK_KHR_present_id");
+        add("VK_KHR_present_wait");
 
         VkDeviceCreateInfo ci = *pCreateInfo;
         ci.enabledExtensionCount = (uint32_t)exts.size();
@@ -72,6 +85,28 @@ public:
             fprintf(stderr, "failed to get device loader data\n");
             fprintf(stderr, "we will get validation errors\n");
         }
+
+        VkPhysicalDevicePresentIdFeaturesKHR pid{};
+        pid.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR;
+        pid.presentId = VK_TRUE;
+
+        VkPhysicalDevicePresentWaitFeaturesKHR pw{};
+        pw.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_WAIT_FEATURES_KHR;
+        pw.presentWait = VK_TRUE;
+
+        void* newPNext = (void*)ci.pNext;
+
+        if (!ChainHasSType(newPNext, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_WAIT_FEATURES_KHR)) {
+            pw.pNext = newPNext;
+            newPNext = &pw;
+        }
+
+        if (!ChainHasSType(newPNext, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR)) {
+            pid.pNext = newPNext;
+            newPNext = &pid;
+        }
+
+        ci.pNext = newPNext;
         return dispatch->CreateDevice(physicalDevice, &ci, pAllocator, pDevice);
     }
 
@@ -119,6 +154,15 @@ public:
         return pfnCreateInstance(&ci, pAllocator, pInstance);
     }
 };
+
+static const VkPresentIdKHR* GetPresentId(const void* pNext) {
+    for (auto* it = (const VkBaseInStructure*)pNext; it; it = it->pNext) {
+        if (it->sType == VK_STRUCTURE_TYPE_PRESENT_ID_KHR) {
+            return (const VkPresentIdKHR*)it;
+        }
+    }
+    return nullptr;
+}
 
 class VkDeviceOverrides {
 public:
@@ -333,8 +377,44 @@ public:
                 return pDispatch->QueuePresentKHR(queue, pPresentInfo);
         }
 
+        if (!present_limiter)
+            present_limiter = std::make_unique<presentLimiter>(pDispatch->WaitForPresentKHR);
+
+        const VkPresentIdKHR* existing_pid = GetPresentId(pi.pNext);
+
+        static thread_local std::vector<uint64_t> tl_ids;
+        static thread_local VkPresentIdKHR tl_pid;
+
+        const uint64_t* ids_ptr = nullptr;
+
+        if (existing_pid && existing_pid->pPresentIds && existing_pid->swapchainCount == pi.swapchainCount) {
+            ids_ptr = existing_pid->pPresentIds;
+        } else {
+            tl_ids.resize(pi.swapchainCount);
+            present_limiter->on_present(&pi, tl_ids.data());
+
+            tl_pid = {};
+            tl_pid.sType = VK_STRUCTURE_TYPE_PRESENT_ID_KHR;
+            tl_pid.swapchainCount = pi.swapchainCount;
+            tl_pid.pPresentIds = tl_ids.data();
+            tl_pid.pNext = (void*)pi.pNext;
+            pi.pNext = &tl_pid;
+
+            ids_ptr = tl_ids.data();
+        }
+
         VkResult r = pDispatch->QueuePresentKHR(queue, &pi);
-        fps_limiter->limit(false);
+
+        if (r == VK_SUCCESS || r == VK_SUBOPTIMAL_KHR) {
+            if (ids_ptr) {
+                present_limiter->on_present_result(&pi, ids_ptr, r);
+            }
+
+            if (fps_limiter && fps_limiter->active) {
+                present_limiter->throttle(pDispatch->Device, pi.pSwapchains[0], 1);
+            }
+        }
+
         return r;
     }
 
@@ -388,6 +468,34 @@ public:
         }
 
         return VK_SUCCESS;
+    }
+
+    static VkResult AcquireNextImageKHR(const vkroots::VkDeviceDispatch* pDispatch,
+                                        VkDevice device, VkSwapchainKHR swapchain,
+                                        uint64_t timeout, VkSemaphore semaphore,
+                                        VkFence fence, uint32_t *pImageIndex)
+    {
+        if (!fps_limiter)
+            fps_limiter = std::make_unique<fpsLimiter>(false);
+
+        VkResult r = pDispatch->AcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, pImageIndex);
+        if (r == VK_SUCCESS)
+            fps_limiter->limit(false);
+
+        return r;
+    }
+
+    static VkResult AcquireNextImage2KHR(const vkroots::VkDeviceDispatch* pDispatch,
+                                         VkDevice device, const VkAcquireNextImageInfoKHR *pAcquireInfo, uint32_t *pImageIndex)
+    {
+        if (!fps_limiter)
+            fps_limiter = std::make_unique<fpsLimiter>(false);
+
+        VkResult r = pDispatch->AcquireNextImage2KHR(device, pAcquireInfo, pImageIndex);
+        if (r == VK_SUCCESS)
+            fps_limiter->limit(false);
+
+        return r;
     }
 };
 

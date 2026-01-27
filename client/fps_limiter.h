@@ -98,6 +98,106 @@ private:
     }
 };
 
+struct PresentState {
+    uint64_t next_id = 0;
+    uint64_t last_assigned = 0;
+    uint64_t last_queued = 0;
+    uint64_t last_completed = 0;
+};
+
+class presentLimiter {
+public:
+    PFN_vkWaitForPresentKHR WaitForPresentKHR = nullptr;
+
+    presentLimiter(PFN_vkWaitForPresentKHR wait) : WaitForPresentKHR(wait) {}
+
+    void on_present(const VkPresentInfoKHR* pPresentInfo, uint64_t* out_ids) {
+        std::lock_guard<std::mutex> lock(mtx);
+        for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {
+            VkSwapchainKHR sc = pPresentInfo->pSwapchains[i];
+            auto& st = states[sc];
+            uint64_t id = ++st.next_id;
+            st.last_assigned = id;
+            out_ids[i] = id;
+        }
+    }
+
+    void on_present_result(const VkPresentInfoKHR* pi, const uint64_t* ids, VkResult r) {
+        if (r != VK_SUCCESS && r != VK_SUBOPTIMAL_KHR) {
+            return;
+        }
+
+        std::lock_guard<std::mutex> lock(mtx);
+        for (uint32_t i = 0; i < pi->swapchainCount; i++) {
+            VkSwapchainKHR sc = pi->pSwapchains[i];
+            auto& st = states[sc];
+
+            uint64_t id = ids ? ids[i] : 0;
+            if (id > 0) {
+                st.last_queued = std::max(st.last_queued, id);
+                st.next_id = std::max(st.next_id, id);
+            }
+        }
+    }
+
+    void throttle(VkDevice device, VkSwapchainKHR swapchain, uint64_t allowed_ahead) {
+        if (!WaitForPresentKHR) return;
+        if (swapchain == VK_NULL_HANDLE) return;
+
+        uint64_t queued = 0;
+        uint64_t completed = 0;
+        uint64_t depth = 0;
+
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+            auto it = states.find(swapchain);
+            if (it == states.end())
+                return;
+
+            auto& st = it->second;
+            queued = st.last_queued;
+            completed = st.last_completed;
+            depth = queued - completed;
+        }
+
+        if (depth <= allowed_ahead)
+            return;
+
+        uint64_t wait_id = queued - allowed_ahead;
+        if (wait_id <= completed)
+            return;
+
+
+        VkResult r = WaitForPresentKHR(device, swapchain, wait_id, UINT64_MAX);
+
+        if (r != VK_SUCCESS) {
+            return;
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+            auto it = states.find(swapchain);
+            if (it == states.end())
+                return;
+
+            auto& st = it->second;
+            if (wait_id > st.last_completed)
+                st.last_completed = wait_id;
+        }
+    }
+
+    void on_destroy_swapchain(VkSwapchainKHR swapchain) {
+        std::lock_guard<std::mutex> lock(mtx);
+        states.erase(swapchain);
+    }
+
+private:
+    std::mutex mtx;
+    std::unordered_map<VkSwapchainKHR, PresentState> states;
+};
+
+extern std::unique_ptr<presentLimiter> present_limiter;
+
 class fpsLimiter {
     private:
         int64_t target = 0;
@@ -158,10 +258,9 @@ class fpsLimiter {
             if (!active || target <= 0)
                 return;
 
-            frame_start = os_time_get_nano();
-
             if (is_early != use_early) return;
 
+            frame_start = os_time_get_nano();
             int64_t sleep_time = calc_sleep(frame_start, frame_end);
             if (sleep_time > 0)
                 do_sleep(sleep_time);
