@@ -390,7 +390,7 @@ int Client::on_work_event(sd_event_source *s, int fd, uint32_t revents, void *us
 void Client::run() {
     pthread_setname_np(pthread_self(), ("c_run " + std::to_string(pid)).substr(0, 15).c_str());
     while (!stop.load()) {
-        if (ready_frame_blocking() && renderMinor > 0) {
+        if (ready_frame() && renderMinor > 0) {
             if (!resources->vk) resources->vk = server->vk(renderMinor);
             if (!resources->initialized)
                 resources->vk->init_client(resources.get());
@@ -407,6 +407,7 @@ void Client::run() {
                 send_fence();
             }
         }
+        usleep(7000);
     }
 }
 
