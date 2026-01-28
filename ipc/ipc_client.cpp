@@ -276,10 +276,6 @@ void IPCClient::stop() {
 
     if (thread.joinable()) thread.join();
 
-    if (dmabuf_slot) sd_bus_slot_unref(dmabuf_slot), dmabuf_slot = nullptr;
-    if (bus) sd_bus_unref(bus), bus = nullptr;
-
-
     std::lock_guard<std::mutex> lock(m);
     if (fdinfo.gbm_fd >= 0) close(fdinfo.gbm_fd);
         fdinfo.gbm_fd = -1;
@@ -403,9 +399,6 @@ int IPCClient::ready_frame() {
 }
 
 int IPCClient::request_fd_from_server() {
-    if (socket_fd >= 0)
-        close(socket_fd);
-
     sd_bus *bus_ = nullptr;
     int r = sd_bus_open_user(&bus_);
     if (r < 0) {
@@ -443,7 +436,6 @@ int IPCClient::request_fd_from_server() {
     sd_bus_message_unref(reply);
     sd_bus_unref(bus_);
 
-    socket_fd = fd_copy;
-    return socket_fd;
+    return fd_copy;
 }
 
