@@ -151,8 +151,7 @@ public:
         {
             std::lock_guard<std::mutex> lock(mtx);
             auto it = states.find(swapchain);
-            if (it == states.end())
-                return;
+            if (it == states.end()) return;
 
             auto& st = it->second;
             queued = st.last_queued;
@@ -160,15 +159,15 @@ public:
             depth = queued - completed;
         }
 
-        if (depth <= allowed_ahead)
-            return;
+        if (depth <= allowed_ahead) return;
 
         uint64_t wait_id = queued - allowed_ahead;
-        if (wait_id <= completed)
-            return;
+        if (wait_id <= completed) return;
 
-
-        VkResult r = WaitForPresentKHR(device, swapchain, wait_id, UINT64_MAX);
+        VkResult r = WaitForPresentKHR(device, swapchain, wait_id, 0);
+        if (r == VK_TIMEOUT) {
+            r = WaitForPresentKHR(device, swapchain, wait_id, 2'000'000ull);
+        }
 
         if (r != VK_SUCCESS) {
             return;
@@ -177,18 +176,12 @@ public:
         {
             std::lock_guard<std::mutex> lock(mtx);
             auto it = states.find(swapchain);
-            if (it == states.end())
-                return;
+            if (it == states.end()) return;
 
             auto& st = it->second;
             if (wait_id > st.last_completed)
                 st.last_completed = wait_id;
         }
-    }
-
-    void on_destroy_swapchain(VkSwapchainKHR swapchain) {
-        std::lock_guard<std::mutex> lock(mtx);
-        states.erase(swapchain);
     }
 
 private:
