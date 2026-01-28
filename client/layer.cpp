@@ -6,7 +6,6 @@
 #include "mesa/os_time.h"
 #include "vulkan.h"
 #include "fps_limiter.h"
-#include <vulkan/vk_enum_string_helper.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 static std::shared_ptr<spdlog::logger> logger;
 std::string pEngineName;

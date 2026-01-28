@@ -639,7 +639,7 @@ VkResult OverlayVK::semaphores(const vkroots::VkDeviceDispatch* d, swapchain_dat
         VkResult r = d->CreateSemaphore(d->Device, &sci, nullptr, &new_release_sema);
 
         if (r != VK_SUCCESS) {
-            SPDLOG_ERROR("CreateSemaphore {}", vk_result_string(r));
+            SPDLOG_ERROR("CreateSemaphore {}", string_VkResult(r));
             new_release_sema = VK_NULL_HANDLE;
             frame_ready = false;
         } else {
@@ -769,7 +769,7 @@ VkResult OverlayVK::import_dmabuf(const vkroots::VkDeviceDispatch* d,
     tmp_ext->d = d;
     VkResult r = d->CreateImage(d->Device, &ici, alloc, &tmp_ext->image);
     if (r != VK_SUCCESS) {
-        SPDLOG_ERROR("CreateImage {}", vk_result_string(r));
+        SPDLOG_ERROR("CreateImage {}", string_VkResult(r));
         return r;
     }
     SetName(d->Device, VK_OBJECT_TYPE_IMAGE, (uint64_t)tmp_ext->image,
@@ -797,7 +797,7 @@ VkResult OverlayVK::import_dmabuf(const vkroots::VkDeviceDispatch* d,
     r = d->AllocateMemory(d->Device, &mai, alloc, &tmp_ext->mem);
     if (r != VK_SUCCESS) {
         ::close(import_fd);
-        SPDLOG_ERROR("AllocateMemory {}", vk_result_string(r));
+        SPDLOG_ERROR("AllocateMemory {}", string_VkResult(r));
         return r;
     }
 
