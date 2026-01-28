@@ -377,7 +377,7 @@ VkResult OverlayVK::sample_dmabuf(const vkroots::VkDeviceDispatch* d, swapchain_
     VkCommandBuffer cb = sc->cmd[imageIndex];
     VkFence fence = sc->cmd_fences[imageIndex];
 
-    VkResult r = d->WaitForFences(d->Device, 1, &fence, VK_TRUE, UINT64_MAX);
+    VkResult r = d->WaitForFences(d->Device, 1, &fence, VK_TRUE, 2'000'000);
     if (r != VK_SUCCESS) {
         return r;
     }
