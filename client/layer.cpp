@@ -410,7 +410,7 @@ public:
             }
 
             if (fps_limiter && fps_limiter->active) {
-                present_limiter->throttle(pDispatch->Device, pi.pSwapchains[0], 1);
+                present_limiter->throttle(pDispatch->Device, pi.pSwapchains[0], 0);
             }
         }
 
