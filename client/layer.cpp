@@ -115,11 +115,12 @@ public:
         const VkAllocationCallbacks*    pAllocator,
         VkInstance*                     pInstance)
     {
-        if (!logger)
+        if (!logger) {
             logger = spdlog::stderr_color_mt("MANGOHUD");
+            spdlog::set_default_logger(logger);
+            spdlog::set_level(spdlog::level::debug);
+        }
 
-        spdlog::set_default_logger(logger);
-        spdlog::set_level(spdlog::level::debug);
         const char* engine = "";
         if (pCreateInfo && pCreateInfo->pApplicationInfo && pCreateInfo->pApplicationInfo->pEngineName)
             engine = pCreateInfo->pApplicationInfo->pEngineName;
@@ -299,9 +300,11 @@ public:
     VkSwapchainKHR swapchain,
     const VkAllocationCallbacks* pAllocator)
     {
+        SPDLOG_DEBUG("Destroying swapchain {}", (void*)swapchain);
         auto it = overlay_vk->swapchains.find(swapchain);
         if (it != overlay_vk->swapchains.end())
             it->second.reset();
+
         pDispatch->DestroySwapchainKHR(pDispatch->Device, swapchain, pAllocator);
     }
 
@@ -369,12 +372,10 @@ public:
         pDispatch->GetSwapchainImagesKHR(pDispatch->Device, pPresentInfo->pSwapchains[0], &swapchain_image_count, nullptr);
         uint32_t imageIndex = pPresentInfo->pImageIndices[0];
         VkPresentInfoKHR pi = *pPresentInfo;
-        {
-            std::lock_guard lock(overlay_vk->m);
-            if (!overlay_vk->draw(pDispatch, pPresentInfo->pSwapchains[0],
-                family, swapchain_image_count, imageIndex, &pi, queue))
-                return pDispatch->QueuePresentKHR(queue, pPresentInfo);
-        }
+
+        if (!overlay_vk->draw(pDispatch, pPresentInfo->pSwapchains[0],
+            family, swapchain_image_count, imageIndex, &pi, queue))
+            return pDispatch->QueuePresentKHR(queue, pPresentInfo);
 
         if (!present_limiter)
             present_limiter = std::make_unique<presentLimiter>(pDispatch->WaitForPresentKHR);
@@ -402,6 +403,9 @@ public:
             ids_ptr = tl_ids.data();
         }
 
+        // if (fps_limiter && fps_limiter->active)
+        //     present_limiter->throttle_before_present(pDispatch->Device, pi.pSwapchains[0], 1);
+
         VkResult r = pDispatch->QueuePresentKHR(queue, &pi);
 
         if (r == VK_SUCCESS || r == VK_SUBOPTIMAL_KHR) {
@@ -409,9 +413,8 @@ public:
                 present_limiter->on_present_result(&pi, ids_ptr, r);
             }
 
-            if (fps_limiter && fps_limiter->active) {
-                present_limiter->throttle(pDispatch->Device, pi.pSwapchains[0], 0);
-            }
+            if (fps_limiter && fps_limiter->active)
+                present_limiter->throttle(pDispatch->Device, pi.pSwapchains[0], 1);
         }
 
         return r;
