@@ -201,17 +201,19 @@ void EGL::import_dmabuf(const Fdinfo& fdinfo, GLuint& tex) {
     }
 }
 
-OverlayGL::OverlayGL(Display* xdpy_) : xdpy(xdpy_) {
+OverlayGL::OverlayGL(Display* xdpy_, std::shared_ptr<IPCClient> ipc_) : xdpy(xdpy_), ipc(ipc_) {
     SPDLOG_INFO("OpenGL overlay init");
     glx = std::make_unique<GLX>();
     egl = std::make_unique<EGL>();
     auto nodes = find_render_nodes(-1);
-    for (auto node : nodes)
-        printf("node: %i\n", atoi(strrchr(node.c_str(), 'D') + 1));
+    int renderer;
+    for (auto node : nodes) {
+        renderer = atoi(strrchr(node.c_str(), 'D') + 1);
+        SPDLOG_DEBUG("OpenGL renderer: {}", renderer);
+    }
 
     std::string node = *nodes.begin();
-    ipc = std::make_unique<IPCClient>(atoi(strrchr(node.c_str(), 'D') + 1), "");
-    ipc->pEngineName = "OpenGL";
+    ipc->start(renderer, pEngineName);
 }
 
 void OverlayGL::init(CtxRes& r) {

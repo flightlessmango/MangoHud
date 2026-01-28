@@ -12,10 +12,14 @@
 #include "mesa/os_time.h"
 #include <GL/glx.h>
 #include <GL/glxext.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
-
-static std::shared_ptr<spdlog::logger> logger;
 std::unique_ptr<OverlayGL> overlay;
+std::shared_ptr<IPCClient> ipc_;
+static void mangohud() {
+    if (!ipc_) ipc_ = std::make_shared<IPCClient>();
+    if (!overlay) overlay = std::make_unique<OverlayGL>(nullptr, ipc_);
+    overlay->ipc->add_to_queue(os_time_get_nano());
+    overlay->draw();
+}
 
 EXPORT_C_(EGLBoolean)eglSwapBuffers(EGLDisplay dpy, EGLSurface surf) {
     static EGLBoolean (*real_eglSwapBuffers)(EGLDisplay, EGLSurface) = nullptr;
@@ -23,9 +27,7 @@ EXPORT_C_(EGLBoolean)eglSwapBuffers(EGLDisplay dpy, EGLSurface surf) {
         real_eglSwapBuffers = (decltype(real_eglSwapBuffers)) real_dlsym(RTLD_NEXT, "eglSwapBuffers");
 
     if (dpy != EGL_NO_DISPLAY && surf != EGL_NO_SURFACE) {
-        if (!overlay) overlay = std::make_unique<OverlayGL>();
-        overlay->ipc->add_to_queue(os_time_get_nano());
-        overlay->draw();
+        mangohud();
     }
 
     return real_eglSwapBuffers(dpy, surf);
@@ -41,9 +43,7 @@ EXPORT_C_(EGLBoolean) eglSwapBuffersWithDamageKHR(EGLDisplay dpy, EGLSurface sur
 
     if (dpy != EGL_NO_DISPLAY && surf != EGL_NO_SURFACE) {
         if (eglGetCurrentContext() != EGL_NO_CONTEXT) {
-            if (!overlay) overlay = std::make_unique<OverlayGL>();
-            overlay->ipc->add_to_queue(os_time_get_nano());
-            overlay->draw();
+            mangohud();
         }
     }
 
@@ -62,9 +62,7 @@ EXPORT_C_(EGLBoolean) eglSwapBuffersWithDamageEXT(EGLDisplay dpy, EGLSurface sur
 
     if (dpy != EGL_NO_DISPLAY && surf != EGL_NO_SURFACE) {
         if (eglGetCurrentContext() != EGL_NO_CONTEXT) {
-            if (!overlay) overlay = std::make_unique<OverlayGL>();
-            overlay->ipc->add_to_queue(os_time_get_nano());
-            overlay->draw();
+            mangohud();
         }
     }
 
@@ -81,12 +79,9 @@ EXPORT_C_(void) glXSwapBuffers(Display* dpy, GLXDrawable drawable) {
     if (!dpy || drawable == 0)
         return real_glXSwapBuffers(dpy, drawable);
 
-    if (!overlay)
-        overlay = std::make_unique<OverlayGL>(dpy);
-
+    mangohud();
     overlay->xdpy = dpy;
-    overlay->draw();
-    overlay->ipc->add_to_queue(os_time_get_nano());
+
     return real_glXSwapBuffers(dpy, drawable);
 }
 
@@ -96,12 +91,8 @@ EXPORT_C_(int64_t) glXSwapBuffersMscOML(Display *dpy, GLXDrawable drawable, int6
     if (!real_glXSwapBuffersMscOML)
         real_glXSwapBuffersMscOML = (int64_t (*)(Display*, GLXDrawable, int64_t, int64_t, int64_t))real_dlsym(RTLD_NEXT, "glXSwapBuffersMscOML");
 
-    if (!overlay)
-        overlay = std::make_unique<OverlayGL>(dpy);
-
+    mangohud();
     overlay->xdpy = dpy;
-    overlay->ipc->add_to_queue(os_time_get_nano());
-    overlay->draw();
 
     return real_glXSwapBuffersMscOML(dpy, drawable, target_msc, divisor, remainder);
 }
@@ -123,12 +114,6 @@ static const auto name_to_funcptr_map = std::array{
 
 extern "C" void* dlsym(void* handle, const char* symbol)
 {
-    if (!logger) {
-        logger = spdlog::stderr_color_mt("MANGOHUD_GL");
-        spdlog::set_default_logger(logger);
-        spdlog::set_level(spdlog::level::debug);
-    }
-
     for (const auto& f : name_to_funcptr_map)
         if (std::strcmp(symbol, f.name) == 0) return f.ptr;
 

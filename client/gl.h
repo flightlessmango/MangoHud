@@ -159,10 +159,10 @@ private:
 
 class OverlayGL {
 public:
-    std::unique_ptr<IPCClient> ipc;
     Display* xdpy;
+    std::shared_ptr<IPCClient> ipc;
 
-    OverlayGL(Display* xdpy_ = nullptr);
+    OverlayGL(Display* xdpy_ = nullptr, std::shared_ptr<IPCClient> ipc_ = nullptr);
     void init(CtxRes& r);
     void draw();
 
@@ -176,6 +176,7 @@ private:
     std::unique_ptr<EGL> egl;
     std::thread egl_thread;
     Fdinfo fdinfo;
+    std::string pEngineName = "OpenGL";
 
     static GLuint compile_shader(GLenum type, const char *src);
     static GLuint link_program(GLuint vs, GLuint fs);

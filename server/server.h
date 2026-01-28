@@ -14,7 +14,7 @@ public:
 
     MangoHudServer() {
         // TODO Don't force debug
-        logger = spdlog::stderr_color_mt("MANGOHUD");
+        logger = spdlog::stderr_color_mt("MANGOHUD SERVER");
         spdlog::set_default_logger(logger);
         spdlog::set_level(spdlog::level::debug);
         ipc     = std::make_unique<IPCServer>(this);

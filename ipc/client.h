@@ -104,6 +104,18 @@ public:
             set_dead();
         }
 
+        std::string match_spdlog =
+            "type='signal',"
+            "path='" + std::string(kObjPath) + "',"
+            "interface='" + std::string(kIface) + "',"
+            "member='spdlog'";
+
+        r = sd_bus_add_match(bus, &spdlog_slot, match_spdlog.c_str(), &Client::spdlog_msg, this);
+        if (r < 0) {
+            SPDLOG_ERROR("match_spdlog {} ({}) ObjPath: {} Iface: {}", r, strerror(-r), kObjPath, kIface);
+            set_dead();
+        }
+
         thread = std::thread(&Client::dbus_thread, this);
         run_t =  std::thread(&Client::run, this);
     }
@@ -145,15 +157,16 @@ private:
     sd_bus_slot* handshake_slot;
     sd_bus_slot* release_fence_slot;
     sd_bus_slot* frame_samples_slot;
+    sd_bus_slot* spdlog_slot;
     std::thread run_t;
     sd_event* event = nullptr;
     sd_event_source* stop_src = nullptr;
     sd_event_source* work_src = nullptr;
     int stop_eventfd = -1;
     int work_eventfd = -1;
-
     std::mutex work_mtx;
     std::queue<std::function<void()>> work_q;
+    std::shared_ptr<spdlog::logger> logger;
 
     static inline const sd_bus_vtable vtable[] = {
         SD_BUS_VTABLE_START(0),
@@ -167,6 +180,7 @@ private:
 
     static int release_fence(sd_bus_message* m, void* userdata, sd_bus_error*);
     static int frame_samples(sd_bus_message* m, void* userdata, sd_bus_error*);
+    static int spdlog_msg(sd_bus_message* m, void* userdata, sd_bus_error*);
     static int on_bus_disconnected(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
     static int on_stop_event(sd_event_source *s, int fd, uint32_t revents, void *userdata);
     static int on_work_event(sd_event_source *s, int fd, uint32_t revents, void *userdata);

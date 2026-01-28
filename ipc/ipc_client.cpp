@@ -1,6 +1,22 @@
 #include "ipc.h"
 #include "ipc_client.h"
 
+IPCClient::IPCClient() {
+    auto console = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
+    auto spdlog_sink = std::make_shared<spdlogSink>(this);
+    logger = std::make_shared<spdlog::logger>("MANGOHUD", spdlog::sinks_init_list{console, spdlog_sink});
+    spdlog::set_default_logger(logger);
+    spdlog::set_level(spdlog::level::level_enum::debug);
+    SPDLOG_DEBUG("init dbus client");
+    wake_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+}
+
+void IPCClient::start(int64_t renderMinor_, std::string& pEngineName_) {
+    renderMinor = renderMinor_;
+    pEngineName = pEngineName_;
+    thread = std::thread(&IPCClient::bus_thread, this);
+}
+
 int IPCClient::on_fence(sd_bus_message* m, void* userdata, sd_bus_error*) {
     auto* self = static_cast<IPCClient*>(userdata);
     int msg_fd = -1;
@@ -285,28 +301,28 @@ void IPCClient::stop() {
 }
 
 bool IPCClient::on_connect() {
-    std::lock_guard<std::mutex> lock(bus_mtx);
-
-    if (!bus) {
+    if (!bus)
         return false;
-    }
 
-    int r = sd_bus_emit_signal(
-        bus,
-        kObjPath,
-        kIface,
-        "on_connect",
-        "sx",
-        pEngineName.c_str(),
-        (int64_t)renderMinor
-    );
+    int r = 0;
+    {
+        std::lock_guard<std::mutex> lock(bus_mtx);
+        r = sd_bus_emit_signal(
+            bus,
+            kObjPath,
+            kIface,
+            "on_connect",
+            "sx",
+            pEngineName.c_str(),
+            (int64_t)renderMinor
+        );
+    }
 
     if (r < 0) {
         SPDLOG_ERROR("on_connect signal send {} ({})", r, strerror(-r));
         return false;
     }
 
-    SPDLOG_INFO("on_connect signal sent");
     connected.store(true);
     return true;
 }
@@ -364,19 +380,21 @@ int IPCClient::push_queue() {
 }
 
 int IPCClient::send_release_fence(int fd) {
-    std::lock_guard<std::mutex> lock(bus_mtx);
-
     if (!bus)
         return false;
 
-    int r = sd_bus_emit_signal(
-        bus,
-        kObjPath,
-        kIface,
-        "release_fence",
-        "h",
-        fd
-    );
+    int r = 0;
+    {
+        std::lock_guard<std::mutex> lock(bus_mtx);
+        r = sd_bus_emit_signal(
+            bus,
+            kObjPath,
+            kIface,
+            "release_fence",
+            "h",
+            fd
+        );
+    }
 
     close (fd);
 
@@ -439,3 +457,28 @@ int IPCClient::request_fd_from_server() {
     return fd_copy;
 }
 
+void IPCClient::send_spdlog(const int level, const char* file, const int line, const std::string& text) {
+    if (!bus)
+        return;
+
+    int r = 0;
+    {
+        std::lock_guard<std::mutex> lock(bus_mtx);
+        r = sd_bus_emit_signal(
+            bus,
+            kObjPath,
+            kIface,
+            "spdlog",
+            "isis",
+            level,
+            file,
+            line,
+            text.c_str()
+        );
+    }
+
+    if (r < 0) {
+        fprintf(stderr, "spdlog signal send %i (%s)\n", r, strerror(-r));
+        return;
+    }
+}

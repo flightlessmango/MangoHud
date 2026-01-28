@@ -132,7 +132,6 @@ void Client::dbus_thread() {
 
 int Client::on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_error) {
     auto* self = static_cast<Client*>(userdata);
-    SPDLOG_DEBUG("Client connected {}", self->pid);
     const char* EngineName = "";
     int64_t renderMinor;
     int r = sd_bus_message_read(m, "sx", &EngineName, &renderMinor);
@@ -143,7 +142,6 @@ int Client::on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_erro
 
     self->pEngineName = EngineName;
     self->renderMinor = renderMinor;
-
     return 0;
 }
 
@@ -465,4 +463,31 @@ Client::~Client() {
         close(stop_eventfd);
         stop_eventfd = -1;
     }
+}
+
+int Client::spdlog_msg(sd_bus_message* m, void* userdata, sd_bus_error*) {
+    auto* self = static_cast<Client*>(userdata);
+    int level;
+    const char* file = "";
+    int line;
+    const char* text = "";
+    int r = sd_bus_message_read(m, "isis", &level, &file, &line, &text);
+
+    if (r < 0)
+        return r;
+
+    auto sink = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
+    //TODO this should probably be a unique name in the future
+    auto name = std::string("MANGOHUD CLIENT");
+
+    if (!self->logger) {
+        self->logger = std::make_shared<spdlog::logger>(name, sink);
+        self->logger->set_level(spdlog::level::debug);
+        self->logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%^%l%$] [%s:%#] %v");
+    }
+
+    spdlog::source_loc loc{file, line, ""};
+    auto lvl = static_cast<spdlog::level::level_enum>(level);
+    self->logger->log(loc, lvl, "{}", text);
+    return 0;
 }

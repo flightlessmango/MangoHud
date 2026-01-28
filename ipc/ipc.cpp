@@ -124,7 +124,9 @@ int IPCServer::on_request_fd(sd_bus_message *m, void *userdata, sd_bus_error *) 
     {
         self->prune_clients();
         std::lock_guard lock(self->clients_mtx);
-        self->clients.push_back(std::make_shared<Client>(pid, self, self->server, client_bus));
+        auto client = std::make_shared<Client>(pid, self, self->server, client_bus);
+        SPDLOG_DEBUG("Client connected {}", client->pid);
+        self->clients.push_back(client);
     }
 
     r = sd_bus_reply_method_return(m, "h", client_fd);

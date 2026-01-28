@@ -6,8 +6,7 @@
 #include "mesa/os_time.h"
 #include "vulkan.h"
 #include "fps_limiter.h"
-#include <spdlog/sinks/stdout_color_sinks.h>
-static std::shared_ptr<spdlog::logger> logger;
+
 std::string pEngineName;
 uint32_t renderMinor = 0;
 static auto& queue_family = *new std::unordered_map<VkQueue, uint32_t>();
@@ -16,6 +15,7 @@ PFN_vkSetDeviceLoaderData g_set_device_loader_data = nullptr;
 std::shared_ptr<OverlayVK> overlay_vk;
 std::unique_ptr<fpsLimiter> fps_limiter;
 std::unique_ptr<presentLimiter> present_limiter;
+std::shared_ptr<IPCClient> ipc;
 
 static bool ChainHasSType(const void* head, VkStructureType sType) {
     for (auto* it = (const VkBaseInStructure*)head; it; it = it->pNext) {
@@ -115,12 +115,7 @@ public:
         const VkAllocationCallbacks*    pAllocator,
         VkInstance*                     pInstance)
     {
-        if (!logger) {
-            logger = spdlog::stderr_color_mt("MANGOHUD");
-            spdlog::set_default_logger(logger);
-            spdlog::set_level(spdlog::level::debug);
-        }
-
+        if (!ipc) ipc = std::make_shared<IPCClient>();
         const char* engine = "";
         if (pCreateInfo && pCreateInfo->pApplicationInfo && pCreateInfo->pApplicationInfo->pEngineName)
             engine = pCreateInfo->pApplicationInfo->pEngineName;
@@ -283,7 +278,7 @@ public:
             }
         }
 
-        if (!overlay_vk) overlay_vk = std::make_shared<OverlayVK>(g_set_device_loader_data);
+        if (!overlay_vk) overlay_vk = std::make_shared<OverlayVK>(g_set_device_loader_data, ipc.get());
         {
             std::lock_guard lock(overlay_vk->swapchain_mtx);
             overlay_vk->swapchains[*pSwapchain] = sc;
@@ -322,7 +317,6 @@ public:
         //     SPDLOG_ERROR("queueLimiter: waits={}, waited_ms={:.3f}, max_depth={}, inflight={}",
         //                 w, (double)ns / 1e6, md, fps_limiter->q_limiter->in_flight.size());
         // }
-
         if (!renderMinor) {
             VkPhysicalDeviceDrmPropertiesEXT drm_props{};
             drm_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRM_PROPERTIES_EXT;
@@ -341,7 +335,7 @@ public:
             if (drm_props.hasPrimary)
                 renderMinor = drm_props.renderMinor;
 
-            SPDLOG_DEBUG("renderMinor: {}", renderMinor);
+            ipc->start(renderMinor, pEngineName);
         }
 
         if (!fps_limiter)
@@ -354,11 +348,10 @@ public:
 
         fps_limiter->limit(true);
 
-        if (!overlay_vk) overlay_vk = std::make_shared<OverlayVK>(g_set_device_loader_data);
-        if (!overlay_vk->ipc) overlay_vk->ipc = std::make_unique<IPCClient>(renderMinor, pEngineName);
-        overlay_vk->ipc->add_to_queue(os_time_get_nano());
+        if (!overlay_vk) overlay_vk = std::make_shared<OverlayVK>(g_set_device_loader_data, ipc.get());
+        ipc->add_to_queue(os_time_get_nano());
         // TODO Probably don't do this every frame
-        fps_limiter->set_fps_limit(overlay_vk->ipc->fps_limit);
+        fps_limiter->set_fps_limit(ipc->fps_limit);
 
         uint32_t family = 0;
         {

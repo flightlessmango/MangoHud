@@ -204,15 +204,14 @@ static const uint32_t overlay_frag_spv[] = {
 
 class OverlayVK {
 public:
-    std::unique_ptr<IPCClient> ipc;
+    PFN_vkSetDeviceLoaderData loader_data = nullptr;
+    PFN_vkSetDebugUtilsObjectNameEXT g_vkSetDebugUtilsObjectNameEXT = nullptr;
+    IPCClient* ipc;
     std::mutex m;
     std::mutex swapchain_mtx;
     std::unordered_map<VkSwapchainKHR, std::shared_ptr<swapchain_data>> swapchains;
-    PFN_vkSetDebugUtilsObjectNameEXT g_vkSetDebugUtilsObjectNameEXT = nullptr;
 
-    OverlayVK(PFN_vkSetDeviceLoaderData loader_data_) : loader_data(loader_data_) {
-            SPDLOG_INFO("Vulkan overlay init");
-    }
+    OverlayVK(PFN_vkSetDeviceLoaderData loader_data_, IPCClient* ipc_) : loader_data(loader_data_), ipc(ipc_) {}
 
     bool draw(const vkroots::VkDeviceDispatch* d, VkSwapchainKHR swapchain,
             uint32_t family, uint32_t image_count, uint32_t img_idx,
@@ -261,7 +260,6 @@ public:
 
 private:
     int acquire_fd = -1;
-    PFN_vkSetDeviceLoaderData loader_data = nullptr;
     std::unique_ptr<dmabuf> ext;
     const vkroots::VkDeviceDispatch* dispatch;
     VkSemaphore release_sema = VK_NULL_HANDLE;

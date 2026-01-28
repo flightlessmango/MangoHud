@@ -7,8 +7,10 @@
 #include <string>
 #include <mutex>
 #include <spdlog/spdlog.h>
+#include <spdlog/sinks/base_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 #include "client.h"
-
+class spdlogSink;
 class IPCClient {
 public:
     std::atomic<bool> needs_import{false};
@@ -17,17 +19,12 @@ public:
     uint64_t seq = 0;
     Fdinfo fdinfo;
     float fps_limit = 0;
-
-    // sending to server stuff
     int64_t renderMinor = 0;
     std::string pEngineName;
 
-    IPCClient(int64_t renderMinor_, std::string pEngineName_) :
-              renderMinor(renderMinor_), pEngineName(pEngineName_) {
-        SPDLOG_DEBUG("init dbus client");
-        wake_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
-        thread = std::thread(&IPCClient::bus_thread, this);
-    }
+    IPCClient();
+
+    void start(int64_t renderMinor, std::string& pEngineName);
 
     bool init();
     void stop();
@@ -60,6 +57,8 @@ public:
         wake_up_fd(wake_fd);
     }
     bool on_connect();
+    void send_spdlog(const int level, const char* file, const int line, const std::string& text);
+
     ~IPCClient() {
         stop();
     }
@@ -79,7 +78,7 @@ private:
         const uint64_t one = 1;
 
         while (true) {
-            const ssize_t n = ::write(wake_fd, &one, sizeof(one));
+            const ssize_t n = write(wake_fd, &one, sizeof(one));
             if (n == (ssize_t)sizeof(one))
                 return;
             if (n == -1 && errno == EINTR)
@@ -121,5 +120,30 @@ private:
     int socket_fd = -1;
     int pending_acquire_fd = -1;
     uint64_t last_push = 0;
+    std::shared_ptr<spdlog::logger> logger;
 };
 
+extern std::shared_ptr<IPCClient> ipc;
+
+class spdlogSink final : public spdlog::sinks::base_sink<std::mutex>  {
+public:
+    spdlogSink(IPCClient* dbus_) : dbus(dbus_),
+               formatter(std::make_unique<spdlog::pattern_formatter>()){};
+
+protected:
+    IPCClient* dbus;
+    std::unique_ptr<spdlog::formatter> formatter;
+
+    void sink_it_(const spdlog::details::log_msg& msg) override
+    {
+        std::string text(msg.payload.data(), msg.payload.size());
+
+        const char* file = msg.source.filename ? msg.source.filename : "";
+        int line = msg.source.line;
+        int level = static_cast<int>(msg.level);
+
+        dbus->send_spdlog(level, file, line, text);
+    }
+
+    void flush_() override {}
+};
