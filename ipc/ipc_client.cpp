@@ -212,8 +212,7 @@ bool IPCClient::run_bus() {
         }
 
         if (pfds[1].revents & POLLIN) {
-            uint64_t v = 0;
-            (void)read(wake_fd, &v, sizeof(v));
+            drain_wake_fd(wake_fd);
 
             if (quit.load())
                 break;
@@ -273,8 +272,7 @@ void IPCClient::bus_thread() {
 
 void IPCClient::stop() {
     quit.store(true);
-    uint64_t one = 1;
-    (void)write(wake_fd, &one, sizeof(one));
+    wake_up_fd(wake_fd);
 
     if (thread.joinable()) thread.join();
 

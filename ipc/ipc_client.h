@@ -43,8 +43,7 @@ public:
         }
 
         if (now - last_push >= 7'000'000) {
-            uint64_t one = 1;
-            (void)write(wake_fd, &one, sizeof(one));
+            wake_up_fd(wake_fd);
             last_push = now;
         }
     }
@@ -54,10 +53,11 @@ public:
     int ready_frame();
     int send_release_fence(int fd);
     void queue_fence(int fd) {
-        std::lock_guard lock(fences_mtx);
-        fences.push_back(std::move(fd));
-        uint64_t one = 1;
-        (void)write(wake_fd, &one, sizeof(one));
+        {
+            std::lock_guard lock(fences_mtx);
+            fences.push_back(std::move(fd));
+        }
+        wake_up_fd(wake_fd);
     }
     bool on_connect();
     ~IPCClient() {
@@ -74,6 +74,36 @@ private:
     void disconnect_bus();
     bool run_bus();
     int request_fd_from_server();
+
+    inline void wake_up_fd(int wake_fd) {
+        const uint64_t one = 1;
+
+        while (true) {
+            const ssize_t n = ::write(wake_fd, &one, sizeof(one));
+            if (n == (ssize_t)sizeof(one))
+                return;
+            if (n == -1 && errno == EINTR)
+                continue;
+
+            return;
+        }
+    }
+
+    inline void drain_wake_fd(int wake_fd) {
+        while (true) {
+            uint64_t v = 0;
+            const ssize_t n = read(wake_fd, &v, sizeof(v));
+            if (n == (ssize_t)sizeof(v))
+                continue;
+            if (n == -1 && errno == EINTR)
+                continue;
+
+            if (n == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))
+                return;
+
+            return;
+        }
+    }
 
     std::atomic<bool> quit{false};
     std::thread thread;
@@ -92,3 +122,4 @@ private:
     int pending_acquire_fd = -1;
     uint64_t last_push = 0;
 };
+
