@@ -308,7 +308,7 @@ static bool render(GLFWwindow* window, overlay_params& real_params) {
     glfwGetWindowSize(window, &w, &h);
     window_size_changed = w != window_size.x || h != window_size.y;
     if (real_params.enabled[OVERLAY_PARAM_ENABLED_horizontal])
-        glfwSetWindowSize(window, screenWidth, window_size.y);
+        glfwSetWindowSize(window, screenWidth, screenHeight * 0.3);
     else
         glfwSetWindowSize(window, window_size.x, window_size.y);
 
@@ -341,7 +341,7 @@ int main(int, char**)
     Display *x11_display = glfwGetX11Display();
     Window x11_window = glfwGetX11Window(window);
     Atom overlay_atom = XInternAtom (x11_display, GamescopeOverlayProperty, False);
-    
+
     // Setup Platform/Renderer backends
     int control_client = -1;
     parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"), false);
