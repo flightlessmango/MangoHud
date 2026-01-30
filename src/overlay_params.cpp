@@ -1176,7 +1176,7 @@ parse_overlay_config(struct overlay_params *params,
       config_ready = true;
       config_cv.notify_one();
    }
-   
+
    auto snapshot = std::make_shared<overlay_params>(*params);
    std::atomic_store_explicit(&g_params, std::move(snapshot), std::memory_order_release);
 
@@ -1291,7 +1291,6 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
          add_to_options(params, "cpu_power", "1");
          add_to_options(params, "battery_watt", "1");
          add_to_options(params, "battery_time", "1");
-         add_to_options(params, "debug", "0");
          break;
 
       case 3:
