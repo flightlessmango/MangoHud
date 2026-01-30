@@ -383,9 +383,9 @@ int main(int, char**)
                     PropModeReplace, (unsigned char *)&value, 1);
     // Main loop
     while (!glfwWindowShouldClose(window)){
-        check_keybinds(params);
         real_params = get_params();
-        if (!real_params->no_display){
+        check_keybinds(*real_params);
+        if (!real_params->no_display && new_frame){
             if (mangoapp_paused){
                 glfwShowWindow(window);
                 render(window, *real_params);
@@ -398,14 +398,7 @@ int main(int, char**)
                     for (auto gpu : gpus->available_gpus)
                         gpu->resume();
             }
-            {
-                std::unique_lock<std::mutex> lk(mangoapp_m);
-                mangoapp_cv.wait(lk, [&] {
-                    return new_frame || (real_params && real_params->no_display);
-                });
-                new_frame = false;
-            }
-            // Start the Dear ImGui frame
+
             {
                 if (render(window, *real_params)) {
                     // If we need to resize our window, give it another couple of rounds for the
@@ -431,6 +424,7 @@ int main(int, char**)
 
             glfwSwapBuffers(window);
         } else if (!mangoapp_paused) {
+            glClearColor(0, 0, 0, 0);
             glClear(GL_COLOR_BUFFER_BIT);
             glfwSwapBuffers(window);
             glfwHideWindow(window);
@@ -453,7 +447,7 @@ int main(int, char**)
             // std::unique_lock<std::mutex> lk(mangoapp_m);
             // mangoapp_cv.wait(lk, []{return !get_params()->no_display;});
         } else {
-            usleep(100000);
+            usleep(500000);
         }
     }
 
