@@ -234,7 +234,6 @@ static void msg_read_thread(){
                 }
             } else {
                 printf("Unsupported mangoapp struct version: %i\n", hdr->version);
-                exit(1);
             }
         }
         else
@@ -389,6 +388,7 @@ int main(int, char**)
         if (!real_params->no_display){
             if (mangoapp_paused){
                 glfwShowWindow(window);
+                render(window, *real_params);
                 uint32_t value = 1;
                 XChangeProperty(x11_display, x11_window, overlay_atom, XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&value, 1);
                 XSync(x11_display, 0);
@@ -431,6 +431,8 @@ int main(int, char**)
 
             glfwSwapBuffers(window);
         } else if (!mangoapp_paused) {
+            glClear(GL_COLOR_BUFFER_BIT);
+            glfwSwapBuffers(window);
             glfwHideWindow(window);
             uint32_t value = 0;
             XChangeProperty(x11_display, x11_window, overlay_atom, XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&value, 1);
