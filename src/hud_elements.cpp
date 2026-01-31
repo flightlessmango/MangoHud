@@ -1942,6 +1942,42 @@ void HudElements::ftrace() {
 #endif // HAVE_FTRACE
 }
 
+void HudElements::obs()
+{
+    if(!HUDElements.obs_ptr)
+        HUDElements.obs_ptr = std::make_unique<ObsStudio>(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_obs_prefix_exe], global_proc_name.c_str());
+
+    if(!HUDElements.obs_ptr)
+        return;
+
+    ImGui::PushFont(HUDElements.sw_stats->font_secondary);
+    ImguiNextColumnFirstItem();
+
+    HUDElements.TextColored(HUDElements.colors.engine, "OBS");
+
+#ifdef HAVE_OBS
+    ImguiNextColumnFirstItem();
+    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", HUDElements.obs_ptr->col1);
+
+    ImguiNextColumnFirstItem();
+    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", HUDElements.obs_ptr->col2);
+#else
+    ImguiNextColumnFirstItem();
+    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "Disabled");
+
+    if(!HUDElements.obs_ptr->islogged_obsunavailable){
+        SPDLOG_WARN(
+                "MangoHud obs configuration option has been enabled but "
+                "obs support was disabled during compile time, or obs libraries were not found. "
+                "MangoHud has to be recompiled with obs support for it to work, "
+                "see meson_options.txt and build_deps.sh in the source tree."
+                );
+        HUDElements.obs_ptr->islogged_obsunavailable = 1;
+    }
+#endif
+    ImGui::PopFont();
+}
+
 void HudElements::sort_elements(const std::pair<std::string, std::string>& option) {
     const auto& param = option.first;
     const auto& value = option.second;
@@ -1994,6 +2030,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
         {"display_server", {_display_session}},
         {"fex_stats", {fex_stats}},
         {"ftrace", {ftrace}},
+        {"obs", {obs}},
     };
 
     auto check_param = display_params.find(param);
@@ -2124,6 +2161,9 @@ void HudElements::legacy_elements(const overlay_params* temp_params){
         ordered_functions.push_back({_display_session, "display_session", value});
     if (temp_params->fex_stats.enabled)
         ordered_functions.push_back({fex_stats, "fex_stats", value});
+    if (params->enabled[OVERLAY_PARAM_ENABLED_obs])
+        ordered_functions.push_back({obs, "obs", value});
+
 #ifdef HAVE_FTRACE
     if (temp_params->ftrace.enabled)
         ordered_functions.push_back({ftrace, "ftrace", value});

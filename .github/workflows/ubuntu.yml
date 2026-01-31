@@ -29,7 +29,8 @@ jobs:
           libwayland-dev \
           libxnvctrl-dev \
           libxkbcommon-dev \
-          meson
+          meson \
+          libobs-dev
     - name: 'Install clang'
       if:  ${{ (matrix.compiler == 'clang') }}
       run: |
@@ -49,6 +50,7 @@ jobs:
           -D with_x11=enabled
           -D with_wayland=enabled
           -D with_dbus=enabled
+          -D with_obs=enabled
           -D mangoapp=true
           -D mangohudctl=true
           -D tests=enabled
