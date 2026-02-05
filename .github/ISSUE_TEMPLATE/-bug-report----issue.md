@@ -7,28 +7,40 @@ assignees: ''
 
 ---
 
-**Do not report issue for old MangoHud versions**
 
-**Describe the bug**
+⚠️ **Do not report issues for unsupported or old MangoHud versions.**
+Please verify the issue still occurs on the latest release before submitting.
+
+---
+
+## Describe the bug
 A clear and concise description of what the bug is.
 
-**List relevant hardware/software information**
-- Linux Distribution
-- MangoHud version
-- GPU
+## System information
+Please provide all relevant details.
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+- **Linux distribution**
+- **Kernel version**
+- **MangoHud version**
+- **MangoHud config** (attach or paste if non default)
+- **Launch options**
+- **Application or game**
+- **GPU model and driver**
+- **Display server** (X11 or Wayland)
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+## Expected behavior
+What you expected to happen.
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+## Actual behavior
+What actually happened.
 
-**Additional context**
-Add any other context about the problem here.
+## Logs
+Include log captured with `MANGOHUD_LOG_LEVEL=debug` set
+
+Wrap logs in code blocks.
+
+## Screenshots
+If applicable, add screenshots to help explain the problem.
+
+## Additional context
+Any other information that might be useful.
