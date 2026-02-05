@@ -6,7 +6,7 @@ pkgrel=1
 pkgdesc="Vulkan and OpenGL overlay to display performance information"
 arch=('x86_64')
 makedepends=('dbus' 'gcc' 'meson' 'python-mako' 'libx11' 'lib32-libx11' 'git' 'pkgconf' 'vulkan-headers')
-depends=('glslang' 'libglvnd' 'lib32-libglvnd' 'glfw-x11' 'python-numpy' 'python-matplotlib'
+depends=('glslang' 'libglvnd' 'lib32-libglvnd' 'glfw' 'python-numpy' 'python-matplotlib'
          'libxrandr' 'libxkbcommon' 'lib32-libxkbcommon')
 replaces=('vulkan-mesa-layer-mango')
 license=('MIT')
