@@ -603,9 +603,9 @@ static void render_benchmark(swapchain_stats& data, const struct overlay_params&
    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0, 0.0, 0.0, alpha / params.background_alpha));
    ImGui::Dummy(ImVec2(0.0f, 8.0f));
    if (params.enabled[OVERLAY_PARAM_ENABLED_histogram])
-      ImGui::PlotHistogram("", benchmark.fps_data.data(), benchmark.fps_data.size(), 0, "", 0.0f, max + 10, ImVec2(ImGui::GetContentRegionAvail().x, 50));
+      ImGui::PlotHistogram("##plot_histogram", benchmark.fps_data.data(), benchmark.fps_data.size(), 0, "", 0.0f, max + 10, ImVec2(ImGui::GetContentRegionAvail().x, 50));
    else
-      ImGui::PlotLines("", benchmark.fps_data.data(), benchmark.fps_data.size(), 0, "", 0.0f, max + 10, ImVec2(ImGui::GetContentRegionAvail().x, 50));
+      ImGui::PlotLines("##plot_lines", benchmark.fps_data.data(), benchmark.fps_data.size(), 0, "", 0.0f, max + 10, ImVec2(ImGui::GetContentRegionAvail().x, 50));
    ImGui::PopStyleColor(2);
    ImGui::End();
 }
