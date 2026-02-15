@@ -36,7 +36,8 @@ enum EngineTypes
    FERAL3D,
    TOGL,
 
-   GAMESCOPE
+   GAMESCOPE,
+   SDLGPU
 };
 
 struct swapchain_stats {
@@ -94,11 +95,11 @@ struct LOAD_DATA {
 inline const char* engine_name(const swapchain_stats& sw_stats) {
    const char* engines[] = {
       "Unknown", "OpenGL", "VULKAN", "DXVK", "VKD3D", "DAMAVAND",
-      "ZINK", "WINED3D", "Feral3D", "ToGL", "GAMESCOPE"
+      "ZINK", "WINED3D", "Feral3D", "ToGL", "GAMESCOPE", "SDLGPU"
    };
    const char* engines_short[] = {
       "Unknown", "OGL", "VK", "DXVK", "VKD3D", "DV",
-       "ZINK", "WD3D", "Feral3D", "ToGL", "GS"
+       "ZINK", "WD3D", "Feral3D", "ToGL", "GS", "SDL"
    };
 
    auto engine = sw_stats.engine;
