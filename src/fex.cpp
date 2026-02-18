@@ -11,6 +11,10 @@
 #include <immintrin.h>
 #endif
 
+constexpr uint64_t AlignUp(uint64_t Value, uint64_t Alignment) {
+    return Value + (Alignment - Value % Alignment) % Alignment;
+}
+
 namespace fex {
 const char* fex_status = "Not Found!";
 std::string fex_version;
@@ -245,7 +249,7 @@ static void init_shm(int pid) {
         goto err;
     }
 
-    shm_size = ALIGN_POT(buf.st_size, g_stats.page_size);
+    shm_size = AlignUp(buf.st_size, g_stats.page_size);
 
     shm_base = mmap(nullptr, shm_size, PROT_READ, MAP_SHARED, fd, 0);
     if (shm_base == MAP_FAILED) {
@@ -304,7 +308,7 @@ static void check_shm_update_necessary() {
     // If the SHM has changed size then we need to unmap and remap with the new size.
     // Required since FEX may grow the SHM region to fit more threads, although previous thread data won't be invalidated.
     memory_barrier();
-    auto new_shm_size = ALIGN_POT(__atomic_load_n(&g_stats.head->Size, __ATOMIC_RELAXED), g_stats.page_size);
+    auto new_shm_size = AlignUp(__atomic_load_n(&g_stats.head->Size, __ATOMIC_RELAXED), g_stats.page_size);
     if (g_stats.shm_size == new_shm_size) {
         return;
     }
