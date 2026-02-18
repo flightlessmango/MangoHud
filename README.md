@@ -439,7 +439,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `procmem`<br>`procmem_shared`, `procmem_virt`| Displays process' memory usage: resident, shared and/or virtual. `procmem` (resident) also toggles others off if disabled |
 | `proc_vram`                        | Display process' VRAM usage                                                           |
 | `ram`<br>`vram`                    | Display system RAM/VRAM usage                                                         |
-| `ram_temp`                         | Display RAM temperature (only supports DDR5 with `spd5118` driver)                    |
+| `ram_temp`                         | Display RAM temperature (only supports `jc42` (DDR4) or `spd5118` (DDR5) drivers)     |
 | `read_cfg`                         | Add to MANGOHUD_CONFIG as first parameter to also load config file. Otherwise only `MANGOHUD_CONFIG` parameters are used |
 | `reload_cfg=`                      | Change keybind for reloading the config. Default = `Shift_L+F4`                       |
 | `resolution`                       | Display the current resolution                                                        |
@@ -686,7 +686,7 @@ Example output:
 #### Intel notes
 - GPU temperature for `i915` requires **linux 6.13+**
 - Fan speed for `i915` requires **linux 6.12+**
-- GPU temperature and vram temperature for `xe` requires **linux 6.15+** 
+- GPU temperature and vram temperature for `xe` requires **linux 6.15+**
 - Fan speed for `xe` requires **linux 6.16+**
 - GPU usage and memory usage shows usage of current process, not total system usage (it's an issue on intel's side)
   - https://gitlab.freedesktop.org/drm/i915/kernel/-/issues/14153
