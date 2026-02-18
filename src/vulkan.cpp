@@ -1962,6 +1962,9 @@ static VkResult overlay_CreateInstance(
       else if (engineName == "Feral3D")
          engine = FERAL3D;
 
+      else if (engineName == "SDLGPU")
+         engine = SDLGPU;
+
       else
          engine = VULKAN;
    }
