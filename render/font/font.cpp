@@ -6,8 +6,6 @@
 #include "font_default.h"
 #include "font.h"
 
-std::unique_ptr<Font> fonts;
-
 void Font::create_fonts(ImFontAtlas* font_atlas)
 {
 
