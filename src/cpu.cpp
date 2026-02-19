@@ -565,12 +565,16 @@ bool CPUStats::GetCpuFile() {
     std::string name, path, input;
     std::string hwmon = "/sys/class/hwmon/";
     std::smatch match;
+    int best_priority = -1;
 
     auto dirs = ls(hwmon.c_str());
     for (auto& dir : dirs) {
-        path = hwmon + dir;
-        name = read_line(path + "/name");
-        SPDLOG_DEBUG("hwmon: sensor name: {}", name);
+        const std::string current_path = hwmon + dir;
+        std::string current_input;
+        int priority = -1;
+        
+        const auto name = read_line(current_path + "/name");
+        SPDLOG_DEBUG("hwmon:  sensor name: {}", name);
 
         std::map<std::string, std::string> custom_sensor = get_params()->cpu_custom_temp_sensor;
 
@@ -578,45 +582,53 @@ bool CPUStats::GetCpuFile() {
             if (name != custom_sensor["hwmon_name"])
                 continue;
 
-            find_fallback_input(path, custom_sensor["hwmon_input"].c_str(), input);
+            find_fallback_input(current_path, custom_sensor["hwmon_input"].c_str(), input);
+            // setting a custom sensor should always have the highest prio
+            priority = 100;
+            // also shouldn't need to loop through the rest
             break;
         } else if (name == "coretemp") {
-            find_input(path, "temp", input, "Package id 0");
-            break;
+            if (find_input(path, "temp", input, "Package id 0"))
+                priority = 10;
         } else if ((name == "zenpower" || name == "k10temp")) {
-            if (!find_input(path, "temp", input, "Tdie"))
-                find_input(path, "temp", input, "Tctl");
-            break;
+            if (find_input(path, "temp", input, "Tdie") || 
+                find_input(path, "temp", input, "Tctl"))
+                priority = 9;
         } else if (name == "atk0110") {
-            find_input(path, "temp", input, "CPU Temperature");
-            break;
+            if (find_input(current_path, "temp", current_input, "CPU Temperature"))
+                priority = 8;
         } else if (name == "it8603") {
-            find_input(path, "temp", input, "temp1");
-            break;
+            if (find_input(current_path, "temp", current_input, "temp1"))
+                priority = 7;
         } else if (starts_with(name, "cpuss0_")) {
-            find_fallback_input(path, "temp1", input);
-            break;
+            if (find_fallback_input(current_path, "temp1", current_input))
+                priority = 6;
         } else if (starts_with(name, "nct")) {
-            // Only break if nct module has TSI0_TEMP node
-            if (find_input(path, "temp", input, "TSI0_TEMP"))
-                break;
-
+            // Only use if nct module has TSI0_TEMP node
+            if (find_input(current_path, "temp", current_input, "TSI0_TEMP"))
+                priority = 5;
         } else if (name == "asusec") {
-            // Only break if module has CPU node
-            if (find_input(path, "temp", input, "CPU"))
-                break;
+            // Only use if module has CPU node
+            if (find_input(current_path, "temp", current_input, "CPU"))
+                priority = 4;
         } else if (name == "l_pcs") {
             // E2K (Elbrus 2000) CPU temperature module
-            find_input(path, "temp", input, "Node 0 Max");
-            break;
+            if (find_input(current_path, "temp", current_input, "Node 0 Max"))
+                priority = 3;
         } else if (std::regex_match(name, match, std::regex("cpu\\d*_thermal"))) {
-            find_fallback_input(path, "temp1", input);
-            break;
+            if (find_fallback_input(current_path, "temp1", current_input))
+                priority = 2;
         } else if (name == "apm_xgene") {
-            find_input(path, "temp", input, "SoC Temperature");
-            break;
-        } else {
-            path.clear();
+            if (find_input(current_path, "temp", current_input, "SoC Temperature"))
+                priority = 1;
+        }
+
+        // if we did find a valid input, only use it if priority
+        // is higher than what we've already found
+        if (priority > best_priority) {
+            best_priority = priority;
+            path = current_path;
+            input = current_input;
         }
     }
 
