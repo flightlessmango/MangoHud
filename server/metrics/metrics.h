@@ -11,12 +11,6 @@
 #include "../../ipc/ipc.h"
 #include "../../render/colors.h"
 
-struct configSig {
-    bool exists = false;
-    std::int64_t size = 0;
-    std::int64_t sec  = 0;
-    std::int64_t nsec = 0;
-};
 using MetricValue = std::variant<int, float, std::vector<float>, std::string>;
 struct Metric {
     std::optional<MetricValue> val;
@@ -26,8 +20,8 @@ using MetricTable = std::unordered_map<std::string,
                    std::unordered_map<std::string, Metric>>;
 class Metrics {
 public:
-    std::shared_ptr<hudTable> table;
-    Metrics(IPCServer& ipc);
+    std::shared_ptr<Config> cfg;
+    Metrics(IPCServer& ipc, std::shared_ptr<Config> cfg_);
     void update();
     Metric get(const char* a, const char* b, const pid_t pid);
     void update_table();
@@ -52,16 +46,10 @@ private:
     std::thread client_thread;
     std::atomic<bool> stop {false};
     ColorCache color;
-    std::string configPath = "/home/crz/.config/MangoHud/MangoHud.yml";
-    configSig previousSig {};
     MetricTable metrics;
     MetricTable client_metrics;
 
-    bool read_sig(const char* path, configSig& out);
-    bool sig_changed(const configSig& a, const configSig& b);
-    bool reload_config();
-
-    std::shared_ptr<hudTable> assign_values(hudTable* t, pid_t pid);
+    void assign_values(hudTable* t, pid_t pid, hudTable* render_table);
     void format_into(std::string& dst, const char* fmt, ...) const;
     std::string engine_name(const std::string& engine) ;
 };

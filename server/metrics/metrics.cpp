@@ -5,43 +5,15 @@
 #include "../common/table_structs.h"
 #include "string_utils.h"
 
-static std::string get_config_dir() {
-    if (const char* xdg = std::getenv("XDG_CONFIG_HOME")) {
-        if (*xdg) return std::string(xdg);
-    }
-    if (const char* home = std::getenv("HOME")) {
-        if (*home) return std::string(home) + "/.config";
-    }
-    throw std::runtime_error("Cannot determine config directory (no XDG_CONFIG_HOME or HOME)");
-}
-
-Metrics::Metrics(IPCServer& ipc) : ipc(ipc){
-    configPath = get_config_dir() + "/MangoHud/MangoHud.yml";
-    table = parse_hud_table(configPath.c_str());
+Metrics::Metrics(IPCServer& ipc, std::shared_ptr<Config> cfg_) : cfg(cfg_), ipc(ipc) {
     client_thread     = std::thread(&Metrics::update_client, this);
     pthread_setname_np(client_thread.native_handle(), "update_client");
     thread            = std::thread(&Metrics::update, this);
     pthread_setname_np(thread.native_handle(), "update_metrics");
 }
 
-void Metrics::update_table() {
-    if (!reload_config())
-        return;
-
-    std::lock_guard lock(m);
-    SPDLOG_INFO("Config changed");
-    table = parse_hud_table(configPath.c_str());
-
-    {
-        std::lock_guard lock_clients(ipc.clients_mtx);
-        for (auto& client : ipc.clients)
-            client->send_config();
-    }
-}
-
 void Metrics::update() {
     while (!stop.load()) {
-        update_table();
         MetricTable new_metrics;
         for (size_t i = 0; i < gpus.available_gpus.size(); i++) {
             auto& gpu = gpus.available_gpus[i];
@@ -87,14 +59,14 @@ void Metrics::update_client() {
         MetricTable new_metrics;
         {
             std::lock_guard clients_lock(ipc.clients_mtx);
-            for (auto& client : ipc.clients) {
+            for (auto client : ipc.clients) {
                 std::vector<float> frametimes;
                 float avg_fps;
                 {
                     std::lock_guard lock(client->m);
                     frametimes.assign(client->frametimes.begin(), client->frametimes.end());
                     avg_fps = client->avg_fps_from_samples();
-                    new_metrics[std::to_string(client->pid)]["ENGINE_NAME"] = {engine_name(client->pEngineName)};
+                    // new_metrics[std::to_string(client->pid)]["ENGINE_NAME"] = {engine_name(client->pEngineName)};
                 }
                 // TODO fps and frametime updates should match other metrics at 500ms
                 // frametimes should still be this fast
@@ -142,30 +114,30 @@ Metric Metrics::get(const char* a, const char* b, const pid_t pid = 0)
 }
 
 void Metrics::populate_tables() {
-    if (table) {
-        std::shared_ptr<hudTable> local;
+    if (cfg->table) {
+        hudTable local;
         {
-            std::lock_guard lock(m);
-            local = table;
+            std::lock_guard lock(cfg->m);
+            local = *cfg->table;
         }
             std::unordered_map<pid_t, std::shared_ptr<clientRes>> client_res;
         {
             std::lock_guard lock(ipc.clients_mtx);
-            for (auto& client : ipc.clients)
+            for (auto client : ipc.clients)
                 client_res.emplace(client->pid, client->resources);
         }
 
         {
             for (auto& [pid, r] : client_res) {
                 std::lock_guard lock(r->table_m);
-                r->table = assign_values(local.get(), pid);
+                assign_values(&local, pid, r->table.get());
             }
         }
     }
 }
 
-std::shared_ptr<hudTable> Metrics::assign_values(hudTable* t, pid_t pid) {
-    auto render_table = std::make_shared<hudTable>();
+void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
+    render_table->rows.clear();
     render_table->cols = t->cols;
     render_table->rows.reserve(t->rows.size());
     for (auto& row : t->rows) {
@@ -242,46 +214,6 @@ std::shared_ptr<hudTable> Metrics::assign_values(hudTable* t, pid_t pid) {
         }
         render_table->rows.push_back(std::move(parsed_row));
     }
-
-    return render_table;
-}
-
-bool Metrics::read_sig(const char* path, configSig& out) {
-    struct stat st {};
-    if (::stat(path, &st) == 0) {
-        out.exists = true;
-        out.size = static_cast<std::int64_t>(st.st_size);
-        out.sec  = static_cast<std::int64_t>(st.st_mtim.tv_sec);
-        out.nsec = static_cast<std::int64_t>(st.st_mtim.tv_nsec);
-        return true;
-    }
-
-    if (errno == ENOENT || errno == ENOTDIR) {
-        out = configSig{};
-        return true;
-    }
-
-    out = configSig{};
-    return false;
-}
-
-bool Metrics::sig_changed(const configSig& a, const configSig& b) {
-    return a.exists != b.exists ||
-        a.size   != b.size   ||
-        a.sec    != b.sec    ||
-        a.nsec   != b.nsec;
-}
-bool Metrics::reload_config() {
-    if (configPath.empty())
-        return false;
-
-    configSig now;
-    read_sig(configPath.c_str(), now);
-    if (sig_changed(previousSig, now)) {
-        previousSig = now;
-        return true;
-    }
-    return false;
 }
 
 void Metrics::format_into(std::string& dst, const char* fmt, ...) const {

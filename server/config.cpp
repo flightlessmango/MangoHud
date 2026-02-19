@@ -8,47 +8,6 @@
 #include "common/table_structs.h"
 #include "string_utils.h"
 
-static constexpr std::string_view HudYaml = R"YAML(
-hud_table:
-  rows:
-    - [ {text: GPU, color: "2e9762"},
-        {value: [GPU, 0, LOAD]},
-        {value: [GPU, 0, TEMP]}
-    ]
-
-    - [ null,
-        {value: [GPU, 0, CORE_CLOCK]},
-        {value: [GPU, 0, POWER]}
-    ]
-
-    - [ {text: CPU, color: "2e97cb"},
-        {value: [CPU, LOAD]},
-        {value: [CPU, TEMP]}
-    ]
-
-    - [ null,
-        {value: [CPU, FREQ]},
-        {value: [CPU, POWER]}
-    ]
-
-    - [ {text: VRAM, color: "ad64c1"},
-        {value: [GPU, 0, VRAM_USED]},
-        {value: [GPU, 0, VRAM_CLOCK]}
-    ]
-
-    - [ {text: RAM, color: "c26693"},
-        {value: [RAM, USED]},
-        {value: [RAM, TEMP]}
-    ]
-
-    - [ {text: VULKAN, color: "eb5b5b"},
-        {value: FPS},
-        {value: FRAMETIME}
-    ]
-
-    - [ {graph: FRAMETIMES}]
-)YAML";
-
 static bool validate_yaml(const YAML::Node& doc) {
     const auto hud = doc["hud_table"];
     if (!hud) {
@@ -107,7 +66,8 @@ static MetricRef parse_value(const YAML::Node& v) {
     throw std::runtime_error("value must be scalar or sequence");
 }
 
-static bool parse_yaml(hudTable& table, YAML::Node doc) {
+bool Config::parse_table_yaml(hudTable& table, YAML::Node doc) {
+    std::lock_guard lock(m);
     YAML::Node rows = doc["hud_table"]["rows"];
     table.rows.clear();
     std::size_t cols = 0;
@@ -157,54 +117,45 @@ static bool parse_yaml(hudTable& table, YAML::Node doc) {
     return true;
 }
 
-std::unique_ptr<hudTable> parse_hud_table(const char* file) {
-    auto out = std::make_unique<hudTable>();
-
-    auto load_default = [&]() -> bool {
+void Config::parse_table(std::string file) {
+    auto load_default = [&]() -> void {
         try {
             YAML::Node def = YAML::Load(std::string{HudYaml});
-            return parse_yaml(*out, def);
+            parse_table_yaml(*table, def);
         } catch (const YAML::Exception& e) {
             SPDLOG_ERROR("YAML error while loading default HUD config: {}", e.what());
-            return false;
+            return;
         } catch (const std::exception& e) {
             SPDLOG_ERROR("Error while loading default HUD config: {}", e.what());
-            return false;
+            return;
         } catch (...) {
             SPDLOG_ERROR("Unknown error while loading default HUD config");
-            return false;
+            return;
         }
     };
 
     try {
-        if (!cfg)
-            cfg = std::make_shared<Config>();
-
         if (!std::filesystem::exists(file)) {
             SPDLOG_DEBUG("Config file doesn't exist, falling back to default");
-            if (!load_default()) return nullptr;
-            cfg->update(YAML::Node());
-            return out;
+            load_default();
+
+            update(YAML::Node());
+            return;
         }
 
         YAML::Node doc = YAML::LoadFile(file);
-        cfg->update(doc["options"]);
+        update(doc["options"]);
 
         if (!validate_yaml(doc)) {
             SPDLOG_ERROR("HUD config validation failed: {}", file);
             SPDLOG_DEBUG("Falling back to default config");
-            if (!load_default()) return nullptr;
-            return out;
+            load_default();
+            return;
         }
 
-        if (!parse_yaml(*out, doc)) {
-            SPDLOG_ERROR("HUD config parse returned failure: {}", file);
-            SPDLOG_DEBUG("Falling back to default config");
-            if (!load_default()) return nullptr;
-            return out;
-        }
+        parse_table_yaml(*table, doc);
+        return;
 
-        return out;
     } catch (const YAML::BadFile& e) {
         SPDLOG_ERROR("{} {}", e.what(), file);
     } catch (const YAML::ParserException& e) {
@@ -218,6 +169,5 @@ std::unique_ptr<hudTable> parse_hud_table(const char* file) {
     }
 
     SPDLOG_DEBUG("Falling back to default config");
-    if (!load_default()) return nullptr;
-    return out;
+    load_default();
 }
