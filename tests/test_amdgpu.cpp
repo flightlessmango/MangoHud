@@ -2,11 +2,13 @@
 #include <stddef.h>
 #include <setjmp.h>
 #include <stdint.h>
+#include "stdio.h"
+#include "../src/amdgpu.h"
+// cmocka and libc++ have clashing symbols which causes issues if the symbols
+// are defined before libc++ can hide its own with _LIBCPP_HIDE_FROM_ABI.
 extern "C" {
 #include <cmocka.h>
 }
-#include "stdio.h"
-#include "../src/amdgpu.h"
 
 #define UNUSED(x) (void)(x)
 
