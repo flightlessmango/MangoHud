@@ -175,17 +175,28 @@ If you are building it by yourself, you need to enable multilib repository, by e
 sudo nano /etc/pacman.conf
 ```
 
-and uncomment:
+and uncomment the lines in order to look like this:
 
-```txt
-#[multilib]
-#Include = /etc/pacman.d/mirrorlist
+```ini
+[multilib]
+Include = /etc/pacman.d/mirrorlist
 ```
 
-then save the file and execute:
+then save the file and execute the command to refresh databases:
 
 ```
 sudo pacman -Syy
+```
+
+and install the 64 bit package with:
+
+```
+sudo pacman -S mangohud
+```
+
+For 32 bit package, install with:
+```
+sudo pacman -S lib32-mangohud
 ```
 
 ### Debian, Ubuntu
