@@ -55,3 +55,49 @@ private:
     std::unique_ptr<state_t> state;
 };
 
+template <class Range>
+class enumerate_view {
+public:
+    explicit enumerate_view(Range& r) : r_(r) {}
+
+    class iterator {
+    public:
+        using base_iter = decltype(std::begin(std::declval<Range&>()));
+
+        iterator(std::size_t i, base_iter it) : i_(i), it_(it) {}
+
+        auto operator*() const {
+            return std::tuple<std::size_t, decltype(*it_)>(i_, *it_);
+        }
+
+        iterator& operator++() {
+            ++i_;
+            ++it_;
+            return *this;
+        }
+
+        bool operator!=(const iterator& other) const {
+            return it_ != other.it_;
+        }
+
+    private:
+        std::size_t i_;
+        base_iter it_;
+    };
+
+    iterator begin() { return iterator(0, std::begin(r_)); }
+    iterator end() { return iterator(0, std::end(r_)); }
+
+private:
+    Range& r_;
+};
+
+template <class Range>
+auto enumerate(Range& r) {
+    return enumerate_view<Range>(r);
+}
+
+template <class T, class U>
+inline bool contains(const std::deque<T>& d, const U& value) {
+    return std::find(d.begin(), d.end(), static_cast<T>(value)) != d.end();
+}
