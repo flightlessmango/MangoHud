@@ -9,10 +9,10 @@
 #include "mesa/util/macros.h"
 
 #if defined(HAVE_XNVCTRL) && defined(HAVE_X11)
-void NVIDIA::parse_token(std::string token, std::unordered_map<std::string, std::string>& options) {
+void NVIDIA::parse_token(const std::string& token, std::unordered_map<std::string, std::string>& options) {
     std::string param, value;
 
-    size_t equal = token.find("=");
+    size_t equal = token.find('=');
     if (equal == std::string::npos)
         return;
 
@@ -224,7 +224,8 @@ void NVIDIA::get_instant_metrics_xnvctrl(struct gpu_metrics *metrics) {
 void NVIDIA::get_samples_and_copy() {
     struct gpu_metrics metrics_buffer[METRICS_SAMPLE_COUNT] {};
     auto logger_ref = logger; // inc ref count, to avoid destruction of logger.
-    auto params_p = get_params().get(); // avoid destruction while we are getting samples...
+    auto params = get_params();
+    auto params_p = params.get(); // avoid destruction while we are getting samples...
     while(!stop_thread) {
 #ifndef TEST_ONLY
         if (HUDElements.g_gamescopePid > 0 && HUDElements.g_gamescopePid != pid) {

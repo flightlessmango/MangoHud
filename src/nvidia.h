@@ -108,7 +108,7 @@ class NVIDIA {
         std::shared_ptr<libnvctrl_loader> nvctrl = get_libnvctrl_loader();
 
         void get_instant_metrics_xnvctrl(struct gpu_metrics *metrics);
-        void parse_token(std::string token, std::unordered_map<std::string, std::string>& options);
+        void parse_token(const std::string& token, std::unordered_map<std::string, std::string>& options);
         bool find_nv_x11(Display*& dpy);
         char* get_attr_target_string(int attr, int target_type, int target_id);
 #endif
