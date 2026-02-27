@@ -18,7 +18,7 @@ bool sysInfoFetched = false;
 double fps;
 float frametime;
 logData currentLogData = {};
-std::unique_ptr<Logger> logger;
+std::shared_ptr<Logger> logger;
 ofstream output_file;
 std::thread log_thread;
 

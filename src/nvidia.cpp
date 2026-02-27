@@ -75,8 +75,7 @@ NVIDIA::NVIDIA(const char* pciBusId) {
 }
 
 #ifdef HAVE_NVML
-void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics) {
-    auto params = get_params();
+void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics, struct overlay_params *params) {
     nvmlReturn_t response;
 
     if (nvml && nvml_available) {
@@ -224,6 +223,8 @@ void NVIDIA::get_instant_metrics_xnvctrl(struct gpu_metrics *metrics) {
 
 void NVIDIA::get_samples_and_copy() {
     struct gpu_metrics metrics_buffer[METRICS_SAMPLE_COUNT] {};
+    auto logger_ref = logger; // inc ref count, to avoid destruction of logger.
+    auto params_p = get_params().get(); // avoid destruction while we are getting samples...
     while(!stop_thread) {
 #ifndef TEST_ONLY
         if (HUDElements.g_gamescopePid > 0 && HUDElements.g_gamescopePid != pid) {
@@ -234,7 +235,7 @@ void NVIDIA::get_samples_and_copy() {
         for (size_t cur_sample_id=0; cur_sample_id < METRICS_SAMPLE_COUNT; cur_sample_id++) {
 #ifdef HAVE_NVML
         if (nvml_available)
-            NVIDIA::get_instant_metrics_nvml(&metrics_buffer[cur_sample_id]);
+            NVIDIA::get_instant_metrics_nvml(&metrics_buffer[cur_sample_id], params_p);
 #endif
 #if defined(HAVE_XNVCTRL) && defined(HAVE_X11)
         if (nvctrl_available)

@@ -1252,7 +1252,6 @@ void add_to_options(struct overlay_params *params, std::string option, std::stri
    params->options[option] = value;
 }
 
-int i = 0;
 void presets(int preset, struct overlay_params *params, bool inherit) {
    if (!inherit && parse_preset_config(preset, params))
          return;

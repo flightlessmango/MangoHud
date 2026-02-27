@@ -76,7 +76,7 @@ private:
   bool m_values_valid;
 };
 
-extern std::unique_ptr<Logger> logger;
+extern std::shared_ptr<Logger> logger;
 
 extern std::string os, cpu, gpu, ram, kernel, driver, cpusched;
 extern bool sysInfoFetched;

@@ -96,7 +96,7 @@ class NVIDIA {
 
         std::vector<nvmlProcessInfo_v1_t> process_info = {};
 
-        void get_instant_metrics_nvml(struct gpu_metrics *metrics);
+        void get_instant_metrics_nvml(struct gpu_metrics *metrics, struct overlay_params *params);
         std::shared_ptr<libnvml_loader> nvml = get_libnvml_loader();
 #endif
 
