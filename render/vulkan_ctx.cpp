@@ -358,7 +358,6 @@ bool VkCtx::create_gbm_buffer(clientRes* r, dmabuf_t* buf) {
     buf->gbm.stride   = gbm_bo_get_stride_for_plane(buf->gbm.bo, 0);
     buf->gbm.offset   = gbm_bo_get_offset(buf->gbm.bo, 0);
     buf->gbm.plane_size = (uint64_t)buf->gbm.stride * (uint64_t)r->h;
-    buf->gbm.renderMinor = renderMinor;
 
     return true;
 }

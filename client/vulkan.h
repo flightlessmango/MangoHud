@@ -107,13 +107,6 @@ struct OverlayPushConsts {
     uint32_t transfer_function;
 };
 
-static const uint32_t overlay_vert_spv[] = {
-    #include "overlay.vert.spv.h"
-};
-static const uint32_t overlay_frag_spv[] = {
-    #include "overlay.frag.spv.h"
-};
-
 class OverlayVK {
 public:
     Layer* layer;

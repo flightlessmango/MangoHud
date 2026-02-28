@@ -66,7 +66,6 @@ struct gbmBuffer {
 
     uint32_t fourcc = 0;
     uint64_t plane_size = 0;
-    int64_t renderMinor;
 
     gbmBuffer() {
         if (bo)
