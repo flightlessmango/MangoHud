@@ -10,10 +10,11 @@
 #include "keybinds.h"
 #include "fps_metrics.h"
 #include "fps_limiter.h"
+#include "mesa/util/os_socket.h"
 
 Clock::time_point last_f2_press, toggle_fps_limit_press, toggle_preset_press, last_f12_press, reload_cfg_press, last_upload_press;
 
-void check_keybinds(struct overlay_params& params){
+void check_keybinds(struct overlay_params& params, int* control_client){
    auto real_params = get_params();
    using namespace std::chrono_literals;
    auto now = Clock::now(); /* us */
@@ -55,7 +56,7 @@ void check_keybinds(struct overlay_params& params){
      for (size_t i = 0; i < size; i++){
        if(real_params->preset[i] == current_preset) {
          current_preset = real_params->preset[++i%size];
-         parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"), true);
+         parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"), true, control_client);
          break;
        }
      }
@@ -69,7 +70,7 @@ void check_keybinds(struct overlay_params& params){
 
    if (elapsedReloadCfg >= keyPressDelay &&
        keys_are_pressed(real_params->reload_cfg)) {
-      parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"), false);
+      parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"), false, control_client);
       reload_cfg_press = now;
    }
 

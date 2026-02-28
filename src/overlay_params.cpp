@@ -925,12 +925,15 @@ static std::string verify_pci_dev(std::string pci_dev) {
 
 void
 parse_overlay_config(struct overlay_params *params,
-                  const char *env, bool use_existing_preset)
+                  const char *env, bool use_existing_preset, int* control_client)
 {
    SPDLOG_DEBUG("Version: {}", MANGOHUD_VERSION);
    std::vector<int> default_preset = {-1, 0, 1, 2, 3, 4};
    auto preset = std::move(params->preset);
    int transfer_function = params->transfer_function;
+   // Save old control socket info for comparison (don't close yet - we may reuse it!)
+   int old_control_fd = params->control;
+   std::string old_control_path = params->control_path;
    *params = {};
    params->transfer_function = transfer_function;
    params->preset = use_existing_preset ? std::move(preset) : default_preset;
@@ -1009,6 +1012,34 @@ parse_overlay_config(struct overlay_params *params,
       HUDElements.ordered_functions.clear();
       parse_overlay_env(params, env, true);
    }
+
+   // Resolve the new control path (empty if control option absent)
+   std::string new_control_path;
+   auto control_it = params->options.find("control");
+   if (control_it != params->options.end()) {
+      new_control_path = control_it->second;
+      size_t npos = new_control_path.find("%p");
+      if (npos != std::string::npos)
+         new_control_path.replace(npos, 2, std::to_string(getpid()));
+   }
+
+   bool reuse = old_control_fd >= 0
+             && new_control_path == old_control_path;
+
+   if (reuse) {
+      if (params->control >= 0 && params->control != old_control_fd)
+         os_socket_close(params->control);
+      params->control = old_control_fd;
+   } else {
+      if (old_control_fd >= 0)
+         os_socket_close(old_control_fd);
+      if (control_client && *control_client >= 0) {
+         os_socket_close(*control_client);
+         *control_client = -1;
+      }
+   }
+
+   params->control_path = new_control_path;
 
    // If fps_only param is enabled disable legacy_layout
    if (params->enabled[OVERLAY_PARAM_ENABLED_fps_only])
