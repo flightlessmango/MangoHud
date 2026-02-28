@@ -66,7 +66,7 @@ void Metrics::update_client() {
                     std::lock_guard lock(client->m);
                     frametimes.assign(client->frametimes.begin(), client->frametimes.end());
                     avg_fps = client->avg_fps_from_samples();
-                    // new_metrics[std::to_string(client->pid)]["ENGINE_NAME"] = {engine_name(client->pEngineName)};
+                    new_metrics[std::to_string(client->pid)]["ENGINE_NAME"] = {engine_name(client->pEngineName)};
                 }
                 // TODO fps and frametime updates should match other metrics at 500ms
                 // frametimes should still be this fast
