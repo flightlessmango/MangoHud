@@ -14,9 +14,10 @@
 #include <GL/glxext.h>
 std::unique_ptr<OverlayGL> overlay;
 std::shared_ptr<IPCClient> ipc_;
-static void mangohud() {
+static void mangohud(Display *dpy = nullptr) {
     if (!ipc_) ipc_ = std::make_shared<IPCClient>();
     if (!overlay) overlay = std::make_unique<OverlayGL>(nullptr, ipc_);
+    if (dpy) overlay->xdpy = dpy;
     overlay->ipc->add_to_queue(os_time_get_nano());
     overlay->draw();
 }
@@ -26,9 +27,9 @@ EXPORT_C_(EGLBoolean)eglSwapBuffers(EGLDisplay dpy, EGLSurface surf) {
     if (!real_eglSwapBuffers)
         real_eglSwapBuffers = (decltype(real_eglSwapBuffers)) real_dlsym(RTLD_NEXT, "eglSwapBuffers");
 
-    if (dpy != EGL_NO_DISPLAY && surf != EGL_NO_SURFACE) {
+    if (dpy != EGL_NO_DISPLAY && surf != EGL_NO_SURFACE)
         mangohud();
-    }
+
 
     return real_eglSwapBuffers(dpy, surf);
 }
@@ -41,11 +42,9 @@ EXPORT_C_(EGLBoolean) eglSwapBuffersWithDamageKHR(EGLDisplay dpy, EGLSurface sur
             real_dlsym(RTLD_NEXT, "eglSwapBuffersWithDamageKHR");
     }
 
-    if (dpy != EGL_NO_DISPLAY && surf != EGL_NO_SURFACE) {
-        if (eglGetCurrentContext() != EGL_NO_CONTEXT) {
+    if (dpy != EGL_NO_DISPLAY && surf != EGL_NO_SURFACE)
+        if (eglGetCurrentContext() != EGL_NO_CONTEXT)
             mangohud();
-        }
-    }
 
     return real_eglSwapBuffersWithDamageKHR
         ? real_eglSwapBuffersWithDamageKHR(dpy, surf, rects, n_rects)
@@ -60,11 +59,9 @@ EXPORT_C_(EGLBoolean) eglSwapBuffersWithDamageEXT(EGLDisplay dpy, EGLSurface sur
             real_dlsym(RTLD_NEXT, "eglSwapBuffersWithDamageEXT");
     }
 
-    if (dpy != EGL_NO_DISPLAY && surf != EGL_NO_SURFACE) {
-        if (eglGetCurrentContext() != EGL_NO_CONTEXT) {
+    if (dpy != EGL_NO_DISPLAY && surf != EGL_NO_SURFACE)
+        if (eglGetCurrentContext() != EGL_NO_CONTEXT)
             mangohud();
-        }
-    }
 
     return real_eglSwapBuffersWithDamageEXT
         ? real_eglSwapBuffersWithDamageEXT(dpy, surf, rects, n_rects)
@@ -79,8 +76,7 @@ EXPORT_C_(void) glXSwapBuffers(Display* dpy, GLXDrawable drawable) {
     if (!dpy || drawable == 0)
         return real_glXSwapBuffers(dpy, drawable);
 
-    mangohud();
-    overlay->xdpy = dpy;
+    mangohud(dpy);
 
     return real_glXSwapBuffers(dpy, drawable);
 }
@@ -91,8 +87,7 @@ EXPORT_C_(int64_t) glXSwapBuffersMscOML(Display *dpy, GLXDrawable drawable, int6
     if (!real_glXSwapBuffersMscOML)
         real_glXSwapBuffersMscOML = (int64_t (*)(Display*, GLXDrawable, int64_t, int64_t, int64_t))real_dlsym(RTLD_NEXT, "glXSwapBuffersMscOML");
 
-    mangohud();
-    overlay->xdpy = dpy;
+    mangohud(dpy);
 
     return real_glXSwapBuffersMscOML(dpy, drawable, target_msc, divisor, remainder);
 }

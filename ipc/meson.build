@@ -15,7 +15,8 @@ ipc_lib = static_library(
                  render_dep,
                  vkbootstrap_dep,
                  vulkan_dep,
-                 utils_dep],
+                 utils_dep,
+                 vkroots_dep],
   include_directories: [inc_common],
 )
 

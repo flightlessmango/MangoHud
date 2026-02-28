@@ -6,7 +6,6 @@
 #include <GL/glext.h>
 #include <GL/glx.h>
 
-
 GLX::GLX() {
     p_glCreateMemoryObjectsEXT = (PFNGLCREATEMEMORYOBJECTSEXTPROC)glx_gp("glCreateMemoryObjectsEXT");
     p_glDeleteMemoryObjectsEXT = (PFNGLDELETEMEMORYOBJECTSEXTPROC)glx_gp("glDeleteMemoryObjectsEXT");
@@ -14,7 +13,7 @@ GLX::GLX() {
     p_glTexStorageMem2DEXT     = (PFNGLTEXSTORAGEMEM2DEXTPROC)glx_gp("glTexStorageMem2DEXT");
 }
 
-bool GLX::import_dmabuf(const Fdinfo& fdinfo, GLuint& tex) {
+bool GLX::import_dmabuf(const Fdinfo& fdinfo, GLuint& tex, GLuint& memobj, int f) {
     if (!p_glCreateMemoryObjectsEXT || !p_glImportMemoryFdEXT || !p_glTexStorageMem2DEXT) {
         fprintf(stderr, "GLX dmabuf import procs missing\n");
         return false;
@@ -23,10 +22,10 @@ bool GLX::import_dmabuf(const Fdinfo& fdinfo, GLuint& tex) {
     if (!memobj) p_glCreateMemoryObjectsEXT(1, &memobj);
     glBindTexture(GL_TEXTURE_2D, tex);
 
-    const int fd_for_gl = dup(fdinfo.gbm_fd);
-    if (fd_for_gl < 0) return false;
+    const int fd = dup(f);
+    if (fd < 0) return false;
 
-    p_glImportMemoryFdEXT(memobj, fdinfo.plane_size, GL_HANDLE_TYPE_OPAQUE_FD_EXT, fd_for_gl);
+    p_glImportMemoryFdEXT(memobj, fdinfo.plane_size, GL_HANDLE_TYPE_OPAQUE_FD_EXT, fd);
     GLenum err = glGetError();
     if (err != GL_NO_ERROR) {
         fprintf(stderr, "glImportMemoryFdEXT failed: 0x%x\n", err);
@@ -45,13 +44,13 @@ bool GLX::import_dmabuf(const Fdinfo& fdinfo, GLuint& tex) {
 
     err = glGetError();
     if (err != GL_NO_ERROR) {
-        fprintf(stderr, "glTexStorageMem2DEXT failed, GL error 0x%x gbm.fd: %i\n", err, fdinfo.gbm_fd);
+        fprintf(stderr, "glTexStorageMem2DEXT failed, GL error 0x%x gbm.fd: %i\n", err, fd);
         return false;
     }
     return true;
 }
 
-bool GLX::import_opaque_fd(GLuint tex, const Fdinfo& fdinfo) {
+bool GLX::import_opaque_fd(GLuint tex, const Fdinfo& fdinfo, GLuint& memobj, int f) {
     if (!p_glCreateMemoryObjectsEXT || !p_glImportMemoryFdEXT || !p_glTexStorageMem2DEXT) {
         fprintf(stderr, "missing GL_EXT_memory_object_fd procs\n");
         return false;
@@ -65,14 +64,14 @@ bool GLX::import_opaque_fd(GLuint tex, const Fdinfo& fdinfo) {
     glBindTexture(GL_TEXTURE_2D, tex);
     if (drain_gl_errors("glBindTexture")) return false;
 
-    int fd_for_gl = dup(fdinfo.opaque_fd);
-    if (fd_for_gl < 0) {
+    int fd = dup(f);
+    if (fd < 0) {
         perror("dup(opaque_fd)");
         return false;
     }
 
     p_glImportMemoryFdEXT(memobj, (GLsizeiptr)fdinfo.opaque_size,
-                        GL_HANDLE_TYPE_OPAQUE_FD_EXT, fd_for_gl);
+                        GL_HANDLE_TYPE_OPAQUE_FD_EXT, fd);
     if (drain_gl_errors("glImportMemoryFdEXT")) return false;
 
     const GLenum internalFormat = GL_SRGB8_ALPHA8;
@@ -161,29 +160,29 @@ int64_t EGL::renderer() {
     return atoi(strrchr(render, 'D') + 1);
 }
 
-void EGL::import_dmabuf(const Fdinfo& fdinfo, GLuint& tex) {
+EGLDisplay EGL::import_dmabuf(const Fdinfo& fdinfo, GLuint& tex, EGLImageKHR& image, int f) {
     if (renderer() != fdinfo.server_render_minor)
         printf("this is not on the same GPU, bail.");
 
     EGLDisplay dpy = eglGetCurrentDisplay();
-    if (dpy == EGL_NO_DISPLAY) return;
+    if (dpy == EGL_NO_DISPLAY) return dpy;
 
     const EGLint img_attrs[] = {
         EGL_WIDTH,  (EGLint)fdinfo.w,
         EGL_HEIGHT, (EGLint)fdinfo.h,
         EGL_LINUX_DRM_FOURCC_EXT, (EGLint)fdinfo.fourcc,
-        EGL_DMA_BUF_PLANE0_FD_EXT, fdinfo.gbm_fd,
+        EGL_DMA_BUF_PLANE0_FD_EXT, f,
         EGL_DMA_BUF_PLANE0_OFFSET_EXT, (EGLint)fdinfo.dmabuf_offset,
         EGL_DMA_BUF_PLANE0_PITCH_EXT,  (EGLint)fdinfo.stride,
         EGL_NONE
     };
 
-    EGLImageKHR img = p_eglCreateImageKHR(dpy, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT,
+    image = p_eglCreateImageKHR(dpy, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT,
                                         (EGLClientBuffer)NULL, img_attrs);
-    if (img == EGL_NO_IMAGE_KHR) {
+    if (image == EGL_NO_IMAGE_KHR) {
         EGLint err = eglGetError();
         fprintf(stderr, "eglCreateImageKHR failed, EGL error 0x%x\n", err);
-        return;
+        return dpy;
     }
 
     glBindTexture(GL_TEXTURE_2D, tex);
@@ -193,12 +192,14 @@ void EGL::import_dmabuf(const Fdinfo& fdinfo, GLuint& tex) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    p_glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, (GLeglImageOES)img);
+    p_glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, (GLeglImageOES)image);
     GLenum err = glGetError();
     if (err != GL_NO_ERROR) {
         fprintf(stderr, "glEGLImageTargetTexture2DOES failed, GL error 0x%x\n", err);
-        return;
+        return dpy;
     }
+
+    return dpy;
 }
 
 OverlayGL::OverlayGL(Display* xdpy_, std::shared_ptr<IPCClient> ipc_) : xdpy(xdpy_), ipc(ipc_) {
@@ -213,52 +214,78 @@ OverlayGL::OverlayGL(Display* xdpy_, std::shared_ptr<IPCClient> ipc_) : xdpy(xdp
     }
 
     std::string node = *nodes.begin();
-    ipc->start(renderer, pEngineName);
+    ipc->start(renderer, pEngineName, 4, ipc_);
 }
 
-void OverlayGL::init(CtxRes& r) {
-    bind_texture(r);
-    if (glXGetCurrentContext()) {
-        if (!glx->import_dmabuf(fdinfo, r.tex))
-            glx->import_opaque_fd(r.tex, fdinfo);
+CtxRes* OverlayGL::get_ctx() {
+    {
+        auto r = glx->ctx();
+         if (r) {
+            if (r->inited)
+                return r;
+
+            program(r);
+            vao_vbo(r);
+            create_cache(r, w, h);
+            r->inited = true;
+            return r;
+        }
     }
 
-    if (eglGetCurrentContext() != EGL_NO_CONTEXT)
-        egl->import_dmabuf(fdinfo, r.tex);
+    {
+        auto r = egl->ctx();
+        if (r) {
+            if (r->inited)
+                return r;
 
-    program(r);
-    vao_vbo(r);
-    create_cache(r, (int)fdinfo.w, (int)fdinfo.h);
+            program(r);
+            vao_vbo(r);
+            create_cache(r, w, h);
+            r->inited = true;
+            return r;
+        }
+    }
+
+    return nullptr;
 }
 
 void OverlayGL::draw() {
+    if (!ipc->connected.load())
+        return;
+
     GLState s;
-    {
-        std::lock_guard lock(ipc->m);
-        fdinfo = ipc->fdinfo;
-    }
-
-    bool have_new = false;
-    int acquire_fd = ipc->ready_frame();
-    if (acquire_fd >= 0 && (fdinfo.gbm_fd >= 0 || fdinfo.opaque_fd >= 0)) {
-        have_new = true;
-        close(acquire_fd);
-    }
-
-    auto& c = glx->ctx();
-    if (!c.inited) {
-        if (!have_new)
+    CtxRes* c = nullptr;
+    c = get_ctx();
+    if (ipc->needs_import.load()) {
+        if (!c)
             return;
 
-        init(c);
-        c.inited = true;
+        std::lock_guard lock(ipc->m);
+        fdinfo = std::move(ipc->fdinfo);
+        c->dmabufs.clear();
+        for (auto& fd : fdinfo.dmabuf_buffer) {
+            auto buf = std::make_unique<dmabuf>();
+            import_dmabuf(buf.get(), fd);
+            c->dmabufs.push_back(std::move(buf));
+        }
+        ipc->needs_import.store(false);
+        inited = true;
     }
 
-    if (have_new) {
+    if (!inited)
+        return;
+
+    if (current_slot == -1)
+        current_slot = ipc->next_frame();
+
+    if (current_slot >= 0) {
         glDisable(GL_FRAMEBUFFER_SRGB);
         sample_dmabuf(c, fdinfo, s.saved);
-        release_fence(ipc.get(), fdinfo.gbm_fd);
+        release_fence(ipc.get(), fdinfo.dmabuf_buffer[current_slot].get());
     }
+
+    if (!c)
+        return;
 
     const int surfW = s.saved.viewport[2];
     const int surfH = s.saved.viewport[3];
@@ -271,17 +298,17 @@ void OverlayGL::draw() {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    glUseProgram(c.prog);
-    if (c.uTexLoc >= 0)        glUniform1i(c.uTexLoc, 0);
-    if (c.uFlipYLoc >= 0)      glUniform1i(c.uFlipYLoc, 0);
-    if (c.uSwapRBLoc >= 0)     glUniform1i(c.uSwapRBLoc, 0);
-    if (c.uDecodeSRGBLoc >= 0)  glUniform1i(c.uDecodeSRGBLoc, 0);
+    glUseProgram(c->prog);
+    if (c->uTexLoc >= 0)        glUniform1i(c->uTexLoc, 0);
+    if (c->uFlipYLoc >= 0)      glUniform1i(c->uFlipYLoc, 0);
+    if (c->uSwapRBLoc >= 0)     glUniform1i(c->uSwapRBLoc, 0);
+    if (c->uDecodeSRGBLoc >= 0)  glUniform1i(c->uDecodeSRGBLoc, 0);
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, c.cache_tex);
+    glBindTexture(GL_TEXTURE_2D, c->cache_tex);
     glEnable(GL_FRAMEBUFFER_SRGB);
-    unsigned drawW = std::min((unsigned)c.cache_w, (unsigned)surfW);
-    unsigned drawH = std::min((unsigned)c.cache_h, (unsigned)surfH);
+    unsigned drawW = std::min((unsigned)c->cache_w, (unsigned)surfW);
+    unsigned drawH = std::min((unsigned)c->cache_h, (unsigned)surfH);
 
     float ndcW = 2.0f * (float)drawW / (float)surfW;
     float ndcH = 2.0f * (float)drawH / (float)surfH;
@@ -291,8 +318,8 @@ void OverlayGL::draw() {
     float t =  1.0f;
     float b =  1.0f - ndcH;
 
-    float uMax = (c.cache_w > 0) ? ((float)drawW / (float)c.cache_w) : 1.0f;
-    float vMax = (c.cache_h > 0) ? ((float)drawH / (float)c.cache_h) : 1.0f;
+    float uMax = (c->cache_w > 0) ? ((float)drawW / (float)c->cache_w) : 1.0f;
+    float vMax = (c->cache_h > 0) ? ((float)drawH / (float)c->cache_h) : 1.0f;
 
     float overlay_verts[] = {
         l, b, 0.0f, 0.0f,
@@ -301,8 +328,8 @@ void OverlayGL::draw() {
         r, t, uMax, vMax,
     };
 
-    glBindVertexArray(c.vao);
-    glBindBuffer(GL_ARRAY_BUFFER, c.vbo);
+    glBindVertexArray(c->vao);
+    glBindBuffer(GL_ARRAY_BUFFER, c->vbo);
     glBufferSubData(GL_ARRAY_BUFFER, 0, (GLsizeiptr)sizeof(overlay_verts), overlay_verts);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glDisable(GL_FRAMEBUFFER_SRGB);
@@ -343,8 +370,8 @@ GLuint OverlayGL::link_program(GLuint vs, GLuint fs) {
     return p;
 }
 
-void OverlayGL::program(CtxRes& r) {
-    if (r.prog) return;
+void OverlayGL::program(CtxRes* r) {
+    if (r->prog) return;
 
     const char *vs_src =
         "#version 330 core\n"
@@ -381,44 +408,34 @@ void OverlayGL::program(CtxRes& r) {
 
     GLuint vs = compile_shader(GL_VERTEX_SHADER, vs_src);
     GLuint fs = compile_shader(GL_FRAGMENT_SHADER, fs_src);
-    r.prog = link_program(vs, fs);
+    r->prog = link_program(vs, fs);
     glDeleteShader(vs);
     glDeleteShader(fs);
 
-    r.uTexLoc = glGetUniformLocation(r.prog, "uTex");
-    r.uFlipYLoc      = glGetUniformLocation(r.prog, "uFlipY");
-    r.uDecodeSRGBLoc = glGetUniformLocation(r.prog, "uDecodeSRGB");
-    r.uSwapRBLoc     = glGetUniformLocation(r.prog, "uSwapRB");
+    r->uTexLoc = glGetUniformLocation(r->prog, "uTex");
+    r->uFlipYLoc      = glGetUniformLocation(r->prog, "uFlipY");
+    r->uDecodeSRGBLoc = glGetUniformLocation(r->prog, "uDecodeSRGB");
+    r->uSwapRBLoc     = glGetUniformLocation(r->prog, "uSwapRB");
 }
 
-void OverlayGL::bind_texture(CtxRes& r) {
-    if (!r.tex) glGenTextures(1, &r.tex);
-
-    glBindTexture(GL_TEXTURE_2D, r.tex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-}
-
-void OverlayGL::create_cache(CtxRes& r, int w, int h) {
+void OverlayGL::create_cache(CtxRes* r, int w, int h) {
     if (w <= 0 || h <= 0) return;
-    if (r.cache_tex && r.cache_fbo && r.cache_w == w && r.cache_h == h) return;
+    if (r->cache_tex && r->cache_fbo && r->cache_w == w && r->cache_h == h) return;
 
-    r.cache_w = w;
-    r.cache_h = h;
+    r->cache_w = w;
+    r->cache_h = h;
 
-    if (!r.cache_tex) glGenTextures(1, &r.cache_tex);
-    glBindTexture(GL_TEXTURE_2D, r.cache_tex);
+    if (!r->cache_tex) glGenTextures(1, &r->cache_tex);
+    glBindTexture(GL_TEXTURE_2D, r->cache_tex);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
-    if (!r.cache_fbo) glGenFramebuffers(1, &r.cache_fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, r.cache_fbo);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, r.cache_tex, 0);
+    if (!r->cache_fbo) glGenFramebuffers(1, &r->cache_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, r->cache_fbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, r->cache_tex, 0);
 
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if (status != GL_FRAMEBUFFER_COMPLETE) {
@@ -428,25 +445,25 @@ void OverlayGL::create_cache(CtxRes& r, int w, int h) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void OverlayGL::sample_dmabuf(CtxRes& r, const Fdinfo& fdinfo, const GLState::state& saved) {
+void OverlayGL::sample_dmabuf(CtxRes* r, const Fdinfo& fdinfo, const GLState::state& saved) {
     create_cache(r, (int)fdinfo.w, (int)fdinfo.h);
 
-    glBindFramebuffer(GL_FRAMEBUFFER, r.cache_fbo);
-    glViewport(0, 0, (GLsizei)r.cache_w, (GLsizei)r.cache_h);
+    glBindFramebuffer(GL_FRAMEBUFFER, r->cache_fbo);
+    glViewport(0, 0, (GLsizei)r->cache_w, (GLsizei)r->cache_h);
     glDisable(GL_SCISSOR_TEST);
     glClearColor(0,0,0,0);
     glClear(GL_COLOR_BUFFER_BIT);
 
     glDisable(GL_BLEND);
 
-    glUseProgram(r.prog);
-    glUseProgram(r.prog);
-    if (r.uTexLoc >= 0) glUniform1i(r.uTexLoc, 0);
-    if (r.uFlipYLoc >= 0) glUniform1i(r.uFlipYLoc, 1);
-    if (r.uDecodeSRGBLoc >= 0) glUniform1i(r.uDecodeSRGBLoc, 1);
+    glUseProgram(r->prog);
+    glUseProgram(r->prog);
+    if (r->uTexLoc >= 0) glUniform1i(r->uTexLoc, 0);
+    if (r->uFlipYLoc >= 0) glUniform1i(r->uFlipYLoc, 1);
+    if (r->uDecodeSRGBLoc >= 0) glUniform1i(r->uDecodeSRGBLoc, 1);
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, r.tex);
+    glBindTexture(GL_TEXTURE_2D, r->dmabufs[current_slot]->tex);
 
     // Fullscreen quad into cache
     const float verts[] = {
@@ -456,8 +473,8 @@ void OverlayGL::sample_dmabuf(CtxRes& r, const Fdinfo& fdinfo, const GLState::st
         1.f,  1.f, 1.f, 1.f,
     };
 
-    glBindVertexArray(r.vao);
-    glBindBuffer(GL_ARRAY_BUFFER, r.vbo);
+    glBindVertexArray(r->vao);
+    glBindBuffer(GL_ARRAY_BUFFER, r->vbo);
     glBufferSubData(GL_ARRAY_BUFFER, 0, (GLsizeiptr)sizeof(verts), verts);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -465,21 +482,6 @@ void OverlayGL::sample_dmabuf(CtxRes& r, const Fdinfo& fdinfo, const GLState::st
 
     glBindFramebuffer(GL_FRAMEBUFFER, saved.fbo);
     glViewport(saved.viewport[0], saved.viewport[1], saved.viewport[2], saved.viewport[3]);
-}
-
-void OverlayGL::draw_dmabuf(CtxRes& r) {
-    if (!r.cache_tex) return;
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    glUseProgram(r.prog);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, r.cache_tex);
-    if (r.uTexLoc >= 0) glUniform1i(r.uTexLoc, 0);
-
-    glBindVertexArray(r.vao);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 
 int OverlayGL::release_fence(IPCClient* ipc, int dmabuf_fd, bool write) {
@@ -502,6 +504,7 @@ int OverlayGL::release_fence(IPCClient* ipc, int dmabuf_fd, bool write) {
         return -1;
     }
 
-    ipc->queue_fence(data.fd);
+    ipc->frame_ready(current_slot, data.fd);
+    current_slot = -1;
     return 0;
 }

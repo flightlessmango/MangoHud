@@ -313,6 +313,7 @@ endif
 # if get_option('mangoapp')
   # glfw3_dep = dependency('glfw3')
 # endif
+vkroots_dep = subproject('vkroots').get_variable('vkroots_dep')
 inc_common = [
   include_directories('include'),
   include_directories('server'),

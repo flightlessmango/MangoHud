@@ -218,7 +218,6 @@ std::unordered_set<std::string> find_render_nodes(pid_t pid) {
             }
         }
     }
-    printf("out.size() %i\n", (int)out.size());
     return out;
 }
 

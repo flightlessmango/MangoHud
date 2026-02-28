@@ -7,6 +7,7 @@
 #include <functional>
 #include <queue>
 #include <memory>
+#include <future>
 #include <systemd/sd-bus.h>
 #include "../render/shared.h"
 #include <poll.h>
@@ -32,10 +33,12 @@ struct Fdinfo {
     int64_t server_render_minor = 0;
 
     bool has_gbm;
-    int gbm_fd = -1;
-    int opaque_fd = -1;
     uint64_t opaque_size = 0;
     uint64_t opaque_offset = 0;
+
+    std::vector<unique_fd> dmabuf_buffer;
+    std::vector<unique_fd> opaque_buffer;
+    std::vector<unique_fd> semaphores;
 };
 
 class IPCServer;
@@ -43,8 +46,9 @@ class MangoHudServer;
 class Client {
 public:
     pid_t pid;
-    mutable std::mutex m;
-    mutable std::shared_ptr<hudTable> table;
+    std::mutex m;
+    std::condition_variable cv;
+    std::shared_ptr<hudTable> table;
     std::deque<Sample> samples;
     std::mutex samples_m;
     std::deque<float> frametimes;
@@ -63,62 +67,12 @@ public:
     sd_bus* bus;
     sd_bus_slot* slot;
     std::atomic<bool> active {true};
+    std::deque<ready_frame> frame_queue;
+    std::atomic<bool> stop {false};
 
     Client(pid_t pid_, IPCServer* ipc_, MangoHudServer* server_, sd_bus* bus_)
            : pid(pid_), frametimes(200, 0.0f), resources(std::make_shared<clientRes>()),
-           ipc(ipc_), server(server_), bus(bus_)
-    {
-        std::string match_handshake =
-            "type='signal',"
-            "path='" + std::string(kObjPath) + "',"
-            "interface='" + std::string(kIface) + "',"
-            "member='on_connect'";
-
-        int r = sd_bus_add_match(bus, &handshake_slot, match_handshake.c_str(), &Client::on_connect, this);
-        if (r < 0) {
-            SPDLOG_ERROR("match_handshake {} ({}) ObjPath: {} Iface: {}", r, strerror(-r), kObjPath, kIface);
-            set_dead();
-        }
-
-        std::string match_release_fence =
-            "type='signal',"
-            "path='" + std::string(kObjPath) + "',"
-            "interface='" + std::string(kIface) + "',"
-            "member='release_fence'";
-
-        r = sd_bus_add_match(bus, &release_fence_slot, match_release_fence.c_str(), &Client::release_fence, this);
-        if (r < 0) {
-            SPDLOG_ERROR("match_release_fence {} ({}) ObjPath: {} Iface: {}", r, strerror(-r), kObjPath, kIface);
-            set_dead();
-        }
-
-        std::string match_frame_samples =
-            "type='signal',"
-            "path='" + std::string(kObjPath) + "',"
-            "interface='" + std::string(kIface) + "',"
-            "member='frame_samples'";
-
-        r = sd_bus_add_match(bus, &frame_samples_slot, match_frame_samples.c_str(), &Client::frame_samples, this);
-        if (r < 0) {
-            SPDLOG_ERROR("match_release_fence {} ({}) ObjPath: {} Iface: {}", r, strerror(-r), kObjPath, kIface);
-            set_dead();
-        }
-
-        std::string match_spdlog =
-            "type='signal',"
-            "path='" + std::string(kObjPath) + "',"
-            "interface='" + std::string(kIface) + "',"
-            "member='spdlog'";
-
-        r = sd_bus_add_match(bus, &spdlog_slot, match_spdlog.c_str(), &Client::spdlog_msg, this);
-        if (r < 0) {
-            SPDLOG_ERROR("match_spdlog {} ({}) ObjPath: {} Iface: {}", r, strerror(-r), kObjPath, kIface);
-            set_dead();
-        }
-
-        thread = std::thread(&Client::dbus_thread, this);
-        run_t =  std::thread(&Client::run, this);
-    }
+           ipc(ipc_), server(server_), bus(bus_) {}
 
     float avg_fps_from_samples() {
         std::lock_guard lock(samples_m);
@@ -141,23 +95,23 @@ public:
         return previous_fps;
     }
 
-    bool ready_frame();
+    void init(std::shared_ptr<Client>& shared);
     void send_dmabuf();
     void send_config();
-    void send_fence();
     static int on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_error);
     void set_dead();
+    void frame_ready(uint32_t idx);
+    void stop_and_join();
 
     ~Client();
 
 private:
-    std::shared_ptr<VkCtx> vk;
     std::thread thread;
-    std::atomic<bool> stop {false};
     sd_bus_slot* handshake_slot;
-    sd_bus_slot* release_fence_slot;
     sd_bus_slot* frame_samples_slot;
     sd_bus_slot* spdlog_slot;
+    sd_bus_slot* frame_slot;
+    std::mutex frame_m;
     std::thread run_t;
     sd_event* event = nullptr;
     sd_event_source* stop_src = nullptr;
@@ -165,8 +119,10 @@ private:
     int stop_eventfd = -1;
     int work_eventfd = -1;
     std::mutex work_mtx;
-    std::queue<std::function<void()>> work_q;
+    std::queue<std::packaged_task<void()>> work_q;
     std::shared_ptr<spdlog::logger> logger;
+    int buffer_size;
+    std::weak_ptr<Client> self_weak;
 
     static inline const sd_bus_vtable vtable[] = {
         SD_BUS_VTABLE_START(0),
@@ -177,12 +133,26 @@ private:
     void queue_frame();
     void dbus_thread();
     void run();
+    int try_acquire_buffer();
+    void setup_handshake(std::string member, sd_bus_slot** slot,
+                         sd_bus_message_handler_t callback, std::shared_ptr<Client>& shared);
 
-    static int release_fence(sd_bus_message* m, void* userdata, sd_bus_error*);
     static int frame_samples(sd_bus_message* m, void* userdata, sd_bus_error*);
     static int spdlog_msg(sd_bus_message* m, void* userdata, sd_bus_error*);
+    static int on_frame(sd_bus_message* m, void* userdata, sd_bus_error*);
     static int on_bus_disconnected(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
     static int on_stop_event(sd_event_source *s, int fd, uint32_t revents, void *userdata);
     static int on_work_event(sd_event_source *s, int fd, uint32_t revents, void *userdata);
-    void post(std::function<void()> fn);
+    template <class F>
+    void post(F&& fn) {
+        {
+            std::lock_guard<std::mutex> lock(work_mtx);
+            work_q.emplace(std::forward<F>(fn));
+        }
+
+        uint64_t one = 1;
+        ssize_t n = write(work_eventfd, &one, sizeof(one));
+        (void)n;
+    }
+    void wait_on_fences();
 };

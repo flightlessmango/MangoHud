@@ -10,7 +10,6 @@ class Font {
         ImFont* small_font;
         ImFont* text_font;
         ImFont* secondary_font;
-        std::shared_mutex m;
         Font(float scale_ = 1, float size_ = 24, float size_secondary_ = 24)
                  : scale(scale_), size(size_), size_secondary(size_secondary_)
         {
@@ -19,7 +18,6 @@ class Font {
             // set_config_options();
             // needs_rebuild();
             {
-                std::unique_lock lock(m);
                 create_fonts(&atlas);
             }
         };

@@ -6,9 +6,11 @@
 #include "font_default.h"
 #include "font.h"
 
+std::mutex m;
+
 void Font::create_fonts(ImFontAtlas* font_atlas)
 {
-
+   std::lock_guard lock(m);
    ImGuiIO& io = ImGui::GetIO();
    io.FontGlobalScale = scale;
    text_font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(

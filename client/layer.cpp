@@ -4,18 +4,15 @@
 
 #include "vkroots.h"
 #include "mesa/os_time.h"
-#include "vulkan.h"
 #include "fps_limiter.h"
+#include "layer.h"
 
 std::string pEngineName;
 uint32_t renderMinor = 0;
-static auto& queue_family = *new std::unordered_map<VkQueue, uint32_t>();
-static auto& q_family_mtx = *new std::mutex();
 PFN_vkSetDeviceLoaderData g_set_device_loader_data = nullptr;
-std::shared_ptr<OverlayVK> overlay_vk;
 std::unique_ptr<fpsLimiter> fps_limiter;
 std::unique_ptr<presentLimiter> present_limiter;
-std::shared_ptr<IPCClient> ipc;
+std::unique_ptr<Layer> layer;
 
 static bool ChainHasSType(const void* head, VkStructureType sType) {
     for (auto* it = (const VkBaseInStructure*)head; it; it = it->pNext) {
@@ -35,7 +32,6 @@ public:
         const VkAllocationCallbacks* pAllocator,
         VkDevice* pDevice)
     {
-
         std::vector<const char*> exts;
         exts.reserve((pCreateInfo ? pCreateInfo->enabledExtensionCount : 0) + 8);
 
@@ -85,6 +81,9 @@ public:
             fprintf(stderr, "we will get validation errors\n");
         }
 
+        if (!layer) layer = std::make_unique<Layer>();
+        layer->loader_data = g_set_device_loader_data;
+
         VkPhysicalDevicePresentIdFeaturesKHR pid{};
         pid.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR;
         pid.presentId = VK_TRUE;
@@ -115,7 +114,6 @@ public:
         const VkAllocationCallbacks*    pAllocator,
         VkInstance*                     pInstance)
     {
-        if (!ipc) ipc = std::make_shared<IPCClient>();
         const char* engine = "";
         if (pCreateInfo && pCreateInfo->pApplicationInfo && pCreateInfo->pApplicationInfo->pEngineName)
             engine = pCreateInfo->pApplicationInfo->pEngineName;
@@ -172,12 +170,6 @@ public:
         if (r != VK_SUCCESS)
             return r;
 
-        auto sc = std::make_shared<swapchain_data>();
-        sc->d = pDispatch;
-        sc->format = pCreateInfo->imageFormat;
-        sc->extent = pCreateInfo->imageExtent;
-        sc->colorspace = pCreateInfo->imageColorSpace;
-
         uint32_t count = 0;
         r = pDispatch->GetSwapchainImagesKHR(pDispatch->Device, *pSwapchain, &count, nullptr);
         if (r != VK_SUCCESS || count == 0) {
@@ -185,138 +177,6 @@ public:
             return (r == VK_SUCCESS) ? VK_ERROR_INITIALIZATION_FAILED : r;
         }
 
-        sc->images.resize(count);
-        r = pDispatch->GetSwapchainImagesKHR(pDispatch->Device, *pSwapchain, &count, sc->images.data());
-        if (r != VK_SUCCESS) {
-            pDispatch->DestroySwapchainKHR(pDispatch->Device, *pSwapchain, pAllocator);
-            return r;
-        }
-
-        sc->views.resize(count, VK_NULL_HANDLE);
-        for (uint32_t i = 0; i < count; i++) {
-            VkImageViewCreateInfo vi{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-            vi.image = sc->images[i];
-            vi.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            vi.format = sc->format;
-            vi.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            vi.subresourceRange.baseMipLevel = 0;
-            vi.subresourceRange.levelCount = 1;
-            vi.subresourceRange.baseArrayLayer = 0;
-            vi.subresourceRange.layerCount = 1;
-
-            r = pDispatch->CreateImageView(pDispatch->Device, &vi, nullptr, &sc->views[i]);
-            if (r != VK_SUCCESS) {
-                for (uint32_t j = 0; j < i; j++)
-                    if (sc->views[j]) pDispatch->DestroyImageView(pDispatch->Device, sc->views[j], nullptr);
-                pDispatch->DestroySwapchainKHR(pDispatch->Device, *pSwapchain, nullptr);
-                return r;
-            }
-        }
-
-        VkAttachmentDescription ad{};
-        ad.format = sc->format;
-        ad.samples = VK_SAMPLE_COUNT_1_BIT;
-        ad.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-        ad.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        ad.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        ad.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        ad.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        ad.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkAttachmentReference aref{};
-        aref.attachment = 0;
-        aref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkSubpassDescription sp{};
-        sp.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        sp.colorAttachmentCount = 1;
-        sp.pColorAttachments = &aref;
-
-        VkSubpassDependency dep{};
-        dep.srcSubpass = VK_SUBPASS_EXTERNAL;
-        dep.dstSubpass = 0;
-        dep.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dep.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dep.srcAccessMask = 0;
-        dep.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-        VkRenderPassCreateInfo rpci{ VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
-        rpci.attachmentCount = 1;
-        rpci.pAttachments = &ad;
-        rpci.subpassCount = 1;
-        rpci.pSubpasses = &sp;
-        rpci.dependencyCount = 1;
-        rpci.pDependencies = &dep;
-
-        r = pDispatch->CreateRenderPass(pDispatch->Device, &rpci, nullptr, &sc->rp);
-        if (r != VK_SUCCESS) {
-            for (auto v : sc->views) if (v) pDispatch->DestroyImageView(pDispatch->Device, v, nullptr);
-            pDispatch->DestroySwapchainKHR(pDispatch->Device, *pSwapchain, nullptr);
-            return r;
-        }
-
-        sc->fb.resize(count, VK_NULL_HANDLE);
-        for (uint32_t i = 0; i < count; i++) {
-            VkImageView att = sc->views[i];
-
-            VkFramebufferCreateInfo fci{ VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
-            fci.renderPass = sc->rp;
-            fci.attachmentCount = 1;
-            fci.pAttachments = &att;
-            fci.width = sc->extent.width;
-            fci.height = sc->extent.height;
-            fci.layers = 1;
-
-            r = pDispatch->CreateFramebuffer(pDispatch->Device, &fci, nullptr, &sc->fb[i]);
-            if (r != VK_SUCCESS) {
-                for (uint32_t j = 0; j < i; j++)
-                    if (sc->fb[j]) pDispatch->DestroyFramebuffer(pDispatch->Device, sc->fb[j], nullptr);
-                if (sc->rp) pDispatch->DestroyRenderPass(pDispatch->Device, sc->rp, nullptr);
-                for (auto v : sc->views) if (v) pDispatch->DestroyImageView(pDispatch->Device, v, nullptr);
-                pDispatch->DestroySwapchainKHR(pDispatch->Device, *pSwapchain, nullptr);
-                return r;
-            }
-        }
-
-        if (!overlay_vk) overlay_vk = std::make_shared<OverlayVK>(g_set_device_loader_data, ipc.get());
-        {
-            std::lock_guard lock(overlay_vk->swapchain_mtx);
-            overlay_vk->swapchains[*pSwapchain] = sc;
-            overlay_vk->g_vkSetDebugUtilsObjectNameEXT =
-            reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(
-                vkGetInstanceProcAddr(pDispatch->pPhysicalDeviceDispatch->Instance, "vkSetDebugUtilsObjectNameEXT"));
-        }
-        return VK_SUCCESS;
-    }
-
-    static void DestroySwapchainKHR(
-    const vkroots::VkDeviceDispatch* pDispatch,
-    VkDevice device,
-    VkSwapchainKHR swapchain,
-    const VkAllocationCallbacks* pAllocator)
-    {
-        SPDLOG_DEBUG("Destroying swapchain {}", (void*)swapchain);
-        auto it = overlay_vk->swapchains.find(swapchain);
-        if (it != overlay_vk->swapchains.end())
-            it->second.reset();
-
-        pDispatch->DestroySwapchainKHR(pDispatch->Device, swapchain, pAllocator);
-    }
-
-    static VkResult QueuePresentKHR(
-        const vkroots::VkDeviceDispatch* pDispatch,
-        VkQueue queue,
-        const VkPresentInfoKHR* pPresentInfo)
-    {
-        // static uint64_t present_counter = 0;
-        // present_counter++;
-        // if ((present_counter % 300) == 0) {
-        //     uint64_t w = fps_limiter->q_limiter->waits.load();
-        //     uint64_t ns = fps_limiter->q_limiter->waited_ns.load();
-        //     uint64_t md = fps_limiter->q_limiter->max_depth_seen.load();
-        //     SPDLOG_ERROR("queueLimiter: waits={}, waited_ms={:.3f}, max_depth={}, inflight={}",
-        //                 w, (double)ns / 1e6, md, fps_limiter->q_limiter->in_flight.size());
-        // }
         if (!renderMinor) {
             VkPhysicalDeviceDrmPropertiesEXT drm_props{};
             drm_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRM_PROPERTIES_EXT;
@@ -334,9 +194,44 @@ public:
             fpGetPhysicalDeviceProperties2KHR(pDispatch->PhysicalDevice, &props2);
             if (drm_props.hasPrimary)
                 renderMinor = drm_props.renderMinor;
-
-            ipc->start(renderMinor, pEngineName);
         }
+
+        if (!layer) layer = std::make_unique<Layer>();
+        layer->init_overlay_resources(pCreateInfo, pDispatch, count);
+        layer->create_swapchain_data(pSwapchain, pCreateInfo, pDispatch);
+
+        layer->g_vkSetDebugUtilsObjectNameEXT =
+        reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(
+            vkGetInstanceProcAddr(pDispatch->pPhysicalDeviceDispatch->Instance, "vkSetDebugUtilsObjectNameEXT"));
+        return VK_SUCCESS;
+    }
+
+    static void DestroySwapchainKHR(
+    const vkroots::VkDeviceDispatch* pDispatch,
+    VkDevice device,
+    VkSwapchainKHR swapchain,
+    const VkAllocationCallbacks* pAllocator)
+    {
+        {
+            std::lock_guard lock(layer->swapchain_mtx);
+            auto it = layer->swapchains.find(swapchain);
+            if (it != layer->swapchains.end())
+                layer->swapchains.erase(it);
+        }
+
+        pDispatch->DestroySwapchainKHR(pDispatch->Device, swapchain, pAllocator);
+    }
+
+    static VkResult QueuePresentKHR(
+        const vkroots::VkDeviceDispatch* pDispatch,
+        VkQueue queue,
+        const VkPresentInfoKHR* pPresentInfo)
+    {
+        layer->init_cmd(queue);
+        uint32_t swapchain_image_count = 0;
+        pDispatch->GetSwapchainImagesKHR(pDispatch->Device, pPresentInfo->pSwapchains[0], &swapchain_image_count, nullptr);
+        uint32_t imageIndex = pPresentInfo->pImageIndices[0];
+        VkPresentInfoKHR pi = *pPresentInfo;
 
         if (!fps_limiter)
             fps_limiter = std::make_unique<fpsLimiter>(false);
@@ -347,28 +242,16 @@ public:
         }
 
         fps_limiter->limit(true);
-
-        if (!overlay_vk) overlay_vk = std::make_shared<OverlayVK>(g_set_device_loader_data, ipc.get());
-        ipc->add_to_queue(os_time_get_nano());
+        layer->ipc->add_to_queue(os_time_get_nano());
         // TODO Probably don't do this every frame
-        fps_limiter->set_fps_limit(ipc->fps_limit);
+        fps_limiter->set_fps_limit(layer->ipc->fps_limit);
 
-        uint32_t family = 0;
+        layer->ipc->start(renderMinor, pEngineName, swapchain_image_count, layer->ipc);
         {
-            std::lock_guard lock(q_family_mtx);
-            auto it = queue_family.find(queue);
-            if (it != queue_family.end())
-                family = it->second;
+            std::lock_guard lock(layer->overlay_vk->m);
+            if (!layer->overlay_vk->draw(pPresentInfo->pSwapchains[0], imageIndex, queue))
+                return pDispatch->QueuePresentKHR(queue, pPresentInfo);
         }
-
-        uint32_t swapchain_image_count = 0;
-        pDispatch->GetSwapchainImagesKHR(pDispatch->Device, pPresentInfo->pSwapchains[0], &swapchain_image_count, nullptr);
-        uint32_t imageIndex = pPresentInfo->pImageIndices[0];
-        VkPresentInfoKHR pi = *pPresentInfo;
-
-        if (!overlay_vk->draw(pDispatch, pPresentInfo->pSwapchains[0],
-            family, swapchain_image_count, imageIndex, &pi, queue))
-            return pDispatch->QueuePresentKHR(queue, pPresentInfo);
 
         if (!present_limiter)
             present_limiter = std::make_unique<presentLimiter>(pDispatch->WaitForPresentKHR);
@@ -396,15 +279,17 @@ public:
             ids_ptr = tl_ids.data();
         }
 
-        // if (fps_limiter && fps_limiter->active)
-        //     present_limiter->throttle_before_present(pDispatch->Device, pi.pSwapchains[0], 1);
+        VkResult r;
 
-        VkResult r = pDispatch->QueuePresentKHR(queue, &pi);
+        {
+            std::lock_guard lock(layer->overlay_vk->m);
+            r = pDispatch->QueuePresentKHR(queue, &pi);
+        }
 
         if (r == VK_SUCCESS || r == VK_SUBOPTIMAL_KHR) {
-            if (ids_ptr) {
+            if (ids_ptr)
                 present_limiter->on_present_result(&pi, ids_ptr, r);
-            }
+
 
             if (fps_limiter && fps_limiter->active)
                 present_limiter->throttle(pDispatch->Device, pi.pSwapchains[0], 1);
@@ -421,23 +306,30 @@ public:
         VkQueue* pQueue)
     {
         pDispatch->GetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
-        std::lock_guard lock(q_family_mtx);
-        queue_family.try_emplace(*pQueue, queueFamilyIndex);
+        if (!layer) layer = std::make_unique<Layer>();
+        {
+            std::lock_guard lock(layer->q_family_mtx);
+            layer->queue_family.try_emplace(*pQueue, queueFamilyIndex);
+        }
     }
 
     static void GetDeviceQueue2(const vkroots::VkDeviceDispatch* pDispatch,
-            VkDevice device,
-            const VkDeviceQueueInfo2* pQueueInfo,
-            VkQueue* pQueue)
+                                VkDevice device,
+                                const VkDeviceQueueInfo2* pQueueInfo,
+                                VkQueue* pQueue)
     {
         pDispatch->GetDeviceQueue2(device, pQueueInfo, pQueue);
-        std::lock_guard lock(q_family_mtx);
-        queue_family.try_emplace(*pQueue, pQueueInfo->queueFamilyIndex);
+        if (!layer) layer = std::make_unique<Layer>();
+        {
+            std::lock_guard lock(layer->q_family_mtx);
+            layer->queue_family.try_emplace(*pQueue, pQueueInfo->queueFamilyIndex);
+        }
     }
 
     static void DestroyDevice(const vkroots::VkDeviceDispatch* d, VkDevice device, const VkAllocationCallbacks* pAllocator) {
         d->DeviceWaitIdle(device);
-        if (overlay_vk) overlay_vk.reset();
+        if (layer) layer.reset();
+        fps_limiter.reset();
 
         d->DestroyDevice(device, pAllocator);
     }
@@ -451,12 +343,13 @@ public:
         auto& q_limiter = fps_limiter->q_limiter;
         if (q_limiter->is_present_queue(queue))
             q_limiter->throttle_before_submit(d);
-
-        VkResult r = d->QueueSubmit(queue, submitCount, pSubmits, fence);
-        if (r != VK_SUCCESS)
-            return r;
+        {
+            std::lock_guard lock(layer->overlay_vk->m);
+            d->QueueSubmit(queue, submitCount, pSubmits, fence);
+        }
 
         if (q_limiter->is_present_queue(queue)) {
+            std::lock_guard lock(layer->overlay_vk->m);
             VkResult r2 = q_limiter->mark_after_submit(d, queue);
             if (r2 != VK_SUCCESS)
                 return r2;

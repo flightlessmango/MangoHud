@@ -10,7 +10,11 @@ int main() {
 
 void MangoHudServer::loop() {
     while (!stop.load()) {
-            ipc->prune_clients();
-            usleep(7000);
-        }
+        if (config->maybe_reload_config())
+            for (auto client : ipc->clients)
+                client->send_config();
+
+        ipc->prune_clients();
+        sleep(1);
+    }
 }

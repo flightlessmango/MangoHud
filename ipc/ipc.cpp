@@ -54,6 +54,7 @@ void IPCServer::prune_clients() {
     for (auto it = clients.begin(); it != clients.end(); ) {
         if (!(*it)->active.load()) {
             SPDLOG_DEBUG("Client disconnected {}", (*it)->pid);
+            (*it)->stop_and_join();
             it = clients.erase(it);
         } else {
             ++it;
@@ -111,6 +112,7 @@ int IPCServer::on_request_fd(sd_bus_message *m, void *userdata, sd_bus_error *) 
     if (r < 0) {
         sd_bus_unref(client_bus);
         close(client_fd);
+        close(server_fd);
         return r;
     }
 
@@ -125,8 +127,9 @@ int IPCServer::on_request_fd(sd_bus_message *m, void *userdata, sd_bus_error *) 
         self->prune_clients();
         std::lock_guard lock(self->clients_mtx);
         auto client = std::make_shared<Client>(pid, self, self->server, client_bus);
-        SPDLOG_DEBUG("Client connected {}", client->pid);
+        client->init(client);
         self->clients.push_back(client);
+        SPDLOG_DEBUG("Client connected {}", client->pid);
     }
 
     r = sd_bus_reply_method_return(m, "h", client_fd);

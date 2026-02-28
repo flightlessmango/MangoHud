@@ -37,7 +37,7 @@ public:
 
             if (d->GetFenceStatus(d->Device, oldest) == VK_NOT_READY) {
                 int64_t t0 = os_time_get_nano();
-                d->WaitForFences(d->Device, 1, &oldest, VK_TRUE, UINT64_MAX);
+                d->WaitForFences(d->Device, 1, &oldest, VK_TRUE, 100'000'000);
                 int64_t t1 = os_time_get_nano();
 
                 waits.fetch_add(1, std::memory_order_relaxed);

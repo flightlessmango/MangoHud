@@ -7,11 +7,10 @@
 #include "imgui.h"
 #include "font/font.h"
 #include "../server/config.h"
+std::mutex init_m;
 
-ImGuiCtx::ImGuiCtx(VkDevice device_, VkPhysicalDevice phys_, VkInstance instance_,
-                   VkQueue queue_, uint32_t queue_idx_, VkFormat fmt_) :
-                   device(device_), physicalDevice(phys_), instance(instance_),
-                   graphicsQueue(queue_), graphicsQueueIdx(queue_idx_), fmt(fmt_){
+ImGuiCtx::ImGuiCtx(VkCtx* vk_, int buffer_size_) : vk(vk_), buffer_size(buffer_size_) {
+    std::lock_guard lock(init_m);
     init();
 };
 
@@ -22,26 +21,42 @@ bool ImGuiCtx::init() {
     implot = ImPlot::CreateContext();
     ImPlot::SetCurrentContext(implot);
     ImGui::StyleColorsDark();
-    fonts = std::make_unique<Font>();
+    fonts = std::make_shared<Font>();
+
+    VkSemaphoreCreateInfo sem_info = {};
+    sem_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    vkCreateSemaphore(vk->device, &sem_info, nullptr, &sema);
+
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableGamepad;
+    io.IniFilename = nullptr;
+    io.LogFilename = nullptr;
+    io.BackendPlatformName = "headless";
+    io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
+
+    auto& style = ImGui::GetStyle();
+    style.CellPadding = ImVec2(5.f, 0.f);
+    style.WindowBorderSize = 0.f;
+    style.WindowMinSize = ImVec2(4, 4);
 
     ImGui_ImplVulkan_InitInfo ii{};
-    ii.Instance = instance;
-    ii.PhysicalDevice = physicalDevice;
-    ii.Device = device;
-    ii.QueueFamily = graphicsQueueIdx;
-    ii.Queue = graphicsQueue;
+    ii.Instance = vk->instance;
+    ii.PhysicalDevice = vk->physicalDevice;
+    ii.Device = vk->device;
+    ii.QueueFamily = vk->graphicsQueueFamilyIndex;
+    ii.Queue = vk->graphicsQueue;
     ii.DescriptorPool = create_desc_pool();
 
-    ii.MinImageCount = 2;
-    ii.ImageCount = 2;
+    ii.MinImageCount = 256;
+    ii.ImageCount = 256;
     ii.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
     ii.UseDynamicRendering = true;
     ii.PipelineRenderingCreateInfo = VkPipelineRenderingCreateInfoKHR{VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR};
     ii.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
-    ii.PipelineRenderingCreateInfo.pColorAttachmentFormats = &fmt;
+    ii.PipelineRenderingCreateInfo.pColorAttachmentFormats = &vk->fmt;
 
-    create_cmd();
     ImGui_ImplVulkan_Init(&ii);
     ImGui_ImplVulkan_CreateFontsTexture();
     return true;
@@ -206,7 +221,7 @@ void ImGuiCtx::draw_graph_plot(const TextCell& tc) {
     ImGui::PopID();
 }
 
-HudLayout ImGuiCtx::build_layout(std::shared_ptr<hudTable>& table) {
+HudLayout ImGuiCtx::build_layout(hudTable* table) {
     HudLayout L{};
     L.cols = table->cols;
 
@@ -289,20 +304,18 @@ HudLayout ImGuiCtx::build_layout(std::shared_ptr<hudTable>& table) {
     return L;
 }
 
-void ImGuiCtx::draw(std::shared_ptr<clientRes>& r) {
-    std::shared_ptr<hudTable> local_table;
+bool ImGuiCtx::draw(std::shared_ptr<clientRes>& r, slot_t &buf) {
+    hudTable local_table;
     {
         std::lock_guard lock(r->table_m);
-        local_table = r->table;
+        local_table = *r->table;
     }
+    std::lock_guard lock(m);
     ImGui::SetCurrentContext(imgui);
     ImPlot::SetCurrentContext(implot);
+
     ImGuiIO& io = ImGui::GetIO();
-    io.IniFilename = nullptr;
-    io.BackendPlatformName = "headless";
     io.DisplaySize = {float(r->w), float(r->h)};
-    io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
-    io.DeltaTime = 1.0f / 144.0f;
 
     ImGui_ImplVulkan_NewFrame();
     ImGui::NewFrame();
@@ -312,9 +325,6 @@ void ImGuiCtx::draw(std::shared_ptr<clientRes>& r) {
     ImGui::SetNextWindowBgAlpha(0.5f);
 
     auto& style = ImGui::GetStyle();
-    style.CellPadding = ImVec2(5.f, 0.f);
-    style.WindowBorderSize = 0.f;
-    style.WindowMinSize = ImVec2(4, 4);
 
     ImVec4 white = ImVec4(1, 1, 1, 1);
 
@@ -324,13 +334,13 @@ void ImGuiCtx::draw(std::shared_ptr<clientRes>& r) {
 
     ImGuiWindowFlags w_flags = ImGuiWindowFlags_NoDecoration;
     ImGui::Begin("HUD", nullptr, w_flags);
-    HudLayout layout = build_layout(local_table);
+    HudLayout layout = build_layout(&local_table);
 
-    const int cols = local_table->cols;
+    const int cols = local_table.cols;
     if (cols > 0 && ImGui::BeginTable("overlay", cols, ImGuiTableFlags_NoClip)) {
         ImGui::PushFont(fonts->text_font);
 
-        for (auto& row : local_table->rows) {
+        for (auto& row : local_table.rows) {
             ImGui::TableNextRow();
             for (int c = 0; c < cols; c++) {
                 ImGui::TableSetColumnIndex(c);
@@ -378,9 +388,48 @@ void ImGuiCtx::draw(std::shared_ptr<clientRes>& r) {
         SPDLOG_DEBUG("resizing image from: {} {} to {} {}", r->w, r->h, w, h);
         r->w = w;
         r->h = h;
-        r->reinit_dmabuf = true;
-        draw(r);
+        r->reinit();
+        return false;
     }
+
+    record_cmd(buf, w, h);
+    return true;
+}
+
+void ImGuiCtx::record_cmd(slot_t& buf, uint32_t w, uint32_t h) {
+    vkWaitForFences(vk->device, 1, &buf.sync.fence, VK_FALSE, 100'000'000);
+    vkResetFences(vk->device, 1, &buf.sync.fence);
+    vkResetCommandBuffer(buf.sync.cmd, 0);
+    VkCommandBufferBeginInfo bi{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+    bi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    vkBeginCommandBuffer(buf.sync.cmd, &bi);
+
+    vk->transition_image(buf.sync.cmd, buf.source.image_res.image, buf.source.image_res.layout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    buf.source.image_res.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkClearValue clear{};
+    VkRenderingAttachmentInfo colorAtt{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
+    assert(buf.source.image_res.view != VK_NULL_HANDLE);
+    colorAtt.imageView = buf.source.image_res.view;
+    colorAtt.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    colorAtt.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAtt.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    clear.color.float32[0] = 0.0f;
+    clear.color.float32[1] = 0.0f;
+    clear.color.float32[2] = 0.0f;
+    clear.color.float32[3] = 0.0f;
+    colorAtt.clearValue = clear;
+
+    VkRenderingInfo ri{VK_STRUCTURE_TYPE_RENDERING_INFO};
+    ri.renderArea.offset = {0, 0};
+    ri.renderArea.extent = {w, h};
+    ri.layerCount = 1;
+    ri.colorAttachmentCount = 1;
+    ri.pColorAttachments = &colorAtt;
+
+    vkCmdBeginRendering(buf.sync.cmd, &ri);
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), buf.sync.cmd);
+    vkCmdEndRendering(buf.sync.cmd);
 }
 
 void ImGuiCtx::RenderOutlinedText(ImVec4 textColor, const char* text) {
@@ -410,41 +459,27 @@ void ImGuiCtx::RenderOutlinedText(ImVec4 textColor, const char* text) {
 
 VkDescriptorPool ImGuiCtx::create_desc_pool() {
     VkDescriptorPoolSize sizes[] = {
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 128},
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 128},
-        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 128},
+        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 256 },
     };
 
-    VkDescriptorPoolCreateInfo dp{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
+    VkDescriptorPoolCreateInfo dp{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
     dp.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
     dp.maxSets = 256;
-    dp.poolSizeCount = (uint32_t)(sizeof(sizes)/sizeof(sizes[0]));
+    dp.poolSizeCount = 1;
     dp.pPoolSizes = sizes;
 
-    vkCreateDescriptorPool(device, &dp, nullptr, &desc_pool);
+    VkResult r = vkCreateDescriptorPool(vk->device, &dp, nullptr, &desc_pool);
+    if (r != VK_SUCCESS) desc_pool = VK_NULL_HANDLE;
     return desc_pool;
 }
 
-void ImGuiCtx::create_cmd() {
-    VkCommandPoolCreateInfo cp{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
-    cp.queueFamilyIndex = graphicsQueueIdx;
-    cp.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    vkCreateCommandPool(device, &cp, nullptr, &cmd_pool);
-
-    VkCommandBufferAllocateInfo ca{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
-    ca.commandPool = cmd_pool;
-    ca.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    ca.commandBufferCount = 1;
-    vkAllocateCommandBuffers(device, &ca, &cmd);
-}
-
 void ImGuiCtx::teardown() {
-    fonts.reset();
-    if (!device)
+    if (!vk->device)
         return;
 
-    vkDeviceWaitIdle(device);
+    vkDeviceWaitIdle(vk->device);
     {
+        fonts.reset();
         ImGui::SetCurrentContext(imgui);
         ImPlot::SetCurrentContext(implot);
         ImGui_ImplVulkan_Shutdown();
@@ -459,23 +494,15 @@ void ImGuiCtx::teardown() {
             imgui = nullptr;
         }
 
-        cmd = VK_NULL_HANDLE;
-        fmt = VK_FORMAT_UNDEFINED;
-    }
+        if (sema) {
+            vkDestroySemaphore(vk->device, sema, nullptr);
+            sema = VK_NULL_HANDLE;
+        }
 
-    if (cmd_pool != VK_NULL_HANDLE) {
-        vkDestroyCommandPool(device, cmd_pool, nullptr);
-        cmd_pool = VK_NULL_HANDLE;
     }
 
     if (desc_pool != VK_NULL_HANDLE) {
-        vkDestroyDescriptorPool(device, desc_pool, nullptr);
+        vkDestroyDescriptorPool(vk->device, desc_pool, nullptr);
         desc_pool = VK_NULL_HANDLE;
     }
-
-    device = VK_NULL_HANDLE;
-    physicalDevice = VK_NULL_HANDLE;
-    instance = VK_NULL_HANDLE;
-    graphicsQueue = VK_NULL_HANDLE;
-    graphicsQueueIdx = 0;
 }

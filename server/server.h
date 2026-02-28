@@ -3,22 +3,26 @@
 #include "ipc.h"
 #include "vulkan_ctx.h"
 #include "metrics/metrics.h"
+#include "config.h"
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 class MangoHudServer {
 public:
-    std::vector<std::weak_ptr<VkCtx>> vk_contexts;
-    std::mutex vk_ctx_m;
-    std::shared_ptr<spdlog::logger> logger;
+    std::shared_ptr<Config> config;
 
     MangoHudServer() {
-        // TODO Don't force debug
-        logger = spdlog::stderr_color_mt("MANGOHUD SERVER");
+        auto name = std::string("\x1b[38;2;173;100;193m") + "MANGOHUD" + "\x1b[0m" +
+                    " " +
+                    "\x1b[38;2;46;151;203m" + std::string("SERVER") + "\x1b[0m";
+        logger = spdlog::stderr_color_mt(name);
         spdlog::set_default_logger(logger);
+        // TODO Don't force debug
         spdlog::set_level(spdlog::level::debug);
+
+        config  = std::make_shared<Config>();
         ipc     = std::make_unique<IPCServer>(this);
-        metrics = std::make_unique<Metrics>(*ipc);
+        metrics = std::make_unique<Metrics>(*ipc, config);
         loop();
     }
 
@@ -47,10 +51,13 @@ public:
         stop.store(true);
     }
 
-    void loop();
-
 private:
     std::unique_ptr<IPCServer> ipc;
     std::unique_ptr<Metrics> metrics;
+    std::shared_ptr<spdlog::logger> logger;
+    std::vector<std::weak_ptr<VkCtx>> vk_contexts;
+    std::mutex vk_ctx_m;
     std::atomic<bool> stop {false};
+
+    void loop();
 };

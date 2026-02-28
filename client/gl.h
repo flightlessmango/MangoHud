@@ -17,9 +17,47 @@
 #include "../ipc/ipc_client.h"
 #include "file_utils.h"
 #include "../render/shared.h"
+#include <VkBootstrap.h>
+
+struct dmabuf {
+    GLuint tex = 0;
+    GLuint memobj = 0;
+    EGLImageKHR image = EGL_NO_IMAGE_KHR;
+    EGLDisplay egl_dpy = EGL_NO_DISPLAY;
+
+    dmabuf() {
+        glGenTextures(1, &tex);
+
+        glBindTexture(GL_TEXTURE_2D, tex);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    }
+
+    ~dmabuf() {
+        if (image != EGL_NO_IMAGE_KHR) {
+            if (egl_dpy != EGL_NO_DISPLAY) {
+                eglDestroyImage(egl_dpy, image);
+            }
+            image = EGL_NO_IMAGE_KHR;
+            egl_dpy = EGL_NO_DISPLAY;
+        }
+
+        if (glXGetCurrentContext()) {
+            if (memobj != 0) {
+                glDeleteMemoryObjectsEXT(1, &memobj);
+                memobj = 0;
+            }
+            if (tex != 0) {
+                glDeleteTextures(1, &tex);
+                tex = 0;
+            }
+        }
+    }
+};
 
 struct CtxRes {
-    GLuint tex = 0;
     GLuint prog = 0;
     GLuint vao = 0;
     GLuint vbo = 0;
@@ -33,8 +71,11 @@ struct CtxRes {
     GLint uDecodeSRGBLoc = -1;
     GLint uSwapRBLoc = -1;
 
+    std::vector<std::unique_ptr<dmabuf>> dmabufs;
+
     bool inited = false;
 };
+
 struct GLState {
     struct state {
         GLint program = 0;
@@ -103,7 +144,6 @@ struct GLState {
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, s.pbo);
         glViewport(s.viewport[0], s.viewport[1], s.viewport[2], s.viewport[3]);
 
-
         glBlendFuncSeparate(s.blendSrcRGB, s.blendDstRGB, s.blendSrcA, s.blendDstA);
         if (s.blend) glEnable(GL_BLEND);
         else glDisable(GL_BLEND);
@@ -115,9 +155,24 @@ public:
     EGL();
 
     int64_t renderer();
-    void import_dmabuf(const Fdinfo& fdinfo, GLuint& tex);
+    EGLDisplay import_dmabuf(const Fdinfo& fdinfo, GLuint& tex, EGLImageKHR& image, int f);
+
+    CtxRes* ctx() {
+        EGLContext c = eglGetCurrentContext();
+        if (c == EGL_NO_CONTEXT) return nullptr;
+        std::lock_guard<std::mutex> lk(ctx_m);
+        return &contexts[c];
+    }
+
+    void reinit_ctx() {
+        std::lock_guard<std::mutex> lk(ctx_m);
+        for (auto& [ctx, res] : contexts)
+            res.inited = false;
+    }
 
 private:
+    std::mutex ctx_m;
+    std::unordered_map<EGLContext, CtxRes> contexts;
     PFNEGLGETPROCADDRESSPROC            real_eglGetProcAddress          = nullptr;
     PFNEGLDESTROYIMAGEKHRPROC           p_eglDestroyImageKHR            = nullptr;
     PFNGLEGLIMAGETARGETTEXTURE2DOESPROC p_glEGLImageTargetTexture2DOES  = nullptr;
@@ -130,13 +185,20 @@ class GLX {
 public:
     GLX();
 
-    bool import_dmabuf(const Fdinfo& fdinfo, GLuint& tex);
-    bool import_opaque_fd(GLuint tex, const Fdinfo& fdinfo);
+    bool import_dmabuf(const Fdinfo& fdinfo, GLuint& tex, GLuint& memobj, int f);
+    bool import_opaque_fd(GLuint tex, const Fdinfo& fdinfo, GLuint& memobj, int f);
 
-    CtxRes& ctx() {
+    CtxRes* ctx() {
         GLXContext c = glXGetCurrentContext();
+        if (!c) return nullptr;
         std::lock_guard<std::mutex> lk(ctx_m);
-        return contexts[c];
+        return &contexts[c];
+    }
+
+    void reinit_ctx() {
+        std::lock_guard<std::mutex> lk(ctx_m);
+        for (auto& [ctx, res] : contexts)
+            res.inited = false;
     }
 
 private:
@@ -146,8 +208,6 @@ private:
     PFNGLDELETEMEMORYOBJECTSEXTPROC     p_glDeleteMemoryObjectsEXT = nullptr;
     PFNGLIMPORTMEMORYFDEXTPROC          p_glImportMemoryFdEXT      = nullptr;
     PFNGLTEXSTORAGEMEM2DEXTPROC         p_glTexStorageMem2DEXT     = nullptr;
-
-    GLuint memobj = 0;
 
     static const char* gl_err_str(GLenum e);
     static bool drain_gl_errors(const char* where);
@@ -161,33 +221,32 @@ class OverlayGL {
 public:
     Display* xdpy;
     std::shared_ptr<IPCClient> ipc;
+    int current_slot = -1;
 
     OverlayGL(Display* xdpy_ = nullptr, std::shared_ptr<IPCClient> ipc_ = nullptr);
-    void init(CtxRes& r);
+    CtxRes* get_ctx();
     void draw();
-
-    ~OverlayGL() {
-        if (egl_thread.joinable())
-            egl_thread.join();
-    }
 
 private:
     std::unique_ptr<GLX> glx;
     std::unique_ptr<EGL> egl;
-    std::thread egl_thread;
+    std::vector<std::shared_ptr<slot_t>> dmabufs;
     Fdinfo fdinfo;
     std::string pEngineName = "OpenGL";
+    uint32_t w = 0;
+    uint32_t h = 0;
+    bool inited = false;
 
     static GLuint compile_shader(GLenum type, const char *src);
     static GLuint link_program(GLuint vs, GLuint fs);
 
-    void program(CtxRes& r);
-    void vao_vbo(CtxRes& r) {
-        if (!r.vao) glGenVertexArrays(1, &r.vao);
-        if (!r.vbo) glGenBuffers(1, &r.vbo);
+    void program(CtxRes* r);
+    void vao_vbo(CtxRes* r) {
+        if (!r->vao) glGenVertexArrays(1, &r->vao);
+        if (!r->vbo) glGenBuffers(1, &r->vbo);
 
-        glBindVertexArray(r.vao);
-        glBindBuffer(GL_ARRAY_BUFFER, r.vbo);
+        glBindVertexArray(r->vao);
+        glBindBuffer(GL_ARRAY_BUFFER, r->vbo);
         glBufferData(GL_ARRAY_BUFFER, 4 * 4 * (GLsizeiptr)sizeof(float), nullptr, GL_STREAM_DRAW);
 
         glEnableVertexAttribArray(0);
@@ -200,9 +259,18 @@ private:
         glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 
-    void bind_texture(CtxRes& r);
-    void create_cache(CtxRes& r, int w, int h);
-    void sample_dmabuf(CtxRes& r, const Fdinfo& fdinfo, const GLState::state& saved);
-    void draw_dmabuf(CtxRes& r);
+    void create_cache(CtxRes* r, int w, int h);
+    void sample_dmabuf(CtxRes* r, const Fdinfo& fdinfo, const GLState::state& saved);
+    void draw_dmabuf(CtxRes* r);
     int release_fence(IPCClient* ipc, int dmabuf_fd, bool write = false);
+    void import_dmabuf(dmabuf* buf, int fd) {
+        auto r = glx->ctx();
+        if (r)
+            if (!glx->import_dmabuf(fdinfo, buf->tex, buf->memobj, fd))
+                glx->import_opaque_fd(buf->tex, fdinfo, buf->memobj, fd);
+
+        r = egl->ctx();
+        if (r)
+            buf->egl_dpy = egl->import_dmabuf(fdinfo, buf->tex, buf->image, fd);
+    }
 };
