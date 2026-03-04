@@ -20,7 +20,6 @@ struct cached_image {
     VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
     VkDescriptorSet ds = VK_NULL_HANDLE;
     VkDescriptorPool dp = VK_NULL_HANDLE;
-    VkFence fence = VK_NULL_HANDLE;
     VkSemaphore semaphore = VK_NULL_HANDLE;
     std::shared_ptr<overlay_resources> ovl_res;
     bool inited = false;
@@ -115,7 +114,7 @@ public:
 
     OverlayVK(Layer* layer_) : layer(layer_) {}
 
-    bool draw(VkSwapchainKHR swapchain, uint32_t img_idx, VkQueue queue);
+    bool draw(VkSwapchainKHR swapchain, uint32_t img_idx, VkQueue queue, VkPresentInfoKHR pi);
     std::vector<int> init_dmabufs(Fdinfo& fdinfo);
 
     ~OverlayVK() {
@@ -133,10 +132,11 @@ private:
     VkQueue queue;
 
     VkResult import_dmabuf(dmabuf_ext* buf, unique_fd& import_fd, Fdinfo& fdinfo);
-    VkResult copy_dmabuf_to_cache(VkQueue queue, int img_idx);
+    VkResult copy_dmabuf_to_cache(VkQueue queue, int img_idx, VkPresentInfoKHR pi);
     void cache_descriptor_set(std::shared_ptr<dmabuf_ext>& buf);
 
-    uint32_t find_mem_type(const VkImage image, int fd);
+    uint32_t find_mem_type_import(const VkImage image, int fd);
+    uint32_t find_mem_type_image(uint32_t type_bits, VkMemoryPropertyFlags want);
     void transition_image(VkCommandBuffer cmd, VkImage image,
                           VkImageLayout old_layout,VkImageLayout new_layout);
     void wait_on_semaphores(const vkroots::VkDeviceDispatch* d);

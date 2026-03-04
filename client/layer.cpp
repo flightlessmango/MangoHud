@@ -256,7 +256,7 @@ public:
         layer->ipc->start(renderMinor, pEngineName, swapchain_image_count, layer->ipc);
         {
             std::lock_guard lock(layer->overlay_vk->m);
-            if (!layer->overlay_vk->draw(pPresentInfo->pSwapchains[0], imageIndex, queue))
+            if (!layer->overlay_vk->draw(pPresentInfo->pSwapchains[0], imageIndex, queue, pi))
                 return pDispatch->QueuePresentKHR(queue, pPresentInfo);
         }
 
@@ -290,7 +290,12 @@ public:
 
         {
             std::lock_guard lock(layer->overlay_vk->m);
-            r = pDispatch->QueuePresentKHR(queue, &pi);
+            VkPresentInfoKHR pi2 = *pPresentInfo;
+            VkSemaphore signal = layer->ovl_res->overlay_done[imageIndex];
+            pi2.waitSemaphoreCount = 1;
+            pi2.pWaitSemaphores = &signal;
+
+            return pDispatch->QueuePresentKHR(queue, &pi2);
         }
 
         if (r == VK_SUCCESS || r == VK_SUBOPTIMAL_KHR) {

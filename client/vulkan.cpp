@@ -2,7 +2,7 @@
 #include "layer.h"
 #include "../utils/mesa/os_time.h"
 
-bool OverlayVK::draw(VkSwapchainKHR swapchain, uint32_t img_idx, VkQueue q)
+bool OverlayVK::draw(VkSwapchainKHR swapchain, uint32_t img_idx, VkQueue q, VkPresentInfoKHR pi)
 {
     queue = q;
     sc = layer->get_swapchain_data(swapchain);
@@ -12,7 +12,7 @@ bool OverlayVK::draw(VkSwapchainKHR swapchain, uint32_t img_idx, VkQueue q)
     if (dmabufs.empty()) return false;
     if (current_slot < 0) current_slot = layer->ipc->next_frame();
 
-    if (copy_dmabuf_to_cache(queue, img_idx) != VK_SUCCESS)
+    if (copy_dmabuf_to_cache(queue, img_idx, pi) != VK_SUCCESS)
         return false;
 
     return true;
@@ -67,8 +67,7 @@ void OverlayVK::cache_descriptor_set(std::shared_ptr<dmabuf_ext>& buf) {
     sc->d->UpdateDescriptorSets(sc->d->Device, 1, &wd, 0, nullptr);
 }
 
-uint32_t OverlayVK::find_mem_type(const VkImage image, int fd)
-{
+uint32_t OverlayVK::find_mem_type_import(VkImage image, int fd) {
     VkImageMemoryRequirementsInfo2 info2{
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2,
         .image = image,
@@ -79,23 +78,34 @@ uint32_t OverlayVK::find_mem_type(const VkImage image, int fd)
     uint32_t imgBits = req2.memoryRequirements.memoryTypeBits;
 
     VkMemoryFdPropertiesKHR fdProps{ VK_STRUCTURE_TYPE_MEMORY_FD_PROPERTIES_KHR };
-    VkResult r = sc->d->GetMemoryFdPropertiesKHR(
-        sc->d->Device,
-        VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT,
-        fd,
-        &fdProps
-    );
-    if (r != VK_SUCCESS) return 0;
+    VkResult r = sc->d->GetMemoryFdPropertiesKHR(sc->d->Device,
+        VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT, fd, &fdProps);
+    if (r != VK_SUCCESS)
+        return UINT32_MAX;
 
-    auto type_bits =  imgBits & fdProps.memoryTypeBits;
+    uint32_t type_bits = imgBits & fdProps.memoryTypeBits;
 
     VkPhysicalDeviceMemoryProperties mp{};
-    sc->d->pPhysicalDeviceDispatch->pInstanceDispatch->GetPhysicalDeviceMemoryProperties(sc->d->PhysicalDevice, &mp);
+    sc->d->pPhysicalDeviceDispatch->pInstanceDispatch
+        ->GetPhysicalDeviceMemoryProperties(sc->d->PhysicalDevice, &mp);
 
     for (uint32_t i = 0; i < mp.memoryTypeCount; i++) {
         if ((type_bits & (1u << i)) == 0)
             continue;
-        if ((mp.memoryTypes[i].propertyFlags & 0) != 0)
+        return i;
+    }
+    return UINT32_MAX;
+}
+
+uint32_t OverlayVK::find_mem_type_image(uint32_t type_bits, VkMemoryPropertyFlags want) {
+    VkPhysicalDeviceMemoryProperties mp{};
+    sc->d->pPhysicalDeviceDispatch->pInstanceDispatch
+        ->GetPhysicalDeviceMemoryProperties(sc->d->PhysicalDevice, &mp);
+
+    for (uint32_t i = 0; i < mp.memoryTypeCount; i++) {
+        if ((type_bits & (1u << i)) == 0)
+            continue;
+        if ((mp.memoryTypes[i].propertyFlags & want) != want)
             continue;
         return i;
     }
@@ -162,24 +172,40 @@ VkResult OverlayVK::import_dmabuf(dmabuf_ext* buf, unique_fd& fd, Fdinfo& fdinfo
     layer->SetName(d->Device, VK_OBJECT_TYPE_IMAGE, (uint64_t)buf->cached->image,
             "mangohud_cache_image_%i", idx);
 
-    VkMemoryRequirements req{};
-    d->GetImageMemoryRequirements(d->Device, buf->image, &req);
+    VkMemoryDedicatedRequirements ded_req{VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS};
+    VkMemoryRequirements2 req2{VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2};
+    req2.pNext = &ded_req;
+
+    VkImageMemoryRequirementsInfo2 info2{VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2};
+    info2.image = buf->image;
+
+    d->GetImageMemoryRequirements2KHR(d->Device, &info2, &req2);
+
     int import_fd = dup(fd.get());
     if (import_fd < 0)
         return VK_ERROR_INITIALIZATION_FAILED;
 
-    uint32_t mt = find_mem_type(buf->image, import_fd);
+    uint32_t mt = find_mem_type_import(buf->image, import_fd);
     if (mt == UINT32_MAX)
         return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 
-    VkImportMemoryFdInfoKHR import{ VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR };
+    VkImportMemoryFdInfoKHR import{VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR};
     import.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT;
     import.fd = import_fd;
 
-    VkMemoryAllocateInfo mai{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-    mai.pNext = &import;
-    mai.allocationSize = req.size;
+    VkMemoryDedicatedAllocateInfo dedicated{VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO};
+    dedicated.image = buf->image;
+
+    VkMemoryAllocateInfo mai{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+    mai.allocationSize = req2.memoryRequirements.size;
     mai.memoryTypeIndex = mt;
+
+    if (ded_req.requiresDedicatedAllocation) {
+        dedicated.pNext = &import;
+        mai.pNext = &dedicated;
+    } else {
+        mai.pNext = &import;
+    }
 
     r = d->AllocateMemory(d->Device, &mai, nullptr, &buf->mem);
     if (r != VK_SUCCESS) {
@@ -196,19 +222,27 @@ VkResult OverlayVK::import_dmabuf(dmabuf_ext* buf, unique_fd& fd, Fdinfo& fdinfo
     layer->SetName(d->Device, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t)buf->mem,
             "mangohud_dmabuf_memory_%" PRIu64, ++idx);
 
+    VkMemoryRequirements req{};
     d->GetImageMemoryRequirements(d->Device, buf->cached->image, &req);
+
     mai.pNext = nullptr;
     mai.allocationSize = req.size;
 
+    uint32_t mt_cached = find_mem_type_image(req.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    if (mt_cached == UINT32_MAX)
+        return VK_ERROR_OUT_OF_DEVICE_MEMORY;
+
+    mai.memoryTypeIndex = mt_cached;
+
     r = d->AllocateMemory(d->Device, &mai, nullptr, &buf->cached->mem);
     if (r != VK_SUCCESS) {
-        SPDLOG_ERROR("AllocateMemory {}", string_VkResult(r));
+        SPDLOG_ERROR("AllocateMemory cached {}", string_VkResult(r));
         return r;
     }
 
-    d->BindImageMemory(d->Device, buf->cached->image, buf->cached->mem, 0);
+    r = d->BindImageMemory(d->Device, buf->cached->image, buf->cached->mem, 0);
     if (r != VK_SUCCESS) {
-        SPDLOG_ERROR("BindImageMemory {}", string_VkResult(r));
+        SPDLOG_ERROR("BindImageMemory cached {}", string_VkResult(r));
         return r;
     }
 
@@ -233,13 +267,6 @@ VkResult OverlayVK::import_dmabuf(dmabuf_ext* buf, unique_fd& fd, Fdinfo& fdinfo
     layer->SetName(d->Device, VK_OBJECT_TYPE_IMAGE_VIEW, (uint64_t)buf->cached->view,
             "mangohud_cache_view_%i", idx);
 
-    VkFenceCreateInfo fci{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-    fci.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-    d->CreateFence(d->Device, &fci, nullptr, &buf->cached->fence);
-
-    layer->SetName(d->Device, VK_OBJECT_TYPE_FENCE, (uint64_t)buf->cached->fence,
-            "mangohud_cache_fence_%i", idx);
-
     buf->cached->format = fmt;
     buf->valid = true;
     buf->width = fdinfo.w;
@@ -263,8 +290,7 @@ static void layout_to_access_stage(VkImageLayout layout,
                                   VkAccessFlags& access,
                                   VkPipelineStageFlags& stage)
 {
-    switch (layout)
-    {
+    switch (layout) {
         case VK_IMAGE_LAYOUT_UNDEFINED:
             access = 0;
             stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
@@ -282,17 +308,27 @@ static void layout_to_access_stage(VkImageLayout layout,
 
         case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
             access = VK_ACCESS_SHADER_READ_BIT;
-            stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+            break;
+
+        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+            access = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
             break;
 
         case VK_IMAGE_LAYOUT_GENERAL:
-            access = VK_ACCESS_TRANSFER_READ_BIT |
-                     VK_ACCESS_TRANSFER_WRITE_BIT |
-                     VK_ACCESS_SHADER_READ_BIT |
-                     VK_ACCESS_SHADER_WRITE_BIT;
-            stage = VK_PIPELINE_STAGE_TRANSFER_BIT |
-                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+            access =
+                VK_ACCESS_TRANSFER_READ_BIT |
+                VK_ACCESS_TRANSFER_WRITE_BIT |
+                VK_ACCESS_SHADER_READ_BIT |
+                VK_ACCESS_SHADER_WRITE_BIT |
+                VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            stage =
+                VK_PIPELINE_STAGE_TRANSFER_BIT |
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
             break;
 
         default:
@@ -336,6 +372,9 @@ void OverlayVK::transition_image(VkCommandBuffer cmd, VkImage image,
 
 void OverlayVK::cache_to_transfer_dst(VkCommandBuffer cmd, VkImage image, VkImageLayout old_layout)
 {
+    if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+        return;
+
     VkImageMemoryBarrier b{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
     b.oldLayout = old_layout;
     b.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -343,20 +382,27 @@ void OverlayVK::cache_to_transfer_dst(VkCommandBuffer cmd, VkImage image, VkImag
     b.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     b.image = image;
     b.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    b.subresourceRange.baseMipLevel = 0;
     b.subresourceRange.levelCount = 1;
+    b.subresourceRange.baseArrayLayer = 0;
     b.subresourceRange.layerCount = 1;
 
-    b.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    VkPipelineStageFlags src_stage = 0;
+    layout_to_access_stage(old_layout, b.srcAccessMask, src_stage);
+
     b.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    VkPipelineStageFlags dst_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
 
     sc->d->CmdPipelineBarrier(cmd,
-                          VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-                          VK_PIPELINE_STAGE_TRANSFER_BIT,
-                          0, 0, nullptr, 0, nullptr, 1, &b);
+                              src_stage, dst_stage,
+                              0, 0, nullptr, 0, nullptr, 1, &b);
 }
 
 void OverlayVK::cache_to_shader_read(VkCommandBuffer cmd, VkImage image, VkImageLayout old_layout)
 {
+    if (old_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+        return;
+
     VkImageMemoryBarrier b{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
     b.oldLayout = old_layout;
     b.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -364,19 +410,23 @@ void OverlayVK::cache_to_shader_read(VkCommandBuffer cmd, VkImage image, VkImage
     b.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     b.image = image;
     b.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    b.subresourceRange.baseMipLevel = 0;
     b.subresourceRange.levelCount = 1;
+    b.subresourceRange.baseArrayLayer = 0;
     b.subresourceRange.layerCount = 1;
 
-    b.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    VkPipelineStageFlags src_stage = 0;
+    layout_to_access_stage(old_layout, b.srcAccessMask, src_stage);
+
     b.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    VkPipelineStageFlags dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 
     sc->d->CmdPipelineBarrier(cmd,
-                          VK_PIPELINE_STAGE_TRANSFER_BIT,
-                          VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-                          0, 0, nullptr, 0, nullptr, 1, &b);
+                              src_stage, dst_stage,
+                              0, 0, nullptr, 0, nullptr, 1, &b);
 }
 
-VkResult OverlayVK::copy_dmabuf_to_cache(VkQueue queue, int img_idx)
+VkResult OverlayVK::copy_dmabuf_to_cache(VkQueue queue, int img_idx, VkPresentInfoKHR pi)
 {
     int slot = -1;
     bool refresh_cache = false;
@@ -481,19 +531,29 @@ VkResult OverlayVK::copy_dmabuf_to_cache(VkQueue queue, int img_idx)
     r = sc->d->EndCommandBuffer(cmd);
     if (r != VK_SUCCESS) return r;
 
-    VkSubmitInfo si {};
-    si.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    VkSubmitInfo si{VK_STRUCTURE_TYPE_SUBMIT_INFO};
 
-    if (refresh_cache) {
-        si.pSignalSemaphores = &buf->cached->semaphore;
-        si.signalSemaphoreCount = 1;
-    }
+    static thread_local std::vector<VkPipelineStageFlags> wait_stages;
+    wait_stages.assign(pi.waitSemaphoreCount, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+
+    si.waitSemaphoreCount = pi.waitSemaphoreCount;
+    si.pWaitSemaphores = pi.pWaitSemaphores;
+    si.pWaitDstStageMask = wait_stages.data();
+
+    VkSemaphore signals[2];
+    uint32_t signal_count = 0;
+
+    if (refresh_cache)
+        signals[signal_count++] = buf->cached->semaphore;
+
+    signals[signal_count++] = layer->ovl_res->overlay_done[img_idx];
+
+    si.signalSemaphoreCount = signal_count;
+    si.pSignalSemaphores = signals;
 
     si.commandBufferCount = 1;
     si.pCommandBuffers = &cmd;
-
     r = sc->d->QueueSubmit(queue, 1, &si, fence);
-
     if (r != VK_SUCCESS)
         SPDLOG_ERROR("QueueSubmit {}", string_VkResult(r));
 
@@ -529,11 +589,6 @@ cached_image::~cached_image() {
     if (mem) {
         d->FreeMemory(d->Device, mem, nullptr);
         mem = VK_NULL_HANDLE;
-    }
-
-    if (fence) {
-        d->DestroyFence(d->Device, fence, nullptr);
-        fence = VK_NULL_HANDLE;
     }
 
     if (semaphore) {
