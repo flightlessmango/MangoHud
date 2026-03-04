@@ -17,12 +17,10 @@ public:
     VkQueue graphicsQueue = VK_NULL_HANDLE;
     uint32_t graphicsQueueFamilyIndex = UINT32_MAX;
     VkFormat fmt = VK_FORMAT_B8G8R8A8_SRGB;
-    int64_t renderMinor;
     std::mutex m;
     PFN_vkImportSemaphoreFdKHR pfn_vkImportSemaphoreFdKHR = nullptr;
 
-    VkCtx(int64_t renderMinor) : renderMinor(renderMinor) {
-        SPDLOG_DEBUG("VkCtx init with renderMinor: {}", renderMinor);
+    VkCtx() {
         init(true);
         imgui = std::make_shared<ImGuiCtx>(this, 4);
     };
@@ -34,13 +32,15 @@ public:
     void create_cmd(clientRes* r, sync_t* s);
     void wait_on_semaphores(std::shared_ptr<Client> client);
     void sync_wait(std::shared_ptr<Client> client);
-    int get_semaphore_fd(VkSemaphore sema);
+    // int get_semaphore_fd(VkSemaphore sema);
+    int get_fence_fd(VkFence fence);
 
     ~VkCtx();
 private:
     VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
     PFN_vkGetMemoryFdPropertiesKHR pfn_vkGetMemoryFdPropertiesKHR = nullptr;
     PFN_vkGetSemaphoreFdKHR pfn_vkGetSemaphoreFdKHR = nullptr;
+    PFN_vkGetFenceFdKHR pfn_vkGetFenceFdKHR = nullptr;
     PFN_vkSetDebugUtilsObjectNameEXT pfn_vkSetDebugUtilsObjectNameEXT = nullptr;
 
     unique_fd phys_fd_;

@@ -19,11 +19,6 @@ void destroy_client_res(clientRes* r) {
         destroy_vk_images(r->device, buf.source.image_res);
         buf.dmabuf.gbm = {};
 
-        if (buf.sync.semaphore) {
-            vkDestroySemaphore(r->device, buf.sync.semaphore, nullptr);
-            buf.sync.semaphore = VK_NULL_HANDLE;
-        }
-
         if (buf.sync.fence) {
             vkDestroyFence(r->device, buf.sync.fence, nullptr);
             buf.sync.fence = VK_NULL_HANDLE;
@@ -229,7 +224,7 @@ int Client::on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_erro
     }
     self->pEngineName = engine;
 
-    if (!self->resources->vk) self->resources->vk = self->server->vk(self->renderMinor);
+    if (!self->resources->vk) self->resources->vk = self->server->vk();
 
     return 0;
 }
@@ -597,8 +592,8 @@ int Client::spdlog_msg(sd_bus_message* m, void* userdata, sd_bus_error*) {
 }
 
 void Client::frame_ready(uint32_t idx) {
-    auto sema = resources->buffer[idx].sync.semaphore;
-    auto fd = unique_fd::adopt(resources->vk->get_semaphore_fd(sema));
+    auto fence = resources->buffer[idx].sync.fence;
+    auto fd = unique_fd::adopt(resources->vk->get_fence_fd(fence));
     auto weak = self_weak;
     post([weak, idx, fd = std::move(fd)]() {
         auto self = weak.lock();

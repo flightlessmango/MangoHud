@@ -100,15 +100,8 @@ struct source_t {
 };
 
 struct sync_t {
-    VkSemaphore             semaphore           = VK_NULL_HANDLE;
-    unique_fd               semaphore_fd;
-    VkSemaphore             consumer_semaphore  = VK_NULL_HANDLE;
-    unique_fd               consumer_semaphore_fd;
-    uint64_t                semaphore_last = 1;
-    uint64_t                consumer_last = 0;
     VkCommandBuffer         cmd                 = VK_NULL_HANDLE;
     VkFence                 fence               = VK_NULL_HANDLE;
-    bool                    inited              = false;
 };
 
 struct slot_t {
@@ -122,7 +115,6 @@ struct clientRes {
     VkDevice device;
 
     std::vector<slot_t> buffer;
-    std::vector<VkFence> in_flight;
     VkCommandPool   cmd_pool            = VK_NULL_HANDLE;
     std::mutex      m;
     std::mutex      table_m;

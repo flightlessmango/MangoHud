@@ -27,17 +27,13 @@ vkb::PhysicalDevice VkCtx::pick_device(vkb::Instance instance) {
     selector.add_required_extension(VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME);
     selector.add_required_extension(VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME);
 
-    if (use_dmabuf) {
-        selector.add_required_extension(VK_EXT_EXTERNAL_MEMORY_DMA_BUF_EXTENSION_NAME);
-        // Some GPUs will not support this and so we can't use dmabuf
-        // TODO add opaque fd path to vulkan layer for this case
-        selector.add_required_extension(VK_EXT_IMAGE_DRM_FORMAT_MODIFIER_EXTENSION_NAME);
-    }
+    selector.add_required_extension(VK_EXT_EXTERNAL_MEMORY_DMA_BUF_EXTENSION_NAME);
+    selector.add_required_extension(VK_EXT_IMAGE_DRM_FORMAT_MODIFIER_EXTENSION_NAME);
 
     auto devicesRet = selector.select_devices();
     if (!devicesRet) {
         SPDLOG_ERROR("Selector failed\n");
-        return vkb::PhysicalDevice();
+        return {};
     }
 
     for (const auto& dev : devicesRet.value()) {
@@ -49,16 +45,12 @@ vkb::PhysicalDevice VkCtx::pick_device(vkb::Instance instance) {
         if (!drm.hasRender)
             continue;
 
-        if (drm.renderMinor != renderMinor)
-            continue;
-
         return dev;
     }
 
-    use_dmabuf = false;
-    return vkb::PhysicalDevice();
+    SPDLOG_ERROR("No Vulkan device with render node + dmabuf/modifier support\n");
+    return {};
 }
-
 
 void VkCtx::init(bool enableValidation = true) {
     vkb::InstanceBuilder ib;
@@ -81,8 +73,8 @@ void VkCtx::init(bool enableValidation = true) {
         vkb_device = pick_device(vkbInstance_);
 
     if (!vkb_device.physical_device) {
-        SPDLOG_ERROR("can't find GPU {}, bailing", renderMinor);
-        exit(1);
+        SPDLOG_ERROR("can't find GPU, bailing");
+        std::abort();
     }
 
     vkb::DeviceBuilder db{vkb_device};
@@ -96,6 +88,7 @@ void VkCtx::init(bool enableValidation = true) {
 
     pfn_vkGetMemoryFdPropertiesKHR = (PFN_vkGetMemoryFdPropertiesKHR)vkGetDeviceProcAddr(device, "vkGetMemoryFdPropertiesKHR");
     pfn_vkGetSemaphoreFdKHR = (PFN_vkGetSemaphoreFdKHR)vkGetDeviceProcAddr(device, "vkGetSemaphoreFdKHR");
+    pfn_vkGetFenceFdKHR = (PFN_vkGetFenceFdKHR)vkGetDeviceProcAddr(device, "vkGetFenceFdKHR");
     pfn_vkImportSemaphoreFdKHR = (PFN_vkImportSemaphoreFdKHR)vkGetDeviceProcAddr(device, "vkImportSemaphoreFdKHR");
     pfn_vkSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetDeviceProcAddr(device, "vkSetDebugUtilsObjectNameEXT");
 }
@@ -187,7 +180,6 @@ void VkCtx::init_client(clientRes* r, size_t buffer_size) {
         return;
 
     r->device = device;
-    r->server_render_minor = renderMinor;
     if (r->buffer.size() < buffer_size)
         r->buffer.resize(buffer_size);
 
@@ -218,24 +210,13 @@ void VkCtx::init_client(clientRes* r, size_t buffer_size) {
 
 // TODO rename this to init sync or something
 void VkCtx::create_sync(slot_t* s) {
-    VkExportSemaphoreCreateInfo exportInfo{
-        .sType = VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO,
-        .pNext = nullptr,
-        .handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT,
-    };
+    VkExportFenceCreateInfo export_info{};
+    export_info.sType = VK_STRUCTURE_TYPE_EXPORT_FENCE_CREATE_INFO;
+    export_info.handleTypes = VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT;
 
-    VkSemaphoreCreateInfo sci{
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-        .pNext = &exportInfo,
-        .flags = 0,
-    };
-
-    VkResult r = vkCreateSemaphore(device, &sci, nullptr, &s->sync.semaphore);
-    if (r != VK_SUCCESS)
-        SPDLOG_ERROR("vkCreateSemaphore {}", string_VkResult(r));
-
-
-    VkFenceCreateInfo fci{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+    VkFenceCreateInfo fci{};
+    fci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fci.pNext = &export_info;
     fci.flags = VK_FENCE_CREATE_SIGNALED_BIT;
     vkCreateFence(device, &fci, nullptr, &s->sync.fence);
 }
@@ -338,15 +319,6 @@ bool VkCtx::create_gbm_buffer(clientRes* r, dmabuf_t* buf) {
 
     const uint64_t linear = DRM_FORMAT_MOD_LINEAR;
     buf->gbm.bo = gbm_bo_create_with_modifiers(gbm_dev, r->w, r->h, buf->gbm.fourcc, &linear, 1);
-    if (!buf->gbm.bo) {
-        buf->gbm.bo = gbm_bo_create(gbm_dev, r->w, r->h, buf->gbm.fourcc, GBM_BO_USE_RENDERING);
-        if (!buf->gbm.bo) {
-            fprintf(stderr, "gbm_bo_create_with_modifiers failed\n");
-            throw;
-            return false;
-        }
-    }
-
     buf->gbm.fd = unique_fd::adopt(gbm_bo_get_fd(buf->gbm.bo));
     if (!buf->gbm.fd) {
         fprintf(stderr, "Failed to get gbm fd\n");
@@ -355,6 +327,11 @@ bool VkCtx::create_gbm_buffer(clientRes* r, dmabuf_t* buf) {
     }
 
     buf->gbm.modifier = gbm_bo_get_modifier(buf->gbm.bo);
+    if (buf->gbm.modifier != DRM_FORMAT_MOD_LINEAR) {
+        SPDLOG_ERROR("Expected linear modifier, got 0x{:016x}", buf->gbm.modifier);
+        return false;
+    }
+
     buf->gbm.stride   = gbm_bo_get_stride_for_plane(buf->gbm.bo, 0);
     buf->gbm.offset   = gbm_bo_get_offset(buf->gbm.bo, 0);
     buf->gbm.plane_size = (uint64_t)buf->gbm.stride * (uint64_t)r->h;
@@ -468,9 +445,9 @@ bool VkCtx::allocate_memory(VkImage image, VkDeviceMemory& memory, clientRes* r,
 
     VkExportMemoryAllocateInfo exportInfo{ VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO };
     VkImportMemoryFdInfoKHR importInfo{ VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR };
-    unique_fd import_fd;
+    int import_fd = -1;
     if (fd >= 0)
-        import_fd = unique_fd::dup(fd);
+        import_fd = dup(fd);
 
     if (import_dmabuf) {
         if (!import_fd) {
@@ -583,9 +560,6 @@ bool VkCtx::submit(std::shared_ptr<clientRes>& r, int idx) {
     submit.commandBufferCount = 1;
     submit.pCommandBuffers = &buf.sync.cmd;
 
-    submit.signalSemaphoreCount = 1;
-    submit.pSignalSemaphores = &buf.sync.semaphore;
-
     {
         std::scoped_lock lock(m);
         vkQueueSubmit(graphicsQueue, 1, &submit, buf.sync.fence);
@@ -594,24 +568,41 @@ bool VkCtx::submit(std::shared_ptr<clientRes>& r, int idx) {
     return true;
 }
 
-int VkCtx::get_semaphore_fd(VkSemaphore sema) {
-    VkSemaphoreGetFdInfoKHR fdinfo{
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR,
-        .pNext = nullptr,
-        .semaphore = sema,
-        .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT_KHR,
-    };
+// int VkCtx::get_semaphore_fd(VkSemaphore sema) {
+//     VkSemaphoreGetFdInfoKHR fdinfo{
+//         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR,
+//         .pNext = nullptr,
+//         .semaphore = sema,
+//         .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT_KHR,
+//     };
 
-    int out_fd = -1;
+//     int out_fd = -1;
+//     // This produces a sync fd that will trigger a false positive double close
+//     // in valgrind etc. Be warned so you don't spend 3 days like I did
+//     // tracking it down.
+//     VkResult r = pfn_vkGetSemaphoreFdKHR(device, &fdinfo, &out_fd);
+//     if (r != VK_SUCCESS)
+//         SPDLOG_ERROR("vkGetSemaphoreFdKHR {}", string_VkResult(r));
+
+
+//     return out_fd;
+// }
+
+int VkCtx::get_fence_fd(VkFence fence) {
+    VkFenceGetFdInfoKHR get_fd{};
+    get_fd.sType = VK_STRUCTURE_TYPE_FENCE_GET_FD_INFO_KHR;
+    get_fd.fence = fence;
+    get_fd.handleType = VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT;
+    int fd;
+
     // This produces a sync fd that will trigger a false positive double close
     // in valgrind etc. Be warned so you don't spend 3 days like I did
     // tracking it down.
-    VkResult r = pfn_vkGetSemaphoreFdKHR(device, &fdinfo, &out_fd);
+    VkResult r = pfn_vkGetFenceFdKHR(device, &get_fd, &fd);
     if (r != VK_SUCCESS)
-        SPDLOG_ERROR("vkGetSemaphoreFdKHR {}", string_VkResult(r));
+        SPDLOG_ERROR("vkGetFenceFdKHR {}", string_VkResult(r));
 
-
-    return out_fd;
+    return fd;
 }
 
 void VkCtx::transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout) {

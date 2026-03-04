@@ -397,7 +397,6 @@ bool ImGuiCtx::draw(std::shared_ptr<clientRes>& r, slot_t &buf) {
 }
 
 void ImGuiCtx::record_cmd(slot_t& buf, uint32_t w, uint32_t h) {
-    vkWaitForFences(vk->device, 1, &buf.sync.fence, VK_FALSE, 100'000'000);
     vkResetFences(vk->device, 1, &buf.sync.fence);
     vkResetCommandBuffer(buf.sync.cmd, 0);
     VkCommandBufferBeginInfo bi{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
