@@ -161,9 +161,6 @@ int64_t EGL::renderer() {
 }
 
 EGLDisplay EGL::import_dmabuf(const Fdinfo& fdinfo, GLuint& tex, EGLImageKHR& image, int f) {
-    if (renderer() != fdinfo.server_render_minor)
-        printf("this is not on the same GPU, bail.");
-
     EGLDisplay dpy = eglGetCurrentDisplay();
     if (dpy == EGL_NO_DISPLAY) return dpy;
 
