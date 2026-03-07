@@ -7,6 +7,7 @@
 #include "unistd.h"
 #include "mesa/os_time.h"
 #include "../server/common/helpers.hpp"
+#include "vulkan/vk_enum_string_helper.h"
 
 vkb::PhysicalDevice VkCtx::pick_device(vkb::Instance instance) {
     vkb::PhysicalDeviceSelector selector{instance};

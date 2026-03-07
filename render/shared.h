@@ -51,6 +51,13 @@ static bool sync_fd_blocking(int fd) {
     }
 }
 
+struct Resolution {
+    uint32_t w;
+    uint32_t h;
+
+    bool operator==(const Resolution&) const = default;
+};
+
 struct ready_frame {
     int idx = -1;
     unique_fd fd;
@@ -75,6 +82,7 @@ struct gbmBuffer {
 
 class VkCtx;
 class ImGuiCtx;
+class X11Session;
 
 struct vk_image_res_t {
     VkImage         image               = VK_NULL_HANDLE;
@@ -130,9 +138,10 @@ struct clientRes {
     bool            initialized         = false;
 
     float           fps_limit           = 0;
+    Resolution      resolution          {};
 
     std::shared_ptr<VkCtx> vk;
-    std::shared_ptr<ImGuiCtx> imgui;
+    std::shared_ptr<X11Session> x11;
 
     clientRes() {
         table = std::make_shared<hudTable>();
@@ -162,110 +171,15 @@ inline void destroy_vk_images(VkDevice device, vk_image_res_t& res) {
 __attribute__((unused))
 void destroy_client_res(clientRes* r);
 
-static inline const char* string_VkResult(VkResult input_value) {
-    switch (input_value) {
-        case VK_SUCCESS:
-            return "VK_SUCCESS";
-        case VK_NOT_READY:
-            return "VK_NOT_READY";
-        case VK_TIMEOUT:
-            return "VK_TIMEOUT";
-        case VK_EVENT_SET:
-            return "VK_EVENT_SET";
-        case VK_EVENT_RESET:
-            return "VK_EVENT_RESET";
-        case VK_INCOMPLETE:
-            return "VK_INCOMPLETE";
-        case VK_ERROR_OUT_OF_HOST_MEMORY:
-            return "VK_ERROR_OUT_OF_HOST_MEMORY";
-        case VK_ERROR_OUT_OF_DEVICE_MEMORY:
-            return "VK_ERROR_OUT_OF_DEVICE_MEMORY";
-        case VK_ERROR_INITIALIZATION_FAILED:
-            return "VK_ERROR_INITIALIZATION_FAILED";
-        case VK_ERROR_DEVICE_LOST:
-            return "VK_ERROR_DEVICE_LOST";
-        case VK_ERROR_MEMORY_MAP_FAILED:
-            return "VK_ERROR_MEMORY_MAP_FAILED";
-        case VK_ERROR_LAYER_NOT_PRESENT:
-            return "VK_ERROR_LAYER_NOT_PRESENT";
-        case VK_ERROR_EXTENSION_NOT_PRESENT:
-            return "VK_ERROR_EXTENSION_NOT_PRESENT";
-        case VK_ERROR_FEATURE_NOT_PRESENT:
-            return "VK_ERROR_FEATURE_NOT_PRESENT";
-        case VK_ERROR_INCOMPATIBLE_DRIVER:
-            return "VK_ERROR_INCOMPATIBLE_DRIVER";
-        case VK_ERROR_TOO_MANY_OBJECTS:
-            return "VK_ERROR_TOO_MANY_OBJECTS";
-        case VK_ERROR_FORMAT_NOT_SUPPORTED:
-            return "VK_ERROR_FORMAT_NOT_SUPPORTED";
-        case VK_ERROR_FRAGMENTED_POOL:
-            return "VK_ERROR_FRAGMENTED_POOL";
-        case VK_ERROR_UNKNOWN:
-            return "VK_ERROR_UNKNOWN";
-        case VK_ERROR_VALIDATION_FAILED:
-            return "VK_ERROR_VALIDATION_FAILED";
-        case VK_ERROR_OUT_OF_POOL_MEMORY:
-            return "VK_ERROR_OUT_OF_POOL_MEMORY";
-        case VK_ERROR_INVALID_EXTERNAL_HANDLE:
-            return "VK_ERROR_INVALID_EXTERNAL_HANDLE";
-        case VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS:
-            return "VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS";
-        case VK_ERROR_FRAGMENTATION:
-            return "VK_ERROR_FRAGMENTATION";
-        case VK_PIPELINE_COMPILE_REQUIRED:
-            return "VK_PIPELINE_COMPILE_REQUIRED";
-        case VK_ERROR_NOT_PERMITTED:
-            return "VK_ERROR_NOT_PERMITTED";
-        case VK_ERROR_SURFACE_LOST_KHR:
-            return "VK_ERROR_SURFACE_LOST_KHR";
-        case VK_ERROR_NATIVE_WINDOW_IN_USE_KHR:
-            return "VK_ERROR_NATIVE_WINDOW_IN_USE_KHR";
-        case VK_SUBOPTIMAL_KHR:
-            return "VK_SUBOPTIMAL_KHR";
-        case VK_ERROR_OUT_OF_DATE_KHR:
-            return "VK_ERROR_OUT_OF_DATE_KHR";
-        case VK_ERROR_INCOMPATIBLE_DISPLAY_KHR:
-            return "VK_ERROR_INCOMPATIBLE_DISPLAY_KHR";
-        case VK_ERROR_INVALID_SHADER_NV:
-            return "VK_ERROR_INVALID_SHADER_NV";
-        case VK_ERROR_IMAGE_USAGE_NOT_SUPPORTED_KHR:
-            return "VK_ERROR_IMAGE_USAGE_NOT_SUPPORTED_KHR";
-        case VK_ERROR_VIDEO_PICTURE_LAYOUT_NOT_SUPPORTED_KHR:
-            return "VK_ERROR_VIDEO_PICTURE_LAYOUT_NOT_SUPPORTED_KHR";
-        case VK_ERROR_VIDEO_PROFILE_OPERATION_NOT_SUPPORTED_KHR:
-            return "VK_ERROR_VIDEO_PROFILE_OPERATION_NOT_SUPPORTED_KHR";
-        case VK_ERROR_VIDEO_PROFILE_FORMAT_NOT_SUPPORTED_KHR:
-            return "VK_ERROR_VIDEO_PROFILE_FORMAT_NOT_SUPPORTED_KHR";
-        case VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR:
-            return "VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR";
-        case VK_ERROR_VIDEO_STD_VERSION_NOT_SUPPORTED_KHR:
-            return "VK_ERROR_VIDEO_STD_VERSION_NOT_SUPPORTED_KHR";
-        case VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT:
-            return "VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT";
-        case VK_ERROR_PRESENT_TIMING_QUEUE_FULL_EXT:
-            return "VK_ERROR_PRESENT_TIMING_QUEUE_FULL_EXT";
-        case VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT:
-            return "VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT";
-        case VK_THREAD_IDLE_KHR:
-            return "VK_THREAD_IDLE_KHR";
-        case VK_THREAD_DONE_KHR:
-            return "VK_THREAD_DONE_KHR";
-        case VK_OPERATION_DEFERRED_KHR:
-            return "VK_OPERATION_DEFERRED_KHR";
-        case VK_OPERATION_NOT_DEFERRED_KHR:
-            return "VK_OPERATION_NOT_DEFERRED_KHR";
-        case VK_ERROR_INVALID_VIDEO_STD_PARAMETERS_KHR:
-            return "VK_ERROR_INVALID_VIDEO_STD_PARAMETERS_KHR";
-        case VK_ERROR_COMPRESSION_EXHAUSTED_EXT:
-            return "VK_ERROR_COMPRESSION_EXHAUSTED_EXT";
-        case VK_INCOMPATIBLE_SHADER_BINARY_EXT:
-            return "VK_INCOMPATIBLE_SHADER_BINARY_EXT";
-        case VK_PIPELINE_BINARY_MISSING_KHR:
-            return "VK_PIPELINE_BINARY_MISSING_KHR";
-        case VK_ERROR_NOT_ENOUGH_SPACE_KHR:
-            return "VK_ERROR_NOT_ENOUGH_SPACE_KHR";
-        default:
-            return "Unhandled VkResult";
-    }
-}
+inline const char* fourcc_to_string(uint32_t fourcc)
+{
+    static thread_local char s[5];
 
+    s[0] = static_cast<char>(fourcc & 0xff);
+    s[1] = static_cast<char>((fourcc >> 8) & 0xff);
+    s[2] = static_cast<char>((fourcc >> 16) & 0xff);
+    s[3] = static_cast<char>((fourcc >> 24) & 0xff);
+    s[4] = '\0';
+
+    return s;
+}

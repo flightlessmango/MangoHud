@@ -82,63 +82,60 @@ enum overlay_transfer_function {
 __attribute__((unused))
 static uint32_t convert_colors_vk(VkFormat format, VkColorSpaceKHR colorspace)
 {
-   uint32_t transfer_function;
-   switch (colorspace) {
-      case VK_COLOR_SPACE_HDR10_ST2084_EXT:
-         transfer_function = PQ;
-         break;
-      case VK_COLOR_SPACE_HDR10_HLG_EXT:
-         transfer_function = HLG;
-         break;
-      case VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT:
-         transfer_function = SRGB;
-         break;
-      default:
-         transfer_function = NONE;
-         break;
-   }
+    switch (colorspace) {
+        case VK_COLOR_SPACE_HDR10_ST2084_EXT:
+            return PQ;
 
-   if (transfer_function == NONE)
-   {
-      switch (format) {
-         case VK_FORMAT_R8_SRGB:
-         case VK_FORMAT_R8G8_SRGB:
-         case VK_FORMAT_R8G8B8_SRGB:
-         case VK_FORMAT_B8G8R8_SRGB:
-         case VK_FORMAT_R8G8B8A8_SRGB:
-         case VK_FORMAT_B8G8R8A8_SRGB:
-         case VK_FORMAT_A8B8G8R8_SRGB_PACK32:
-         case VK_FORMAT_BC1_RGB_SRGB_BLOCK:
-         case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
-         case VK_FORMAT_BC2_SRGB_BLOCK:
-         case VK_FORMAT_BC3_SRGB_BLOCK:
-         case VK_FORMAT_BC7_SRGB_BLOCK:
-         case VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK:
-         case VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK:
-         case VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_4x4_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_5x4_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_5x5_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_6x5_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_6x6_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_8x5_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_8x6_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_8x8_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_10x5_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_10x6_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_10x8_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_10x10_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_12x10_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_12x12_SRGB_BLOCK:
-         case VK_FORMAT_PVRTC1_2BPP_SRGB_BLOCK_IMG:
-         case VK_FORMAT_PVRTC1_4BPP_SRGB_BLOCK_IMG:
-         case VK_FORMAT_PVRTC2_2BPP_SRGB_BLOCK_IMG:
-         case VK_FORMAT_PVRTC2_4BPP_SRGB_BLOCK_IMG:
-            transfer_function = SRGB;
+        case VK_COLOR_SPACE_HDR10_HLG_EXT:
+            return HLG;
+
+        case VK_COLOR_SPACE_SRGB_NONLINEAR_KHR:
+            return SRGB;
+
+        case VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT:
+            return NONE;
+
+        default:
             break;
-         default: break;
-      }
-   }
+    }
 
-   return transfer_function;
+    switch (format) {
+        case VK_FORMAT_R8_SRGB:
+        case VK_FORMAT_R8G8_SRGB:
+        case VK_FORMAT_R8G8B8_SRGB:
+        case VK_FORMAT_B8G8R8_SRGB:
+        case VK_FORMAT_R8G8B8A8_SRGB:
+        case VK_FORMAT_B8G8R8A8_SRGB:
+        case VK_FORMAT_A8B8G8R8_SRGB_PACK32:
+        case VK_FORMAT_BC1_RGB_SRGB_BLOCK:
+        case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
+        case VK_FORMAT_BC2_SRGB_BLOCK:
+        case VK_FORMAT_BC3_SRGB_BLOCK:
+        case VK_FORMAT_BC7_SRGB_BLOCK:
+        case VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK:
+        case VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK:
+        case VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_4x4_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_5x4_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_5x5_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_6x5_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_6x6_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_8x5_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_8x6_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_8x8_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_10x5_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_10x6_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_10x8_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_10x10_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_12x10_SRGB_BLOCK:
+        case VK_FORMAT_ASTC_12x12_SRGB_BLOCK:
+        case VK_FORMAT_PVRTC1_2BPP_SRGB_BLOCK_IMG:
+        case VK_FORMAT_PVRTC1_4BPP_SRGB_BLOCK_IMG:
+        case VK_FORMAT_PVRTC2_2BPP_SRGB_BLOCK_IMG:
+        case VK_FORMAT_PVRTC2_4BPP_SRGB_BLOCK_IMG:
+            return NONE;
+
+        default:
+            return NONE;
+    }
 }

@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <memory>
 #include <string>
+#include "vulkan/vk_enum_string_helper.h"
 #include "../ipc/ipc_client.h"
 #include "../render/colors.h"
 #include "../render/shared.h"
@@ -123,7 +124,7 @@ public:
     }
 
 private:
-    VkFormat fmt = VK_FORMAT_B8G8R8A8_SRGB;
+    VkFormat fmt = VK_FORMAT_B8G8R8A8_UNORM;
     int current_slot = -1;
     int last_slot = -1;
     std::deque<int> frame_queue;

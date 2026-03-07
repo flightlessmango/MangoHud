@@ -152,6 +152,16 @@ VkResult OverlayVK::import_dmabuf(dmabuf_ext* buf, unique_fd& fd, Fdinfo& fdinfo
     VkResult r = d->CreateImage(d->Device, &ici, nullptr, &buf->image);
     if (r != VK_SUCCESS) {
         SPDLOG_ERROR("CreateImage {}", string_VkResult(r));
+        SPDLOG_DEBUG(
+            "dmabuf import: fourcc=0x{:08x} '{}' -> VkFormat={} ({}) colorspace={} transfer_function={} modifier=0x{:016x}",
+            fdinfo.fourcc,
+            fourcc_to_string(fdinfo.fourcc),
+            string_VkFormat(fmt),
+            static_cast<uint32_t>(fmt),
+            string_VkColorSpaceKHR(sc->colorspace),
+            convert_colors_vk(sc->format, sc->colorspace),
+            static_cast<unsigned long long>(fdinfo.modifier)
+        );
         return r;
     }
 
