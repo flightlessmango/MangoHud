@@ -162,7 +162,16 @@ VkResult OverlayVK::import_dmabuf(dmabuf_ext* buf, unique_fd& fd, Fdinfo& fdinfo
             convert_colors_vk(sc->format, sc->colorspace),
             static_cast<unsigned long long>(fdinfo.modifier)
         );
-        return r;
+
+        SPDLOG_DEBUG(
+            "plane[0]: offset={} rowPitch={} w={} h={} usage=0x{:x}",
+            static_cast<unsigned long long>(plane.offset),
+            static_cast<unsigned long long>(plane.rowPitch),
+            fdinfo.w,
+            fdinfo.h,
+            static_cast<unsigned>(ici.usage)
+        );
+    return r;
     }
 
     static uint64_t idx = 0;
