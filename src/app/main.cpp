@@ -40,11 +40,13 @@ static ImVec2 window_size;
 static uint32_t vendorID;
 static std::string deviceName;
 static notify_thread notifier;
-static int msgid;
+static int msgid = 0;
+static int unique_msgid = 0;
 static bool mangoapp_paused = false;
 std::mutex mangoapp_m;
 std::condition_variable mangoapp_cv;
 static uint8_t raw_msg[1024] = {0};
+static uint8_t raw_ctrl_msg[1024] = {0};
 static uint32_t screenWidth, screenHeight;
 static std::atomic_bool g_x_dead{false};
 
@@ -96,9 +98,9 @@ static unsigned int get_prop(const char* propName){
 
 static void ctrl_thread(){
     while (1){
-        const struct mangoapp_ctrl_msgid1_v1 *mangoapp_ctrl_v1 = (const struct mangoapp_ctrl_msgid1_v1*) raw_msg;
-        memset(raw_msg, 0, sizeof(raw_msg));
-        msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 2, 0);
+        const struct mangoapp_ctrl_msgid1_v1 *mangoapp_ctrl_v1 = (const struct mangoapp_ctrl_msgid1_v1*) raw_ctrl_msg;
+        memset(raw_ctrl_msg, 0, sizeof(raw_ctrl_msg));
+        msgrcv(msgid, (void *) raw_ctrl_msg, sizeof(raw_ctrl_msg), 2, 0);
         switch (mangoapp_ctrl_v1->log_session) {
             case 0:
                 // Keep as-is
@@ -173,9 +175,21 @@ static void msg_read_thread(){
         HUDElements.gamescope_debug_app.push_back(0);
         HUDElements.gamescope_debug_latency.push_back(0);
     }
-    int key = ftok("mangoapp", 65);
+    // WARNING: Unless a file named "mangoapp" is in the current directory key will be -1 (0xffffffff) and errno will be set
+    //   0xffffffff is a valid key, but is likely to collide
+    // TODO: Deprecate SysV message queues
+    key_t key = ftok("mangoapp", 65);
     msgid = msgget(key, 0666 | IPC_CREAT);
     // uint32_t previous_pid = 0;
+    const char *mangoapp_mq_key_string = getenv("MANGOAPP_MQ_KEY");
+    if (mangoapp_mq_key_string) {
+        key = atoi(mangoapp_mq_key_string);
+        if (key > 0) {
+            unique_msgid = msgget(key, 0);
+            printf("mangoapp: Opened message queue with key %d\n", key);
+        }
+    }
+
     const struct mangoapp_msg_header *hdr = (const struct mangoapp_msg_header*) raw_msg;
     const struct mangoapp_msg_v1 *mangoapp_v1 = (const struct mangoapp_msg_v1*) raw_msg;
 
@@ -184,7 +198,8 @@ static void msg_read_thread(){
     while (1){
         // make sure that the message recieved is compatible
         // and that we're not trying to use variables that don't exist (yet)
-        size_t msg_size = msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 1, 0);
+        int mq_id = unique_msgid == 0 ? msgid : unique_msgid;
+        size_t msg_size = msgrcv(mq_id, (void *) raw_msg, sizeof(raw_msg), 1, 0);
         if (msg_size != size_t(-1))
         {
             if (hdr->version == 1){
@@ -238,6 +253,10 @@ static void msg_read_thread(){
         }
         else
         {
+            if (errno == EIDRM) {
+                printf("mangoapp: message queue removed\n");
+                exit(1);
+            }
             printf("mangoapp: msgrcv returned -1 with error %d - %s\n", errno, strerror(errno));
         }
     }
