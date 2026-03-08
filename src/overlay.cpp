@@ -1,6 +1,7 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include <cstring>
 #include <string>
 #include <thread>
 #include <condition_variable>
@@ -31,7 +32,7 @@
 #include "ftrace.h"
 
 #ifdef __linux__
-#include <libgen.h>
+#include <link.h>
 #include <unistd.h>
 #include <sys/sysinfo.h>
 #include <sys/utsname.h>
@@ -765,30 +766,6 @@ struct pci_bus {
    int func;
 };
 
-#ifdef __linux__
-static void parse_proton_version(std::string wineProcess, std::string postfix)
-{
-   stringstream ss;
-   ss << dirname((char*)wineProcess.c_str()) << postfix;
-   string protonVersion = ss.str();
-   ss.str(""); ss.clear();
-   ss << read_line(protonVersion);
-   std::getline(ss, wineVersion, ' '); // skip first number string
-   std::getline(ss, wineVersion, ' ');
-   trim(wineVersion);
-   string toReplace = "proton-";
-   size_t pos = wineVersion.find(toReplace);
-   if (pos != std::string::npos) {
-      // If found replace
-      wineVersion.replace(pos, toReplace.length(), "Proton ");
-   }
-   else {
-      // If not found insert for non official proton builds
-      wineVersion.insert(0, "Proton ");
-   }
-}
-#endif
-
 static std::string parse_value_from_file(std::ifstream& file, const std::string& key, const std::string& separator) {
    std::string line;
 
@@ -819,6 +796,89 @@ static void strip_parenthesized_blocks(std::string& s) {
    trim(s);
 }
 
+#ifdef __linux__
+struct wine_build_search {
+   bool found_ntdll = false;
+   std::string version;
+};
+
+static bool is_printable_ascii(char c) {
+   return c >= 0x20 && c <= 0x7e;
+}
+
+// Find the first "wine-<digit>..." C string. wine_build is not necessarily
+// preceded by NUL (it may follow a table in .rodata), so only require that it
+// does not continue a printable string and is printable up to its NUL.
+static std::string scan_wine_build(const char* data, size_t size) {
+   static const char prefix[] = "wine-";
+   const size_t prefix_len = sizeof(prefix) - 1;
+   const size_t max_len = 64;
+
+   for (size_t i = 0; i + prefix_len < size; i++) {
+      if (i > 0 && is_printable_ascii(data[i - 1]))
+         continue;
+      if (memcmp(data + i, prefix, prefix_len) != 0)
+         continue;
+      if (data[i + prefix_len] < '0' || data[i + prefix_len] > '9')
+         continue;
+
+      const size_t limit = std::min(max_len, size - i);
+      const char* end = static_cast<const char*>(memchr(data + i, '\0', limit));
+      if (end && std::all_of(data + i, end, is_printable_ascii))
+         return std::string(data + i, end);
+   }
+   return std::string();
+}
+
+// Wine's unix-side ntdll.so embeds wine_build ("wine-X.Y...") in a read-only
+// segment. Reading it from the already mapped module avoids spawning wine.
+static int find_wine_build(struct dl_phdr_info* info, size_t, void* opaque) {
+   auto& search = *static_cast<wine_build_search*>(opaque);
+   const char* name = info->dlpi_name ? info->dlpi_name : "";
+   const size_t name_len = strlen(name);
+   const char suffix[] = "/ntdll.so";
+   const size_t suffix_len = sizeof(suffix) - 1;
+   if (name_len < suffix_len || strcmp(name + name_len - suffix_len, suffix) != 0)
+      return 0;
+
+   search.found_ntdll = true;
+   for (int i = 0; i < info->dlpi_phnum; i++) {
+      const auto& phdr = info->dlpi_phdr[i];
+      if (phdr.p_type != PT_LOAD || !(phdr.p_flags & PF_R) || (phdr.p_flags & (PF_W | PF_X)))
+         continue;
+
+      const char* data = reinterpret_cast<const char*>(info->dlpi_addr + phdr.p_vaddr);
+      search.version = scan_wine_build(data, phdr.p_memsz);
+      if (!search.version.empty())
+         break;
+   }
+   return 1;
+}
+
+static std::string parse_proton_version(const std::string& path) {
+   stringstream ss;
+   string version;
+   ss << read_line(path);
+   std::getline(ss, version, ' '); // skip first number string
+   std::getline(ss, version, ' ');
+   trim(version);
+   if (version.empty())
+      return version;
+
+   string toReplace = "proton-";
+   size_t pos = version.find(toReplace);
+   if (pos != std::string::npos) {
+      // If found replace
+      version.replace(pos, toReplace.length(), "Proton ");
+   }
+   else {
+      // If not found insert for non official proton builds
+      version.insert(0, "Proton ");
+   }
+   return version;
+}
+#endif
+
 void init_system_info(){
    #ifdef __linux__
       struct sysinfo info_buf;
@@ -846,53 +906,39 @@ void init_system_info(){
 
       cpusched = read_line("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
 
-      const char* ld_preload = getenv("LD_PRELOAD");
-      if (ld_preload)
-         unsetenv("LD_PRELOAD");
-
 // Get WINE version
 
       wineProcess = get_exe_path();
-      auto n = wineProcess.find_last_of('/');
-      string preloader = wineProcess.substr(n + 1);
-      if (preloader == "wine-preloader" || preloader == "wine64-preloader") {
+      wine_build_search wine_search;
+      dl_iterate_phdr(find_wine_build, &wine_search);
+      if (wine_search.found_ntdll) {
          // Check if using Proton
+         string dir = wineProcess.substr(0, wineProcess.find_last_of('/'));
+         string protonVersion;
+         bool proton = true;
          if (wineProcess.find("/dist/bin/wine") != std::string::npos
             || wineProcess.find("/files/bin/wine") != std::string::npos
             || wineProcess.find("/dist/bin-wow64/wine") != std::string::npos
             || wineProcess.find("/files/bin-wow64/wine") != std::string::npos)
-         {
-            parse_proton_version(wineProcess, "/../../version");
-         }
+            protonVersion = parse_proton_version(dir + "/../../version");
          else if (wineProcess.find("/files/lib/wine") != std::string::npos)
-         {
-            parse_proton_version(wineProcess, "/../../../../version");
-         }
-         else {
-            char *dir = dirname((char*)wineProcess.c_str());
-            stringstream findVersion;
-            if (preloader == "wine-preloader")
-               findVersion << "\"" << dir << "/wine\" --version";
-            else
-               findVersion << "\"" << dir << "/wine64\" --version";
-            const char *wine_env = getenv("WINELOADERNOEXEC");
-            if (wine_env)
-               unsetenv("WINELOADERNOEXEC");
-            wineVersion = exec(findVersion.str());
-            trim(wineVersion);
-            SPDLOG_DEBUG("WINE version: {}", wineVersion);
-            if (wine_env)
-               setenv("WINELOADERNOEXEC", wine_env, 1);
-         }
+            protonVersion = parse_proton_version(dir + "/../../../../version");
+         else
+            proton = false;
+
+         if (!protonVersion.empty())
+            wineVersion = protonVersion;
+         else if (proton && !wine_search.version.empty())
+            wineVersion = "Proton " + wine_search.version;
+         else
+            wineVersion = wine_search.version;
+         SPDLOG_DEBUG("WINE version: {}", wineVersion);
       }
       else {
            wineVersion = "";
       }
 
       check_for_vkbasalt_and_gamemode();
-
-      if (ld_preload)
-         setenv("LD_PRELOAD", ld_preload, 1);
 
       SPDLOG_DEBUG("Ram:{}", ram);
       SPDLOG_DEBUG("Cpu:{}", cpu);
