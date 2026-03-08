@@ -822,10 +822,6 @@ void init_system_info(){
 
       cpusched = read_line("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
 
-      const char* ld_preload = getenv("LD_PRELOAD");
-      if (ld_preload)
-         unsetenv("LD_PRELOAD");
-
 // Get WINE version
 
       wineProcess = get_exe_path();
@@ -864,14 +860,20 @@ void init_system_info(){
                findVersion << "\"" << dir << "/wine\" --version";
             else
                findVersion << "\"" << dir << "/wine64\" --version";
+            const char* ld_preload = getenv("LD_PRELOAD");
+            if (ld_preload)
+               unsetenv("LD_PRELOAD");
             const char *wine_env = getenv("WINELOADERNOEXEC");
             if (wine_env)
                unsetenv("WINELOADERNOEXEC");
+
             wineVersion = exec(findVersion.str());
             trim(wineVersion);
             SPDLOG_DEBUG("WINE version: {}", wineVersion);
             if (wine_env)
                setenv("WINELOADERNOEXEC", wine_env, 1);
+            if (ld_preload)
+               setenv("LD_PRELOAD", ld_preload, 1);
          }
       }
       else {
@@ -879,9 +881,6 @@ void init_system_info(){
       }
 
       check_for_vkbasalt_and_gamemode();
-
-      if (ld_preload)
-         setenv("LD_PRELOAD", ld_preload, 1);
 
       SPDLOG_DEBUG("Ram:{}", ram);
       SPDLOG_DEBUG("Cpu:{}", cpu);
