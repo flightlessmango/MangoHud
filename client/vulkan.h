@@ -22,6 +22,7 @@ struct cached_image {
     VkDescriptorSet ds = VK_NULL_HANDLE;
     VkDescriptorPool dp = VK_NULL_HANDLE;
     VkSemaphore semaphore = VK_NULL_HANDLE;
+    VkFramebuffer fb = VK_NULL_HANDLE;
     std::shared_ptr<overlay_resources> ovl_res;
     bool inited = false;
     bool valid = false;
@@ -132,7 +133,7 @@ private:
     std::shared_ptr<swapchain_data> sc;
     VkQueue queue;
 
-    VkResult import_dmabuf(dmabuf_ext* buf, unique_fd& import_fd, Fdinfo& fdinfo);
+    VkResult import_dmabuf(dmabuf_ext* buf, unique_fd& import_fd, Fdinfo& fdinfo, int idx);
     VkResult copy_dmabuf_to_cache(VkQueue queue, int img_idx, VkPresentInfoKHR pi);
     void cache_descriptor_set(std::shared_ptr<dmabuf_ext>& buf);
 

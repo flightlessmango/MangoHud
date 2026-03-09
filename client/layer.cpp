@@ -474,6 +474,21 @@ void Layer::init_overlay_resources(const VkSwapchainCreateInfoKHR* pCreateInfo, 
         if (r != VK_SUCCESS)
             SPDLOG_ERROR("CreateDescriptorPool {}", string_VkResult(r));
         SetName(d->Device, VK_OBJECT_TYPE_DESCRIPTOR_POOL, uint64_t(ovl_res->dp), "mangohud_descriptor_pool");
+
+        ovl_res->ds.resize(image_count);
+        for (auto&& [i, ds] : enumerate(ovl_res->ds)) {
+            VkDescriptorSetAllocateInfo as{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+            as.descriptorPool = ovl_res->dp;
+            as.descriptorSetCount = 1;
+            as.pSetLayouts = &ovl_res->dsl;
+
+            VkResult r = d->AllocateDescriptorSets(d->Device, &as, &ds);
+            if (r == VK_SUCCESS) {
+                layer->SetName(d->Device, VK_OBJECT_TYPE_DESCRIPTOR_SET, uint64_t(ds), "mangohud_descriptor_set");
+            } else {
+                SPDLOG_ERROR("AllocateDescriptorSets {}", string_VkResult(r));
+            }
+        }
     }
 
     if (!ovl_res->pl) {
@@ -524,4 +539,38 @@ void Layer::init_overlay_resources(const VkSwapchainCreateInfoKHR* pCreateInfo, 
                     "mangohud_overlay_done_semaphore_%zu", i);
         }
     }
+
+    VkAttachmentDescription color{};
+    color.format = VK_FORMAT_B8G8R8A8_UNORM;
+    color.samples = VK_SAMPLE_COUNT_1_BIT;
+    color.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    color.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    color.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    color.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    color.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    color.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    VkAttachmentReference color_ref{};
+    color_ref.attachment = 0;
+    color_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass{};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &color_ref;
+
+    VkRenderPassCreateInfo rpci{VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO};
+    rpci.attachmentCount = 1;
+    rpci.pAttachments = &color;
+    rpci.subpassCount = 1;
+    rpci.pSubpasses = &subpass;
+
+    VkResult r = d->CreateRenderPass(d->Device, &rpci, nullptr, &ovl_res->rp);
+    if (r != VK_SUCCESS) {
+        SPDLOG_ERROR("CreateRenderPass {}", string_VkResult(r));
+        return;
+    }
+
+    layer->SetName(d->Device, VK_OBJECT_TYPE_RENDER_PASS, (uint64_t)ovl_res->rp,
+                "mangohud_cache_renderpass");
 }
