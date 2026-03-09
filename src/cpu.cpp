@@ -826,6 +826,8 @@ void CPUStats::get_cpu_cores_types() {
 
     if (vendor == "GenuineIntel")
         get_cpu_cores_types_intel();
+    else if (vendor == "AuthenticAMD")
+        get_cpu_cores_types_amd();
 #endif
 
 #if defined(__arm__) || defined(__aarch64__)
@@ -871,6 +873,92 @@ void CPUStats::get_cpu_cores_types_intel() {
                 m_cpuData[k].label = key;
                 break;
             }
+        }
+    }
+}
+
+void CPUStats::get_cpu_cores_types_amd() {
+    static const char* LABEL_X3D = "X3D";
+    static const char* LABEL_FREQ = "Freq";
+    bool is_x3d_cpu = false;
+    {
+        std::ifstream cpuinfo(PROCCPUINFOFILE);
+        for (std::string line; std::getline(cpuinfo, line);) {
+            if (line.rfind("model name", 0) == 0) {
+                is_x3d_cpu = line.find("X3D") != std::string::npos;
+                break;
+            }
+        }
+    }
+
+    std::string base_label = is_x3d_cpu ? LABEL_X3D : LABEL_FREQ;
+    for (auto& cpu : m_cpuData)
+        cpu.label = base_label;
+
+    SPDLOG_DEBUG("get_cpu_cores_types_amd: base label = {}", base_label);
+
+    std::map<int, unsigned long> ccd_l3_size;
+    std::map<int, std::vector<size_t>> ccd_to_indices;
+
+    // enumerate CCDs and L3 sizes
+    for (size_t i = 0; i < m_cpuData.size(); i++) {
+        int cpu_id = m_cpuData[i].cpu_id;
+        std::string base = "/sys/devices/system/cpu/cpu" + std::to_string(cpu_id);
+
+        std::string ccd_id_str = read_line(base + "/cache/index3/id");
+        if (ccd_id_str.empty()) {
+            SPDLOG_WARN("get_cpu_cores_types_amd: failed to read L3 cache id for cpu{}", cpu_id);
+            continue;
+        }
+
+        int ccd_id;
+        try {
+            ccd_id = std::stoi(ccd_id_str);
+        } catch (...) {
+            SPDLOG_WARN("get_cpu_cores_types_amd: invalid L3 cache id '{}' for cpu{}", ccd_id_str, cpu_id);
+            continue;
+        }
+
+        ccd_to_indices[ccd_id].push_back(i);
+
+        if (ccd_l3_size.count(ccd_id))
+            continue;
+
+        std::string size_str = read_line(base + "/cache/index3/size");
+        if (size_str.empty())
+            continue;
+
+        unsigned long size_kb;
+        try {
+            size_kb = std::stoul(size_str);
+        } catch (...) {
+            continue;
+        }
+
+        ccd_l3_size[ccd_id] = size_kb;
+    }
+
+    // Single-CCD, use the base label
+    if (ccd_l3_size.size() < 2)
+        return;
+
+    // Compare CCDs L3 sizes
+    auto max_it = std::max_element(ccd_l3_size.begin(), ccd_l3_size.end(),
+        [](const auto& a, const auto& b) { return a.second < b.second; });
+    auto min_it = std::min_element(ccd_l3_size.begin(), ccd_l3_size.end(),
+        [](const auto& a, const auto& b) { return a.second < b.second; });
+
+    // All CCDs have the same L3 size, use base label
+    if (max_it->second == min_it->second)
+        return;
+
+    // Different L3 sizes per CCD, label which CCD is X3D
+    for (auto& [ccd_id, indices] : ccd_to_indices) {
+        std::string label = (ccd_id == max_it->first) ? LABEL_X3D : LABEL_FREQ;
+        for (size_t idx : indices) {
+            m_cpuData[idx].label = label;
+            SPDLOG_DEBUG("get_cpu_cores_types_amd: cpu{} ccd{} -> {}",
+                m_cpuData[idx].cpu_id, ccd_id, label);
         }
     }
 }
