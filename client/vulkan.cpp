@@ -112,13 +112,120 @@ uint32_t OverlayVK::find_mem_type_image(uint32_t type_bits, VkMemoryPropertyFlag
     return UINT32_MAX;
 }
 
+bool OverlayVK::is_dmabuf_import_supported(VkFormat format, const Fdinfo& fdinfo) {
+    auto d = sc->d;
+
+    VkDrmFormatModifierPropertiesListEXT modifier_list{
+        .sType = VK_STRUCTURE_TYPE_DRM_FORMAT_MODIFIER_PROPERTIES_LIST_EXT,
+    };
+
+    VkFormatProperties2 format_props{
+        .sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2,
+        .pNext = &modifier_list,
+    };
+
+     d->pPhysicalDeviceDispatch->GetPhysicalDeviceFormatProperties2KHR(d->PhysicalDevice, format, &format_props);
+
+    if (modifier_list.drmFormatModifierCount == 0) {
+        SPDLOG_DEBUG(
+            "dmabuf import unsupported: format {} exposes no DRM modifiers",
+            string_VkFormat(format));
+        return false;
+    }
+
+    std::vector<VkDrmFormatModifierPropertiesEXT> modifiers(modifier_list.drmFormatModifierCount);
+    modifier_list.pDrmFormatModifierProperties = modifiers.data();
+
+     d->pPhysicalDeviceDispatch->GetPhysicalDeviceFormatProperties2KHR(d->PhysicalDevice, format, &format_props);
+
+    bool modifier_found = false;
+    for (const auto& mod : modifiers) {
+        if (mod.drmFormatModifier == fdinfo.modifier) {
+            modifier_found = true;
+            break;
+        }
+    }
+
+    if (!modifier_found) {
+        SPDLOG_DEBUG(
+            "dmabuf import unsupported: format {} does not advertise modifier 0x{:016x}",
+            string_VkFormat(format),
+            static_cast<unsigned long long>(fdinfo.modifier));
+        return false;
+    }
+
+    VkPhysicalDeviceExternalImageFormatInfo external_info{
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO,
+        .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT,
+    };
+
+    VkPhysicalDeviceImageDrmFormatModifierInfoEXT modifier_info{
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_DRM_FORMAT_MODIFIER_INFO_EXT,
+        .pNext = &external_info,
+        .drmFormatModifier = fdinfo.modifier,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .queueFamilyIndexCount = 0,
+        .pQueueFamilyIndices = nullptr,
+    };
+
+    VkPhysicalDeviceImageFormatInfo2 image_info{
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2,
+        .pNext = &modifier_info,
+        .format = format,
+        .type = VK_IMAGE_TYPE_2D,
+        .tiling = VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT,
+        .usage = VK_IMAGE_USAGE_SAMPLED_BIT,
+        .flags = 0,
+    };
+
+    VkExternalImageFormatProperties external_props{
+        .sType = VK_STRUCTURE_TYPE_EXTERNAL_IMAGE_FORMAT_PROPERTIES,
+    };
+
+    VkImageFormatProperties2 image_props{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2,
+        .pNext = &external_props,
+    };
+    VkResult result = d->pPhysicalDeviceDispatch->GetPhysicalDeviceImageFormatProperties2KHR(
+        d->PhysicalDevice, &image_info, &image_props);
+
+    if (result != VK_SUCCESS) {
+        SPDLOG_DEBUG(
+            "dmabuf import unsupported: GetPhysicalDeviceImageFormatProperties2 failed: "
+            "format={} modifier=0x{:016x} w={} h={} usage=0x{:x} result={}",
+            string_VkFormat(format),
+            static_cast<unsigned long long>(fdinfo.modifier),
+            fdinfo.w,
+            fdinfo.h,
+            static_cast<unsigned>(VK_IMAGE_USAGE_SAMPLED_BIT),
+            string_VkResult(result));
+        return false;
+    }
+
+    const auto& external_mem = external_props.externalMemoryProperties;
+    if ((external_mem.externalMemoryFeatures & VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT) == 0) {
+        SPDLOG_DEBUG(
+            "dmabuf import unsupported: format={} modifier=0x{:016x} is not importable",
+            string_VkFormat(format),
+            static_cast<unsigned long long>(fdinfo.modifier));
+        return false;
+    }
+
+    return true;
+}
+
 VkResult OverlayVK::import_dmabuf(dmabuf_ext* buf, unique_fd& fd, Fdinfo& fdinfo, int idx) {
+    if (!is_dmabuf_import_supported(fmt, fdinfo))
+        return VK_ERROR_IMAGE_USAGE_NOT_SUPPORTED_KHR;
+
     auto d = sc->d;
 
     VkSubresourceLayout plane{};
     plane.offset = fdinfo.dmabuf_offset;
     plane.rowPitch = fdinfo.stride;
     plane.size = 0;
+    plane.arrayPitch = 0;
+    plane.depthPitch = 0;
 
     VkImageDrmFormatModifierExplicitCreateInfoEXT drm_explicit{
         VK_STRUCTURE_TYPE_IMAGE_DRM_FORMAT_MODIFIER_EXPLICIT_CREATE_INFO_EXT
