@@ -144,5 +144,4 @@ private:
     void wait_on_semaphores(const vkroots::VkDeviceDispatch* d);
     void cache_to_transfer_dst(VkCommandBuffer cmd, VkImage image, VkImageLayout old_layout);
     void cache_to_shader_read(VkCommandBuffer cmd, VkImage image, VkImageLayout old_layout);
-    bool is_dmabuf_import_supported(VkFormat format, const Fdinfo& fdinfo);
 };
