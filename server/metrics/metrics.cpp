@@ -81,7 +81,7 @@ void Metrics::update_client() {
             new_metrics.swap(client_metrics);
         }
         populate_tables();
-        std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        std::this_thread::sleep_for(std::chrono::milliseconds(7));
     }
 }
 
