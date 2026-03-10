@@ -16,7 +16,7 @@ public:
     VkDevice device = VK_NULL_HANDLE;
     VkQueue graphicsQueue = VK_NULL_HANDLE;
     uint32_t graphicsQueueFamilyIndex = UINT32_MAX;
-    VkFormat fmt = VK_FORMAT_B8G8R8A8_SRGB;
+    VkFormat fmt = VK_FORMAT_B8G8R8A8_UNORM;
     std::mutex m;
     PFN_vkImportSemaphoreFdKHR pfn_vkImportSemaphoreFdKHR = nullptr;
 
