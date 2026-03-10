@@ -26,7 +26,7 @@ std::vector<int> OverlayVK::init_dmabufs(Fdinfo& fdinfo) {
     std::vector<int> semaphores;
     for (auto [i, fd] : enumerate(fdinfo.dmabuf_buffer)) {
         dmabufs.push_back(std::make_shared<dmabuf_ext>(sc->d));
-        import_dmabuf(dmabufs.back().get(), fd, fdinfo, i);
+        import_dmabuf(dmabufs.back().get(), fd, fdinfo);
         cache_descriptor_set(dmabufs.back());
     }
 
@@ -112,7 +112,7 @@ uint32_t OverlayVK::find_mem_type_image(uint32_t type_bits, VkMemoryPropertyFlag
     return UINT32_MAX;
 }
 
-VkResult OverlayVK::import_dmabuf(dmabuf_ext* buf, unique_fd& fd, Fdinfo& fdinfo, int idx) {
+VkResult OverlayVK::import_dmabuf(dmabuf_ext* buf, unique_fd& fd, Fdinfo& fdinfo) {
     auto d = sc->d;
 
     VkSubresourceLayout plane{};
@@ -144,7 +144,7 @@ VkResult OverlayVK::import_dmabuf(dmabuf_ext* buf, unique_fd& fd, Fdinfo& fdinfo
     ici.arrayLayers = 1;
     ici.samples = VK_SAMPLE_COUNT_1_BIT;
     ici.tiling = VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT;
-    ici.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+    ici.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     ici.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     ici.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
@@ -174,12 +174,13 @@ VkResult OverlayVK::import_dmabuf(dmabuf_ext* buf, unique_fd& fd, Fdinfo& fdinfo
     return r;
     }
 
+    static uint64_t idx = 0;
     layer->SetName(d->Device, VK_OBJECT_TYPE_IMAGE, (uint64_t)buf->image,
-            "mangohud_dmabuf_image_%" PRIu64, idx);
+            "mangohud_dmabuf_image_%" PRIu64, ++idx);
 
     ici.pNext = nullptr;
     ici.tiling = VK_IMAGE_TILING_OPTIMAL;
-    ici.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    ici.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
     r = d->CreateImage(d->Device, &ici, nullptr, &buf->cached->image);
     if (r != VK_SUCCESS) {
@@ -238,7 +239,7 @@ VkResult OverlayVK::import_dmabuf(dmabuf_ext* buf, unique_fd& fd, Fdinfo& fdinfo
     }
 
     layer->SetName(d->Device, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t)buf->mem,
-            "mangohud_dmabuf_memory_%" PRIu64, idx);
+            "mangohud_dmabuf_memory_%" PRIu64, ++idx);
 
     VkMemoryRequirements req{};
     d->GetImageMemoryRequirements(d->Device, buf->cached->image, &req);
@@ -279,42 +280,11 @@ VkResult OverlayVK::import_dmabuf(dmabuf_ext* buf, unique_fd& fd, Fdinfo& fdinfo
     if (r != VK_SUCCESS)
         return r;
 
-    VkDescriptorImageInfo dii{};
-    dii.sampler = layer->ovl_res->sampler;
-    dii.imageView = buf->view;
-    dii.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-    VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-    write.dstSet = layer->ovl_res->ds[idx];
-    write.dstBinding = 0;
-    write.descriptorCount = 1;
-    write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    write.pImageInfo = &dii;
-
-    d->UpdateDescriptorSets(d->Device, 1, &write, 0, nullptr);
-
     vci.image = buf->cached->image;
     d->CreateImageView(d->Device, &vci, nullptr, &buf->cached->view);
 
     layer->SetName(d->Device, VK_OBJECT_TYPE_IMAGE_VIEW, (uint64_t)buf->cached->view,
             "mangohud_cache_view_%i", idx);
-
-    VkFramebufferCreateInfo fbci{VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
-    fbci.renderPass = layer->ovl_res->rp;
-    fbci.attachmentCount = 1;
-    fbci.pAttachments = &buf->cached->view;
-    fbci.width = fdinfo.w;
-    fbci.height = fdinfo.h;
-    fbci.layers = 1;
-
-    r = d->CreateFramebuffer(d->Device, &fbci, nullptr, &buf->cached->fb);
-    if (r != VK_SUCCESS) {
-        SPDLOG_ERROR("CreateFramebuffer {}", string_VkResult(r));
-        return r;
-    }
-
-    layer->SetName(d->Device, VK_OBJECT_TYPE_FRAMEBUFFER, (uint64_t)buf->cached->fb,
-                   "mangohud_cache_framebuffer_%i", idx);
 
     buf->cached->format = fmt;
     buf->valid = true;
@@ -517,56 +487,31 @@ VkResult OverlayVK::copy_dmabuf_to_cache(VkQueue queue, int img_idx, VkPresentIn
 
     r = sc->d->BeginCommandBuffer(cmd, &bi);
     if (r != VK_SUCCESS) return r;
-    if (refresh_cache) {
-        if (buf->layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-            transition_image(cmd, buf->image, buf->layout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-            buf->layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        }
 
-        if (buf->cached->layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
-            transition_image(cmd, buf->cached->image, buf->cached->layout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-            buf->cached->layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        }
+    if (refresh_cache)
+    {
+        transition_image(cmd, buf->image, buf->layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+        buf->layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
-        VkClearValue clear{};
-        clear.color = {{0.0f, 0.0f, 0.0f, 0.0f}};
+        cache_to_transfer_dst(cmd, buf->cached->image, buf->cached->layout);
+        buf->cached->layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
-        VkRenderPassBeginInfo cache_rpbi{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
-        cache_rpbi.renderPass = layer->ovl_res->rp;
-        cache_rpbi.framebuffer = buf->cached->fb;
-        cache_rpbi.renderArea.offset = {0, 0};
-        cache_rpbi.renderArea.extent = {buf->width, buf->height};
-        cache_rpbi.clearValueCount = 1;
-        cache_rpbi.pClearValues = &clear;
+        VkImageCopy region{};
+        region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.srcSubresource.layerCount = 1;
+        region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.dstSubresource.layerCount = 1;
+        region.extent.width = buf->width;
+        region.extent.height = buf->height;
+        region.extent.depth = 1;
 
-        sc->d->CmdBeginRenderPass(cmd, &cache_rpbi, VK_SUBPASS_CONTENTS_INLINE);
-        sc->d->CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layer->ovl_res->pipe);
+        sc->d->CmdCopyImage(cmd,
+                        buf->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                        buf->cached->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                        1, &region);
 
-        sc->d->CmdBindDescriptorSets(cmd,
-            VK_PIPELINE_BIND_POINT_GRAPHICS,
-            layer->ovl_res->pl,
-            0, 1, &layer->ovl_res->ds[slot],
-            0, nullptr);
-
-        OverlayPushConsts pc{};
-        pc.dstExtent[0] = static_cast<float>(buf->width);
-        pc.dstExtent[1] = static_cast<float>(buf->height);
-        pc.srcExtent[0] = static_cast<float>(buf->width);
-        pc.srcExtent[1] = static_cast<float>(buf->height);
-        pc.transfer_function = convert_colors_vk(sc->format, sc->colorspace);
-
-        sc->d->CmdPushConstants(cmd,
-            layer->ovl_res->pl,
-            VK_SHADER_STAGE_FRAGMENT_BIT,
-            0,
-            sizeof(pc),
-            &pc);
-
-        sc->d->CmdDraw(cmd, 3, 1, 0, 0);
-        sc->d->CmdEndRenderPass(cmd);
-
+        cache_to_shader_read(cmd, buf->cached->image, buf->cached->layout);
         buf->cached->layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
         last_slot = slot;
         buf->cached->valid = true;
     } else {
@@ -576,34 +521,29 @@ VkResult OverlayVK::copy_dmabuf_to_cache(VkQueue queue, int img_idx, VkPresentIn
         }
     }
 
-    VkRenderPassBeginInfo rpbi{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
+    VkRenderPassBeginInfo rpbi{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
     rpbi.renderPass = sc->rp;
     rpbi.framebuffer = sc->fb[img_idx];
-    rpbi.renderArea.offset = {0, 0};
+    rpbi.renderArea.offset = { 0, 0 };
     rpbi.renderArea.extent = sc->extent;
 
     sc->d->CmdBeginRenderPass(cmd, &rpbi, VK_SUBPASS_CONTENTS_INLINE);
     sc->d->CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, sc->pipe);
 
     sc->d->CmdBindDescriptorSets(cmd,
-        VK_PIPELINE_BIND_POINT_GRAPHICS,
-        layer->ovl_res->pl,
-        0, 1, &buf->cached->ds,
-        0, nullptr);
+                             VK_PIPELINE_BIND_POINT_GRAPHICS,
+                             layer->ovl_res->pl,
+                             0, 1, &buf->cached->ds,
+                             0, nullptr);
 
     OverlayPushConsts pc{};
-    pc.dstExtent[0] = static_cast<float>(sc->extent.width);
-    pc.dstExtent[1] = static_cast<float>(sc->extent.height);
-    pc.srcExtent[0] = static_cast<float>(buf->width);
-    pc.srcExtent[1] = static_cast<float>(buf->height);
+    pc.dstExtent[0] = (float)sc->extent.width;
+    pc.dstExtent[1] = (float)sc->extent.height;
+    pc.srcExtent[0] = (float)buf->width;
+    pc.srcExtent[1] = (float)buf->height;
+    pc.transfer_function = convert_colors_vk(sc->format, sc->colorspace);
 
-    sc->d->CmdPushConstants(cmd,
-        layer->ovl_res->pl,
-        VK_SHADER_STAGE_FRAGMENT_BIT,
-        0,
-        sizeof(pc),
-        &pc);
-
+    sc->d->CmdPushConstants(cmd, layer->ovl_res->pl, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(pc), &pc);
     sc->d->CmdDraw(cmd, 3, 1, 0, 0);
     sc->d->CmdEndRenderPass(cmd);
 
@@ -678,10 +618,5 @@ cached_image::~cached_image() {
     if (ds) {
         d->FreeDescriptorSets(d->Device, ovl_res->dp, 1, &ds);
         ds = VK_NULL_HANDLE;
-    }
-
-    if (fb) {
-        d->DestroyFramebuffer(d->Device, fb, nullptr);
-        fb = VK_NULL_HANDLE;
     }
 }

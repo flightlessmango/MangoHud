@@ -6,9 +6,6 @@ struct overlay_resources {
     VkDescriptorSetLayout dsl = VK_NULL_HANDLE;
     VkPipelineLayout pl = VK_NULL_HANDLE;
     VkDescriptorPool dp = VK_NULL_HANDLE;
-    VkRenderPass rp = VK_NULL_HANDLE;
-    VkPipeline pipe = VK_NULL_HANDLE;
-    std::vector<VkDescriptorSet> ds;
 
     VkShaderModule vs = VK_NULL_HANDLE;
     VkShaderModule fs = VK_NULL_HANDLE;
@@ -82,16 +79,6 @@ struct overlay_resources {
         for (auto& sema : overlay_done) {
             d->DestroySemaphore(d->Device, sema, nullptr);
             sema = VK_NULL_HANDLE;
-        }
-
-        if (rp) {
-            d->DestroyRenderPass(d->Device, rp, nullptr);
-            rp = VK_NULL_HANDLE;
-        }
-
-        if (pipe) {
-            d->DestroyPipeline(d->Device, pipe, nullptr);
-            pipe = VK_NULL_HANDLE;
         }
     }
 };
@@ -385,15 +372,6 @@ public:
         {
             std::lock_guard lock(swapchain_mtx);
             swapchains[*pSwapchain] = sc;
-        }
-
-        if (!ovl_res->pipe) {
-            gp.renderPass =  ovl_res->rp;
-            d->CreateGraphicsPipelines(d->Device, VK_NULL_HANDLE, 1, &gp, nullptr, &ovl_res->pipe);
-            if (r == VK_SUCCESS)
-                SetName(d->Device, VK_OBJECT_TYPE_PIPELINE, uint64_t(ovl_res->pipe), "mangohud_cache_pipeline");
-            else
-                SPDLOG_ERROR("CreateGraphicsPipelines {}", string_VkResult(r));
         }
     }
 
