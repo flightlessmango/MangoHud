@@ -320,6 +320,13 @@ bool VkCtx::create_gbm_buffer(clientRes* r, dmabuf_t* buf) {
 
     const uint64_t linear = DRM_FORMAT_MOD_LINEAR;
     buf->gbm.bo = gbm_bo_create_with_modifiers(gbm_dev, r->w, r->h, buf->gbm.fourcc, &linear, 1);
+    if (!buf->gbm.bo)
+        buf->gbm.bo = gbm_bo_create(gbm_dev, r->w, r->h, buf->gbm.fourcc, GBM_BO_USE_RENDERING);
+
+    if (!buf->gbm.bo) {
+        SPDLOG_ERROR("gbm buffer creation failed");
+        return false;
+    }
     buf->gbm.fd = unique_fd::adopt(gbm_bo_get_fd(buf->gbm.bo));
     if (!buf->gbm.fd) {
         fprintf(stderr, "Failed to get gbm fd\n");
