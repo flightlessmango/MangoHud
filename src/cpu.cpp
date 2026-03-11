@@ -904,9 +904,9 @@ void CPUStats::get_cpu_cores_types_amd() {
     for (auto& cpu : m_cpuData) {
         cpu.label = base_label;
         int cpu_id = cpu.cpu_id;
-        std::string base = "/sys/devices/system/cpu/cpu" + std::to_string(cpu_id);
+        auto const base = "/sys/devices/system/cpu/cpu" + std::to_string(cpu_id);
 
-        std::string ccd_id_str = read_line(base + "/cache/index3/id");
+        auto const ccd_id_str = read_line(base + "/cache/index3/id");
         if (ccd_id_str.empty()) {
             SPDLOG_WARN("get_cpu_cores_types_amd: failed to read L3 cache id for cpu{}", cpu_id);
             continue;
