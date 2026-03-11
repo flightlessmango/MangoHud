@@ -901,8 +901,9 @@ void CPUStats::get_cpu_cores_types_amd() {
     std::map<int, std::vector<size_t>> ccd_to_indices;
 
     // enumerate CCDs and L3 sizes
-    for (size_t i = 0; i < m_cpuData.size(); i++) {
-        int cpu_id = m_cpuData[i].cpu_id;
+    for (auto& cpu : m_cpuData) {
+        cpu.label = base_label;
+        int cpu_id = cpu.cpu_id;
         std::string base = "/sys/devices/system/cpu/cpu" + std::to_string(cpu_id);
 
         std::string ccd_id_str = read_line(base + "/cache/index3/id");
