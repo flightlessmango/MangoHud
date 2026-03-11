@@ -880,20 +880,16 @@ void CPUStats::get_cpu_cores_types_intel() {
 void CPUStats::get_cpu_cores_types_amd() {
     static const char* LABEL_X3D = "X3D";
     static const char* LABEL_FREQ = "Freq";
-    bool is_x3d_cpu = false;
-    {
+    static auto const is_x3d_cpu = []() -> bool {
         std::ifstream cpuinfo(PROCCPUINFOFILE);
         for (std::string line; std::getline(cpuinfo, line);) {
-            if (line.rfind("model name", 0) == 0) {
-                is_x3d_cpu = line.find("X3D") != std::string::npos;
-                break;
-            }
+             if (starts_with(line, "model name") and line.find("X3D") != std::string::npos)
+                 return true;
         }
-    }
+        return false;
+    }();
 
     static auto const base_label = is_x3d_cpu ? LABEL_X3D : LABEL_FREQ;
-    for (auto& cpu : m_cpuData)
-        cpu.label = base_label;
 
     SPDLOG_DEBUG("get_cpu_cores_types_amd: base label = {}", base_label);
 
@@ -901,7 +897,8 @@ void CPUStats::get_cpu_cores_types_amd() {
     std::map<int, std::vector<size_t>> ccd_to_indices;
 
     // enumerate CCDs and L3 sizes
-    for (auto& cpu : m_cpuData) {
+    for (size_t i = 0; i < m_cpuData.size(); i++) {
+        auto& cpu = m_cpuData[i];
         cpu.label = base_label;
         int cpu_id = cpu.cpu_id;
         auto const base = "/sys/devices/system/cpu/cpu" + std::to_string(cpu_id);
