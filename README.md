@@ -497,10 +497,13 @@ Because comma is also used as option delimiter and needs to be escaped for value
 
 ### Vulkan Vsync
 
-- `0` = Adaptive VSync (FIFO_RELAXED_KHR)
+- `0` = Adaptive VSync (FIFO_RELAXED_KHR) (Tear-free when keeping pace, tears on missed Vblanks to minimize latency.)
 - `1` = Off (IMMEDIATE_KHR)
-- `2` = Mailbox (VSync with uncapped FPS) (MAILBOX_KHR)
+- `2` = Mailbox (MAILBOX_KHR) (VSync with uncapped FPS. Tear-free, low latency, no pacing guarantees.)
 - `3` = On (FIFO_KHR)
+- `4` = (SHARED_DEMAND_REFRESH_KHR) (Shared image update, demand-driven refresh. Tearing, low-latency, no pacing guarantees. Rarely used.)
+- `5` = (SHARED_CONTINUOUS_REFRESH_KHR) (Shared image update, continuous refresh. Tearing, low-latency, no pacing guarantees. Rarely used.)
+- `6` = FIFO Latest Ready (FIFO_LATEST_READY_KHR) (VSync with uncapped FPS. Tear-free, low latency, improved pacing versus MAILBOX_KHR.)
 
 Not all vulkan vsync options may be supported on your device, you can check what your device supports here [vulkan.gpuinfo.org](https://vulkan.gpuinfo.org/listsurfacepresentmodes.php?platform=linux)
 
