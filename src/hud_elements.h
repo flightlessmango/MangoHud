@@ -151,13 +151,14 @@ class HudElements{
 
         void TextColored(ImVec4 col, const char *fmt, ...);
 
-        std::array<VkPresentModeKHR, 6> presentModes = {
+        std::array<VkPresentModeKHR, 7> presentModes = {
             VK_PRESENT_MODE_FIFO_RELAXED_KHR,
             VK_PRESENT_MODE_IMMEDIATE_KHR,
             VK_PRESENT_MODE_MAILBOX_KHR,
             VK_PRESENT_MODE_FIFO_KHR,
             VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR,
-            VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR};
+            VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR,
+            VK_PRESENT_MODE_FIFO_LATEST_READY_KHR};
 
         std::map<VkPresentModeKHR, std::string> presentModeMap = {
             {VK_PRESENT_MODE_IMMEDIATE_KHR, "IMMEDIATE"},
@@ -165,7 +166,8 @@ class HudElements{
             {VK_PRESENT_MODE_FIFO_KHR, "FIFO"},
             {VK_PRESENT_MODE_FIFO_RELAXED_KHR, "FIFO Relaxed"},
             {VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR, "DEMAND"},
-            {VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR, "CONTINUOUS"}
+            {VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR, "CONTINUOUS"},
+            {VK_PRESENT_MODE_FIFO_LATEST_READY_KHR, "FIFO Latest Ready"},
         };
 
         VkPresentModeKHR cur_present_mode;

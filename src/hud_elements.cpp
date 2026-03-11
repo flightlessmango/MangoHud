@@ -1713,7 +1713,7 @@ void HudElements::present_mode() {
         ImguiNextColumnOrNewRow();
 
 
-    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.5f, "%s\n", HUDElements.get_present_mode().c_str());
+    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.75f, "%s\n", HUDElements.get_present_mode().c_str());
 
     ImGui::PopFont();
 }
