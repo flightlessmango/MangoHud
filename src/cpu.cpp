@@ -925,7 +925,7 @@ void CPUStats::get_cpu_cores_types_amd() {
         if (ccd_l3_size.count(ccd_id))
             continue;
 
-        std::string size_str = read_line(base + "/cache/index3/size");
+        auto const size_str = read_line(base + "/cache/index3/size");
         if (size_str.empty())
             continue;
 
