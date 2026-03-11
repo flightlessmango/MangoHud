@@ -891,7 +891,7 @@ void CPUStats::get_cpu_cores_types_amd() {
         }
     }
 
-    std::string base_label = is_x3d_cpu ? LABEL_X3D : LABEL_FREQ;
+    static auto const base_label = is_x3d_cpu ? LABEL_X3D : LABEL_FREQ;
     for (auto& cpu : m_cpuData)
         cpu.label = base_label;
 
