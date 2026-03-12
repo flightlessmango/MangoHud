@@ -1088,20 +1088,14 @@ parse_overlay_config(struct overlay_params *params,
                                 );
 
    // check if user specified an env for fps limiter instead
-   if (params->fps_limit.size() == 0 ||
-      (params->fps_limit.size() == 1 && params->fps_limit[0] == 0))
+   const char *fps_limit_env = getenv("MANGOHUD_FPS_LIMIT");
+   if (fps_limit_env)
    {
-      const char *env = getenv("MANGOHUD_FPS_LIMIT");
-      if (env)
-      {
-         try {
-            int fps = std::stof(env);
-            if (params->fps_limit.size() == 0)
-               params->fps_limit.push_back(fps);
-            else
-               params->fps_limit[0] = fps;
-         } catch(...) {}
-      }
+      try {
+         int fps = std::stof(fps_limit_env);
+         auto front = params->fps_limit.begin();
+         params->fps_limit.insert(front, fps);
+      } catch(...) {}
    }
 
 #ifdef HAVE_DBUS
