@@ -23,6 +23,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
+#include <algorithm>
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -1856,27 +1857,31 @@ static VkResult overlay_CreateDevice(
    std::vector<VkExtensionProperties> available_extensions(extension_count);
    instance_data->pd_vtable.EnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extension_count, available_extensions.data());
 
+   auto has_extension = [](const auto& list, const char *name) {
+      return std::any_of(list.begin(), list.end(), [&](const auto& e) {
+         return e == std::string_view(name);
+      });
+   };
 
-   bool can_get_driver_info = instance_data->api_version < VK_API_VERSION_1_1 ? false : true;
 
-   // VK_KHR_driver_properties became core in 1.2
-   if (instance_data->api_version < VK_API_VERSION_1_2 && can_get_driver_info) {
-      for (auto& extension : available_extensions) {
-         if (extension.extensionName == std::string(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME)) {
-            for (auto& enabled : enabled_extensions) {
-               if (enabled == std::string(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME))
-                  goto DONT;
+   bool can_get_driver_info = false;
+
+   for (auto& extension : available_extensions) {
+      if (extension.extensionName == std::string_view(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME)) {
+         can_get_driver_info = true;
+         if (instance_data->api_version < VK_API_VERSION_1_2) {
+            if (!has_extension(enabled_extensions, VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME)) {
+               enabled_extensions.push_back(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME);
             }
-            enabled_extensions.push_back(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME);
-            DONT:
-            goto FOUND;
          }
       }
-      can_get_driver_info = false;
-      FOUND:;
    }
 
-   VkResult result = fpCreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
+   VkDeviceCreateInfo pCreateInfoPatched = *pCreateInfo;
+   pCreateInfoPatched.ppEnabledExtensionNames = enabled_extensions.data();
+   pCreateInfoPatched.enabledExtensionCount = (uint32_t) enabled_extensions.size();
+
+   VkResult result = fpCreateDevice(physicalDevice, &pCreateInfoPatched, pAllocator, pDevice);
    if (result != VK_SUCCESS) return result;
 
    struct device_data *device_data = new_device_data(*pDevice, instance_data);
