@@ -1670,6 +1670,7 @@ static VkResult overlay_QueuePresentKHR(
       fps_limiter->limit(true);
 
    struct queue_data *queue_data = FIND(struct queue_data, queue);
+   const auto *mode_info = static_cast<const VkSwapchainPresentModeInfoKHR*>(vk_find_struct_const(pPresentInfo->pNext, SWAPCHAIN_PRESENT_MODE_INFO_KHR));
 
    /* Otherwise we need to add our overlay drawing semaphore to the list of
     * semaphores to wait on. If we don't do that the presented picture might
@@ -1687,6 +1688,9 @@ static VkResult overlay_QueuePresentKHR(
       present_info.swapchainCount = 1;
       present_info.pSwapchains = &swapchain;
       present_info.pImageIndices = &image_index;
+
+      if (mode_info)
+         HUDElements.cur_present_mode = mode_info->pPresentModes[i];
 
       struct overlay_draw *draw = before_present(swapchain_data,
                                                    queue_data,
