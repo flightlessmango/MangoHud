@@ -1876,6 +1876,11 @@ static VkResult overlay_CreateDevice(
             }
          }
       }
+      if (extension.extensionName == std::string_view(VK_KHR_PRESENT_MODE_FIFO_LATEST_READY_EXTENSION_NAME)) {
+         if (!has_extension(enabled_extensions, VK_KHR_PRESENT_MODE_FIFO_LATEST_READY_EXTENSION_NAME)) {
+            enabled_extensions.push_back(VK_KHR_PRESENT_MODE_FIFO_LATEST_READY_EXTENSION_NAME);
+         }
+      }
    }
 
    VkDeviceCreateInfo pCreateInfoPatched = *pCreateInfo;
