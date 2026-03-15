@@ -168,6 +168,22 @@ static void gamescope_frametime(uint64_t app_frametime_ns, uint64_t latency_ns){
         HUDElements.gamescope_debug_latency.erase(HUDElements.gamescope_debug_latency.begin());
 }
 
+static EngineTypes engine_type_from_str(std::string const& engineName) {
+    if (engineName == "DXVK")
+        return DXVK;
+    if (engineName == "vkd3d")
+        return VKD3D;
+    if(engineName == "mesa zink")
+        return ZINK;
+    if (engineName == "Damavand")
+        return DAMAVAND;
+    if (engineName == "Feral3D")
+        return FERAL3D;
+    if (engineName == "gamescope")
+        return GAMESCOPE;
+    return VULKAN;
+}
+
 static void msg_read_thread(){
     for (size_t i = 0; i < 200; i++){
         HUDElements.gamescope_debug_app.push_back(0);
@@ -230,6 +246,15 @@ static void msg_read_thread(){
                         mangoapp_cv.notify_one();
                         screenWidth = mangoapp_v1->outputWidth;
                         screenHeight = mangoapp_v1->outputHeight;
+                    }
+
+                    if (msg_size > offsetof(mangoapp_msg_v1, engineName)) {
+                        if (!steam_focused) {
+                            auto len = std::min(sizeof(mangoapp_v1->engineName), strlen(mangoapp_v1->engineName));
+                            sw_stats.engine = engine_type_from_str(std::string(mangoapp_v1->engineName, len));
+                        }
+                    } else {
+                        sw_stats.engine = EngineTypes::GAMESCOPE;
                     }
                 }
             } else {
