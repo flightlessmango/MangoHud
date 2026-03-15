@@ -185,6 +185,7 @@ public:
    void get_cpu_cores_types();
    void get_cpu_cores_types_intel();
    void get_cpu_cores_types_arm();
+   void get_cpu_cores_types_amd();
 
    const std::vector<CPUData>& GetCPUData() const {
       return m_cpuData;
