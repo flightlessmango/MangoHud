@@ -1,0 +1,9 @@
+[wrap-file]
+directory = Vulkan-Utility-Libraries-1.4.346
+source_url = https://github.com/KhronosGroup/Vulkan-Utility-Libraries/archive/v1.4.346.tar.gz
+source_filename = vulkan-utility-libraries-1.4.346.tar.gz
+source_hash = 372eb525103ecb4e3a04d030b2a9778ebc67853bbdc82ce6747de3757d432ad9
+patch_directory = vulkan-utility-libraries
+
+[provide]
+dependency_names = VulkanUtilityLibraries

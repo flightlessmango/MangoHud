@@ -176,6 +176,9 @@ endif
   vulkan_headers_sp = subproject('vulkan-headers')
   vulkan_headers_api_xml = vulkan_headers_sp.get_variable('vulkan_api_xml')
   dep_vulkan_headers = vulkan_headers_sp.get_variable('vulkan_headers_dep')
+
+  vulkan_utility_libraries_sp = subproject('vulkan-utility-libraries')
+  dep_vulkan_utility_libraries = vulkan_utility_libraries_sp.get_variable('vulkan_utility_libraries_dep')
 # else
 #  dep_vulkan_headers = dependency('VulkanHeaders', required: true)
 #  vulkan_headers_api_xml = files('/usr/share/vulkan/registry/vk.xml')
