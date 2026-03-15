@@ -42,6 +42,7 @@
 #include "mesa/util/macros.h" // defines "restrict" for vk_util.h
 #include "mesa/util/os_socket.h"
 #include <vulkan/vulkan.h>
+#include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vk_layer.h>
 #include <vulkan/vk_util.h>
 #include "vk_enum_to_str.h"
@@ -1590,12 +1591,12 @@ static VkResult overlay_CreateSwapchainKHR(
          createInfo.presentMode = target_present_mode;
       }
       else {
-         SPDLOG_WARN("Present mode is not supported: {}", HUDElements.presentModeMap[target_present_mode]);
+         SPDLOG_WARN("Present mode is not supported: {}", string_VkPresentModeKHR(target_present_mode));
       }
    }
 
    HUDElements.cur_present_mode = createInfo.presentMode;
-   SPDLOG_DEBUG("Present mode : {}", HUDElements.presentModeMap[HUDElements.cur_present_mode]);
+   SPDLOG_DEBUG("Present mode : {}", string_VkPresentModeKHR(HUDElements.cur_present_mode));
 
    VkResult result = device_data->vtable.CreateSwapchainKHR(device, &createInfo, pAllocator, pSwapchain);
    if (result != VK_SUCCESS) return result;

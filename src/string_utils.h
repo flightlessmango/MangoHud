@@ -77,6 +77,24 @@ static bool ends_with(const std::string& s,  const char *t, bool icase = false) 
     return (s0.rfind(s1, pos) == pos);
 }
 
+static bool iequal(std::string_view lhs, std::string_view rhs) {
+    return lhs.size() == rhs.size() && std::equal(lhs.begin(), lhs.end(), rhs.begin(), [](unsigned char x, unsigned char y) {
+        return std::toupper(x) == std::toupper(y);
+    });
+};
+
+static std::string_view strip_prefix(const std::string_view input, const std::string_view prefix) {
+    if (input.size() >= prefix.size() && iequal(input.substr(0, prefix.size()), prefix))
+        return input.substr(prefix.size());
+    return input;
+};
+
+static std::string_view strip_suffix(const std::string_view input, const std::string_view suffix) {
+    if (input.size() >= suffix.size() && iequal(input.substr(input.size() - suffix.size()), suffix))
+        return input.substr(0, input.size() - suffix.size());
+    return input;
+};
+
 template<typename T>
 static std::string itox(T i) {
     std::stringstream ss;
