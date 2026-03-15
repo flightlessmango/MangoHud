@@ -1586,13 +1586,19 @@ static VkResult overlay_CreateSwapchainKHR(
    struct device_data *device_data = FIND(struct device_data, device);
    const auto& params = device_data->instance->params;
 
-   if (params.vsync < 4) {
-      VkPresentModeKHR target_present_mode = HUDElements.presentModes[params.vsync];
-      if (is_present_mode_supported(device_data->physical_device, createInfo.surface, target_present_mode)) {
-         createInfo.presentMode = target_present_mode;
+   std::optional<VkPresentModeKHR> target_present_mode;
+   if (params.m_vulkan_present_mode.has_value()) {
+      target_present_mode = params.m_vulkan_present_mode;
+   } else if (params.vsync < 4) {
+      target_present_mode = HUDElements.presentModes[params.vsync];
+   }
+
+   if (target_present_mode.has_value()) {
+      if (is_present_mode_supported(device_data->physical_device, createInfo.surface, target_present_mode.value())) {
+         createInfo.presentMode = target_present_mode.value();
       }
       else {
-         SPDLOG_WARN("Present mode is not supported: {}", string_VkPresentModeKHR(target_present_mode));
+         SPDLOG_WARN("Present mode is not supported: {}", string_VkPresentModeKHR(target_present_mode.value()));
       }
    }
 
