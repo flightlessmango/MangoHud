@@ -23,6 +23,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
+#include <algorithm>
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -42,6 +43,7 @@
 #include "mesa/util/macros.h" // defines "restrict" for vk_util.h
 #include "mesa/util/os_socket.h"
 #include <vulkan/vulkan.h>
+#include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vk_layer.h>
 #include <vulkan/vk_util.h>
 #include "vk_enum_to_str.h"
@@ -1584,18 +1586,24 @@ static VkResult overlay_CreateSwapchainKHR(
    struct device_data *device_data = FIND(struct device_data, device);
    const auto& params = device_data->instance->params;
 
-   if (params.vsync < 4) {
-      VkPresentModeKHR target_present_mode = HUDElements.presentModes[params.vsync];
-      if (is_present_mode_supported(device_data->physical_device, createInfo.surface, target_present_mode)) {
-         createInfo.presentMode = target_present_mode;
+   std::optional<VkPresentModeKHR> target_present_mode;
+   if (params.m_vulkan_present_mode.has_value()) {
+      target_present_mode = params.m_vulkan_present_mode;
+   } else if (params.vsync < 4) {
+      target_present_mode = HUDElements.presentModes[params.vsync];
+   }
+
+   if (target_present_mode.has_value()) {
+      if (is_present_mode_supported(device_data->physical_device, createInfo.surface, target_present_mode.value())) {
+         createInfo.presentMode = target_present_mode.value();
       }
       else {
-         SPDLOG_WARN("Present mode is not supported: {}", HUDElements.presentModeMap[target_present_mode]);
+         SPDLOG_WARN("Present mode is not supported: {}", string_VkPresentModeKHR(target_present_mode.value()));
       }
    }
 
    HUDElements.cur_present_mode = createInfo.presentMode;
-   SPDLOG_DEBUG("Present mode : {}", HUDElements.presentModeMap[HUDElements.cur_present_mode]);
+   SPDLOG_DEBUG("Present mode : {}", string_VkPresentModeKHR(HUDElements.cur_present_mode));
 
    VkResult result = device_data->vtable.CreateSwapchainKHR(device, &createInfo, pAllocator, pSwapchain);
    if (result != VK_SUCCESS) return result;
@@ -1855,27 +1863,36 @@ static VkResult overlay_CreateDevice(
    std::vector<VkExtensionProperties> available_extensions(extension_count);
    instance_data->pd_vtable.EnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extension_count, available_extensions.data());
 
+   auto has_extension = [](const auto& list, const char *name) {
+      return std::any_of(list.begin(), list.end(), [&](const auto& e) {
+         return e == std::string_view(name);
+      });
+   };
 
-   bool can_get_driver_info = instance_data->api_version < VK_API_VERSION_1_1 ? false : true;
 
-   // VK_KHR_driver_properties became core in 1.2
-   if (instance_data->api_version < VK_API_VERSION_1_2 && can_get_driver_info) {
-      for (auto& extension : available_extensions) {
-         if (extension.extensionName == std::string(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME)) {
-            for (auto& enabled : enabled_extensions) {
-               if (enabled == std::string(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME))
-                  goto DONT;
+   bool can_get_driver_info = false;
+
+   for (auto& extension : available_extensions) {
+      if (extension.extensionName == std::string_view(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME)) {
+         can_get_driver_info = true;
+         if (instance_data->api_version < VK_API_VERSION_1_2) {
+            if (!has_extension(enabled_extensions, VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME)) {
+               enabled_extensions.push_back(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME);
             }
-            enabled_extensions.push_back(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME);
-            DONT:
-            goto FOUND;
          }
       }
-      can_get_driver_info = false;
-      FOUND:;
+      if (extension.extensionName == std::string_view(VK_KHR_PRESENT_MODE_FIFO_LATEST_READY_EXTENSION_NAME)) {
+         if (!has_extension(enabled_extensions, VK_KHR_PRESENT_MODE_FIFO_LATEST_READY_EXTENSION_NAME)) {
+            enabled_extensions.push_back(VK_KHR_PRESENT_MODE_FIFO_LATEST_READY_EXTENSION_NAME);
+         }
+      }
    }
 
-   VkResult result = fpCreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
+   VkDeviceCreateInfo pCreateInfoPatched = *pCreateInfo;
+   pCreateInfoPatched.ppEnabledExtensionNames = enabled_extensions.data();
+   pCreateInfoPatched.enabledExtensionCount = (uint32_t) enabled_extensions.size();
+
+   VkResult result = fpCreateDevice(physicalDevice, &pCreateInfoPatched, pAllocator, pDevice);
    if (result != VK_SUCCESS) return result;
 
    struct device_data *device_data = new_device_data(*pDevice, instance_data);

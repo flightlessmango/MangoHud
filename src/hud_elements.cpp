@@ -1713,7 +1713,7 @@ void HudElements::present_mode() {
         ImguiNextColumnOrNewRow();
 
 
-    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.5f, "%s\n", HUDElements.get_present_mode().c_str());
+    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 2.0f, "%s\n", HUDElements.get_present_mode().c_str());
 
     ImGui::PopFont();
 }
@@ -2149,6 +2149,17 @@ void HudElements::update_exec(){
             item.ret = ret;
     }
 #endif
+}
+
+std::string_view HudElements::get_vulkan_present_mode_short_name(VkPresentModeKHR mode) {
+    static constexpr std::string_view prefix = "VK_PRESENT_MODE_";
+    static constexpr std::string_view suffix = "_KHR";
+
+    auto name = std::string_view{string_VkPresentModeKHR(mode)};
+    name = strip_prefix(name, prefix);
+    name = strip_suffix(name, suffix);
+
+    return name;
 }
 
 HudElements HUDElements;

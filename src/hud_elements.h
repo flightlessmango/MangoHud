@@ -6,7 +6,8 @@
 #include <imgui.h>
 #include "timing.hpp"
 #include <functional>
-#include "vulkan/vulkan.h"
+#include <vulkan/vulkan.h>
+#include <vulkan/vk_enum_string_helper.h>
 #include <array>
 #include "net.h"
 #include "overlay_params.h"
@@ -159,24 +160,17 @@ class HudElements{
             VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR,
             VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR};
 
-        std::map<VkPresentModeKHR, std::string> presentModeMap = {
-            {VK_PRESENT_MODE_IMMEDIATE_KHR, "IMMEDIATE"},
-            {VK_PRESENT_MODE_MAILBOX_KHR, "MAILBOX"},
-            {VK_PRESENT_MODE_FIFO_KHR, "FIFO"},
-            {VK_PRESENT_MODE_FIFO_RELAXED_KHR, "FIFO Relaxed"},
-            {VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR, "DEMAND"},
-            {VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR, "CONTINUOUS"}
-        };
-
         VkPresentModeKHR cur_present_mode;
 
-        std::string get_present_mode(){
+        std::string get_present_mode() {
             if (is_vulkan)
-                return presentModeMap[cur_present_mode];
+                return std::string(HudElements::get_vulkan_present_mode_short_name(cur_present_mode));
             else
                 return vsync == 0 ? "OFF" : "ON";
 
         }
+
+        static std::string_view get_vulkan_present_mode_short_name(VkPresentModeKHR mode);
 };
 
 extern HudElements HUDElements;

@@ -173,17 +173,20 @@ endif
 # Commented code can be used if mangohud start using latest SDK Vulkan-Headers
 # Allowing user to build mangohud using system Vulkan-Headers
 # if not dependency('VulkanHeaders').found()
-  vkh_sp = subproject('vulkan-headers')
-  vk_api_xml = vkh_sp.get_variable('vulkan_api_xml')
-  dep_vulkan = vkh_sp.get_variable('vulkan_headers_dep')
+  vulkan_headers_sp = subproject('vulkan-headers')
+  vulkan_headers_api_xml = vulkan_headers_sp.get_variable('vulkan_api_xml')
+  dep_vulkan_headers = vulkan_headers_sp.get_variable('vulkan_headers_dep')
+
+  vulkan_utility_libraries_sp = subproject('vulkan-utility-libraries')
+  dep_vulkan_utility_libraries = vulkan_utility_libraries_sp.get_variable('vulkan_utility_libraries_dep')
 # else
-#  dep_vulkan = dependency('VulkanHeaders', required: true)
-#  vk_api_xml = files('/usr/share/vulkan/registry/vk.xml')
+#  dep_vulkan_headers = dependency('VulkanHeaders', required: true)
+#  vulkan_headers_api_xml = files('/usr/share/vulkan/registry/vk.xml')
 # endif
 
 vk_enum_to_str = custom_target(
   'vk_enum_to_str',
-  input : ['bin/gen_enum_to_str.py', vk_api_xml],
+  input : ['bin/gen_enum_to_str.py', vulkan_headers_api_xml],
   output : ['vk_enum_to_str.c', 'vk_enum_to_str.h', 'vk_enum_defines.h'],
   command : [
     prog_python, '@INPUT0@', '--xml', '@INPUT1@',
@@ -196,7 +199,7 @@ vk_enum_to_str = custom_target(
 
 vk_dispatch_table = custom_target(
   'vk_dispatch_table',
-  input : ['bin/vk_dispatch_table_gen.py', vk_api_xml],
+  input : ['bin/vk_dispatch_table_gen.py', vulkan_headers_api_xml],
   output : ['vk_dispatch_table.c', 'vk_dispatch_table.h'],
   command : [
     prog_python, '@INPUT0@', '--xml', '@INPUT1@',
@@ -207,7 +210,7 @@ vk_dispatch_table = custom_target(
 
 vk_extensions = custom_target(
   'vk_extensions',
-  input : ['bin/vk_extensions_gen.py', vk_api_xml],
+  input : ['bin/vk_extensions_gen.py', vulkan_headers_api_xml],
   output : ['vk_extensions.c', 'vk_extensions.h'],
   command : [
     prog_python, '@INPUT0@', '--xml', '@INPUT1@',

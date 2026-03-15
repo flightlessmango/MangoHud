@@ -20,6 +20,7 @@
 #include <array>
 #include <functional>
 #include <spdlog/spdlog.h>
+#include <vulkan/vulkan_core.h>
 
 #include "overlay_params.h"
 #include "overlay.h"
@@ -82,6 +83,37 @@ size_t get_hash(T const& first, Ts const&... rest)
 }
 
 #endif
+
+namespace {
+bool parse_vulkan_present_mode_name(std::string_view name, VkPresentModeKHR& mode) {
+   static constexpr std::string_view prefix = "VK_PRESENT_MODE_";
+   static constexpr std::string_view suffix = "_KHR";
+
+   static constexpr std::pair<std::string_view, VkPresentModeKHR> present_mode_table[] = {
+      { "IMMEDIATE", VK_PRESENT_MODE_IMMEDIATE_KHR },
+      { "MAILBOX", VK_PRESENT_MODE_MAILBOX_KHR },
+      { "FIFO", VK_PRESENT_MODE_FIFO_KHR },
+      { "FIFO_RELAXED", VK_PRESENT_MODE_FIFO_RELAXED_KHR },
+      { "SHARED_DEMAND_REFRESH", VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR },
+      { "SHARED_CONTINUOUS_REFRESH", VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR },
+      { "FIFO_LATEST_READY", VK_PRESENT_MODE_FIFO_LATEST_READY_KHR },
+   };
+
+   name = strip_prefix(name, prefix);
+   name = strip_suffix(name, suffix);
+
+   const auto elem = std::find_if(
+       std::begin(present_mode_table), std::end(present_mode_table),
+       [&](const auto &entry) { return iequal(entry.first, name); });
+
+   if (elem == std::end(present_mode_table))
+      return false;
+
+   mode = elem->second;
+
+   return true;
+}
+}
 
 static enum overlay_param_position
 parse_position(const char *str)
@@ -544,6 +576,7 @@ parse_ftrace(const char *str) {
 
 #define parse_width(s) parse_unsigned(s)
 #define parse_height(s) parse_unsigned(s)
+#define parse_vulkan_present_mode(s) parse_str(s)
 #define parse_vsync(s) parse_unsigned(s)
 #define parse_gl_vsync(s) parse_signed(s)
 #define parse_offset_x(s) parse_unsigned(s)
@@ -1170,6 +1203,13 @@ parse_overlay_config(struct overlay_params *params,
 
    if (!params->pci_dev.empty())
       params->pci_dev = verify_pci_dev(params->pci_dev);
+
+   if (!params->vulkan_present_mode.empty()) {
+      VkPresentModeKHR present_mode;
+      if (parse_vulkan_present_mode_name(params->vulkan_present_mode, present_mode)) {
+         params->m_vulkan_present_mode = present_mode;
+      }
+   }
 
    {
       std::lock_guard<std::mutex> lock(config_mtx);

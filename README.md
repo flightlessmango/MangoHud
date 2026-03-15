@@ -466,6 +466,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `version`                          | Show current MangoHud version                                                         |
 | `vkbasalt`                         | Show if vkBasalt is on                                                                |
 | `vsync`<br> `gl_vsync`             | Set Vsync for OpenGL or Vulkan                                                        |
+| `vulkan_present_mode=<name>`       | Override Vulkan [present mode](https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPresentModeKHR.html) using specified mode name (takes precedence over `vsync=`) |
 | `vulkan_driver`                    | Display used Vulkan driver (radv/amdgpu-pro/amdvlk)                                   |
 | `width=`<br>`height=`              | Customizable HUD dimensions (in pixels)                                              |
 | `wine_color`                       | Change color of the wine/proton text                                                  |
@@ -686,7 +687,7 @@ Example output:
 #### Intel notes
 - GPU temperature for `i915` requires **linux 6.13+**
 - Fan speed for `i915` requires **linux 6.12+**
-- GPU temperature and vram temperature for `xe` requires **linux 6.15+** 
+- GPU temperature and vram temperature for `xe` requires **linux 6.15+**
 - Fan speed for `xe` requires **linux 6.16+**
 - GPU usage and memory usage shows usage of current process, not total system usage (it's an issue on intel's side)
   - https://gitlab.freedesktop.org/drm/i915/kernel/-/issues/14153
