@@ -12,4 +12,4 @@ vulkan_headers_dep = declare_dependency(
   include_directories: include_directories('include'),
 )
 
-meson.override_dependency('vulkanheaders', vulkan_headers_dep)
+meson.override_dependency('VulkanHeaders', vulkan_headers_dep)
