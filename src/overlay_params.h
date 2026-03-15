@@ -9,6 +9,8 @@
 #include <condition_variable>
 #include <mutex>
 #include <map>
+#include <optional>
+#include <vulkan/vulkan_core.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -152,6 +154,7 @@ struct Tracepoint;
    OVERLAY_PARAM_CUSTOM(control)                     \
    OVERLAY_PARAM_CUSTOM(fps_limit)                   \
    OVERLAY_PARAM_CUSTOM(fps_limit_method)            \
+   OVERLAY_PARAM_CUSTOM(vulkan_present_mode)         \
    OVERLAY_PARAM_CUSTOM(vsync)                       \
    OVERLAY_PARAM_CUSTOM(gl_vsync)                    \
    OVERLAY_PARAM_CUSTOM(gl_size_query)               \
@@ -299,6 +302,8 @@ struct overlay_params {
    int offset_x, offset_y;
    float round_corners;
    unsigned vsync;
+   std::string vulkan_present_mode;
+   std::optional<VkPresentModeKHR> m_vulkan_present_mode;
    int gl_vsync;
    int gl_bind_framebuffer {0};
    enum gl_size_query gl_size_query {GL_SIZE_DRAWABLE};
