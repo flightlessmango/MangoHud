@@ -227,6 +227,21 @@ static void unmap_object(uint64_t obj)
       } \
    } while (0)
 
+namespace {
+// Walks a chain and returns a pointer-to-pointer handle to the given type or `nullptr` if not found.
+// The handle allows the caller to modify and relink the chain.
+VkBaseInStructure **
+vk_find_next_struct(void **chain, VkStructureType type) {
+  VkBaseInStructure **pPrev = (VkBaseInStructure **)chain;
+  while (*pPrev) {
+    if ((*pPrev)->sType == type)
+      return pPrev;
+    pPrev = (VkBaseInStructure **)&(*pPrev)->pNext;
+  }
+  return nullptr;
+}
+}
+
 /**/
 
 static void shutdown_swapchain_font(struct swapchain_data*);
@@ -1676,7 +1691,6 @@ static VkResult overlay_QueuePresentKHR(
       fps_limiter->limit(true);
 
    struct queue_data *queue_data = FIND(struct queue_data, queue);
-   const auto *mode_info = static_cast<const VkSwapchainPresentModeInfoKHR*>(vk_find_struct_const(pPresentInfo->pNext, SWAPCHAIN_PRESENT_MODE_INFO_KHR));
 
    /* Otherwise we need to add our overlay drawing semaphore to the list of
     * semaphores to wait on. If we don't do that the presented picture might
@@ -1695,8 +1709,30 @@ static VkResult overlay_QueuePresentKHR(
       present_info.pSwapchains = &swapchain;
       present_info.pImageIndices = &image_index;
 
-      if (mode_info)
+      VkBaseInStructure **mode_info_node = vk_find_next_struct(
+          (void**)&present_info.pNext, VK_STRUCTURE_TYPE_SWAPCHAIN_PRESENT_MODE_INFO_EXT);
+
+      VkSwapchainPresentModeInfoEXT mode_info_patched;
+      VkPresentModeKHR present_mode_override;
+
+      if (mode_info_node) {
+         const auto *mode_info = (const VkSwapchainPresentModeInfoEXT *)*mode_info_node;
          HUDElements.cur_present_mode = mode_info->pPresentModes[i];
+
+         // Check if there is a user-specified present mode override.
+         if (get_params()->m_vulkan_present_mode.has_value()) {
+            present_mode_override = get_params()->m_vulkan_present_mode.value();
+
+            // Patch `mode_info` so that the user-specified override is not
+            // clobbered by the application from swapchain maintenance.
+            mode_info_patched = *mode_info;
+            mode_info_patched.swapchainCount = 1;
+            mode_info_patched.pPresentModes = &present_mode_override;
+            *mode_info_node = (VkBaseInStructure *)&mode_info_patched;
+
+            HUDElements.cur_present_mode = present_mode_override;
+        }
+      }
 
       struct overlay_draw *draw = before_present(swapchain_data,
                                                    queue_data,
