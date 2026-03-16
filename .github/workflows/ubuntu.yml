@@ -30,7 +30,7 @@ jobs:
               | tr ',' '\n' \
               | grep -v ':i386' \
               | tr '\n' ' ')"
-          apt -o Acquire::Queue-Mode=access -y install $DEPS_NO_I386 sudo
+          apt -o Acquire::Queue-Mode=access -y install $DEPS_NO_I386 sudo git
     - name: 'Install clang'
       if:  ${{ (matrix.compiler == 'clang') }}
       run: |
