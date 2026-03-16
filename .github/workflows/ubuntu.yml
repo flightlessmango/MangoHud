@@ -4,11 +4,18 @@ on: [push, pull_request]
 
 jobs:
   build-test:
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      DEBIAN_FRONTEND: noninteractive
+
     strategy:
       matrix:
         compiler: [clang, gcc]
 
-    runs-on: ${{ github.event_name == 'push' && github.actor == 'flightlessmango' && fromJSON('["self-hosted","oldie"]') || 'ubuntu-24.04' }}
+    runs-on: ${{ github.event_name == 'push' && github.actor == 'flightlessmango' && fromJSON('["self-hosted"]') || 'ubuntu-24.04' }}
     container:
         image: ubuntu:24.04
 
@@ -17,23 +24,23 @@ jobs:
       uses: actions/checkout@v3
     - name: 'Install prerequisites'
       run: |
-        sudo apt-get update
+        apt-get update
           source ./build_deps.sh
           DEPS_NO_I386="$(printf '%s' "$DEPS_DEBIAN" \
               | tr ',' '\n' \
               | grep -v ':i386' \
               | tr '\n' ' ')"
-          sudo apt -o Acquire::Queue-Mode=access -y install $DEPS_NO_I386
+          apt -o Acquire::Queue-Mode=access -y install $DEPS_NO_I386 sudo
     - name: 'Install clang'
       if:  ${{ (matrix.compiler == 'clang') }}
       run: |
-          sudo apt-get install -y clang
+          apt-get install -y clang
           echo "CC=clang" >> "$GITHUB_ENV"
           echo "CXX=clang++" >> "$GITHUB_ENV"
     - name: 'Install gcc'
       if:  ${{ (matrix.compiler == 'gcc') }}
       run: |
-          sudo apt-get install -y gcc g++
+          apt-get install -y gcc g++
           echo "CC=gcc" >> "$GITHUB_ENV"
           echo "CXX=g++" >> "$GITHUB_ENV"
     - name: 'Configure'

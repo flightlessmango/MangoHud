@@ -5,7 +5,16 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      DEBIAN_FRONTEND: noninteractive
+
+    runs-on: ${{ github.event_name == 'push' && github.actor == 'flightlessmango' && fromJSON('["self-hosted"]') || 'ubuntu-24.04' }}
+    container:
+        image: ubuntu:24.04
 
     steps:
       - name: Checkout
@@ -15,10 +24,11 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          sudo dpkg --add-architecture i386
-          sudo apt update
+          dpkg --add-architecture i386
+          apt update
           source ./build_deps.sh
-          sudo apt -o Acquire::Queue-Mode=access -y install ${DEPS_DEBIAN//,/ }
+          DEPS_APT="$(printf '%s' "$DEPS_DEBIAN" | tr ',' ' ')"
+          apt -o Acquire::Queue-Mode=access -y install $DEPS_APT sudo git wget unzip
       - name: Prepare artifact variables
         id: git-vars
         shell: bash
