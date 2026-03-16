@@ -17,7 +17,8 @@ source=(
         "imgui_1.91.6-3_patch.zip::https://wrapdb.mesonbuild.com/v2/imgui_1.91.6-3/get_patch"
         "spdlog-1.14.1.tar.gz::https://github.com/gabime/spdlog/archive/refs/tags/v1.14.1.tar.gz"
         "spdlog_1.14.1-1_patch.zip::https://wrapdb.mesonbuild.com/v2/spdlog_1.14.1-1/get_patch"
-        "vulkan-headers-1.4.345.tar.gz::https://github.com/KhronosGroup/Vulkan-Headers/archive/v1.4.345.tar.gz"
+        "vulkan-headers-1.4.346.tar.gz::https://github.com/KhronosGroup/Vulkan-Headers/archive/v1.4.346.tar.gz"
+        "vulkan-utility-libraries-1.4.346.tar.gz::https://github.com/KhronosGroup/Vulkan-Utility-Libraries/archive/v1.4.346.tar.gz"
         "implot-0.16.zip::https://github.com/epezent/implot/archive/refs/tags/v0.16.zip"
         "implot_0.16-1_patch.zip::https://wrapdb.mesonbuild.com/v2/implot_0.16-1/get_patch"
         )
@@ -29,7 +30,8 @@ sha256sums=(
             '2f7977114ba07d06559aaf8890a92a4ebd25186592d4447954605aaf2244634d'
             '1586508029a7d0670dfcb2d97575dcdc242d3868a259742b69f100801ab4e16b'
             'ae878e732330ea1048f90d7e117c40c0cd2a6fb8ae5492c7955818ce3aaade6c'
-            "99e19205df172c33229f18b5574c9258bc73ea229ec7d6b04daa357b2430f6c8"
+            "5bb77f5d7b460e255a9e51affc00d64354986b55cf577d8eab28529cad01fc80"
+            "372eb525103ecb4e3a04d030b2a9778ebc67853bbdc82ce6747de3757d432ad9"
             "24f772c688f6b8a6e19d7efc10e4923a04a915f13d487b08b83553aa62ae1708"
             "1c6b1462066a5452fa50c1da1dd47fed841f28232972c82d778f2962936568c7"
             )
@@ -50,8 +52,10 @@ prepare() {
   # meson subprojects
   ln -sv "$srcdir/imgui-1.91.6" subprojects
   ln -sv "$srcdir/spdlog-1.14.1" subprojects
-  ln -sv "$srcdir/Vulkan-Headers-1.4.345" subprojects
-  cp -rvt "subprojects/Vulkan-Headers-1.4.345" -- "subprojects/packagefiles/vulkan-headers/"*
+  ln -sv "$srcdir/Vulkan-Headers-1.4.346" subprojects
+  cp -rvt "subprojects/Vulkan-Headers-1.4.346" -- "subprojects/packagefiles/vulkan-headers/"*
+  ln -sv "$srcdir/Vulkan-Utility-Libraries-1.4.346" subprojects
+  cp -rvt "subprojects/Vulkan-Utility-Libraries-1.4.346" -- "subprojects/packagefiles/vulkan-utility-libraries/"*
   ln -sv "$srcdir/implot-0.16" subprojects
 }
 
