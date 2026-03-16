@@ -1209,6 +1209,8 @@ parse_overlay_config(struct overlay_params *params,
       if (parse_vulkan_present_mode_name(params->vulkan_present_mode, present_mode)) {
          params->m_vulkan_present_mode = present_mode;
       }
+   } else if ((int)params->vsync != -1) {
+      params->m_vulkan_present_mode = HUDElements.presentModes[params->vsync];
    }
 
    {
