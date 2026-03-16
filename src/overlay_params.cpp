@@ -1204,7 +1204,11 @@ parse_overlay_config(struct overlay_params *params,
          params->m_vulkan_present_mode = present_mode;
       }
    } else if ((int)params->vsync != -1) {
-      params->m_vulkan_present_mode = HUDElements.presentModes[params->vsync];
+      if (params->vsync < HUDElements.presentModes.size()) {
+         params->m_vulkan_present_mode = HUDElements.presentModes[params->vsync];
+      } else {
+         SPDLOG_WARN("vsync={} out of range for [0 .. {}] (ignoring)", params->vsync, HUDElements.presentModes.size() - 1);
+      }
    }
 
    {
