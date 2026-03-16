@@ -1589,8 +1589,6 @@ static VkResult overlay_CreateSwapchainKHR(
    std::optional<VkPresentModeKHR> target_present_mode;
    if (params.m_vulkan_present_mode.has_value()) {
       target_present_mode = params.m_vulkan_present_mode;
-   } else if (params.vsync < 4) {
-      target_present_mode = HUDElements.presentModes[params.vsync];
    }
 
    if (target_present_mode.has_value()) {
