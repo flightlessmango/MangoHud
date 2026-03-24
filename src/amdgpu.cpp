@@ -251,11 +251,14 @@ void AMDGPU::get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[ME
 		// then we replace with GPU metrics if it's available
 		get_sysfs_metrics();
 
+        int fdinfo_load = -1;
 #ifndef TEST_ONLY
 		metrics.proc_vram_used = fdinfo_helper->amdgpu_helper_get_proc_vram();
+        if (fdinfo_helper)
+            fdinfo_load = fdinfo_helper->get_gpu_load();
 #endif
 
-		if (gpu_metrics_is_valid) {
+		if (gpu_metrics_is_valid || fdinfo_load >= 0) {
 			UPDATE_METRIC_AVERAGE(gpu_load_percent);
 			UPDATE_METRIC_AVERAGE_FLOAT(average_gfx_power_w);
 			UPDATE_METRIC_AVERAGE_FLOAT(average_cpu_power_w);
@@ -275,7 +278,14 @@ void AMDGPU::get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[ME
 			UPDATE_METRIC_MAX(fan_speed);
 			metrics.fan_rpm = true;
 
-			metrics.load = amdgpu_common_metrics.gpu_load_percent;
+			if (fdinfo_load >= 0 && fdinfo_load <= 100) {
+                metrics.load = fdinfo_load;
+            } else if (amdgpu_common_metrics.gpu_load_percent <= 100) {
+                metrics.load = amdgpu_common_metrics.gpu_load_percent;
+            } else {
+                metrics.load = 0;
+            }
+
 			metrics.powerUsage = amdgpu_common_metrics.average_gfx_power_w;
 			metrics.MemClock = amdgpu_common_metrics.current_uclk_mhz;
 

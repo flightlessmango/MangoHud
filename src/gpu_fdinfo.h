@@ -72,7 +72,6 @@ private:
     void find_fd();
     void open_fdinfo_fd(std::string path);
 
-    int get_gpu_load();
     uint64_t get_gpu_time();
 
     uint64_t previous_gpu_time = 0, previous_time = 0;
@@ -241,5 +240,6 @@ public:
         cond_var.notify_one();
     }
 
+    int get_gpu_load();
     float amdgpu_helper_get_proc_vram();
 };
