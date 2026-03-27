@@ -344,6 +344,36 @@ void HudElements::gpu_stats(){
                 ImGui::PopFont();
             }
 
+            if (gpu->metrics.junction_temp > -1 &&
+                gpu->metrics.temp > -1 &&
+                HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_hotspot_delta]) {
+
+                ImguiNextColumnOrNewRow();
+
+                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit]) {
+                    int delta_f = HUDElements.convert_to_fahrenheit(gpu->metrics.junction_temp)
+                                - HUDElements.convert_to_fahrenheit(gpu->metrics.temp);
+
+                    right_aligned_text(text_color, HUDElements.ralign_width, "%i", delta_f);
+
+                    ImGui::SameLine(0, 1.0f);
+                    HUDElements.TextColored(HUDElements.colors.text, "°F");
+                } else {
+                    int delta = gpu->metrics.junction_temp - gpu->metrics.temp;
+
+                    right_aligned_text(text_color, HUDElements.ralign_width, "%i", delta);
+
+                    ImGui::SameLine(0, 1.0f);
+                    HUDElements.TextColored(HUDElements.colors.text, "°C");
+                }
+
+                ImGui::SameLine(0, 3.0f);
+
+                ImGui::PushFont(HUDElements.sw_stats->font_small);
+                HUDElements.TextColored(HUDElements.colors.text, "dT");
+                ImGui::PopFont();
+            }
+
             if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_fan] && !gpu->is_apu()){
                 ImguiNextColumnOrNewRow();
                 right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu->metrics.fan_speed);

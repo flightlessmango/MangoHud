@@ -817,6 +817,7 @@ static void set_param_defaults(struct overlay_params *params){
    params->enabled[OVERLAY_PARAM_ENABLED_cpu_power] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_junction_temp] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_gpu_hotspot_delta] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_mem_temp] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats] = true;
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] = true;

@@ -45,6 +45,7 @@ struct Tracepoint;
    OVERLAY_PARAM_BOOL(cpu_power)                     \
    OVERLAY_PARAM_BOOL(gpu_temp)                      \
    OVERLAY_PARAM_BOOL(gpu_junction_temp)             \
+   OVERLAY_PARAM_BOOL(gpu_hotspot_delta)             \
    OVERLAY_PARAM_BOOL(gpu_mem_temp)                  \
    OVERLAY_PARAM_BOOL(cpu_stats)                     \
    OVERLAY_PARAM_BOOL(gpu_stats)                     \
