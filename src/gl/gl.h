@@ -33,6 +33,8 @@ unsigned int eglDestroyContext( void*, void* );
 void* eglGetProcAddress( const char* );
 int eglTerminate( void* );
 
+void* eglGetPlatformDisplayEXT(unsigned int platform, void* native_display, const intptr_t* attrib_list);
+
 #ifdef __cplusplus
 }
 #endif //__cplusplus

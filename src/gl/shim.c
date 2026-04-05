@@ -160,6 +160,11 @@ CREATE_FWD(void*, eglGetPlatformDisplay,
      void* native_display,
      const intptr_t* attrib_list),
      platform, native_display, attrib_list)
+CREATE_FWD(void*, eglGetPlatformDisplayEXT,
+    (unsigned int platform,
+     void* native_display,
+     const intptr_t* attrib_list),
+     platform, native_display, attrib_list)
 CREATE_FWD(unsigned int, eglSwapBuffers, (void* dpy, void* surf), dpy, surf)
 CREATE_FWD(void*, eglGetProcAddress, (const char* procName), procName)
 CREATE_FWD(int, eglTerminate, (void *display), display)
@@ -185,6 +190,7 @@ static struct func_ptr hooks[] = {
     ADD_HOOK(eglDestroyContext),
     ADD_HOOK(eglSwapBuffers),
     ADD_HOOK(eglGetPlatformDisplay),
+    ADD_HOOK(eglGetPlatformDisplayEXT),
     ADD_HOOK(eglGetDisplay),
     ADD_HOOK(eglGetProcAddress),
     ADD_HOOK(eglTerminate)
