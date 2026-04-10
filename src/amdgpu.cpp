@@ -15,33 +15,52 @@
 #define IS_VALID_METRIC(FIELD) (FIELD != 0xffff)
 void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	FILE *f;
-	uint8_t buf[sizeof(struct gpu_metrics_v3_0)+1];  // big enough for v1.3/v2.4/v3.0
-	struct metrics_table_header *header = (struct metrics_table_header *)buf;
-
+    metrics_table_header header {};
 	f = fopen(gpu_metrics_path.c_str(), "rb");
 	if (!f)
 		return;
 
-	size_t nread = fread(buf, 1, sizeof(buf), f);
-	fclose(f);
+    size_t nread = fread(&header, 1, sizeof(header), f);
 
-	if (nread < sizeof(*header)) {
+	if (nread < sizeof(header)) {
 		SPDLOG_DEBUG("amdgpu metrics file '{}' may be corrupted (read {} bytes, need at least {})",
-					gpu_metrics_path, nread, sizeof(*header));
+			gpu_metrics_path, nread, sizeof(header));
+		fclose(f);
 		return;
 	}
 
-	if (nread == sizeof(buf)) {
-		// File may be larger than our buffer, so we might have truncated it
-		SPDLOG_DEBUG("amdgpu metrics file '{}' may be larger than the buffer ({} bytes)",
-					gpu_metrics_path, sizeof(buf));
-		return;
+    if (header.structure_size < sizeof(header)) {
+        SPDLOG_DEBUG(
+            "amdgpu metrics file '{}' has invalid structure_size {}",
+            gpu_metrics_path, header.structure_size);
+        fclose(f);
+        return;
+    }
+
+	std::vector<uint8_t> buf(header.structure_size);
+	rewind(f);
+	nread = fread(buf.data(), 1, buf.size(), f);
+	fclose(f);
+
+	if (nread < buf.size()) {
+		SPDLOG_DEBUG(
+            "amdgpu metrics file '{}' short read (read {} bytes, expected {})",
+            gpu_metrics_path, nread, buf.size());
+        return;
 	}
 
 	bool is_power=false, is_current=false, is_temp=false, is_other=false;
-	if (header->format_revision == 1) {
+	if (header.format_revision == 1) {
 		// Desktop GPUs
-		struct gpu_metrics_v1_3 *amdgpu_metrics = (struct gpu_metrics_v1_3 *) buf;
+		if (buf.size() < sizeof(gpu_metrics_v1_3)) {
+			SPDLOG_DEBUG(
+				"amdgpu metrics file '{}' too small for gpu_metrics_v1_3 "
+				"(have {}, need {})",
+				gpu_metrics_path, buf.size(), sizeof(gpu_metrics_v1_3));
+			return;
+		}
+
+		const auto *amdgpu_metrics = reinterpret_cast<const gpu_metrics_v1_3 *>(buf.data());
 		metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
 
 		metrics->average_gfx_power_w = amdgpu_metrics->average_socket_power;
@@ -63,10 +82,30 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		is_other   = ((indep >> 56) & 0xFF) != 0;
 		if (throttling)
 			throttling->indep_throttle_status = indep;
-	} else if (header->format_revision == 2) {
-		// APUs
+	} else if (header.format_revision == 2) {
+		// APUS
+		size_t needed = 0;
+
+		if (header.content_revision >= 3)
+			needed = sizeof(gpu_metrics_v2_3);
+		else if (header.content_revision >= 2)
+			needed = sizeof(gpu_metrics_v2_2);
+		else
+			needed = sizeof(gpu_metrics_v2_1);
+
+		if (buf.size() < needed) {
+			SPDLOG_DEBUG(
+				"amdgpu metrics file '{}' too small for gpu_metrics_v2_{} "
+				"(have {}, need {})",
+				gpu_metrics_path,
+				header.content_revision >= 3 ? 3 : header.content_revision >= 2 ? 2 : 1,
+				buf.size(),
+				needed);
+			return;
+		}
+
+		const auto *amdgpu_metrics = reinterpret_cast<const gpu_metrics_v2_3 *>(buf.data());
 		this->is_apu = true;
-		struct gpu_metrics_v2_3 *amdgpu_metrics = (struct gpu_metrics_v2_3 *) buf;
 
 		metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
 
@@ -88,7 +127,7 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		if( IS_VALID_METRIC(amdgpu_metrics->temperature_gfx) ) {
 			// prefered method
 			metrics->gpu_temp_c = amdgpu_metrics->temperature_gfx / 100;
-		} else if( header->content_revision >= 3 && IS_VALID_METRIC(amdgpu_metrics->average_temperature_gfx) ) {
+		} else if( header.content_revision >= 3 && IS_VALID_METRIC(amdgpu_metrics->average_temperature_gfx) ) {
 			// fallback 1
 			metrics->gpu_temp_c = amdgpu_metrics->average_temperature_gfx / 100;
 		} else {
@@ -103,7 +142,7 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 			do cpu_temp = MAX(cpu_temp, amdgpu_metrics->temperature_core[i]);
 			while (++i < ARRAY_SIZE(amdgpu_metrics->temperature_core) && IS_VALID_METRIC(amdgpu_metrics->temperature_core[i]));
 			metrics->apu_cpu_temp_c = cpu_temp / 100;
-		} else if( header->content_revision >= 3 && IS_VALID_METRIC(amdgpu_metrics->average_temperature_core[0]) ) {
+		} else if( header.content_revision >= 3 && IS_VALID_METRIC(amdgpu_metrics->average_temperature_core[0]) ) {
 			// fallback 1
 			unsigned i = 0;
 			do cpu_temp = MAX(cpu_temp, amdgpu_metrics->average_temperature_core[i]);
@@ -139,7 +178,7 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 			metrics->current_uclk_mhz = 0;
 		}
 
-		if(header->content_revision >= 2) {
+		if(header.content_revision >= 2) {
 			uint64_t indep = amdgpu_metrics->indep_throttle_status;
 			is_power   = ((indep >> 0)  & 0xFF) != 0;
 			is_current = ((indep >> 16) & 0xFF) != 0;
@@ -148,9 +187,16 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		if (throttling)
 				throttling->indep_throttle_status = indep;
 		}
-	} else if (header->format_revision == 3) {
+	} else if (header.format_revision == 3) {
+		if (buf.size() < sizeof(gpu_metrics_v3_0)) {
+			SPDLOG_DEBUG(
+				"amdgpu metrics file '{}' too small for gpu_metrics_v3_0 "
+				"(have {}, need {})",
+				gpu_metrics_path, buf.size(), sizeof(gpu_metrics_v3_0));
+			return;
+		}
+		struct gpu_metrics_v3_0 *amdgpu_metrics = (struct gpu_metrics_v3_0 *) buf.data();
 		this->is_apu = true;
-		struct gpu_metrics_v3_0 *amdgpu_metrics = (struct gpu_metrics_v3_0 *) buf;
 
 		metrics->gpu_temp_c = amdgpu_metrics->temperature_gfx / 100;
 		metrics->soc_temp_c = amdgpu_metrics->temperature_soc / 100;
@@ -174,7 +220,7 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		metrics->average_gfx_power_w = amdgpu_metrics->average_gfx_power / 1000.0;
 		metrics->current_gfxclk_mhz = amdgpu_metrics->average_gfxclk_frequency;
 		metrics->current_uclk_mhz = amdgpu_metrics->average_uclk_frequency;
-		
+
 		if (previous_metrics.common_header.structure_size == 0) {
 			previous_metrics = *amdgpu_metrics;
 			is_temp = false;
@@ -186,7 +232,7 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 				throttling->v3_power.store(false);
 				throttling->v3_thermal.store(false);
 			}
-			return;	
+			return;
 		} else {
 			uint32_t d_thm_core = V3_THROTTLING_DELTA(thm_core);
 			uint32_t d_thm_gfx  = V3_THROTTLING_DELTA(thm_gfx);
