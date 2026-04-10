@@ -47,7 +47,7 @@ class Throttling {
 		std::vector<float> power;
 		std::vector<float> thermal;
 		int64_t indep_throttle_status = 0;
-        bool use_v3;
+        bool use_v3 = false;
         std::atomic<bool> v3_power {false};
         std::atomic<bool> v3_thermal {false};
         uint32_t vendor_id;
@@ -59,23 +59,23 @@ class Throttling {
 			: power(200, 0.0f),
 			thermal(200, 0.0f), vendor_id(vendor_id) {}
 
-		void update(){
+        void update() {
             if (vendor_id == 0x10de) {
-                if (vendor_id == 0x10de && use_v3) {
+                power.push_back((indep_throttle_status & (1ULL << 4)) != 0 ? 0.1f : 0.0f);
+                thermal.push_back((indep_throttle_status & indep_temp_mask) != 0 ? 0.1f : 0.0f);
+            } else if (vendor_id == 0x1002) {
+                if (use_v3) {
                     power.push_back(v3_power.load() ? 0.1f : 0.0f);
                     thermal.push_back(v3_thermal.load() ? 0.1f : 0.0f);
                 } else {
-                    power.push_back((indep_throttle_status & (1ULL << 4)) != 0 ? 0.1f : 0.0f);
-                    thermal.push_back((indep_throttle_status & indep_temp_mask) != 0 ? 0.1f : 0.0f);
+                    power.push_back(((indep_throttle_status >> 0) & 0xFF) != 0 ? 0.1f : 0.0f);
+                    thermal.push_back(((indep_throttle_status >> 32) & 0xFFFF) != 0 ? 0.1f : 0.0f);
                 }
-            } else if (vendor_id == 0x1002) {
-                power.push_back(((indep_throttle_status >> 0 & 0xFF) != 0) ? 0.1f : 0.0f);
-                thermal.push_back(((indep_throttle_status >> 32 & 0xFFFF) != 0) ? 0.1f : 0.0f );
             }
 
-			power.erase(power.begin());
-			thermal.erase(thermal.begin());
-		}
+            power.erase(power.begin());
+            thermal.erase(thermal.begin());
+        }
         
 		bool power_throttling(){
             return std::find(power.begin(), power.end(), 0.1f) != power.end();
