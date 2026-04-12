@@ -263,8 +263,10 @@ void* dlsym(void *handle, const char *name)
 {
     save_and_consume_real_dlerror();
     // const char* dlsym_enabled = getenv("MANGOHUD_DLSYM");
-    // const char* dlsym_RTLD_NEXT_env = getenv("MANGOHUD_DLSYM_RTLD_NEXT");
-    // const bool bypass_RTLD_NEXT = dlsym_RTLD_NEXT_env ? dlsym_RTLD_NEXT_env[0] == '0' : false;
+    const char* dlsym_RTLD_DEFAULT_env = getenv("MANGOHUD_DLSYM_RTLD_DEFAULT_FIX");
+    const bool enable_RTLD_DEFAULT_experimental_fix = dlsym_RTLD_DEFAULT_env ? dlsym_RTLD_DEFAULT_env[0] == '1' : false;
+    const char* dlsym_RTLD_NEXT_env = getenv("MANGOHUD_DLSYM_RTLD_NEXT_BAD_FIX");
+    const bool enable_RTLD_NEXT_experimental_fix = dlsym_RTLD_NEXT_env ? dlsym_RTLD_NEXT_env[0] == '1' : false;
     void* is_angle = real_dlsym(handle, "eglStreamPostD3DTextureANGLE");
     // Consume error message if there was an error
     if (!is_angle)
@@ -280,27 +282,28 @@ void* dlsym(void *handle, const char *name)
     // Note, RTLD_DEFAULT might still be broken for edge cases.
 
     // this causes issues with nvidia and will crash. Needs to be reworked
-    // if (!fn_ptr && (handle == RTLD_DEFAULT || (handle == RTLD_NEXT && !bypass_RTLD_NEXT)))
-    // {
-    //     void* ret_addr = __builtin_extract_return_addr(__builtin_return_address(0));
-    //     Dl_info dl_info = {};
+    if (enable_RTLD_DEFAULT_experimental_fix || enable_RTLD_NEXT_experimental_fix)
+    if (!fn_ptr && (handle == RTLD_DEFAULT || (handle == RTLD_NEXT && enable_RTLD_NEXT_experimental_fix)))
+    {
+        void* ret_addr = __builtin_extract_return_addr(__builtin_return_address(0));
+        Dl_info dl_info = {};
 
-    //     if (dladdr(ret_addr, &dl_info) && dl_info.dli_fname && dl_info.dli_fname[0])
-    //     {
-    //         void* caller_handle = dlopen(dl_info.dli_fname, RTLD_LAZY | RTLD_NOLOAD);
-    //         if (caller_handle)
-    //         {
-    //             // last real_dlsym call failed so we consume the last error
-    //             (void) real_dlerror();
-    //             fn_ptr = real_dlsym(caller_handle, name);
-    //             if (handle == RTLD_NEXT)
-    //             {
-    //                 fprintf(stderr, "MANGOHUD: WARNING dlsym called with RTLD_NEXT, if you are facing issues try to disable mangohud.\n");
-    //                 fprintf(stderr, "MANGOHUD: or you can try MANGOHUD_DLSYM_RTLD_NEXT=0\n");
-    //             }
-    //         }
-    //     }
-    // }
+        if (dladdr(ret_addr, &dl_info) && dl_info.dli_fname && dl_info.dli_fname[0])
+        {
+            void* caller_handle = dlopen(dl_info.dli_fname, RTLD_LAZY | RTLD_NOLOAD);
+            if (caller_handle)
+            {
+                // last real_dlsym call failed so we consume the last error
+                (void) real_dlerror();
+                fn_ptr = real_dlsym(caller_handle, name);
+                if (handle == RTLD_NEXT)
+                {
+                    fprintf(stderr, "MANGOHUD: WARNING dlsym called with RTLD_NEXT, if you are facing issues try to disable mangohud.\n");
+                    fprintf(stderr, "MANGOHUD: or you can try MANGOHUD_DLSYM_RTLD_NEXT_BAD_FIX=0 or unset it if already set.\n");
+                }
+            }
+        }
+    }
 
     // Activate override if there wasn't any new error
     // from real_dlsym
