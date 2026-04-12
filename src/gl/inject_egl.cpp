@@ -39,6 +39,18 @@ static void* get_egl_proc_address(const char* name) {
 
     void *func = nullptr;
     static void *(*pfn_eglGetProcAddress)(const char*) = nullptr;
+
+    const char* egl_simple_load_env = getenv("MANGOHUD_EGL_SIMPLE_LOAD");
+    const bool enable_egl_simple_load = egl_simple_load_env ? egl_simple_load_env[0] == '1' : false;
+
+    if (!pfn_eglGetProcAddress && enable_egl_simple_load)
+    {
+        static void *handle = real_dlopen("libEGL.so.1", RTLD_LAZY);
+
+        if (handle)
+            pfn_eglGetProcAddress = reinterpret_cast<decltype(pfn_eglGetProcAddress)>(real_dlsym(handle, "eglGetProcAddress"));
+    }
+
     const char *libs[] = {
         "*libEGL.so.*",
         "*libEGL_mesa.so.*",
