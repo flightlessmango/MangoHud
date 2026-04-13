@@ -4,12 +4,17 @@
 #include <utility>
 #include "gpu.hpp"
 #include "nvml_loader.hpp"
+#include "nvapi_loader.hpp"
 
 class Nvidia : public GPU {
 private:
     std::shared_ptr<libnvml_loader> nvml;
     nvmlDevice_t device = nullptr;
     bool init_nvml(const std::string& pci_dev);
+
+    std::shared_ptr<libnvapi_loader> nvapi;
+    uint32_t nvapi_device = 0;
+    bool init_nvapi(const std::string& pci_dev);
 
     const std::vector<nvmlProcessInfo_v1_t> get_processes();
 
@@ -20,6 +25,7 @@ public:
     );
 
     bool nvml_available = false;
+    bool nvapi_available = false;
 
     // System-related functions
     int     get_load()          override;

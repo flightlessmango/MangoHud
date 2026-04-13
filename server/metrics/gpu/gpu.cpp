@@ -90,6 +90,10 @@ GPUS::GPUS() {
 
                     continue;
                 }
+
+                if (!ptr->nvapi_available) {
+                    SPDLOG_WARN("NvAPI is not loaded. Voltage might not be available");
+                }
             }
         } else if (driver == "panfrost") {
             gpu = std::make_shared<Panfrost>(drm_node, pci_dev, vendor_id, device_id);

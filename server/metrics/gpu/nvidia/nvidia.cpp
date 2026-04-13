@@ -7,6 +7,7 @@ Nvidia::Nvidia(
     GPU(drm_node, pci_dev, vendor_id, device_id, "gpu-nvidia"
 ) {
     nvml_available = init_nvml(pci_dev);
+    nvapi_available = init_nvapi(pci_dev);
 }
 
 bool Nvidia::init_nvml(const std::string& pci_dev) {
@@ -29,6 +30,67 @@ bool Nvidia::init_nvml(const std::string& pci_dev) {
     
     if (NVML_SUCCESS != result) {
         SPDLOG_ERROR("Getting device handle by PCI bus ID failed: {}", nvml->nvmlErrorString(result));
+        return false;
+    }
+
+    return true;
+}
+
+bool Nvidia::init_nvapi(const std::string& pci_dev) {
+    nvapi = get_libnvapi_loader();
+
+    unsigned int pciBusId = 0;
+
+    {
+        unsigned int domain, bus, slot, func;
+
+        if (sscanf(pci_dev.c_str(), "%x:%02x:%02x.%x", &domain, &bus, &slot, &func) != 4) {
+            SPDLOG_ERROR("nvapi: Failed to parse PCI device ID: '{}'", pci_dev);
+            return false;
+        }
+
+        pciBusId = bus;
+    }
+
+    if (!nvapi)
+        return false;
+
+    if (!nvapi->is_loaded())
+        return false;
+
+    int result = nvapi->nvapi_Initialize();
+
+    if (result != 0) {
+        char msg[64] = {};
+        nvapi->nvapi_GetErrorMessage(result, &msg);
+        SPDLOG_ERROR("nvapi_Initialize() failed: {}", msg);
+        return false;
+    }
+
+    long nvGPUHandle[NVAPI_MAX_PHYSICAL_GPUS] = {};
+    unsigned int numOfGPUs = 0;
+
+    result = nvapi->nvapi_EnumPhysicalGPUs(&nvGPUHandle, &numOfGPUs);
+
+    if (result != 0) {
+        char msg[64] = {};
+        nvapi->nvapi_GetErrorMessage(result, &msg);
+        SPDLOG_ERROR("nvapi_EnumPhysicalGPUs() failed: {}", msg);
+        return false;
+    }
+
+    for (unsigned int i = 0; i < numOfGPUs; i++) {
+        unsigned int busId = 0;
+        result = nvapi->nvapi_GPU_GetBusId(nvGPUHandle[i], &busId);
+
+        if (result == 0 && busId == pciBusId) {
+            nvapi_device = nvGPUHandle[i];
+            break;
+        }
+    }
+
+    if (nvapi_device == 0) {
+        SPDLOG_ERROR("nvapi: Failed to find gpu with {}", pci_dev);
         return false;
     }
 
@@ -121,15 +183,27 @@ int Nvidia::get_core_clock() {
 
 int Nvidia::get_voltage() {
     uint32_t voltage = 0;
+    bool try_nvapi = false;
 
-    if (nvml->nvmlInternalGetVoltage == nullptr) {
-        return 0;
+    if (nvml->nvmlInternalGetVoltage != nullptr) {
+        nvmlReturn_t ret = nvml->nvmlInternalGetVoltage(device, &voltage);
+
+        if (ret != NVML_SUCCESS) {
+            try_nvapi = true;
+        }
+    } else {
+        try_nvapi = true;
     }
 
-    nvmlReturn_t ret = nvml->nvmlInternalGetVoltage(device, &voltage);
+    if (try_nvapi && nvapi_available) {
+        libnvapi_loader::NvApiVoltage voltage_info = {};
 
-    if (ret != NVML_SUCCESS)
-        return 0;
+        int nv_ret = nvapi->nvapi_GetVoltage(nvapi_device, &voltage_info);
+        
+        if (nv_ret == 0) {
+            voltage = voltage_info.value_microvolts;
+        }
+    }
 
     return voltage / 1000.f;
 }
