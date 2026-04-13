@@ -34,6 +34,10 @@ public:
     decltype(&::nvmlDeviceGetFanSpeed) nvmlDeviceGetFanSpeed;
     decltype(&::nvmlDeviceGetGraphicsRunningProcesses) nvmlDeviceGetGraphicsRunningProcesses;
 
+    // Use internal nvml function to get voltage
+    nvmlReturn_t (*nvmlInternalGetExportTable)(void*, const void*);
+    nvmlReturn_t (*nvmlInternalGetVoltage)(nvmlDevice_t, unsigned int*) = nullptr;
+
 private:
     void unload();
     void* library_ = nullptr;
@@ -44,6 +48,16 @@ private:
     // Disallow copy constructor and assignment operator.
     libnvml_loader(const libnvml_loader&);
     void operator=(const libnvml_loader&);
+
+    // everything below is related to nvmlInternalGetVoltage
+    void** internalFuncsArr = nullptr;
+
+    const char internalApiVersion[16] = {
+        '\xc4', '\xfe', '\x3e', '\x6c', '\xc9', '\x8f', '\x6c', '\x4e',
+        '\xa3', '\x27', '\xee', '\x69', '\x6e', '\x12', '\xf7', '\xc4'
+    };
+
+    const int voltageFuncIndex = 0xd1;
 };
 
 std::shared_ptr<libnvml_loader> get_libnvml_loader();

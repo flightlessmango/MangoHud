@@ -119,6 +119,21 @@ int Nvidia::get_core_clock() {
     return core_clock;
 }
 
+int Nvidia::get_voltage() {
+    uint32_t voltage = 0;
+
+    if (nvml->nvmlInternalGetVoltage == nullptr) {
+        return 0;
+    }
+
+    nvmlReturn_t ret = nvml->nvmlInternalGetVoltage(device, &voltage);
+
+    if (ret != NVML_SUCCESS)
+        return 0;
+
+    return voltage / 1000.f;
+}
+
 float Nvidia::get_power_usage() {
     uint32_t power_usage = 0;
     
