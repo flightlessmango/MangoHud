@@ -32,6 +32,7 @@ public:
     int     get_temperature()   override;
 
     int     get_core_clock()    override;
+    int     get_voltage()       override;
 
     float   get_power_usage()   override;
     float   get_power_limit()   override;

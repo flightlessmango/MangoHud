@@ -24,6 +24,7 @@ libnvml_loader::~libnvml_loader() {
     do {                    \
         name = reinterpret_cast<decltype(this->name)>(dlsym(library_, #name)); \
         if (!name) { \
+            SPDLOG_ERROR("Failed to find address of {}", #name); \
             unload(); \
             return false; \
         } \
@@ -58,6 +59,16 @@ bool libnvml_loader::load() {
     LOAD_NVML_FUNCTION(nvmlUnitGetHandleByIndex);
     LOAD_NVML_FUNCTION(nvmlDeviceGetFanSpeed);
     LOAD_NVML_FUNCTION(nvmlDeviceGetGraphicsRunningProcesses);
+    LOAD_NVML_FUNCTION(nvmlInternalGetExportTable);
+
+    nvmlReturn_t res = nvmlInternalGetExportTable(&internalFuncsArr, &internalApiVersion);
+
+    if (res == NVML_SUCCESS) {
+        nvmlInternalGetVoltage =
+            reinterpret_cast<decltype(nvmlInternalGetVoltage)>(internalFuncsArr[voltageFuncIndex]);
+    } else {
+        SPDLOG_WARN("nvmlInternalGetExportTable failed: {}", nvmlErrorString(res));
+    }
 
     loaded_ = true;
     return true;
