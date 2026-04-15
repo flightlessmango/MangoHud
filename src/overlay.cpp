@@ -1,6 +1,7 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include <string>
 #include <thread>
 #include <condition_variable>
 #include <spdlog/spdlog.h>
@@ -32,6 +33,8 @@
 #ifdef __linux__
 #include <libgen.h>
 #include <unistd.h>
+#include <sys/sysinfo.h>
+#include <sys/utsname.h>
 #endif
 
 namespace fs = ghc::filesystem;
@@ -762,32 +765,62 @@ struct pci_bus {
    int func;
 };
 
+static std::string parse_value_from_file(std::ifstream& file, const std::string& key, const std::string& separator) {
+   std::string line;
+
+   while (std::getline(file, line)) {
+      const auto position = line.find(separator);
+      if (std::string::npos == position) continue;
+
+      auto current_key = line.substr(0, position); trim(current_key);
+      auto current_value = line.substr(position + separator.size()); trim(current_value);
+
+      if (current_key == key && !current_value.empty())
+         return current_value;
+   }
+   return std::string();
+}
+
+static void strip_parenthesized_blocks(std::string& s) {
+   std::size_t pos = 0;
+   while (std::string::npos != (pos = s.find('(', pos))) {
+      const auto end = s.find(')', pos + 1);
+      if (end == std::string::npos) break;
+      s.erase(pos, end - pos + 1);
+   }
+
+   while (std::string::npos != s.find("  "))
+      s.replace(s.find("  "), 2, " ");
+
+   trim(s);
+}
+
 void init_system_info(){
    #ifdef __linux__
-      const char* ld_preload = getenv("LD_PRELOAD");
-      if (ld_preload)
-         unsetenv("LD_PRELOAD");
-
-      ram =  exec("sed -n 's/^MemTotal: *\\([0-9]*\\).*/\\1/p' /proc/meminfo");
-      trim(ram);
-      cpu =  exec("sed -n 's/^model name.*: \\(.*\\)/\\1/p' /proc/cpuinfo | sed 's/([^)]*)//g' | tail -n1");
-      trim(cpu);
-      kernel = exec("uname -r");
-      trim(kernel);
-      os = exec("sed -n 's/PRETTY_NAME=\\(.*\\)/\\1/p' /etc/os-release");
-      os.erase(remove(os.begin(), os.end(), '\"' ), os.end());
-      trim(os);
-      cpusched = read_line("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
-
-      const char* mangohud_recursion = getenv("MANGOHUD_RECURSION");
-      if (!mangohud_recursion) {
-         setenv("MANGOHUD_RECURSION", "1", 1);
-         // driver = exec("glxinfo -B | sed -n 's/^OpenGL version.*: \\(.*\\)/\\1/p' | sed 's/([^)]*)//g;s/  / /g'");
-         // trim(driver);
-         unsetenv("MANGOHUD_RECURSION");
+      struct sysinfo info_buf;
+      if (0 == sysinfo(&info_buf)) {
+         auto ram_bytes = static_cast<unsigned long long>(info_buf.totalram) * info_buf.mem_unit;
+         ram = std::to_string(ram_bytes >> 10);
       } else {
-         driver = "MangoHud glxinfo recursion detected";
+         ram.clear();
       }
+
+      struct utsname uts_buf;
+      if (0 == uname(&uts_buf)) {
+         kernel = uts_buf.release;
+      } else {
+         kernel.clear();
+      }
+
+      std::ifstream cpuinfo("/proc/cpuinfo");
+      cpu = parse_value_from_file(cpuinfo, "model name", ":");
+      strip_parenthesized_blocks(cpu);
+
+      std::ifstream osrel("/etc/os-release");
+      os = parse_value_from_file(osrel, "PRETTY_NAME", "=");
+      os.erase(std::remove(os.begin(), os.end(), '\"' ), os.end());
+
+      cpusched = read_line("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
 
 // Get WINE version
 
@@ -827,14 +860,20 @@ void init_system_info(){
                findVersion << "\"" << dir << "/wine\" --version";
             else
                findVersion << "\"" << dir << "/wine64\" --version";
+            const char* ld_preload = getenv("LD_PRELOAD");
+            if (ld_preload)
+               unsetenv("LD_PRELOAD");
             const char *wine_env = getenv("WINELOADERNOEXEC");
             if (wine_env)
                unsetenv("WINELOADERNOEXEC");
+
             wineVersion = exec(findVersion.str());
             trim(wineVersion);
             SPDLOG_DEBUG("WINE version: {}", wineVersion);
             if (wine_env)
                setenv("WINELOADERNOEXEC", wine_env, 1);
+            if (ld_preload)
+               setenv("LD_PRELOAD", ld_preload, 1);
          }
       }
       else {
@@ -842,9 +881,6 @@ void init_system_info(){
       }
 
       check_for_vkbasalt_and_gamemode();
-
-      if (ld_preload)
-         setenv("LD_PRELOAD", ld_preload, 1);
 
       SPDLOG_DEBUG("Ram:{}", ram);
       SPDLOG_DEBUG("Cpu:{}", cpu);
