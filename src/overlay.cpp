@@ -762,6 +762,30 @@ struct pci_bus {
    int func;
 };
 
+#ifdef __linux__
+static void parse_proton_version(std::string wineProcess, std::string postfix)
+{
+   stringstream ss;
+   ss << dirname((char*)wineProcess.c_str()) << postfix;
+   string protonVersion = ss.str();
+   ss.str(""); ss.clear();
+   ss << read_line(protonVersion);
+   std::getline(ss, wineVersion, ' '); // skip first number string
+   std::getline(ss, wineVersion, ' ');
+   trim(wineVersion);
+   string toReplace = "proton-";
+   size_t pos = wineVersion.find(toReplace);
+   if (pos != std::string::npos) {
+      // If found replace
+      wineVersion.replace(pos, toReplace.length(), "Proton ");
+   }
+   else {
+      // If not found insert for non official proton builds
+      wineVersion.insert(0, "Proton ");
+   }
+}
+#endif
+
 void init_system_info(){
    #ifdef __linux__
       const char* ld_preload = getenv("LD_PRELOAD");
@@ -801,24 +825,11 @@ void init_system_info(){
             || wineProcess.find("/dist/bin-wow64/wine") != std::string::npos
             || wineProcess.find("/files/bin-wow64/wine") != std::string::npos)
          {
-            stringstream ss;
-            ss << dirname((char*)wineProcess.c_str()) << "/../../version";
-            string protonVersion = ss.str();
-            ss.str(""); ss.clear();
-            ss << read_line(protonVersion);
-            std::getline(ss, wineVersion, ' '); // skip first number string
-            std::getline(ss, wineVersion, ' ');
-            trim(wineVersion);
-            string toReplace = "proton-";
-            size_t pos = wineVersion.find(toReplace);
-            if (pos != std::string::npos) {
-               // If found replace
-               wineVersion.replace(pos, toReplace.length(), "Proton ");
-            }
-            else {
-               // If not found insert for non official proton builds
-               wineVersion.insert(0, "Proton ");
-            }
+            parse_proton_version(wineProcess, "/../../version");
+         }
+         else if (wineProcess.find("/files/lib/wine") != std::string::npos)
+         {
+            parse_proton_version(wineProcess, "/../../../../version");
          }
          else {
             char *dir = dirname((char*)wineProcess.c_str());
