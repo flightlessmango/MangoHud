@@ -25,6 +25,7 @@ static  std::vector<std::string> blacklist {
     "Amazon Games UI.exe",
     "Battle.net.exe",
     "BethesdaNetLauncher.exe",
+    "CypressLauncher.exe",
     "EADesktop.exe",
     "EALauncher.exe",
     "EpicGamesLauncher.exe",
