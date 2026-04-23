@@ -14,9 +14,12 @@ private:
 
     std::shared_ptr<libnvapi_loader> nvapi;
     uint32_t nvapi_device = 0;
+    std::string nvapi_gpu_name;
+    uint32_t nvapi_thermal_sensors_mask = 0;
     bool init_nvapi(const std::string& pci_dev);
 
     const std::vector<nvmlProcessInfo_v1_t> get_processes();
+    bool get_thermal_sensors(libnvapi_loader::NvThermalSensors& sensors);
 
 public:
     Nvidia(
@@ -34,8 +37,12 @@ public:
 
     float   get_memory_total()  override;
     int     get_memory_clock()  override;
+    // in case of nvidia this is memory junction temperature
+    // not memory chip temperature
+    int     get_memory_temp()   override;
 
     int     get_temperature()   override;
+    int     get_junction_temperature() override;
 
     int     get_core_clock()    override;
     int     get_voltage()       override;

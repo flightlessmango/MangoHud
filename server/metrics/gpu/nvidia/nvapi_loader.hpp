@@ -10,6 +10,8 @@
 #define NVAPI_ENUM_PHYSICAL_GPUS 0xe5ac921f
 #define NVAPI_GET_BUS_ID 0x1be0b8e5
 #define NVAPI_GET_CURRENT_VOLTAGE 0x465f9bcf
+#define NVAPI_GET_FULL_NAME 0xceee8e9f
+#define NVAPI_GET_THERMAL_SENSORS 0x65fe3aad
 
 class libnvapi_loader {
 public:
@@ -24,6 +26,13 @@ public:
         unsigned int padding_2[8];
     };
 
+    struct NvThermalSensors {
+        unsigned int version = sizeof(NvThermalSensors) | (2 << 16);
+        unsigned int mask;
+        int reserved[8];
+        int temperatures[32];
+    };
+
     bool load();
     bool is_loaded() { return loaded_; }
 
@@ -33,6 +42,8 @@ public:
     int (*nvapi_EnumPhysicalGPUs)(void*, unsigned int*);
     int (*nvapi_GPU_GetBusId)(long, unsigned int*);
     int (*nvapi_GetVoltage)(long, NvApiVoltage*);
+    int (*nvapi_GPU_GetFullName)(long, char*);
+    int (*nvapi_GPU_GetThermalSensors)(long, NvThermalSensors*);
 
 private:
     void unload();
