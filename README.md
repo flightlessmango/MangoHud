@@ -583,7 +583,7 @@ Example output:
 	</tr>
 	<tr>
 		<td>Junction Temperature</td>
-		<td>🔴</td>
+		<td>🟠</td>
 		<td>🟢</td>
 		<td>🔴</td>
 		<td>🔴</td>
@@ -592,7 +592,7 @@ Example output:
 	</tr>
 	<tr>
 		<td>Memory Temperature</td>
-		<td>🔴</td>
+		<td>🟠</td>
 		<td>🟢</td>
 		<td>🔴</td>
 		<td>🟢</td>
@@ -673,7 +673,7 @@ Example output:
 	</tr>
 	<tr>
 		<td>Voltage</td>
-		<td>🔴</td>
+		<td>🟠</td>
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
@@ -681,6 +681,11 @@ Example output:
 		<td>🔴</td>
 	</tr>
 </table>
+
+#### Nvidia notes
+- Chip and memory junction temperatures, and voltage are collected using **undocumented** APIs.
+  As a result, their accuracy cannot be guaranteed. Before reporting issues related to these metrics,
+  compare them against values obtained on Windows.
 
 #### Intel notes
 - GPU temperature for `i915` requires **linux 6.13+**

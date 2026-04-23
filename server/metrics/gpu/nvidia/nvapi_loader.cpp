@@ -54,6 +54,8 @@ bool libnvapi_loader::load() {
     LOAD_NVAPI_FUNCTION(nvapi_EnumPhysicalGPUs, NVAPI_ENUM_PHYSICAL_GPUS);
     LOAD_NVAPI_FUNCTION(nvapi_GPU_GetBusId, NVAPI_GET_BUS_ID);
     LOAD_NVAPI_FUNCTION(nvapi_GetVoltage, NVAPI_GET_CURRENT_VOLTAGE);
+    LOAD_NVAPI_FUNCTION(nvapi_GPU_GetFullName, NVAPI_GET_FULL_NAME);
+    LOAD_NVAPI_FUNCTION(nvapi_GPU_GetThermalSensors, NVAPI_GET_THERMAL_SENSORS);
 
     loaded_ = true;
     return true;

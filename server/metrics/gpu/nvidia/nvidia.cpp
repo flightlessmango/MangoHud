@@ -94,6 +94,39 @@ bool Nvidia::init_nvapi(const std::string& pci_dev) {
         return false;
     }
 
+    char name[64] = {};
+    result = nvapi->nvapi_GPU_GetFullName(nvapi_device, &name[0]);
+
+    if (result != 0) {
+        char msg[64] = {};
+        nvapi->nvapi_GetErrorMessage(result, &msg);
+
+        SPDLOG_WARN(
+            "nvapi_GPU_GetFullName() failed: {}. "
+            "Hotspot and memory junction temperatures will not work because sensor location "
+            "is different across generations",
+            msg
+        );
+    } else {
+        nvapi_gpu_name = name;
+        SPDLOG_INFO("GPU Name: {}", nvapi_gpu_name);
+
+        // brute-force biggest sensor mask
+        for (uint32_t bit = 0; bit < 32; bit++) {
+            libnvapi_loader::NvThermalSensors thermal_sensors = {
+                .mask = nvapi_thermal_sensors_mask | (1U << bit)
+            };
+
+            result = nvapi->nvapi_GPU_GetThermalSensors(nvapi_device, &thermal_sensors);
+
+            if (result == 0) {
+                nvapi_thermal_sensors_mask = thermal_sensors.mask;
+            }
+        }
+
+        SPDLOG_DEBUG("nvapi_thermal_sensors_mask = {}", nvapi_thermal_sensors_mask);
+    }
+
     return true;
 }
 
@@ -113,6 +146,18 @@ const std::vector<nvmlProcessInfo_v1_t> Nvidia::get_processes() {
         return {};
 
     return cur_process_info;
+}
+
+bool Nvidia::get_thermal_sensors(libnvapi_loader::NvThermalSensors& sensors) {
+    if (!nvapi_available || nvapi_gpu_name.empty() || nvapi_thermal_sensors_mask == 0) {
+        return false;
+    }
+
+    sensors.mask = nvapi_thermal_sensors_mask;
+
+    int result = nvapi->nvapi_GPU_GetThermalSensors(nvapi_device, &sensors);
+
+    return result == 0;
 }
 
 int Nvidia::get_load() {
@@ -159,6 +204,26 @@ int Nvidia::get_memory_clock() {
     return memory_clock;
 }
 
+int Nvidia::get_memory_temp() {
+    libnvapi_loader::NvThermalSensors sensors = {};
+
+    if (!get_thermal_sensors(sensors)) {
+        return 0;
+    }
+
+    uint32_t temp;
+
+    if (nvapi_gpu_name.find("NVIDIA GeForce RTX 50") != std::string::npos) {
+        temp = sensors.temperatures[2];
+    } else if (nvapi_gpu_name.find("NVIDIA GeForce RTX 40") != std::string::npos) {
+        temp = sensors.temperatures[7];
+    } else {
+        temp = sensors.temperatures[9];
+    }
+
+    return temp / 256.f;
+}
+
 int Nvidia::get_temperature() {
     uint32_t temperature = 0;
     
@@ -168,6 +233,21 @@ int Nvidia::get_temperature() {
         return 0;
     
     return temperature;
+}
+
+int Nvidia::get_junction_temperature() {
+    libnvapi_loader::NvThermalSensors sensors = {};
+
+    // RTX 50xx seems to not support hotspot temperature
+    // Instead "sensors.temperatures[1]" contains gpu temperature
+    if (
+        nvapi_gpu_name.find("NVIDIA GeForce RTX 50") != std::string::npos ||
+        !get_thermal_sensors(sensors)
+    ) {
+        return 0;
+    }
+
+    return sensors.temperatures[1] / 256.f;
 }
 
 int Nvidia::get_core_clock() {
