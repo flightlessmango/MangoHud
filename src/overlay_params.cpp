@@ -592,6 +592,8 @@ parse_ftrace(const char *str) {
 #define parse_pci_dev(s) parse_str(s)
 #define parse_media_player_name(s) parse_str(s)
 #define parse_font_scale_media_player(s) parse_float(s)
+#define parse_scale_resolution_ref_width(s) parse_unsigned(s)
+#define parse_scale_resolution_ref_height(s) parse_unsigned(s)
 #define parse_cpu_text(s) parse_str(s)
 #define parse_fps_text(s) parse_str(s)
 #define parse_log_interval(s) parse_unsigned(s)
@@ -909,6 +911,9 @@ static void set_param_defaults(struct overlay_params *params){
    params->media_player_name = "";
    params->font_scale = 1.0f;
    params->wine_color = 0xeb5b5b;
+   params->scale_resolution_ref_width = 1920;
+   params->scale_resolution_ref_height = 1080;
+   params->resolution_scale = 1.0f;
    params->horizontal_separator_color = 0xad64c1;
    params->gpu_load_color = { 0x39f900, 0xfdfd09, 0xb22222 };
    params->cpu_load_color = { 0x39f900, 0xfdfd09, 0xb22222 };
@@ -1093,15 +1098,16 @@ parse_overlay_config(struct overlay_params *params,
 
    //increase hud width if io read and write
    if (!params->width && !params->enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
-      params->width = params->font_size * params->font_scale * params->table_columns * 4.6;
+      float effective_scale = params->font_scale * params->resolution_scale;
+      params->width = params->font_size * effective_scale * params->table_columns * 4.6;
 
       if ((params->enabled[OVERLAY_PARAM_ENABLED_io_read] || params->enabled[OVERLAY_PARAM_ENABLED_io_write])) {
-         params->width += 2 * params->font_size * params->font_scale;
+         params->width += 2 * params->font_size * effective_scale;
       }
 
       // Treat it like hud would need to be ~7 characters wider with default font.
       if (params->no_small_font)
-         params->width += 7 * params->font_size * params->font_scale;
+         params->width += 7 * params->font_size * effective_scale;
    }
 
    // If secondary font size not set, compute it from main font_size
@@ -1117,7 +1123,8 @@ parse_overlay_config(struct overlay_params *params,
                                  params->font_file_text,
                                  params->font_glyph_ranges,
                                  params->font_scale,
-                                 params->font_size_secondary
+                                 params->font_size_secondary,
+                                 params->resolution_scale
                                 );
 
    // check if user specified an env for fps limiter instead
@@ -1154,7 +1161,7 @@ parse_overlay_config(struct overlay_params *params,
       SPDLOG_INFO("output_file is deprecated, use output_folder instead");
    }
 
-   auto real_size = params->font_size * params->font_scale;
+   auto real_size = params->font_size * params->font_scale * params->resolution_scale;
    real_font_size = ImVec2(real_size, real_size / 2);
 
    for (const auto& option : HUDElements.options) {

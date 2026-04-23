@@ -672,6 +672,35 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    if (real_params)
       HUDElements.params = real_params;
 
+   /* ---- resolution-independent scaling ---------------------------------- */
+   if (real_params && real_params->enabled[OVERLAY_PARAM_ENABLED_scale_to_resolution]) {
+      auto& io_ref = ImGui::GetIO();
+      float cur_w = io_ref.DisplaySize.x;
+      float cur_h = io_ref.DisplaySize.y;
+      float ref_w = (real_params->scale_resolution_ref_width  > 0)
+                     ? (float)real_params->scale_resolution_ref_width  : 1920.f;
+      float ref_h = (real_params->scale_resolution_ref_height > 0)
+                     ? (float)real_params->scale_resolution_ref_height : 1080.f;
+      // Use the smaller axis ratio so the overlay never overflows either dimension
+      float new_scale = std::min(cur_w / ref_w, cur_h / ref_h);
+      if (new_scale < 0.01f) new_scale = 0.01f;
+      if (std::abs(new_scale - real_params->resolution_scale) > 0.0001f) {
+         real_params->resolution_scale = new_scale;
+         /* Re-derive real_font_size so everything that reads it stays in sync */
+         float real_size = real_params->font_size * real_params->font_scale * new_scale;
+         real_font_size = ImVec2(real_size, real_size / 2.f);
+         /* Invalidate font cache — check_fonts / imgui_render will rebuild */
+         real_params->font_params_hash = 0;
+      }
+   } else if (real_params && real_params->resolution_scale != 1.0f) {
+      /* Feature was toggled off — restore neutral scale */
+      real_params->resolution_scale = 1.0f;
+      float real_size = real_params->font_size * real_params->font_scale;
+      real_font_size = ImVec2(real_size, real_size / 2.f);
+      real_params->font_params_hash = 0;
+   }
+   /* ---------------------------------------------------------------------- */
+
    HUDElements.is_vulkan = is_vulkan;
    ImGui::GetIO().FontGlobalScale = real_params->font_scale;
    static float ralign_width = 0, old_scale = 0;
@@ -680,6 +709,17 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       window_size = ImVec2((to_string(int(HUDElements.sw_stats->fps)).length() * ImGui::CalcTextSize("A").x) + 15.f, get_params()->height);
    } else if (real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
       window_size = ImVec2(io.DisplaySize.x, real_params->height);
+   } else if (real_params->enabled[OVERLAY_PARAM_ENABLED_scale_to_resolution]) {
+      /* Dynamically compute width from the scaled font size so the overlay
+         keeps the same proportional footprint across all resolutions. */
+      float effective_scale = real_params->font_scale * real_params->resolution_scale;
+      float scaled_font = real_params->font_size * effective_scale;
+      float dyn_width = scaled_font * real_params->table_columns * 4.6f;
+      if (real_params->enabled[OVERLAY_PARAM_ENABLED_io_read] || real_params->enabled[OVERLAY_PARAM_ENABLED_io_write])
+         dyn_width += 2.f * scaled_font;
+      if (real_params->no_small_font)
+         dyn_width += 7.f * scaled_font;
+      window_size = ImVec2(dyn_width, real_params->height);
    } else {
       window_size = ImVec2(real_params->width, real_params->height);
    }

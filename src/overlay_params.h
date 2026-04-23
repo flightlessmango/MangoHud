@@ -135,6 +135,7 @@ struct Tracepoint;
    OVERLAY_PARAM_BOOL(flip_efficiency)               \
    OVERLAY_PARAM_BOOL(gpu_power_limit)               \
    OVERLAY_PARAM_BOOL(dx_api)                        \
+   OVERLAY_PARAM_BOOL(scale_to_resolution)           \
    OVERLAY_PARAM_CUSTOM(fps_sampling_period)         \
    OVERLAY_PARAM_CUSTOM(output_folder)               \
    OVERLAY_PARAM_CUSTOM(output_file)                 \
@@ -147,6 +148,8 @@ struct Tracepoint;
    OVERLAY_PARAM_CUSTOM(font_size_secondary)         \
    OVERLAY_PARAM_CUSTOM(font_scale)                  \
    OVERLAY_PARAM_CUSTOM(font_scale_media_player)     \
+   OVERLAY_PARAM_CUSTOM(scale_resolution_ref_width)  \
+   OVERLAY_PARAM_CUSTOM(scale_resolution_ref_height) \
    OVERLAY_PARAM_CUSTOM(position)                    \
    OVERLAY_PARAM_CUSTOM(width)                       \
    OVERLAY_PARAM_CUSTOM(height)                      \
@@ -325,6 +328,9 @@ struct overlay_params {
    float font_size, font_scale;
    float font_size_text, font_size_secondary;
    float font_scale_media_player;
+   unsigned scale_resolution_ref_width;
+   unsigned scale_resolution_ref_height;
+   float resolution_scale; /* computed at render time; not a config value */
    float background_alpha, alpha;
    float cellpadding_y;
    std::vector<KeySym> toggle_hud;
