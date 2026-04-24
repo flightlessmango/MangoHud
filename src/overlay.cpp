@@ -23,6 +23,7 @@
 #include "file_utils.h"
 #include "pci_ids.h"
 #include "iostats.h"
+#include "native_display_res.h"
 #include "amdgpu.h"
 #include "fps_metrics.h"
 #include "net.h"
@@ -677,10 +678,14 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       auto& io_ref = ImGui::GetIO();
       float cur_w = io_ref.DisplaySize.x;
       float cur_h = io_ref.DisplaySize.y;
-      float ref_w = (real_params->scale_resolution_ref_width  > 0)
-                     ? (float)real_params->scale_resolution_ref_width  : 1920.f;
-      float ref_h = (real_params->scale_resolution_ref_height > 0)
-                     ? (float)real_params->scale_resolution_ref_height : 1080.f;
+
+      uint32_t native_w = 0, native_h = 0;
+      float ref_w = 1920.f, ref_h = 1080.f; // safe fallback while detection pending
+      if (get_native_display_resolution(native_w, native_h)) {
+         ref_w = static_cast<float>(native_w);
+         ref_h = static_cast<float>(native_h);
+      }
+
       // Use the smaller axis ratio so the overlay never overflows either dimension
       float new_scale = std::min(cur_w / ref_w, cur_h / ref_h);
       if (new_scale < 0.01f) new_scale = 0.01f;

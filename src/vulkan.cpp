@@ -64,6 +64,7 @@
 #endif
 #include "imgui_utils.h"
 #include "fps_limiter.h"
+#include "native_display_res.h"
 
 using namespace std;
 
@@ -1369,6 +1370,11 @@ static void setup_swapchain_data(struct swapchain_data *data,
    data->width = pCreateInfo->imageExtent.width;
    data->height = pCreateInfo->imageExtent.height;
    data->format = pCreateInfo->imageFormat;
+
+   /* Best-effort fallback: if X11/Wayland resolution detection is unavailable,
+      the first swapchain extent (typically the native fullscreen resolution)
+      is used as the reference for scale_to_resolution. */
+   set_native_display_res_swapchain(data->width, data->height);
 
    if (!data->imgui_contexts.imgui)
       data->imgui_contexts = create_imgui_contexts(data->font_atlas);
