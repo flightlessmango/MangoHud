@@ -73,14 +73,16 @@ class fpsLimiter {
                 return;
 
             fps_limits_idx = (fps_limits_idx + 1) % v.size();
-            auto next_target = v[fps_limits_idx];
-            target = next_target <= 0.0f ? 0 : int64_t(1'000'000'000.0f / next_target);
-            SPDLOG_DEBUG("Changed fps limit to {}", next_target);
+            set_target(v[fps_limits_idx]);
+            SPDLOG_DEBUG("Changed fps limit to {}", v[fps_limits_idx]);
+        }
+
+        void set_target(float fps) {
+            target = fps <= 0.0f ? 0 : int64_t(1'000'000'000.0f / fps);
         }
 
         int current_limit() {
-            auto& v = get_params()->fps_limit;
-            return v[fps_limits_idx];
+            return target > 0 ? int(1'000'000'000.0f / target) : 0;
         }
 };
 

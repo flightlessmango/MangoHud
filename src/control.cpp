@@ -7,6 +7,7 @@
 #include "overlay.h"
 #include "version.h"
 #include "app/mangoapp.h"
+#include "fps_limiter.h"
 
 int global_control_client;
 
@@ -35,6 +36,13 @@ static void parse_command(overlay_params &params,
       }
    } else if (!strncmp(cmd, "fcat", cmdlen)) {
       params.enabled[OVERLAY_PARAM_ENABLED_fcat] = !params.enabled[OVERLAY_PARAM_ENABLED_fcat];
+   } else if (!strncmp(cmd, "set_fps_limit", cmdlen)) {
+      if (param && param[0] && fps_limiter) {
+         char *endptr;
+         float fps = strtof(param, &endptr);
+         if (endptr != param && fps >= 0)
+            fps_limiter->set_target(fps);
+      }
    }
 }
 
