@@ -1,7 +1,7 @@
 # Maintainer: Simon Hallsten <flightlessmangoyt@gmail.com>
 
 pkgname=('mangohud' 'lib32-mangohud')
-pkgver=0.8.3.rc1.r36.ga2a54f5e
+pkgver=0.8.3.r2.gee672429
 pkgrel=1
 pkgdesc="Vulkan and OpenGL overlay to display performance information"
 arch=('x86_64')
@@ -14,7 +14,6 @@ source=(
         "mangohud"::"git+https://github.com/flightlessmango/MangoHud.git#branch=master"
         "mangohud-minhook"::"git+https://github.com/flightlessmango/minhook.git"
         "imgui-1.91.6.tar.gz::https://github.com/ocornut/imgui/archive/refs/tags/v1.91.6.tar.gz"
-        "imgui_1.91.6-3_patch.zip::https://wrapdb.mesonbuild.com/v2/imgui_1.91.6-3/get_patch"
         "spdlog-1.14.1.tar.gz::https://github.com/gabime/spdlog/archive/refs/tags/v1.14.1.tar.gz"
         "spdlog_1.14.1-1_patch.zip::https://wrapdb.mesonbuild.com/v2/spdlog_1.14.1-1/get_patch"
         "vulkan-headers-1.4.346.tar.gz::https://github.com/KhronosGroup/Vulkan-Headers/archive/v1.4.346.tar.gz"
@@ -27,7 +26,6 @@ sha256sums=(
             'SKIP'
             'SKIP'
             'c5fbc5dcab1d46064001c3b84d7a88812985cde7e0e9ced03f5677bec1ba502a'
-            '2f7977114ba07d06559aaf8890a92a4ebd25186592d4447954605aaf2244634d'
             '1586508029a7d0670dfcb2d97575dcdc242d3868a259742b69f100801ab4e16b'
             'ae878e732330ea1048f90d7e117c40c0cd2a6fb8ae5492c7955818ce3aaade6c'
             "5bb77f5d7b460e255a9e51affc00d64354986b55cf577d8eab28529cad01fc80"
@@ -51,6 +49,7 @@ prepare() {
 
   # meson subprojects
   ln -sv "$srcdir/imgui-1.91.6" subprojects
+  cp -rvt "subprojects/imgui-1.91.6" -- "subprojects/packagefiles/imgui-1.91.6/"*
   ln -sv "$srcdir/spdlog-1.14.1" subprojects
   ln -sv "$srcdir/Vulkan-Headers-1.4.346" subprojects
   cp -rvt "subprojects/Vulkan-Headers-1.4.346" -- "subprojects/packagefiles/vulkan-headers/"*
