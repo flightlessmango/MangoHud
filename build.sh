@@ -288,7 +288,10 @@ reinstall() {
 
 clean() {
     rm -rf "build"
-    rm -rf subprojects/*/
+    for path in subprojects/*/; do
+        [[ $path == "subprojects/packagefiles/" ]] && continue
+        rm -rf "$path"
+    done
 }
 
 usage() {
