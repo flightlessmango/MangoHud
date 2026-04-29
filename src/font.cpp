@@ -13,15 +13,16 @@ void create_fonts(ImFontAtlas* font_atlas, const overlay_params& params, ImFont*
    font_atlas->Clear();
 
    ImGui::GetIO().FontGlobalScale = params.font_scale; // set here too so ImGui::CalcTextSize is correct
-   float font_size = params.font_size;
+   const float rs = params.resolution_scale; // may be 1.0 when feature is disabled
+   float font_size = params.font_size * rs;
    if (font_size < FLT_EPSILON)
-      font_size = 24;
+      font_size = 24 * rs;
 
-   float font_size_text = params.font_size_text;
+   float font_size_text = params.font_size_text * rs;
    if (font_size_text < FLT_EPSILON)
       font_size_text = font_size;
 
-   float font_size_secondary = params.font_size_secondary;
+   float font_size_secondary = params.font_size_secondary * rs;
    if (font_size_secondary > font_size || font_size_secondary < FLT_EPSILON)
       font_size_secondary = font_size;
 
