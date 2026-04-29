@@ -1,0 +1,31 @@
+name: Support / Question
+description: Ask a question or request help with MangoHud
+title: "[Support] "
+labels:
+    - support
+
+body:
+    - type: textarea
+      id: question
+      attributes:
+          label: Question or problem
+          description: Describe the issue or what you are trying to do.
+      validations:
+          required: true
+
+    - type: textarea
+      id: system-info
+      attributes:
+          label: Relevant system information
+          value: |
+              - Distribution:
+              - MangoHud version:
+              - GPU:
+              - Installation method:
+      validations:
+          required: true
+
+    - type: textarea
+      id: additional-context
+      attributes:
+          label: Additional context

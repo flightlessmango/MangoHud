@@ -1,0 +1,120 @@
+name: Bug report
+description: Create a report to help us improve MangoHud
+title: "[Bug] "
+labels:
+    - bug
+
+body:
+    - type: textarea
+      id: bug-description
+      attributes:
+          label: Describe the bug
+          description: A clear and concise description of the issue.
+      validations:
+          required: true
+
+    - type: input
+      id: distribution
+      attributes:
+          label: Linux distribution
+          placeholder: Arch Linux, Fedora, Ubuntu, etc.
+      validations:
+          required: true
+
+    - type: input
+      id: mangohud-version
+      attributes:
+          label: MangoHud version
+          description: Please test with the latest release before reporting.
+          placeholder: v0.8.3
+      validations:
+          required: true
+
+    - type: checkboxes
+      id: latest-git
+      attributes:
+          label: Version check
+          options:
+              - label: I have tested and can reproduce this on latest git.
+
+    - type: markdown
+      attributes:
+          value: |
+              If the issue does not reproduce on latest git, please do not submit the issue unless you explain why it should still be tracked.
+
+    - type: input
+      id: gpu
+      attributes:
+          label: GPU
+          placeholder: AMD Radeon RX 7900 XT, NVIDIA RTX 5070 Ti, etc.
+      validations:
+          required: true
+
+    - type: input
+      id: gpu-driver
+      attributes:
+          label: GPU driver
+          placeholder: Mesa 25.x, NVIDIA 590.xx, etc.
+      validations:
+          required: true
+
+    - type: input
+      id: install-method
+      attributes:
+          label: MangoHud installation method
+          placeholder: Distribution package, Flatpak, built from source, etc.
+      validations:
+          required: true
+
+    - type: input
+      id: application-install-method
+      attributes:
+          label: Application installation method
+          placeholder: Native package, Flatpak, AppImage, etc.
+      validations:
+          required: true
+
+    - type: markdown
+      attributes:
+          value: |
+              If you are using Steam Flatpak, MangoHud Flatpak, or another Flatpak setup, please verify that the issue is not caused by Flatpak packaging, runtime, or sandboxing before reporting it as an upstream MangoHud issue.
+
+    - type: textarea
+      id: reproduction
+      attributes:
+          label: Steps to reproduce
+          description: Steps to reproduce the behavior.
+          placeholder: |
+              1. Go to ...
+              2. Click on ...
+              3. Scroll down to ...
+              4. See error
+      validations:
+          required: true
+
+    - type: textarea
+      id: expected-behavior
+      attributes:
+          label: Expected behavior
+          description: A clear and concise description of what you expected to happen.
+      validations:
+          required: true
+
+    - type: textarea
+      id: logs
+      attributes:
+          label: Logs and terminal output
+          description: Paste relevant logs/output here, or drag and drop log files into this field.
+          render: shell
+
+    - type: textarea
+      id: screenshots
+      attributes:
+          label: Screenshots
+          description: Drag and drop screenshots here if applicable.
+
+    - type: textarea
+      id: additional-context
+      attributes:
+          label: Additional context
+          description: Add any other context about the problem here.

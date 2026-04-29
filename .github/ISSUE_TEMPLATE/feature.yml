@@ -1,0 +1,36 @@
+name: Feature request
+description: Suggest an idea or improvement for MangoHud
+title: "[Feature Request] "
+labels:
+    - enhancement
+
+body:
+    - type: textarea
+      id: description
+      attributes:
+          label: Describe the request
+          description: What would you like MangoHud to support or improve?
+      validations:
+          required: true
+
+    - type: textarea
+      id: use-case
+      attributes:
+          label: Use case
+          description: Why would this be useful?
+      validations:
+          required: true
+
+    - type: textarea
+      id: alternatives
+      attributes:
+          label: Alternatives considered
+          description: Are there existing ways to solve this?
+      validations:
+          required: false
+
+    - type: textarea
+      id: additional-context
+      attributes:
+          label: Additional context
+          description: Add mockups, screenshots, examples, or links if useful.
