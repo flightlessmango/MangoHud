@@ -1,3 +1,4 @@
 #pragma once
 
-#define MANGOHUD_VERSION "@VCS_TAG@"
+#define MANGOHUD_VERSION @VCS_TAG@
+#define MANGOHUD_IPC_ABI_HASH @IPC_ABI_HASH@

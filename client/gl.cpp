@@ -5,6 +5,7 @@
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include <GL/glx.h>
+#include <drm/drm_fourcc.h>
 
 GLX::GLX() {
     p_glCreateMemoryObjectsEXT = (PFNGLCREATEMEMORYOBJECTSEXTPROC)glx_gp("glCreateMemoryObjectsEXT");
@@ -14,39 +15,69 @@ GLX::GLX() {
 }
 
 bool GLX::import_dmabuf(const Fdinfo& fdinfo, GLuint& tex, GLuint& memobj, int f) {
-    if (!p_glCreateMemoryObjectsEXT || !p_glImportMemoryFdEXT || !p_glTexStorageMem2DEXT) {
-        fprintf(stderr, "GLX dmabuf import procs missing\n");
+    if (!p_glCreateMemoryObjectsEXT || !p_glImportMemoryFdEXT || !p_glTexStorageMem2DEXT)
         return false;
+
+    if (memobj) {
+        glDeleteMemoryObjectsEXT(1, &memobj);
+        memobj = 0;
     }
 
-    if (!memobj) p_glCreateMemoryObjectsEXT(1, &memobj);
-    glBindTexture(GL_TEXTURE_2D, tex);
+    p_glCreateMemoryObjectsEXT(1, &memobj);
 
-    const int fd = dup(f);
-    if (fd < 0) return false;
+    int fd = dup(f);
+    if (fd < 0)
+        return false;
 
-    p_glImportMemoryFdEXT(memobj, fdinfo.plane_size, GL_HANDLE_TYPE_OPAQUE_FD_EXT, fd);
+    while (glGetError() != GL_NO_ERROR) {}
+
+    p_glImportMemoryFdEXT(
+        memobj,
+        fdinfo.plane_size,
+        GL_HANDLE_TYPE_OPAQUE_FD_EXT,
+        fd
+    );
+
     GLenum err = glGetError();
     if (err != GL_NO_ERROR) {
-        fprintf(stderr, "glImportMemoryFdEXT failed: 0x%x\n", err);
+        close(fd);
+        SPDLOG_ERROR("glImportMemoryFdEXT failed: 0x{:x}", err);
         return false;
     }
 
-    const GLenum internalFormat = GL_SRGB8_ALPHA8;
-    p_glTexStorageMem2DEXT(GL_TEXTURE_2D, 1, internalFormat,
-                            (GLsizei)fdinfo.w, (GLsizei)fdinfo.h,
-                            memobj, (GLuint64)fdinfo.dmabuf_offset);
+    glBindTexture(GL_TEXTURE_2D, tex);
+
+    p_glTexStorageMem2DEXT(
+        GL_TEXTURE_2D,
+        1,
+        GL_RGBA8, // try this before SRGB
+        fdinfo.w,
+        fdinfo.h,
+        memobj,
+        0
+    );
+
+    err = glGetError();
+    if (err != GL_NO_ERROR) {
+        SPDLOG_ERROR("glTexStorageMem2DEXT failed: 0x{:x}", err);
+        return false;
+    }
+
+    GLint w = 0;
+    GLint h = 0;
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &w);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h);
+
+    if (w == 0 || h == 0) {
+        SPDLOG_ERROR("GL memory object import produced empty texture: {}x{}", w, h);
+        return false;
+    }
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_BLUE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_GREEN);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_RED);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ALPHA);
 
-    err = glGetError();
-    if (err != GL_NO_ERROR) {
-        fprintf(stderr, "glTexStorageMem2DEXT failed, GL error 0x%x gbm.fd: %i\n", err, fd);
-        return false;
-    }
     return true;
 }
 
@@ -58,7 +89,12 @@ bool GLX::import_opaque_fd(GLuint tex, const Fdinfo& fdinfo, GLuint& memobj, int
 
     drain_gl_errors("import_opaque_fd(entry)");
 
-    if (!memobj) p_glCreateMemoryObjectsEXT(1, &memobj);
+    if (memobj) {
+        glDeleteMemoryObjectsEXT(1, &memobj);
+        memobj = 0;
+    }
+
+    p_glCreateMemoryObjectsEXT(1, &memobj);
     if (drain_gl_errors("glCreateMemoryObjectsEXT")) return false;
 
     glBindTexture(GL_TEXTURE_2D, tex);
@@ -74,7 +110,7 @@ bool GLX::import_opaque_fd(GLuint tex, const Fdinfo& fdinfo, GLuint& memobj, int
                         GL_HANDLE_TYPE_OPAQUE_FD_EXT, fd);
     if (drain_gl_errors("glImportMemoryFdEXT")) return false;
 
-    const GLenum internalFormat = GL_SRGB8_ALPHA8;
+    const GLenum internalFormat = GL_RGBA8;
     p_glTexStorageMem2DEXT(GL_TEXTURE_2D, 1, internalFormat,
                         fdinfo.w, fdinfo.h, memobj, (GLuint64)fdinfo.opaque_offset);
     if (drain_gl_errors("glTexStorageMem2DEXT")) return false;
@@ -136,6 +172,9 @@ EGL::EGL() {
     p_eglQueryDeviceStringEXT       = (PFNEGLQUERYDEVICESTRINGEXTPROC)real_eglGetProcAddress("eglQueryDeviceStringEXT");
     p_eglQueryDisplayAttribEXT      = (PFNEGLQUERYDISPLAYATTRIBEXTPROC)real_eglGetProcAddress("eglQueryDisplayAttribEXT");
     p_eglQueryDeviceStringEXT       = (PFNEGLQUERYDEVICESTRINGEXTPROC)real_eglGetProcAddress("eglQueryDeviceStringEXT");
+    p_eglGetPlatformDisplayEXT      = (PFNEGLGETPLATFORMDISPLAYEXTPROC)real_eglGetProcAddress("eglGetPlatformDisplayEXT");
+    p_eglQueryDmaBufModifiersEXT    = (PFNEGLQUERYDMABUFMODIFIERSEXTPROC)real_eglGetProcAddress("eglQueryDmaBufModifiersEXT");
+    p_eglQueryDevicesEXT            = (PFNEGLQUERYDEVICESEXTPROC)real_eglGetProcAddress("eglQueryDevicesEXT");
 }
 
 int64_t EGL::renderer() {
@@ -160,8 +199,15 @@ int64_t EGL::renderer() {
     return atoi(strrchr(render, 'D') + 1);
 }
 
-EGLDisplay EGL::import_dmabuf(const Fdinfo& fdinfo, GLuint& tex, EGLImageKHR& image, int f) {
+EGLDisplay EGL::import_dmabuf(const Fdinfo& fdinfo, GLuint& tex, EGLImageKHR& image, int f, Display* xdpy) {
     EGLDisplay dpy = eglGetCurrentDisplay();
+
+    // if (dpy == EGL_NO_DISPLAY)
+    //     dpy = display_from_device_for_modifier(fdinfo.fourcc, fdinfo.modifier);
+
+    // if (dpy == EGL_NO_DISPLAY && xdpy)
+    //     dpy = display_from_glx(xdpy);
+
     if (dpy == EGL_NO_DISPLAY) return dpy;
 
     const EGLint img_attrs[] = {
@@ -171,14 +217,22 @@ EGLDisplay EGL::import_dmabuf(const Fdinfo& fdinfo, GLuint& tex, EGLImageKHR& im
         EGL_DMA_BUF_PLANE0_FD_EXT, f,
         EGL_DMA_BUF_PLANE0_OFFSET_EXT, (EGLint)fdinfo.dmabuf_offset,
         EGL_DMA_BUF_PLANE0_PITCH_EXT,  (EGLint)fdinfo.stride,
+        EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT, (EGLint)(fdinfo.modifier & 0xffffffff),
+        EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT, (EGLint)(fdinfo.modifier >> 32),
         EGL_NONE
     };
+    if (!display_supports_modifier(dpy, DRM_FORMAT_ABGR8888, fdinfo.modifier)) {
+        SPDLOG_ERROR(
+            "EGLDisplay does not support fourcc=0x{:x}, modifier=0x{:x}",
+            fdinfo.fourcc,
+            fdinfo.modifier
+        );
+    }
 
     image = p_eglCreateImageKHR(dpy, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT,
                                         (EGLClientBuffer)NULL, img_attrs);
     if (image == EGL_NO_IMAGE_KHR) {
-        EGLint err = eglGetError();
-        fprintf(stderr, "eglCreateImageKHR failed, EGL error 0x%x\n", err);
+        SPDLOG_ERROR("eglCreateImageKHR failed, EGL error 0x{:x}", eglGetError());
         return dpy;
     }
 
@@ -190,13 +244,163 @@ EGLDisplay EGL::import_dmabuf(const Fdinfo& fdinfo, GLuint& tex, EGLImageKHR& im
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     p_glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, (GLeglImageOES)image);
+
     GLenum err = glGetError();
-    if (err != GL_NO_ERROR) {
-        fprintf(stderr, "glEGLImageTargetTexture2DOES failed, GL error 0x%x\n", err);
-        return dpy;
+
+    GLint w = 0;
+    GLint h = 0;
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &w);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h);
+
+    if (err != GL_NO_ERROR || w == 0 || h == 0) {
+        SPDLOG_ERROR(
+            "glEGLImageTargetTexture2DOES failed/empty: err=0x{:x}, size={}x{}",
+            err,
+            w,
+            h
+        );
+        return EGL_NO_DISPLAY;
     }
 
     return dpy;
+}
+
+EGLDisplay EGL::display_from_glx(Display* xdpy) {
+    if (!xdpy)
+        return EGL_NO_DISPLAY;
+
+    EGLDisplay dpy = EGL_NO_DISPLAY;
+    dpy = p_eglGetPlatformDisplayEXT(EGL_PLATFORM_X11_EXT, reinterpret_cast<void*>(xdpy), nullptr);
+    if (dpy == EGL_NO_DISPLAY) dpy = eglGetDisplay(reinterpret_cast<EGLNativeDisplayType>(xdpy));
+
+    if (!eglInitialize(dpy, nullptr, nullptr)) {
+        SPDLOG_ERROR("eglInitialize failed: 0x{:x}", eglGetError());
+        return EGL_NO_DISPLAY;
+    }
+
+    return dpy;
+}
+
+EGLDisplay EGL::display_from_device_for_modifier(uint32_t fourcc, uint64_t modifier) {
+    if (!p_eglQueryDevicesEXT || !p_eglGetPlatformDisplayEXT)
+        return EGL_NO_DISPLAY;
+
+    EGLint count = 0;
+    if (!p_eglQueryDevicesEXT(0, nullptr, &count) || count <= 0)
+        return EGL_NO_DISPLAY;
+
+    std::vector<EGLDeviceEXT> devices(count);
+    if (!p_eglQueryDevicesEXT(count, devices.data(), &count))
+        return EGL_NO_DISPLAY;
+
+    for (EGLint i = 0; i < count; i++) {
+        EGLDisplay dpy = p_eglGetPlatformDisplayEXT(
+            EGL_PLATFORM_DEVICE_EXT,
+            devices[i],
+            nullptr
+        );
+
+        if (dpy == EGL_NO_DISPLAY)
+            continue;
+
+        if (!eglInitialize(dpy, nullptr, nullptr))
+            continue;
+
+        SPDLOG_INFO(
+            "EGLDevice[{}] vendor: {}",
+            i,
+            eglQueryString(dpy, EGL_VENDOR)
+        );
+
+        if (display_supports_modifier(dpy, fourcc, modifier))
+            return dpy;
+
+        eglTerminate(dpy);
+    }
+
+    return EGL_NO_DISPLAY;
+}
+
+// static const char* safe_str(const GLubyte* s) {
+//     return s ? reinterpret_cast<const char*>(s) : "(null)";
+// }
+
+// static const char* safe_egl_str(const char* s) {
+//     return s ? s : "(null)";
+// }
+
+bool EGL::display_supports_modifier(EGLDisplay dpy, uint32_t fourcc, uint64_t modifier) {
+    // const char* gl_vendor = safe_str(glGetString(GL_VENDOR));
+    // const char* gl_renderer = safe_str(glGetString(GL_RENDERER));
+    // const char* gl_version = safe_str(glGetString(GL_VERSION));
+
+    // const char* egl_vendor = safe_egl_str(eglQueryString(dpy, EGL_VENDOR));
+    // const char* egl_version = safe_egl_str(eglQueryString(dpy, EGL_VERSION));
+
+    // SPDLOG_INFO("GL_VENDOR: {}", gl_vendor);
+    // SPDLOG_INFO("GL_RENDERER: {}", gl_renderer);
+    // SPDLOG_INFO("GL_VERSION: {}", gl_version);
+    // SPDLOG_INFO("EGL_VENDOR: {}", egl_vendor);
+    // SPDLOG_INFO("EGL_VERSION: {}", egl_version);
+
+    // const bool gl_nvidia = strstr(gl_vendor, "NVIDIA") || strstr(gl_renderer, "NVIDIA");
+    // const bool egl_nvidia = strstr(egl_vendor, "NVIDIA");
+
+    // const bool gl_mesa =
+    //     strstr(gl_vendor, "Mesa") ||
+    //     strstr(gl_renderer, "Mesa") ||
+    //     strstr(gl_version, "Mesa");
+
+    // const bool egl_mesa = strstr(egl_vendor, "Mesa");
+
+    // if (gl_nvidia && egl_mesa) {
+    //     SPDLOG_WARN("GLX context appears to be NVIDIA, but fallback EGLDisplay is Mesa. "
+    //                 "EGL dma-buf import may reject NVIDIA-supported modifiers.");
+    // }
+
+    // if (gl_mesa && egl_nvidia) {
+    //     SPDLOG_WARN("GLX context appears to be Mesa, but fallback EGLDisplay is NVIDIA. "
+    //                 "EGLImage import/GL consumption may not interop correctly.");
+    // }
+    if (dpy == EGL_NO_DISPLAY || !p_eglQueryDmaBufModifiersEXT)
+        return false;
+
+    EGLint count = 0;
+    if (!p_eglQueryDmaBufModifiersEXT(dpy, fourcc, 0, nullptr, nullptr, &count)) {
+        SPDLOG_ERROR("eglQueryDmaBufModifiersEXT count failed: 0x{:x}", eglGetError());
+        return false;
+    }
+
+    if (count <= 0)
+        return false;
+
+    std::vector<EGLuint64KHR> modifiers(count);
+    std::vector<EGLBoolean> external_only(count);
+
+    if (!p_eglQueryDmaBufModifiersEXT(
+            dpy,
+            fourcc,
+            count,
+            modifiers.data(),
+            external_only.data(),
+            &count)) {
+        SPDLOG_ERROR("eglQueryDmaBufModifiersEXT list failed: 0x{:x}", eglGetError());
+        return false;
+    }
+
+    for (EGLint i = 0; i < count; i++) {
+        SPDLOG_INFO(
+            "EGL modifier[{}]=0x{:x}, external_only={}",
+            i,
+            static_cast<uint64_t>(modifiers[i]),
+            external_only[i] == EGL_TRUE
+        );
+
+        if (static_cast<uint64_t>(modifiers[i]) == modifier)
+            return true;
+    }
+
+    return false;
 }
 
 OverlayGL::OverlayGL(Display* xdpy_, std::shared_ptr<IPCClient> ipc_) : xdpy(xdpy_), ipc(ipc_) {
@@ -204,14 +408,14 @@ OverlayGL::OverlayGL(Display* xdpy_, std::shared_ptr<IPCClient> ipc_) : xdpy(xdp
     glx = std::make_unique<GLX>();
     egl = std::make_unique<EGL>();
     auto nodes = find_render_nodes(-1);
-    int renderer;
+    int renderer = -1;
     for (auto node : nodes) {
         renderer = atoi(strrchr(node.c_str(), 'D') + 1);
         SPDLOG_DEBUG("OpenGL renderer: {}", renderer);
     }
 
     std::string node = *nodes.begin();
-    ipc->start(renderer, pEngineName, 4, ipc_);
+    ipc->start(renderer, pEngineName, 4, ipc);
 }
 
 CtxRes* OverlayGL::get_ctx() {
@@ -260,9 +464,9 @@ void OverlayGL::draw() {
         std::lock_guard lock(ipc->m);
         fdinfo = std::move(ipc->fdinfo);
         c->dmabufs.clear();
-        for (auto& fd : fdinfo.dmabuf_buffer) {
+        for (size_t i = 0; i < fdinfo.dmabuf_buffer.size(); i++) {
             auto buf = std::make_unique<dmabuf>();
-            import_dmabuf(buf.get(), fd);
+            import_dmabuf(buf.get(), fdinfo.dmabuf_buffer[i], fdinfo.opaque_buffer[i]);
             c->dmabufs.push_back(std::move(buf));
         }
         ipc->needs_import.store(false);
@@ -492,12 +696,12 @@ int OverlayGL::release_fence(IPCClient* ipc, int dmabuf_fd, bool write) {
 
     if (ioctl(dmabuf_fd, DMA_BUF_IOCTL_EXPORT_SYNC_FILE, &data) != 0) {
         const int err = errno;
-        fprintf(stderr, "DMA_BUF_IOCTL_EXPORT_SYNC_FILE failed: errno=%d\n", err);
+        SPDLOG_ERROR("DMA_BUF_IOCTL_EXPORT_SYNC_FILE failed: errno={}", err);
         return -1;
     }
 
     if (data.fd < 0) {
-        fprintf(stderr, "DMA_BUF_IOCTL_EXPORT_SYNC_FILE returned invalid fd\n");
+        SPDLOG_ERROR("DMA_BUF_IOCTL_EXPORT_SYNC_FILE returned invalid fd");
         return -1;
     }
 

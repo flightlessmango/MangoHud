@@ -16,7 +16,8 @@ ipc_lib = static_library(
                  vkbootstrap_dep,
                  vulkan_dep,
                  utils_dep,
-                 vkroots_dep],
+                 vkroots_dep,
+                 mangohud_version_dep],
   include_directories: [inc_common],
 )
 

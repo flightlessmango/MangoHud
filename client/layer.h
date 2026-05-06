@@ -147,7 +147,7 @@ public:
     std::mutex q_family_mtx;
 
     Layer() {
-        ipc = std::make_shared<IPCClient>(this);
+        ipc = std::make_shared<IPCClient>(this, Backend::VULKAN);
         overlay_vk = std::make_shared<OverlayVK>(this);
     }
 

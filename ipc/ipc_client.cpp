@@ -1,8 +1,9 @@
 #include "ipc.h"
 #include "ipc_client.h"
 #include "../client/layer.h"
+#include "version.h"
 
-IPCClient::IPCClient(Layer* layer_) : layer(layer_) {
+IPCClient::IPCClient(Layer* layer_, Backend api_) : layer(layer_), api(api_){
     auto console = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
     auto spdlog_sink = std::make_shared<spdlogSink>(this);
     logger = std::make_shared<spdlog::logger>("MANGOHUD", spdlog::sinks_init_list{console, spdlog_sink});
@@ -292,12 +293,17 @@ bool IPCClient::on_connect() {
             return false;
         }
 
+        int32_t raw_api = static_cast<int32_t>(api);
+        uint64_t abi_hash = MANGOHUD_IPC_ABI_HASH;
+
         r = sd_bus_message_append(
             m,
-            "sxi",
+            "tsxii",
+            abi_hash,
             pEngineName.c_str(),
-            (int64_t)renderMinor,
-            buffer_size
+            int64_t(renderMinor),
+            (buffer_size),
+            raw_api
         );
 
         r = sd_bus_send(bus, m, nullptr);

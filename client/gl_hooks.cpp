@@ -12,10 +12,13 @@
 #include "mesa/os_time.h"
 #include <GL/glx.h>
 #include <GL/glxext.h>
+
 std::unique_ptr<OverlayGL> overlay;
 std::shared_ptr<IPCClient> ipc_;
+
 static void mangohud(Display *dpy = nullptr) {
-    if (!ipc_) ipc_ = std::make_shared<IPCClient>();
+    auto api = dpy ? Backend::GLX : Backend::EGL;
+    if (!ipc_) ipc_ = std::make_shared<IPCClient>(nullptr, api);
     if (!overlay) overlay = std::make_unique<OverlayGL>(nullptr, ipc_);
     if (dpy) overlay->xdpy = dpy;
     overlay->ipc->add_to_queue(os_time_get_nano());
@@ -34,7 +37,7 @@ EXPORT_C_(EGLBoolean)eglSwapBuffers(EGLDisplay dpy, EGLSurface surf) {
     return real_eglSwapBuffers(dpy, surf);
 }
 
-EXPORT_C_(EGLBoolean) eglSwapBuffersWithDamageKHR(EGLDisplay dpy, EGLSurface surf, const EGLint* rects, EGLint n_rects) {    fprintf(stderr, "WITH DAMAGE KHR\n");
+EXPORT_C_(EGLBoolean) eglSwapBuffersWithDamageKHR(EGLDisplay dpy, EGLSurface surf, const EGLint* rects, EGLint n_rects) {
     static EGLBoolean (*real_eglSwapBuffersWithDamageKHR)(EGLDisplay, EGLSurface, const EGLint*, EGLint) = nullptr;
     if (!real_eglSwapBuffersWithDamageKHR) {
         real_eglSwapBuffersWithDamageKHR =

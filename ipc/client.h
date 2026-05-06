@@ -100,7 +100,7 @@ public:
     void send_config();
     static int on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_error);
     void set_dead();
-    void frame_ready(uint32_t idx);
+    void frame_ready(uint32_t idx, int fd);
     void stop_and_join();
 
     ~Client();

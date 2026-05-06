@@ -8,6 +8,9 @@
 #include "mesa/os_time.h"
 #include "../server/common/helpers.hpp"
 #include "vulkan/vk_enum_string_helper.h"
+#include "export.h"
+#include "imgui/imgui_ctx.h"
+#include "imgui/vk.h"
 
 vkb::PhysicalDevice VkCtx::pick_device(vkb::Instance instance) {
     vkb::PhysicalDeviceSelector selector{instance};
@@ -93,6 +96,10 @@ void VkCtx::init(bool enableValidation = true) {
     pfn_vkImportSemaphoreFdKHR = (PFN_vkImportSemaphoreFdKHR)vkGetDeviceProcAddr(device, "vkImportSemaphoreFdKHR");
     pfn_vkSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetDeviceProcAddr(device, "vkSetDebugUtilsObjectNameEXT");
 }
+
+VkCtx::VkCtx() {
+    init(true);
+};
 
 int VkCtx::phys_fd() {
     if (phys_fd_)
@@ -184,16 +191,25 @@ void VkCtx::init_client(clientRes* r, size_t buffer_size) {
     if (r->buffer.size() < buffer_size)
         r->buffer.resize(buffer_size);
 
+    gbm_dev = gbm_create_device(phys_fd());
+    if (!gbm_dev) {
+        SPDLOG_ERROR("gbm_create_device failed");
+        return;
+    }
+
     for (auto& buf : r->buffer) {
-        if (!create_gbm_buffer(r, &buf.dmabuf))
+        if (!create_gbm(r, &buf.dmabuf, phys_fd(), DRM_FORMAT_MOD_LINEAR))
             SPDLOG_ERROR("init gbm failed");
+
         if (!create_dmabuf(r, &buf.dmabuf))
             SPDLOG_ERROR("init dmabuf failed");
-        if (!create_opaque(r, &buf.opaque))
-            SPDLOG_ERROR("init opaque failed");
+
+        if (r->is_glx())
+            if (!create_opaque(r, &buf.opaque))
+                SPDLOG_ERROR("init opaque failed");
+
         if (!create_src(r, &buf.source))
             SPDLOG_ERROR("init source failed");
-
 
         create_sync(&buf);
         create_cmd(r, &buf.sync);
@@ -311,40 +327,6 @@ int VkCtx::export_opaquefd(VkDeviceMemory mem){
     VkResult r = pfn_vkGetMemoryFdKHR(device, &info, &fd);
     if (r != VK_SUCCESS) return -1;
     return fd;
-}
-
-bool VkCtx::create_gbm_buffer(clientRes* r, dmabuf_t* buf) {
-    buf->gbm.fourcc = DRM_FORMAT_ARGB8888;
-    if (!gbm_dev)
-        gbm_dev = gbm_create_device(phys_fd());
-
-    const uint64_t linear = DRM_FORMAT_MOD_LINEAR;
-    buf->gbm.bo = gbm_bo_create_with_modifiers(gbm_dev, r->w, r->h, buf->gbm.fourcc, &linear, 1);
-    if (!buf->gbm.bo)
-        buf->gbm.bo = gbm_bo_create(gbm_dev, r->w, r->h, buf->gbm.fourcc, GBM_BO_USE_RENDERING);
-
-    if (!buf->gbm.bo) {
-        SPDLOG_ERROR("gbm buffer creation failed");
-        return false;
-    }
-    buf->gbm.fd = unique_fd::adopt(gbm_bo_get_fd(buf->gbm.bo));
-    if (!buf->gbm.fd) {
-        fprintf(stderr, "Failed to get gbm fd\n");
-        throw;
-        return false;
-    }
-
-    buf->gbm.modifier = gbm_bo_get_modifier(buf->gbm.bo);
-    if (buf->gbm.modifier != DRM_FORMAT_MOD_LINEAR) {
-        SPDLOG_ERROR("Expected linear modifier, got 0x{:016x}", buf->gbm.modifier);
-        return false;
-    }
-
-    buf->gbm.stride   = gbm_bo_get_stride_for_plane(buf->gbm.bo, 0);
-    buf->gbm.offset   = gbm_bo_get_offset(buf->gbm.bo, 0);
-    buf->gbm.plane_size = (uint64_t)buf->gbm.stride * (uint64_t)r->h;
-
-    return true;
 }
 
 bool VkCtx::create_image(VkImageDrmFormatModifierExplicitCreateInfoEXT* drm, clientRes* r, VkImage& image,
@@ -557,10 +539,11 @@ bool VkCtx::submit(std::shared_ptr<clientRes>& r, int idx) {
     transition_image(buf.sync.cmd, buf.source.image_res.image, buf.source.image_res.layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
     buf.source.image_res.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
-    if (use_dmabuf)
+    if (r->is_vulkan())
         copy_to_dst(buf.dmabuf.image_res.image, buf.dmabuf.image_res.layout, VK_IMAGE_LAYOUT_GENERAL, r.get(), buf);
 
-    copy_to_dst(buf.opaque.image_res.image, buf.opaque.image_res.layout, VK_IMAGE_LAYOUT_GENERAL, r.get(), buf);
+    if (r->is_glx())
+        copy_to_dst(buf.opaque.image_res.image, buf.opaque.image_res.layout, VK_IMAGE_LAYOUT_GENERAL, r.get(), buf);
 
     vkEndCommandBuffer(buf.sync.cmd);
 
@@ -739,7 +722,6 @@ void VkCtx::create_cmd(clientRes* r, sync_t* s) {
 VkCtx::~VkCtx() {
     if (device) {
         vkDeviceWaitIdle(device);
-        imgui.reset();
         vkDestroyDevice(device, nullptr);
         device = VK_NULL_HANDLE;
     }

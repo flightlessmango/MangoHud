@@ -12,12 +12,36 @@ cpp = meson.get_compiler('cpp')
 prog_python = import('python').find_installation('python3', modules: ['mako'])
 null_dep = dependency('', required : false)
 
-mangohud_version = vcs_tag(
-  command: ['git', 'describe', '--tags', '--dirty=+'],
-  input:  'version.h.in',
-  output: 'version.h')
+vcs_tag_cmd = run_command(
+    'git', 'describe', '--tags', '--dirty=+',
+    check: false
+)
 
-mangohud_version_dep = declare_dependency(sources : mangohud_version)
+ipc_hash_cmd = run_command(
+    'sh', '-c',
+    'cat "$1"/ipc/*.h "$1"/ipc/*.cpp | sha256sum | cut -c1-16',
+    'sh',
+    meson.current_source_dir(),
+    check: true
+)
+
+conf = configuration_data()
+conf.set_quoted(
+    'VCS_TAG',
+    vcs_tag_cmd.returncode() == 0 ? vcs_tag_cmd.stdout().strip() : ''
+)
+conf.set('IPC_ABI_HASH', '0x' + ipc_hash_cmd.stdout().strip() + 'ULL')
+
+mangohud_version = configure_file(
+    input: 'version.h.in',
+    output: 'version.h',
+    configuration: conf
+)
+
+mangohud_version_dep = declare_dependency(
+    sources: mangohud_version,
+    include_directories: include_directories('.')
+)
 
 pre_args = [
   '-D__STDC_CONSTANT_MACROS',
@@ -221,7 +245,7 @@ imgui_options = [
   'dx11=disabled',
   'dx12=disabled',
   'metal=disabled',
-  'opengl=disabled',
+  'opengl=enabled',
   'vulkan=enabled',
   'glfw=disabled',
   'sdl2=disabled',
@@ -267,15 +291,16 @@ spdlog_options = [
   'std_format=disabled'
 ]
 
-spdlog_dep = dependency('spdlog', required: true)
+spdlog_dep = dependency('spdlog', required: get_option('use_system_spdlog').enabled())
+
 if get_option('use_system_spdlog').disabled() or not spdlog_dep.found()
     if get_option('use_system_spdlog').enabled()
-      warning('spdlog dependency not found following back to submodule')
+        warning('spdlog dependency not found, falling back to submodule')
     endif
+
     spdlog_sp = subproject('spdlog', default_options: spdlog_options)
     spdlog_dep = spdlog_sp.get_variable('spdlog_dep')
 endif
-spdlog_dep = spdlog_sp.get_variable('spdlog_dep')
 
 if ['windows', 'mingw'].contains(host_machine.system())
   minhook_dep = dependency('minhook', fallback: ['minhook', 'minhook_dep'], required: true)

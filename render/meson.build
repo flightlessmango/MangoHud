@@ -1,19 +1,21 @@
-subdir('font')
-gbm_dep = dependency('gbm')
+subdir('imgui')
+
 render_lib = static_library(
     'render',
     files(
       'vulkan_ctx.cpp',
-      'imgui_ctx.cpp',
-      'font/font.cpp',
+      'egl_ctx.cpp',
       ),
     dependencies: [vulkan_dep,
                    dearimgui_dep,
                    implot_dep,
-                   gbm_dep,
+                   dependency('gbm'),
                    vkbootstrap_dep,
-                   spdlog_dep],
-    link_with: font_lib,
+                   spdlog_dep,
+                   dependency('libdrm'),
+                   dependency('gl'),
+                   dependency('egl')],
+    link_with: mangohud_imgui,
     include_directories: inc_common
 
 )

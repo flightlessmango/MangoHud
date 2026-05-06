@@ -155,7 +155,7 @@ public:
     EGL();
 
     int64_t renderer();
-    EGLDisplay import_dmabuf(const Fdinfo& fdinfo, GLuint& tex, EGLImageKHR& image, int f);
+    EGLDisplay import_dmabuf(const Fdinfo& fdinfo, GLuint& tex, EGLImageKHR& image, int f, Display* xdpy = nullptr);
 
     CtxRes* ctx() {
         EGLContext c = eglGetCurrentContext();
@@ -179,6 +179,13 @@ private:
     PFNEGLCREATEIMAGEKHRPROC            p_eglCreateImageKHR             = nullptr;
     PFNEGLQUERYDISPLAYATTRIBEXTPROC     p_eglQueryDisplayAttribEXT      = nullptr;
     PFNEGLQUERYDEVICESTRINGEXTPROC      p_eglQueryDeviceStringEXT       = nullptr;
+    PFNEGLGETPLATFORMDISPLAYEXTPROC     p_eglGetPlatformDisplayEXT      = nullptr;
+    PFNEGLQUERYDMABUFMODIFIERSEXTPROC   p_eglQueryDmaBufModifiersEXT    = nullptr;
+    PFNEGLQUERYDEVICESEXTPROC           p_eglQueryDevicesEXT            = nullptr;
+
+    EGLDisplay display_from_glx(Display* xdpy);
+    bool display_supports_modifier(EGLDisplay dpy, uint32_t fourcc, uint64_t modifier);
+    EGLDisplay display_from_device_for_modifier(uint32_t fourcc, uint64_t modifier);
 };
 
 class GLX {
@@ -230,7 +237,6 @@ public:
 private:
     std::unique_ptr<GLX> glx;
     std::unique_ptr<EGL> egl;
-    std::vector<std::shared_ptr<slot_t>> dmabufs;
     Fdinfo fdinfo;
     std::string pEngineName = "OpenGL";
     uint32_t w = 0;
@@ -263,14 +269,13 @@ private:
     void sample_dmabuf(CtxRes* r, const Fdinfo& fdinfo, const GLState::state& saved);
     void draw_dmabuf(CtxRes* r);
     int release_fence(IPCClient* ipc, int dmabuf_fd, bool write = false);
-    void import_dmabuf(dmabuf* buf, int fd) {
+    void import_dmabuf(dmabuf* buf, int fd, int opaque) {
         auto r = glx->ctx();
         if (r)
-            if (!glx->import_dmabuf(fdinfo, buf->tex, buf->memobj, fd))
-                glx->import_opaque_fd(buf->tex, fdinfo, buf->memobj, fd);
+            glx->import_opaque_fd(buf->tex, fdinfo, buf->memobj, opaque);
 
         r = egl->ctx();
         if (r)
-            buf->egl_dpy = egl->import_dmabuf(fdinfo, buf->tex, buf->image, fd);
+            buf->egl_dpy = egl->import_dmabuf(fdinfo, buf->tex, buf->image, fd, nullptr);
     }
 };

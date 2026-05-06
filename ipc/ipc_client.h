@@ -10,6 +10,7 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/base_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/pattern_formatter.h>
 #include "client.h"
 
 class spdlogSink;
@@ -25,7 +26,7 @@ public:
     std::string pEngineName;
     int buffer_size = 0;
 
-    IPCClient(Layer* layer_ = nullptr);
+    IPCClient(Layer* layer_ = nullptr, Backend api_ = Backend::NONE);
 
     void start(int64_t renderMinor, std::string& pEngineName, int image_count, std::shared_ptr<IPCClient> shared);
 
@@ -78,6 +79,7 @@ public:
 
 private:
     Layer* layer;
+    Backend api = Backend::NONE;
 
     std::atomic<bool> quit{false};
     std::thread thread;

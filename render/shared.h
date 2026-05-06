@@ -5,11 +5,20 @@
 #include "poll.h"
 #include "../server/common/helpers.hpp"
 #include "imgui.h"
+#include <GL/gl.h>
+#include <EGL/egl.h>
 
 static constexpr const char* kBusName = "io.mangohud.socket";
 static constexpr const char* kObjPath = "/io/mangohud/socket";
 static constexpr const char* kIface   = "io.mangohud.socket1";
 static constexpr uint32_t kProtoVersion = 1;
+
+enum class Backend : int32_t {
+    NONE = 0,
+    GLX = 1,
+    EGL = 2,
+    VULKAN = 3,
+};
 
 __attribute__((unused))
 static bool sync_fd_signaled(int fd) {
@@ -64,6 +73,7 @@ struct ready_frame {
 };
 
 struct gbmBuffer {
+    gbm_device* dev = nullptr;
     gbm_bo* bo = nullptr;
 
     unique_fd fd;
@@ -77,10 +87,15 @@ struct gbmBuffer {
     gbmBuffer() {
         if (bo)
             gbm_bo_destroy(bo);
+
+        if (dev)
+            gbm_device_destroy(dev);
+
     }
 };
 
 class VkCtx;
+class EglCtx;
 class ImGuiCtx;
 class X11Session;
 
@@ -91,13 +106,22 @@ struct vk_image_res_t {
     VkImageLayout   layout              = VK_IMAGE_LAYOUT_UNDEFINED;
 };
 
+struct egl_image_res_t {
+    GLuint tex = 0;
+    GLuint fbo = 0;
+    GLuint mem = 0; // for opaque fd
+    EGLImage image = EGL_NO_IMAGE;
+};
+
 struct dmabuf_t {
     vk_image_res_t  image_res{};
+    egl_image_res_t egl_res{};
     gbmBuffer       gbm{};
 };
 
 struct opauqe_t {
     vk_image_res_t  image_res{};
+    egl_image_res_t egl_res{};
     VkDeviceSize    size                = 0;
     VkDeviceSize    offset              = 0;
     unique_fd       fd;
@@ -130,21 +154,36 @@ struct clientRes {
 
     std::string     client_id;
     std::shared_ptr<hudTable> table     = nullptr;
-    uint32_t        w                   = 0;
-    uint32_t        h                   = 0;
+    uint32_t        w                   = 500;
+    uint32_t        h                   = 500;
 
     bool            send_dmabuf         = false;
     bool            reinit_dmabuf       = false;
     bool            initialized         = false;
 
+    Backend         api                 = Backend::NONE;
     float           fps_limit           = 0;
     Resolution      resolution          {};
 
     std::shared_ptr<VkCtx> vk;
+    std::shared_ptr<EglCtx> egl;
+    std::shared_ptr<ImGuiCtx> imgui;
     std::shared_ptr<X11Session> x11;
 
     clientRes() {
         table = std::make_shared<hudTable>();
+    }
+
+    bool is_vulkan() {
+        return api == Backend::VULKAN;
+    }
+
+    bool is_egl() {
+        return api == Backend::EGL;
+    }
+
+    bool is_glx() {
+        return api == Backend::GLX;
     }
 
     void reinit();
@@ -182,4 +221,25 @@ inline const char* fourcc_to_string(uint32_t fourcc)
     s[4] = '\0';
 
     return s;
+}
+
+inline const char* egl_error_string(EGLint err) {
+    switch (err) {
+        case EGL_SUCCESS:             return "EGL_SUCCESS";
+        case EGL_NOT_INITIALIZED:     return "EGL_NOT_INITIALIZED";
+        case EGL_BAD_ACCESS:          return "EGL_BAD_ACCESS";
+        case EGL_BAD_ALLOC:           return "EGL_BAD_ALLOC";
+        case EGL_BAD_ATTRIBUTE:       return "EGL_BAD_ATTRIBUTE";
+        case EGL_BAD_CONTEXT:         return "EGL_BAD_CONTEXT";
+        case EGL_BAD_CONFIG:          return "EGL_BAD_CONFIG";
+        case EGL_BAD_CURRENT_SURFACE: return "EGL_BAD_CURRENT_SURFACE";
+        case EGL_BAD_DISPLAY:         return "EGL_BAD_DISPLAY";
+        case EGL_BAD_SURFACE:         return "EGL_BAD_SURFACE";
+        case EGL_BAD_MATCH:           return "EGL_BAD_MATCH";
+        case EGL_BAD_PARAMETER:       return "EGL_BAD_PARAMETER";
+        case EGL_BAD_NATIVE_PIXMAP:   return "EGL_BAD_NATIVE_PIXMAP";
+        case EGL_BAD_NATIVE_WINDOW:   return "EGL_BAD_NATIVE_WINDOW";
+        case EGL_CONTEXT_LOST:        return "EGL_CONTEXT_LOST";
+        default:                      return "EGL_UNKNOWN_ERROR";
+    }
 }

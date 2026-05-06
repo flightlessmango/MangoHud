@@ -27,16 +27,9 @@ public:
         loop();
     }
 
-    std::shared_ptr<VkCtx> vk() {
-        std::lock_guard<std::mutex> lock(vk_ctx_m);
-
-        if (auto ctx = vk_ctx.lock())
-            return ctx;
-
-        auto ctx = std::make_shared<VkCtx>();
-        vk_ctx = ctx;
-        return ctx;
-    }
+    std::shared_ptr<VkCtx> vk();
+    std::shared_ptr<EglCtx> egl();
+    std::shared_ptr<ImGuiCtx> imgui();
 
     ~MangoHudServer() {
         stop.store(true);
@@ -48,6 +41,10 @@ private:
     std::shared_ptr<spdlog::logger> logger;
     std::weak_ptr<VkCtx> vk_ctx;
     std::mutex vk_ctx_m;
+    std::weak_ptr<EglCtx> egl_ctx;
+    std::mutex egl_ctx_m;
+    std::weak_ptr<ImGuiCtx> imgui_ctx;
+    std::mutex imgui_ctx_m;
     std::atomic<bool> stop {false};
 
     void loop();

@@ -15,6 +15,7 @@
 #include <stdexcept>
 #include <spdlog/spdlog.h>
 #include "common/table_structs.h"
+#include <sys/stat.h>
 
 #ifdef Bool
 #undef Bool

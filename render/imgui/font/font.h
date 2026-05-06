@@ -7,9 +7,9 @@
 
 class Font {
     public:
-        ImFont* small_font;
-        ImFont* text_font;
-        ImFont* secondary_font;
+        ImFont* small_font = nullptr;
+        ImFont* text_font = nullptr;
+        ImFont* secondary_font = nullptr;
         Font(float scale_ = 1, float size_ = 24, float size_secondary_ = 24)
                  : scale(scale_), size(size_), size_secondary(size_secondary_)
         {
@@ -18,7 +18,7 @@ class Font {
             // set_config_options();
             // needs_rebuild();
             {
-                create_fonts(&atlas);
+                create_fonts();
             }
         };
 
@@ -58,12 +58,12 @@ class Font {
         std::string file;
         std::string file_text;
         std::shared_ptr<Config> cfg;
-        void create_fonts(ImFontAtlas* atlas);
+        void create_fonts();
         void check_fonts() {
             auto hash_ = get_hash(size, size_secondary,file,
                             file_text, scale);
             if (hash != hash_) {
-                create_fonts(&atlas);
+                create_fonts();
                 hash = hash_;
             }
 

@@ -2,7 +2,11 @@
 #include "ipc.h"
 #include "server.h"
 #include "../render/vulkan_ctx.h"
-#include "../render/imgui_ctx.h"
+#include "../render/imgui/imgui_ctx.h"
+#include "../render/egl_ctx.h"
+#include "../render/imgui/vk.h"
+#include "../render/imgui/egl.h"
+#include "version.h"
 
 class IPCServer;
 
@@ -17,6 +21,9 @@ void destroy_client_res(clientRes* r) {
         destroy_vk_images(r->device, buf.dmabuf.image_res);
         destroy_vk_images(r->device, buf.opaque.image_res);
         destroy_vk_images(r->device, buf.source.image_res);
+        destroy_vk_images(r->device, buf.dmabuf.image_res);
+        // TODO clean up EGL resources
+
         buf.dmabuf.gbm = {};
 
         if (buf.sync.fence) {
@@ -45,8 +52,6 @@ void clientRes::reinit() {
     destroy_client_res(this);
     reinit_dmabuf = false;
     initialized = false;
-
-    vk->init_client(this);
 }
 
 int Client::try_acquire_buffer() {
@@ -215,16 +220,46 @@ int Client::on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_erro
 
     std::lock_guard lock(self->resources->m);
 
-    const char* engine = "";
-    int r = sd_bus_message_read(m, "sxi", &engine, &self->renderMinor, &self->buffer_size);
+    uint64_t peer_hash = 0;
+
+    int r = sd_bus_message_read(m, "t", &peer_hash);
     if (r < 0) {
-        SPDLOG_ERROR("on_connect read(sxi) {} ({})", r, strerror(-r));
+        SPDLOG_ERROR(
+            "on_connect: expected IPC ABI hash first, got malformed/old message: {} ({}). Restart game/client and server.",
+            r,
+            strerror(-r)
+        );
         self->set_dead();
         return 0;
     }
-    self->pEngineName = engine;
 
-    if (!self->resources->vk) self->resources->vk = self->server->vk();
+    if (peer_hash != MANGOHUD_IPC_ABI_HASH) {
+        SPDLOG_ERROR(
+            "IPC ABI mismatch: peer=0x{:016x}, local=0x{:016x}. Restart game/client and server.",
+            peer_hash,
+            static_cast<uint64_t>(MANGOHUD_IPC_ABI_HASH)
+        );
+        self->set_dead();
+        return 0;
+    }
+
+    const char* engine = "";
+    int32_t raw_api = 0;
+    r = sd_bus_message_read(m, "sxii", &engine, &self->renderMinor, &self->buffer_size, &raw_api);
+    if (r < 0) {
+        SPDLOG_ERROR("on_connect append(sxii) {} ({})", r, strerror(-r));
+        self->set_dead();
+        return false;
+    }
+    self->pEngineName = engine;
+    self->resources->api = static_cast<Backend>(raw_api);
+
+    if (!self->resources->imgui) self->resources->imgui = self->server->imgui();
+    if (self->resources->api == Backend::VULKAN || self->resources->api == Backend::GLX)
+        if (!self->resources->vk) self->resources->vk = self->server->vk();
+
+    if (self->resources->api == Backend::EGL)
+        if (!self->resources->egl) self->resources->egl = self->server->egl();
 
     return 0;
 }
@@ -235,12 +270,24 @@ void Client::send_dmabuf(){
         std::lock_guard lock(resources->m);
         resources->send_dmabuf = false;
         for (auto& buf : resources->buffer) {
-            unique_fd dmabuf = unique_fd::dup(buf.dmabuf.gbm.fd);
-            unique_fd opaque = unique_fd::dup(buf.opaque.fd);
+            unique_fd dmabuf;
+            unique_fd opaque;
+            if (resources->is_vulkan() || resources->is_egl()) {
+                // just duplicate here for ease, we don't actually use the opaque in this path
+                dmabuf = unique_fd::dup(buf.dmabuf.gbm.fd);
+                opaque = unique_fd::dup(buf.dmabuf.gbm.fd);
+            }
+
+            if (resources->is_glx()) {
+                dmabuf = unique_fd::dup(buf.dmabuf.gbm.fd);
+                opaque = unique_fd::dup(buf.opaque.fd);
+            }
+
             if (!dmabuf || !opaque) {
                 SPDLOG_ERROR("send_dmabuf: failed to dup an fd. critical error");
                 return;
             }
+
             fdinfo.dmabuf_buffer.push_back(std::move(dmabuf));
             fdinfo.opaque_buffer.push_back(std::move(opaque));
         }
@@ -467,11 +514,22 @@ void Client::run() {
     pthread_setname_np(pthread_self(), ("c_run-" + std::to_string(pid)).substr(0, 15).c_str());
     int buf_idx = -1;
     while (!stop.load()) {
-        while (!resources->vk) {
+        while (!resources->vk && !resources->egl) {
             sleep(1);
             continue;
         }
-        if (!resources->initialized) resources->vk->init_client(resources.get(), buffer_size);
+
+        if (!resources->initialized) {
+            if (!resources->imgui) resources->imgui = std::make_shared<ImGuiCtx>();
+            if (resources->is_vulkan() || resources->is_glx()) {
+                resources->vk->init_client(resources.get(), buffer_size);
+                resources->imgui->init_vk(resources->vk);
+            }
+
+            if (resources->is_egl()) {
+                resources->egl->init_client(resources.get(), buffer_size);
+            }
+        }
 
         if (!resources->table) return;
         if (resources->send_dmabuf) send_dmabuf();
@@ -480,11 +538,17 @@ void Client::run() {
 
         if (buf_idx >= 0) {
             auto& buf = resources->buffer[buf_idx];
-            if (!resources->vk->imgui->draw(resources, buf))
-                continue;
+            if (resources->is_vulkan() || resources->is_glx()) {
+                if (!resources->imgui->draw(resources, &buf, Backend::VULKAN))
+                    continue;
 
-            resources->vk->submit(resources, buf_idx);
-            frame_ready(buf_idx);
+                resources->vk->submit(resources, buf_idx);
+            }
+            int fd = -1;
+            if (resources->is_egl())
+                fd = resources->egl->submit(resources, buf_idx);
+
+            frame_ready(buf_idx, fd);
             buf_idx = -1;
         }
     }
@@ -591,9 +655,16 @@ int Client::spdlog_msg(sd_bus_message* m, void* userdata, sd_bus_error*) {
     return 0;
 }
 
-void Client::frame_ready(uint32_t idx) {
-    auto fence = resources->buffer[idx].sync.fence;
-    auto fd = unique_fd::adopt(resources->vk->get_fence_fd(fence));
+void Client::frame_ready(uint32_t idx, int fd_) {
+    unique_fd fd;
+    if (resources->is_vulkan() || resources->is_glx()) {
+        auto fence = resources->buffer[idx].sync.fence;
+        fd = unique_fd::adopt(resources->vk->get_fence_fd(fence));
+    }
+
+    if (resources->is_egl())
+        fd = unique_fd::adopt(fd_);
+
     auto weak = self_weak;
     post([weak, idx, fd = std::move(fd)]() {
         auto self = weak.lock();

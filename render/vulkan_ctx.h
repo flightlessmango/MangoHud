@@ -4,13 +4,12 @@
 #include <VkBootstrap.h>
 #include <memory>
 #include <deque>
-#include "imgui_ctx.h"
 #include "shared.h"
 #include "../ipc/client.h"
 
+class ImGuiCtx;
 class VkCtx {
 public:
-    std::shared_ptr<ImGuiCtx> imgui;
     VkInstance instance = VK_NULL_HANDLE;
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     VkDevice device = VK_NULL_HANDLE;
@@ -20,10 +19,7 @@ public:
     std::mutex m;
     PFN_vkImportSemaphoreFdKHR pfn_vkImportSemaphoreFdKHR = nullptr;
 
-    VkCtx() {
-        init(true);
-        imgui = std::make_shared<ImGuiCtx>(this, 4);
-    };
+    VkCtx();
 
     bool submit(std::shared_ptr<clientRes>& r, int idx);
     void init_client(clientRes* r, size_t buffer_size = 0);
@@ -50,7 +46,6 @@ private:
     void init(bool enableValidation);
     int phys_fd();
     uint32_t compatible_bits_for_dmabuf_import(VkImage image, int import_fd);
-    bool create_gbm_buffer(clientRes* r, dmabuf_t* buf);
     bool create_src(clientRes* r, source_t* source);
     bool create_image(VkImageDrmFormatModifierExplicitCreateInfoEXT* drm, clientRes* r, VkImage& image,
                       VkImageUsageFlags usage, VkImageTiling tiling, VkExternalMemoryHandleTypeFlags handle);
