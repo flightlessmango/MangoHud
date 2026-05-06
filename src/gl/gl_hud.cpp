@@ -213,7 +213,7 @@ void imgui_render(gl_context *ctx, unsigned int width, unsigned int height)
         process_control_socket(control_client, params);
     }
 
-    check_keybinds(params);
+    check_keybinds(params, &control_client);
     update_hud_info(sw_stats, params, vendorID);
 
     auto saved_imgui_contexts = get_current_imgui_contexts();
