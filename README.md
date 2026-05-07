@@ -355,6 +355,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `cpu_load_color`                   | Set the colors for the gpu load change low, medium and high. e.g `cpu_load_color=0000FF,00FFFF,FF00FF` |
 | `cpu_load_value`                   | Set the values for medium and high load e.g `cpu_load_value=50,90`                    |
 | `cpu_mhz`                          | Show the CPUs current MHz                                                             |
+| `cpu_no_label`                     | Remove the label before cpu_stats                                                     |
 | `cpu_power`<br>`gpu_power`         | Display CPU/GPU draw in watts                                                         |
 | `cpu_temp`<br>`gpu_temp`<br>`gpu_junction_temp`<br>`gpu_mem_temp`           | Display current CPU/GPU temperature                                                  |
 | `cpu_custom_temp_sensor`           | Use custom hwmon sensor for cpu temperature. e.g `cpu_custom_temp_sensor=cpuss0_2,temp3_input`.|
@@ -387,6 +388,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `fps_color=`                       | Choose the colors that the fps changes to when `fps_color_change` is enabled. Corresponds with fps_value. Default is `b22222,fdfd09,39f900`   |
 | `fps_limit_method`                 | If FPS limiter should wait before or after presenting a frame. Choose `late` (default) for the lowest latency or `early` for the smoothest frametimes |
 | `fps_limit`                        | Limit the apps framerate. Comma-separated list of one or more FPS values. `0` means unlimited |
+| `fps_no_label`                     | Remove the label before fps |
 | `fps_only`                         | Show FPS only. ***Not meant to be used with other display params***                   |
 | `fps_sampling_period=`             | Time interval between two sampling points for gathering the FPS in milliseconds. Default is `500`   |
 | `fps_value`                        | Choose the break points where `fps_color_change` changes colors between. E.g `60,144`, default is `30,60` |
@@ -396,6 +398,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `frame_count`                      | Display frame count                                                                   |
 | `frametime`                        | Display frametime next to FPS text                                                    |
 | `frame_timing_detailed`            | Display frame timing in a more detailed chart                                         |
+| `gpu_no_label`                     | Remove the label before gpu_stats                                                     |
 | `fsr`                              | Display the status of FSR (only works in gamescope)                                   |
 | `hdr`                              | Display the status of HDR (only works in gamescope)                                   |
 | `refresh_rate`                     | Display the current refresh rate (only works in gamescope)                            |
