@@ -497,7 +497,7 @@ void render_mpris_metadata(const struct overlay_params& params, mutexed_metadata
             std::string str;
             try
             {
-               str = fmt::format(f,
+               str = fmt::format(fmt::runtime(f),
                                    fmt::arg("artist", meta.meta.artists),
                                    fmt::arg("title", meta.meta.title),
                                    fmt::arg("album", meta.meta.album));

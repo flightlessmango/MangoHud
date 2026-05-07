@@ -29,6 +29,8 @@ conf_data = configuration_data()
 
 conf_data.set('ld_libdir_mangohud_abs', libdir_mangohud)
 conf_data.set('ld_libdir_mangohud', ld_libdir_mangohud)
+conf_data.set('mangohud_lib_name', 'libMangoHud_shim.so')
+conf_data.set('mangohud_env', 'MANGOHUD')
 conf_data.set('cpu_family', host_machine.cpu_family())
 conf_data.set('version', describe_ver)
 
@@ -208,10 +210,11 @@ mangohud_static_lib = static_library(
     dep_dl,
     dep_rt,
     dep_pthread,
-    dep_vulkan_headers,
+    vulkan_headers_dep,
     dep_vulkan_utility_libraries,
     windows_deps,
-    implot_dep],
+    implot_dep,
+    mangohud_version_dep],
   include_directories : [inc_common],
   link_args : link_args,
   install_dir : libdir_mangohud,
@@ -250,7 +253,7 @@ mangohud_opengl_shared_lib = shared_library(
     dep_dl,
     dep_rt,
     dep_pthread,
-    dep_vulkan_headers,
+    vulkan_headers_dep,
     dep_vulkan_utility_libraries,
     windows_deps,
     implot_dep],
@@ -283,7 +286,7 @@ if get_option('mangoapp')
     dependencies : [
       dearimgui_dep,
       dep_dl,
-      dep_vulkan_headers,
+      vulkan_headers_dep,
       dep_vulkan_utility_libraries,
       spdlog_dep,
       dbus_dep,

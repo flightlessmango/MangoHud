@@ -3,7 +3,7 @@ project('MangoHud',
   version : 'v0.8.4',
   license : 'MIT',
   meson_version: '>=0.60.0',
-  default_options : ['buildtype=release', 'c_std=c99', 'cpp_std=c++17', 'warning_level=2']
+  default_options : ['buildtype=release', 'c_std=c99', 'cpp_std=c++20', 'warning_level=2']
 )
 
 cc = meson.get_compiler('c')
@@ -12,12 +12,27 @@ cpp = meson.get_compiler('cpp')
 prog_python = import('python').find_installation('python3', modules: ['mako'])
 null_dep = dependency('', required : false)
 
-mangohud_version = vcs_tag(
-  command: ['git', 'describe', '--tags', '--dirty=+'],
-  input:  'version.h.in',
-  output: 'version.h')
+vcs_tag_cmd = run_command(
+    'git', 'describe', '--tags', '--dirty=+',
+    check: false
+)
 
-mangohud_version_dep = declare_dependency(sources : mangohud_version)
+conf = configuration_data()
+conf.set_quoted(
+    'VCS_TAG',
+    vcs_tag_cmd.returncode() == 0 ? vcs_tag_cmd.stdout().strip() : ''
+)
+
+mangohud_version = configure_file(
+    input: 'version.h.in',
+    output: 'version.h',
+    configuration: conf
+)
+
+mangohud_version_dep = declare_dependency(
+    sources: mangohud_version,
+    include_directories: include_directories('.')
+)
 
 pre_args = [
   '-D__STDC_CONSTANT_MACROS',
@@ -115,7 +130,7 @@ if is_unixy and not dep_x11.found() and not dep_wayland_client.found()
 endif
 
 inc_common = [
-    include_directories('include'),
+  include_directories('include'),
 ]
 
 dep_pthread = dependency('threads')
@@ -173,9 +188,14 @@ endif
 # Commented code can be used if mangohud start using latest SDK Vulkan-Headers
 # Allowing user to build mangohud using system Vulkan-Headers
 # if not dependency('VulkanHeaders').found()
-  vulkan_headers_sp = subproject('vulkan-headers')
-  vulkan_headers_api_xml = vulkan_headers_sp.get_variable('vulkan_api_xml')
-  dep_vulkan_headers = vulkan_headers_sp.get_variable('vulkan_headers_dep')
+vkh_sp = subproject('vulkan-headers')
+vk_api_xml = vkh_sp.get_variable('vulkan_api_xml')
+vulkan_headers_dep = vkh_sp.get_variable('vulkan_headers_dep')
+vulkan_lib = cc.find_library('vulkan', required: true)
+vulkan_dep = declare_dependency(
+  dependencies: [vulkan_headers_dep, vulkan_lib]
+)
+meson.override_dependency('vulkan', vulkan_dep)
 
   vulkan_utility_libraries_sp = subproject('vulkan-utility-libraries')
   dep_vulkan_utility_libraries = vulkan_utility_libraries_sp.get_variable('vulkan_utility_libraries_dep')
@@ -186,7 +206,7 @@ endif
 
 vk_enum_to_str = custom_target(
   'vk_enum_to_str',
-  input : ['bin/gen_enum_to_str.py', vulkan_headers_api_xml],
+  input : ['bin/gen_enum_to_str.py', vk_api_xml],
   output : ['vk_enum_to_str.c', 'vk_enum_to_str.h', 'vk_enum_defines.h'],
   command : [
     prog_python, '@INPUT0@', '--xml', '@INPUT1@',
@@ -199,7 +219,7 @@ vk_enum_to_str = custom_target(
 
 vk_dispatch_table = custom_target(
   'vk_dispatch_table',
-  input : ['bin/vk_dispatch_table_gen.py', vulkan_headers_api_xml],
+  input : ['bin/vk_dispatch_table_gen.py', vk_api_xml],
   output : ['vk_dispatch_table.c', 'vk_dispatch_table.h'],
   command : [
     prog_python, '@INPUT0@', '--xml', '@INPUT1@',
@@ -210,7 +230,7 @@ vk_dispatch_table = custom_target(
 
 vk_extensions = custom_target(
   'vk_extensions',
-  input : ['bin/vk_extensions_gen.py', vulkan_headers_api_xml],
+  input : ['bin/vk_extensions_gen.py', vk_api_xml],
   output : ['vk_extensions.c', 'vk_extensions.h'],
   command : [
     prog_python, '@INPUT0@', '--xml', '@INPUT1@',
@@ -227,8 +247,8 @@ imgui_options = [
   'dx11=disabled',
   'dx12=disabled',
   'metal=disabled',
-  'opengl=disabled',
-  'vulkan=disabled',
+  'opengl=enabled',
+  'vulkan=enabled',
   'glfw=disabled',
   'sdl2=disabled',
   'sdl3=disabled',
@@ -333,3 +353,5 @@ endif
 if get_option('mangoplot').enabled()
   subdir('bin')
 endif
+
+subdir('mangohud-next')
