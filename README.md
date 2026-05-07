@@ -382,6 +382,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `font_scale_media_player`          | Change size of media player text relative to `font_size`                              |
 | `font_size=`                       | Customizable font size. Default is `24`                                               |
 | `font_size_secondary=`             | Customizable font size for secondary metrics. Default is `0.55 * font_size`, except if `no_small_font` is set, in which case the default value is `font_size`          |
+| `font_size_small=`                 | Customizable font size for small text (like units). Default is `0.55 * font_size`.    |
 | `font_size_text=`                  | Customizable font size for other text like media metadata. Default is `24`            |
 | `fps_color_change`                 | Change the FPS text color depepending on the FPS value                                |
 | `fps_color=`                       | Choose the colors that the fps changes to when `fps_color_change` is enabled. Corresponds with fps_value. Default is `b22222,fdfd09,39f900`   |
@@ -687,7 +688,7 @@ Example output:
 #### Intel notes
 - GPU temperature for `i915` requires **linux 6.13+**
 - Fan speed for `i915` requires **linux 6.12+**
-- GPU temperature and vram temperature for `xe` requires **linux 6.15+** 
+- GPU temperature and vram temperature for `xe` requires **linux 6.15+**
 - Fan speed for `xe` requires **linux 6.16+**
 - GPU usage and memory usage shows usage of current process, not total system usage (it's an issue on intel's side)
   - https://gitlab.freedesktop.org/drm/i915/kernel/-/issues/14153
