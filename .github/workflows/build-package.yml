@@ -14,13 +14,13 @@ jobs:
           set -x
           sudo dpkg --add-architecture i386
           sudo apt update
-          sudo apt -y install gcc-multilib g++-multilib ninja-build python3-setuptools \
-                              python3-wheel mesa-common-dev libxnvctrl-dev libdbus-1-dev \
-                              python3-numpy python3-matplotlib unzip libxkbcommon-dev libwayland-dev wget unzip \
-                              libxkbcommon-dev:i386 libwayland-dev:i386 gh python3-mako meson pkgconf pkg-config
-          wget https://github.com/KhronosGroup/glslang/releases/download/SDK-candidate-26-Jul-2020/glslang-master-linux-Release.zip
-          unzip glslang-master-linux-Release.zip bin/glslangValidator
-          sudo install -m755 bin/glslangValidator /usr/local/bin/
+          source ./build_deps.sh
+          DEPS="$(printf '%s' "$DEPS_DEBIAN" | tr ',' ' ')"
+          sudo apt -o Acquire::Queue-Mode=access -y install \
+            $DEPS \
+            gh \
+            pkgconf
+          command -v glslangValidator && glslangValidator --version
           command -v pkg-config && pkg-config --version
       - name: Prepare Artifact Git Info
         shell: bash

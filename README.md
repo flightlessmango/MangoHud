@@ -73,7 +73,13 @@ Install necessary development packages.
 - meson >=0.54
 - ninja (ninja-build)
 - glslang
-- libGL/libEGL (libglvnd, mesa-common-dev, mesa-libGL-devel etc)
+- Vulkan loader (libvulkan-dev)
+- libGL/libEGL (libglvnd, libgl-dev, libegl-dev, mesa-common-dev, mesa-libGL-devel etc)
+- GBM (libgbm-dev)
+- libdrm (libdrm-dev)
+- libcap (libcap-dev)
+- libsystemd (libsystemd-dev)
+- yaml-cpp (libyaml-cpp-dev)
 - X11 (libx11-dev)
 - XNVCtrl (libxnvctrl-dev), optional, use `-Dwith_xnvctrl=disabled` option with `meson` to disable
 - D-Bus (libdbus-1-dev), optional, use `-Dwith_dbus=disabled` option with `meson` to disable

@@ -86,12 +86,6 @@ dependencies() {
 
                 dep_install
 
-                if [[ ! -f /usr/local/bin/glslangValidator ]]; then
-                    wget https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip
-                    unzip glslang-master-linux-Release.zip bin/glslangValidator
-                    $SU_CMD /usr/bin/install -m755 bin/glslangValidator /usr/local/bin/
-                    rm bin/glslangValidator glslang-master-linux-Release.zip
-                fi
                 break
             ;;
             *suse*)
