@@ -50,38 +50,57 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	}
 
 	bool is_power=false, is_current=false, is_temp=false, is_other=false;
-	if (header.format_revision == 1) {
-		// Desktop GPUs
-		if (buf.size() < sizeof(gpu_metrics_v1_3)) {
-			SPDLOG_DEBUG(
-				"amdgpu metrics file '{}' too small for gpu_metrics_v1_3 "
-				"(have {}, need {})",
-				gpu_metrics_path, buf.size(), sizeof(gpu_metrics_v1_3));
-			return;
+
+	if (header.format_revision == 1) { // Desktop GPUs
+		if (header.content_revision == 0) { // gpu_metrics_v1_0
+			if (buf.size() != sizeof(gpu_metrics_v1_0)) {
+				SPDLOG_DEBUG(
+					"amdgpu metrics file '{}' does not fit gpu_metrics_v1_0 but reported as v1_0"
+					"(have {}, need {})",
+					gpu_metrics_path, buf.size(), sizeof(gpu_metrics_v1_0));
+				return;
+			}
+			const auto *amdgpu_metrics = reinterpret_cast<const gpu_metrics_v1_0 *>(buf.data());
+			metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
+
+			metrics->average_gfx_power_w = amdgpu_metrics->average_socket_power / 1000.0f;
+
+			metrics->current_gfxclk_mhz = amdgpu_metrics->current_gfxclk;
+			metrics->current_uclk_mhz = amdgpu_metrics->current_uclk;
+
+			metrics->gpu_temp_c = amdgpu_metrics->temperature_edge;
+			metrics->fan_speed = amdgpu_metrics->current_fan_speed;
+		} else { // Assume it's gpu_metrics_v1_3
+			if (buf.size() < sizeof(gpu_metrics_v1_3)) {
+				SPDLOG_DEBUG(
+					"amdgpu metrics file '{}' too small for gpu_metrics_v1_3 "
+					"(have {}, need {})",
+					gpu_metrics_path, buf.size(), sizeof(gpu_metrics_v1_3));
+				return;
+			}
+			const auto *amdgpu_metrics = reinterpret_cast<const gpu_metrics_v1_3 *>(buf.data());
+			metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
+
+			metrics->average_gfx_power_w = amdgpu_metrics->average_socket_power;
+
+			metrics->current_gfxclk_mhz = amdgpu_metrics->current_gfxclk;
+			metrics->current_uclk_mhz = amdgpu_metrics->current_uclk;
+
+			metrics->gpu_temp_c = amdgpu_metrics->temperature_edge;
+			metrics->fan_speed = amdgpu_metrics->current_fan_speed;
+
+			uint64_t indep = amdgpu_metrics->indep_throttle_status;
+			// RDNA 3 almost always shows the TEMP_HOTSPOT throtting flag,
+			// so clear that bit
+			indep &= ~(1ull << TEMP_HOTSPOT_BIT);  // your existing quirk
+
+			is_power   = ((indep >> 0)  & 0xFF) != 0;
+			is_current = ((indep >> 16) & 0xFF) != 0;
+			is_temp    = ((indep >> 32) & 0xFFFF) != 0;
+			is_other   = ((indep >> 56) & 0xFF) != 0;
+			if (throttling)
+				throttling->indep_throttle_status = indep;
 		}
-
-		const auto *amdgpu_metrics = reinterpret_cast<const gpu_metrics_v1_3 *>(buf.data());
-		metrics->gpu_load_percent = amdgpu_metrics->average_gfx_activity;
-
-		metrics->average_gfx_power_w = amdgpu_metrics->average_socket_power;
-
-		metrics->current_gfxclk_mhz = amdgpu_metrics->current_gfxclk;
-		metrics->current_uclk_mhz = amdgpu_metrics->current_uclk;
-
-		metrics->gpu_temp_c = amdgpu_metrics->temperature_edge;
-		metrics->fan_speed = amdgpu_metrics->current_fan_speed;
-
-		uint64_t indep = amdgpu_metrics->indep_throttle_status;
-		// RDNA 3 almost always shows the TEMP_HOTSPOT throtting flag,
-		// so clear that bit
-		indep &= ~(1ull << TEMP_HOTSPOT_BIT);  // your existing quirk
-
-		is_power   = ((indep >> 0)  & 0xFF) != 0;
-		is_current = ((indep >> 16) & 0xFF) != 0;
-		is_temp    = ((indep >> 32) & 0xFFFF) != 0;
-		is_other   = ((indep >> 56) & 0xFF) != 0;
-		if (throttling)
-			throttling->indep_throttle_status = indep;
 	} else if (header.format_revision == 2) {
 		// APUS
 		size_t needed = 0;
