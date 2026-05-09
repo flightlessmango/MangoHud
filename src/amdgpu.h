@@ -515,6 +515,7 @@ class AMDGPU {
 		std::thread thread;
 		struct amdgpu_files sysfs_nodes = {};
 		bool gpu_metrics_is_valid = false;
+		bool gpu_metrics_sampled = false;
 		std::condition_variable cond_var;
 		std::atomic<bool> stop_thread{false};
         std::atomic<bool> paused{false};
