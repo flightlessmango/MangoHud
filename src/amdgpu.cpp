@@ -267,10 +267,17 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	metrics->is_current_throttled = is_current;
 	metrics->is_temp_throttled    = is_temp;
 	metrics->is_other_throttled   = is_other;
+
+	// flipping this flag to true tells us that
+	// gpu_metrics gave us valid snapshot
+	gpu_metrics_sampled = true;
 }
 
 void AMDGPU::get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT], bool &gpu_load_needs_dividing) {
 	while (!stop_thread) {
+	    // resetting the flag
+	    gpu_metrics_sampled = false;
+
 		// Get all the samples
 		for (size_t cur_sample_id=0; cur_sample_id < METRICS_SAMPLE_COUNT; cur_sample_id++) {
 			if (gpu_metrics_is_valid)
@@ -301,7 +308,10 @@ void AMDGPU::get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[ME
 		metrics.proc_vram_used = fdinfo_helper->amdgpu_helper_get_proc_vram();
 #endif
 
-		if (gpu_metrics_is_valid) {
+        // gpu_metrics file must exist & is readable and
+        // amdgpu_common_metrics should've been populated with valid
+        // gpu_metrics values to overwrite valid sysfs values
+		if (gpu_metrics_is_valid && gpu_metrics_sampled) {
 			UPDATE_METRIC_AVERAGE(gpu_load_percent);
 			UPDATE_METRIC_AVERAGE_FLOAT(average_gfx_power_w);
 			UPDATE_METRIC_AVERAGE_FLOAT(average_cpu_power_w);
