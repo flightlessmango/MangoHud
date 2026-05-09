@@ -33,6 +33,65 @@ struct metrics_table_header {
 	uint8_t				content_revision;
 };
 
+/*
+ * gpu_metrics_v1_0 is not naturally aligned, so not recommended,
+ * but some GPUs like vega20 are still using it.
+ */
+struct gpu_metrics_v1_0 {
+	struct metrics_table_header common_header;
+	uint32_t			padding1;
+
+	/* Driver attached timestamp (in ns) */
+	uint64_t			system_clock_counter;
+
+	/* Temperature */
+	uint16_t			temperature_edge;
+	uint16_t			temperature_hotspot;
+	uint16_t			temperature_mem;
+	uint16_t			temperature_vrgfx;
+	uint16_t			temperature_vrsoc;
+	uint16_t			temperature_vrmem;
+
+	/* Utilization */
+	uint16_t			average_gfx_activity;
+	uint16_t			average_umc_activity; // memory controller
+	uint16_t			average_mm_activity; // UVD or VCN
+
+	/* Power/Energy */
+	uint16_t			average_socket_power; // mW
+	uint32_t			energy_accumulator;
+
+	/* Average clocks */
+	uint16_t			average_gfxclk_frequency;
+	uint16_t			average_socclk_frequency;
+	uint16_t			average_uclk_frequency;
+	uint16_t			average_vclk0_frequency;
+	uint16_t			average_dclk0_frequency;
+	uint16_t			average_vclk1_frequency;
+	uint16_t			average_dclk1_frequency;
+
+	/* Current clocks */
+	uint16_t			current_gfxclk;
+	uint16_t			current_socclk;
+	uint16_t			current_uclk;
+	uint16_t			current_vclk0;
+	uint16_t			current_dclk0;
+	uint16_t			current_vclk1;
+	uint16_t			current_dclk1;
+
+	/* Throttle status */
+	uint32_t			throttle_status;
+
+	/* Fans */
+	uint16_t			current_fan_speed; // RPM
+
+	/* Link width/speed */
+	uint8_t				pcie_link_width;
+	uint8_t				pcie_link_speed; // in 0.1 GT/s
+
+	uint32_t			padding2;
+};
+
 struct gpu_metrics_v1_3 {
 	struct metrics_table_header	common_header;
 
