@@ -27,6 +27,12 @@ jobs:
           libglfw3-dev \
           sudo \
           git
+    - name: 'Install Meson'
+      run: |
+        MESON_MIN_VERSION="$(sed -n "s/.*meson_version:[[:space:]]*'>=\([^']*\)'.*/\1/p" meson.build)"
+        python3 -m pip install --user --break-system-packages "meson>=${MESON_MIN_VERSION}"
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+        meson --version
     - name: 'Install clang'
       if:  ${{ (matrix.compiler == 'clang') }}
       run: |

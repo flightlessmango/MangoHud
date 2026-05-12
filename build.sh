@@ -26,6 +26,19 @@ done
 
 dependencies() {
     if [[ ! -f build/release/usr/lib/libMangoHud.so ]]; then
+        local min_version
+        min_version=$(sed -n "s/.*meson_version:[[:space:]]*'>=\\([^']*\\)'.*/\\1/p" meson.build)
+        if ! command -v meson &> /dev/null || [[ "$(printf '%s\n' "$min_version" "$(meson --version)" | sort -V | head -n1)" != "$min_version" ]]; then
+            echo "# Meson >= $min_version is required."
+            if command -v meson &> /dev/null; then
+                echo "# Found meson $(meson --version)."
+            else
+                echo "# Meson was not found."
+            fi
+            echo "# Please install Meson >= $min_version and run this script again."
+            exit 1
+        fi
+
         missing_deps() {
             echo "# Missing dependencies:$INSTALL"
             read -rp "Do you wish the script to install these packages? [y/N]" PERMISSION
@@ -98,9 +111,6 @@ dependencies() {
                 DEPS="{${DEPS_SUSE},${DEPS_SUSE_EXTRA}}"
                 dep_install
 
-                if [[ $(pip3 show meson; echo $?) == 1 ]]; then
-                    $SU_CMD pip3 install 'meson>=0.54'
-                fi
                 break
             ;;
             *solus*)
@@ -175,7 +185,7 @@ package() {
 }
 
 release() {
-    rm build/MangoHud-package.tar
+    rm -f build/MangoHud-package.tar
     mkdir -p build/MangoHud
     package
     cp --preserve=mode bin/mangohud-setup.sh build/MangoHud/mangohud-setup.sh
