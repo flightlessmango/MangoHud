@@ -11,22 +11,14 @@ cpp = meson.get_compiler('cpp')
 
 prog_python = import('python').find_installation('python3', modules: ['mako'])
 null_dep = dependency('', required : false)
+vcs_tag_command = ['git', 'describe', '--tags', '--dirty=+']
+vcs_tag_fallback = meson.project_version()
 
-vcs_tag_cmd = run_command(
-    'git', 'describe', '--tags', '--dirty=+',
-    check: false
-)
-
-conf = configuration_data()
-conf.set_quoted(
-    'VCS_TAG',
-    vcs_tag_cmd.returncode() == 0 ? vcs_tag_cmd.stdout().strip() : ''
-)
-
-mangohud_version = configure_file(
+mangohud_version = vcs_tag(
     input: 'version.h.in',
     output: 'version.h',
-    configuration: conf
+    command: vcs_tag_command,
+    fallback: vcs_tag_fallback,
 )
 
 mangohud_version_dep = declare_dependency(

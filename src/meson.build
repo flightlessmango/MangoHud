@@ -15,16 +15,6 @@ else
   ld_libdir_mangohud = ld_prefix
 endif
 
-git = find_program('git', required: false)
-if git.found()
-  git_describe = run_command([git, 'describe', '--tags', '--dirty=+'], check: false)
-endif
-if git.found() and git_describe.returncode() == 0
-  describe_ver = git_describe.stdout().strip()
-else
-  describe_ver = meson.project_version()
-endif
-
 conf_data = configuration_data()
 
 conf_data.set('ld_libdir_mangohud_abs', libdir_mangohud)
@@ -32,7 +22,7 @@ conf_data.set('ld_libdir_mangohud', ld_libdir_mangohud)
 conf_data.set('mangohud_lib_name', 'libMangoHud_shim.so')
 conf_data.set('mangohud_env', 'MANGOHUD')
 conf_data.set('cpu_family', host_machine.cpu_family())
-conf_data.set('version', describe_ver)
+conf_data.set('version', '@VCS_TAG@')
 
 overlay_shaders = [
   'overlay.frag',
@@ -342,9 +332,17 @@ configure_file(input : 'mangohud.json.in',
   install_tag : 'runtime',
 )
 
-configure_file(input : '../bin/mangohud.in',
-  output : 'mangohud',
+configured_mangohud = configure_file(input : '../bin/mangohud.in',
+  output : 'mangohud.vcs.in',
   configuration : conf_data,
+)
+
+vcs_tag(input : configured_mangohud,
+  output : 'mangohud',
+  command : vcs_tag_command,
+  fallback : vcs_tag_fallback,
+  install : true,
   install_dir : get_option('bindir'),
   install_tag : 'scripts',
+  install_mode : 'rwxr-xr-x',
 )

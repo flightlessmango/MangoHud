@@ -48,7 +48,7 @@ conf_data.set('ld_libdir_mangohud', next_ld_libdir_mangohud)
 conf_data.set('mangohud_lib_name', 'libMangoHud-next.so')
 conf_data.set('mangohud_env', 'MANGOHUD_NEXT')
 conf_data.set('cpu_family', host_machine.cpu_family())
-conf_data.set('version', describe_ver)
+conf_data.set('version', '@VCS_TAG@')
 
 configure_file(input : 'mangohud.json.in',
   output : '@0@-next.@1@.json'.format(meson.project_name(), host_machine.cpu_family()),
@@ -58,9 +58,17 @@ configure_file(input : 'mangohud.json.in',
   install_tag : 'runtime',
 )
 
-configure_file(input : '../../bin/mangohud.in',
-  output : 'mangohud-next',
+configured_mangohud_next = configure_file(input : '../../bin/mangohud.in',
+  output : 'mangohud-next.vcs.in',
   configuration : conf_data,
+)
+
+vcs_tag(input : configured_mangohud_next,
+  output : 'mangohud-next',
+  command : vcs_tag_command,
+  fallback : vcs_tag_fallback,
+  install : true,
   install_dir : get_option('bindir'),
   install_tag : 'scripts',
+  install_mode : 'rwxr-xr-x',
 )
