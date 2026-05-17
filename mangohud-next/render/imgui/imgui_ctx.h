@@ -45,7 +45,7 @@ private:
     std::shared_ptr<ImGuiVK> vk;
     ImVec2 Text(ImVec4 col, const char* buffer);
     inline static float ralign_width = 0.0f;
-    inline static float unit_gap = 1.0f;
+    inline static float unit_gap = -1.5f;
     inline static float outline_padding_x = 1.5f;
     int buffer_size = 0;
 
