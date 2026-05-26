@@ -1933,9 +1933,6 @@ static VkResult overlay_CreateDevice(
    vk_device_dispatch_table_load(&device_data->vtable,
                               fpGetDeviceProcAddr, *pDevice);
    device_data->physical_device = physicalDevice;
-   vk_instance_dispatch_table_load(&instance_data->vtable,
-                                   fpGetInstanceProcAddr,
-                                   instance_data->instance);
 
    instance_data->pd_vtable.GetPhysicalDeviceProperties(device_data->physical_device,
                                                      &device_data->properties);
