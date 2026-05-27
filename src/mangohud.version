@@ -3,6 +3,7 @@
   global:
     overlay_GetInstanceProcAddr;
     overlay_GetDeviceProcAddr;
+    vkNegotiateLoaderLayerInterfaceVersion;
     glX*;
     egl*;
     dlsym;

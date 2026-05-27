@@ -2167,6 +2167,23 @@ extern "C" PUBLIC VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetDeviceProc
 extern "C" PUBLIC VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetInstanceProcAddr(VkInstance instance,
                                                                                const char *funcName);
 
+extern "C" PUBLIC VKAPI_ATTR VkResult VKAPI_CALL
+vkNegotiateLoaderLayerInterfaceVersion(VkNegotiateLayerInterface *pVersionStruct)
+{
+    if (!pVersionStruct)
+        return VK_ERROR_INITIALIZATION_FAILED;
+
+    if (pVersionStruct->loaderLayerInterfaceVersion < 2)
+        return VK_ERROR_INITIALIZATION_FAILED;
+
+    pVersionStruct->loaderLayerInterfaceVersion = 2;
+    pVersionStruct->pfnGetInstanceProcAddr = overlay_GetInstanceProcAddr;
+    pVersionStruct->pfnGetDeviceProcAddr = overlay_GetDeviceProcAddr;
+    pVersionStruct->pfnGetPhysicalDeviceProcAddr = nullptr;
+
+    return VK_SUCCESS;
+}
+
 static const struct {
    const char *name;
    void *ptr;
