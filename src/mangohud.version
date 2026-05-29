@@ -4,10 +4,5 @@
     overlay_GetInstanceProcAddr;
     overlay_GetDeviceProcAddr;
     vkNegotiateLoaderLayerInterfaceVersion;
-    glX*;
-    egl*;
-    dlsym;
-    mangohud_find_glx_ptr;
-    mangohud_find_egl_ptr;
   local: *;
 };
