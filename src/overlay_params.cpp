@@ -813,7 +813,7 @@ parse_overlay_env(struct overlay_params *params,
       }
    }
 
-   presets(current_preset, params);
+   presets(current_preset, params, use_existing_preset);
    env = env_start;
 
    while ((num = parse_string(env, key, value)) != 0) {
