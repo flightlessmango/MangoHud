@@ -59,4 +59,4 @@ jobs:
     - name: 'Build'
       run: meson compile -C ./builddir || ninja -C ./builddir
     - name: 'Install'
-      run: sudo env "PATH=$PATH" meson install -C ./builddir
+      run: meson install -C ./builddir --destdir "$PWD/install-root"
