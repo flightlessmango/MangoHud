@@ -18,19 +18,20 @@ bool OverlayVK::draw(VkSwapchainKHR swapchain, uint32_t img_idx, VkQueue q, VkPr
     return true;
 }
 
-std::vector<int> OverlayVK::init_dmabufs(Fdinfo& fdinfo) {
+bool OverlayVK::init_dmabufs(Fdinfo& fdinfo) {
     std::lock_guard lock(m);
     sc->d->DeviceWaitIdle(sc->d->Device);
     last_slot = -1;
     dmabufs.clear();
-    std::vector<int> semaphores;
     for (auto [i, fd] : enumerate(fdinfo.dmabuf_buffer)) {
         dmabufs.push_back(std::make_shared<dmabuf_ext>(sc->d));
-        import_dmabuf(dmabufs.back().get(), fd, fdinfo);
+        if (import_dmabuf(dmabufs.back().get(), fd, fdinfo) != VK_SUCCESS)
+            return false;
+
         cache_descriptor_set(dmabufs.back());
     }
 
-    return semaphores;
+    return true;
 }
 
 void OverlayVK::cache_descriptor_set(std::shared_ptr<dmabuf_ext>& buf) {

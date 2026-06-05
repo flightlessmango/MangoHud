@@ -2,8 +2,7 @@
 #include "config.h"
 #include "stdio.h"
 #include "mesa/os_time.h"
-#include "egl_ctx.h"
-#include "../render/imgui/imgui_ctx.h"
+#include "vulkan_ctx.h"
 
 int main() {
   MangoHudServer();
@@ -21,35 +20,17 @@ void MangoHudServer::loop() {
     }
 }
 
-std::shared_ptr<VkCtx> MangoHudServer::vk() {
+std::shared_ptr<VkCtx> MangoHudServer::vk(int renderer) {
     std::lock_guard lock(vk_ctx_m);
 
-    if (auto ctx = vk_ctx.lock())
+    if (auto ctx = vk_ctx[renderer].lock())
         return ctx;
 
-    auto ctx = std::make_shared<VkCtx>();
-    vk_ctx = ctx;
+    auto ctx = std::make_shared<VkCtx>(renderer);
+    vk_ctx[renderer] = ctx;
     return ctx;
 }
 
-std::shared_ptr<EglCtx> MangoHudServer::egl() {
-    std::lock_guard lock(egl_ctx_m);
-
-    if (auto ctx = egl_ctx.lock())
-        return ctx;
-
-    auto ctx = std::make_shared<EglCtx>();
-    egl_ctx = ctx;
-    return ctx;
-}
-
-std::shared_ptr<ImGuiCtx> MangoHudServer::imgui() {
-    std::lock_guard lock(imgui_ctx_m);
-
-    if (auto ctx = imgui_ctx.lock())
-        return ctx;
-
-    auto ctx = std::make_shared<ImGuiCtx>();
-    imgui_ctx = ctx;
-    return ctx;
+std::vector<std::shared_ptr<GPU>> MangoHudServer::available_gpus() const {
+    return metrics->available_gpus();
 }

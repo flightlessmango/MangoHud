@@ -57,6 +57,7 @@ public:
     int push_queue();
     bool on_connect();
     void send_spdlog(const int level, const char* file, const int line, const std::string& text);
+    void send_import_failed();
     void send_semaphores(std::vector<int> sema);
     void frame_ready(uint32_t idx, int fd);
     int next_frame() {

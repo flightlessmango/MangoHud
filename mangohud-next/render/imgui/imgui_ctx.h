@@ -31,7 +31,7 @@ public:
 
     ImGuiCtx();
     bool init();
-    bool draw(std::shared_ptr<clientRes>& r, slot_t* buf, Backend backend);
+    bool draw(clientRes* r, slot_t* buf, Backend backend);
 
     void init_vk(std::shared_ptr<VkCtx> vk_);
     void init_egl();

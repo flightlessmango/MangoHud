@@ -13,7 +13,7 @@ inline bool create_gbm(clientRes* r, dmabuf_t* buf, int dev_fd, const uint64_t m
 
     buf->gbm.bo = gbm_bo_create_with_modifiers(buf->gbm.dev, r->w, r->h, buf->gbm.fourcc, &modifier, 1);
     if (!buf->gbm.bo) {
-        SPDLOG_ERROR("linear gbm_bo_create_with_modifiers failed");
+        SPDLOG_ERROR("gbm_bo_create_with_modifiers failed for modifier=0x{:016x}", modifier);
         return false;
     }
 
@@ -27,6 +27,8 @@ inline bool create_gbm(clientRes* r, dmabuf_t* buf, int dev_fd, const uint64_t m
     buf->gbm.modifier = gbm_bo_get_modifier(buf->gbm.bo);
     if (buf->gbm.modifier != modifier) {
         SPDLOG_ERROR("Expected {} modifier, got 0x{:016x}", modifier, buf->gbm.modifier);
+        gbm_bo_destroy(buf->gbm.bo);
+        buf->gbm.bo = nullptr;
         return false;
     }
 

@@ -116,7 +116,7 @@ public:
     OverlayVK(Layer* layer_) : layer(layer_) {}
 
     bool draw(VkSwapchainKHR swapchain, uint32_t img_idx, VkQueue queue, VkPresentInfoKHR pi);
-    std::vector<int> init_dmabufs(Fdinfo& fdinfo);
+    bool init_dmabufs(Fdinfo& fdinfo);
 
     ~OverlayVK() {
         for (auto& b : dmabufs)

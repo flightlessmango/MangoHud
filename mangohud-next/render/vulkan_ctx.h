@@ -19,9 +19,10 @@ public:
     std::mutex m;
     PFN_vkImportSemaphoreFdKHR pfn_vkImportSemaphoreFdKHR = nullptr;
 
-    VkCtx();
+    explicit VkCtx(int renderer = -1);
+    int renderer = -1;
 
-    bool submit(std::shared_ptr<clientRes>& r, int idx);
+    bool submit(clientRes* r, int idx);
     void init_client(clientRes* r, size_t buffer_size = 0);
     void transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
     void create_sync(slot_t* s);

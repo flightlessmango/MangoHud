@@ -6,6 +6,7 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/cfg/env.h>
+#include <unordered_map>
 
 class MangoHudServer {
 public:
@@ -26,9 +27,8 @@ public:
         loop();
     }
 
-    std::shared_ptr<VkCtx> vk();
-    std::shared_ptr<EglCtx> egl();
-    std::shared_ptr<ImGuiCtx> imgui();
+    std::shared_ptr<VkCtx> vk(int renderer = -1);
+    std::vector<std::shared_ptr<GPU>> available_gpus() const;
 
     ~MangoHudServer() {
         stop.store(true);
@@ -38,12 +38,8 @@ private:
     std::unique_ptr<IPCServer> ipc;
     std::unique_ptr<Metrics> metrics;
     std::shared_ptr<spdlog::logger> logger;
-    std::weak_ptr<VkCtx> vk_ctx;
+    std::unordered_map<int, std::weak_ptr<VkCtx>> vk_ctx;
     std::mutex vk_ctx_m;
-    std::weak_ptr<EglCtx> egl_ctx;
-    std::mutex egl_ctx_m;
-    std::weak_ptr<ImGuiCtx> imgui_ctx;
-    std::mutex imgui_ctx_m;
     std::atomic<bool> stop {false};
 
     void loop();

@@ -15,7 +15,7 @@ ImGuiCtx::ImGuiCtx() {
 };
 
 void ImGuiCtx::init_vk(std::shared_ptr<VkCtx> vk_) {
-    if (!vk) vk = std::make_shared<ImGuiVK>(std::move(vk_), this);
+    vk = std::make_shared<ImGuiVK>(std::move(vk_), this);
 }
 
 void ImGuiCtx::init_egl() {
@@ -263,7 +263,7 @@ HudLayout ImGuiCtx::build_layout(hudTable* table, Font* fonts) {
     return L;
 }
 
-bool ImGuiCtx::draw(std::shared_ptr<clientRes>& r, slot_t* buf, Backend backend) {
+bool ImGuiCtx::draw(clientRes* r, slot_t* buf, Backend backend) {
     std::lock_guard lock(m);
     ImGuiContext* imgui = nullptr;
     ImPlotContext* implot = nullptr;
@@ -364,14 +364,13 @@ bool ImGuiCtx::draw(std::shared_ptr<clientRes>& r, slot_t* buf, Backend backend)
         SPDLOG_DEBUG("resizing image from: {} {} to {} {}", r->w, r->h, w, h);
         r->w = w;
         r->h = h;
-        r->reinit();
         return false;
     }
 
-    if (r->is_vulkan() || r->is_glx())
+    if (backend == Backend::VULKAN)
         vk->record_cmd(*buf, w, h);
 
-    if (r->is_egl())
+    if (backend == Backend::EGL)
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     return true;

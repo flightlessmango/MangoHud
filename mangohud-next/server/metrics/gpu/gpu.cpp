@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstdlib>
 
 #include "gpu.hpp"
 #include "intel/i915/i915.hpp"
@@ -101,7 +102,10 @@ GPUS::GPUS() {
             continue;
         }
 
-        available_gpus.push_back(gpu);
+        {
+            std::lock_guard lock(available_gpus_m);
+            available_gpus.push_back(gpu);
+        }
         gpu->start_thread_worker();
 
         // if (params->gpu_list.size() == 1 && params->gpu_list[0] == idx++)
@@ -121,6 +125,7 @@ GPUS::GPUS() {
     if (total_active < 2)
         return;
 
+    std::lock_guard lock(available_gpus_m);
     for (auto& gpu : available_gpus) {
         if (!gpu->is_active)
             continue;
@@ -134,6 +139,11 @@ GPUS::GPUS() {
 
         break;
     }
+}
+
+std::vector<std::shared_ptr<GPU>> GPUS::available() const {
+    std::lock_guard lock(available_gpus_m);
+    return available_gpus;
 }
 
 std::string GPUS::get_pci_device_address(const std::string& drm_card_path) {
@@ -254,11 +264,28 @@ void GPU::poll() {
     }
 }
 
+static int render_minor_from_node(const std::string& drm_node) {
+    if (!drm_node.starts_with("renderD"))
+        return -1;
+
+    char* end = nullptr;
+    long renderer = std::strtol(drm_node.c_str() + 7, &end, 10);
+    if (end && *end == '\0' && renderer >= 0)
+        return static_cast<int>(renderer);
+
+    return -1;
+}
+
 GPU::GPU(
     const std::string& drm_node, const std::string& pci_dev,
     uint16_t vendor_id, uint16_t device_id, const std::string& thread_name
 ) : drm_node(drm_node), pci_dev(pci_dev), vendor_id(vendor_id),
-    device_id(device_id), worker_thread_name(thread_name) {}
+    device_id(device_id), render_minor(render_minor_from_node(drm_node)),
+    worker_thread_name(thread_name) {}
+
+int GPU::renderer() const {
+    return render_minor;
+}
 
 GPU::~GPU() {
     stop_thread = true;

@@ -3,6 +3,7 @@
 #include <variant>
 #include <sys/stat.h>
 #include "../common/table_structs.h"
+#include "../common/helpers.hpp"
 #include "string_utils.h"
 
 Metrics::Metrics(IPCServer& ipc, std::shared_ptr<Config> cfg_) : cfg(cfg_), ipc(ipc) {
@@ -15,8 +16,7 @@ Metrics::Metrics(IPCServer& ipc, std::shared_ptr<Config> cfg_) : cfg(cfg_), ipc(
 void Metrics::update() {
     while (!stop.load()) {
         MetricTable new_metrics;
-        for (size_t i = 0; i < gpus.available_gpus.size(); i++) {
-            auto& gpu = gpus.available_gpus[i];
+        for (const auto& [i, gpu] : enumerate(gpus.available())) {
             auto gpu_metrics = gpu->get_system_metrics();
             std::string gpu_index = "GPU" + std::to_string(i);
             new_metrics[gpu_index]["LOAD"] = {gpu_metrics.load, "%"};

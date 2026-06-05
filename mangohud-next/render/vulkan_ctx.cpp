@@ -49,6 +49,11 @@ vkb::PhysicalDevice VkCtx::pick_device(vkb::Instance instance) {
         if (!drm.hasRender)
             continue;
 
+        if (renderer >= 0 &&
+            drm.renderMinor != static_cast<uint32_t>(renderer))
+            continue;
+
+        renderer = drm.renderMinor;
         return dev;
     }
 
@@ -73,8 +78,10 @@ void VkCtx::init(bool enableValidation = true) {
     debugMessenger = enableValidation ? vkbInstance_.debug_messenger : VK_NULL_HANDLE;
     vkb::PhysicalDevice vkb_device;
     vkb_device = pick_device(vkbInstance_);
-    if (!vkb_device.physical_device)
+    if (!vkb_device.physical_device && renderer >= 0) {
+        renderer = -1;
         vkb_device = pick_device(vkbInstance_);
+    }
 
     if (!vkb_device.physical_device) {
         SPDLOG_ERROR("can't find GPU, bailing");
@@ -97,7 +104,7 @@ void VkCtx::init(bool enableValidation = true) {
     pfn_vkSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetDeviceProcAddr(device, "vkSetDebugUtilsObjectNameEXT");
 }
 
-VkCtx::VkCtx() {
+VkCtx::VkCtx(int renderer_) : renderer(renderer_) {
     init(true);
 };
 
@@ -204,7 +211,7 @@ void VkCtx::init_client(clientRes* r, size_t buffer_size) {
         if (!create_dmabuf(r, &buf.dmabuf))
             SPDLOG_ERROR("init dmabuf failed");
 
-        if (r->is_glx())
+        if (r->export_method == OPAQUE_FD_VULKAN)
             if (!create_opaque(r, &buf.opaque))
                 SPDLOG_ERROR("init opaque failed");
 
@@ -533,17 +540,17 @@ bool VkCtx::create_view(VkImage image, VkDeviceMemory memory, VkImageView& view,
     return ret == VK_SUCCESS;
 }
 
-bool VkCtx::submit(std::shared_ptr<clientRes>& r, int idx) {
+bool VkCtx::submit(clientRes* r, int idx) {
     slot_t& buf = r->buffer[idx];
 
     transition_image(buf.sync.cmd, buf.source.image_res.image, buf.source.image_res.layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
     buf.source.image_res.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
-    if (r->is_vulkan())
-        copy_to_dst(buf.dmabuf.image_res.image, buf.dmabuf.image_res.layout, VK_IMAGE_LAYOUT_GENERAL, r.get(), buf);
+    if (r->export_method == DMABUF_VULKAN)
+        copy_to_dst(buf.dmabuf.image_res.image, buf.dmabuf.image_res.layout, VK_IMAGE_LAYOUT_GENERAL, r, buf);
 
-    if (r->is_glx())
-        copy_to_dst(buf.opaque.image_res.image, buf.opaque.image_res.layout, VK_IMAGE_LAYOUT_GENERAL, r.get(), buf);
+    if (r->export_method == OPAQUE_FD_VULKAN)
+        copy_to_dst(buf.opaque.image_res.image, buf.opaque.image_res.layout, VK_IMAGE_LAYOUT_GENERAL, r, buf);
 
     vkEndCommandBuffer(buf.sync.cmd);
 

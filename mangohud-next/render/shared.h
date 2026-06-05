@@ -13,11 +13,20 @@ static constexpr const char* kObjPath = "/io/mangohud/socket";
 static constexpr const char* kIface   = "io.mangohud.socket1";
 static constexpr uint32_t kProtoVersion = 1;
 
+class GPU;
+
 enum class Backend : int32_t {
     NONE = 0,
     GLX = 1,
     EGL = 2,
     VULKAN = 3,
+};
+
+enum ExportMethod : int32_t {
+    DMABUF_VULKAN = 0,
+    DMABUF_EGL,
+    OPAQUE_FD_VULKAN,
+    EXPORT_NONE,
 };
 
 __attribute__((unused))
@@ -150,7 +159,7 @@ struct clientRes {
     VkCommandPool   cmd_pool            = VK_NULL_HANDLE;
     std::mutex      m;
     std::mutex      table_m;
-    uint32_t        server_render_minor = 0;
+    std::shared_ptr<GPU> server_gpu;
 
     std::string     client_id;
     std::shared_ptr<hudTable> table     = nullptr;
@@ -162,12 +171,10 @@ struct clientRes {
     bool            initialized         = false;
 
     Backend         api                 = Backend::NONE;
+    ExportMethod    export_method       = EXPORT_NONE;
     float           fps_limit           = 0;
     Resolution      resolution          {};
 
-    std::shared_ptr<VkCtx> vk;
-    std::shared_ptr<EglCtx> egl;
-    std::shared_ptr<ImGuiCtx> imgui;
     std::shared_ptr<X11Session> x11;
 
     clientRes() {
@@ -185,9 +192,6 @@ struct clientRes {
     bool is_glx() {
         return api == Backend::GLX;
     }
-
-    void reinit();
-    ~clientRes();
 };
 
 inline void destroy_vk_images(VkDevice device, vk_image_res_t& res) {
@@ -208,7 +212,7 @@ inline void destroy_vk_images(VkDevice device, vk_image_res_t& res) {
 }
 
 __attribute__((unused))
-void destroy_client_res(clientRes* r);
+void destroy_client_res(clientRes* r, VkCtx* vk);
 
 inline const char* fourcc_to_string(uint32_t fourcc)
 {

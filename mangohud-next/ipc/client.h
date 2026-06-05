@@ -30,9 +30,7 @@ struct Fdinfo {
 
     uint32_t w = 0;
     uint32_t h = 0;
-    int64_t server_render_minor = 0;
 
-    bool has_gbm;
     uint64_t opaque_size = 0;
     uint64_t opaque_offset = 0;
 
@@ -43,6 +41,44 @@ struct Fdinfo {
 
 class IPCServer;
 class MangoHudServer;
+
+struct RenderMethod {
+    ExportMethod export_method = EXPORT_NONE;
+    std::shared_ptr<GPU> gpu;
+};
+
+class Renderer {
+public:
+    Renderer(MangoHudServer* server, clientRes* r_, int render_minor, int buffer_size);
+    unique_fd render(slot_t* buf, int idx);
+    void consumer_import_failed();
+
+    ~Renderer();
+
+private:
+    std::shared_ptr<VkCtx> vk;
+    std::shared_ptr<EglCtx> egl;
+    std::shared_ptr<ImGuiCtx> imgui;
+    mutable std::mutex m;
+    RenderMethod method;
+    MangoHudServer* server;
+    clientRes* r;
+    int render_minor;
+    int buffer_size;
+    size_t method_idx = 0;
+    std::vector<RenderMethod> methods;
+
+    bool configure(RenderMethod next_method);
+    bool configure_current_or_advance();
+    bool advance_method();
+    std::vector<RenderMethod> build_methods() const;
+    RenderMethod current_method() const;
+    int producer_renderer() const;
+    bool init_vk();
+    bool init_egl();
+    void reset_resources();
+};
+
 class Client {
 public:
     pid_t pid;
@@ -100,17 +136,18 @@ public:
     void send_config();
     static int on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_error);
     void set_dead();
-    void frame_ready(uint32_t idx, int fd);
+    void frame_ready(uint32_t idx, unique_fd fd);
     void stop_and_join();
 
     ~Client();
 
 private:
     std::thread thread;
-    sd_bus_slot* handshake_slot;
-    sd_bus_slot* frame_samples_slot;
-    sd_bus_slot* spdlog_slot;
-    sd_bus_slot* frame_slot;
+    sd_bus_slot* handshake_slot = nullptr;
+    sd_bus_slot* frame_samples_slot = nullptr;
+    sd_bus_slot* spdlog_slot = nullptr;
+    sd_bus_slot* frame_slot = nullptr;
+    sd_bus_slot* import_failed_slot = nullptr;
     std::mutex frame_m;
     std::thread run_t;
     sd_event* event = nullptr;
@@ -123,6 +160,7 @@ private:
     std::shared_ptr<spdlog::logger> logger;
     int buffer_size;
     std::weak_ptr<Client> self_weak;
+    std::unique_ptr<Renderer> renderer;
 
     static inline const sd_bus_vtable vtable[] = {
         SD_BUS_VTABLE_START(0),
@@ -140,6 +178,7 @@ private:
     static int frame_samples(sd_bus_message* m, void* userdata, sd_bus_error*);
     static int spdlog_msg(sd_bus_message* m, void* userdata, sd_bus_error*);
     static int on_frame(sd_bus_message* m, void* userdata, sd_bus_error*);
+    static int on_import_failed(sd_bus_message* m, void* userdata, sd_bus_error*);
     static int on_bus_disconnected(sd_bus_message *m, void *userdata, sd_bus_error *ret_error);
     static int on_stop_event(sd_event_source *s, int fd, uint32_t revents, void *userdata);
     static int on_work_event(sd_event_source *s, int fd, uint32_t revents, void *userdata);

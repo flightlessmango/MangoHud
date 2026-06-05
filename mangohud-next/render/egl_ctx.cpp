@@ -4,17 +4,19 @@
 #include <GL/glext.h>
 #include <string>
 #include <stdexcept>
+#include <cstring>
 #include <fcntl.h>
 #include <unistd.h>
 #include <xf86drm.h>
 #include <spdlog/spdlog.h>
 #include <drm/drm_fourcc.h>
+#include <algorithm>
 
 #include "../server/common/helpers.hpp"
 #include "egl_ctx.h"
 #include "imgui/egl.h"
 
-EglCtx::EglCtx() {
+EglCtx::EglCtx(int renderer_, std::shared_ptr<ImGuiCtx> imgui) : renderer(renderer_), imgui(imgui) {
     p_glEGLImageTargetTexture2DOES =
         reinterpret_cast<PFNGLEGLIMAGETARGETTEXTURE2DOESPROC>(
             eglGetProcAddress("glEGLImageTargetTexture2DOES"));
@@ -30,6 +32,10 @@ EglCtx::EglCtx() {
     p_eglCreateSyncKHR =
         reinterpret_cast<PFNEGLCREATESYNCKHRPROC>(
             eglGetProcAddress("eglCreateSyncKHR"));
+
+    p_eglQueryDmaBufModifiersEXT =
+        reinterpret_cast<PFNEGLQUERYDMABUFMODIFIERSEXTPROC>(
+            eglGetProcAddress("eglQueryDmaBufModifiersEXT"));
 
     {
         std::lock_guard lock(m);
@@ -104,35 +110,6 @@ bool EglCtx::init_client(clientRes* r, int buffer_size) {
         dmabuf_t& dmabuf = buf.dmabuf;
         if (!dev_fd) dev_fd = unique_fd::adopt(pick_device());
 
-        create_gbm(r, &dmabuf, dev_fd.get(), 0x0300000000606010ull);
-
-        const EGLAttrib img_attrs[] = {
-            EGL_WIDTH, EGLint(r->w),
-            EGL_HEIGHT, EGLint(r->h),
-            EGL_LINUX_DRM_FOURCC_EXT, EGLint(dmabuf.gbm.fourcc),
-            EGL_DMA_BUF_PLANE0_FD_EXT, dmabuf.gbm.fd.get(),
-            EGL_DMA_BUF_PLANE0_OFFSET_EXT, EGLint(dmabuf.gbm.offset),
-            EGL_DMA_BUF_PLANE0_PITCH_EXT, EGLint(dmabuf.gbm.stride),
-            EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT, EGLint(dmabuf.gbm.modifier & 0xffffffffull),
-            EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT, EGLint(dmabuf.gbm.modifier >> 32),
-            EGL_NONE
-        };
-
-        dmabuf.egl_res.image = eglCreateImage(
-            dpy,
-            EGL_NO_CONTEXT,
-            EGL_LINUX_DMA_BUF_EXT,
-            nullptr,
-            img_attrs
-        );
-
-        if (dmabuf.egl_res.image == EGL_NO_IMAGE_KHR) {
-            EGLint err = eglGetError();
-            SPDLOG_ERROR("eglCreateImage failed, err=0x{:x} {}", err, egl_error_string(err));
-            eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-            return false;
-        }
-
         if (!eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, ctx)) {
             EGLint err = eglGetError();
             SPDLOG_ERROR("eglMakeCurrent failed, err=0x{:x} {} dpy: {} ctx: {}", err, egl_error_string(err), dpy, ctx);
@@ -140,7 +117,13 @@ bool EglCtx::init_client(clientRes* r, int buffer_size) {
             return false;
         }
 
-        r->imgui->init_egl();
+        if (!init_dmabuf(r, dmabuf)) {
+            eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+            return false;
+        }
+
+        if (imgui && !imgui->egl)
+            imgui->init_egl();
 
         glGenTextures(1, &dmabuf.egl_res.tex);
 
@@ -167,7 +150,25 @@ bool EglCtx::init_client(clientRes* r, int buffer_size) {
     return true;
 }
 
-int EglCtx::submit(std::shared_ptr<clientRes> r, int idx) {
+void EglCtx::destroy_client(clientRes* r) {
+    std::lock_guard lock(m);
+
+    if (dpy == EGL_NO_DISPLAY || ctx == EGL_NO_CONTEXT)
+        return;
+
+    if (!eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, ctx)) {
+        EGLint err = eglGetError();
+        SPDLOG_ERROR("eglMakeCurrent failed, err=0x{:x} {} dpy: {} ctx: {}", err, egl_error_string(err), dpy, ctx);
+        return;
+    }
+
+    for (auto& buf : r->buffer)
+        destroy_dmabuf_res(buf.dmabuf);
+
+    eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+}
+
+int EglCtx::submit(clientRes* r, int idx) {
     std::lock_guard lock(m);
 
     if (!eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, ctx)) {
@@ -224,7 +225,12 @@ int EglCtx::submit(std::shared_ptr<clientRes> r, int idx) {
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    r->imgui->egl->draw(r, buf);
+    if (!imgui->draw(r, buf, Backend::EGL)) {
+        glDeleteFramebuffers(1, &intermediate_fbo);
+        glDeleteTextures(1, &intermediate_tex);
+        eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+        return -1;
+    }
 
     glBindFramebuffer(GL_READ_FRAMEBUFFER, intermediate_fbo);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, buf->dmabuf.egl_res.fbo);
@@ -282,8 +288,16 @@ int EglCtx::pick_device() {
         if (!(dev->available_nodes & (1 << DRM_NODE_RENDER)))
             continue;
 
+        int minor = -1;
+        if (const char* render = strrchr(dev->nodes[DRM_NODE_RENDER], 'D'))
+            minor = atoi(render + 1);
+
+        if (renderer >= 0 && minor != renderer)
+            continue;
+
         fd = open(dev->nodes[DRM_NODE_RENDER], O_RDWR | O_CLOEXEC);
         if (fd >= 0) {
+            renderer = minor;
             SPDLOG_DEBUG("picked render {}", dev->nodes[DRM_NODE_RENDER]);
             break;
         }
@@ -329,6 +343,130 @@ bool EglCtx::choose_config(uint32_t format, EGLConfig* out) {
     return false;
 }
 
+std::vector<uint64_t> EglCtx::get_modifiers(EGLDisplay dpy, uint32_t fourcc) {
+    std::vector<uint64_t> ret;
+    if (!p_eglQueryDmaBufModifiersEXT)
+        return ret;
+
+    EGLint count = 0;
+    if (!p_eglQueryDmaBufModifiersEXT(dpy, fourcc, 0, nullptr, nullptr, &count)) {
+        EGLint err = eglGetError();
+        SPDLOG_ERROR("eglQueryDmaBufModifiersEXT count failed, err=0x{:x} {}", err, egl_error_string(err));
+        return ret;
+    }
+
+    if (count <= 0)
+        return ret;
+
+    std::vector<EGLuint64KHR> modifiers(count);
+    std::vector<EGLBoolean> external_only(count);
+    if (!p_eglQueryDmaBufModifiersEXT(
+            dpy,
+            fourcc,
+            count,
+            modifiers.data(),
+            external_only.data(),
+            &count)) {
+        EGLint err = eglGetError();
+        SPDLOG_ERROR("eglQueryDmaBufModifiersEXT list failed, err=0x{:x} {}", err, egl_error_string(err));
+        return ret;
+    }
+
+    ret.reserve(count);
+    for (EGLint i = 0; i < count; i++)
+        ret.push_back(static_cast<uint64_t>(modifiers[i]));
+
+    auto linear = std::find(ret.begin(), ret.end(), DRM_FORMAT_MOD_LINEAR);
+    if (linear != ret.end())
+        std::rotate(ret.begin(), linear, linear + 1);
+
+    return ret;
+}
+
+void EglCtx::destroy_dmabuf_res(dmabuf_t& dmabuf) {
+    if (dmabuf.egl_res.fbo) {
+        glDeleteFramebuffers(1, &dmabuf.egl_res.fbo);
+        dmabuf.egl_res.fbo = 0;
+    }
+
+    if (dmabuf.egl_res.tex) {
+        glDeleteTextures(1, &dmabuf.egl_res.tex);
+        dmabuf.egl_res.tex = 0;
+    }
+
+    if (dmabuf.egl_res.image != EGL_NO_IMAGE) {
+        eglDestroyImage(dpy, dmabuf.egl_res.image);
+        dmabuf.egl_res.image = EGL_NO_IMAGE;
+    }
+
+    if (dmabuf.gbm.bo) {
+        gbm_bo_destroy(dmabuf.gbm.bo);
+        dmabuf.gbm.bo = nullptr;
+    }
+
+    if (dmabuf.gbm.dev) {
+        gbm_device_destroy(dmabuf.gbm.dev);
+        dmabuf.gbm.dev = nullptr;
+    }
+
+    dmabuf.gbm.fd.reset();
+    dmabuf.gbm.modifier = 0;
+    dmabuf.gbm.stride = 0;
+    dmabuf.gbm.offset = 0;
+    dmabuf.gbm.plane_size = 0;
+}
+
+bool EglCtx::init_dmabuf(clientRes* r, dmabuf_t& dmabuf) {
+    constexpr uint32_t fourcc = DRM_FORMAT_ARGB8888;
+    auto modifiers = get_modifiers(dpy, fourcc);
+    if (modifiers.empty())
+        modifiers.push_back(DRM_FORMAT_MOD_LINEAR);
+
+    for (uint64_t modifier : modifiers) {
+        destroy_dmabuf_res(dmabuf);
+
+        if (!create_gbm(r, &dmabuf, dev_fd.get(), modifier))
+            continue;
+
+        const EGLAttrib img_attrs[] = {
+            EGL_WIDTH, EGLint(r->w),
+            EGL_HEIGHT, EGLint(r->h),
+            EGL_LINUX_DRM_FOURCC_EXT, EGLint(dmabuf.gbm.fourcc),
+            EGL_DMA_BUF_PLANE0_FD_EXT, dmabuf.gbm.fd.get(),
+            EGL_DMA_BUF_PLANE0_OFFSET_EXT, EGLint(dmabuf.gbm.offset),
+            EGL_DMA_BUF_PLANE0_PITCH_EXT, EGLint(dmabuf.gbm.stride),
+            EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT, EGLint(dmabuf.gbm.modifier & 0xffffffffull),
+            EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT, EGLint(dmabuf.gbm.modifier >> 32),
+            EGL_NONE
+        };
+
+        dmabuf.egl_res.image = eglCreateImage(
+            dpy,
+            EGL_NO_CONTEXT,
+            EGL_LINUX_DMA_BUF_EXT,
+            nullptr,
+            img_attrs
+        );
+
+        if (dmabuf.egl_res.image != EGL_NO_IMAGE_KHR) {
+            SPDLOG_DEBUG("selected EGL dmabuf modifier=0x{:016x}", modifier);
+            return true;
+        }
+
+        EGLint err = eglGetError();
+        SPDLOG_DEBUG(
+            "eglCreateImage failed for modifier=0x{:016x}, err=0x{:x} {}",
+            modifier,
+            err,
+            egl_error_string(err)
+        );
+    }
+
+    SPDLOG_ERROR("failed to create EGL dmabuf for any advertised modifier");
+    destroy_dmabuf_res(dmabuf);
+    return false;
+}
+
 EglCtx::~EglCtx() {
     if (dpy != EGL_NO_DISPLAY) {
         eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, ctx);
@@ -339,4 +477,3 @@ EglCtx::~EglCtx() {
     if (gbm_dev)
         gbm_device_destroy(gbm_dev);
 }
-

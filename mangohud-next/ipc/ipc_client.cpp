@@ -55,12 +55,11 @@ int IPCClient::on_incompatible(sd_bus_message* m, void* userdata, sd_bus_error*)
 int IPCClient::on_dmabuf(sd_bus_message* m, void* userdata, sd_bus_error*) {
     auto* self = static_cast<IPCClient*>(userdata);
     SPDLOG_DEBUG("got dmabuf");
-    bool has_gbm = false;
     Fdinfo fdinfo{};
 
     int r = sd_bus_message_read(
         m,
-        "tuuutttuuxb",
+        "tuuutttuu",
         &fdinfo.modifier,
         &fdinfo.dmabuf_offset,
         &fdinfo.stride,
@@ -69,9 +68,7 @@ int IPCClient::on_dmabuf(sd_bus_message* m, void* userdata, sd_bus_error*) {
         &fdinfo.opaque_size,
         &fdinfo.opaque_offset,
         &fdinfo.w,
-        &fdinfo.h,
-        &fdinfo.server_render_minor,
-        &has_gbm
+        &fdinfo.h
     );
 
     if (r < 0) {
@@ -88,9 +85,8 @@ int IPCClient::on_dmabuf(sd_bus_message* m, void* userdata, sd_bus_error*) {
     for (;;) {
         int gbm_fd = -1;
         int opaque_fd = -1;
-        int sema_fd = -1;
 
-        r = sd_bus_message_read(m, "(hh)", &gbm_fd, &opaque_fd, &sema_fd);
+        r = sd_bus_message_read(m, "(hh)", &gbm_fd, &opaque_fd);
         if (r < 0) {
             SPDLOG_DEBUG("sd_bus_message_read (hh) {} ({})", r, strerror(-r));
             sd_bus_message_exit_container(m);
@@ -118,8 +114,13 @@ int IPCClient::on_dmabuf(sd_bus_message* m, void* userdata, sd_bus_error*) {
     }
 
     {
-        if (self->layer)
-            self->layer->overlay_vk->init_dmabufs(fdinfo);
+        if (self->layer) {
+            const bool import_success = self->layer->overlay_vk->init_dmabufs(fdinfo);
+            if (!import_success) {
+                self->send_import_failed();
+                return 0;
+            }
+        }
 
         std::lock_guard lock(self->m);
         self->fdinfo = std::move(fdinfo);
@@ -272,8 +273,6 @@ void IPCClient::run_bus() {
     int r = sd_event_loop(event);
     if (r < 0 && !quit.load())
         SPDLOG_ERROR("sd_event_loop {} ({})", r, strerror(-r));
-
-    sd_event_unref(event);
 }
 
 void IPCClient::bus_thread() {
@@ -485,6 +484,31 @@ void IPCClient::send_spdlog(const int level, const char* file, const int line, c
         if (r < 0) {
             sd_event_exit(event, 0);
             return;
+        }
+    });
+}
+
+void IPCClient::send_import_failed() {
+    {
+        std::lock_guard lock(m);
+        fdinfo = {};
+        needs_import.store(true);
+    }
+
+    if (!bus)
+        return;
+
+    post([this] {
+        int r = sd_bus_emit_signal(
+            bus,
+            kObjPath,
+            kIface,
+            "import_failed",
+            ""
+        );
+        if (r < 0) {
+            SPDLOG_ERROR("send_import_failed {} ({})", r, strerror(-r));
+            sd_event_exit(event, 0);
         }
     });
 }

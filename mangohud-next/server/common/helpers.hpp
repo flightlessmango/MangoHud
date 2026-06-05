@@ -3,6 +3,8 @@
 #include <string>
 #include <cstdint>
 #include <deque>
+#include <type_traits>
+#include <utility>
 #include <unistd.h>
 
 std::string read_line(const std::string& filename);
@@ -99,7 +101,37 @@ auto enumerate(Range& r) {
     return enumerate_view<Range>(r);
 }
 
+template <class Range>
+class owning_enumerate_view {
+public:
+    explicit owning_enumerate_view(Range&& r) : r_(std::move(r)) {}
+
+    auto begin() { return enumerate_view<Range>(r_).begin(); }
+    auto end() { return enumerate_view<Range>(r_).end(); }
+
+private:
+    Range r_;
+};
+
+template <class Range>
+auto enumerate(Range&& r) requires (!std::is_lvalue_reference_v<Range&&>) {
+    return owning_enumerate_view<std::decay_t<Range>>(std::forward<Range>(r));
+}
+
 template <class T, class U>
 inline bool contains(const std::deque<T>& d, const U& value) {
     return std::find(d.begin(), d.end(), static_cast<T>(value)) != d.end();
+}
+
+template <typename Container, typename T>
+bool contains(const Container& container, const T& value) {
+    return std::find(container.begin(), container.end(), value) != container.end();
+}
+
+template <typename T>
+bool same_elements(std::vector<T> a, std::vector<T> b) {
+    std::sort(a.begin(), a.end());
+    std::sort(b.begin(), b.end());
+
+    return a == b;
 }

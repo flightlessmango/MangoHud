@@ -43,12 +43,6 @@ public:
         ImGui_ImplOpenGL3_CreateFontsTexture();
     }
 
-    bool draw(std::shared_ptr<clientRes>& r, slot_t* buf) {
-        imgui_ctx->draw(r, buf, Backend::EGL);
-
-        return true;
-    }
-
     ~ImGuiEGL() {
         std::lock_guard lock(imgui_ctx->m);
         if (imgui) {

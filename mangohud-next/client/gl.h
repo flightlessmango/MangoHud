@@ -90,6 +90,7 @@ struct GLState {
         GLboolean blend = GL_FALSE;
         GLint blendSrcRGB=0, blendDstRGB=0, blendSrcA=0, blendDstA=0;
         GLint pbo = 0, align = 0, rowLen = 0, sampler = 0;
+        GLboolean framebufferSRGB = GL_FALSE;
 
     } saved;
 
@@ -113,6 +114,7 @@ struct GLState {
         glGetIntegerv(GL_VIEWPORT, s.viewport);
 
         s.blend = glIsEnabled(GL_BLEND);
+        s.framebufferSRGB = glIsEnabled(GL_FRAMEBUFFER_SRGB);
         glGetIntegerv(GL_BLEND_SRC_RGB, &s.blendSrcRGB);
         glGetIntegerv(GL_BLEND_DST_RGB, &s.blendDstRGB);
         glGetIntegerv(GL_BLEND_SRC_ALPHA, &s.blendSrcA);
@@ -147,6 +149,8 @@ struct GLState {
         glBlendFuncSeparate(s.blendSrcRGB, s.blendDstRGB, s.blendSrcA, s.blendDstA);
         if (s.blend) glEnable(GL_BLEND);
         else glDisable(GL_BLEND);
+        if (s.framebufferSRGB) glEnable(GL_FRAMEBUFFER_SRGB);
+        else glDisable(GL_FRAMEBUFFER_SRGB);
     }
 };
 
@@ -266,16 +270,26 @@ private:
     }
 
     void create_cache(CtxRes* r, int w, int h);
-    void sample_dmabuf(CtxRes* r, const Fdinfo& fdinfo, const GLState::state& saved);
+    void sample_dmabuf(CtxRes* r, const Fdinfo& fdinfo, const GLState::state& saved, bool framebuffer_encodes_srgb);
     void draw_dmabuf(CtxRes* r);
     int release_fence(IPCClient* ipc, int dmabuf_fd, bool write = false);
-    void import_dmabuf(dmabuf* buf, int fd, int opaque) {
+    bool import_dmabuf(dmabuf* buf, int fd, int opaque) {
+        bool imported = false;
         auto r = glx->ctx();
-        if (r)
-            glx->import_opaque_fd(buf->tex, fdinfo, buf->memobj, opaque);
+        if (r) {
+            if (fdinfo.opaque_size > 0)
+                imported = glx->import_opaque_fd(buf->tex, fdinfo, buf->memobj, opaque);
+            else
+                imported = glx->import_dmabuf(fdinfo, buf->tex, buf->memobj, fd);
+        }
 
         r = egl->ctx();
         if (r)
             buf->egl_dpy = egl->import_dmabuf(fdinfo, buf->tex, buf->image, fd, nullptr);
+
+        if (buf->egl_dpy != EGL_NO_DISPLAY)
+            imported = true;
+
+        return imported;
     }
 };

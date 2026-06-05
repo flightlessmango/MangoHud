@@ -11,11 +11,13 @@ class ImGuiEGL;
 class EglCtx {
 public:
     EGLDisplay dpy = EGL_NO_DISPLAY;
-    std::shared_ptr<ImGuiEGL> imgui;
+    int renderer = -1;
+    std::shared_ptr<ImGuiCtx> imgui;
 
-    EglCtx();
+    explicit EglCtx(int renderer = -1, std::shared_ptr<ImGuiCtx> imgui = nullptr);
     bool init_client(clientRes* r, int buffer_size);
-    int submit(std::shared_ptr<clientRes> r, int idx);
+    void destroy_client(clientRes* r);
+    int submit(clientRes* r, int idx);
 
     ~EglCtx();
 
@@ -34,5 +36,6 @@ private:
     int pick_device();
     bool choose_config(uint32_t format, EGLConfig* out);
     std::vector<uint64_t> get_modifiers(EGLDisplay dpy, uint32_t fourcc);
+    bool init_dmabuf(clientRes* r, dmabuf_t& dmabuf);
     void destroy_dmabuf_res(dmabuf_t& dmabuf);
 };

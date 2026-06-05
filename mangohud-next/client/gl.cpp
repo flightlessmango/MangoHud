@@ -147,6 +147,22 @@ bool GLX::drain_gl_errors(const char* where) {
     return had;
 }
 
+static bool framebuffer_encodes_srgb(GLint fbo) {
+    GLint encoding = GL_LINEAR;
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
+    glGetFramebufferAttachmentParameteriv(
+        GL_DRAW_FRAMEBUFFER,
+        fbo == 0 ? GL_BACK_LEFT : GL_COLOR_ATTACHMENT0,
+        GL_FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING,
+        &encoding
+    );
+
+    if (glGetError() != GL_NO_ERROR)
+        return false;
+
+    return encoding == GL_SRGB;
+}
+
 EGL::EGL() {
     auto g_libEGL = dlopen("libEGL.so.1", RTLD_LAZY | RTLD_LOCAL);
     if (!g_libEGL) {
@@ -233,7 +249,7 @@ EGLDisplay EGL::import_dmabuf(const Fdinfo& fdinfo, GLuint& tex, EGLImageKHR& im
                                         (EGLClientBuffer)NULL, img_attrs);
     if (image == EGL_NO_IMAGE_KHR) {
         SPDLOG_ERROR("eglCreateImageKHR failed, EGL error 0x{:x}", eglGetError());
-        return dpy;
+        return EGL_NO_DISPLAY;
     }
 
     glBindTexture(GL_TEXTURE_2D, tex);
@@ -388,17 +404,9 @@ bool EGL::display_supports_modifier(EGLDisplay dpy, uint32_t fourcc, uint64_t mo
         return false;
     }
 
-    for (EGLint i = 0; i < count; i++) {
-        SPDLOG_INFO(
-            "EGL modifier[{}]=0x{:x}, external_only={}",
-            i,
-            static_cast<uint64_t>(modifiers[i]),
-            external_only[i] == EGL_TRUE
-        );
-
+    for (EGLint i = 0; i < count; i++)
         if (static_cast<uint64_t>(modifiers[i]) == modifier)
             return true;
-    }
 
     return false;
 }
@@ -461,12 +469,30 @@ void OverlayGL::draw() {
         if (!c)
             return;
 
-        std::lock_guard lock(ipc->m);
-        fdinfo = std::move(ipc->fdinfo);
+        {
+            std::lock_guard lock(ipc->m);
+            fdinfo = std::move(ipc->fdinfo);
+            ipc->fdinfo = {};
+        }
+
+        if (fdinfo.dmabuf_buffer.empty()) {
+            c->dmabufs.clear();
+            current_slot = -1;
+            inited = false;
+            return;
+        }
+
         c->dmabufs.clear();
         for (size_t i = 0; i < fdinfo.dmabuf_buffer.size(); i++) {
             auto buf = std::make_unique<dmabuf>();
-            import_dmabuf(buf.get(), fdinfo.dmabuf_buffer[i], fdinfo.opaque_buffer[i]);
+            if (!import_dmabuf(buf.get(), fdinfo.dmabuf_buffer[i], fdinfo.opaque_buffer[i])) {
+                c->dmabufs.clear();
+                fdinfo = {};
+                current_slot = -1;
+                inited = false;
+                ipc->send_import_failed();
+                return;
+            }
             c->dmabufs.push_back(std::move(buf));
         }
         ipc->needs_import.store(false);
@@ -480,8 +506,12 @@ void OverlayGL::draw() {
         current_slot = ipc->next_frame();
 
     if (current_slot >= 0) {
+        const bool dst_encodes_srgb = framebuffer_encodes_srgb(s.saved.fbo);
         glDisable(GL_FRAMEBUFFER_SRGB);
-        sample_dmabuf(c, fdinfo, s.saved);
+        sample_dmabuf(c, fdinfo, s.saved, dst_encodes_srgb);
+        // Do not remove this dma-buf fd dependency yet: GL uses it only to export
+        // the release fence when the image itself came from an opaque fd.
+        // TODO: split GL release fencing from image transport.
         release_fence(ipc.get(), fdinfo.dmabuf_buffer[current_slot].get());
     }
 
@@ -507,7 +537,7 @@ void OverlayGL::draw() {
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, c->cache_tex);
-    glEnable(GL_FRAMEBUFFER_SRGB);
+    (framebuffer_encodes_srgb(s.saved.fbo) ? glEnable : glDisable)(GL_FRAMEBUFFER_SRGB);
     unsigned drawW = std::min((unsigned)c->cache_w, (unsigned)surfW);
     unsigned drawH = std::min((unsigned)c->cache_h, (unsigned)surfH);
 
@@ -646,7 +676,7 @@ void OverlayGL::create_cache(CtxRes* r, int w, int h) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void OverlayGL::sample_dmabuf(CtxRes* r, const Fdinfo& fdinfo, const GLState::state& saved) {
+void OverlayGL::sample_dmabuf(CtxRes* r, const Fdinfo& fdinfo, const GLState::state& saved, bool framebuffer_encodes_srgb) {
     create_cache(r, (int)fdinfo.w, (int)fdinfo.h);
 
     glBindFramebuffer(GL_FRAMEBUFFER, r->cache_fbo);
@@ -661,7 +691,7 @@ void OverlayGL::sample_dmabuf(CtxRes* r, const Fdinfo& fdinfo, const GLState::st
     glUseProgram(r->prog);
     if (r->uTexLoc >= 0) glUniform1i(r->uTexLoc, 0);
     if (r->uFlipYLoc >= 0) glUniform1i(r->uFlipYLoc, 1);
-    if (r->uDecodeSRGBLoc >= 0) glUniform1i(r->uDecodeSRGBLoc, 1);
+    if (r->uDecodeSRGBLoc >= 0) glUniform1i(r->uDecodeSRGBLoc, framebuffer_encodes_srgb);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, r->dmabufs[current_slot]->tex);

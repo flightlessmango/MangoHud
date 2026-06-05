@@ -26,6 +26,7 @@ public:
     const std::string pci_dev;
     const uint16_t vendor_id;
     const uint16_t device_id;
+    const int render_minor;
     std::mutex system_metrics_mutex, process_metrics_mutex;
 
     // whether gpu is main one
@@ -37,6 +38,7 @@ public:
 
     virtual ~GPU();
 
+    int renderer() const;
     void add_pid(pid_t pid);
     void print_metrics();
     void start_thread_worker();
@@ -97,6 +99,9 @@ protected:
 
 class GPUS {
 private:
+    mutable std::mutex available_gpus_m;
+    std::vector<std::shared_ptr<GPU>> available_gpus;
+
     std::string get_pci_device_address(const std::string& drm_card_path);
     std::string get_driver(const std::string& drm_card_path);
 
@@ -106,5 +111,5 @@ private:
 
 public:
     GPUS();
-    std::vector<std::shared_ptr<GPU>> available_gpus;
+    std::vector<std::shared_ptr<GPU>> available() const;
 };

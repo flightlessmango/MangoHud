@@ -27,6 +27,7 @@ public:
     void update_table();
     void populate_tables();
     void update_client();
+    std::vector<std::shared_ptr<GPU>> available_gpus() const { return gpus.available(); }
 
     ~Metrics() {
         stop.store(true);
