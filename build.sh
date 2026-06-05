@@ -26,6 +26,19 @@ done
 
 dependencies() {
     if [[ ! -f build/release/usr/lib/libMangoHud.so ]]; then
+        local min_version
+        min_version=$(sed -n "s/.*meson_version:[[:space:]]*'>=\\([^']*\\)'.*/\\1/p" meson.build)
+        if ! command -v meson &> /dev/null || [[ "$(printf '%s\n' "$min_version" "$(meson --version)" | sort -V | head -n1)" != "$min_version" ]]; then
+            echo "# Meson >= $min_version is required."
+            if command -v meson &> /dev/null; then
+                echo "# Found meson $(meson --version)."
+            else
+                echo "# Meson was not found."
+            fi
+            echo "# Please install Meson >= $min_version and run this script again."
+            exit 1
+        fi
+
         missing_deps() {
             echo "# Missing dependencies:$INSTALL"
             read -rp "Do you wish the script to install these packages? [y/N]" PERMISSION
@@ -86,12 +99,6 @@ dependencies() {
 
                 dep_install
 
-                if [[ ! -f /usr/local/bin/glslangValidator ]]; then
-                    wget https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip
-                    unzip glslang-master-linux-Release.zip bin/glslangValidator
-                    $SU_CMD /usr/bin/install -m755 bin/glslangValidator /usr/local/bin/
-                    rm bin/glslangValidator glslang-master-linux-Release.zip
-                fi
                 break
             ;;
             *suse*)
@@ -104,9 +111,6 @@ dependencies() {
                 DEPS="{${DEPS_SUSE},${DEPS_SUSE_EXTRA}}"
                 dep_install
 
-                if [[ $(pip3 show meson; echo $?) == 1 ]]; then
-                    $SU_CMD pip3 install 'meson>=0.54'
-                fi
                 break
             ;;
             *solus*)
@@ -151,8 +155,9 @@ configure() {
     if [[ ! -f "build/meson32/build.ninja" && "$MACHINE" = "x86_64" ]]; then
         export CC="gcc -m32"
         export CXX="g++ -m32"
+        export LDFLAGS=-m32
         export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH_32}"
-        meson setup build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false $@ ${CONFIGURE_OPTS}
+        meson setup build/meson32 --libdir lib/mangohud/lib32 --prefix /usr -Dappend_libdir_mangohud=false -Dwith_server=false $@ ${CONFIGURE_OPTS}
     fi
 }
 
@@ -180,7 +185,7 @@ package() {
 }
 
 release() {
-    rm build/MangoHud-package.tar
+    rm -f build/MangoHud-package.tar
     mkdir -p build/MangoHud
     package
     cp --preserve=mode bin/mangohud-setup.sh build/MangoHud/mangohud-setup.sh
@@ -198,7 +203,11 @@ uninstall() {
     rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.json"
     rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json"
     rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json"
+    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud-next.x86.json"
+    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud-next.x86_64.json"
     rm -fv "/usr/bin/mangohud"
+    rm -fv "/usr/bin/mangohud-next"
+    rm -fv "/usr/bin/mangohud-server"
     rm -fv "/usr/bin/mangoplot"
     rm -fv "/usr/bin/mangohud.x86"
 }
@@ -231,17 +240,35 @@ install() {
     /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud.so /usr/lib/mangohud/lib64/libMangoHud.so
     /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud_opengl.so /usr/lib/mangohud/lib64/libMangoHud_opengl.so
     /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud_shim.so /usr/lib/mangohud/lib64/libMangoHud_shim.so
+    if [[ -f ./build/release/usr/lib/mangohud/lib64/libMangoHud-next.so ]]; then
+      /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud-next.so /usr/lib/mangohud/lib64/libMangoHud-next.so
+    fi
     if [ "$MACHINE" = "x86_64" ]; then
       /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud.so /usr/lib/mangohud/lib32/libMangoHud.so
       /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud_opengl.so /usr/lib/mangohud/lib32/libMangoHud_opengl.so
       /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud_shim.so /usr/lib/mangohud/lib32/libMangoHud_shim.so
+      if [[ -f ./build/release/usr/lib/mangohud/lib32/libMangoHud-next.so ]]; then
+        /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud-next.so /usr/lib/mangohud/lib32/libMangoHud-next.so
+      fi
     fi
 
     /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json
     /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86.json
+    if [[ -f ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud-next.x86_64.json ]]; then
+      /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud-next.x86_64.json /usr/share/vulkan/implicit_layer.d/MangoHud-next.x86_64.json
+    fi
+    if [[ -f ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud-next.x86.json ]]; then
+      /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud-next.x86.json /usr/share/vulkan/implicit_layer.d/MangoHud-next.x86.json
+    fi
     /usr/bin/install -Dvm644 ./build/release/usr/share/man/man1/mangohud.1 /usr/share/man/man1/mangohud.1
     /usr/bin/install -Dvm644 ./build/release/usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
     /usr/bin/install -vm755  ./build/release/usr/bin/mangohud /usr/bin/mangohud
+    if [[ -f ./build/release/usr/bin/mangohud-next ]]; then
+      /usr/bin/install -vm755  ./build/release/usr/bin/mangohud-next /usr/bin/mangohud-next
+    fi
+    if [[ -f ./build/release/usr/bin/mangohud-server ]]; then
+      /usr/bin/install -vm755  ./build/release/usr/bin/mangohud-server /usr/bin/mangohud-server
+    fi
     /usr/bin/install -vm755  ./build/release/usr/bin/mangoplot /usr/bin/mangoplot
 
     ln -sv $DEFAULTLIB /usr/lib/mangohud/lib
@@ -290,6 +317,7 @@ clean() {
     rm -rf "build"
     for path in subprojects/*/; do
         [[ $path == "subprojects/packagefiles/" ]] && continue
+        [[ $path == "subprojects/packagecache/" ]] && continue
         rm -rf "$path"
     done
 }
