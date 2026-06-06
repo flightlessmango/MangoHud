@@ -11,6 +11,7 @@
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
 #include <thread>
+#include <chrono>
 #include <unistd.h>
 #include "../overlay.h"
 #include "notify.h"
@@ -385,7 +386,7 @@ int main(int, char**)
     while (!glfwWindowShouldClose(window)){
         real_params = get_params();
         check_keybinds(*real_params);
-        if (!real_params->no_display && new_frame){
+        if (!real_params->no_display){
             if (mangoapp_paused){
                 glfwShowWindow(window);
                 render(window, *real_params);
@@ -397,6 +398,18 @@ int main(int, char**)
                 if (gpus)
                     for (auto gpu : gpus->available_gpus)
                         gpu->resume();
+            }
+
+            // throttle to one render per game frame, else we render flat-out
+            {
+                std::unique_lock<std::mutex> lk(mangoapp_m);
+                mangoapp_cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
+                    return new_frame || real_params->no_display;
+                });
+                // no_display can flip mid-wait so re-check
+                if (real_params->no_display || !new_frame)
+                    continue;
+                new_frame = false;
             }
 
             {
