@@ -1,7 +1,7 @@
 # Maintainer: Simon Hallsten <flightlessmangoyt@gmail.com>
 
 pkgname=('mangohud' 'lib32-mangohud')
-pkgver=0.8.3.r2.gee672429
+pkgver=0.8.4.r11.g2c1dc528
 pkgrel=1
 pkgdesc="Vulkan and OpenGL overlay to display performance information"
 arch=('x86_64')
