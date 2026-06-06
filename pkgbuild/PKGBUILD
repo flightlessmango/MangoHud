@@ -7,7 +7,7 @@ pkgdesc="Vulkan and OpenGL overlay to display performance information"
 arch=('x86_64')
 makedepends=('dbus' 'gcc' 'meson' 'python-mako' 'libx11' 'lib32-libx11' 'git' 'pkgconf' 'vulkan-headers')
 depends=('glslang' 'libglvnd' 'lib32-libglvnd' 'glfw' 'python-numpy' 'python-matplotlib'
-         'libxrandr' 'libxkbcommon' 'lib32-libxkbcommon')
+         'libxrandr' 'libxkbcommon' 'lib32-libxkbcommon' 'yaml-cpp')
 replaces=('vulkan-mesa-layer-mango')
 license=('MIT')
 source=(
@@ -18,20 +18,24 @@ source=(
         "spdlog_1.14.1-1_patch.zip::https://wrapdb.mesonbuild.com/v2/spdlog_1.14.1-1/get_patch"
         "vulkan-headers-1.4.346.tar.gz::https://github.com/KhronosGroup/Vulkan-Headers/archive/v1.4.346.tar.gz"
         "vulkan-utility-libraries-1.4.346.tar.gz::https://github.com/KhronosGroup/Vulkan-Utility-Libraries/archive/v1.4.346.tar.gz"
+        "vkroots::git+https://github.com/Joshua-Ashton/vkroots.git#commit=5106d8a0df95de66cc58dc1ea37e69c99afc9540"
+        "vk-bootstrap::git+https://github.com/charles-lunarg/vk-bootstrap.git#tag=v1.4.328"
         "implot-0.16.zip::https://github.com/epezent/implot/archive/refs/tags/v0.16.zip"
         "implot_0.16-1_patch.zip::https://wrapdb.mesonbuild.com/v2/implot_0.16-1/get_patch"
         )
 
 sha256sums=(
-            'SKIP'
-            'SKIP'
-            'c5fbc5dcab1d46064001c3b84d7a88812985cde7e0e9ced03f5677bec1ba502a'
-            '1586508029a7d0670dfcb2d97575dcdc242d3868a259742b69f100801ab4e16b'
-            'ae878e732330ea1048f90d7e117c40c0cd2a6fb8ae5492c7955818ce3aaade6c'
-            "5bb77f5d7b460e255a9e51affc00d64354986b55cf577d8eab28529cad01fc80"
-            "372eb525103ecb4e3a04d030b2a9778ebc67853bbdc82ce6747de3757d432ad9"
-            "24f772c688f6b8a6e19d7efc10e4923a04a915f13d487b08b83553aa62ae1708"
-            "1c6b1462066a5452fa50c1da1dd47fed841f28232972c82d778f2962936568c7"
+            'SKIP' # mangohud
+            'SKIP' # mangohud-minhook
+            'c5fbc5dcab1d46064001c3b84d7a88812985cde7e0e9ced03f5677bec1ba502a' # imgui-1.91.6.tar.gz
+            '1586508029a7d0670dfcb2d97575dcdc242d3868a259742b69f100801ab4e16b' # spdlog-1.14.1.tar.gz
+            'ae878e732330ea1048f90d7e117c40c0cd2a6fb8ae5492c7955818ce3aaade6c' # spdlog_1.14.1-1_patch.zip
+            "5bb77f5d7b460e255a9e51affc00d64354986b55cf577d8eab28529cad01fc80" # vulkan-headers-1.4.346.tar.gz
+            "372eb525103ecb4e3a04d030b2a9778ebc67853bbdc82ce6747de3757d432ad9" # vulkan-utility-libraries-1.4.346.tar.gz
+            'SKIP' # vkroots
+            'SKIP' # vk-bootstrap
+            "24f772c688f6b8a6e19d7efc10e4923a04a915f13d487b08b83553aa62ae1708" # implot-0.16.zip
+            "1c6b1462066a5452fa50c1da1dd47fed841f28232972c82d778f2962936568c7" # implot_0.16-1_patch.zip
             )
 
 _build_args="-Dappend_libdir_mangohud=false -Dwith_xnvctrl=disabled -Dtests=disabled"
@@ -55,6 +59,10 @@ prepare() {
   cp -rvt "subprojects/Vulkan-Headers-1.4.346" -- "subprojects/packagefiles/vulkan-headers/"*
   ln -sv "$srcdir/Vulkan-Utility-Libraries-1.4.346" subprojects
   cp -rvt "subprojects/Vulkan-Utility-Libraries-1.4.346" -- "subprojects/packagefiles/vulkan-utility-libraries/"*
+  ln -sv "$srcdir/vkroots" subprojects
+  cp -rvt "subprojects/vkroots" -- "subprojects/packagefiles/vkroots/"*
+  ln -sv "$srcdir/vk-bootstrap" subprojects
+  cp -rvt "subprojects/vk-bootstrap" -- "subprojects/packagefiles/vk-bootstrap/"*
   ln -sv "$srcdir/implot-0.16" subprojects
 }
 
@@ -72,6 +80,7 @@ build() {
     --libdir=lib32 \
     -Dmangoapp=false \
     -Dmangohudctl=false \
+    -Dwith_server=false \
     ${_build_args}
 
   ninja -C build32
