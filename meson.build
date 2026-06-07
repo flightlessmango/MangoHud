@@ -346,4 +346,6 @@ if get_option('mangoplot').enabled()
   subdir('bin')
 endif
 
-subdir('mangohud-next')
+if get_option('with_mangohud_next')
+  subdir('mangohud-next')
+endif
