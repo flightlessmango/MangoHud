@@ -65,10 +65,10 @@ public:
         if (frame_queue.empty())
             return -1;
 
-        ready_frame& frame = frame_queue.front();
-        if (sync_fd_signaled(frame.fd.get())) {
+        if (sync_fd_signaled(frame_queue.front().fd.get())) {
+            int idx = frame_queue.front().idx;
             frame_queue.pop_front();
-            return frame.idx;
+            return idx;
         }
 
         return -1;
