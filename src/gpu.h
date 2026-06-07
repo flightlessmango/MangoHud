@@ -100,6 +100,13 @@ class GPU {
                 return false;
         }
 
+        // Sensor availability: AMD and Intel report it from hwmon
+        bool has_fan_sensor()           { return amdgpu ? amdgpu->has_fan_sensor()           : fdinfo ? fdinfo->has_fan_sensor()           : true; }
+        bool has_junction_temp_sensor() { return amdgpu ? amdgpu->has_junction_temp_sensor() : fdinfo ? fdinfo->has_junction_temp_sensor() : true; }
+        bool has_memory_temp_sensor()   { return amdgpu ? amdgpu->has_memory_temp_sensor()   : fdinfo ? fdinfo->has_memory_temp_sensor()   : true; }
+        bool has_voltage_sensor()       { return amdgpu ? amdgpu->has_voltage_sensor()       : fdinfo ? fdinfo->has_voltage_sensor()       : true; }
+        bool has_power_limit_sensor()   { return amdgpu ? amdgpu->has_power_limit_sensor()   : fdinfo ? fdinfo->has_power_limit_sensor()   : true; }
+
         std::shared_ptr<Throttling> throttling() {
             if (nvidia)
                 return nvidia->throttling;
