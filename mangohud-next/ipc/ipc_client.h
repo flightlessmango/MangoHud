@@ -28,7 +28,7 @@ public:
 
     IPCClient(Layer* layer_ = nullptr, Backend api_ = Backend::NONE);
 
-    void start(int64_t renderMinor, std::string& pEngineName, int image_count, std::shared_ptr<IPCClient> shared);
+    void start(int64_t renderMinor, std::string& pEngineName, int image_count);
 
     bool init();
     void stop();

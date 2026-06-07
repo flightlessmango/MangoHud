@@ -423,7 +423,7 @@ OverlayGL::OverlayGL(Display* xdpy_, std::shared_ptr<IPCClient> ipc_) : xdpy(xdp
     }
 
     std::string node = *nodes.begin();
-    ipc->start(renderer, pEngineName, 4, ipc);
+    ipc->start(renderer, pEngineName, 4);
 }
 
 CtxRes* OverlayGL::get_ctx() {

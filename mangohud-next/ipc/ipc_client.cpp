@@ -15,14 +15,14 @@ IPCClient::IPCClient(Layer* layer_, Backend api_) : layer(layer_), api(api_){
 }
 
 void IPCClient::start(int64_t renderMinor_, std::string& pEngineName_,
-                      int image_count, std::shared_ptr<IPCClient> shared) {
+                      int image_count) {
     if (thread.joinable())
         return;
 
     renderMinor = renderMinor_;
     pEngineName = pEngineName_;
     buffer_size = image_count;
-    thread = std::thread([self = shared] { self->bus_thread(); });
+    thread = std::thread([this] { bus_thread(); });
 }
 
 int IPCClient::on_config(sd_bus_message* m, void* userdata, sd_bus_error*) {

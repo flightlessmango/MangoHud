@@ -253,7 +253,7 @@ public:
         // TODO Probably don't do this every frame
         fps_limiter->set_fps_limit(layer->ipc->fps_limit);
 
-        layer->ipc->start(renderMinor, pEngineName, swapchain_image_count, layer->ipc);
+        layer->ipc->start(renderMinor, pEngineName, swapchain_image_count);
         {
             std::lock_guard lock(layer->overlay_vk->m);
             if (!layer->overlay_vk->draw(pPresentInfo->pSwapchains[0], imageIndex, queue, pi))
