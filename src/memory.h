@@ -6,6 +6,7 @@
 
 extern float memused, memmax, swapused;
 extern int mem_temp;
+extern bool mem_temp_available;
 extern uint64_t proc_mem_resident, proc_mem_shared, proc_mem_virt;
 
 void update_meminfo();
