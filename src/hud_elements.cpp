@@ -1616,13 +1616,14 @@ void HudElements::graphs(){
     ImGui::PopFont();
     ImGui::Dummy(ImVec2(0.0f,5.0f));
     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+    const std::string graph_label = "##graph_" + value;
     if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_histogram]){
-        ImGui::PlotLines("", arr.data(),
+        ImGui::PlotLines(graph_label.c_str(), arr.data(),
                 arr.size(), 0,
                 NULL, HUDElements.min, HUDElements.max,
                 ImVec2((ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x), 50));
     } else {
-        ImGui::PlotHistogram("", arr.data(),
+        ImGui::PlotHistogram(graph_label.c_str(), arr.data(),
             arr.size(), 0,
             NULL, HUDElements.min, HUDElements.max,
             ImVec2((ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x), 50));
@@ -1864,7 +1865,7 @@ void HudElements::fex_stats()
             ImGui::PushStyleColor(ImGuiCol_PlotHistogram, WarningColor);
         }
 
-        ImGui::PlotHistogram("", fex::fex_max_thread_loads.data(),
+        ImGui::PlotHistogram("##fex_hot_threads", fex::fex_max_thread_loads.data(),
             fex::fex_max_thread_loads.size(), 0,
             NULL, 0, 100,
             ImVec2((ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x), 50));
@@ -1878,7 +1879,7 @@ void HudElements::fex_stats()
 
         ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
 
-        ImGui::PlotLines("", fex::fex_load_data.data(),
+        ImGui::PlotLines("##fex_jit_load", fex::fex_load_data.data(),
             fex::fex_load_data.size(), 0,
             NULL, 0, 100,
             ImVec2((ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x), 50));
