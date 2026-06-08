@@ -133,8 +133,6 @@ private:
     void sync_wait();
 };
 
-extern std::shared_ptr<IPCClient> ipc;
-
 class spdlogSink final : public spdlog::sinks::base_sink<std::mutex>  {
 public:
     spdlogSink(IPCClient* dbus_) : dbus(dbus_),
