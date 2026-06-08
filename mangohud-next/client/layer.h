@@ -1,3 +1,4 @@
+#pragma once
 #include "vulkan.h"
 
 struct overlay_resources {
