@@ -158,8 +158,8 @@ void Client::init(std::shared_ptr<Client>& shared) {
         });
     }
 
-    thread = std::thread([self = shared] { self->dbus_thread(); });
-    run_t  = std::thread([self = shared] { self->run(); });
+    thread = std::thread([this] { dbus_thread(); });
+    run_t = std::thread([this] { run(); });
 }
 
 int Client::on_stop_event(sd_event_source *s, int fd, uint32_t revents, void *userdata) {
