@@ -20,34 +20,33 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	if (!f)
 		return;
 
-    size_t nread = fread(&header, 1, sizeof(header), f);
+	// Read the whole table in a single read and parse the header out of the same
+	// buffer. Van Gogh returns a zeroed table if gpu_metrics is read multiple times.
+	std::vector<uint8_t> buf(sizeof(gpu_metrics_v3_0) + 1);
+	size_t nread = fread(buf.data(), 1, buf.size(), f);
+	fclose(f);
 
 	if (nread < sizeof(header)) {
 		SPDLOG_DEBUG("amdgpu metrics file '{}' may be corrupted (read {} bytes, need at least {})",
 			gpu_metrics_path, nread, sizeof(header));
-		fclose(f);
 		return;
 	}
 
-    if (header.structure_size < sizeof(header)) {
-        SPDLOG_DEBUG(
-            "amdgpu metrics file '{}' has invalid structure_size {}",
-            gpu_metrics_path, header.structure_size);
-        fclose(f);
-        return;
-    }
-
-	std::vector<uint8_t> buf(header.structure_size);
-	rewind(f);
-	nread = fread(buf.data(), 1, buf.size(), f);
-	fclose(f);
-
-	if (nread < buf.size()) {
-		SPDLOG_DEBUG(
-            "amdgpu metrics file '{}' short read (read {} bytes, expected {})",
-            gpu_metrics_path, nread, buf.size());
-        return;
+	if (nread == buf.size()) {
+		SPDLOG_DEBUG("amdgpu metrics file '{}' is larger than expected", gpu_metrics_path);
+		return;
 	}
+
+	header = *reinterpret_cast<const metrics_table_header *>(buf.data());
+
+	if (header.structure_size < sizeof(header) || nread < header.structure_size) {
+		SPDLOG_DEBUG(
+			"amdgpu metrics file '{}' has invalid structure_size {} (read {})",
+			gpu_metrics_path, header.structure_size, nread);
+		return;
+	}
+
+	buf.resize(header.structure_size);
 
 	bool is_power=false, is_current=false, is_temp=false, is_other=false;
 	if (header.format_revision == 1) {
