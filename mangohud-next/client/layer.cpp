@@ -295,7 +295,7 @@ public:
             pi2.waitSemaphoreCount = 1;
             pi2.pWaitSemaphores = &signal;
 
-            return pDispatch->QueuePresentKHR(queue, &pi2);
+            r = pDispatch->QueuePresentKHR(queue, &pi2);
         }
 
         if (r == VK_SUCCESS || r == VK_SUBOPTIMAL_KHR) {
