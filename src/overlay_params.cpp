@@ -643,6 +643,7 @@ parse_ftrace(const char *str) {
 #define parse_text_outline_color(s) parse_color(s)
 #define parse_text_outline_thickness(s) parse_float(s)
 #define parse_device_battery(s) parse_str_tokenize(s)
+#define parse_magicpods_url(s) parse_str(s)
 #define parse_network(s) parse_str_tokenize(s)
 #define parse_gpu_text(s) parse_str_tokenize(s)
 
@@ -925,6 +926,7 @@ static void set_param_defaults(struct overlay_params *params){
    params->fps_value = { 30, 60 };
    params->round_corners = 0;
    params->battery_color =0xff9078;
+   params->magicpods_url = "127.0.0.1:2020";
    params->fsr_steam_sharpness = -1;
    params->picmip = -17;
    params->af = -1;

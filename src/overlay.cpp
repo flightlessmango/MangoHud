@@ -28,6 +28,9 @@
 #include "net.h"
 #include "fex.h"
 #include "ftrace.h"
+#ifdef HAVE_MAGICPODS
+#include "magicpods.h"
+#endif
 
 #ifdef __linux__
 #include <libgen.h>
@@ -130,6 +133,9 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
             device_info();
       }
    }
+#ifdef HAVE_MAGICPODS
+   MagicPods::ensure(params);
+#endif
    if (real_params->enabled[OVERLAY_PARAM_ENABLED_ram] || real_params->enabled[OVERLAY_PARAM_ENABLED_swap] || logger->is_active())
       update_meminfo();
    if (real_params->enabled[OVERLAY_PARAM_ENABLED_ram_temp])
@@ -224,6 +230,9 @@ static std::unique_ptr<hw_info_updater> hw_update_thread;
 
 void stop_hw_updater()
 {
+#ifdef HAVE_MAGICPODS
+   MagicPods::stop();
+#endif
    if (hw_update_thread)
       hw_update_thread.reset();
 }

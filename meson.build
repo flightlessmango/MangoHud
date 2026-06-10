@@ -308,6 +308,12 @@ if get_option('mangoapp')
   glfw3_dep = dependency('glfw3')
 endif
 
+if is_unixy and not get_option('with_magicpods').disabled()
+  nlohmann_json_dep = dependency('nlohmann_json', fallback: ['nlohmann_json', 'nlohmann_json_dep'], required: get_option('with_magicpods'))
+else
+  nlohmann_json_dep = null_dep
+endif
+
 subdir('src')
 
 if get_option('include_doc')
@@ -338,6 +344,33 @@ if get_option('tests').enabled()
   #   include_directories: inc_common)
 
   # test('test amdgpu', e, workdir : meson.project_source_root() + '/tests')
+
+  if nlohmann_json_dep.found()
+    src_inc = include_directories('src')
+
+    e = executable('ws_client', 'tests/test_ws_client.cpp',
+      files(
+        'src/ws_client.cpp'
+      ),
+      include_directories: [inc_common, src_inc])
+
+    test('test ws client', e, workdir : meson.project_source_root() + '/tests')
+
+    e = executable('magicpods_parse', 'tests/test_magicpods_parse.cpp',
+      files(
+        'src/magicpods.cpp',
+        'src/ws_client.cpp'
+      ),
+      cpp_args: ['-DHAVE_MAGICPODS'],
+      dependencies: [
+        nlohmann_json_dep,
+        spdlog_dep,
+        dep_pthread
+      ],
+      include_directories: [inc_common, src_inc])
+
+    test('test magicpods parse', e, workdir : meson.project_source_root() + '/tests')
+  endif
 
 endif
 

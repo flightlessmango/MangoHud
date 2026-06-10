@@ -29,6 +29,9 @@
 #include "ftrace.h"
 #include "winesync.h"
 #include "fps_limiter.h"
+#ifdef HAVE_MAGICPODS
+#include "magicpods.h"
+#endif
 
 #define CHAR_CELSIUS    "\xe2\x84\x83"
 #define CHAR_FAHRENHEIT "\xe2\x84\x89"
@@ -1394,9 +1397,10 @@ void HudElements::gamescope_frame_timing(){
 void HudElements::device_battery()
 {
 #ifdef __linux__
-    std::unique_lock<std::mutex> l(device_lock);
     if (!HUDElements.params->device_battery.empty()) {
-        if (device_found) {
+        {
+            std::unique_lock<std::mutex> l(device_lock);
+            if (device_found) {
             for (int i = 0; i < device_count; i++) {
                 std::string battery = device_data[i].battery;
                 std::string name = device_data[i].name;
@@ -1443,7 +1447,70 @@ void HudElements::device_battery()
                     ImGui::TableNextRow();
                 ImGui::PopFont();
             }
+            }
         }
+#ifdef HAVE_MAGICPODS
+        if (std::find(HUDElements.params->device_battery.begin(), HUDElements.params->device_battery.end(), "headset") != HUDElements.params->device_battery.end()) {
+            auto headset = MagicPods::snapshot();
+            if (headset.valid) {
+                auto slot_visible = [](const headset_slot& slot) {
+                    return (slot.status == 2 || slot.status == 3) && slot.battery >= 0;
+                };
+                auto add_slot = [&](std::string& text, const char* label, const headset_slot& slot) {
+                    if (!slot_visible(slot))
+                        return;
+                    if (!text.empty())
+                        text += " ";
+                    if (label && *label) {
+                        text += label;
+                        text += ":";
+                    }
+                    text += std::to_string(slot.battery);
+                    text += "%";
+                    if (slot.charging)
+                        text += ICON_FK_BOLT;
+                };
+
+                std::string status_text;
+                if (slot_visible(headset.single)) {
+                    add_slot(status_text, "", headset.single);
+                } else {
+                    add_slot(status_text, "L", headset.left);
+                    add_slot(status_text, "R", headset.right);
+                    add_slot(status_text, "C", headset.charging_case);
+                }
+
+                bool any_charging =
+                    (slot_visible(headset.single) && headset.single.charging) ||
+                    (slot_visible(headset.left) && headset.left.charging) ||
+                    (slot_visible(headset.right) && headset.right.charging) ||
+                    (slot_visible(headset.charging_case) && headset.charging_case.charging);
+                int min_level = 101;
+                for (const auto& slot : {headset.single, headset.left, headset.right, headset.charging_case}) {
+                    if (slot_visible(slot))
+                        min_level = std::min(min_level, static_cast<int>(slot.battery));
+                }
+
+                ImguiNextColumnFirstItem();
+                HUDElements.TextColored(HUDElements.colors.engine, "%s", headset.name.c_str());
+                ImguiNextColumnOrNewRow();
+                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_device_battery_icon]) {
+                    if (any_charging)
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_USB);
+                    else if (min_level >= 75)
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_FULL);
+                    else if (min_level >= 50)
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_THREE_QUARTERS);
+                    else if (min_level >= 26)
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_HALF);
+                    else
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_BATTERY_QUARTER);
+                } else {
+                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", status_text.c_str());
+                }
+            }
+        }
+#endif
     }
 #endif
 }

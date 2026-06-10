@@ -220,6 +220,7 @@ struct Tracepoint;
    OVERLAY_PARAM_CUSTOM(text_outline_thickness)      \
    OVERLAY_PARAM_CUSTOM(fps_text)                    \
    OVERLAY_PARAM_CUSTOM(device_battery)              \
+   OVERLAY_PARAM_CUSTOM(magicpods_url)               \
    OVERLAY_PARAM_CUSTOM(fps_metrics)                 \
    OVERLAY_PARAM_CUSTOM(network)                     \
    OVERLAY_PARAM_CUSTOM(gpu_list)                    \
@@ -363,6 +364,7 @@ struct overlay_params {
    unsigned text_outline_color;
    float text_outline_thickness;
    std::vector<std::string> device_battery;
+   std::string magicpods_url;
    std::vector<std::string> fps_metrics;
    std::vector<std::string> network;
    std::vector<unsigned> gpu_list;

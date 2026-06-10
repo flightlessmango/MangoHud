@@ -1,0 +1,6 @@
+[wrap-file]
+directory = json
+source_url = https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+source_filename = json-3.11.3.tar.xz
+source_hash = d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d
+patch_directory = nlohmann_json

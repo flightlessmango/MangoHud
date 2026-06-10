@@ -370,7 +370,8 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `custom_text`                      | Display a custom text e.g `custom_text=Fsync enabled`                                 |
 | `debug`                            | Shows the graph of gamescope app frametimes and latency (only on gamescope obviously) |
 | `device_battery_icon`              | Display wirless device battery icon.                                                  |
-| `device_battery`                   | Display wireless device battery percent. Currently supported arguments `gamepad` and `mouse` e.g `device_battery=gamepad,mouse` |
+| `device_battery`                   | Display wireless device battery percent. Currently supported arguments `gamepad`, `mouse`, and `headset` e.g `device_battery=gamepad,mouse,headset` |
+| `magicpods_url`                    | MagicPodsCore WebSocket endpoint for `device_battery=headset`, default `127.0.0.1:2020` |
 | `display_server`                   | Display the current display session (e.g. X11 or wayland)                             |
 | `dynamic_frame_timing`             | This changes frame_timing y-axis to correspond with the current maximum and minimum frametime instead of being a static 0-50 |
 | `engine_short_names`               | Display a short version of the used engine (e.g. `OGL` instead of `OpenGL`)           |

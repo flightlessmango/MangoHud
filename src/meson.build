@@ -96,6 +96,14 @@ if is_unixy
     )
   endif
 
+  if nlohmann_json_dep.found()
+    pre_args += '-DHAVE_MAGICPODS'
+    vklayer_files += files(
+      'magicpods.cpp',
+      'ws_client.cpp',
+    )
+  endif
+
   opengl_files = files(
     'gl/glad.c',
     'gl/gl_renderer.cpp',
@@ -200,6 +208,7 @@ mangohud_static_lib = static_library(
     dep_dl,
     dep_rt,
     dep_pthread,
+    nlohmann_json_dep,
     vulkan_headers_dep,
     dep_vulkan_utility_libraries,
     windows_deps,
