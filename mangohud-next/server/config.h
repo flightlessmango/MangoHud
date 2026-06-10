@@ -102,7 +102,7 @@ public:
 
         configSig now;
         read_sig(config_path.c_str(), now);
-        if (sig_changed(prev_sig, now)) {
+        if (!inited || sig_changed(prev_sig, now)) {
             prev_sig = now;
             parse_table(config_path);
             return true;
