@@ -15,7 +15,8 @@ render_lib = static_library(
                    dependency('libdrm'),
                    dependency('gl'),
                    dependency('egl'),
-                   dep_vulkan_utility_libraries],
+                   dep_vulkan_utility_libraries,
+                   ipc_dep],
     link_with: mangohud_imgui,
     include_directories: inc_common
 

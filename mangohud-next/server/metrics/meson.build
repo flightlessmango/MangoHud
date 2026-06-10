@@ -12,7 +12,8 @@ metrics_lib = static_library(
                   vkbootstrap_dep,
                   dearimgui_dep,
                   implot_dep,
-                  vulkan_dep],
+                  vulkan_dep,
+                  ipc_dep],
     link_with: [cpu_lib,
                 gpu_lib],
     include_directories: utils_inc
