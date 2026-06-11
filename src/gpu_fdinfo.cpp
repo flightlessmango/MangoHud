@@ -175,7 +175,7 @@ void GPU_fdinfo::find_hwmon_sensors()
 {
     std::string hwmon;
 
-    if (module == "msm")
+    if (module == "msm_dpu")
         hwmon = find_hwmon_sensor_dir("gpu");
     else if (module == "panfrost" || module == "panthor")
         hwmon = find_hwmon_sensor_dir("gpu_thermal");
