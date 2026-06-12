@@ -1562,7 +1562,7 @@ static bool is_present_mode_supported(VkPhysicalDevice device, VkSurfaceKHR surf
    struct instance_data *instance_data = FIND(struct instance_data, device);
 
    PFN_vkGetPhysicalDeviceSurfacePresentModesKHR fpGetPhysicalDeviceSurfacePresentModesKHR =
-   (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR) instance_data->vtable.GetInstanceProcAddr(instance_data->instance, "vkGetPhysicalDeviceSurfacePresentModesKHR");
+      instance_data->pd_vtable.GetPhysicalDeviceSurfacePresentModesKHR;
 
    if (fpGetPhysicalDeviceSurfacePresentModesKHR != NULL) {
       uint32_t presentModeCount = 0;
@@ -1875,9 +1875,8 @@ static VkResult overlay_CreateDevice(
       get_device_chain_info(pCreateInfo, VK_LAYER_LINK_INFO);
 
    assert(chain_info->u.pLayerInfo);
-   PFN_vkGetInstanceProcAddr fpGetInstanceProcAddr = chain_info->u.pLayerInfo->pfnNextGetInstanceProcAddr;
    PFN_vkGetDeviceProcAddr fpGetDeviceProcAddr = chain_info->u.pLayerInfo->pfnNextGetDeviceProcAddr;
-   PFN_vkCreateDevice fpCreateDevice = (PFN_vkCreateDevice)fpGetInstanceProcAddr(instance_data->instance, "vkCreateDevice");
+   PFN_vkCreateDevice fpCreateDevice = instance_data->pd_vtable.CreateDevice;
    if (fpCreateDevice == NULL) {
       return VK_ERROR_INITIALIZATION_FAILED;
    }
@@ -1904,12 +1903,11 @@ static VkResult overlay_CreateDevice(
    };
 
 
-   bool can_get_driver_info = false;
+   bool can_get_driver_info = instance_data->api_version >= VK_API_VERSION_1_1;
 
    for (auto& extension : available_extensions) {
       if (extension.extensionName == std::string_view(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME)) {
-         can_get_driver_info = true;
-         if (instance_data->api_version < VK_API_VERSION_1_2) {
+         if (can_get_driver_info && instance_data->api_version < VK_API_VERSION_1_2) {
             if (!has_extension(enabled_extensions, VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME)) {
                enabled_extensions.push_back(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME);
             }
@@ -1932,10 +1930,8 @@ static VkResult overlay_CreateDevice(
    struct device_data *device_data = new_device_data(*pDevice, instance_data);
    vk_device_dispatch_table_load(&device_data->vtable,
                               fpGetDeviceProcAddr, *pDevice);
+   device_data->vtable.GetDeviceProcAddr = fpGetDeviceProcAddr;
    device_data->physical_device = physicalDevice;
-   vk_instance_dispatch_table_load(&instance_data->vtable,
-                                   fpGetInstanceProcAddr,
-                                   instance_data->instance);
 
    instance_data->pd_vtable.GetPhysicalDeviceProperties(device_data->physical_device,
                                                      &device_data->properties);
@@ -1984,11 +1980,12 @@ static VkResult overlay_CreateInstance(
    std::string engineVersion, engineName;
    enum EngineTypes engine = EngineTypes::UNKNOWN;
    const char* pEngineName = nullptr;
+   uint32_t applicationVersion = 0;
+   uint32_t api_version = pCreateInfo->pApplicationInfo ? pCreateInfo->pApplicationInfo->apiVersion : VK_API_VERSION_1_0;
 
-   struct instance_data *instance_data = new_instance_data(*pInstance);
    if (pCreateInfo->pApplicationInfo) {
       pEngineName = pCreateInfo->pApplicationInfo->pEngineName;
-      instance_data->applicationVersion = pCreateInfo->pApplicationInfo->applicationVersion;
+      applicationVersion = pCreateInfo->pApplicationInfo->applicationVersion;
    }
    if (pEngineName)
    {
@@ -2039,9 +2036,15 @@ static VkResult overlay_CreateInstance(
 
    VkResult result = fpCreateInstance(pCreateInfo, pAllocator, pInstance);
    if (result != VK_SUCCESS) return result;
+
+   struct instance_data *instance_data = new_instance_data(*pInstance);
+   instance_data->applicationVersion = applicationVersion;
+   instance_data->api_version = api_version;
+
    vk_instance_dispatch_table_load(&instance_data->vtable,
                                    fpGetInstanceProcAddr,
                                    instance_data->instance);
+   instance_data->vtable.GetInstanceProcAddr = fpGetInstanceProcAddr;
    vk_physical_device_dispatch_table_load(&instance_data->pd_vtable,
                                           fpGetInstanceProcAddr,
                                           instance_data->instance);
@@ -2069,8 +2072,6 @@ static VkResult overlay_CreateInstance(
       instance_data->engineName = engineName;
       instance_data->engineVersion = engineVersion;
    }
-
-   instance_data->api_version = pCreateInfo->pApplicationInfo ? pCreateInfo->pApplicationInfo->apiVersion : VK_API_VERSION_1_0;
 
    return result;
 }
@@ -2165,6 +2166,23 @@ extern "C" PUBLIC VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetDeviceProc
                                                                              const char *funcName);
 extern "C" PUBLIC VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetInstanceProcAddr(VkInstance instance,
                                                                                const char *funcName);
+
+extern "C" PUBLIC VKAPI_ATTR VkResult VKAPI_CALL
+vkNegotiateLoaderLayerInterfaceVersion(VkNegotiateLayerInterface *pVersionStruct)
+{
+    if (!pVersionStruct)
+        return VK_ERROR_INITIALIZATION_FAILED;
+
+    if (pVersionStruct->loaderLayerInterfaceVersion < 2)
+        return VK_ERROR_INITIALIZATION_FAILED;
+
+    pVersionStruct->loaderLayerInterfaceVersion = 2;
+    pVersionStruct->pfnGetInstanceProcAddr = overlay_GetInstanceProcAddr;
+    pVersionStruct->pfnGetDeviceProcAddr = overlay_GetDeviceProcAddr;
+    pVersionStruct->pfnGetPhysicalDeviceProcAddr = nullptr;
+
+    return VK_SUCCESS;
+}
 
 static const struct {
    const char *name;

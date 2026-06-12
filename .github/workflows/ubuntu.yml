@@ -15,21 +15,24 @@ jobs:
     - name: 'Install prerequisites'
       run: |
         sudo apt-get update
-        sudo apt-get install -y \
+        source ./build_deps.sh
+        DEPS_NO_I386="$(printf '%s' "$DEPS_DEBIAN" \
+          | tr ',' '\n' \
+          | grep -v ':i386' \
+          | tr '\n' ' ')"
+        sudo apt-get -o Acquire::Queue-Mode=access install -y \
+          $DEPS_NO_I386 \
           appstream \
-          glslang-tools \
-          ninja-build \
-          python3-mako \
-          python3-setuptools \
-          python3-wheel \
-          mesa-common-dev \
           libcmocka-dev \
-          libdbus-1-dev \
           libglfw3-dev \
-          libwayland-dev \
-          libxnvctrl-dev \
-          libxkbcommon-dev \
-          meson
+          sudo \
+          git
+    - name: 'Install Meson'
+      run: |
+        MESON_MIN_VERSION="$(sed -n "s/.*meson_version:[[:space:]]*'>=\([^']*\)'.*/\1/p" meson.build)"
+        python3 -m pip install --user --break-system-packages "meson>=${MESON_MIN_VERSION}"
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+        meson --version
     - name: 'Install clang'
       if:  ${{ (matrix.compiler == 'clang') }}
       run: |
@@ -56,4 +59,4 @@ jobs:
     - name: 'Build'
       run: meson compile -C ./builddir || ninja -C ./builddir
     - name: 'Install'
-      run: sudo meson install -C ./builddir
+      run: meson install -C ./builddir --destdir "$PWD/install-root"

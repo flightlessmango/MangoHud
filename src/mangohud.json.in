@@ -8,8 +8,7 @@
       "implementation_version": "1",
       "description": "Vulkan Hud Overlay",
       "functions": {
-         "vkGetInstanceProcAddr": "overlay_GetInstanceProcAddr",
-         "vkGetDeviceProcAddr": "overlay_GetDeviceProcAddr"
+         "vkNegotiateLoaderLayerInterfaceVersion": "vkNegotiateLoaderLayerInterfaceVersion"
       },
       "enable_environment": {
         "MANGOHUD": "1"
