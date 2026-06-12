@@ -11,6 +11,7 @@
 #include "wayland_hook.h"
 #include "real_dlsym.h"
 #include "keybinds.h"
+#include "native_display_res.h"
 
 void* wl_handle = NULL;
 struct xkb_context *context_xkb = NULL;
@@ -21,6 +22,7 @@ struct wayland_display
     struct wl_event_queue *queue;
     struct wl_seat *seat;
     struct wl_keyboard *keyboard;
+    struct wl_output *output;
     struct xkb_keymap *keymap_xkb;
     struct xkb_state *state_xkb;
     std::set<void *> vk_surfaces;
@@ -31,6 +33,7 @@ struct wayland_display
         ref = 1;
         queue = NULL;
         keyboard = NULL;
+        output = NULL;
         keymap_xkb = NULL;
         state_xkb = NULL;
         seat = NULL;
@@ -42,6 +45,8 @@ struct wayland_display
         vk_surfaces.clear();
         wl_seat_destroy(this->seat);
         wl_keyboard_destroy(this->keyboard);
+        if (this->output)
+            wl_output_destroy(this->output);
         wl_event_queue_destroy(this->queue);
         if (this->keymap_xkb)
             xkb_keymap_unref(this->keymap_xkb);
@@ -70,6 +75,33 @@ struct wl_seat_listener seat_listener {
     .name = seat_handle_name,
 };
 
+/* ---- wl_output listener — captures native monitor resolution ------------ */
+
+static void output_handle_geometry(void*, struct wl_output*, int32_t, int32_t,
+    int32_t, int32_t, int32_t, const char*, const char*, int32_t) {}
+
+static void output_handle_mode(void*, struct wl_output*, uint32_t flags,
+    int32_t width, int32_t height, int32_t)
+{
+    /* WL_OUTPUT_MODE_CURRENT == 0x1 */
+    if ((flags & 0x1) && width > 0 && height > 0)
+        set_native_display_res_wayland(
+            static_cast<uint32_t>(width),
+            static_cast<uint32_t>(height));
+}
+
+static void output_handle_done(void*, struct wl_output*) {}
+static void output_handle_scale(void*, struct wl_output*, int32_t) {}
+
+static const struct wl_output_listener output_listener = {
+    .geometry = output_handle_geometry,
+    .mode     = output_handle_mode,
+    .done     = output_handle_done,
+    .scale    = output_handle_scale,
+};
+
+/* ------------------------------------------------------------------------ */
+
 static void registry_handle_global(void *data, struct wl_registry* registry, uint32_t name, const char *interface, uint32_t version)
 {
     if (!data) return;
@@ -78,6 +110,12 @@ static void registry_handle_global(void *data, struct wl_registry* registry, uin
     {
         wayland->seat = (struct wl_seat*)wl_registry_bind(registry, name, &wl_seat_interface, version < 5 ? version : 5);
         wl_seat_add_listener(wayland->seat, &seat_listener, data);
+    }
+    /* Bind the first output we see to get the native monitor resolution. */
+    if (strcmp(interface, wl_output_interface.name) == 0 && !wayland->output)
+    {
+        wayland->output = (struct wl_output*)wl_registry_bind(registry, name, &wl_output_interface, version < 2 ? version : 2);
+        wl_output_add_listener(wayland->output, &output_listener, data);
     }
 }
 
