@@ -379,7 +379,7 @@ public:
             fps_limiter = std::make_unique<fpsLimiter>(false);
 
         VkResult r = pDispatch->AcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, pImageIndex);
-        if (r == VK_SUCCESS)
+        if (r == VK_SUCCESS || r == VK_SUBOPTIMAL_KHR)
             fps_limiter->limit(false);
 
         return r;
@@ -392,7 +392,7 @@ public:
             fps_limiter = std::make_unique<fpsLimiter>(false);
 
         VkResult r = pDispatch->AcquireNextImage2KHR(device, pAcquireInfo, pImageIndex);
-        if (r == VK_SUCCESS)
+        if (r == VK_SUCCESS || r == VK_SUBOPTIMAL_KHR)
             fps_limiter->limit(false);
 
         return r;
