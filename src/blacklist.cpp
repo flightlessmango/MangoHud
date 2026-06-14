@@ -25,6 +25,7 @@ static  std::vector<std::string> blacklist {
     "Amazon Games UI.exe",
     "Battle.net.exe",
     "BethesdaNetLauncher.exe",
+    "CypressLauncher.exe",
     "EADesktop.exe",
     "EALauncher.exe",
     "EpicGamesLauncher.exe",
@@ -41,6 +42,7 @@ static  std::vector<std::string> blacklist {
     "IGOProxy64.exe",
     "iexplore.exe",
     "InsurgencyEAC.exe",
+    "KanvasLauncher.exe",
     "Launcher", //Paradox Interactive Launcher
     "LeagueClient.exe",
     "LeagueClientUxRender.exe",

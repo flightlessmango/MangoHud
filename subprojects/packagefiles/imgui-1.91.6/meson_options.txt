@@ -1,0 +1,85 @@
+# renderer backends
+option(
+    'dx9',
+    type: 'feature',
+    value: 'auto',
+)
+option(
+    'dx10',
+    type: 'feature',
+    value: 'auto',
+)
+option(
+    'dx11',
+    type: 'feature',
+    value: 'auto',
+)
+option(
+    'dx12',
+    type: 'feature',
+    value: 'auto',
+)
+option(
+    'metal',
+    type: 'feature',
+    value: 'auto',
+)
+option(
+    'opengl',
+    type: 'feature',
+    value: 'auto',
+)
+option(
+    'sdl2_renderer',
+    type: 'feature',
+    value: 'auto',
+)
+option(
+    'sdl3_renderer',
+    type: 'feature',
+    value: 'auto',
+)
+option(
+    'vulkan',
+    type: 'feature',
+    value: 'auto',
+)
+option(
+    'webgpu',
+    type: 'feature',
+    value: 'auto',
+)
+
+# platform backends
+option(
+    'glfw',
+    type: 'feature',
+    value: 'auto',
+)
+option(
+    'sdl2',
+    type: 'feature',
+    value: 'auto',
+)
+option(
+    'sdl3',
+    type: 'feature',
+    value: 'auto',
+)
+option(
+    'osx',
+    type: 'feature',
+    value: 'auto',
+)
+option(
+    'win',
+    type: 'feature',
+    value: 'auto',
+)
+
+# frameworks (renderer + platform)
+option(
+    'allegro5',
+    type: 'feature',
+    value: 'auto',
+)

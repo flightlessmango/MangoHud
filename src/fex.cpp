@@ -238,6 +238,7 @@ static void init_shm(int pid) {
 
     fd = shm_open(f.c_str(), O_RDONLY, 0);
     if (fd == -1) {
+        fex_status = "Not Found!";
         goto err;
     }
 
@@ -302,6 +303,9 @@ err:
     if (shm_base != MAP_FAILED) {
         munmap(shm_base, shm_size);
     }
+
+    // Ensure no pid is being tracked
+    g_stats.pid = -1;
 }
 
 static void check_shm_update_necessary() {

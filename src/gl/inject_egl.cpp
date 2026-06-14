@@ -39,6 +39,18 @@ static void* get_egl_proc_address(const char* name) {
 
     void *func = nullptr;
     static void *(*pfn_eglGetProcAddress)(const char*) = nullptr;
+
+    const char* egl_simple_load_env = getenv("MANGOHUD_EGL_SIMPLE_LOAD");
+    const bool enable_egl_simple_load = egl_simple_load_env ? egl_simple_load_env[0] == '1' : false;
+
+    if (!pfn_eglGetProcAddress && enable_egl_simple_load)
+    {
+        static void *handle = real_dlopen("libEGL.so.1", RTLD_LAZY);
+
+        if (handle)
+            pfn_eglGetProcAddress = reinterpret_cast<decltype(pfn_eglGetProcAddress)>(real_dlsym(handle, "eglGetProcAddress"));
+    }
+
     const char *libs[] = {
         "*libEGL.so.*",
         "*libEGL_mesa.so.*",
@@ -195,6 +207,28 @@ EXPORT_C_(void*) eglGetPlatformDisplay( unsigned int platform, void* native_disp
     return ret;
 }
 
+EXPORT_C_(void*) eglGetPlatformDisplayEXT( unsigned int platform, void* native_display, const intptr_t* attrib_list);
+EXPORT_C_(void*) eglGetPlatformDisplayEXT( unsigned int platform, void* native_display, const intptr_t* attrib_list)
+{
+    void *ret;
+    static void* (*pfn_eglGetPlatformDisplayEXT)(unsigned int, void*, const intptr_t*) = nullptr;
+
+    if (!pfn_eglGetPlatformDisplayEXT)
+        pfn_eglGetPlatformDisplayEXT = reinterpret_cast<decltype(pfn_eglGetPlatformDisplayEXT)>(get_egl_proc_address("eglGetPlatformDisplayEXT"));
+
+    ret = pfn_eglGetPlatformDisplayEXT(platform, native_display, attrib_list);
+
+#ifdef HAVE_WAYLAND
+    if (platform == EGL_PLATFORM_WAYLAND_KHR && ret)
+    {
+        HUDElements.display_server = HUDElements.display_servers::WAYLAND;
+        init_wayland_data((struct wl_display*)native_display, ret);
+    }
+#endif
+
+    return ret;
+}
+
 EXPORT_C_(void*) eglGetDisplay( void* native_display );
 EXPORT_C_(void*) eglGetDisplay( void* native_display )
 {
@@ -254,11 +288,12 @@ struct func_ptr {
    void *ptr;
 };
 
-static std::array<const func_ptr, 6> name_to_funcptr_map = {{
+static std::array<const func_ptr, 7> name_to_funcptr_map = {{
 #define ADD_HOOK(fn) { #fn, (void *) fn }
     ADD_HOOK(eglDestroyContext),
     ADD_HOOK(eglGetDisplay),
     ADD_HOOK(eglGetPlatformDisplay),
+    ADD_HOOK(eglGetPlatformDisplayEXT),
     ADD_HOOK(eglGetProcAddress),
     ADD_HOOK(eglSwapBuffers),
     ADD_HOOK(eglTerminate)

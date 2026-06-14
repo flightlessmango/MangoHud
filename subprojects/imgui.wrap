@@ -3,11 +3,7 @@ directory = imgui-1.91.6
 source_url = https://github.com/ocornut/imgui/archive/refs/tags/v1.91.6.tar.gz
 source_filename = imgui-1.91.6.tar.gz
 source_hash = c5fbc5dcab1d46064001c3b84d7a88812985cde7e0e9ced03f5677bec1ba502a
-patch_filename = imgui_1.91.6-3_patch.zip
-patch_url = https://wrapdb.mesonbuild.com/v2/imgui_1.91.6-3/get_patch
-patch_hash = 2f7977114ba07d06559aaf8890a92a4ebd25186592d4447954605aaf2244634d
-source_fallback_url = https://github.com/mesonbuild/wrapdb/releases/download/imgui_1.91.6-3/imgui-1.91.6.tar.gz
-wrapdb_version = 1.91.6-3
+patch_directory = imgui-1.91.6
 
 [provide]
 imgui = imgui_dep

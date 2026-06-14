@@ -3,6 +3,7 @@ OS_RELEASE_FILES=("/etc/os-release" "/usr/lib/os-release")
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 MANGOHUD_CONFIG_DIR="$XDG_CONFIG_HOME/MangoHud"
 SU_CMD=$(command -v sudo || command -v doas || echo)
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
 # doas requires a double dash if the command it runs will include any dashes,
 # so append a double dash to the command
@@ -47,8 +48,20 @@ mangohud_install() {
     rm -f "$HOME/.local/share/vulkan/implicit_layer.d/"{mangohud32.json,mangohud64.json}
 
     [ "$UID" -eq 0 ] || mangohud_config
-    [ "$UID" -eq 0 ] || tar xf MangoHud-package.tar
-    [ "$UID" -eq 0 ] || exec $SU_CMD bash "$0" install
+
+    if [ "$UID" -ne 0 ]; then
+        if [ ! -f "$SCRIPT_DIR/MangoHud-package.tar" ]; then
+            echo "Error: MangoHud-package.tar was not found next to mangohud-setup.sh."
+            exit 1
+        fi
+
+        tar xf "$SCRIPT_DIR/MangoHud-package.tar" || {
+            echo "Error: failed to unpack MangoHud-package.tar."
+            exit 1
+        }
+
+        exec $SU_CMD bash "$SCRIPT_DIR/mangohud-setup.sh" install
+    fi
 
     mangohud_uninstall
 
@@ -73,6 +86,7 @@ mangohud_install() {
     /usr/bin/install -Dvm644 ./usr/share/man/man1/mangohud.1 /usr/share/man/man1/mangohud.1
     /usr/bin/install -Dvm644 ./usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
     /usr/bin/install -vm755  ./usr/bin/mangohud /usr/bin/mangohud
+    /usr/bin/install -vm755  ./usr/bin/mangohud-server /usr/bin/mangohud-server
     /usr/bin/install -vm755  ./usr/bin/mangoplot /usr/bin/mangoplot
 
     ln -sv $DEFAULTLIB /usr/lib/mangohud/lib

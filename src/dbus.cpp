@@ -294,17 +294,16 @@ bool dbus_manager::handle_properties_changed(DBusMessage* msg,
 
     metadata meta;
     parse_mpris_properties(m_dbus_ldr, msg, source, meta);
-#ifndef NDEBUG
-    std::cerr << "PropertiesChanged Signal received:\n";
-    std::cerr << "\tSource: " << source << "\n";
-    std::cerr << "active_player:         " << m_active_player << "\n";
-    std::cerr << "active_player's owner: " << m_name_owners[m_active_player]
-              << "\n";
-    std::cerr << "sender:                " << sender << "\n";
-#endif
+
+    SPDLOG_DEBUG("PropertiesChanged Signal received:");
+    SPDLOG_DEBUG("\tSource: {}", source);
+    SPDLOG_DEBUG("active_player:         {}", m_active_player);
+    SPDLOG_DEBUG("active_player's owner: {}", m_name_owners[m_active_player]);
+    SPDLOG_DEBUG("sender:                {}", sender);
+
     if (source != "org.mpris.MediaPlayer2.Player") return false;
 
-    if (m_active_player == "" ||
+    if (m_active_player.empty() ||
         (m_requested_player.empty() && !main_metadata.meta.playing)) {
         select_active_player();
     }
@@ -417,7 +416,7 @@ void dbus_manager::disconnect_from_signals(Service srv) {
         auto signal = format_signal(kv);
         m_dbus_ldr.bus_remove_match(m_dbus_conn, signal.c_str(), &m_error);
         if (m_dbus_ldr.error_is_set(&m_error)) {
-#ifndef NDEBUG
+#if SPDLOG_ACTIVE_LEVEL <= SPDLOG_LEVEL_DEBUG
             // spdlog might be destroyed by now
             std::cerr << "[MANGOHUD] [debug] " << __func__ << " "
             << m_error.name << ": " << m_error.message << std::endl;

@@ -224,9 +224,10 @@ void NVIDIA::get_instant_metrics_xnvctrl(struct gpu_metrics *metrics) {
 void NVIDIA::get_samples_and_copy() {
     struct gpu_metrics metrics_buffer[METRICS_SAMPLE_COUNT] {};
     auto logger_ref = logger; // inc ref count, to avoid destruction of logger.
-    auto params = get_params();
-    auto params_p = params.get(); // avoid destruction while we are getting samples...
     while(!stop_thread) {
+        auto params = get_params();
+        auto params_p = params.get(); // avoid destruction while we are getting samples...
+
 #ifndef TEST_ONLY
         if (HUDElements.g_gamescopePid > 0 && HUDElements.g_gamescopePid != pid) {
             pid = HUDElements.g_gamescopePid;

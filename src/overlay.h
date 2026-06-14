@@ -117,21 +117,19 @@ inline const char* engine_name(const swapchain_stats& sw_stats) {
       return "FPS";
    }
 
-   if (en[OVERLAY_PARAM_ENABLED_horizontal] && !en[OVERLAY_PARAM_ENABLED_engine_short_names]) {
-      en[OVERLAY_PARAM_ENABLED_hide_fps_superscript] = true;
+   if (en[OVERLAY_PARAM_ENABLED_horizontal] && !en[OVERLAY_PARAM_ENABLED_engine_short_names])
       return "FPS";
-   }
 
    if (en[OVERLAY_PARAM_ENABLED_dx_api]) {
       if (engine == EngineTypes::VKD3D)
          return "DX12";
 
       if (engine == EngineTypes::DXVK) {
-         if (sw_stats.applicationVersion == 1)
-            return "DX9";
+         if (sw_stats.applicationVersion == 0)
+            return "DX10,11";
 
-         if (sw_stats.applicationVersion == 2)
-            return "DX11";
+         if (sw_stats.applicationVersion == 1)
+            return "DX3-9";
 
          return "DX?";
       }

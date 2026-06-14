@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <cctype>
 #include <array>
+#include <atomic>
 #include <functional>
 #include <spdlog/spdlog.h>
 #include <vulkan/vulkan_core.h>
@@ -48,7 +49,7 @@ std::unique_ptr<fpsMetrics> fpsmetrics;
 std::mutex config_mtx;
 std::condition_variable config_cv;
 bool config_ready = false;
-static std::shared_ptr<overlay_params> g_params;
+static std::atomic<std::shared_ptr<overlay_params>> g_params;
 std::shared_ptr<fpsLimiter> fps_limiter;
 
 #if __cplusplus >= 201703L
@@ -1204,7 +1205,11 @@ parse_overlay_config(struct overlay_params *params,
          params->m_vulkan_present_mode = present_mode;
       }
    } else if ((int)params->vsync != -1) {
-      params->m_vulkan_present_mode = HUDElements.presentModes[params->vsync];
+      if (params->vsync < HUDElements.presentModes.size()) {
+         params->m_vulkan_present_mode = HUDElements.presentModes[params->vsync];
+      } else {
+         SPDLOG_WARN("vsync={} out of range for [0 .. {}] (ignoring)", params->vsync, HUDElements.presentModes.size() - 1);
+      }
    }
 
    {
@@ -1214,7 +1219,7 @@ parse_overlay_config(struct overlay_params *params,
    }
 
    auto snapshot = std::make_shared<overlay_params>(*params);
-   std::atomic_store_explicit(&g_params, std::move(snapshot), std::memory_order_release);
+   g_params.store(std::move(snapshot), std::memory_order_release);
 
    fps_limiter = std::make_unique<fpsLimiter>(params->fps_limit_method ? false : true);
 
@@ -1233,7 +1238,7 @@ parse_overlay_config(struct overlay_params *params,
 
 std::shared_ptr<overlay_params> get_params() {
     for (;;) {
-        auto p = std::atomic_load_explicit(&g_params, std::memory_order_acquire);
+        auto p = g_params.load(std::memory_order_acquire);
         if (p) return p;
         std::this_thread::sleep_for(std::chrono::milliseconds(25));
     }
