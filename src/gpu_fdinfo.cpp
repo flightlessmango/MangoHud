@@ -55,6 +55,11 @@ void GPU_fdinfo::find_fd()
                 client_id = val;
         }
 
+        // fixup mismatch between display engine and render engine drivers
+        if (module == "msm_dpu" && driver == "msm") {
+            driver = "msm_dpu";
+        }
+
         if (!driver.empty() && driver == module) {
             total++;
             SPDLOG_TRACE(
