@@ -93,7 +93,36 @@ struct gbmBuffer {
     uint32_t fourcc = 0;
     uint64_t plane_size = 0;
 
-    gbmBuffer() {
+    gbmBuffer() = default;
+
+    gbmBuffer(const gbmBuffer&) = delete;
+    gbmBuffer& operator=(const gbmBuffer&) = delete;
+
+    gbmBuffer(gbmBuffer&& o) noexcept { *this = std::move(o); }
+
+    gbmBuffer& operator=(gbmBuffer&& o) noexcept {
+        if (this != &o) {
+            if (bo)
+                gbm_bo_destroy(bo);
+            if (dev)
+                gbm_device_destroy(dev);
+
+            dev = o.dev;
+            bo = o.bo;
+            fd = std::move(o.fd);
+            modifier = o.modifier;
+            stride = o.stride;
+            offset = o.offset;
+            fourcc = o.fourcc;
+            plane_size = o.plane_size;
+
+            o.dev = nullptr;
+            o.bo = nullptr;
+        }
+        return *this;
+    }
+
+    ~gbmBuffer() {
         if (bo)
             gbm_bo_destroy(bo);
 
