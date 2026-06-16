@@ -8,6 +8,7 @@
 #include "../config.h"
 #include "gpu/gpu.hpp"
 #include "cpu/cpu.hpp"
+#include "exec.h"
 #include "../../ipc/ipc.h"
 #include "../../render/colors.h"
 
@@ -47,6 +48,7 @@ private:
     std::thread client_thread;
     std::atomic<bool> stop {false};
     ColorCache color;
+    Exec exec;
     MetricTable metrics;
     MetricTable client_metrics;
 

@@ -45,7 +45,13 @@ struct GraphCell {
     uint32_t color;
 };
 
-using Cell = std::variant<TextCell, ValueCell, GraphCell>;
+struct ExecCell {
+    std::string command;
+    std::string unit;
+    std::string color;
+};
+
+using Cell = std::variant<TextCell, ValueCell, GraphCell, ExecCell>;
 using MaybeCell = std::optional<Cell>;
 
 struct hudTable {

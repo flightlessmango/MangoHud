@@ -211,6 +211,20 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
                 continue;
             }
 
+            if (std::holds_alternative<ExecCell>(c)) {
+                auto& ec = std::get<ExecCell>(c);
+                auto [valid, text] = exec.get(ec.command);
+                if (!valid)
+                    continue;
+
+                out.vec = color.get(ec.color);
+                out.text = std::move(text);
+                out.unit = ec.unit;
+
+                parsed_row.push_back(std::move(out));
+                continue;
+            }
+
         }
         render_table->rows.push_back(std::move(parsed_row));
     }

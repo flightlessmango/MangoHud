@@ -8,6 +8,8 @@
 #include "common/table_structs.h"
 #include "string_utils.h"
 
+static constexpr const char* default_cell_color = "FFFFFFFF";
+
 static bool validate_yaml(const YAML::Node& doc) {
     const auto hud = doc["hud_table"];
     if (!hud) {
@@ -84,7 +86,7 @@ bool Config::parse_table_yaml(hudTable& table, YAML::Node doc) {
             if (cell["text"]) {
                 TextCell tc;
                 tc.text = cell["text"].as<std::string>();
-                tc.color = cell["color"] ? cell["color"].as<std::string>() : "FFFFFFFF";
+                tc.color = cell["color"] ? cell["color"].as<std::string>() : default_cell_color;
 
                 parsed_row.push_back(Cell{tc});
                 continue;
@@ -94,7 +96,7 @@ bool Config::parse_table_yaml(hudTable& table, YAML::Node doc) {
                 ValueCell vc;
                 vc.ref = parse_value(cell["value"]);
                 vc.unit = cell["unit"] ? cell["unit"].as<std::string>() : std::string();
-                vc.color = cell["color"] ? cell["color"].as<std::string>() : "FFFFFFFF";
+                vc.color = cell["color"] ? cell["color"].as<std::string>() : default_cell_color;
                 if (cell["precision"])
                     try_stoi(vc.precision, cell["precision"].as<std::string>());
 
@@ -106,6 +108,16 @@ bool Config::parse_table_yaml(hudTable& table, YAML::Node doc) {
                 GraphCell gc;
                 gc.ref = parse_value(cell["graph"]);
                 parsed_row.push_back(Cell{gc});
+                continue;
+            }
+
+            if (cell["exec"]) {
+                ExecCell ec;
+                ec.command = cell["exec"].as<std::string>();
+                ec.unit = cell["unit"] ? cell["unit"].as<std::string>() : std::string();
+                ec.color = cell["color"] ? cell["color"].as<std::string>() : default_cell_color;
+
+                parsed_row.push_back(Cell{ec});
                 continue;
             }
         }
