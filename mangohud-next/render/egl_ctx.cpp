@@ -399,21 +399,7 @@ void EglCtx::destroy_dmabuf_res(dmabuf_t& dmabuf) {
         dmabuf.egl_res.image = EGL_NO_IMAGE;
     }
 
-    if (dmabuf.gbm.bo) {
-        gbm_bo_destroy(dmabuf.gbm.bo);
-        dmabuf.gbm.bo = nullptr;
-    }
-
-    if (dmabuf.gbm.dev) {
-        gbm_device_destroy(dmabuf.gbm.dev);
-        dmabuf.gbm.dev = nullptr;
-    }
-
-    dmabuf.gbm.fd.reset();
-    dmabuf.gbm.modifier = 0;
-    dmabuf.gbm.stride = 0;
-    dmabuf.gbm.offset = 0;
-    dmabuf.gbm.plane_size = 0;
+    dmabuf.gbm = {};
 }
 
 bool EglCtx::init_dmabuf(clientRes* r, dmabuf_t& dmabuf) {
