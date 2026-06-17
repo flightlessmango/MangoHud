@@ -62,16 +62,16 @@ value: [CPU, LOAD]
 value: [GPU, 0, LOAD]
 ```
 
-Single-name references, such as `FPS`, use metrics from the current application. Two-item references use a metric group and key, such as `[CPU, LOAD]`. Three-item GPU references insert the GPU index into the group name, so `[GPU, 0, LOAD]` becomes `GPU0` and `LOAD`.
+Single-name references, such as `FPS`, use metrics from the current application. Two-item references use a metric group and key, such as `[CPU, LOAD]`. GPU metrics are indexed, so use the three-item form, such as `[GPU, 0, LOAD]`.
 
-Available metric groups and keys currently include:
+Available metrics currently include:
 
-| Group | Keys |
+| Reference | Keys |
 | --- | --- |
-| `GPU0`, `GPU1`, ... | `LOAD`, `VRAM_USED`, `GTT_USED`, `VRAM_TOTAL`, `VRAM_CLOCK`, `VRAM_TEMP`, `TEMP`, `JUNCTION_TEMP`, `CORE_CLOCK`, `VOLTAGE`, `POWER`, `POWER_LIMIT`, `FAN_SPEED` |
-| `CPU` | `LOAD`, `FREQ`, `TEMP`, `POWER` |
-| `RAM` | `USED`, `TOTAL`, `SWAP_USED` |
-| Current client | `ENGINE_NAME`, `FPS`, `FRAMETIME`, `FRAMETIMES` |
+| `[GPU, index, KEY]` | `LOAD`, `VRAM_USED`, `GTT_USED`, `VRAM_TOTAL`, `VRAM_CLOCK`, `VRAM_TEMP`, `TEMP`, `JUNCTION_TEMP`, `CORE_CLOCK`, `VOLTAGE`, `POWER`, `POWER_LIMIT`, `FAN_SPEED` |
+| `[CPU, KEY]` | `LOAD`, `FREQ`, `TEMP`, `POWER` |
+| `[RAM, KEY]` | `USED`, `TOTAL`, `SWAP_USED` |
+| `KEY` | `ENGINE_NAME`, `FPS`, `FRAMETIME`, `FRAMETIMES` |
 
 ## Example
 
