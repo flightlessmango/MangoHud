@@ -1692,70 +1692,66 @@ static VkResult overlay_QueuePresentKHR(
 
    struct queue_data *queue_data = FIND(struct queue_data, queue);
 
-   /* Otherwise we need to add our overlay drawing semaphore to the list of
-    * semaphores to wait on. If we don't do that the presented picture might
-    * be have incomplete overlay drawings.
-    */
-   VkResult result = VK_SUCCESS;
-   for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {
-      VkSwapchainKHR swapchain = pPresentInfo->pSwapchains[i];
+   VkPresentInfoKHR present_info = *pPresentInfo;
+   VkBaseInStructure **mode_info_node = vk_find_next_struct(
+       (void**)&present_info.pNext, VK_STRUCTURE_TYPE_SWAPCHAIN_PRESENT_MODE_INFO_EXT);
+   VkSwapchainPresentModeInfoEXT mode_info_patched;
+   std::vector<VkPresentModeKHR> present_mode_overrides;
+
+   if (mode_info_node) {
+      const auto *mode_info = (const VkSwapchainPresentModeInfoEXT *)*mode_info_node;
+      HUDElements.cur_present_mode = mode_info->pPresentModes[0];
+
+      // Check if there is a user-specified present mode override.
+      if (get_params()->m_vulkan_present_mode.has_value()) {
+         present_mode_overrides.assign(mode_info->swapchainCount,
+                                       get_params()->m_vulkan_present_mode.value());
+
+         // Patch `mode_info` so that the user-specified override is not
+         // clobbered by the application from swapchain maintenance.
+         mode_info_patched = *mode_info;
+         mode_info_patched.pPresentModes = present_mode_overrides.data();
+         *mode_info_node = (VkBaseInStructure *)&mode_info_patched;
+
+         HUDElements.cur_present_mode = get_params()->m_vulkan_present_mode.value();
+      }
+   }
+
+   if (pPresentInfo->swapchainCount > 0) {
+      VkSwapchainKHR swapchain = pPresentInfo->pSwapchains[0];
       struct swapchain_data *swapchain_data =
          FIND(struct swapchain_data, swapchain);
 
-      uint32_t image_index = pPresentInfo->pImageIndices[i];
-
-      VkPresentInfoKHR present_info = *pPresentInfo;
-      present_info.swapchainCount = 1;
-      present_info.pSwapchains = &swapchain;
-      present_info.pImageIndices = &image_index;
-
-      VkBaseInStructure **mode_info_node = vk_find_next_struct(
-          (void**)&present_info.pNext, VK_STRUCTURE_TYPE_SWAPCHAIN_PRESENT_MODE_INFO_EXT);
-
-      VkSwapchainPresentModeInfoEXT mode_info_patched;
-      VkPresentModeKHR present_mode_override;
-
-      if (mode_info_node) {
-         const auto *mode_info = (const VkSwapchainPresentModeInfoEXT *)*mode_info_node;
-         HUDElements.cur_present_mode = mode_info->pPresentModes[i];
-
-         // Check if there is a user-specified present mode override.
-         if (get_params()->m_vulkan_present_mode.has_value()) {
-            present_mode_override = get_params()->m_vulkan_present_mode.value();
-
-            // Patch `mode_info` so that the user-specified override is not
-            // clobbered by the application from swapchain maintenance.
-            mode_info_patched = *mode_info;
-            mode_info_patched.swapchainCount = 1;
-            mode_info_patched.pPresentModes = &present_mode_override;
-            *mode_info_node = (VkBaseInStructure *)&mode_info_patched;
-
-            HUDElements.cur_present_mode = present_mode_override;
-        }
+      if (pPresentInfo->swapchainCount > 1) {
+         SPDLOG_DEBUG("QueuePresentKHR has {} swapchains; drawing overlay on index 0 and forwarding all swapchains",
+                      pPresentInfo->swapchainCount);
+         SPDLOG_DEBUG("QueuePresentKHR selected swapchain[0]=0x{:x} image={} size={}x{}",
+                      HKEY(swapchain), pPresentInfo->pImageIndices[0],
+                      swapchain_data->width, swapchain_data->height);
+         for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {
+            SPDLOG_DEBUG("QueuePresentKHR presented swapchain[{}]=0x{:x} image={}",
+                         i, HKEY(pPresentInfo->pSwapchains[i]), pPresentInfo->pImageIndices[i]);
+         }
       }
 
       struct overlay_draw *draw = before_present(swapchain_data,
-                                                   queue_data,
-                                                   pPresentInfo->pWaitSemaphores,
-                                                   i == 0 ? pPresentInfo->waitSemaphoreCount : 0,
-                                                   image_index);
+                                                 queue_data,
+                                                 pPresentInfo->pWaitSemaphores,
+                                                 pPresentInfo->waitSemaphoreCount,
+                                                 pPresentInfo->pImageIndices[0]);
 
       /* Because the submission of the overlay draw waits on the semaphores
-         * handed for present, we don't need to have this present operation
-         * wait on them as well, we can just wait on the overlay submission
-         * semaphore.
-         */
+       * handed for present, we don't need to have this present operation
+       * wait on them as well, we can just wait on the overlay submission
+       * semaphore.
+       */
       if (draw) {
          present_info.pWaitSemaphores = &draw->semaphore;
          present_info.waitSemaphoreCount = 1;
       }
-
-      VkResult chain_result = queue_data->device->vtable.QueuePresentKHR(queue, &present_info);
-      if (pPresentInfo->pResults)
-         pPresentInfo->pResults[i] = chain_result;
-      if (chain_result != VK_SUCCESS && result == VK_SUCCESS)
-         result = chain_result;
    }
+
+   VkResult result = queue_data->device->vtable.QueuePresentKHR(queue, &present_info);
 
    if (fps_limiter)
       fps_limiter->limit(false);
