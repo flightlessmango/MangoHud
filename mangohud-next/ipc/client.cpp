@@ -609,6 +609,12 @@ void Client::stop_and_join() {
     if (run_t.joinable()) {
         run_t.join();
     }
+
+    std::queue<std::packaged_task<void()>> drain;
+    {
+        std::lock_guard<std::mutex> lock(work_mtx);
+        work_q.swap(drain);
+    }
 }
 
 int Client::spdlog_msg(sd_bus_message* m, void* userdata, sd_bus_error*) {
