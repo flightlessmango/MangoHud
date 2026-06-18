@@ -196,7 +196,6 @@ int Client::on_bus_disconnected(sd_bus_message *m, void *userdata, sd_bus_error 
 
 void Client::dbus_thread() {
     pthread_setname_np(pthread_self(), ("c_dbus " + std::to_string(pid)).substr(0, 15).c_str());
-    send_config();
 
     int r = sd_event_loop(event);
     if (r < 0 && !stop.load())
@@ -260,6 +259,8 @@ int Client::on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_erro
     }
     self->pEngineName = engine;
     self->resources->api = static_cast<Backend>(raw_api);
+
+    self->send_config();
 
     return 0;
 }
@@ -419,6 +420,7 @@ void Client::send_config() {
             SPDLOG_DEBUG("failed to send message {}", r);
             return r;
         }
+        sd_bus_flush(self->bus);
         return 0;
     });
 }
