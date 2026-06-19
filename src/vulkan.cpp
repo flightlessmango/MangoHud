@@ -1702,8 +1702,12 @@ static VkResult overlay_QueuePresentKHR(
       const auto *mode_info = (const VkSwapchainPresentModeInfoEXT *)*mode_info_node;
       HUDElements.cur_present_mode = mode_info->pPresentModes[0];
 
+      const char *disable_present_mode_patching =
+         getenv("MANGOHUD_DISABLE_PRESENT_MODE_PATCHING");
+
       // Check if there is a user-specified present mode override.
-      if (get_params()->m_vulkan_present_mode.has_value()) {
+      if ((!disable_present_mode_patching || disable_present_mode_patching[0] != '1') &&
+          get_params()->m_vulkan_present_mode.has_value()) {
          present_mode_overrides.assign(mode_info->swapchainCount,
                                        get_params()->m_vulkan_present_mode.value());
 
