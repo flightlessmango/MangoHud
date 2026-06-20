@@ -1695,30 +1695,10 @@ static VkResult overlay_QueuePresentKHR(
    VkPresentInfoKHR present_info = *pPresentInfo;
    VkBaseInStructure **mode_info_node = vk_find_next_struct(
        (void**)&present_info.pNext, VK_STRUCTURE_TYPE_SWAPCHAIN_PRESENT_MODE_INFO_EXT);
-   VkSwapchainPresentModeInfoEXT mode_info_patched;
-   std::vector<VkPresentModeKHR> present_mode_overrides;
 
    if (mode_info_node) {
       const auto *mode_info = (const VkSwapchainPresentModeInfoEXT *)*mode_info_node;
       HUDElements.cur_present_mode = mode_info->pPresentModes[0];
-
-      const char *disable_present_mode_patching =
-         getenv("MANGOHUD_DISABLE_PRESENT_MODE_PATCHING");
-
-      // Check if there is a user-specified present mode override.
-      if ((!disable_present_mode_patching || disable_present_mode_patching[0] != '1') &&
-          get_params()->m_vulkan_present_mode.has_value()) {
-         present_mode_overrides.assign(mode_info->swapchainCount,
-                                       get_params()->m_vulkan_present_mode.value());
-
-         // Patch `mode_info` so that the user-specified override is not
-         // clobbered by the application from swapchain maintenance.
-         mode_info_patched = *mode_info;
-         mode_info_patched.pPresentModes = present_mode_overrides.data();
-         *mode_info_node = (VkBaseInStructure *)&mode_info_patched;
-
-         HUDElements.cur_present_mode = get_params()->m_vulkan_present_mode.value();
-      }
    }
 
    if (pPresentInfo->swapchainCount > 0) {
