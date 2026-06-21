@@ -7,6 +7,7 @@
 #include "amdgpu/amdgpu.hpp"
 #include "nvidia/nvidia.hpp"
 #include "panfrost.hpp"
+#include "panthor.hpp"
 #include "msm/dpu.hpp"
 #include "msm/kgsl.hpp"
 #include "../common/helpers.hpp"
@@ -94,6 +95,8 @@ GPUS::GPUS() {
             }
         } else if (driver == "panfrost") {
             gpu = std::make_shared<Panfrost>(drm_node, pci_dev, vendor_id, device_id);
+        } else if (driver == "panthor") {
+            gpu = std::make_shared<Panthor>(drm_node, pci_dev, vendor_id, device_id);
         } else if (driver == "msm_dpu") {
             gpu = std::make_shared<MSM_DPU>(drm_node, pci_dev, vendor_id, device_id);
         } else if (driver == "msm_drm") {
