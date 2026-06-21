@@ -1,6 +1,3 @@
-libdrm_dep = dependency('libdrm')
-libcap_dep = dependency('libcap')
-
 gpu_lib = static_library(
     'gpu',
     files('gpu.cpp',
