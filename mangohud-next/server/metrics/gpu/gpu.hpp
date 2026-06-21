@@ -20,6 +20,12 @@
 using namespace std::chrono_literals;
 namespace fs = std::filesystem;
 
+#ifdef MANGOHUD_LEGACY
+// MangoHud legacy also has class named GPU, and linker resolves legacy's GPU destructor call
+// to next's GPU destructor which leads to SEGFAULT
+#define GPU NextGPU
+#endif
+
 class GPU {
 public:
     const std::string drm_node;

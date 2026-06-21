@@ -13,9 +13,7 @@
 #include <thread>
 #include "gpu_metrics_util.h"
 
-#ifndef TEST_ONLY
-#include "gpu_fdinfo.h"
-#endif
+#include "../mangohud-next/legacy_gpu_wrapper/wrapper.hpp"
 
 #define NUM_HBM_INSTANCES 4
 #define TEMP_HOTSPOT_BIT 36ull
@@ -479,7 +477,7 @@ class AMDGPU {
 		bool is_apu = false;
 		std::shared_ptr<Throttling> throttling;
 
-    	AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id);
+    	AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id, std::string drm_node);
 
 		~AMDGPU() {
 			stop_thread = true;
@@ -520,14 +518,12 @@ class AMDGPU {
         std::atomic<bool> paused{false};
 		std::mutex metrics_mutex;
 		gpu_metrics metrics;
+		pid_t pid = getpid();
+		LegacyFDInfoWrapper fdinfo;
 		struct amdgpu_common_metrics amdgpu_common_metrics;
 		struct gpu_metrics_v3_0 previous_metrics{};
 		#define V3_THROTTLING_DELTA(name) \
 		((amdgpu_metrics)->throttle_residency_##name - (previous_metrics).throttle_residency_##name)
-
-#ifndef TEST_ONLY
-		std::unique_ptr<GPU_fdinfo> fdinfo_helper;
-#endif
 
 		void get_sysfs_metrics();
 		void metrics_polling_thread();

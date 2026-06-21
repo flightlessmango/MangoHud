@@ -310,6 +310,10 @@ if get_option('mangoapp')
   glfw3_dep = dependency('glfw3')
 endif
 
+libdrm_dep = dependency('libdrm')
+libcap_dep = dependency('libcap')
+
+subdir('mangohud-next/legacy_gpu_wrapper')
 subdir('src')
 
 if get_option('include_doc')
