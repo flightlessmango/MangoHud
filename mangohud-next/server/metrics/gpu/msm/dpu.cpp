@@ -38,3 +38,7 @@ int MSM_DPU::get_process_load(pid_t pid) {
 
     return static_cast<int>(::lroundf(result));
 }
+
+float MSM_DPU::get_process_vram_used(pid_t pid) {
+    return fdinfo.get_memory_used(pid, "drm-resident-memory");
+}

@@ -28,4 +28,5 @@ public:
 
     // Process-related functions
     int     get_process_load(pid_t pid)         override;
+    float   get_process_vram_used(pid_t pid)    override;
 };
