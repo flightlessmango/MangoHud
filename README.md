@@ -644,8 +644,8 @@ Example output:
 		<td>Total VRAM</td>
 		<td>🟢</td>
 		<td>🟢</td>
-		<td>🔴</td>
-		<td>🔴</td>
+		<td>🟢</td>
+		<td>🟢</td>
 		<td>🔴</td>
 		<td>🔴</td>
 		<td>🔴</td>
