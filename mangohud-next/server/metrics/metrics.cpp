@@ -139,6 +139,7 @@ void Metrics::populate_tables() {
 void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
     render_table->rows.clear();
     render_table->cols = t->cols;
+    render_table->font_size = t->font_size;
     render_table->rows.reserve(t->rows.size());
     for (auto& row : t->rows) {
         std::vector<MaybeCell> parsed_row;
@@ -156,6 +157,7 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
                 auto& tc = std::get<TextCell>(c);
                 out.vec = color.get(tc.color);
                 out.text = tc.text;
+                out.style = tc.style;
 
                 parsed_row.push_back(std::move(out));
                 continue;
@@ -164,6 +166,7 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
             if (std::holds_alternative<ValueCell>(c)) {
                 auto& vc = std::get<ValueCell>(c);
                 out.vec = color.get(vc.color);
+                out.style = vc.style;
                 float value = 0;
                 int i_value = 0;
                 Metric metric = get(vc.ref.a.c_str(), vc.ref.b.c_str(), pid);
@@ -203,6 +206,7 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
             if (std::holds_alternative<GraphCell>(c)) {
                 auto& gc = std::get<GraphCell>(c);
                 std::vector<float> data;
+                out.style = gc.style;
                 Metric metric = get(gc.ref.a.c_str(), gc.ref.b.c_str(), pid);
                 if (metric.val && std::holds_alternative<std::vector<float>>(*metric.val))
                     out.data = std::get<std::vector<float>>(*metric.val);
@@ -220,6 +224,7 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
                 out.vec = color.get(ec.color);
                 out.text = std::move(text);
                 out.unit = ec.unit;
+                out.style = ec.style;
 
                 parsed_row.push_back(std::move(out));
                 continue;

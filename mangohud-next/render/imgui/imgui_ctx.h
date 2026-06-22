@@ -16,8 +16,8 @@ class ImGuiVK;
 class ImGuiEGL;
 
 struct HudLayout {
-    float value_field_w = 0.0f;
     int cols = 0;
+    std::vector<float> max_value_w;
     std::vector<float> max_unit_w;
     std::vector<float> col_content_w;
 
@@ -55,8 +55,8 @@ private:
     static uint32_t calculate_width(const HudLayout& L);
     static void right_aligned(const ImVec4& col, float off_x, const char *fmt, ...);
     static void RenderOutlinedText(ImVec4 textColor, const char* text);
-    static void draw_value_with_unit(int col_index, const TextCell& tc, const ImVec4& unit_col, const HudLayout& L, Font* fonts);
+    static void draw_value_with_unit(int col_index, const TextCell& tc, const ImVec4& unit_col, const HudLayout& L, Font* fonts, const hudTable& table, float row_h);
     static void draw_graph_plot(const TextCell& tc);
-    static void draw_graph_header(const TextCell& tc, Font* fonts);
+    static void draw_graph_header(const TextCell& tc, Font* fonts, const hudTable& table);
     static HudLayout build_layout(hudTable* table, Font* fonts);
 };

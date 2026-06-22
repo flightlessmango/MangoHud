@@ -69,43 +69,106 @@ static inline double TransformInverse_Custom(double v, void*) {
    return v;
 }
 
+static float text_font_size(const hudTable& table, const TextCell& tc) {
+    if (tc.style.font_size > 0.0f)
+        return tc.style.font_size;
+
+    return table.font_size * tc.style.font_scale;
+}
+
+static float unit_font_size(const hudTable& table, const TextCell& tc) {
+    return text_font_size(table, tc) / 2.0f;
+}
+
+static void prepare_table_fonts(const hudTable& table, Font* fonts) {
+    fonts->get(table.font_size);
+    fonts->get(table.font_size / 2.0f);
+
+    for (const auto& row : table.rows) {
+        for (const auto& opt : row) {
+            if (!opt)
+                continue;
+
+            const auto* tc = std::get_if<TextCell>(&*opt);
+            if (!tc)
+                continue;
+
+            fonts->get(text_font_size(table, *tc));
+            fonts->get(unit_font_size(table, *tc));
+        }
+    }
+}
+
+static ImVec2 text_size(const hudTable& table, const TextCell& tc, Font* fonts) {
+    ImGui::PushFont(fonts->get(text_font_size(table, tc)));
+    ImVec2 size = ImGui::CalcTextSize(tc.text.c_str());
+    ImGui::PopFont();
+    return size;
+}
+
+static ImVec2 unit_size(const hudTable& table, const TextCell& tc, Font* fonts) {
+    if (tc.unit.empty())
+        return ImVec2(0.0f, 0.0f);
+
+    const float size = tc.unit == "%" ? text_font_size(table, tc) : unit_font_size(table, tc);
+    ImGui::PushFont(fonts->get(size));
+    ImVec2 unit = ImGui::CalcTextSize(tc.unit.c_str());
+    ImGui::PopFont();
+    return unit;
+}
+
+static float cell_height(const hudTable& table, const TextCell& tc, Font* fonts) {
+    const ImVec2 value_sz = text_size(table, tc, fonts);
+    const ImVec2 unit_sz = unit_size(table, tc, fonts);
+    return std::max(value_sz.y, unit_sz.y);
+}
+
+static float row_height(const hudTable& table, const std::vector<MaybeCell>& row, Font* fonts) {
+    float height = 0.0f;
+
+    for (const auto& opt : row) {
+        if (!opt)
+            continue;
+
+        const auto* tc = std::get_if<TextCell>(&*opt);
+        if (!tc || !tc->data.empty())
+            continue;
+
+        height = std::max(height, cell_height(table, *tc, fonts));
+    }
+
+    return height;
+}
+
 void ImGuiCtx::draw_value_with_unit(int col_index,
                                    const TextCell& tc,
                                    const ImVec4& unit_col,
                                    const HudLayout& L,
-                                   Font* fonts) {
+                                   Font* fonts,
+                                   const hudTable& table,
+                                   float row_h) {
     const ImVec2 base = ImGui::GetCursorPos();
-
-    auto unit_size = [&](const std::string& u) -> ImVec2 {
-        if (u.empty()) {
-            return ImVec2(0.0f, 0.0f);
-        }
-        if (u == "%") {
-            ImGui::PushFont(fonts->text_font);
-            ImVec2 s = ImGui::CalcTextSize(u.c_str());
-            ImGui::PopFont();
-            return s;
-        }
-        ImGui::PushFont(fonts->small_font);
-        ImVec2 s = ImGui::CalcTextSize(u.c_str());
-        ImGui::PopFont();
-        return s;
-    };
-
-    const ImVec2 value_sz = ImGui::CalcTextSize(tc.text.c_str());
-    const ImVec2 u_sz = unit_size(tc.unit);
-    const float row_h = std::max(value_sz.y, u_sz.y);
+    const float text_font_sz = text_font_size(table, tc);
+    const ImVec2 value_sz = text_size(table, tc, fonts);
+    const ImVec2 u_sz = unit_size(table, tc, fonts);
+    const float text_y = base.y + row_h - value_sz.y;
+    const float unit_y = base.y + row_h - u_sz.y;
 
     if (col_index == 0) {
+        ImGui::SetCursorPos(ImVec2(base.x, text_y));
+        ImGui::PushFont(fonts->get(text_font_sz));
         RenderOutlinedText(tc.vec, tc.text.c_str());
+        ImGui::PopFont();
         if (!tc.unit.empty()) {
-            ImGui::SetCursorPos(ImVec2(base.x + value_sz.x, base.y));
+            ImGui::SetCursorPos(ImVec2(base.x + value_sz.x, unit_y));
             ImGui::SameLine(0.0f, unit_gap);
 
             if (tc.unit == "%") {
+                ImGui::PushFont(fonts->get(text_font_sz));
                 RenderOutlinedText(unit_col, tc.unit.c_str());
+                ImGui::PopFont();
             } else {
-                ImGui::PushFont(fonts->small_font);
+                ImGui::PushFont(fonts->get(unit_font_size(table, tc)));
                 RenderOutlinedText(unit_col, tc.unit.c_str());
                 ImGui::PopFont();
             }
@@ -124,17 +187,22 @@ void ImGuiCtx::draw_value_with_unit(int col_index,
 
     const float unit_start_x = cell_left + (cell_w - right_pad - L.max_unit_w[col_index]);
     const float value_right_x = unit_start_x - unit_gap;
-    const float value_left_x = value_right_x - L.value_field_w;
+    const float value_w = L.max_value_w[col_index];
+    const float value_left_x = value_right_x - value_w;
 
-    ImGui::SetCursorPos(ImVec2(value_left_x, base.y));
-    right_aligned(tc.vec, L.value_field_w, "%s", tc.text.c_str());
+    ImGui::SetCursorPos(ImVec2(value_left_x, text_y));
+    ImGui::PushFont(fonts->get(text_font_sz));
+    right_aligned(tc.vec, value_w, "%s", tc.text.c_str());
+    ImGui::PopFont();
 
     if (!tc.unit.empty()) {
-        ImGui::SetCursorPos(ImVec2(unit_start_x, base.y));
+        ImGui::SetCursorPos(ImVec2(unit_start_x, unit_y));
         if (tc.unit == "%") {
+            ImGui::PushFont(fonts->get(text_font_sz));
             RenderOutlinedText(unit_col, tc.unit.c_str());
+            ImGui::PopFont();
         } else {
-            ImGui::PushFont(fonts->small_font);
+            ImGui::PushFont(fonts->get(unit_font_size(table, tc)));
             RenderOutlinedText(unit_col, tc.unit.c_str());
             ImGui::PopFont();
         }
@@ -143,9 +211,9 @@ void ImGuiCtx::draw_value_with_unit(int col_index,
     ImGui::SetCursorPos(ImVec2(base.x, base.y + row_h));
 }
 
-void ImGuiCtx::draw_graph_header(const TextCell& tc, Font* fonts) {
+void ImGuiCtx::draw_graph_header(const TextCell& tc, Font* fonts, const hudTable& table) {
     ImGui::TableSetColumnIndex(0);
-    ImGui::PushFont(fonts->small_font);
+    ImGui::PushFont(fonts->get(unit_font_size(table, tc)));
     RenderOutlinedText(colors.get("eb5b5b"), "frametime");
 
     ImGui::TableSetColumnIndex(ImGui::TableGetColumnCount() - 1);
@@ -186,12 +254,9 @@ HudLayout ImGuiCtx::build_layout(hudTable* table, Font* fonts) {
     HudLayout L{};
     L.cols = table->cols;
 
+    L.max_value_w.assign(L.cols, 0.0f);
     L.max_unit_w.assign(L.cols, 0.0f);
     L.col_content_w.assign(L.cols, 0.0f);
-
-    ImGui::PushFont(fonts->text_font);
-    L.value_field_w = ImGui::CalcTextSize("00000").x;
-    ImGui::PopFont();
 
     float max_col0_w = 0.0f;
 
@@ -200,8 +265,9 @@ HudLayout ImGuiCtx::build_layout(hudTable* table, Font* fonts) {
             const Cell& v0 = *row[0];
             if (const auto* tc0 = std::get_if<TextCell>(&v0)) {
                 float w = 0.0f;
+                const float text_size = text_font_size(*table, *tc0);
 
-                ImGui::PushFont(fonts->text_font);
+                ImGui::PushFont(fonts->get(text_size));
                 w += ImGui::CalcTextSize(tc0->text.c_str()).x;
                 ImGui::PopFont();
 
@@ -209,11 +275,11 @@ HudLayout ImGuiCtx::build_layout(hudTable* table, Font* fonts) {
                     w += unit_gap;
 
                     if (tc0->unit == "%") {
-                        ImGui::PushFont(fonts->text_font);
+                        ImGui::PushFont(fonts->get(text_size));
                         w += ImGui::CalcTextSize(tc0->unit.c_str()).x;
                         ImGui::PopFont();
                     } else {
-                        ImGui::PushFont(fonts->small_font);
+                        ImGui::PushFont(fonts->get(unit_font_size(*table, *tc0)));
                         w += ImGui::CalcTextSize(tc0->unit.c_str()).x;
                         ImGui::PopFont();
                     }
@@ -232,16 +298,23 @@ HudLayout ImGuiCtx::build_layout(hudTable* table, Font* fonts) {
 
             const Cell& v = *opt;
             const auto* tc = std::get_if<TextCell>(&v);
-            if (!tc || tc->unit.empty())
+            if (!tc)
+                continue;
+
+            const ImVec2 value_sz = text_size(*table, *tc, fonts);
+            if (value_sz.x > L.max_value_w[c])
+                L.max_value_w[c] = value_sz.x;
+
+            if (tc->unit.empty())
                 continue;
 
             float uw = 0.0f;
             if (tc->unit == "%") {
-                ImGui::PushFont(fonts->text_font);
+                ImGui::PushFont(fonts->get(text_font_size(*table, *tc)));
                 uw = ImGui::CalcTextSize(tc->unit.c_str()).x;
                 ImGui::PopFont();
             } else {
-                ImGui::PushFont(fonts->small_font);
+                ImGui::PushFont(fonts->get(unit_font_size(*table, *tc)));
                 uw = ImGui::CalcTextSize(tc->unit.c_str()).x;
                 ImGui::PopFont();
             }
@@ -256,7 +329,7 @@ HudLayout ImGuiCtx::build_layout(hudTable* table, Font* fonts) {
             L.col_content_w[c] = max_col0_w;
         } else {
             const bool has_units = (L.max_unit_w[c] > 0.0f);
-            L.col_content_w[c] = L.value_field_w + (has_units ? (unit_gap + L.max_unit_w[c]) : 0.0f);
+            L.col_content_w[c] = L.max_value_w[c] + (has_units ? (unit_gap + L.max_unit_w[c]) : 0.0f);
         }
     }
 
@@ -264,12 +337,14 @@ HudLayout ImGuiCtx::build_layout(hudTable* table, Font* fonts) {
 }
 
 bool ImGuiCtx::draw(clientRes* r, slot_t* buf, Backend backend) {
-    std::lock_guard lock(m);
+    std::unique_lock<std::mutex> imgui_lock(m);
+    std::unique_lock<std::mutex> vk_lock;
     ImGuiContext* imgui = nullptr;
     ImPlotContext* implot = nullptr;
     Font* fonts = nullptr;
     if (backend == Backend::VULKAN) {
         if (!vk) SPDLOG_ERROR("vulkan backend is not initalized");
+        vk_lock = std::unique_lock<std::mutex>(vk->mutex());
         imgui = vk->imgui;
         implot = vk->implot;
         fonts = vk->fonts.get();
@@ -287,6 +362,7 @@ bool ImGuiCtx::draw(clientRes* r, slot_t* buf, Backend backend) {
     }
     ImGui::SetCurrentContext(imgui);
     ImPlot::SetCurrentContext(implot);
+    prepare_table_fonts(local_table, fonts);
 
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = {float(r->w), float(r->h)};
@@ -304,7 +380,7 @@ bool ImGuiCtx::draw(clientRes* r, slot_t* buf, Backend backend) {
 
     ImVec4 white = ImVec4(1, 1, 1, 1);
 
-    ImGui::PushFont(fonts->text_font);
+    ImGui::PushFont(fonts->get(local_table.font_size));
     ralign_width = ImGui::CalcTextSize("00000").x;
     ImGui::PopFont();
 
@@ -313,10 +389,12 @@ bool ImGuiCtx::draw(clientRes* r, slot_t* buf, Backend backend) {
     HudLayout layout = build_layout(&local_table, fonts);
 
     const int cols = local_table.cols;
-    if (cols > 0 && ImGui::BeginTable("overlay", cols, ImGuiTableFlags_NoClip)) {
-        ImGui::PushFont(fonts->text_font);
+    if (cols > 0 && ImGui::BeginTable("overlay", cols, ImGuiTableFlags_NoClip | ImGuiTableFlags_SizingFixedFit)) {
+        for (int c = 0; c < cols; c++)
+            ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed, layout.col_content_w[c]);
 
         for (auto& row : local_table.rows) {
+            const float row_h = row_height(local_table, row, fonts);
             ImGui::TableNextRow();
             for (int c = 0; c < cols; c++) {
                 ImGui::TableSetColumnIndex(c);
@@ -338,18 +416,17 @@ bool ImGuiCtx::draw(clientRes* r, slot_t* buf, Backend backend) {
                 if (!tc->data.empty()) {
                     ImGui::Dummy({0, style.ItemSpacing.y});
                     ImGui::TableNextRow();
-                    draw_graph_header(*tc, fonts);
+                    draw_graph_header(*tc, fonts, local_table);
 
                     ImGui::TableNextRow();
                     draw_graph_plot(*tc);
                     continue;
                 }
 
-                draw_value_with_unit(c, *tc, white, layout, fonts);
+                draw_value_with_unit(c, *tc, white, layout, fonts, local_table, row_h);
             }
         }
 
-        ImGui::PopFont();
         ImGui::EndTable();
     }
 

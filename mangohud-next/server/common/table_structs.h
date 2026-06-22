@@ -20,12 +20,18 @@ struct MetricRef {
     std::string b;
 };
 
+struct CellStyle {
+    float font_size = 0.0f;
+    float font_scale = 1.0f;
+};
+
 struct TextCell {
     std::string text;
     std::string color;
     ImVec4 vec;
     std::string unit;
     std::vector<float> data;
+    CellStyle style;
 };
 
 struct ValueCell {
@@ -33,6 +39,7 @@ struct ValueCell {
     std::string unit;
     std::string color;
     int precision = 0;
+    CellStyle style;
 };
 
 struct GraphCell {
@@ -43,12 +50,14 @@ struct GraphCell {
     int min = 0;
     int max = 0;
     uint32_t color;
+    CellStyle style;
 };
 
 struct ExecCell {
     std::string command;
     std::string unit;
     std::string color;
+    CellStyle style;
 };
 
 using Cell = std::variant<TextCell, ValueCell, GraphCell, ExecCell>;

@@ -55,7 +55,7 @@ public:
     void update(YAML::Node doc) {
         std::lock_guard lock(m);
         for (const auto& [key, spec] : possible_)
-            options_.emplace(std::string(key), spec.val);
+            options_[std::string(key)] = spec.val;
 
         load_yaml(doc);
         inited = true;

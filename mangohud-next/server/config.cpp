@@ -68,10 +68,23 @@ static MetricRef parse_value(const YAML::Node& v) {
     throw std::runtime_error("value must be scalar or sequence");
 }
 
+static CellStyle parse_cell_style(const YAML::Node& cell) {
+    CellStyle style;
+
+    if (cell["font_size"])
+        style.font_size = cell["font_size"].as<float>();
+
+    if (cell["font_scale"])
+        style.font_scale = cell["font_scale"].as<float>();
+
+    return style;
+}
+
 bool Config::parse_table_yaml(hudTable& table, YAML::Node doc) {
     std::lock_guard lock(m);
     YAML::Node rows = doc["hud_table"]["rows"];
     table.rows.clear();
+    table.font_size = get<int>("font_size");
     std::size_t cols = 0;
     for (auto row : rows) {
         cols = std::max(cols, row.size());
@@ -87,6 +100,7 @@ bool Config::parse_table_yaml(hudTable& table, YAML::Node doc) {
                 TextCell tc;
                 tc.text = cell["text"].as<std::string>();
                 tc.color = cell["color"] ? cell["color"].as<std::string>() : default_cell_color;
+                tc.style = parse_cell_style(cell);
 
                 parsed_row.push_back(Cell{tc});
                 continue;
@@ -99,6 +113,7 @@ bool Config::parse_table_yaml(hudTable& table, YAML::Node doc) {
                 vc.color = cell["color"] ? cell["color"].as<std::string>() : default_cell_color;
                 if (cell["precision"])
                     try_stoi(vc.precision, cell["precision"].as<std::string>());
+                vc.style = parse_cell_style(cell);
 
                 parsed_row.push_back(Cell{vc});
                 continue;
@@ -107,6 +122,7 @@ bool Config::parse_table_yaml(hudTable& table, YAML::Node doc) {
             if (cell["graph"]) {
                 GraphCell gc;
                 gc.ref = parse_value(cell["graph"]);
+                gc.style = parse_cell_style(cell);
                 parsed_row.push_back(Cell{gc});
                 continue;
             }
@@ -116,6 +132,7 @@ bool Config::parse_table_yaml(hudTable& table, YAML::Node doc) {
                 ec.command = cell["exec"].as<std::string>();
                 ec.unit = cell["unit"] ? cell["unit"].as<std::string>() : std::string();
                 ec.color = cell["color"] ? cell["color"].as<std::string>() : default_cell_color;
+                ec.style = parse_cell_style(cell);
 
                 parsed_row.push_back(Cell{ec});
                 continue;
@@ -149,9 +166,8 @@ void Config::parse_table(std::string file) {
     try {
         if (!std::filesystem::exists(file)) {
             SPDLOG_DEBUG("Config file doesn't exist, falling back to default");
-            load_default();
-
             update(YAML::Node());
+            load_default();
             return;
         }
 
