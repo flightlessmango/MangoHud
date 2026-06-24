@@ -100,6 +100,13 @@ class GPU {
                 return false;
         }
 
+        bool uses_integrated_memory() const {
+            if (fdinfo)
+                return fdinfo->uses_integrated_memory();
+            else
+                return false;
+        }
+
         std::shared_ptr<Throttling> throttling() {
             if (nvidia)
                 return nvidia->throttling;

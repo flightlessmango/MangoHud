@@ -66,6 +66,8 @@ private:
 
     std::vector<std::map<std::string, std::string>> fdinfo_data;
     void gather_fdinfo_data();
+    bool fdinfo_data_has_key(const std::string& key) const;
+    void update_intel_memory_type();
 
     void main_thread();
 
@@ -165,24 +167,7 @@ public:
             drm_memory_type = "drm-resident-memory";
         }
 
-        if (fdinfo_data.size() > 0 &&
-            fdinfo_data[0].find(drm_memory_type) == fdinfo_data[0].end())
-        {
-            auto old_type = drm_memory_type;
-
-            if (module == "i915") {
-                drm_memory_type = "drm-resident-system0";
-                intel_gpu_integrated = fdinfo_data[0].find(drm_memory_type) != fdinfo_data[0].end();
-            } else if (module == "xe") {
-                drm_memory_type = "drm-resident-gtt";
-                intel_gpu_integrated = fdinfo_data[0].find(drm_memory_type) != fdinfo_data[0].end();
-            }
-
-            SPDLOG_DEBUG(
-                "\"{}\" is not found, you probably have an integrated GPU. "
-                "Using \"{}\"", old_type, drm_memory_type
-            );
-        }
+        update_intel_memory_type();
 
         SPDLOG_DEBUG(
             "drm_engine_type = {}, drm_memory_type = {}",
@@ -257,4 +242,9 @@ public:
     }
 
     float amdgpu_helper_get_proc_vram();
+
+    bool uses_integrated_memory() const
+    {
+        return intel_gpu_integrated;
+    }
 };
