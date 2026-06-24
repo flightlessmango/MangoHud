@@ -1,4 +1,5 @@
 #include "gpu_fdinfo.h"
+#include "file_utils.h"
 
 #ifndef TEST_ONLY
 #include "hud_elements.h"
@@ -303,8 +304,102 @@ void GPU_fdinfo::get_current_hwmon_readings()
     }
 }
 
+bool GPU_fdinfo::has_hwmon_sensor(const std::string& key) const
+{
+    auto sensor = hwmon_sensors.find(key);
+    return sensor != hwmon_sensors.end() && !sensor->second.filename.empty();
+}
+
+void GPU_fdinfo::find_intel_gpu_rapl_power()
+{
+    std::string powercap = "/sys/class/powercap/";
+    auto powercap_dirs = ls(powercap.c_str());
+
+    for (auto& dir : powercap_dirs) {
+        auto path = powercap + dir;
+        auto name = read_line(path + "/name");
+
+        if (name != "uncore")
+            continue;
+
+        auto energy_path = path + "/energy_uj";
+        auto energy_stream = std::ifstream(energy_path);
+
+        if (!energy_stream.good()) {
+            SPDLOG_DEBUG(
+                "powercap: Intel GPU RAPL energy is not accessible at {}",
+                energy_path
+            );
+            continue;
+        }
+
+        intel_gpu_rapl_energy_stream = std::move(energy_stream);
+
+        try {
+            auto max_energy_range = read_line(path + "/max_energy_range_uj");
+            if (!max_energy_range.empty())
+                intel_gpu_rapl_max_energy_range_uj = std::stoull(max_energy_range);
+        } catch (...) {
+            intel_gpu_rapl_max_energy_range_uj = 0;
+        }
+
+        SPDLOG_DEBUG("powercap: using Intel GPU RAPL energy at {}", energy_path);
+        return;
+    }
+}
+
+bool GPU_fdinfo::read_intel_gpu_rapl_energy(uint64_t& energy_uj)
+{
+    if (!intel_gpu_rapl_energy_stream.is_open())
+        return false;
+
+    intel_gpu_rapl_energy_stream.clear();
+    intel_gpu_rapl_energy_stream.seekg(0);
+
+    std::string energy;
+    std::getline(intel_gpu_rapl_energy_stream, energy);
+
+    if (energy.empty())
+        return false;
+
+    try {
+        energy_uj = std::stoull(energy);
+    } catch (...) {
+        return false;
+    }
+
+    return true;
+}
+
+float GPU_fdinfo::get_intel_gpu_rapl_power_usage()
+{
+    uint64_t now = 0;
+    if (!read_intel_gpu_rapl_energy(now))
+        return 0.f;
+
+    if (!intel_gpu_rapl_energy_initialized) {
+        intel_gpu_rapl_last_energy_uj = now;
+        intel_gpu_rapl_energy_initialized = true;
+        return 0.f;
+    }
+
+    uint64_t delta = 0;
+    if (now >= intel_gpu_rapl_last_energy_uj) {
+        delta = now - intel_gpu_rapl_last_energy_uj;
+    } else if (intel_gpu_rapl_max_energy_range_uj > intel_gpu_rapl_last_energy_uj) {
+        delta = intel_gpu_rapl_max_energy_range_uj - intel_gpu_rapl_last_energy_uj + now;
+    }
+
+    intel_gpu_rapl_last_energy_uj = now;
+
+    return (static_cast<float>(delta) / (METRICS_UPDATE_PERIOD_MS / 1000.f)) / 1'000'000;
+}
+
 float GPU_fdinfo::get_power_usage()
 {
+    if (intel_gpu_rapl_energy_stream.is_open())
+        return get_intel_gpu_rapl_power_usage();
+
     if (!hwmon_sensors["power"].filename.empty())
         return static_cast<float>(hwmon_sensors["power"].val) / 1'000'000;
 
