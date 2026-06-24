@@ -10,14 +10,13 @@
 
 static constexpr const char* default_cell_color = "FFFFFFFF";
 
-static bool validate_yaml(const YAML::Node& doc) {
-    const auto hud = doc["hud_table"];
-    if (!hud) {
-        SPDLOG_DEBUG("hud_table missing");
+static bool validate_table(const YAML::Node& table) {
+    if (!table) {
+        SPDLOG_DEBUG("table missing");
         return false;
     }
 
-    const auto rows = hud["rows"];
+    const auto rows = table["rows"];
     if (!rows) {
         SPDLOG_ERROR("invalid config: rows missing");
         return false;
@@ -27,7 +26,7 @@ static bool validate_yaml(const YAML::Node& doc) {
         return false;
     }
 
-    const auto cols = hud["cols"];
+    const auto cols = table["cols"];
     if (cols && !cols.IsScalar()) {
         SPDLOG_ERROR("cols must be a scalar integer");
         return false;
@@ -44,10 +43,87 @@ static bool validate_yaml(const YAML::Node& doc) {
                 SPDLOG_ERROR("cell must be null or a map/object");
                 return false;
             }
+            if (cell["table"] && !validate_table(cell["table"]))
+                return false;
         }
     }
 
     return true;
+}
+
+static bool validate_yaml(const YAML::Node& doc) {
+    const auto hud = doc["hud"];
+    if (hud) {
+        const auto windows = hud["windows"];
+        if (!windows) {
+            SPDLOG_ERROR("invalid config: hud.windows missing");
+            return false;
+        }
+        if (!windows.IsSequence()) {
+            SPDLOG_ERROR("hud.windows is not a list");
+            return false;
+        }
+        if (windows.size() == 0) {
+            SPDLOG_ERROR("hud.windows must contain at least one window");
+            return false;
+        }
+
+        for (const auto& window : windows) {
+            if (!window.IsMap()) {
+                SPDLOG_ERROR("hud window is not a map/object");
+                return false;
+            }
+            const auto background = window["background"];
+            if (background && !background.IsScalar()) {
+                SPDLOG_ERROR("hud window background must be a boolean");
+                return false;
+            }
+            if (background) {
+                try {
+                    background.as<bool>();
+                } catch (const YAML::BadConversion&) {
+                    SPDLOG_ERROR("hud window background must be a boolean");
+                    return false;
+                }
+            }
+            const auto padding = window["padding"];
+            if (padding && !padding.IsScalar()) {
+                SPDLOG_ERROR("hud window padding must be a number");
+                return false;
+            }
+            if (padding) {
+                try {
+                    if (padding.as<float>() < 0.0f) {
+                        SPDLOG_ERROR("hud window padding cannot be negative");
+                        return false;
+                    }
+                } catch (const YAML::BadConversion&) {
+                    SPDLOG_ERROR("hud window padding must be a number");
+                    return false;
+                }
+            }
+            const auto position = window["position"];
+            if (position) {
+                if (!position.IsSequence() || position.size() != 2) {
+                    SPDLOG_ERROR("hud window position must be a two-item list");
+                    return false;
+                }
+                try {
+                    position[0].as<float>();
+                    position[1].as<float>();
+                } catch (const YAML::BadConversion&) {
+                    SPDLOG_ERROR("hud window position must contain numbers");
+                    return false;
+                }
+            }
+            if (!validate_table(window["table"]))
+                return false;
+        }
+
+        return true;
+    }
+
+    return validate_table(doc["hud_table"]);
 }
 
 static MetricRef parse_value(const YAML::Node& v) {
@@ -80,11 +156,10 @@ static CellStyle parse_cell_style(const YAML::Node& cell) {
     return style;
 }
 
-bool Config::parse_table_yaml(hudTable& table, YAML::Node doc) {
-    std::lock_guard lock(m);
-    YAML::Node rows = doc["hud_table"]["rows"];
+static bool parse_table_node(hudTable& table, YAML::Node table_node, int font_size) {
+    YAML::Node rows = table_node["rows"];
     table.rows.clear();
-    table.font_size = get<int>("font_size");
+    table.font_size = font_size;
     std::size_t cols = 0;
     for (auto row : rows) {
         cols = std::max(cols, row.size());
@@ -137,6 +212,14 @@ bool Config::parse_table_yaml(hudTable& table, YAML::Node doc) {
                 parsed_row.push_back(Cell{ec});
                 continue;
             }
+
+            if (cell["table"]) {
+                TableCell tc;
+                tc.table = std::make_shared<hudTable>();
+                parse_table_node(*tc.table, cell["table"], font_size);
+                parsed_row.push_back(Cell{tc});
+                continue;
+            }
         }
 
         table.rows.push_back(parsed_row);
@@ -146,11 +229,39 @@ bool Config::parse_table_yaml(hudTable& table, YAML::Node doc) {
     return true;
 }
 
+bool Config::parse_table_yaml(HudConfig& hud, YAML::Node doc) {
+    std::lock_guard lock(m);
+    hud.windows.clear();
+
+    const int font_size = get<int>("font_size");
+    const auto hud_node = doc["hud"];
+    if (hud_node) {
+        for (const auto& window_node : hud_node["windows"]) {
+            HudWindow window;
+            if (window_node["background"])
+                window.background = window_node["background"].as<bool>();
+            if (window_node["padding"])
+                window.padding = window_node["padding"].as<float>();
+            if (window_node["position"])
+                window.position = {window_node["position"][0].as<float>(), window_node["position"][1].as<float>()};
+            parse_table_node(window.table, window_node["table"], font_size);
+            hud.windows.push_back(std::move(window));
+        }
+        if (hud.windows.empty())
+            hud.windows.emplace_back();
+
+        return true;
+    }
+
+    hud.windows.emplace_back();
+    return parse_table_node(hud.default_window().table, doc["hud_table"], font_size);
+}
+
 void Config::parse_table(std::string file) {
     auto load_default = [&]() -> void {
         try {
             YAML::Node def = YAML::Load(std::string{HudYaml});
-            parse_table_yaml(*table, def);
+            parse_table_yaml(*hud, def);
         } catch (const YAML::Exception& e) {
             SPDLOG_ERROR("YAML error while loading default HUD config: {}", e.what());
             return;
@@ -181,7 +292,7 @@ void Config::parse_table(std::string file) {
             return;
         }
 
-        parse_table_yaml(*table, doc);
+        parse_table_yaml(*hud, doc);
         return;
 
     } catch (const YAML::BadFile& e) {

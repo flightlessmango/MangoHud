@@ -84,7 +84,6 @@ public:
     pid_t pid;
     std::mutex m;
     std::condition_variable cv;
-    std::shared_ptr<hudTable> table;
     std::deque<Sample> samples;
     std::mutex samples_m;
     std::deque<float> frametimes;

@@ -114,13 +114,13 @@ Metric Metrics::get(const char* a, const char* b, const pid_t pid = 0)
 }
 
 void Metrics::populate_tables() {
-    if (cfg->table) {
-        hudTable local;
+    if (cfg->hud) {
+        HudConfig local;
         {
             std::lock_guard lock(cfg->m);
-            local = *cfg->table;
+            local = *cfg->hud;
         }
-            std::unordered_map<pid_t, std::shared_ptr<clientRes>> client_res;
+        std::unordered_map<pid_t, std::shared_ptr<clientRes>> client_res;
         {
             std::lock_guard lock(ipc.clients_mtx);
             for (auto client : ipc.clients)
@@ -129,8 +129,17 @@ void Metrics::populate_tables() {
 
         {
             for (auto& [pid, r] : client_res) {
-                std::lock_guard lock(r->table_m);
-                assign_values(&local, pid, r->table.get());
+                std::lock_guard lock(r->hud_m);
+                r->hud->windows.clear();
+                r->hud->windows.reserve(local.windows.size());
+                for (auto& window : local.windows) {
+                    HudWindow out;
+                    out.background = window.background;
+                    out.padding = window.padding;
+                    out.position = window.position;
+                    assign_values(&window.table, pid, &out.table);
+                    r->hud->windows.push_back(std::move(out));
+                }
             }
         }
     }
@@ -227,6 +236,18 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
                 out.style = ec.style;
 
                 parsed_row.push_back(std::move(out));
+                continue;
+            }
+
+            if (std::holds_alternative<TableCell>(c)) {
+                auto& tc = std::get<TableCell>(c);
+                if (!tc.table)
+                    continue;
+
+                TableCell out_table;
+                out_table.table = std::make_shared<hudTable>();
+                assign_values(tc.table.get(), pid, out_table.table.get());
+                parsed_row.push_back(Cell{std::move(out_table)});
                 continue;
             }
 

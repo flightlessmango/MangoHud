@@ -187,11 +187,11 @@ struct clientRes {
     std::vector<slot_t> buffer;
     VkCommandPool   cmd_pool            = VK_NULL_HANDLE;
     std::mutex      m;
-    std::mutex      table_m;
+    std::mutex      hud_m;
     std::shared_ptr<GPU> server_gpu;
 
     std::string     client_id;
-    std::shared_ptr<hudTable> table     = nullptr;
+    std::shared_ptr<HudConfig> hud      = nullptr;
     uint32_t        w                   = 500;
     uint32_t        h                   = 500;
 
@@ -207,7 +207,7 @@ struct clientRes {
     std::shared_ptr<X11Session> x11;
 
     clientRes() {
-        table = std::make_shared<hudTable>();
+        hud = std::make_shared<HudConfig>();
     }
 
     bool is_vulkan() {

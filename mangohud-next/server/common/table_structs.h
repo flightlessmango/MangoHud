@@ -4,6 +4,7 @@
 #include <variant>
 #include <vector>
 #include <optional>
+#include <memory>
 #include "imgui.h"
 #include <deque>
 
@@ -60,11 +61,40 @@ struct ExecCell {
     CellStyle style;
 };
 
-using Cell = std::variant<TextCell, ValueCell, GraphCell, ExecCell>;
+struct hudTable;
+
+struct TableCell {
+    std::shared_ptr<hudTable> table;
+};
+
+using Cell = std::variant<TextCell, ValueCell, GraphCell, ExecCell, TableCell>;
 using MaybeCell = std::optional<Cell>;
 
 struct hudTable {
     int cols = 0;
     int font_size = 24;
     std::vector<std::vector<MaybeCell>> rows;
+};
+
+struct HudWindow {
+    bool background = true;
+    float padding = 8.0f;
+    ImVec2 position = {10.0f, 10.0f};
+    hudTable table;
+};
+
+struct HudConfig {
+    std::vector<HudWindow> windows;
+
+    HudConfig() {
+        windows.emplace_back();
+    }
+
+    HudWindow& default_window() {
+        return windows.front();
+    }
+
+    const HudWindow& default_window() const {
+        return windows.front();
+    }
 };

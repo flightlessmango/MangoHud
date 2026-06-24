@@ -518,7 +518,7 @@ void Client::run() {
         if (!renderer)
             renderer = std::make_unique<Renderer>(server, resources.get(), renderMinor, buffer_size);
 
-        if (!resources->table)
+        if (!resources->hud)
             return;
 
         if (resources->send_dmabuf)
