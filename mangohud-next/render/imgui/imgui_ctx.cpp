@@ -214,6 +214,22 @@ static float graph_height(const hudTable& table, const TextCell& tc, Font* fonts
 
 static HudLayout build_table_layout(hudTable* table, Font* fonts);
 
+static int cell_colspan(const Cell& cell) {
+    return std::visit([](const auto& c) {
+        return std::max(1, c.style.colspan);
+    }, cell);
+}
+
+static float spanned_width(const HudLayout& L, int start_col, int colspan) {
+    if (start_col < 0 || start_col >= L.cols)
+        return 0.0f;
+
+    const int end_col = std::min(L.cols - 1, start_col + std::max(1, colspan) - 1);
+    const HudBox& start = L.col_boxes[start_col];
+    const HudBox& end = L.col_boxes[end_col];
+    return std::max(0.0f, end.pos.x + end.size.x - start.pos.x);
+}
+
 static ImVec2 nested_table_size(hudTable& table, Font* fonts) {
     HudLayout layout = build_table_layout(&table, fonts);
     return {
@@ -371,7 +387,7 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
     for (const auto& row : table->rows) {
         for (int c = 0; c < (int)row.size(); c++) {
             if (row[c])
-                occupied_cols = std::max(occupied_cols, c + 1);
+                occupied_cols = std::max(occupied_cols, c + cell_colspan(*row[c]));
         }
     }
 
@@ -519,11 +535,12 @@ void ImGuiCtx::draw_table(hudTable& table, Font* fonts, const HudLayout& layout,
             if (c >= (int)row.size() || !row[c])
                 continue;
 
+            Cell& cell = *row[c];
+            const int colspan = cell_colspan(cell);
             const float cell_x = origin.x + layout.col_boxes[c].pos.x + hud_cell_padding_x;
-            const float cell_w = layout.col_boxes[c].size.x;
+            const float cell_w = spanned_width(layout, c, colspan);
             ImGui::SetCursorPos(ImVec2(cell_x, row_y));
 
-            Cell& cell = *row[c];
             if (auto* nested = std::get_if<TableCell>(&cell); nested && nested->table) {
                 HudLayout nested_layout = build_table_layout(nested->table.get(), fonts);
                 const float nested_y = row_y + hud_cell_padding_y;
@@ -553,7 +570,8 @@ void ImGuiCtx::draw_table(hudTable& table, Font* fonts, const HudLayout& layout,
                 ImGui::PopFont();
 
                 ImGui::SetCursorPos(ImVec2(origin.x + hud_cell_padding_x, row_y + header_h + hud_row_gap));
-                draw_graph_plot(*tc, std::max(0.0f, layout.content_size.x - hud_cell_padding_x * 2.0f));
+                const float full_width = std::max(0.0f, layout.content_size.x - hud_cell_padding_x * 2.0f);
+                draw_graph_plot(*tc, colspan > 1 ? cell_w : full_width);
                 continue;
             }
 

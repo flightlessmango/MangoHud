@@ -153,7 +153,15 @@ static CellStyle parse_cell_style(const YAML::Node& cell) {
     if (cell["font_scale"])
         style.font_scale = cell["font_scale"].as<float>();
 
+    if (cell["colspan"])
+        style.colspan = std::max(1, cell["colspan"].as<int>());
+
     return style;
+}
+
+static void append_colspan_placeholders(std::vector<MaybeCell>& row, const CellStyle& style) {
+    for (int i = 1; i < style.colspan; i++)
+        row.push_back(std::nullopt);
 }
 
 static bool parse_table_node(hudTable& table, YAML::Node table_node, int font_size) {
@@ -162,7 +170,6 @@ static bool parse_table_node(hudTable& table, YAML::Node table_node, int font_si
     table.font_size = font_size;
     std::size_t cols = 0;
     for (auto row : rows) {
-        cols = std::max(cols, row.size());
         std::vector<MaybeCell> parsed_row;
 
         for (auto cell : row) {
@@ -178,6 +185,7 @@ static bool parse_table_node(hudTable& table, YAML::Node table_node, int font_si
                 tc.style = parse_cell_style(cell);
 
                 parsed_row.push_back(Cell{tc});
+                append_colspan_placeholders(parsed_row, tc.style);
                 continue;
             };
 
@@ -191,6 +199,7 @@ static bool parse_table_node(hudTable& table, YAML::Node table_node, int font_si
                 vc.style = parse_cell_style(cell);
 
                 parsed_row.push_back(Cell{vc});
+                append_colspan_placeholders(parsed_row, vc.style);
                 continue;
             }
 
@@ -199,6 +208,7 @@ static bool parse_table_node(hudTable& table, YAML::Node table_node, int font_si
                 gc.ref = parse_value(cell["graph"]);
                 gc.style = parse_cell_style(cell);
                 parsed_row.push_back(Cell{gc});
+                append_colspan_placeholders(parsed_row, gc.style);
                 continue;
             }
 
@@ -210,18 +220,22 @@ static bool parse_table_node(hudTable& table, YAML::Node table_node, int font_si
                 ec.style = parse_cell_style(cell);
 
                 parsed_row.push_back(Cell{ec});
+                append_colspan_placeholders(parsed_row, ec.style);
                 continue;
             }
 
             if (cell["table"]) {
                 TableCell tc;
                 tc.table = std::make_shared<hudTable>();
+                tc.style = parse_cell_style(cell);
                 parse_table_node(*tc.table, cell["table"], font_size);
                 parsed_row.push_back(Cell{tc});
+                append_colspan_placeholders(parsed_row, tc.style);
                 continue;
             }
         }
 
+        cols = std::max(cols, parsed_row.size());
         table.rows.push_back(parsed_row);
     }
 

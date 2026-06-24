@@ -24,6 +24,7 @@ struct MetricRef {
 struct CellStyle {
     float font_size = 0.0f;
     float font_scale = 1.0f;
+    int colspan = 1;
 };
 
 struct TextCell {
@@ -65,6 +66,7 @@ struct hudTable;
 
 struct TableCell {
     std::shared_ptr<hudTable> table;
+    CellStyle style;
 };
 
 using Cell = std::variant<TextCell, ValueCell, GraphCell, ExecCell, TableCell>;

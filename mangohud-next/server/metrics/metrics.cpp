@@ -156,8 +156,7 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
         for (auto& cell : row) {
             TextCell out {};
             if (!cell.has_value()) {
-                out.text = " ";
-                parsed_row.push_back(out);
+                parsed_row.push_back(std::nullopt);
                 continue;
             }
 
@@ -246,6 +245,7 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
 
                 TableCell out_table;
                 out_table.table = std::make_shared<hudTable>();
+                out_table.style = tc.style;
                 assign_values(tc.table.get(), pid, out_table.table.get());
                 parsed_row.push_back(Cell{std::move(out_table)});
                 continue;
