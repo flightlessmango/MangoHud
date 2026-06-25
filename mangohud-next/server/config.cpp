@@ -9,6 +9,7 @@
 #include "string_utils.h"
 
 static constexpr const char* default_cell_color = "FFFFFFFF";
+static constexpr const char* default_progress_background_color = "303030FF";
 
 static bool validate_table(const YAML::Node& table) {
     if (!table) {
@@ -144,6 +145,21 @@ static MetricRef parse_value(const YAML::Node& v) {
     throw std::runtime_error("value must be scalar or sequence");
 }
 
+static ProgressBound parse_progress_bound(const YAML::Node& v, float fallback) {
+    if (!v)
+        return fallback;
+
+    if (v.IsScalar()) {
+        try {
+            return v.as<float>();
+        } catch (const YAML::BadConversion&) {
+            return parse_value(v);
+        }
+    }
+
+    return parse_value(v);
+}
+
 static CellStyle parse_cell_style(const YAML::Node& cell) {
     CellStyle style;
 
@@ -175,6 +191,24 @@ static bool parse_table_node(hudTable& table, YAML::Node table_node, int font_si
         for (auto cell : row) {
             if (cell.IsNull()) {
                 parsed_row.push_back(std::nullopt);
+                continue;
+            }
+
+            if (cell["progress"]) {
+                ProgressCell pc;
+                pc.ref = parse_value(cell["progress"]);
+                pc.min = parse_progress_bound(cell["min"], 0.0f);
+                pc.max = parse_progress_bound(cell["max"], 100.0f);
+                pc.unit = cell["unit"] ? cell["unit"].as<std::string>() : std::string();
+                pc.text = cell["text"] ? cell["text"].as<std::string>() : std::string();
+                pc.color = cell["color"] ? cell["color"].as<std::string>() : default_cell_color;
+                pc.background_color = cell["background_color"] ? cell["background_color"].as<std::string>() : default_progress_background_color;
+                if (cell["precision"])
+                    try_stoi(pc.precision, cell["precision"].as<std::string>());
+                pc.style = parse_cell_style(cell);
+
+                parsed_row.push_back(Cell{pc});
+                append_colspan_placeholders(parsed_row, pc.style);
                 continue;
             }
 

@@ -75,15 +75,15 @@ static inline double TransformInverse_Custom(double v, void*) {
    return v;
 }
 
-static float text_font_size(const hudTable& table, const TextCell& tc) {
-    if (tc.style.font_size > 0.0f)
-        return tc.style.font_size;
+static float style_font_size(const hudTable& table, const CellStyle& style) {
+    if (style.font_size > 0.0f)
+        return style.font_size;
 
-    return table.font_size * tc.style.font_scale;
+    return table.font_size * style.font_scale;
 }
 
 static float unit_font_size(const hudTable& table, const TextCell& tc) {
-    return text_font_size(table, tc) / 2.0f;
+    return style_font_size(table, tc.style) / 2.0f;
 }
 
 static void prepare_table_fonts(const hudTable& table, Font* fonts) {
@@ -97,8 +97,14 @@ static void prepare_table_fonts(const hudTable& table, Font* fonts) {
 
             const auto* tc = std::get_if<TextCell>(&*opt);
             if (tc) {
-                fonts->get(text_font_size(table, *tc));
+                fonts->get(style_font_size(table, tc->style));
                 fonts->get(unit_font_size(table, *tc));
+                continue;
+            }
+
+            const auto* pc = std::get_if<ProgressCell>(&*opt);
+            if (pc) {
+                fonts->get(style_font_size(table, pc->style));
                 continue;
             }
 
@@ -109,9 +115,12 @@ static void prepare_table_fonts(const hudTable& table, Font* fonts) {
     }
 }
 
-static ImVec2 text_size(const hudTable& table, const TextCell& tc, Font* fonts) {
-    ImGui::PushFont(fonts->get(text_font_size(table, tc)));
-    ImVec2 size = ImGui::CalcTextSize(tc.text.c_str());
+static ImVec2 text_size(const hudTable& table, const CellStyle& style, const std::string& text, Font* fonts) {
+    if (text.empty())
+        return {};
+
+    ImGui::PushFont(fonts->get(style_font_size(table, style)));
+    ImVec2 size = ImGui::CalcTextSize(text.c_str());
     ImGui::PopFont();
     return size;
 }
@@ -179,7 +188,7 @@ static TextYBounds text_y_bounds(const char* text, ImFont* font, float size) {
 }
 
 static TextYBounds text_y_bounds(const hudTable& table, const TextCell& tc, Font* fonts) {
-    const float size = text_font_size(table, tc);
+    const float size = style_font_size(table, tc.style);
     return text_y_bounds(tc.text.c_str(), fonts->get(size), size);
 }
 
@@ -187,13 +196,16 @@ static TextYBounds unit_y_bounds(const hudTable& table, const TextCell& tc, Font
     if (tc.unit.empty())
         return {};
 
-    const float size = tc.unit == "%" ? text_font_size(table, tc) : unit_font_size(table, tc);
+    const float size = tc.unit == "%" ? style_font_size(table, tc.style) : unit_font_size(table, tc);
     return text_y_bounds(tc.unit.c_str(), fonts->get(size), size);
 }
 
 static ImVec2 reserved_value_size(const hudTable& table, const TextCell& tc, Font* fonts) {
-    ImGui::PushFont(fonts->get(text_font_size(table, tc)));
-    ImVec2 size = ImGui::CalcTextSize("00000");
+    if (tc.unit != "%")
+        return {};
+
+    ImGui::PushFont(fonts->get(style_font_size(table, tc.style)));
+    ImVec2 size = ImGui::CalcTextSize("100");
     ImGui::PopFont();
     return size;
 }
@@ -210,6 +222,18 @@ static float graph_height(const hudTable& table, const TextCell& tc, Font* fonts
     ImGui::PopFont();
 
     return hud_row_gap + header_h + 50.0f;
+}
+
+static float progress_height(const hudTable& table, const ProgressCell& pc, Font* fonts) {
+    const float bar_h = std::max(6.0f, table.font_size * 0.6f);
+    const std::string& text = pc.layout_text.empty() ? pc.text : pc.layout_text;
+    if (text.empty())
+        return bar_h;
+
+    const float size = style_font_size(table, pc.style);
+    ImFont* font = fonts->get(size);
+    const TextYBounds bounds = text_y_bounds(text.c_str(), font, size);
+    return std::max(bar_h, bounds.max - bounds.min);
 }
 
 static HudLayout build_table_layout(hudTable* table, Font* fonts);
@@ -247,6 +271,12 @@ static float row_height(hudTable& table, const std::vector<MaybeCell>& row, Font
 
         const auto* tc = std::get_if<TextCell>(&*opt);
         if (!tc) {
+            const auto* pc = std::get_if<ProgressCell>(&*opt);
+            if (pc) {
+                height = std::max(height, progress_height(table, *pc, fonts));
+                continue;
+            }
+
             const auto* nested = std::get_if<TableCell>(&*opt);
             if (nested && nested->table) {
                 height = std::max(height, nested_table_size(*nested->table, fonts).y);
@@ -275,8 +305,8 @@ void ImGuiCtx::draw_value_with_unit(int col_index,
                                    float cell_w,
                                    bool numeric_align) {
     const ImVec2 base = ImGui::GetCursorPos();
-    const float text_font_sz = text_font_size(table, tc);
-    const ImVec2 value_sz = text_size(table, tc, fonts);
+    const float text_font_sz = style_font_size(table, tc.style);
+    const ImVec2 value_sz = text_size(table, tc.style, tc.text, fonts);
     const TextYBounds value_y = text_y_bounds(table, tc, fonts);
     const TextYBounds unit_y = unit_y_bounds(table, tc, fonts);
     const float text_y = base.y + row_h - value_y.max;
@@ -380,17 +410,40 @@ void ImGuiCtx::draw_graph_plot(const TextCell& tc, float width) {
     ImGui::PopID();
 }
 
+void ImGuiCtx::draw_progress_bar(const ProgressCell& pc, Font* fonts, const hudTable& table, float width, float height) {
+    const ImVec2 local_pos = ImGui::GetCursorPos();
+    const ImVec2 screen_pos = ImGui::GetCursorScreenPos();
+    const float range = pc.max_value - pc.min_value;
+    float fraction = range == 0.0f ? 0.0f : (pc.value - pc.min_value) / range;
+    fraction = std::max(0.0f, std::min(1.0f, fraction));
+
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    const ImVec2 end = ImVec2(screen_pos.x + width, screen_pos.y + height);
+    const ImVec2 fill_end = ImVec2(screen_pos.x + width * fraction, screen_pos.y + height);
+    draw_list->AddRectFilled(screen_pos, end, ImGui::ColorConvertFloat4ToU32(pc.background_vec));
+    draw_list->AddRectFilled(screen_pos, fill_end, ImGui::ColorConvertFloat4ToU32(pc.vec));
+
+    if (!pc.text.empty()) {
+        const float font_size = style_font_size(table, pc.style);
+        ImFont* font = fonts->get(font_size);
+        ImGui::PushFont(font);
+        const ImVec2 text_sz = ImGui::CalcTextSize(pc.text.c_str());
+        ImGui::PopFont();
+        const TextYBounds bounds = text_y_bounds(pc.text.c_str(), font, font_size);
+        const float text_x = local_pos.x + (width - text_sz.x) * 0.5f;
+        const float text_y = local_pos.y + (height - (bounds.max - bounds.min)) * 0.5f - bounds.min;
+        ImGui::SetCursorPos(ImVec2(text_x, text_y));
+        ImGui::PushFont(font);
+        RenderOutlinedText(ImVec4(1, 1, 1, 1), pc.text.c_str());
+        ImGui::PopFont();
+    }
+
+    ImGui::SetCursorPos(ImVec2(local_pos.x, local_pos.y + height));
+}
+
 static HudLayout build_table_layout(hudTable* table, Font* fonts) {
     HudLayout L{};
     L.cols = table->cols;
-    int occupied_cols = 0;
-    for (const auto& row : table->rows) {
-        for (int c = 0; c < (int)row.size(); c++) {
-            if (row[c])
-                occupied_cols = std::max(occupied_cols, c + cell_colspan(*row[c]));
-        }
-    }
-
     L.max_value_w.assign(L.cols, 0.0f);
     L.max_unit_w.assign(L.cols, 0.0f);
     L.col_boxes.resize(L.cols);
@@ -402,7 +455,7 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
             const Cell& v0 = *row[0];
             if (const auto* tc0 = std::get_if<TextCell>(&v0)) {
                 float w = 0.0f;
-                const float text_size = text_font_size(*table, *tc0);
+                const float text_size = style_font_size(*table, tc0->style);
 
                 ImGui::PushFont(fonts->get(text_size));
                 w += ImGui::CalcTextSize(tc0->text.c_str()).x;
@@ -424,6 +477,11 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
 
                 if (w > max_col0_w)
                     max_col0_w = w;
+            } else if (const auto* pc0 = std::get_if<ProgressCell>(&v0)) {
+                const std::string& text = pc0->layout_text.empty() ? pc0->text : pc0->layout_text;
+                const float w = std::max(100.0f, text_size(*table, pc0->style, text, fonts).x);
+                if (w > max_col0_w)
+                    max_col0_w = w;
             } else if (const auto* nested = std::get_if<TableCell>(&v0); nested && nested->table) {
                 const ImVec2 size = nested_table_size(*nested->table, fonts);
                 if (size.x > max_col0_w)
@@ -440,6 +498,15 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
             const Cell& v = *opt;
             const auto* tc = std::get_if<TextCell>(&v);
             if (!tc) {
+                const auto* pc = std::get_if<ProgressCell>(&v);
+                if (pc) {
+                    const std::string& text = pc->layout_text.empty() ? pc->text : pc->layout_text;
+                    const float w = std::max(100.0f, text_size(*table, pc->style, text, fonts).x);
+                    if (w > L.max_value_w[c])
+                        L.max_value_w[c] = w;
+                    continue;
+                }
+
                 const auto* nested = std::get_if<TableCell>(&v);
                 if (nested && nested->table) {
                     const ImVec2 size = nested_table_size(*nested->table, fonts);
@@ -449,12 +516,10 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
                 continue;
             }
 
-            const ImVec2 value_sz = text_size(*table, *tc, fonts);
+            const ImVec2 value_sz = text_size(*table, tc->style, tc->text, fonts);
             float value_w = value_sz.x;
-            if (occupied_cols > 2) {
-                const ImVec2 reserved_sz = reserved_value_size(*table, *tc, fonts);
-                value_w = std::max(value_w, reserved_sz.x);
-            }
+            const ImVec2 reserved_sz = reserved_value_size(*table, *tc, fonts);
+            value_w = std::max(value_w, reserved_sz.x);
             if (value_w > L.max_value_w[c])
                 L.max_value_w[c] = value_w;
 
@@ -463,7 +528,7 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
 
             float uw = 0.0f;
             if (tc->unit == "%") {
-                ImGui::PushFont(fonts->get(text_font_size(*table, *tc)));
+                ImGui::PushFont(fonts->get(style_font_size(*table, tc->style)));
                 uw = ImGui::CalcTextSize(tc->unit.c_str()).x;
                 ImGui::PopFont();
             } else {
@@ -554,6 +619,11 @@ void ImGuiCtx::draw_table(hudTable& table, Font* fonts, const HudLayout& layout,
 
                 ImGui::SetCursorPos(ImVec2(nested_x, nested_y));
                 draw_table(*nested->table, fonts, nested_layout, c > 0);
+                continue;
+            }
+
+            if (auto* pc = std::get_if<ProgressCell>(&cell)) {
+                draw_progress_bar(*pc, fonts, table, cell_w, row_h);
                 continue;
             }
 

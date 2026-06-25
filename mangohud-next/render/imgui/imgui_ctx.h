@@ -65,6 +65,7 @@ private:
     static void draw_value_with_unit(int col_index, const TextCell& tc, const ImVec4& unit_col, const HudLayout& L, Font* fonts, const hudTable& table, float row_h, float cell_w = 0.0f, bool numeric_align = false);
     static void draw_graph_plot(const TextCell& tc, float width);
     static void draw_graph_header(const TextCell& tc, Font* fonts, const hudTable& table, const HudLayout& L);
+    static void draw_progress_bar(const ProgressCell& pc, Font* fonts, const hudTable& table, float width, float height);
     static void draw_table(hudTable& table, Font* fonts, const HudLayout& layout, bool first_col_numeric = false);
     static void begin_window(const HudWindow& window, ImVec2 size, const char* name);
     static void end_window();

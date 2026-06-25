@@ -55,6 +55,26 @@ struct GraphCell {
     CellStyle style;
 };
 
+using ProgressBound = std::variant<float, MetricRef>;
+
+struct ProgressCell {
+    MetricRef ref;
+    ProgressBound min = 0.0f;
+    ProgressBound max = 100.0f;
+    float value = 0.0f;
+    float min_value = 0.0f;
+    float max_value = 100.0f;
+    std::string text;
+    std::string layout_text;
+    std::string unit;
+    std::string color;
+    std::string background_color;
+    ImVec4 vec;
+    ImVec4 background_vec;
+    int precision = 1;
+    CellStyle style;
+};
+
 struct ExecCell {
     std::string command;
     std::string unit;
@@ -69,7 +89,7 @@ struct TableCell {
     CellStyle style;
 };
 
-using Cell = std::variant<TextCell, ValueCell, GraphCell, ExecCell, TableCell>;
+using Cell = std::variant<TextCell, ValueCell, GraphCell, ProgressCell, ExecCell, TableCell>;
 using MaybeCell = std::optional<Cell>;
 
 struct hudTable {

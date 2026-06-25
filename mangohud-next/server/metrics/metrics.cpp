@@ -1,10 +1,27 @@
 #include "metrics.h"
 #include "memory.hpp"
 #include <variant>
+#include <string_view>
 #include <sys/stat.h>
 #include "../common/table_structs.h"
 #include "../common/helpers.hpp"
 #include "string_utils.h"
+
+static void replace_all(std::string& text, std::string_view from, std::string_view to) {
+    std::size_t pos = 0;
+    while ((pos = text.find(from, pos)) != std::string::npos) {
+        text.replace(pos, from.size(), to);
+        pos += to.size();
+    }
+}
+
+static std::string left_pad(std::string text, std::size_t width) {
+    if (text.size() >= width)
+        return text;
+
+    return std::string(width - text.size(), ' ') + text;
+}
+
 
 Metrics::Metrics(IPCServer& ipc, std::shared_ptr<Config> cfg_) : cfg(cfg_), ipc(ipc) {
     client_thread     = std::thread(&Metrics::update_client, this);
@@ -220,6 +237,75 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
                     out.data = std::get<std::vector<float>>(*metric.val);
 
                 parsed_row.push_back(std::move(out));
+                continue;
+            }
+
+            if (std::holds_alternative<ProgressCell>(c)) {
+                auto& pc = std::get<ProgressCell>(c);
+
+                auto metric_float = [&](const MetricRef& ref, float fallback, std::string* unit = nullptr) -> float {
+                    Metric metric = get(ref.a.c_str(), ref.b.c_str(), pid);
+                    if (!metric.val)
+                        return fallback;
+
+                    if (unit && unit->empty())
+                        *unit = metric.unit;
+
+                    if (std::holds_alternative<float>(*metric.val))
+                        return std::get<float>(*metric.val);
+
+                    if (std::holds_alternative<int>(*metric.val))
+                        return static_cast<float>(std::get<int>(*metric.val));
+
+                    return fallback;
+                };
+
+                auto resolve_bound = [&](const ProgressBound& bound, float fallback) -> float {
+                    if (std::holds_alternative<float>(bound))
+                        return std::get<float>(bound);
+
+                    return metric_float(std::get<MetricRef>(bound), fallback);
+                };
+
+                ProgressCell progress = pc;
+                progress.unit = pc.unit;
+                progress.value = metric_float(pc.ref, 0.0f, &progress.unit);
+                progress.min_value = resolve_bound(pc.min, 0.0f);
+                progress.max_value = resolve_bound(pc.max, 100.0f);
+                progress.vec = color.get(pc.color);
+                progress.background_vec = color.get(pc.background_color);
+
+                if (!pc.text.empty()) {
+                    auto formatted = [&](float value) {
+                        std::string out;
+                        format_into(out, "%.*f", pc.precision, value);
+                        return out;
+                    };
+
+                    const float range = progress.max_value - progress.min_value;
+                    const float normalized = range == 0.0f ? 0.0f : (progress.value - progress.min_value) / range;
+                    const std::string value = formatted(progress.value);
+                    const std::string min = formatted(progress.min_value);
+                    const std::string max = formatted(progress.max_value);
+                    const std::string percent = formatted(normalized * 100.0f);
+                    const std::string reserve_value = progress.unit == "%" ? "100" : (min.size() > max.size() ? min : max);
+                    const std::string reserve_percent = "100";
+
+                    auto render_text = [&](const std::string& value_text, const std::string& percent_text) {
+                        std::string text = pc.text;
+                        replace_all(text, "{value}", value_text);
+                        replace_all(text, "{min}", min);
+                        replace_all(text, "{max}", max);
+                        replace_all(text, "{percent}", percent_text);
+                        replace_all(text, "{unit}", progress.unit);
+                        return text;
+                    };
+
+                    progress.text = render_text(left_pad(value, reserve_value.size()), left_pad(percent, reserve_percent.size()));
+                    progress.layout_text = render_text(reserve_value, reserve_percent);
+                }
+
+                parsed_row.push_back(Cell{std::move(progress)});
                 continue;
             }
 
