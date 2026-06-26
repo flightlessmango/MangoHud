@@ -15,6 +15,7 @@ static constexpr float hud_cell_padding_x = 4.0f;
 static constexpr float hud_cell_padding_y = 2.0f;
 static constexpr float hud_col_gap = 16.0f;
 static constexpr float hud_row_gap = 6.0f;
+static constexpr float outline_padding_x = 1.5f;
 
 ImGuiCtx::ImGuiCtx() {
     std::lock_guard lock(init_m);
@@ -43,23 +44,19 @@ void ImGuiCtx::right_aligned(const ImVec4& col, float off_x, const char* fmt, ..
     RenderOutlinedText(col, buffer);
 }
 
-uint32_t ImGuiCtx::calculate_width(const HudLayout& L) {
-    const ImGuiStyle& style = ImGui::GetStyle();
-    const float pad_r = std::ceil(outline_padding_x);
-
+uint32_t ImGuiCtx::calculate_width(const HudLayout& L, const HudWindow& window) {
     float total = L.content_size.x;
 
-    total += style.WindowPadding.x * 2.0f;
-    total += pad_r;
+    total += window.padding * 2.0f;
+    total += std::ceil(outline_padding_x) * 2.0f;
 
     return (uint32_t)std::ceil(total);
 }
 
-uint32_t ImGuiCtx::calculate_height(const HudLayout& L) {
-    const ImGuiStyle& style = ImGui::GetStyle();
+uint32_t ImGuiCtx::calculate_height(const HudLayout& L, const HudWindow& window) {
     float total = L.content_size.y;
 
-    total += style.WindowPadding.y * 2.0f;
+    total += window.padding * 2.0f;
 
     return (uint32_t)std::ceil(total);
 }
@@ -115,12 +112,29 @@ static void prepare_table_fonts(const hudTable& table, Font* fonts) {
     }
 }
 
-static ImVec2 text_size(const hudTable& table, const CellStyle& style, const std::string& text, Font* fonts) {
+static ImVec2 outlined_text_size_current_font(const char* text) {
+    ImVec2 size = ImGui::CalcTextSize(text);
+    size.x += std::ceil(outline_padding_x) * 2.0f;
+    size.y += std::ceil(outline_padding_x) * 2.0f;
+    return size;
+}
+
+static ImVec2 raw_text_size(const hudTable& table, const CellStyle& style, const std::string& text, Font* fonts) {
     if (text.empty())
         return {};
 
     ImGui::PushFont(fonts->get(style_font_size(table, style)));
     ImVec2 size = ImGui::CalcTextSize(text.c_str());
+    ImGui::PopFont();
+    return size;
+}
+
+static ImVec2 text_size(const hudTable& table, const CellStyle& style, const std::string& text, Font* fonts) {
+    if (text.empty())
+        return {};
+
+    ImGui::PushFont(fonts->get(style_font_size(table, style)));
+    ImVec2 size = outlined_text_size_current_font(text.c_str());
     ImGui::PopFont();
     return size;
 }
@@ -144,6 +158,55 @@ struct TextYBounds {
     float min = 0.0f;
     float max = 0.0f;
 };
+
+struct TextXBounds {
+    float min = 0.0f;
+    float max = 0.0f;
+};
+
+static TextXBounds text_x_bounds(const char* text, ImFont* font, float size) {
+    TextXBounds bounds;
+    if (!text || !text[0])
+        return bounds;
+
+    const float scale = size / font->FontSize;
+    float x = 0.0f;
+    bool found = false;
+    const char* s = text;
+    while (*s) {
+        unsigned int c = 0;
+        const int bytes = ImTextCharFromUtf8(&c, s, nullptr);
+        if (bytes <= 0)
+            break;
+        s += bytes;
+
+        const ImFontGlyph* glyph = font->FindGlyph((ImWchar)c);
+        if (!glyph)
+            continue;
+
+        if (glyph->Visible) {
+            const float x0 = x + glyph->X0 * scale;
+            const float x1 = x + glyph->X1 * scale;
+            if (!found) {
+                bounds.min = x0;
+                bounds.max = x1;
+                found = true;
+            } else {
+                bounds.min = std::min(bounds.min, x0);
+                bounds.max = std::max(bounds.max, x1);
+            }
+        }
+
+        x += glyph->AdvanceX * scale;
+    }
+
+    if (!found) {
+        bounds.min = 0.0f;
+        bounds.max = ImGui::CalcTextSize(text).x;
+    }
+
+    return bounds;
+}
 
 static TextYBounds text_y_bounds(const char* text, ImFont* font, float size) {
     TextYBounds bounds;
@@ -201,11 +264,11 @@ static TextYBounds unit_y_bounds(const hudTable& table, const TextCell& tc, Font
 }
 
 static ImVec2 reserved_value_size(const hudTable& table, const TextCell& tc, Font* fonts) {
-    if (tc.unit != "%")
+    if (tc.unit.empty())
         return {};
 
     ImGui::PushFont(fonts->get(style_font_size(table, tc.style)));
-    ImVec2 size = ImGui::CalcTextSize("100");
+    ImVec2 size = outlined_text_size_current_font((tc.unit == "%" || tc.unit == "W" || tc.unit == "GiB") ? "100" : "00000");
     ImGui::PopFont();
     return size;
 }
@@ -213,12 +276,12 @@ static ImVec2 reserved_value_size(const hudTable& table, const TextCell& tc, Fon
 static float cell_height(const hudTable& table, const TextCell& tc, Font* fonts) {
     const TextYBounds value = text_y_bounds(table, tc, fonts);
     const TextYBounds unit = unit_y_bounds(table, tc, fonts);
-    return std::max(value.max - value.min, unit.max - unit.min);
+    return std::max(value.max - value.min, unit.max - unit.min) + std::ceil(outline_padding_x) * 2.0f;
 }
 
 static float graph_height(const hudTable& table, const TextCell& tc, Font* fonts) {
     ImGui::PushFont(fonts->get(unit_font_size(table, tc)));
-    const float header_h = ImGui::CalcTextSize("frametime").y;
+    const float header_h = outlined_text_size_current_font("frametime").y;
     ImGui::PopFont();
 
     return hud_row_gap + header_h + 50.0f;
@@ -306,12 +369,32 @@ void ImGuiCtx::draw_value_with_unit(int col_index,
                                    bool numeric_align) {
     const ImVec2 base = ImGui::GetCursorPos();
     const float text_font_sz = style_font_size(table, tc.style);
-    const ImVec2 value_sz = text_size(table, tc.style, tc.text, fonts);
+    const ImVec2 value_sz = raw_text_size(table, tc.style, tc.text, fonts);
     const TextYBounds value_y = text_y_bounds(table, tc, fonts);
     const TextYBounds unit_y = unit_y_bounds(table, tc, fonts);
-    const float text_y = base.y + row_h - value_y.max;
+    const float outline_pad = std::ceil(outline_padding_x);
+    const float text_y = base.y + row_h - outline_pad - value_y.max;
     const float value_top_y = text_y + value_y.min;
     const float unit_pos_y = value_top_y - unit_y.min;
+
+    if (tc.style.align != CellAlign::Default && tc.unit.empty()) {
+        ImFont* font = fonts->get(text_font_sz);
+        const TextXBounds x_bounds = text_x_bounds(tc.text.c_str(), font, text_font_sz);
+        const float visual_w = x_bounds.max - x_bounds.min;
+        float text_x = base.x - x_bounds.min;
+
+        if (tc.style.align == CellAlign::Center)
+            text_x = base.x + (cell_w - visual_w) * 0.5f - x_bounds.min;
+        else if (tc.style.align == CellAlign::Right)
+            text_x = base.x + cell_w - std::ceil(outline_padding_x) - x_bounds.max;
+
+        ImGui::SetCursorPos(ImVec2(text_x, text_y));
+        ImGui::PushFont(font);
+        RenderOutlinedText(tc.vec, tc.text.c_str());
+        ImGui::PopFont();
+        ImGui::SetCursorPos(ImVec2(base.x, base.y + row_h));
+        return;
+    }
 
     if (col_index == 0 && !numeric_align) {
         ImFont* font = fonts->get(text_font_sz);
@@ -342,23 +425,20 @@ void ImGuiCtx::draw_value_with_unit(int col_index,
     if (cell_w <= 0.0f)
         cell_w = ImGui::GetContentRegionAvail().x;
 
-    const float pad_r = std::ceil(outline_padding_x);
-    const float right_pad = pad_r;
-
-    const float unit_start_x = cell_left + (cell_w - right_pad - L.max_unit_w[col_index]);
+    const float unit_start_x = cell_left + (cell_w - outline_pad - L.max_unit_w[col_index]);
     const float value_right_x = unit_start_x - unit_gap;
     const float value_w = L.max_value_w[col_index];
     const float value_left_x = value_right_x - value_w;
 
     ImFont* value_font = fonts->get(text_font_sz);
-    const float value_x = value_left_x + value_w - value_sz.x - text_left_bearing(tc.text.c_str(), value_font, text_font_sz);
+    const float value_x = value_left_x + value_w - outline_pad - value_sz.x - text_left_bearing(tc.text.c_str(), value_font, text_font_sz);
     ImGui::SetCursorPos(ImVec2(value_x, text_y));
     ImGui::PushFont(value_font);
     RenderOutlinedText(tc.vec, tc.text.c_str());
     ImGui::PopFont();
 
     if (!tc.unit.empty()) {
-        ImGui::SetCursorPos(ImVec2(unit_start_x, unit_pos_y));
+        ImGui::SetCursorPos(ImVec2(unit_start_x + outline_pad, unit_pos_y));
         if (tc.unit == "%") {
             ImGui::PushFont(fonts->get(text_font_sz));
             RenderOutlinedText(unit_col, tc.unit.c_str());
@@ -458,7 +538,7 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
                 const float text_size = style_font_size(*table, tc0->style);
 
                 ImGui::PushFont(fonts->get(text_size));
-                w += ImGui::CalcTextSize(tc0->text.c_str()).x;
+                w += outlined_text_size_current_font(tc0->text.c_str()).x;
                 ImGui::PopFont();
 
                 if (!tc0->unit.empty()) {
@@ -466,11 +546,11 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
 
                     if (tc0->unit == "%") {
                         ImGui::PushFont(fonts->get(text_size));
-                        w += ImGui::CalcTextSize(tc0->unit.c_str()).x;
+                        w += outlined_text_size_current_font(tc0->unit.c_str()).x;
                         ImGui::PopFont();
                     } else {
                         ImGui::PushFont(fonts->get(unit_font_size(*table, *tc0)));
-                        w += ImGui::CalcTextSize(tc0->unit.c_str()).x;
+                        w += outlined_text_size_current_font(tc0->unit.c_str()).x;
                         ImGui::PopFont();
                     }
                 }
@@ -529,11 +609,11 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
             float uw = 0.0f;
             if (tc->unit == "%") {
                 ImGui::PushFont(fonts->get(style_font_size(*table, tc->style)));
-                uw = ImGui::CalcTextSize(tc->unit.c_str()).x;
+                uw = outlined_text_size_current_font(tc->unit.c_str()).x;
                 ImGui::PopFont();
             } else {
                 ImGui::PushFont(fonts->get(unit_font_size(*table, *tc)));
-                uw = ImGui::CalcTextSize(tc->unit.c_str()).x;
+                uw = outlined_text_size_current_font(tc->unit.c_str()).x;
                 ImGui::PopFont();
             }
 
@@ -589,7 +669,8 @@ void ImGuiCtx::draw_table(hudTable& table, Font* fonts, const HudLayout& layout,
     ralign_width = ImGui::CalcTextSize("00000").x;
     ImGui::PopFont();
 
-    const ImVec2 origin = ImGui::GetCursorPos();
+    const ImVec2 cursor_origin = ImGui::GetCursorPos();
+    const ImVec2 origin = ImVec2(cursor_origin.x + std::ceil(outline_padding_x), cursor_origin.y);
     ImGui::PushID(&table);
     for (std::size_t r = 0; r < table.rows.size(); r++) {
         auto& row = table.rows[r];
@@ -636,7 +717,7 @@ void ImGuiCtx::draw_table(hudTable& table, Font* fonts, const HudLayout& layout,
                 draw_graph_header(*tc, fonts, table, layout);
 
                 ImGui::PushFont(fonts->get(unit_font_size(table, *tc)));
-                const float header_h = ImGui::CalcTextSize("frametime").y;
+                const float header_h = outlined_text_size_current_font("frametime").y;
                 ImGui::PopFont();
 
                 ImGui::SetCursorPos(ImVec2(origin.x + hud_cell_padding_x, row_y + header_h + hud_row_gap));
@@ -649,7 +730,7 @@ void ImGuiCtx::draw_table(hudTable& table, Font* fonts, const HudLayout& layout,
         }
     }
     ImGui::PopID();
-    ImGui::SetCursorPos(ImVec2(origin.x, origin.y + layout.content_size.y));
+    ImGui::SetCursorPos(ImVec2(cursor_origin.x, cursor_origin.y + layout.content_size.y));
 
 }
 
@@ -710,8 +791,8 @@ bool ImGuiCtx::draw(clientRes* r, slot_t* buf, Backend backend) {
     for (std::size_t i = 0; i < windows.size(); i++) {
         HudWindow& window = windows[i];
         HudLayout layout = build_layout(&window.table, fonts);
-        const uint32_t window_w = calculate_width(layout);
-        const uint32_t window_h = calculate_height(layout);
+        const uint32_t window_w = calculate_width(layout, window);
+        const uint32_t window_h = calculate_height(layout, window);
         const std::string name = "HUD##" + std::to_string(i);
 
         begin_window(window, {float(window_w), float(window_h)}, name.c_str());
@@ -765,7 +846,7 @@ void ImGuiCtx::RenderOutlinedText(ImVec4 textColor, const char* text) {
 
     dl->AddText(font, fontSize, pos, tc, text);
 
-    ImVec2 sz = ImGui::CalcTextSize(text);
+    ImVec2 sz = outlined_text_size_current_font(text);
     ImGui::Dummy({sz.x, sz.y});
 }
 

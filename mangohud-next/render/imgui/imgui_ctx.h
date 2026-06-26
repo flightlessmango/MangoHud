@@ -52,14 +52,13 @@ private:
     std::shared_ptr<ImGuiVK> vk;
     ImVec2 Text(ImVec4 col, const char* buffer);
     inline static float ralign_width = 0.0f;
-    inline static float outline_padding_x = 1.5f;
     int buffer_size = 0;
 
     inline static ColorCache colors;
 
     void record_cmd(slot_t& buf, uint32_t w, uint32_t h);
-    static uint32_t calculate_width(const HudLayout& L);
-    static uint32_t calculate_height(const HudLayout& L);
+    static uint32_t calculate_width(const HudLayout& L, const HudWindow& window);
+    static uint32_t calculate_height(const HudLayout& L, const HudWindow& window);
     static void right_aligned(const ImVec4& col, float off_x, const char *fmt, ...);
     static void RenderOutlinedText(ImVec4 textColor, const char* text);
     static void draw_value_with_unit(int col_index, const TextCell& tc, const ImVec4& unit_col, const HudLayout& L, Font* fonts, const hudTable& table, float row_h, float cell_w = 0.0f, bool numeric_align = false);
