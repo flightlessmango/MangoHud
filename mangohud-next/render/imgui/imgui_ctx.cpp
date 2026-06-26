@@ -288,15 +288,14 @@ static float graph_height(const hudTable& table, const TextCell& tc, Font* fonts
 }
 
 static float progress_height(const hudTable& table, const ProgressCell& pc, Font* fonts) {
-    const float bar_h = std::max(6.0f, table.font_size * 0.6f);
     const std::string& text = pc.layout_text.empty() ? pc.text : pc.layout_text;
     if (text.empty())
-        return bar_h;
+        return std::max(6.0f, table.font_size * 0.6f);
 
     const float size = style_font_size(table, pc.style);
     ImFont* font = fonts->get(size);
     const TextYBounds bounds = text_y_bounds(text.c_str(), font, size);
-    return std::max(bar_h, bounds.max - bounds.min);
+    return bounds.max - bounds.min + std::ceil(outline_padding_x) * 2.0f;
 }
 
 static HudLayout build_table_layout(hudTable* table, Font* fonts);
@@ -492,28 +491,43 @@ void ImGuiCtx::draw_graph_plot(const TextCell& tc, float width) {
 
 void ImGuiCtx::draw_progress_bar(const ProgressCell& pc, Font* fonts, const hudTable& table, float width, float height) {
     const ImVec2 local_pos = ImGui::GetCursorPos();
+    const float bar_h = progress_height(table, pc, fonts);
+    float bar_y = local_pos.y + (height - bar_h) * 0.5f;
+    float text_x = 0.0f;
+    float text_y = 0.0f;
+    ImFont* text_font = nullptr;
+
+    if (!pc.text.empty()) {
+        const float font_size = style_font_size(table, pc.style);
+        text_font = fonts->get(font_size);
+        ImGui::PushFont(text_font);
+        const ImVec2 text_sz = ImGui::CalcTextSize(pc.text.c_str());
+        ImGui::PopFont();
+        const float outline_pad = std::ceil(outline_padding_x);
+        const float outlined_text_w = text_sz.x + outline_pad * 2.0f;
+        const TextYBounds bounds = text_y_bounds(pc.text.c_str(), text_font, font_size);
+        const float text_h = bounds.max - bounds.min + outline_pad * 2.0f;
+
+        text_x = local_pos.x + (width - outlined_text_w) * 0.5f + outline_pad;
+        text_y = local_pos.y + height - outline_pad - bounds.max;
+        bar_y = text_y + bounds.min - outline_pad + (text_h - bar_h) * 0.5f;
+    }
+
+    ImGui::SetCursorPos(ImVec2(local_pos.x, bar_y));
     const ImVec2 screen_pos = ImGui::GetCursorScreenPos();
     const float range = pc.max_value - pc.min_value;
     float fraction = range == 0.0f ? 0.0f : (pc.value - pc.min_value) / range;
     fraction = std::max(0.0f, std::min(1.0f, fraction));
 
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    const ImVec2 end = ImVec2(screen_pos.x + width, screen_pos.y + height);
-    const ImVec2 fill_end = ImVec2(screen_pos.x + width * fraction, screen_pos.y + height);
+    const ImVec2 end = ImVec2(screen_pos.x + width, screen_pos.y + bar_h);
+    const ImVec2 fill_end = ImVec2(screen_pos.x + width * fraction, screen_pos.y + bar_h);
     draw_list->AddRectFilled(screen_pos, end, ImGui::ColorConvertFloat4ToU32(pc.background_vec));
     draw_list->AddRectFilled(screen_pos, fill_end, ImGui::ColorConvertFloat4ToU32(pc.vec));
 
     if (!pc.text.empty()) {
-        const float font_size = style_font_size(table, pc.style);
-        ImFont* font = fonts->get(font_size);
-        ImGui::PushFont(font);
-        const ImVec2 text_sz = ImGui::CalcTextSize(pc.text.c_str());
-        ImGui::PopFont();
-        const TextYBounds bounds = text_y_bounds(pc.text.c_str(), font, font_size);
-        const float text_x = local_pos.x + (width - text_sz.x) * 0.5f;
-        const float text_y = local_pos.y + (height - (bounds.max - bounds.min)) * 0.5f - bounds.min;
         ImGui::SetCursorPos(ImVec2(text_x, text_y));
-        ImGui::PushFont(font);
+        ImGui::PushFont(text_font);
         RenderOutlinedText(ImVec4(1, 1, 1, 1), pc.text.c_str());
         ImGui::PopFont();
     }
