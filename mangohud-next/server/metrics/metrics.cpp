@@ -122,6 +122,19 @@ Metric Metrics::get(const char* a, const char* b, const pid_t pid = 0)
         return null_out;
     }
 
+    if (std::strcmp(a, "GLOBAL") == 0) {
+        if (const char* command = Exec::value_command(to_uppercase(b))) {
+            std::string resolved_command = command;
+            replace_all(resolved_command, "{pid}", std::to_string(pid));
+
+            auto [valid, text] = exec.get(resolved_command);
+            if (valid)
+                return {std::move(text)};
+
+            return null_out;
+        }
+    }
+
     std::lock_guard<std::mutex> lock(m);
 
     const auto* outer = &metrics;

@@ -6,6 +6,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <unordered_map>
 #include <utility>
@@ -22,6 +23,87 @@ public:
     ~Exec();
 
     std::pair<bool, std::string> get(const std::string& command);
+
+    static const char* value_command(std::string_view name) {
+        static constexpr std::pair<std::string_view, const char*> commands[] = {
+            {"KERNEL", "uname -r"},
+            {"OS_NAME", "sed -n 's/PRETTY_NAME=\\(.*\\)/\\1/p' /etc/os-release | tr -d '\"'"},
+            {"CPU_NAME", "sed -n 's/^model name.*: \\(.*\\)/\\1/p' /proc/cpuinfo | sed 's/([^)]*)//g' | tail -n1"},
+            {"CPU_GOVERNOR", "cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"},
+            {"ARCH",
+             "exe=$(readlink /proc/{pid}/exe 2>/dev/null); "
+             "case \"$exe\" in "
+             "*preloader*|\"\") "
+             "cwd=$(readlink /proc/{pid}/cwd 2>/dev/null); "
+             "cmd=$(tr '\\0' '\\n' < /proc/{pid}/cmdline 2>/dev/null | awk '{l=tolower($0); if (l ~ /\\.exe/) {print; exit}}'); "
+             "if [ -n \"$cmd\" ]; then "
+             "case \"$cmd\" in "
+             "/*) target=\"$cmd\" ;; "
+             "*) base=${cmd##*/}; base=${base##*\\\\}; target=\"$cwd/$base\" ;; "
+             "esac; "
+             "else "
+             "comm=$(cat /proc/{pid}/comm 2>/dev/null); "
+             "for f in \"$cwd/$comm\"*; do [ -e \"$f\" ] && target=\"$f\" && break; done; "
+             "[ -n \"$target\" ] || target=\"$cwd/$comm\"; "
+             "fi ;; "
+             "*) target=\"$exe\" ;; "
+             "esac; "
+             "info=$(file -Lb \"$target\" 2>/dev/null); "
+             "case \"$info\" in "
+             "*x86-64*|*x86_64*|*AMD64*) printf x86_64 ;; "
+             "*80386*|*i386*|*Intel\\ 386*) printf x86 ;; "
+             "*aarch64*|*AArch64*|*ARM64*) printf aarch64 ;; "
+             "*ARM*) printf arm ;; "
+             "*RISC-V*64-bit*) printf riscv64 ;; "
+             "*RISC-V*32-bit*) printf riscv32 ;; "
+             "*PowerPC*64-bit*) printf ppc64 ;; "
+             "*PowerPC*) printf ppc ;; "
+             "*PE32+*|*64-bit*) printf 64-bit ;; "
+             "*PE32*|*32-bit*) printf 32-bit ;; "
+             "*) printf UNKNOWN ;; "
+             "esac"},
+            {"DESKTOP_SESSION", "printf %s \"$XDG_CURRENT_DESKTOP\""},
+            {"GAMEMODE", "grep -qi gamemode /proc/{pid}/maps && printf ON || printf OFF"},
+            {"VKBASALT", "grep -qi vkbasalt /proc/{pid}/maps && printf ON || printf OFF"},
+            {"WINESYNC",
+             "out=NONE; "
+             "for f in /proc/{pid}/fd/*; do "
+             "link=$(readlink \"$f\" 2>/dev/null) || continue; "
+             "case \"$link\" in "
+             "*ntsync*|*NTSYNC*) out=NTsync; break ;; "
+             "*fsync*|*FSYNC*) out=Fsync; break ;; "
+             "*esync*|*ESYNC*) out=Esync; break ;; "
+             "*winesync*|*WINESYNC*) out=Wserver; break ;; "
+             "esac; "
+             "done; "
+             "printf %s \"$out\""},
+            {"MEDIA_TITLE", "playerctl metadata title"},
+            {"MEDIA_ALBUM", "playerctl metadata album"},
+            {"MEDIA_ARTIST", "playerctl metadata artist"},
+            {"CLIENT_EXE",
+             "exe=$(readlink /proc/{pid}/exe 2>/dev/null); "
+             "case \"$exe\" in "
+             "*preloader*|\"\") "
+             "cwd=$(readlink /proc/{pid}/cwd 2>/dev/null); "
+             "cmd=$(tr '\\0' '\\n' < /proc/{pid}/cmdline 2>/dev/null | awk '{l=tolower($0); if (l ~ /\\.exe/) {print; exit}}'); "
+             "if [ -n \"$cmd\" ]; then "
+             "cmd=${cmd##*/}; cmd=${cmd##*\\\\}; printf %s \"$cmd\"; "
+             "else "
+             "comm=$(cat /proc/{pid}/comm 2>/dev/null); "
+             "for f in \"$cwd/$comm\"*; do [ -e \"$f\" ] && basename \"$f\" && exit; done; "
+             "printf %s \"$comm\"; "
+             "fi ;; "
+             "*) basename \"$exe\" ;; "
+             "esac"},
+        };
+
+        for (const auto& [key, command] : commands) {
+            if (key == name)
+                return command;
+        }
+
+        return nullptr;
+    }
 
 private:
     struct Job {

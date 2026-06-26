@@ -77,6 +77,24 @@ Available metrics currently include:
 | `[RAM, KEY]` | `USED`, `TOTAL`, `SWAP_USED` |
 | `KEY` | `ENGINE_NAME`, `FPS`, `FRAMETIME`, `FRAMETIMES` |
 
+Some single-name references are backed by small shell commands:
+
+| Reference | Description |
+| --- | --- |
+| `ARCH` | Client executable architecture, using the Wine/Proton game executable when possible. |
+| `CLIENT_EXE` | Client executable name. |
+| `CPU_GOVERNOR` | Current CPU frequency governor. |
+| `CPU_NAME` | CPU model name. |
+| `DESKTOP_SESSION` | Current desktop session from `XDG_CURRENT_DESKTOP`. |
+| `GAMEMODE` | `ON` when GameMode appears in the client process maps, otherwise `OFF`. |
+| `KERNEL` | Kernel release. |
+| `MEDIA_ALBUM` | Current MPRIS media album from `playerctl`. |
+| `MEDIA_ARTIST` | Current MPRIS media artist from `playerctl`. |
+| `MEDIA_TITLE` | Current MPRIS media title from `playerctl`. |
+| `OS_NAME` | Pretty OS name from `/etc/os-release`. |
+| `VKBASALT` | `ON` when vkBasalt appears in the client process maps, otherwise `OFF`. |
+| `WINESYNC` | Wine sync method, such as `NTsync`, `Fsync`, `Esync`, `Wserver`, or `NONE`. |
+
 ## Example
 
 ```yaml
