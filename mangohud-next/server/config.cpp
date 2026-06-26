@@ -160,6 +160,24 @@ static ProgressBound parse_progress_bound(const YAML::Node& v, float fallback) {
     return parse_value(v);
 }
 
+static CellAlign parse_cell_align(const YAML::Node& cell) {
+    if (!cell["align"])
+        return CellAlign::Default;
+
+    std::string align = cell["align"].as<std::string>();
+    if (align == "left")
+        return CellAlign::Left;
+
+    if (align == "center")
+        return CellAlign::Center;
+
+    if (align == "right")
+        return CellAlign::Right;
+
+    SPDLOG_ERROR("invalid cell align '{}': expected left, center, or right", align);
+    return CellAlign::Default;
+}
+
 static CellStyle parse_cell_style(const YAML::Node& cell) {
     CellStyle style;
 
@@ -171,6 +189,8 @@ static CellStyle parse_cell_style(const YAML::Node& cell) {
 
     if (cell["colspan"])
         style.colspan = std::max(1, cell["colspan"].as<int>());
+
+    style.align = parse_cell_align(cell);
 
     return style;
 }
