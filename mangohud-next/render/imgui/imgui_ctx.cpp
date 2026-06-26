@@ -250,6 +250,15 @@ static TextYBounds text_y_bounds(const char* text, ImFont* font, float size) {
     return bounds;
 }
 
+static TextYBounds font_y_bounds(ImFont* font, float size) {
+    return text_y_bounds("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZacefhiklmnrstuvwxz", font, size);
+}
+
+static TextYBounds style_y_bounds(const hudTable& table, const CellStyle& style, Font* fonts) {
+    const float size = style_font_size(table, style);
+    return font_y_bounds(fonts->get(size), size);
+}
+
 static TextYBounds text_y_bounds(const hudTable& table, const TextCell& tc, Font* fonts) {
     const float size = style_font_size(table, tc.style);
     return text_y_bounds(tc.text.c_str(), fonts->get(size), size);
@@ -260,7 +269,7 @@ static TextYBounds unit_y_bounds(const hudTable& table, const TextCell& tc, Font
         return {};
 
     const float size = tc.unit == "%" ? style_font_size(table, tc.style) : unit_font_size(table, tc);
-    return text_y_bounds(tc.unit.c_str(), fonts->get(size), size);
+    return font_y_bounds(fonts->get(size), size);
 }
 
 static ImVec2 reserved_value_size(const hudTable& table, const TextCell& tc, Font* fonts) {
@@ -274,7 +283,7 @@ static ImVec2 reserved_value_size(const hudTable& table, const TextCell& tc, Fon
 }
 
 static float cell_height(const hudTable& table, const TextCell& tc, Font* fonts) {
-    const TextYBounds value = text_y_bounds(table, tc, fonts);
+    const TextYBounds value = style_y_bounds(table, tc.style, fonts);
     const TextYBounds unit = unit_y_bounds(table, tc, fonts);
     return std::max(value.max - value.min, unit.max - unit.min) + std::ceil(outline_padding_x) * 2.0f;
 }
@@ -293,8 +302,7 @@ static float progress_height(const hudTable& table, const ProgressCell& pc, Font
         return std::max(6.0f, table.font_size * 0.6f);
 
     const float size = style_font_size(table, pc.style);
-    ImFont* font = fonts->get(size);
-    const TextYBounds bounds = text_y_bounds(text.c_str(), font, size);
+    const TextYBounds bounds = font_y_bounds(fonts->get(size), size);
     return bounds.max - bounds.min + std::ceil(outline_padding_x) * 2.0f;
 }
 
@@ -370,9 +378,11 @@ void ImGuiCtx::draw_value_with_unit(int col_index,
     const float text_font_sz = style_font_size(table, tc.style);
     const ImVec2 value_sz = raw_text_size(table, tc.style, tc.text, fonts);
     const TextYBounds value_y = text_y_bounds(table, tc, fonts);
+    const TextYBounds value_font_y = style_y_bounds(table, tc.style, fonts);
     const TextYBounds unit_y = unit_y_bounds(table, tc, fonts);
     const float outline_pad = std::ceil(outline_padding_x);
-    const float text_y = base.y + row_h - outline_pad - value_y.max;
+    const float font_box_h = value_font_y.max - value_font_y.min + outline_pad * 2.0f;
+    const float text_y = base.y + (row_h - font_box_h) * 0.5f + outline_pad - value_font_y.min;
     const float value_top_y = text_y + value_y.min;
     const float unit_pos_y = value_top_y - unit_y.min;
 
@@ -505,11 +515,11 @@ void ImGuiCtx::draw_progress_bar(const ProgressCell& pc, Font* fonts, const hudT
         ImGui::PopFont();
         const float outline_pad = std::ceil(outline_padding_x);
         const float outlined_text_w = text_sz.x + outline_pad * 2.0f;
-        const TextYBounds bounds = text_y_bounds(pc.text.c_str(), text_font, font_size);
+        const TextYBounds bounds = font_y_bounds(text_font, font_size);
         const float text_h = bounds.max - bounds.min + outline_pad * 2.0f;
 
         text_x = local_pos.x + (width - outlined_text_w) * 0.5f + outline_pad;
-        text_y = local_pos.y + height - outline_pad - bounds.max;
+        text_y = local_pos.y + (height - text_h) * 0.5f + outline_pad - bounds.min;
         bar_y = text_y + bounds.min - outline_pad + (text_h - bar_h) * 0.5f;
     }
 
