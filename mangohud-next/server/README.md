@@ -45,14 +45,16 @@ The config file is watched while MangoHud Next is running. Changes are reloaded 
 
 | Cell | Required field | Optional fields | Description |
 | --- | --- | --- | --- |
-| Text | `text` | `color`, `font_size`, `font_scale` | Static text. |
-| Value | `value` | `unit`, `color`, `precision`, `font_size`, `font_scale` | Metric value. If `unit` is omitted, the metric's default unit is used. Float values use one decimal by default. |
+| Text | `text` | `color`, `font_size`, `font_scale`, `truncate` | Static text. |
+| Value | `value` | `unit`, `color`, `precision`, `font_size`, `font_scale`, `truncate` | Metric value. If `unit` is omitted, the metric's default unit is used. Float values use one decimal by default. |
 | Graph | `graph` | none currently used | Graph data. Currently only supports `FRAMETIMES`. |
-| Exec | `exec` | `unit`, `color`, `font_size`, `font_scale` | Output of a shell command. |
+| Exec | `exec` | `unit`, `color`, `font_size`, `font_scale`, `truncate` | Output of a shell command. |
 
 Color values are `RRGGBB` or `RRGGBBAA` hex strings, with an optional leading `#`. When `color` is omitted, the default is white.
 
 `font_size` sets an exact size for a cell. `font_scale` scales the HUD default font size for that cell. If both are set, `font_size` is used.
+
+`truncate` limits displayed text to a maximum character count. Truncated text ends with `...` when there is room.
 
 ## Metric References
 

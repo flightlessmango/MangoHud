@@ -190,6 +190,9 @@ static CellStyle parse_cell_style(const YAML::Node& cell) {
     if (cell["colspan"])
         style.colspan = std::max(1, cell["colspan"].as<int>());
 
+    if (cell["truncate"])
+        style.truncate = std::max(0, cell["truncate"].as<int>());
+
     style.align = parse_cell_align(cell);
 
     return style;

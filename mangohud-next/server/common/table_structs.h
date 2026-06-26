@@ -32,6 +32,7 @@ struct CellStyle {
     float font_size = 0.0f;
     float font_scale = 1.0f;
     int colspan = 1;
+    int truncate = 0;
     CellAlign align = CellAlign::Default;
 };
 

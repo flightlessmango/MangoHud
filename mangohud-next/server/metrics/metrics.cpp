@@ -22,6 +22,18 @@ static std::string left_pad(std::string text, std::size_t width) {
     return std::string(width - text.size(), ' ') + text;
 }
 
+static void truncate_text(std::string& text, int max_chars) {
+    if (max_chars <= 0 || text.size() <= static_cast<std::size_t>(max_chars))
+        return;
+
+    if (max_chars <= 3)
+        text.resize(max_chars);
+    else {
+        text.resize(max_chars - 3);
+        text += "...";
+        return;
+    }
+}
 
 Metrics::Metrics(IPCServer& ipc, std::shared_ptr<Config> cfg_) : cfg(cfg_), ipc(ipc) {
     client_thread     = std::thread(&Metrics::update_client, this);
@@ -183,6 +195,7 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
                 out.vec = color.get(tc.color);
                 out.text = tc.text;
                 out.style = tc.style;
+                truncate_text(out.text, out.style.truncate);
 
                 parsed_row.push_back(std::move(out));
                 continue;
@@ -224,6 +237,7 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
                     format_into(out.text, "%i", i_value);
                 }
 
+                truncate_text(out.text, out.style.truncate);
                 parsed_row.push_back(std::move(out));
                 continue;
             }
@@ -303,6 +317,8 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
 
                     progress.text = render_text(left_pad(value, reserve_value.size()), left_pad(percent, reserve_percent.size()));
                     progress.layout_text = render_text(reserve_value, reserve_percent);
+                    truncate_text(progress.text, progress.style.truncate);
+                    truncate_text(progress.layout_text, progress.style.truncate);
                 }
 
                 parsed_row.push_back(Cell{std::move(progress)});
@@ -319,6 +335,7 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
                 out.text = std::move(text);
                 out.unit = ec.unit;
                 out.style = ec.style;
+                truncate_text(out.text, out.style.truncate);
 
                 parsed_row.push_back(std::move(out));
                 continue;
