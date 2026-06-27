@@ -139,6 +139,18 @@ static ImVec2 text_size(const hudTable& table, const CellStyle& style, const std
     return size;
 }
 
+static ImVec2 text_layout_size(const hudTable& table, const CellStyle& style, const std::string& text, Font* fonts) {
+    ImVec2 size = text_size(table, style, text, fonts);
+    if (style.truncate <= 0)
+        return size;
+
+    const std::string reserve(static_cast<std::size_t>(style.truncate), '0');
+    const ImVec2 reserve_size = text_size(table, style, reserve, fonts);
+    size.x = std::max(size.x, reserve_size.x);
+    size.y = std::max(size.y, reserve_size.y);
+    return size;
+}
+
 static float text_left_bearing(const char* text, ImFont* font, float size) {
     if (!text || !text[0])
         return 0.0f;
@@ -559,17 +571,14 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
             const Cell& v0 = *row[0];
             if (const auto* tc0 = std::get_if<TextCell>(&v0)) {
                 float w = 0.0f;
-                const float text_size = style_font_size(*table, tc0->style);
-
-                ImGui::PushFont(fonts->get(text_size));
-                w += outlined_text_size_current_font(tc0->text.c_str()).x;
-                ImGui::PopFont();
+                const float font_size = style_font_size(*table, tc0->style);
+                w += text_layout_size(*table, tc0->style, tc0->text, fonts).x;
 
                 if (!tc0->unit.empty()) {
                     w += unit_gap;
 
                     if (tc0->unit == "%") {
-                        ImGui::PushFont(fonts->get(text_size));
+                        ImGui::PushFont(fonts->get(font_size));
                         w += outlined_text_size_current_font(tc0->unit.c_str()).x;
                         ImGui::PopFont();
                     } else {
@@ -620,7 +629,7 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
                 continue;
             }
 
-            const ImVec2 value_sz = text_size(*table, tc->style, tc->text, fonts);
+            const ImVec2 value_sz = text_layout_size(*table, tc->style, tc->text, fonts);
             float value_w = value_sz.x;
             const ImVec2 reserved_sz = reserved_value_size(*table, *tc, fonts);
             value_w = std::max(value_w, reserved_sz.x);

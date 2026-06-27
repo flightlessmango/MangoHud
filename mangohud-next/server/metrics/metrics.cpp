@@ -225,8 +225,11 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
                 float value = 0;
                 int i_value = 0;
                 Metric metric = get(vc.ref.a.c_str(), vc.ref.b.c_str(), pid);
-                if (!metric.val)
+                if (!metric.val) {
+                    out.unit = vc.unit;
+                    parsed_row.push_back(std::move(out));
                     continue;
+                }
 
                 if (metric.val && std::holds_alternative<std::string>(*metric.val))
                     out.text = std::get<std::string>(*metric.val);
@@ -345,11 +348,9 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
             if (std::holds_alternative<ExecCell>(c)) {
                 auto& ec = std::get<ExecCell>(c);
                 auto [valid, text] = exec.get(ec.command);
-                if (!valid)
-                    continue;
-
                 out.vec = color.get(ec.color);
-                out.text = std::move(text);
+                if (valid)
+                    out.text = std::move(text);
                 out.unit = ec.unit;
                 out.style = ec.style;
                 truncate_text(out.text, out.style.truncate);
