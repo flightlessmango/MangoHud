@@ -63,6 +63,7 @@ Each entry in `hud.windows` defines one hud window.
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `col_gap` | number | `8` | Horizontal spacing between columns. |
+| `debug_cell_boxes` | boolean | `false` | Draw debug outlines for table cells. |
 
 `rows` is a list of rows. Each row is a YAML list of cells. A cell can be `null` or one of these maps:
 
