@@ -217,6 +217,18 @@ static bool parse_table_node(hudTable& table, YAML::Node table_node, int font_si
                 continue;
             }
 
+            if (cell["separator"]) {
+                SeparatorCell sc;
+                sc.color = cell["color"] ? cell["color"].as<std::string>() : default_cell_color;
+                if (cell["thickness"])
+                    sc.thickness = std::max(1.0f, cell["thickness"].as<float>());
+                sc.style = parse_cell_style(cell);
+
+                parsed_row.push_back(Cell{sc});
+                append_colspan_placeholders(parsed_row, sc.style);
+                continue;
+            }
+
             if (cell["progress"]) {
                 ProgressCell pc;
                 pc.ref = parse_value(cell["progress"]);

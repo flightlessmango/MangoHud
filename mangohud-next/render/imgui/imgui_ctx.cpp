@@ -104,6 +104,12 @@ static void prepare_table_fonts(const hudTable& table, Font* fonts) {
                 continue;
             }
 
+            const auto* sc = std::get_if<SeparatorCell>(&*opt);
+            if (sc) {
+                fonts->get(style_font_size(table, sc->style));
+                continue;
+            }
+
             const auto* nested = std::get_if<TableCell>(&*opt);
             if (nested && nested->table)
                 prepare_table_fonts(*nested->table, fonts);
@@ -317,6 +323,15 @@ static float progress_height(const hudTable& table, const ProgressCell& pc, Font
     return bounds.max - bounds.min + std::ceil(outline_padding_x) * 2.0f;
 }
 
+static float separator_width(const SeparatorCell& sc) {
+    return std::ceil(outline_padding_x) * 2.0f + std::max(1.0f, sc.thickness);
+}
+
+static float separator_height(const hudTable& table, const SeparatorCell& sc, Font* fonts) {
+    const TextYBounds bounds = style_y_bounds(table, sc.style, fonts);
+    return bounds.max - bounds.min + std::ceil(outline_padding_x) * 2.0f;
+}
+
 static HudLayout build_table_layout(hudTable* table, Font* fonts);
 
 static int cell_colspan(const Cell& cell) {
@@ -352,6 +367,11 @@ static float row_height(hudTable& table, const std::vector<MaybeCell>& row, Font
 
         const auto* tc = std::get_if<TextCell>(&*opt);
         if (!tc) {
+            if (std::get_if<SeparatorCell>(&*opt)) {
+                height = std::max(height, separator_height(table, std::get<SeparatorCell>(*opt), fonts));
+                continue;
+            }
+
             const auto* pc = std::get_if<ProgressCell>(&*opt);
             if (pc) {
                 height = std::max(height, progress_height(table, *pc, fonts));
@@ -556,6 +576,32 @@ void ImGuiCtx::draw_progress_bar(const ProgressCell& pc, Font* fonts, const hudT
     ImGui::SetCursorPos(ImVec2(local_pos.x, local_pos.y + height));
 }
 
+static void draw_separator(const SeparatorCell& sc, const hudTable& table, Font* fonts, float width, float row_height) {
+    if (row_height <= 0.0f)
+        return;
+
+    const float height = separator_height(table, sc, fonts);
+    const TextYBounds bounds = style_y_bounds(table, sc.style, fonts);
+    const float content_h = bounds.max - bounds.min;
+    const float outline_pad = std::ceil(outline_padding_x);
+    const ImVec2 screen_pos = ImGui::GetCursorScreenPos();
+    const float x = screen_pos.x + width * 0.5f;
+    const float y0 = screen_pos.y + (row_height - height) * 0.5f + outline_pad;
+    const float y1 = y0 + content_h;
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    const ImU32 outline = ImGui::ColorConvertFloat4ToU32(ImVec4(0, 0, 0, 1));
+    const ImU32 color = ImGui::ColorConvertFloat4ToU32(sc.vec);
+
+    draw_list->AddLine(ImVec2(x - outline_padding_x, y0), ImVec2(x - outline_padding_x, y1), outline, sc.thickness);
+    draw_list->AddLine(ImVec2(x + outline_padding_x, y0), ImVec2(x + outline_padding_x, y1), outline, sc.thickness);
+    draw_list->AddLine(ImVec2(x, y0 - outline_padding_x), ImVec2(x, y1 - outline_padding_x), outline, sc.thickness);
+    draw_list->AddLine(ImVec2(x, y0 + outline_padding_x), ImVec2(x, y1 + outline_padding_x), outline, sc.thickness);
+    draw_list->AddLine(ImVec2(x, y0), ImVec2(x, y1), color, sc.thickness);
+
+    const ImVec2 local_pos = ImGui::GetCursorPos();
+    ImGui::SetCursorPos(ImVec2(local_pos.x, local_pos.y + row_height));
+}
+
 static ImVec2 local_to_screen(const ImVec2& pos) {
     const ImVec2 cursor = ImGui::GetCursorPos();
     ImGui::SetCursorPos(pos);
@@ -578,6 +624,16 @@ static void draw_debug_cell_box(bool enabled, const ImVec2& raw_pos, const ImVec
     draw_list->AddRect(content_min, content_max, IM_COL32(0, 220, 255, 255));
 }
 
+static void draw_debug_separator_center(bool enabled, const ImVec2& raw_pos, const ImVec2& raw_size) {
+    if (!enabled)
+        return;
+
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    const ImVec2 raw_min = local_to_screen(raw_pos);
+    const float x = raw_min.x + raw_size.x * 0.5f;
+    draw_list->AddLine(ImVec2(x, raw_min.y), ImVec2(x, raw_min.y + raw_size.y), IM_COL32(255, 0, 255, 255));
+}
+
 static HudLayout build_table_layout(hudTable* table, Font* fonts) {
     HudLayout L{};
     L.cols = table->cols;
@@ -586,6 +642,8 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
     L.col_boxes.resize(L.cols);
 
     float max_col0_w = 0.0f;
+    std::vector<bool> separator_cols(L.cols, false);
+    std::vector<float> separator_col_widths(L.cols, 0.0f);
 
     for (const auto& row : table->rows) {
         if (!row.empty() && row[0].has_value()) {
@@ -630,6 +688,14 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
                 continue;
 
             const Cell& v = *opt;
+            if (std::get_if<SeparatorCell>(&v)) {
+                separator_cols[c] = true;
+                const float w = separator_width(std::get<SeparatorCell>(v));
+                if (w > separator_col_widths[c])
+                    separator_col_widths[c] = w;
+                continue;
+            }
+
             const auto* tc = std::get_if<TextCell>(&v);
             if (!tc) {
                 const auto* pc = std::get_if<ProgressCell>(&v);
@@ -677,7 +743,9 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
     }
 
     for (int c = 0; c < L.cols; c++) {
-        if (c == 0) {
+        if (separator_cols[c]) {
+            L.col_boxes[c].size.x = separator_col_widths[c];
+        } else if (c == 0) {
             L.col_boxes[c].size.x = max_col0_w;
         } else {
             const bool has_units = (L.max_unit_w[c] > 0.0f);
@@ -767,6 +835,15 @@ void ImGuiCtx::draw_table(hudTable& table, Font* fonts, const HudLayout& layout,
 
             if (auto* pc = std::get_if<ProgressCell>(&cell)) {
                 draw_progress_bar(*pc, fonts, table, cell_w, row_h);
+                continue;
+            }
+
+            if (auto* sc = std::get_if<SeparatorCell>(&cell)) {
+                const float separator_x = raw_cell_x + hud_cell_padding_x * 0.5f;
+                const float separator_w = spanned_width(layout, c, colspan);
+                ImGui::SetCursorPos(ImVec2(separator_x, row_y));
+                draw_debug_separator_center(table.debug_cell_boxes, ImVec2(separator_x, row_y), ImVec2(separator_w, row_h));
+                draw_separator(*sc, table, fonts, separator_w, row_h);
                 continue;
             }
 

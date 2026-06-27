@@ -91,6 +91,13 @@ struct ExecCell {
     CellStyle style;
 };
 
+struct SeparatorCell {
+    std::string color;
+    ImVec4 vec;
+    float thickness = 1.0f;
+    CellStyle style;
+};
+
 struct hudTable;
 
 struct TableCell {
@@ -98,7 +105,7 @@ struct TableCell {
     CellStyle style;
 };
 
-using Cell = std::variant<TextCell, ValueCell, GraphCell, ProgressCell, ExecCell, TableCell>;
+using Cell = std::variant<TextCell, ValueCell, GraphCell, ProgressCell, ExecCell, SeparatorCell, TableCell>;
 using MaybeCell = std::optional<Cell>;
 
 struct hudTable {

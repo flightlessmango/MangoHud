@@ -362,6 +362,14 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
                 continue;
             }
 
+            if (std::holds_alternative<SeparatorCell>(c)) {
+                auto& sc = std::get<SeparatorCell>(c);
+                SeparatorCell out_separator = sc;
+                out_separator.vec = color.get(sc.color);
+                parsed_row.push_back(Cell{std::move(out_separator)});
+                continue;
+            }
+
             if (std::holds_alternative<TableCell>(c)) {
                 auto& tc = std::get<TableCell>(c);
                 if (!tc.table)
