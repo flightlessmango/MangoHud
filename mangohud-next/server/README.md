@@ -117,6 +117,7 @@ Some single-name references are backed by small shell commands:
 | `OS_NAME` | Pretty OS name from `/etc/os-release`. |
 | `VKBASALT` | `ON` when vkBasalt appears in the client process maps, otherwise `OFF`. |
 | `WINESYNC` | Wine sync method, such as `NTsync`, `Fsync`, `Esync`, `Wserver`, or `NONE`. |
+| `WINE_VERSION` | Wine or Proton version for Wine/Proton clients. |
 
 ## Example
 

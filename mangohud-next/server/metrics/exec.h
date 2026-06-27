@@ -77,6 +77,23 @@ public:
              "esac; "
              "done; "
              "printf %s \"$out\""},
+            {"WINE_VERSION",
+             "exe=$(readlink /proc/{pid}/exe 2>/dev/null); "
+             "case \"${exe##*/}\" in wine-preloader|wine64-preloader) ;; *) exit 0 ;; esac; "
+             "version_file=; "
+             "case \"$exe\" in "
+             "*/dist/bin/wine|*/files/bin/wine|*/dist/bin-wow64/wine|*/files/bin-wow64/wine) version_file=\"$(dirname \"$exe\")/../../version\" ;; "
+             "*/files/lib/wine/*) version_file=\"$(dirname \"$exe\")/../../../../version\" ;; "
+             "esac; "
+             "if [ -n \"$version_file\" ] && [ -r \"$version_file\" ]; then "
+             "version=$(awk '{print $2; exit}' \"$version_file\"); "
+             "case \"$version\" in proton-*) version=\"Proton ${version#proton-}\" ;; ?*) version=\"Proton $version\" ;; esac; "
+             "printf %s \"$version\"; exit 0; "
+             "fi; "
+             "dir=$(dirname \"$exe\"); "
+             "bin=wine; "
+             "[ \"${exe##*/}\" = wine64-preloader ] && bin=wine64; "
+             "env -u WINELOADERNOEXEC \"$dir/$bin\" --version 2>/dev/null"},
             {"MEDIA_TITLE", "playerctl metadata title"},
             {"MEDIA_ALBUM", "playerctl metadata album"},
             {"MEDIA_ARTIST", "playerctl metadata artist"},
