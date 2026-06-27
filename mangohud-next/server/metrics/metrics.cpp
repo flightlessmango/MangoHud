@@ -229,7 +229,8 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
                 int i_value = 0;
                 Metric metric = get(vc.ref.a.c_str(), vc.ref.b.c_str(), pid);
                 if (!metric.val) {
-                    out.unit = vc.unit;
+                    if (vc.unit_override)
+                        out.unit = vc.unit;
                     parsed_row.push_back(std::move(out));
                     continue;
                 }
@@ -239,7 +240,7 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
 
                 if (metric.val && std::holds_alternative<float>(*metric.val)) {
                     value = std::get<float>(*metric.val);
-                    if (!vc.unit.empty())
+                    if (vc.unit_override)
                         out.unit = vc.unit;
                     else
                         out.unit = metric.unit;
@@ -252,7 +253,7 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
 
                 if (metric.val && std::holds_alternative<int>(*metric.val)) {
                     i_value = std::get<int>(*metric.val);
-                    if (!vc.unit.empty())
+                    if (vc.unit_override)
                         out.unit = vc.unit;
                     else
                         out.unit = metric.unit;
@@ -306,7 +307,7 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
 
                 ProgressCell progress = pc;
                 progress.unit = pc.unit;
-                progress.value = metric_float(pc.ref, 0.0f, &progress.unit);
+                progress.value = metric_float(pc.ref, 0.0f, pc.unit_override ? nullptr : &progress.unit);
                 progress.min_value = resolve_bound(pc.min, 0.0f);
                 progress.max_value = resolve_bound(pc.max, 100.0f);
                 progress.vec = color.get(pc.color);

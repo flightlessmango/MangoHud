@@ -160,6 +160,29 @@ static ProgressBound parse_progress_bound(const YAML::Node& v, float fallback) {
     return parse_value(v);
 }
 
+static void parse_unit(const YAML::Node& cell, std::string& unit, bool& unit_override) {
+    const YAML::Node value = cell["unit"];
+    if (!value)
+        return;
+
+    if (value.IsScalar() && value.Tag() != "!") {
+        try {
+            if (value.as<bool>()) {
+                unit_override = false;
+                unit.clear();
+            } else {
+                unit_override = true;
+                unit.clear();
+            }
+            return;
+        } catch (const YAML::BadConversion&) {
+        }
+    }
+
+    unit = value.as<std::string>();
+    unit_override = true;
+}
+
 static CellAlign parse_cell_align(const YAML::Node& cell) {
     if (!cell["align"])
         return CellAlign::Default;
@@ -234,7 +257,7 @@ static bool parse_table_node(hudTable& table, YAML::Node table_node, int font_si
                 pc.ref = parse_value(cell["progress"]);
                 pc.min = parse_progress_bound(cell["min"], 0.0f);
                 pc.max = parse_progress_bound(cell["max"], 100.0f);
-                pc.unit = cell["unit"] ? cell["unit"].as<std::string>() : std::string();
+                parse_unit(cell, pc.unit, pc.unit_override);
                 pc.text = cell["text"] ? cell["text"].as<std::string>() : std::string();
                 pc.color = cell["color"] ? cell["color"].as<std::string>() : default_cell_color;
                 pc.background_color = cell["background_color"] ? cell["background_color"].as<std::string>() : default_progress_background_color;
@@ -261,7 +284,7 @@ static bool parse_table_node(hudTable& table, YAML::Node table_node, int font_si
             if (cell["value"]) {
                 ValueCell vc;
                 vc.ref = parse_value(cell["value"]);
-                vc.unit = cell["unit"] ? cell["unit"].as<std::string>() : std::string();
+                parse_unit(cell, vc.unit, vc.unit_override);
                 vc.color = cell["color"] ? cell["color"].as<std::string>() : default_cell_color;
                 if (cell["precision"])
                     try_stoi(vc.precision, cell["precision"].as<std::string>());

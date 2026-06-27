@@ -48,6 +48,7 @@ struct TextCell {
 struct ValueCell {
     MetricRef ref;
     std::string unit;
+    bool unit_override = false;
     std::string color;
     int precision = 0;
     CellStyle style;
@@ -76,6 +77,7 @@ struct ProgressCell {
     std::string text;
     std::string layout_text;
     std::string unit;
+    bool unit_override = false;
     std::string color;
     std::string background_color;
     ImVec4 vec;

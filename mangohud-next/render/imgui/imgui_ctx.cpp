@@ -11,7 +11,7 @@
 #include "egl.h"
 std::mutex init_m;
 static constexpr float unit_gap = -1.5f;
-static constexpr float hud_cell_padding_x = 4.0f;
+static constexpr float hud_cell_padding_x = 0.0f;
 static constexpr float hud_cell_padding_y = 2.0f;
 static constexpr float hud_row_gap = 6.0f;
 static constexpr float outline_padding_x = 1.5f;
@@ -154,6 +154,43 @@ static ImVec2 text_layout_size(const hudTable& table, const CellStyle& style, co
     size.x = std::max(size.x, reserve_size.x);
     size.y = std::max(size.y, reserve_size.y);
     return size;
+}
+
+static ImVec2 raw_text_layout_size(const hudTable& table, const CellStyle& style, const std::string& text, Font* fonts) {
+    ImVec2 size = raw_text_size(table, style, text, fonts);
+    if (style.truncate <= 0)
+        return size;
+
+    const std::string reserve(static_cast<std::size_t>(style.truncate), '0');
+    const ImVec2 reserve_size = raw_text_size(table, style, reserve, fonts);
+    size.x = std::max(size.x, reserve_size.x);
+    size.y = std::max(size.y, reserve_size.y);
+    return size;
+}
+
+static bool is_numeric_text(const std::string& text) {
+    if (text.empty())
+        return false;
+
+    bool digit = false;
+    for (char c : text) {
+        if (c >= '0' && c <= '9') {
+            digit = true;
+            continue;
+        }
+        if (c == '.' || c == '-' || c == '+')
+            continue;
+        return false;
+    }
+
+    return digit;
+}
+
+static ImVec2 raw_reserved_numeric_size(const hudTable& table, const TextCell& tc, Font* fonts) {
+    if (!tc.unit.empty() || !is_numeric_text(tc.text))
+        return {};
+
+    return text_size(table, tc.style, "00000", fonts);
 }
 
 static float text_left_bearing(const char* text, ImFont* font, float size) {
@@ -461,6 +498,20 @@ void ImGuiCtx::draw_value_with_unit(int col_index,
         return;
     }
 
+    if (tc.unit.empty()) {
+        ImFont* font = fonts->get(text_font_sz);
+        const ImVec2 reserved_sz = raw_reserved_numeric_size(table, tc, fonts);
+        const float value_w = std::max(value_sz.x, reserved_sz.x);
+        const float right_pad = reserved_sz.x > 0.0f ? outline_pad : 0.0f;
+        const float text_x = base.x + value_w - right_pad - value_sz.x - text_left_bearing(tc.text.c_str(), font, text_font_sz);
+        ImGui::SetCursorPos(ImVec2(text_x, text_y));
+        ImGui::PushFont(font);
+        RenderOutlinedText(tc.vec, tc.text.c_str());
+        ImGui::PopFont();
+        ImGui::SetCursorPos(ImVec2(base.x, base.y + row_h));
+        return;
+    }
+
     const float cell_left = base.x;
     if (cell_w <= 0.0f)
         cell_w = ImGui::GetContentRegionAvail().x;
@@ -716,15 +767,22 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
                 continue;
             }
 
-            const ImVec2 value_sz = text_layout_size(*table, tc->style, tc->text, fonts);
+            const ImVec2 value_sz = tc->unit.empty()
+                ? raw_text_layout_size(*table, tc->style, tc->text, fonts)
+                : text_layout_size(*table, tc->style, tc->text, fonts);
             float value_w = value_sz.x;
+            if (tc->unit.empty()) {
+                const ImVec2 reserved_sz = raw_reserved_numeric_size(*table, *tc, fonts);
+                value_w = std::max(value_w, reserved_sz.x);
+                if (value_w > L.max_value_w[c])
+                    L.max_value_w[c] = value_w;
+                continue;
+            }
+
             const ImVec2 reserved_sz = reserved_value_size(*table, *tc, fonts);
             value_w = std::max(value_w, reserved_sz.x);
             if (value_w > L.max_value_w[c])
                 L.max_value_w[c] = value_w;
-
-            if (tc->unit.empty())
-                continue;
 
             float uw = 0.0f;
             if (tc->unit == "%") {
@@ -834,7 +892,7 @@ void ImGuiCtx::draw_table(hudTable& table, Font* fonts, const HudLayout& layout,
             }
 
             if (auto* pc = std::get_if<ProgressCell>(&cell)) {
-                draw_progress_bar(*pc, fonts, table, cell_w, row_h);
+                draw_progress_bar(*pc, fonts, table, std::max(0.0f, cell_w - hud_cell_padding_x), row_h);
                 continue;
             }
 
