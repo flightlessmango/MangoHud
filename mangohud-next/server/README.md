@@ -16,19 +16,24 @@ If the file does not exist, or if the HUD table is invalid, MangoHud Next falls 
 
 ## Configuration Format
 
-The config file is YAML with two top-level sections:
+The config file is YAML. `options` is optional. A layout can be defined as `hud.windows`, or as `hud_table` for a single default window.
 
 ```yaml
 options:
   font_size: 24
   fps_limit: 0.0
 
-hud_table:
-  rows:
-    - [ {text: GPU}, {value: [GPU, 0, LOAD]} ]
+hud:
+  windows:
+    - position: [10, 10]
+      padding: 8
+      background: true
+      table:
+        rows:
+          - [ {text: GPU}, {value: [GPU, 0, LOAD]} ]
 ```
 
-`options` is optional. `hud_table.rows` is required when a config file exists.
+`hud_table.rows` is required when using the single-window form. `hud.windows[].table.rows` is required when using the window form.
 
 The config file is watched while MangoHud Next is running. Changes are reloaded automatically when the file timestamp or size changes.
 
@@ -39,9 +44,20 @@ The config file is watched while MangoHud Next is running. Changes are reloaded 
 | `font_size` | integer | `24` | HUD font size. Currently parsed by the config system for renderer use. |
 | `fps_limit` | number | `0` | FPS limit sent to connected clients. `0` disables the limiter. |
 
-## HUD Table
+## Hud Windows
 
-`hud_table.rows` is a list of rows. Each row is a YAML list of cells. A cell can be `null` or one of these maps:
+Each entry in `hud.windows` defines one hud window.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `position` | `[x, y]` | `[10, 10]` | Window position in pixels. |
+| `padding` | number | `8` | Padding around the table content. |
+| `background` | boolean | `true` | Draw the window background. |
+| `table` | map | required | Table layout for this window. |
+
+## Hud Table
+
+`rows` is a list of rows. Each row is a YAML list of cells. A cell can be `null` or one of these maps:
 
 | Cell | Required field | Optional fields | Description |
 | --- | --- | --- | --- |
