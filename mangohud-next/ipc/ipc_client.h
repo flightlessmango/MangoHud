@@ -24,11 +24,13 @@ public:
     float fps_limit = 0;
     int64_t renderMinor = 0;
     std::string pEngineName;
+    std::string vulkanDriver;
     int buffer_size = 0;
 
     IPCClient(Layer* layer_ = nullptr, Backend api_ = Backend::NONE);
 
-    void start(int64_t renderMinor, std::string& pEngineName, int image_count);
+    void start(int64_t renderMinor, const std::string& pEngineName, int image_count,
+               const std::string& vulkanDriver = {});
 
     bool init();
     void stop();
@@ -56,6 +58,7 @@ public:
     void drain_queue();
     int push_queue();
     bool on_connect();
+    void send_resolution(uint32_t width, uint32_t height);
     void send_spdlog(const int level, const char* file, const int line, const std::string& text);
     void send_import_failed();
     void send_semaphores(std::vector<int> sema);
@@ -107,6 +110,10 @@ private:
     std::queue<std::packaged_task<void()>> work_q;
     sd_event* event = nullptr;
     sd_event_source* work_src = nullptr;
+    uint32_t resolution_width = 0;
+    uint32_t resolution_height = 0;
+    uint32_t sent_resolution_width = 0;
+    uint32_t sent_resolution_height = 0;
 
     static int on_dmabuf(sd_bus_message* m, void* userdata, sd_bus_error* ret_error);
     static int on_config(sd_bus_message* m, void* userdata, sd_bus_error* ret_error);
@@ -117,6 +124,7 @@ private:
     bool connect_bus();
     void disconnect_bus();
     void run_bus();
+    bool send_resolution_signal(uint32_t width, uint32_t height);
     int request_fd_from_server();
     static int on_work_event(sd_event_source *s, int fd, uint32_t revents, void *userdata);
     template <class F>

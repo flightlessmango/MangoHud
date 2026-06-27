@@ -92,6 +92,7 @@ void Client::init(std::shared_ptr<Client>& shared) {
 
     setup_handshake("on_connect", &handshake_slot, &Client::on_connect, shared);
     setup_handshake("frame_samples", &frame_samples_slot, &Client::frame_samples, shared);
+    setup_handshake("resolution", &resolution_slot, &Client::resolution, shared);
     setup_handshake("spdlog", &spdlog_slot, &Client::spdlog_msg, shared);
     setup_handshake("frame_ready", &frame_slot, &Client::on_frame, shared);
     setup_handshake("import_failed", &import_failed_slot,
@@ -250,19 +251,44 @@ int Client::on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_erro
     }
 
     const char* engine = "";
+    const char* vulkan_driver = "";
     int32_t raw_api = 0;
-    r = sd_bus_message_read(m, "sxii", &engine, &self->renderMinor, &self->buffer_size, &raw_api);
+    r = sd_bus_message_read(m, "sxiis", &engine, &self->renderMinor, &self->buffer_size, &raw_api, &vulkan_driver);
     if (r < 0) {
-        SPDLOG_ERROR("on_connect append(sxii) {} ({})", r, strerror(-r));
+        SPDLOG_ERROR("on_connect append(sxiis) {} ({})", r, strerror(-r));
         self->set_dead();
         return false;
     }
     self->pEngineName = engine;
+    self->vulkanDriver = vulkan_driver;
     self->resources->api = static_cast<Backend>(raw_api);
 
     self->send_config();
 
     return 0;
+}
+
+int Client::resolution(sd_bus_message* m, void* userdata, sd_bus_error*) {
+    auto* w = static_cast<std::weak_ptr<Client>*>(userdata);
+    auto self = w->lock();
+    if (!self)
+        return 0;
+
+    uint32_t width = 0;
+    uint32_t height = 0;
+    int r = sd_bus_message_read(m, "uu", &width, &height);
+    if (r < 0) {
+        SPDLOG_ERROR("resolution: read {} ({})", r, strerror(-r));
+        return 0;
+    }
+
+    {
+        std::lock_guard lock(self->m);
+        self->resolutionWidth = width;
+        self->resolutionHeight = height;
+    }
+
+    return sd_bus_reply_method_return(m, "");
 }
 
 void Client::send_dmabuf(){
@@ -554,6 +580,7 @@ Client::~Client() {
 
     sd_bus_slot_unref(handshake_slot);
     sd_bus_slot_unref(frame_samples_slot);
+    sd_bus_slot_unref(resolution_slot);
     sd_bus_slot_unref(spdlog_slot);
     sd_bus_slot_unref(frame_slot);
     sd_bus_slot_unref(import_failed_slot);

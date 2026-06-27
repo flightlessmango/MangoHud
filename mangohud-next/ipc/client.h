@@ -95,6 +95,9 @@ public:
     double previous_fps = 0;
     bool have_prev = false;
     std::string pEngineName;
+    std::string vulkanDriver;
+    uint32_t resolutionWidth = 0;
+    uint32_t resolutionHeight = 0;
     int64_t renderMinor = 0;
     std::shared_ptr<clientRes> resources;
     IPCServer* ipc;
@@ -144,6 +147,7 @@ private:
     std::thread thread;
     sd_bus_slot* handshake_slot = nullptr;
     sd_bus_slot* frame_samples_slot = nullptr;
+    sd_bus_slot* resolution_slot = nullptr;
     sd_bus_slot* spdlog_slot = nullptr;
     sd_bus_slot* frame_slot = nullptr;
     sd_bus_slot* import_failed_slot = nullptr;
@@ -175,6 +179,7 @@ private:
                          sd_bus_message_handler_t callback, std::shared_ptr<Client>& shared);
 
     static int frame_samples(sd_bus_message* m, void* userdata, sd_bus_error*);
+    static int resolution(sd_bus_message* m, void* userdata, sd_bus_error*);
     static int spdlog_msg(sd_bus_message* m, void* userdata, sd_bus_error*);
     static int on_frame(sd_bus_message* m, void* userdata, sd_bus_error*);
     static int on_import_failed(sd_bus_message* m, void* userdata, sd_bus_error*);

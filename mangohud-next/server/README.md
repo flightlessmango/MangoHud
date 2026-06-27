@@ -75,7 +75,7 @@ Available metrics currently include:
 | `[GPU, index, KEY]` | `LOAD`, `VRAM_USED`, `GTT_USED`, `VRAM_TOTAL`, `VRAM_CLOCK`, `VRAM_TEMP`, `TEMP`, `JUNCTION_TEMP`, `CORE_CLOCK`, `VOLTAGE`, `POWER`, `POWER_LIMIT`, `FAN_SPEED` |
 | `[CPU, KEY]` | `LOAD`, `FREQ`, `TEMP`, `POWER` |
 | `[RAM, KEY]` | `USED`, `TOTAL`, `SWAP_USED` |
-| `KEY` | `ENGINE_NAME`, `FPS`, `FRAMETIME`, `FRAMETIMES` |
+| `KEY` | `ENGINE_NAME`, `VULKAN_DRIVER`, `RESOLUTION`, `FPS`, `FRAMETIME`, `FRAMETIMES` |
 
 Some single-name references are backed by small shell commands:
 

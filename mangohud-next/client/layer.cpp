@@ -8,6 +8,7 @@
 #include "layer.h"
 
 std::string pEngineName;
+std::string vulkanDriver;
 uint32_t renderMinor = 0;
 PFN_vkSetDeviceLoaderData g_set_device_loader_data = nullptr;
 std::unique_ptr<fpsLimiter> fps_limiter;
@@ -184,10 +185,13 @@ public:
             return (r == VK_SUCCESS) ? VK_ERROR_INITIALIZATION_FAILED : r;
         }
 
-        if (!renderMinor) {
+        if (!renderMinor || vulkanDriver.empty()) {
             VkPhysicalDeviceDrmPropertiesEXT drm_props{};
             drm_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRM_PROPERTIES_EXT;
-            drm_props.pNext = nullptr;
+
+            VkPhysicalDeviceDriverProperties driver_props{};
+            driver_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES;
+            drm_props.pNext = &driver_props;
 
             VkPhysicalDeviceProperties2KHR props2{};
             props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
@@ -201,11 +205,14 @@ public:
             fpGetPhysicalDeviceProperties2KHR(pDispatch->PhysicalDevice, &props2);
             if (drm_props.hasPrimary)
                 renderMinor = drm_props.renderMinor;
+            if (driver_props.driverInfo[0] != '\0')
+                vulkanDriver = driver_props.driverInfo;
         }
 
         if (!layer) layer = std::make_unique<Layer>();
         layer->init_overlay_resources(pCreateInfo, pDispatch, count);
         layer->create_swapchain_data(pSwapchain, pCreateInfo, pDispatch);
+        layer->ipc->send_resolution(pCreateInfo->imageExtent.width, pCreateInfo->imageExtent.height);
 
         layer->g_vkSetDebugUtilsObjectNameEXT =
         reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(
@@ -270,7 +277,7 @@ public:
         // TODO Probably don't do this every frame
         fps_limiter->set_fps_limit(layer->ipc->fps_limit);
 
-        layer->ipc->start(renderMinor, pEngineName, swapchain_image_count);
+        layer->ipc->start(renderMinor, pEngineName, swapchain_image_count, vulkanDriver);
         {
             std::lock_guard lock(layer->overlay_vk->m);
             if (!layer->overlay_vk->draw(pPresentInfo->pSwapchains[0], imageIndex, queue, pi))
