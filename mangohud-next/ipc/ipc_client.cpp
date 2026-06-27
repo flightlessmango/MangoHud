@@ -14,14 +14,10 @@ IPCClient::IPCClient(Layer* layer_, Backend api_) : layer(layer_), api(api_){
     work_eventfd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
 }
 
-void IPCClient::start(int64_t renderMinor_, const std::string& pEngineName_,
-                      int image_count, const std::string& vulkanDriver_) {
+void IPCClient::start(int image_count) {
     if (thread.joinable())
         return;
 
-    renderMinor = renderMinor_;
-    pEngineName = pEngineName_;
-    vulkanDriver = vulkanDriver_;
     buffer_size = image_count;
     thread = std::thread([this] { bus_thread(); });
 }
