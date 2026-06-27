@@ -320,13 +320,14 @@ bool IPCClient::on_connect() {
 
         r = sd_bus_message_append(
             msg,
-            "tsxiis",
+            "tsxiiss",
             abi_hash,
             pEngineName.c_str(),
             int64_t(renderMinor),
             (buffer_size),
             raw_api,
-            vulkanDriver.c_str()
+            vulkanDriver.c_str(),
+            gpuName.c_str()
         );
 
         r = sd_bus_send(bus, msg, nullptr);

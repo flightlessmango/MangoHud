@@ -252,15 +252,17 @@ int Client::on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_erro
 
     const char* engine = "";
     const char* vulkan_driver = "";
+    const char* gpu_name = "";
     int32_t raw_api = 0;
-    r = sd_bus_message_read(m, "sxiis", &engine, &self->renderMinor, &self->buffer_size, &raw_api, &vulkan_driver);
+    r = sd_bus_message_read(m, "sxiiss", &engine, &self->renderMinor, &self->buffer_size, &raw_api, &vulkan_driver, &gpu_name);
     if (r < 0) {
-        SPDLOG_ERROR("on_connect append(sxiis) {} ({})", r, strerror(-r));
+        SPDLOG_ERROR("on_connect append(sxiiss) {} ({})", r, strerror(-r));
         self->set_dead();
         return false;
     }
     self->pEngineName = engine;
     self->vulkanDriver = vulkan_driver;
+    self->gpuName = gpu_name;
     self->resources->api = static_cast<Backend>(raw_api);
 
     self->send_config();

@@ -425,6 +425,8 @@ OverlayGL::OverlayGL(Display* xdpy_, std::shared_ptr<IPCClient> ipc_) : xdpy(xdp
     std::string node = *nodes.begin();
     ipc->renderMinor = renderer;
     ipc->pEngineName = pEngineName;
+    if (const GLubyte* gpu_name = glGetString(GL_RENDERER))
+        ipc->gpuName = clean_gpu_name(reinterpret_cast<const char*>(gpu_name));
     ipc->start(4);
 }
 

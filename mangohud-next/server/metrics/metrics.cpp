@@ -97,6 +97,7 @@ void Metrics::update_client() {
                     avg_fps = client->avg_fps_from_samples();
                     auto& metrics = new_metrics[std::to_string(client->pid)];
                     metrics["ENGINE_NAME"] = {engine_name(client->pEngineName)};
+                    metrics["GPU_NAME"] = {client->gpuName};
                     metrics["VULKAN_DRIVER"] = {client->vulkanDriver};
                     if (client->resolutionWidth && client->resolutionHeight)
                         metrics["RESOLUTION"] = {std::to_string(client->resolutionWidth) + "x" + std::to_string(client->resolutionHeight)};

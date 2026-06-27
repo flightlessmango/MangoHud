@@ -96,6 +96,7 @@ public:
     bool have_prev = false;
     std::string pEngineName;
     std::string vulkanDriver;
+    std::string gpuName;
     uint32_t resolutionWidth = 0;
     uint32_t resolutionHeight = 0;
     int64_t renderMinor = 0;

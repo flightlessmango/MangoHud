@@ -25,6 +25,7 @@ public:
     int64_t renderMinor = 0;
     std::string pEngineName;
     std::string vulkanDriver;
+    std::string gpuName;
     int buffer_size = 0;
 
     IPCClient(Layer* layer_ = nullptr, Backend api_ = Backend::NONE);

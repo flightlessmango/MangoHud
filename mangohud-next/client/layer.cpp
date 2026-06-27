@@ -7,6 +7,7 @@
 #include "mesa/os_time.h"
 #include "fps_limiter.h"
 #include "layer.h"
+#include "file_utils.h"
 
 static char pendingEngineName[VK_MAX_DESCRIPTION_SIZE]{};
 PFN_vkSetDeviceLoaderData g_set_device_loader_data = nullptr;
@@ -209,6 +210,8 @@ public:
                 layer->ipc->renderMinor = drm_props.renderMinor;
             if (driver_props.driverInfo[0] != '\0')
                 layer->ipc->vulkanDriver = driver_props.driverInfo;
+            if (props2.properties.deviceName[0] != '\0')
+                layer->ipc->gpuName = clean_gpu_name(props2.properties.deviceName);
         }
 
         layer->init_overlay_resources(pCreateInfo, pDispatch, count);
