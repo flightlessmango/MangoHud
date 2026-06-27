@@ -95,18 +95,10 @@ void Exec::tick()
     }
 
     auto spawn_started = std::chrono::steady_clock::now();
-    size_t spawned = 0;
-    for (auto& [command, entry] : active_entries) {
-        if (spawn(command, entry.get()))
-            spawned++;
-    }
+    for (auto& [command, entry] : active_entries)
+        spawn(command, entry.get());
 
     auto spawn_elapsed = std::chrono::steady_clock::now() - spawn_started;
-    if (spawned > 0) {
-        auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(spawn_elapsed).count();
-        SPDLOG_DEBUG("exec spawned {} command(s) in {} ms", spawned, elapsed_ms);
-    }
-
     if (spawn_elapsed > interval) {
         auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(spawn_elapsed).count();
         auto interval_ms = std::chrono::duration_cast<std::chrono::milliseconds>(interval).count();
