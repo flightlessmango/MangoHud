@@ -556,6 +556,28 @@ void ImGuiCtx::draw_progress_bar(const ProgressCell& pc, Font* fonts, const hudT
     ImGui::SetCursorPos(ImVec2(local_pos.x, local_pos.y + height));
 }
 
+static ImVec2 local_to_screen(const ImVec2& pos) {
+    const ImVec2 cursor = ImGui::GetCursorPos();
+    ImGui::SetCursorPos(pos);
+    const ImVec2 screen = ImGui::GetCursorScreenPos();
+    ImGui::SetCursorPos(cursor);
+    return screen;
+}
+
+static void draw_debug_cell_box(bool enabled, const ImVec2& raw_pos, const ImVec2& raw_size, const ImVec2& content_pos, const ImVec2& content_size) {
+    if (!enabled)
+        return;
+
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    const ImVec2 raw_min = local_to_screen(raw_pos);
+    const ImVec2 raw_max(raw_min.x + raw_size.x, raw_min.y + raw_size.y);
+    const ImVec2 content_min = local_to_screen(content_pos);
+    const ImVec2 content_max(content_min.x + content_size.x, content_min.y + content_size.y);
+
+    draw_list->AddRect(raw_min, raw_max, IM_COL32(255, 220, 0, 255));
+    draw_list->AddRect(content_min, content_max, IM_COL32(0, 220, 255, 255));
+}
+
 static HudLayout build_table_layout(hudTable* table, Font* fonts) {
     HudLayout L{};
     L.cols = table->cols;
@@ -715,8 +737,16 @@ void ImGuiCtx::draw_table(hudTable& table, Font* fonts, const HudLayout& layout,
 
             Cell& cell = *row[c];
             const int colspan = cell_colspan(cell);
-            const float cell_x = origin.x + layout.col_boxes[c].pos.x + hud_cell_padding_x;
+            const float raw_cell_x = origin.x + layout.col_boxes[c].pos.x;
+            const float cell_x = raw_cell_x + hud_cell_padding_x;
             const float cell_w = spanned_width(layout, c, colspan);
+            draw_debug_cell_box(
+                table.debug_cell_boxes,
+                ImVec2(raw_cell_x, row_y),
+                ImVec2(cell_w, row_h),
+                ImVec2(cell_x, row_y),
+                ImVec2(std::max(0.0f, cell_w - hud_cell_padding_x), row_h)
+            );
             ImGui::SetCursorPos(ImVec2(cell_x, row_y));
 
             if (auto* nested = std::get_if<TableCell>(&cell); nested && nested->table) {
