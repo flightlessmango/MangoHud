@@ -104,6 +104,7 @@ using MaybeCell = std::optional<Cell>;
 struct hudTable {
     int cols = 0;
     int font_size = 24;
+    float col_gap = 8.0f;
     std::vector<std::vector<MaybeCell>> rows;
 };
 

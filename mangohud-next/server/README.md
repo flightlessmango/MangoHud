@@ -29,6 +29,7 @@ hud:
       padding: 8
       background: true
       table:
+        col_gap: 8
         rows:
           - [ {text: GPU}, {value: [GPU, 0, LOAD]} ]
 ```
@@ -56,6 +57,12 @@ Each entry in `hud.windows` defines one hud window.
 | `table` | map | required | Table layout for this window. |
 
 ## Hud Table
+
+`hud_table` and each window `table` support these table options:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `col_gap` | number | `8` | Horizontal spacing between columns. |
 
 `rows` is a list of rows. Each row is a YAML list of cells. A cell can be `null` or one of these maps:
 

@@ -195,6 +195,7 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
     render_table->rows.clear();
     render_table->cols = t->cols;
     render_table->font_size = t->font_size;
+    render_table->col_gap = t->col_gap;
     render_table->rows.reserve(t->rows.size());
     for (auto& row : t->rows) {
         std::vector<MaybeCell> parsed_row;

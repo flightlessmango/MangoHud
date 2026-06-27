@@ -13,7 +13,6 @@ std::mutex init_m;
 static constexpr float unit_gap = -1.5f;
 static constexpr float hud_cell_padding_x = 4.0f;
 static constexpr float hud_cell_padding_y = 2.0f;
-static constexpr float hud_col_gap = 16.0f;
 static constexpr float hud_row_gap = 6.0f;
 static constexpr float outline_padding_x = 1.5f;
 
@@ -667,7 +666,7 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
     float x = 0.0f;
     for (int c = 0; c < L.cols; c++) {
         L.col_boxes[c].pos.x = x;
-        x += L.col_boxes[c].size.x + hud_col_gap;
+        x += L.col_boxes[c].size.x + table->col_gap;
     }
 
     L.row_boxes.resize(table->rows.size());
