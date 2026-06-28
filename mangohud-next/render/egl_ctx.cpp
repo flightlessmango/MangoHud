@@ -105,6 +105,16 @@ EglCtx::EglCtx(int renderer_, std::shared_ptr<ImGuiCtx> imgui) : renderer(render
 
 bool EglCtx::init_client(clientRes* r, int buffer_size) {
     std::lock_guard lock(m);
+    if (dpy == EGL_NO_DISPLAY || ctx == EGL_NO_CONTEXT) {
+        SPDLOG_ERROR("EGL context is not initialized");
+        return false;
+    }
+
+    if (!p_glEGLImageTargetTexture2DOES) {
+        SPDLOG_ERROR("glEGLImageTargetTexture2DOES is unavailable");
+        return false;
+    }
+
     r->buffer.resize(buffer_size);
     for (auto& buf : r->buffer) {
         dmabuf_t& dmabuf = buf.dmabuf;
