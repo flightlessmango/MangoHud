@@ -13,9 +13,11 @@ class FDInfoBase {
 private:
     std::vector<std::ifstream> fds_streams;
     chrono_timer last_init;
+    std::string card_node;
 
     std::vector<std::string> find_fds();
     void open_fds(const std::vector<std::string>& fds);
+    std::string get_card_node();
 
 public:
     const std::string drm_node;
