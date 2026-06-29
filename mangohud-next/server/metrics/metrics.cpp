@@ -60,7 +60,7 @@ void Metrics::update() {
             new_metrics[gpu_index]["VOLTAGE"] = {gpu_metrics.voltage, "W"};
             new_metrics[gpu_index]["POWER"] = {(int)gpu_metrics.power_usage, "W"};
             new_metrics[gpu_index]["POWER_LIMIT"] = {gpu_metrics.power_limit, "W"};
-            new_metrics[gpu_index]["FAN_SPEED"] = {gpu_metrics.fan_speed, "%"};
+            new_metrics[gpu_index]["FAN_SPEED"] = {gpu_metrics.fan_speed, gpu_metrics.fan_rpm ? "RPM" : "%"};
         }
 
         cpu.poll();
