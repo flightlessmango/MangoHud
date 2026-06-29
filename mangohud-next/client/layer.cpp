@@ -383,19 +383,28 @@ public:
         auto& q_limiter = fps_limiter->q_limiter;
         if (q_limiter->is_present_queue(queue))
             q_limiter->throttle_before_submit(d);
+
+        VkResult r;
         {
             std::lock_guard lock(layer->overlay_vk->m);
-            d->QueueSubmit(queue, submitCount, pSubmits, fence);
+            r = d->QueueSubmit(queue, submitCount, pSubmits, fence);
+        }
+
+        if (r != VK_SUCCESS) {
+            SPDLOG_ERROR("QueueSubmit {}", string_VkResult(r));
+            return r;
         }
 
         if (q_limiter->is_present_queue(queue)) {
             std::lock_guard lock(layer->overlay_vk->m);
             VkResult r2 = q_limiter->mark_after_submit(d, queue);
-            if (r2 != VK_SUCCESS)
+            if (r2 != VK_SUCCESS) {
+                SPDLOG_ERROR("QueueSubmit limiter mark_after_submit {}", string_VkResult(r2));
                 return r2;
+            }
         }
 
-        return VK_SUCCESS;
+        return r;
     }
 
     static VkResult AcquireNextImageKHR(const vkroots::VkDeviceDispatch* pDispatch,
