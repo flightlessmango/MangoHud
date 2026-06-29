@@ -22,6 +22,7 @@ struct HudBox {
 
 struct HudLayout {
     int cols = 0;
+    std::vector<float> max_cell_w;
     std::vector<float> max_value_w;
     std::vector<float> max_unit_w;
     std::vector<HudBox> col_boxes;

@@ -502,8 +502,8 @@ void ImGuiCtx::draw_value_with_unit(int col_index,
         ImFont* font = fonts->get(text_font_sz);
         const ImVec2 reserved_sz = raw_reserved_numeric_size(table, tc, fonts);
         const float value_w = std::max(value_sz.x, reserved_sz.x);
-        const float right_pad = reserved_sz.x > 0.0f ? outline_pad : 0.0f;
-        const float text_x = base.x + value_w - right_pad - value_sz.x - text_left_bearing(tc.text.c_str(), font, text_font_sz);
+        const float align_w = std::max(cell_w, value_w);
+        const float text_x = base.x + align_w - outline_pad - value_sz.x - text_left_bearing(tc.text.c_str(), font, text_font_sz);
         ImGui::SetCursorPos(ImVec2(text_x, text_y));
         ImGui::PushFont(font);
         RenderOutlinedText(tc.vec, tc.text.c_str());
@@ -688,6 +688,7 @@ static void draw_debug_separator_center(bool enabled, const ImVec2& raw_pos, con
 static HudLayout build_table_layout(hudTable* table, Font* fonts) {
     HudLayout L{};
     L.cols = table->cols;
+    L.max_cell_w.assign(L.cols, 0.0f);
     L.max_value_w.assign(L.cols, 0.0f);
     L.max_unit_w.assign(L.cols, 0.0f);
     L.col_boxes.resize(L.cols);
@@ -753,16 +754,16 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
                 if (pc) {
                     const std::string& text = pc->layout_text.empty() ? pc->text : pc->layout_text;
                     const float w = std::max(100.0f, text_size(*table, pc->style, text, fonts).x);
-                    if (w > L.max_value_w[c])
-                        L.max_value_w[c] = w;
+                    if (w > L.max_cell_w[c])
+                        L.max_cell_w[c] = w;
                     continue;
                 }
 
                 const auto* nested = std::get_if<TableCell>(&v);
                 if (nested && nested->table) {
                     const ImVec2 size = nested_table_size(*nested->table, fonts);
-                    if (size.x > L.max_value_w[c])
-                        L.max_value_w[c] = size.x;
+                    if (size.x > L.max_cell_w[c])
+                        L.max_cell_w[c] = size.x;
                 }
                 continue;
             }
@@ -774,8 +775,8 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
             if (tc->unit.empty()) {
                 const ImVec2 reserved_sz = raw_reserved_numeric_size(*table, *tc, fonts);
                 value_w = std::max(value_w, reserved_sz.x);
-                if (value_w > L.max_value_w[c])
-                    L.max_value_w[c] = value_w;
+                if (value_w > L.max_cell_w[c])
+                    L.max_cell_w[c] = value_w;
                 continue;
             }
 
@@ -807,7 +808,8 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
             L.col_boxes[c].size.x = max_col0_w;
         } else {
             const bool has_units = (L.max_unit_w[c] > 0.0f);
-            L.col_boxes[c].size.x = L.max_value_w[c] + (has_units ? (unit_gap + L.max_unit_w[c]) : 0.0f);
+            const float unit_w = L.max_value_w[c] + (has_units ? (unit_gap + L.max_unit_w[c]) : 0.0f);
+            L.col_boxes[c].size.x = std::max(L.max_cell_w[c], unit_w);
         }
     }
 
