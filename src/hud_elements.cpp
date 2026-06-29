@@ -311,7 +311,10 @@ void HudElements::gpu_stats(){
                 // ImGui::Text("%s", "%");
             }
 
-            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp]){
+            if (
+                HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp] &&
+                gpu->metrics.temp > -1
+            ){
                 ImguiNextColumnOrNewRow();
                 if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit])
                     right_aligned_text(text_color, HUDElements.ralign_width, "%i", HUDElements.convert_to_fahrenheit(gpu->metrics.temp));
@@ -344,7 +347,11 @@ void HudElements::gpu_stats(){
                 ImGui::PopFont();
             }
 
-            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_fan] && !gpu->is_apu()){
+            if (
+                HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_fan] &&
+                gpu->metrics.fan_speed > -1 &&
+                !gpu->is_apu()
+            ){
                 ImguiNextColumnOrNewRow();
                 right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu->metrics.fan_speed);
                 ImGui::SameLine(0, 1.0f);
@@ -360,7 +367,10 @@ void HudElements::gpu_stats(){
                 ImGui::PopFont();
             }
 
-            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock]){
+            if (
+                HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock] &&
+                gpu->metrics.CoreClock > -1
+            ){
                 ImguiNextColumnOrNewRow();
                 right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu->metrics.CoreClock);
                 ImGui::SameLine(0, 1.0f);
@@ -369,7 +379,10 @@ void HudElements::gpu_stats(){
                 ImGui::PopFont();
             }
 
-            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power]) {
+            if (
+                HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power] &&
+                gpu->metrics.powerUsage > -1
+            ) {
                 ImguiNextColumnOrNewRow();
                 char str[16];
                 snprintf(str, sizeof(str), "%.1f", gpu->metrics.powerUsage);
@@ -379,14 +392,20 @@ void HudElements::gpu_stats(){
                     right_aligned_text(text_color, HUDElements.ralign_width, "%.1f", gpu->metrics.powerUsage);
                 ImGui::SameLine(0, 1.0f);
                 ImGui::PushFont(HUDElements.sw_stats->font_small);
-                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power_limit])
+                if (
+                    HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_power_limit] &&
+                    gpu->metrics.powerLimit > 0
+                )
                     HUDElements.TextColored(HUDElements.colors.text, "/%.0fW", gpu->metrics.powerLimit);
                 else
                     HUDElements.TextColored(HUDElements.colors.text, "W");
                 ImGui::PopFont();
             }
 
-            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_efficiency]) {
+            if (
+                HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_efficiency] &&
+                gpu->metrics.powerUsage > 0
+            ) {
                 ImguiNextColumnOrNewRow();
                 float efficiency;
                 const char* efficiency_unit;
@@ -404,7 +423,10 @@ void HudElements::gpu_stats(){
                 ImGui::PopFont();
             }
 
-            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_voltage]) {
+            if (
+                HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_voltage] &&
+                gpu->metrics.voltage > -1
+            ) {
                 ImguiNextColumnOrNewRow();
                 right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu->metrics.voltage);
                 ImGui::SameLine(0, 1.0f);
@@ -647,11 +669,11 @@ void HudElements::vram(){
                 HUDElements.TextColored(HUDElements.colors.vram, gpu->vram_text().c_str());
 
                 ImguiNextColumnOrNewRow();
-                // Add gtt_used to vram usage for APUs
-                if (gpu->is_apu())
-                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", gpu->metrics.sys_vram_used + gpu->metrics.gtt_used);
-                else
-                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", gpu->metrics.sys_vram_used);
+                // Add shared memory usage for APUs and Intel integrated GPUs.
+                float vram_used = gpu->metrics.sys_vram_used;
+                if (gpu->is_apu() || gpu->uses_integrated_memory())
+                    vram_used += gpu->metrics.gtt_used;
+                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", vram_used);
                 if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
                     ImGui::SameLine(0,1.0f);
                     ImGui::PushFont(HUDElements.sw_stats->font_small);
@@ -672,7 +694,10 @@ void HudElements::vram(){
                         HUDElements.TextColored(HUDElements.colors.text, "°C");
                 }
 
-                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_mem_clock]){
+                if (
+                    HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_mem_clock] &&
+                    gpu->metrics.MemClock > 0
+                ){
                     ImguiNextColumnOrNewRow();
                     right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", gpu->metrics.MemClock);
                     ImGui::SameLine(0, 1.0f);
@@ -723,7 +748,8 @@ void HudElements::proc_vram() {
         // show only if vram is not enabled
         if (
             !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_vram] &&
-            HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_mem_temp]
+            HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_mem_temp] &&
+            gpu->metrics.memory_temp > -1
         ) {
             ImguiNextColumnOrNewRow();
 

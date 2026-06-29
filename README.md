@@ -658,7 +658,7 @@ Example output:
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
-		<td>🔴</td>
+		<td>🟢</td>
 		<td>🔴</td>
 	</tr>
 	<tr>
@@ -698,7 +698,14 @@ Example output:
 - GPU usage and memory usage shows usage of current process, not total system usage (it's an issue on intel's side)
   - https://gitlab.freedesktop.org/drm/i915/kernel/-/issues/14153
   - https://gitlab.freedesktop.org/drm/xe/kernel/-/issues/4861
-- Integrated Intel GPUs are **limited** due to lack of hwmon interface (it's an issue on intel's side, [i915 source](https://github.com/torvalds/linux/blob/5fc31936081919a8572a3d644f3fbb258038f337/drivers/gpu/drm/i915/i915_hwmon.c#L914-L916), [xe source](https://github.com/torvalds/linux/blob/5fc31936081919a8572a3d644f3fbb258038f337/drivers/gpu/drm/xe/xe_hwmon.c#L824-L826))
+- For integrated Intel GPUs, the `vram` overlay row uses current-process
+  fdinfo shared memory (`drm-resident-system0` on `i915`,
+  `drm-resident-gtt` on `xe`) when local or VRAM fdinfo memory is not
+  available. This keeps SteamOS `mangoapp` presets useful without claiming
+  total system VRAM support.
+- Integrated Intel GPU power uses the RAPL `uncore` powercap energy counter when
+  it is present and readable by the current user.
+- Integrated Intel GPUs are otherwise **limited** due to lack of hwmon interface (it's an issue on intel's side, [i915 source](https://github.com/torvalds/linux/blob/5fc31936081919a8572a3d644f3fbb258038f337/drivers/gpu/drm/i915/i915_hwmon.c#L914-L916), [xe source](https://github.com/torvalds/linux/blob/5fc31936081919a8572a3d644f3fbb258038f337/drivers/gpu/drm/xe/xe_hwmon.c#L824-L826))
 
 #### Panfrost and Panthor notes
 - GPU usage requires `echo N | sudo tee /sys/class/drm/renderD*/device/profiling`
