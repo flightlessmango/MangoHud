@@ -1,4 +1,5 @@
 #pragma once
+#include <atomic>
 #include "vulkan.h"
 
 struct overlay_resources {
@@ -139,7 +140,7 @@ public:
     std::shared_ptr<IPCClient> ipc;
 
     std::shared_ptr<const vkroots::VkDeviceDispatch> d;
-    PFN_vkSetDeviceLoaderData loader_data = nullptr;
+    static inline std::atomic<PFN_vkSetDeviceLoaderData> set_device_loader_data = nullptr;
     PFN_vkSetDebugUtilsObjectNameEXT g_vkSetDebugUtilsObjectNameEXT = nullptr;
     std::mutex swapchain_mtx;
     std::unordered_map<VkSwapchainKHR, std::shared_ptr<swapchain_data>> swapchains;
@@ -377,7 +378,7 @@ public:
     }
 
     void init_overlay_resources(const VkSwapchainCreateInfoKHR* pCreateInfo, const vkroots::VkDeviceDispatch* pDispatch, uint32_t image_count);
-    void init_cmd(VkQueue queue) {
+    bool init_cmd(VkQueue queue) {
         auto d = ovl_res->d;
         uint32_t image_count = ovl_res->cmd_fences.size();
         if (ovl_res->cmd_pool == VK_NULL_HANDLE) {
@@ -410,9 +411,19 @@ public:
             if (r != VK_SUCCESS)
                 SPDLOG_ERROR("AllocateCommandBuffers {}", string_VkResult(r));
 
-            for (VkCommandBuffer cb : ovl_res->cmd)
-                loader_data(d->Device, cb);
+            auto loader_data = set_device_loader_data.load(std::memory_order_acquire);
+            if (!loader_data) {
+                SPDLOG_ERROR("vkSetDeviceLoaderData callback missing");
+                return false;
+            }
+
+            for (VkCommandBuffer cb : ovl_res->cmd) {
+                VkResult loader_r = set_device_loader_data(d->Device, cb);
+                if (loader_r != VK_SUCCESS)
+                    SPDLOG_ERROR("vkSetDeviceLoaderData {}", string_VkResult(loader_r));
+            }
         }
+        return true;
     }
 
     ~Layer() {
@@ -433,4 +444,3 @@ private:
     }
 
 };
-

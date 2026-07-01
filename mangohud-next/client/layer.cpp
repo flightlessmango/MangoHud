@@ -10,7 +10,6 @@
 #include "file_utils.h"
 
 static char pendingEngineName[VK_MAX_DESCRIPTION_SIZE]{};
-PFN_vkSetDeviceLoaderData g_set_device_loader_data = nullptr;
 std::unique_ptr<fpsLimiter> fps_limiter;
 std::unique_ptr<presentLimiter> present_limiter;
 std::unique_ptr<Layer> layer;
@@ -29,6 +28,23 @@ static bool ChainHasSType(const void* head, VkStructureType sType) {
         }
     }
     return false;
+}
+
+static PFN_vkSetDeviceLoaderData FindSetDeviceLoaderData(const VkDeviceCreateInfo* pCreateInfo)
+{
+    if (!pCreateInfo)
+        return nullptr;
+
+    for (auto* it = reinterpret_cast<const VkBaseInStructure*>(pCreateInfo->pNext); it; it = it->pNext) {
+        if (it->sType != VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO)
+            continue;
+
+        auto* layer_info = reinterpret_cast<const VkLayerDeviceCreateInfo*>(it);
+        if (layer_info->function == VK_LOADER_DATA_CALLBACK)
+            return layer_info->u.pfnSetDeviceLoaderData;
+    }
+
+    return nullptr;
 }
 
 class VkInstanceOverrides {
@@ -71,26 +87,10 @@ public:
         ci.enabledExtensionCount = (uint32_t)exts.size();
         ci.ppEnabledExtensionNames = exts.data();
 
-        const VkLayerDeviceCreateInfo* layer_info =
-            (const VkLayerDeviceCreateInfo*)pCreateInfo->pNext;
+        Layer::set_device_loader_data.store(FindSetDeviceLoaderData(pCreateInfo), std::memory_order_release);
 
-        while (layer_info) {
-            if (layer_info->sType == VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO &&
-                layer_info->function == VK_LOADER_DATA_CALLBACK) {
-                g_set_device_loader_data = layer_info->u.pfnSetDeviceLoaderData;
-                break;
-            }
-
-            layer_info = (const VkLayerDeviceCreateInfo*)layer_info->pNext;
-        }
-
-        if (!g_set_device_loader_data) {
-            fprintf(stderr, "failed to get device loader data\n");
-            fprintf(stderr, "we will get validation errors\n");
-        }
-
-        if (!layer) layer = std::make_unique<Layer>();
-        layer->loader_data = g_set_device_loader_data;
+        if (!Layer::set_device_loader_data.load(std::memory_order_acquire))
+            SPDLOG_ERROR("Failed to get vkSetDeviceLoaderData callback; layer-created dispatchable objects will not be tagged");
 
         VkPhysicalDevicePresentIdFeaturesKHR pid{};
         pid.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR;
@@ -245,7 +245,9 @@ public:
         VkQueue queue,
         const VkPresentInfoKHR* pPresentInfo)
     {
-        layer->init_cmd(queue);
+        if (!layer->init_cmd(queue))
+            return pDispatch->QueuePresentKHR(queue, pPresentInfo);
+
         uint32_t swapchain_image_count = 0;
         pDispatch->GetSwapchainImagesKHR(pDispatch->Device, pPresentInfo->pSwapchains[0], &swapchain_image_count, nullptr);
         uint32_t imageIndex = pPresentInfo->pImageIndices[0];
