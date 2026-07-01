@@ -8,11 +8,11 @@ inc_common += [
 subdir('utils')
 vkbootstrap_dep = subproject('vk-bootstrap').get_variable('vkbootstrap_dep')
 libdrm_dep = dependency('libdrm')
+subdir('ipc')
 # subdir('render')
 if get_option('with_server')
   subdir('render')
 endif
-subdir('ipc')
 if get_option('with_server')
   subdir('server')
 endif

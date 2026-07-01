@@ -1,4 +1,4 @@
-systemd_dep = dependency('libsystemd')
+systemd_dep = dependency('libsystemd', 'libelogind')
 
 ipc_inc = include_directories('.')
 
@@ -45,4 +45,5 @@ ipc_lib = static_library(
 ipc_dep = declare_dependency(
   link_with: ipc_lib,
   include_directories: [ipc_inc],
+  dependencies: [systemd_dep]
 )
