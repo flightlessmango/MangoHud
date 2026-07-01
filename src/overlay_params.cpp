@@ -1381,22 +1381,26 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
          add_to_options(params, "gpu_efficiency", "0");
          add_to_options(params, "cpu_efficiency", "0");
 
-         // Disable some options if steamdeck / other known handhelds
+         // Hide GPU fields with no backing sensor on any detected GPU
          if (!gpus)
             gpus = std::make_unique<GPUS>(params);
 
-         for (auto gpu : gpus->available_gpus) {
-            if (gpu->device_id == 0x1435 || gpu->device_id == 0x163f || gpu->device_id == 0x1681 || gpu->device_id == 0x15bf){
-               add_to_options(params, "gpu_fan", "0");
-               add_to_options(params, "gpu_junction_temp", "0");
-               add_to_options(params, "gpu_voltage", "0");
-               add_to_options(params, "gpu_mem_temp", "0");
-               add_to_options(params, "gpu_efficiency", "0");
+         if (!gpus->available_gpus.empty()) {
+            bool has_fan = false, has_junction_temp = false, has_memory_temp = false;
+            bool has_voltage = false, has_power_limit = false;
+            for (auto gpu : gpus->available_gpus) {
+               has_fan           |= gpu->has_fan_sensor();
+               has_junction_temp |= gpu->has_junction_temp_sensor();
+               has_memory_temp   |= gpu->has_memory_temp_sensor();
+               has_voltage       |= gpu->has_voltage_sensor();
+               has_power_limit   |= gpu->has_power_limit_sensor();
             }
-            // Rembrandt and Phoenix APUs (Z1, Z1E, Z2 Go)
-            if (gpu->device_id == 0x1681 || gpu->device_id == 0x15bf){
-               add_to_options(params, "gpu_power_limit", "0");
-            }
+
+            if (!has_fan)           add_to_options(params, "gpu_fan", "0");
+            if (!has_junction_temp) add_to_options(params, "gpu_junction_temp", "0");
+            if (!has_memory_temp)   add_to_options(params, "gpu_mem_temp", "0");
+            if (!has_voltage)       add_to_options(params, "gpu_voltage", "0");
+            if (!has_power_limit)   add_to_options(params, "gpu_power_limit", "0");
          }
 
          break;

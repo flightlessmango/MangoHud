@@ -553,6 +553,15 @@ AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id) {
 		}
 	}
 
+	// Probe voltage before the polling thread starts; it shares this FILE*.
+	if (sysfs_nodes.gpu_voltage_soc) {
+		int64_t value = 0;
+		rewind(sysfs_nodes.gpu_voltage_soc);
+		fflush(sysfs_nodes.gpu_voltage_soc);
+		if (fscanf(sysfs_nodes.gpu_voltage_soc, "%" PRId64, &value) == 1 && value > 0)
+			voltage_is_valid = true;
+	}
+
 	throttling = std::make_shared<Throttling>(0x1002);
 #ifndef TEST_ONLY
 	fdinfo_helper = std::make_unique<GPU_fdinfo>("amdgpu", pci_dev, "", /*called_from_amdgpu_cpp=*/ true);
