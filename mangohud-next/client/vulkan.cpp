@@ -1,7 +1,6 @@
 #include "vulkan.h"
 #include "layer.h"
 #include "../utils/mesa/os_time.h"
-#include <drm/drm_fourcc.h>
 
 bool OverlayVK::draw(VkSwapchainKHR swapchain, uint32_t img_idx, VkQueue q, VkPresentInfoKHR pi)
 {
@@ -133,8 +132,7 @@ VkResult OverlayVK::import_dmabuf(dmabuf_ext* buf, unique_fd& fd, Fdinfo& fdinfo
         VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO
     };
     ext_img.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT;
-    if (fdinfo.modifier != DRM_FORMAT_MOD_LINEAR)
-        ext_img.pNext = &drm_explicit;
+    ext_img.pNext = &drm_explicit;
 
     VkImageCreateInfo ici{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
     ici.pNext = &ext_img;
@@ -146,9 +144,7 @@ VkResult OverlayVK::import_dmabuf(dmabuf_ext* buf, unique_fd& fd, Fdinfo& fdinfo
     ici.mipLevels = 1;
     ici.arrayLayers = 1;
     ici.samples = VK_SAMPLE_COUNT_1_BIT;
-    ici.tiling = fdinfo.modifier == DRM_FORMAT_MOD_LINEAR
-        ? VK_IMAGE_TILING_LINEAR
-        : VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT;
+    ici.tiling = VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT;
     ici.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     ici.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     ici.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
