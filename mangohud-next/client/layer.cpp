@@ -316,17 +316,17 @@ public:
             ids_ptr = tl_ids.data();
         }
 
-        VkResult r;
-
+        VkSemaphore signal;
         {
             std::lock_guard lock(layer->overlay_vk->m);
-            VkPresentInfoKHR pi2 = *pPresentInfo;
-            VkSemaphore signal = layer->ovl_res->overlay_done[imageIndex];
-            pi2.waitSemaphoreCount = 1;
-            pi2.pWaitSemaphores = &signal;
-
-            r = pDispatch->QueuePresentKHR(queue, &pi2);
+            signal = layer->ovl_res->overlay_done[imageIndex];
         }
+
+        VkPresentInfoKHR pi2 = *pPresentInfo;
+        pi2.waitSemaphoreCount = 1;
+        pi2.pWaitSemaphores = &signal;
+
+        VkResult r = pDispatch->QueuePresentKHR(queue, &pi2);
 
         if (r == VK_SUCCESS || r == VK_SUBOPTIMAL_KHR) {
             if (ids_ptr)
