@@ -369,9 +369,13 @@ public:
     }
 
     static void DestroyDevice(const vkroots::VkDeviceDispatch* d, VkDevice device, const VkAllocationCallbacks* pAllocator) {
+        // Keep the global layer alive when unrelated temporary devices are destroyed.
+        const bool destroy_layer = layer && layer->ovl_res && layer->ovl_res->d && layer->ovl_res->d->Device == device;
         d->DeviceWaitIdle(device);
-        if (layer) layer.reset();
-        fps_limiter.reset();
+        if (destroy_layer) {
+            layer.reset();
+            fps_limiter.reset();
+        }
 
         d->DestroyDevice(device, pAllocator);
     }
