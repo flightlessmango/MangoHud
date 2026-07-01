@@ -418,7 +418,7 @@ public:
             }
 
             for (VkCommandBuffer cb : ovl_res->cmd) {
-                VkResult loader_r = set_device_loader_data(d->Device, cb);
+                VkResult loader_r = loader_data(d->Device, cb);
                 if (loader_r != VK_SUCCESS)
                     SPDLOG_ERROR("vkSetDeviceLoaderData {}", string_VkResult(loader_r));
             }
