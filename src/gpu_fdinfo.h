@@ -144,8 +144,8 @@ public:
             drm_engine_type = "drm-engine-gfx";
             drm_memory_type = "drm-memory-vram";
         } else if (module == "msm_dpu") {
-            // msm driver does not report vram usage
             drm_engine_type = "drm-engine-gpu";
+            drm_memory_type = "drm-resident-memory";
         } else if (module == "msm_drm") {
             init_kgsl();
         } else if (module == "panfrost") {

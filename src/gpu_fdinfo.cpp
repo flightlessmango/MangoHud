@@ -55,6 +55,11 @@ void GPU_fdinfo::find_fd()
                 client_id = val;
         }
 
+        // fixup mismatch between display engine and render engine drivers
+        if (module == "msm_dpu" && driver == "msm") {
+            driver = "msm_dpu";
+        }
+
         if (!driver.empty() && driver == module) {
             total++;
             SPDLOG_TRACE(
@@ -175,7 +180,7 @@ void GPU_fdinfo::find_hwmon_sensors()
 {
     std::string hwmon;
 
-    if (module == "msm")
+    if (module == "msm_dpu")
         hwmon = find_hwmon_sensor_dir("gpu");
     else if (module == "panfrost" || module == "panthor")
         hwmon = find_hwmon_sensor_dir("gpu_thermal");
