@@ -7,7 +7,6 @@ metrics_lib = static_library(
           'fdinfo.cpp',
           'hwmon.cpp',
           'memory.cpp',
-          'panfrost.cpp',
           'metrics.cpp'),
     dependencies: [spdlog_dep,
                   vkbootstrap_dep,
