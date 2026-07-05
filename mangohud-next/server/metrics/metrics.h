@@ -6,7 +6,7 @@
 #include <atomic>
 #include <string_view>
 #include "../config.h"
-#include "gpu/gpu.hpp"
+#include "gpu/gpus.hpp"
 #include "cpu/cpu.hpp"
 #include "exec.h"
 #include "../../ipc/ipc.h"
