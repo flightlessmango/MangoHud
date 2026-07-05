@@ -4,6 +4,7 @@ libcap_dep = dependency('libcap')
 gpu_lib = static_library(
     'gpu',
     files('gpu.cpp',
+          'gpus.cpp',
           'amdgpu/amdgpu.cpp',
           'amdgpu/gpu_metrics.cpp',
           'intel/i915/i915.cpp',
