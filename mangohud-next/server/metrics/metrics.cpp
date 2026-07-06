@@ -75,7 +75,7 @@ void Metrics::update() {
             new_metrics[gpu_index]["TEMP"] = {gpu_metrics.temperature, "°C"};
             new_metrics[gpu_index]["JUNCTION_TEMP"] = {gpu_metrics.junction_temperature, "°C"};
             new_metrics[gpu_index]["CORE_CLOCK"] = {gpu_metrics.core_clock, "MHz"};
-            new_metrics[gpu_index]["VOLTAGE"] = {gpu_metrics.voltage, "W"};
+            new_metrics[gpu_index]["VOLTAGE"] = {gpu_metrics.voltage, "mV"};
             new_metrics[gpu_index]["POWER"] = {(int)gpu_metrics.power_usage, "W"};
             new_metrics[gpu_index]["POWER_LIMIT"] = {gpu_metrics.power_limit, "W"};
             new_metrics[gpu_index]["FAN_SPEED"] = {gpu_metrics.fan_speed, gpu_metrics.fan_rpm ? "RPM" : "%"};
