@@ -18,6 +18,7 @@
 #include "notify.h"
 #include "mangoapp.h"
 #include "mangoapp_proto.h"
+#include "frame_feed.h"
 #include <GLFW/glfw3.h>
 #ifdef __linux__
 #include "implot.h"
@@ -206,6 +207,13 @@ static void msg_read_thread(){
                         update_hud_info_with_frametime(sw_stats, params, vendorID, mangoapp_v1->visible_frametime_ns);
                         should_new_frame = true;
                     }
+
+                    // Export a rolling frame summary for the steamos-intel-handheld
+                    // game-power daemon. No-op unless MANGOAPP_FRAME_FEED=1. Runs
+                    // regardless of overlay visibility so the daemon still gets frame
+                    // data when the HUD is hidden.
+                    if (mangoapp_v1->visible_frametime_ns != ~(0lu))
+                        frame_feed_record_frame(mangoapp_v1->visible_frametime_ns, mangoapp_v1->pid);
 
                     if (msg_size > offsetof(mangoapp_msg_v1, fsrUpscale)){
                         HUDElements.g_fsrUpscale = mangoapp_v1->fsrUpscale;
