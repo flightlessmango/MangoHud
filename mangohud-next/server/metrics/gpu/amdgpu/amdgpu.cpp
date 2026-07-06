@@ -58,7 +58,7 @@ int AMDGPU::get_memory_clock() {
 }
 
 int AMDGPU::get_memory_temp() {
-    return hwmon.get_sensor_value("memory_temp");
+    return std::round(hwmon.get_sensor_value("memory_temp") / 1'000.f);
 }
 
 int AMDGPU::get_temperature() {
@@ -74,7 +74,7 @@ int AMDGPU::get_temperature() {
 }
 
 int AMDGPU::get_junction_temperature() {
-    return hwmon.get_sensor_value("junction_temp");
+    return std::round(hwmon.get_sensor_value("junction_temp") / 1'000.f);
 }
 
 int AMDGPU::get_core_clock() {
