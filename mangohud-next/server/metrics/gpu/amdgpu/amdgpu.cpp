@@ -103,7 +103,7 @@ float AMDGPU::get_power_usage() {
 }
 
 float AMDGPU::get_power_limit() {
-    return hwmon.get_sensor_value("power_limit");
+    return hwmon.get_sensor_value("power_limit") / 1'000'000.f;
 }
 
 bool AMDGPU::get_is_apu() {
