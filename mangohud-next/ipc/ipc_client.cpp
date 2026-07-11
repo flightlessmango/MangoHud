@@ -112,6 +112,13 @@ int IPCClient::on_dmabuf(sd_bus_message* m, void* userdata, sd_bus_error*) {
 
     {
         if (self->layer) {
+            if (!self->layer->overlay_vk) {
+                std::lock_guard lock(self->m);
+                self->fdinfo = std::move(fdinfo);
+                self->import_generation.fetch_add(1, std::memory_order_release);
+                return 0;
+            }
+
             const bool import_success = self->layer->overlay_vk->init_dmabufs(fdinfo);
             if (!import_success) {
                 self->send_import_failed();
@@ -121,7 +128,7 @@ int IPCClient::on_dmabuf(sd_bus_message* m, void* userdata, sd_bus_error*) {
 
         std::lock_guard lock(self->m);
         self->fdinfo = std::move(fdinfo);
-        self->needs_import.store(true);
+        self->import_generation.fetch_add(1, std::memory_order_release);
     }
 
     return 0;
@@ -557,7 +564,7 @@ void IPCClient::send_import_failed() {
     {
         std::lock_guard lock(m);
         fdinfo = {};
-        needs_import.store(true);
+        import_generation.fetch_add(1, std::memory_order_release);
     }
 
     if (!bus)

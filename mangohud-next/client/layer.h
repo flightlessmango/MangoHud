@@ -98,6 +98,8 @@ struct swapchain_data {
     VkRenderPass rp = VK_NULL_HANDLE;
     VkPipeline pipe = VK_NULL_HANDLE;
 
+    VkSurfaceKHR vk_surface;
+
     std::mutex m;
     swapchain_data(std::shared_ptr<const vkroots::VkDeviceDispatch> d_) : d(d_) {}
     ~swapchain_data() {
@@ -150,7 +152,6 @@ public:
 
     Layer() {
         ipc = std::make_shared<IPCClient>(this, Backend::VULKAN);
-        overlay_vk = std::make_shared<OverlayVK>(this);
     }
 
     void SetName(VkDevice device, VkObjectType type, uint64_t handle, const char* fmt, ...) {
@@ -190,6 +191,7 @@ public:
         sc->format = pCreateInfo->imageFormat;
         sc->extent = pCreateInfo->imageExtent;
         sc->colorspace = pCreateInfo->imageColorSpace;
+        sc->vk_surface = pCreateInfo->surface;
 
         uint32_t count = 0;
         VkResult r = pDispatch->GetSwapchainImagesKHR(pDispatch->Device, *pSwapchain, &count, nullptr);

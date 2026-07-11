@@ -17,7 +17,7 @@ class spdlogSink;
 class Layer;
 class IPCClient {
 public:
-    std::atomic<bool> needs_import{false};
+    std::atomic<uint64_t> import_generation{0};
     std::atomic<bool> connected{false};
     std::mutex m;
     Fdinfo fdinfo;
@@ -63,6 +63,11 @@ public:
     void send_import_failed();
     void send_semaphores(std::vector<int> sema);
     void frame_ready(uint32_t idx, int fd);
+    void clear_frames() {
+        std::lock_guard lock(sync_mtx);
+        frame_queue.clear();
+    }
+
     int next_frame() {
         std::lock_guard lock(sync_mtx);
         if (frame_queue.empty())

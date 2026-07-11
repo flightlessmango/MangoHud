@@ -469,20 +469,28 @@ void OverlayGL::draw() {
     GLState s;
     CtxRes* c = nullptr;
     c = get_ctx();
-    if (ipc->needs_import.load()) {
+    uint64_t generation = ipc->import_generation.load(std::memory_order_acquire);
+    bool do_import = generation != imported_generation;
+    if (do_import) {
         if (!c)
             return;
 
-        {
-            std::lock_guard lock(ipc->m);
+        std::lock_guard lock(ipc->m);
+        generation = ipc->import_generation.load(std::memory_order_acquire);
+        if (generation != imported_generation) {
             fdinfo = std::move(ipc->fdinfo);
             ipc->fdinfo = {};
+        } else {
+            do_import = false;
         }
+    }
 
+    if (do_import) {
         if (fdinfo.dmabuf_buffer.empty()) {
             c->dmabufs.clear();
             current_slot = -1;
             inited = false;
+            imported_generation = generation;
             return;
         }
 
@@ -499,7 +507,7 @@ void OverlayGL::draw() {
             }
             c->dmabufs.push_back(std::move(buf));
         }
-        ipc->needs_import.store(false);
+        imported_generation = generation;
         inited = true;
     }
 

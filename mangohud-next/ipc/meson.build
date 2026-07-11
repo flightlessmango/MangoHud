@@ -39,6 +39,7 @@ ipc_lib = static_library(
                  vkroots_dep,
                  mangohud_version_dep,
                  dep_vulkan_utility_libraries],
+  cpp_args: wayland_wsi_args,
   include_directories: [inc_common],
 )
 

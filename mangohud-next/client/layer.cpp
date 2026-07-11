@@ -8,11 +8,13 @@
 #include "fps_limiter.h"
 #include "layer.h"
 #include "file_utils.h"
+#include "wayland.h"
 
 static char pendingEngineName[VK_MAX_DESCRIPTION_SIZE]{};
 std::unique_ptr<fpsLimiter> fps_limiter;
 std::unique_ptr<presentLimiter> present_limiter;
 std::unique_ptr<Layer> layer;
+static std::unique_ptr<Wayland> wayland;
 
 static const uint32_t overlay_vert_spv[] = {
     #include "overlay.vert.spv.h"
@@ -154,6 +156,24 @@ public:
 
         return pfnCreateInstance(&ci, pAllocator, pInstance);
     }
+
+    static VkResult CreateWaylandSurfaceKHR(const vkroots::VkInstanceDispatch* dispatch, VkInstance instance,
+                                     const VkWaylandSurfaceCreateInfoKHR *pCreateInfo,
+                                     const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface)
+    {
+        VkResult r = dispatch->CreateWaylandSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
+        if (!layer) layer = std::make_unique<Layer>();
+        if (!wayland) wayland = std::make_unique<Wayland>(layer->ipc);
+        wayland->add_surface(*pSurface, pCreateInfo->surface, pCreateInfo->display);
+        return r;
+    }
+
+    static void DestroySurfaceKHR(const vkroots::VkInstanceDispatch* dispatch, VkInstance instance,
+                                  VkSurfaceKHR surface, const VkAllocationCallbacks *pAllocator)
+    {
+        if (wayland) wayland->destroy_surface(surface);
+        return dispatch->DestroySurfaceKHR(instance, surface, pAllocator);
+    }
 };
 
 static const VkPresentIdKHR* GetPresentId(const void* pNext) {
@@ -245,6 +265,15 @@ public:
         VkQueue queue,
         const VkPresentInfoKHR* pPresentInfo)
     {
+        if (layer) layer->ipc->add_to_queue(os_time_get_nano());
+        if (wayland) {
+            auto swapchain_data = layer->get_swapchain_data(pPresentInfo->pSwapchains[0]);
+            wayland->ensure_overlay(swapchain_data->vk_surface);
+            return pDispatch->QueuePresentKHR(queue, pPresentInfo);
+        }
+
+        if (!layer->overlay_vk) layer->overlay_vk = std::make_shared<OverlayVK>(layer.get());
+
         if (!layer->init_cmd(queue))
             return pDispatch->QueuePresentKHR(queue, pPresentInfo);
 
@@ -279,7 +308,6 @@ public:
         }
 
         fps_limiter->limit(true);
-        layer->ipc->add_to_queue(os_time_get_nano());
         // TODO Probably don't do this every frame
         fps_limiter->set_fps_limit(layer->ipc->fps_limit);
 
