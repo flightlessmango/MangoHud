@@ -36,26 +36,12 @@ public:
     void stop();
 
     void add_to_queue(uint64_t now) {
-        {
-            static uint64_t seq;
-            std::unique_lock lock(samples_mtx);
-            samples.push_back({seq, now});
-            seq++;
-        }
-
-        if (last_push == 0) {
-            last_push = now;
-            return;
-        }
-
-        if (now - last_push >= 4'000'000) {
-            push_queue();
-            // wake_up_fd(wake_fd);
-            last_push = now;
-        }
+        static uint64_t seq;
+        std::unique_lock lock(samples_mtx);
+        samples.push_back({seq, now});
+        seq++;
     }
 
-    void drain_queue();
     int push_queue();
     bool on_connect();
     void send_resolution(uint32_t width, uint32_t height);
@@ -107,7 +93,6 @@ private:
     sd_bus_slot* incompatible_slot = nullptr;
     int wake_fd = -1;
     int socket_fd = -1;
-    uint64_t last_push = 0;
     std::shared_ptr<spdlog::logger> logger;
     std::deque<ready_frame> frame_queue;
     int work_eventfd = -1;

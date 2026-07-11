@@ -639,7 +639,10 @@ int IPCClient::on_frame(sd_bus_message* m, void* userdata, sd_bus_error*) {
     }
 
     frame.fd = unique_fd::dup(fd);
-    std::lock_guard lock(self->sync_mtx);
-    self->frame_queue.push_back(std::move(frame));
+    {
+        std::lock_guard lock(self->sync_mtx);
+        self->frame_queue.push_back(std::move(frame));
+    }
+    self->push_queue();
     return 0;
 }
