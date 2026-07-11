@@ -80,10 +80,13 @@ vulkan_layer = shared_library(
                    dependency('gl'),
                    vkbootstrap_dep,
                    dep_vulkan_utility_libraries],
-    cpp_args: wayland_wsi_args,
+    cpp_args: vulkan_wsi_args,
     include_directories: inc_common,
     install: true,
-    link_args: ['-static-libstdc++'],
+    link_args: [
+      '-static-libstdc++',
+      '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version')),
+    ],
 )
 
 conf_data = configuration_data()
