@@ -197,20 +197,24 @@ private:
 
     template <typename Surface>
     void run_thread(Surface surface) {
-        std::shared_ptr<surface_data> surf_data;
         while (!quit.load()) {
-            surf_data = get_surface(surface);
-            dispatch_events(surf_data);
-            if (!ipc->connected.load(std::memory_order_acquire)) {
-                detach(surf_data);
-                std::this_thread::sleep_for(std::chrono::milliseconds(16));
-                continue;
-            }
+            {
+                auto surf_data = get_surface(surface);
+                dispatch_events(surf_data);
+                if (!ipc->connected.load(std::memory_order_acquire)) {
+                    detach(surf_data);
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                } else {
+                    update_import(surf_data);
+                    present(surf_data);
+                    dispatch_events(surf_data);
+                }
 
-            update_import(surf_data);
-            present(surf_data);
-            dispatch_events(surf_data);
+                if (quit.load())
+                    break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(16));
         }
-        detach(surf_data, false);
+        detach(get_surface(surface), false);
     }
 };
