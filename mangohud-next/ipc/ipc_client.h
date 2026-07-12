@@ -91,6 +91,7 @@ private:
     sd_bus_slot* config_slot = nullptr;
     sd_bus_slot* frame_slot = nullptr;
     sd_bus_slot* incompatible_slot = nullptr;
+    sd_bus_slot* disconnected_slot = nullptr;
     int wake_fd = -1;
     int socket_fd = -1;
     std::shared_ptr<spdlog::logger> logger;
@@ -109,6 +110,7 @@ private:
     static int on_config(sd_bus_message* m, void* userdata, sd_bus_error* ret_error);
     static int on_frame(sd_bus_message* m, void* userdata, sd_bus_error*);
     static int on_incompatible(sd_bus_message* m, void* userdata, sd_bus_error*);
+    static int on_bus_disconnected(sd_bus_message* m, void* userdata, sd_bus_error*);
     void bus_thread();
     static int on_server_owner_changed(sd_bus_message* m, void* userdata, sd_bus_error*);
     bool connect_bus();

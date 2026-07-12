@@ -49,6 +49,16 @@ int IPCClient::on_incompatible(sd_bus_message* m, void* userdata, sd_bus_error*)
     return 0;
 }
 
+int IPCClient::on_bus_disconnected(sd_bus_message* m, void* userdata, sd_bus_error*) {
+    (void)m;
+
+    auto* self = static_cast<IPCClient*>(userdata);
+    SPDLOG_DEBUG("IPC server disconnected");
+    self->connected.store(false);
+    sd_event_exit(self->event, 0);
+    return 0;
+}
+
 int IPCClient::on_dmabuf(sd_bus_message* m, void* userdata, sd_bus_error*) {
     auto* self = static_cast<IPCClient*>(userdata);
     SPDLOG_DEBUG("got dmabuf");
@@ -156,6 +166,10 @@ void IPCClient::disconnect_bus() {
         sd_bus_slot_unref(incompatible_slot);
         incompatible_slot = nullptr;
     }
+    if (disconnected_slot) {
+        sd_bus_slot_unref(disconnected_slot);
+        disconnected_slot = nullptr;
+    }
 
     if (bus) {
         sd_bus_flush_close_unref(bus);
@@ -243,6 +257,20 @@ bool IPCClient::connect_bus() {
     r = sd_bus_add_match(b, &incompatible_slot, match_incompatible.c_str(), &IPCClient::on_incompatible, this);
     if (r < 0) {
         SPDLOG_ERROR("match incompatible: {} ({})", r, strerror(-r));
+        sd_bus_unref(b);
+        return false;
+    }
+
+    std::string match_disconnected =
+        "type='signal',"
+        "sender='org.freedesktop.DBus.Local',"
+        "path='/org/freedesktop/DBus/Local',"
+        "interface='org.freedesktop.DBus.Local',"
+        "member='Disconnected'";
+
+    r = sd_bus_add_match(b, &disconnected_slot, match_disconnected.c_str(), &IPCClient::on_bus_disconnected, this);
+    if (r < 0) {
+        SPDLOG_ERROR("match disconnected: {} ({})", r, strerror(-r));
         sd_bus_unref(b);
         return false;
     }
