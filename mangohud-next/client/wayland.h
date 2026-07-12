@@ -213,7 +213,7 @@ private:
                 if (quit.load())
                     break;
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(16));
+            std::this_thread::sleep_for(std::chrono::milliseconds(4));
         }
         detach(get_surface(surface), false);
     }
