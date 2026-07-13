@@ -43,6 +43,10 @@ bool Wayland::ensure_overlay_data(const std::shared_ptr<surface_data>& surf_data
         surf_data->overlay_surf = wl_compositor_create_surface(globals.compositor);
         wl_proxy_set_queue(reinterpret_cast<wl_proxy*>(surf_data->overlay_surf), globals.queue);
 
+        wl_region* input_region = wl_compositor_create_region(globals.compositor);
+        wl_surface_set_input_region(surf_data->overlay_surf, input_region);
+        wl_region_destroy(input_region);
+
         surf_data->sub_surf = wl_subcompositor_get_subsurface(globals.subcompositor,
                                                               surf_data->overlay_surf,
                                                               surf_data->surface);
