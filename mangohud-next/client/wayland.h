@@ -203,7 +203,6 @@ private:
                 dispatch_events(surf_data);
                 if (!ipc->connected.load(std::memory_order_acquire)) {
                     detach(surf_data);
-                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 } else {
                     update_import(surf_data);
                     present(surf_data);
@@ -213,7 +212,8 @@ private:
                 if (quit.load())
                     break;
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(4));
+            int sleep = ipc->connected.load(std::memory_order_acquire) ? 4 : 100;
+            std::this_thread::sleep_for(std::chrono::milliseconds(sleep));
         }
         detach(get_surface(surface), false);
     }
