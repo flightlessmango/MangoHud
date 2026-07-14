@@ -425,8 +425,10 @@ static bool get_cpu_power_rapl(CPUPowerData* cpuPowerData, float& power) {
     int64_t timeDiffMicro = std::chrono::duration_cast<std::chrono::microseconds>(timeDiff).count();
     uint64_t energyCounterDiff = energyCounterValue - powerData_rapl->lastCounterValue;
 
-    if (powerData_rapl->lastCounterValue > 0 && energyCounterValue > powerData_rapl->lastCounterValue)
+    if (powerData_rapl->lastCounterValue > 0 && energyCounterValue > powerData_rapl->lastCounterValue) {
         power = energyCounterDiff / timeDiffMicro;
+        SPDLOG_TRACE("RAPL: power = {} W (delta={} uJ, dt={} us)", power, energyCounterDiff, timeDiffMicro);
+    }
 
     powerData_rapl->lastCounterValue = energyCounterValue;
     powerData_rapl->lastCounterValueTime = now;
