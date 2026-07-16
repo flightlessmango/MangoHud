@@ -23,6 +23,11 @@ For Steam launch options, use:
 mangohud-next %command%
 ```
 
+Runtime metric snapshots can be requested from the server as JSON:
+
+- `mangohud-next get_system` returns the current server-side system metrics, including GPU polling state when GPU metrics are present.
+- `mangohud-next get_clients` returns the current connected client metrics and process ids.
+
 ## Configuration
 
 Configuration is documented in [server/README.md](server/README.md).

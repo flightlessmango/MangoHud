@@ -3,7 +3,9 @@
 #include <variant>
 #include <string_view>
 #include <cctype>
+#include <algorithm>
 #include <sys/stat.h>
+#include "../common/json.h"
 #include "../common/table_structs.h"
 #include "../common/helpers.hpp"
 #include "string_utils.h"
@@ -46,6 +48,39 @@ static bool parse_gpu_index(const char* key, size_t& index) {
 
     index = static_cast<size_t>(*p - '0');
     return true;
+}
+
+static std::string metrics_to_json(const MetricTable::mapped_type& metrics) {
+    std::string out;
+
+    out.push_back('{');
+    bool first = true;
+    for (const auto& [key, metric] : metrics) {
+        if (!first)
+            out.push_back(',');
+        first = false;
+
+        append_json_string(out, key);
+        out += R"(:{"value":)";
+
+        if (metric.val) {
+            std::visit([&out](const auto& value) {
+                append_json_value(out, value);
+            }, *metric.val);
+        } else {
+            out += "null";
+        }
+
+        if (!metric.unit.empty()) {
+            out += R"(,"unit":)";
+            append_json_string(out, metric.unit);
+        }
+
+        out.push_back('}');
+    }
+
+    out.push_back('}');
+    return out;
 }
 
 Metrics::Metrics(IPCServer& ipc, std::shared_ptr<Config> cfg_) : cfg(cfg_), ipc(ipc) {
@@ -135,6 +170,71 @@ void Metrics::update_client() {
         populate_tables();
         std::this_thread::sleep_for(std::chrono::milliseconds(7));
     }
+}
+
+std::string Metrics::system_json_snapshot() {
+    std::lock_guard lock(m);
+
+    std::vector<std::string> groups;
+    groups.reserve(metrics.size());
+    for (const auto& group : metrics)
+        groups.push_back(group.first);
+
+    std::sort(groups.begin(), groups.end());
+    std::unordered_map<std::string, bool> gpu_polling;
+    for (const auto& [i, gpu] : enumerate(gpus.available()))
+        gpu_polling["GPU" + std::to_string(i)] = gpu->polling_active();
+
+    std::string out;
+    out += "{\"system\":{";
+
+    bool first = true;
+    for (const auto& group : groups) {
+        if (!first)
+            out.push_back(',');
+        first = false;
+        append_json_string(out, group);
+        out += ":{";
+        if (auto it = gpu_polling.find(group); it != gpu_polling.end()) {
+            out += "\"polling\":";
+            append_json_value(out, it->second);
+            out.push_back(',');
+        }
+        out += "\"metrics\":";
+        out += metrics_to_json(metrics.at(group));
+        out.push_back('}');
+    }
+
+    out += "}}";
+    return out;
+}
+
+std::string Metrics::clients_json_snapshot() {
+    std::lock_guard lock(m);
+
+    std::vector<const MetricTable::value_type*> client_entries;
+    client_entries.reserve(client_metrics.size());
+    for (const auto& client : client_metrics)
+        client_entries.push_back(&client);
+
+    std::sort(client_entries.begin(), client_entries.end(), [](const auto* a, const auto* b) {
+        return std::stoll(a->first) < std::stoll(b->first);
+    });
+
+    std::string out;
+    out += "{\"clients\":[";
+    for (const auto* client : client_entries) {
+        if (client != client_entries.front())
+            out.push_back(',');
+        out += "{\"pid\":";
+        append_json_value(out, std::stoll(client->first));
+        out += ",\"metrics\":";
+        out += metrics_to_json(client->second);
+        out.push_back('}');
+    }
+    out += "]}";
+
+    return out;
 }
 
 Metric Metrics::get(const char* a, const char* b, const pid_t pid = 0)
