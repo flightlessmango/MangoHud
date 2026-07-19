@@ -3,16 +3,16 @@
 
 struct gpu_metrics {
     int load;
-    int temp;
+    int temp {-1};
     int junction_temp {-1};
     int memory_temp {-1};
     float sys_vram_used;
     float proc_vram_used;
     float memoryTotal;
-    int MemClock;
-    int CoreClock;
-    float powerUsage;
-    float powerLimit;
+    int MemClock {-1};
+    int CoreClock {-1};
+    float powerUsage {-1.0f};
+    float powerLimit {-1.0f};
     float apu_cpu_power;
     int apu_cpu_temp;
     bool is_power_throttled;
@@ -20,17 +20,17 @@ struct gpu_metrics {
     bool is_temp_throttled;
     bool is_other_throttled;
     float gtt_used;
-    int fan_speed;
-    int voltage;
+    int fan_speed {-1};
+    int voltage {-1};
     bool fan_rpm;
 
     gpu_metrics()
-        : load(0), temp(0), junction_temp(0), memory_temp(0),
-          sys_vram_used(0.0f), proc_vram_used(0.0f), memoryTotal(0.0f), MemClock(0), CoreClock(0),
-          powerUsage(0.0f), powerLimit(0.0f), apu_cpu_power(0.0f), apu_cpu_temp(0),
+        : load(0), temp(-1), junction_temp(-1), memory_temp(-1),
+          sys_vram_used(0.0f), proc_vram_used(0.0f), memoryTotal(0.0f), MemClock(-1), CoreClock(-1),
+          powerUsage(-1.0f), powerLimit(-1.0f), apu_cpu_power(0.0f), apu_cpu_temp(0),
           is_power_throttled(false), is_current_throttled(false),
           is_temp_throttled(false), is_other_throttled(false),
-          gtt_used(0.0f), fan_speed(0), voltage(0), fan_rpm(false) {}
+          gtt_used(0.0f), fan_speed(-1), voltage(-1), fan_rpm(false) {}
 };
 
 #define METRICS_UPDATE_PERIOD_MS 500

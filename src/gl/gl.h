@@ -2,9 +2,29 @@
 #ifndef MANGOHUD_GL_GL_H
 #define MANGOHUD_GL_GL_H
 
+#include <stdint.h>
+
+typedef unsigned int GLenum;
+typedef unsigned int GLbitfield;
+typedef unsigned char GLubyte;
+typedef float GLfloat;
+
+#define GL_DEPTH_TEST 0x0B71
+#define GL_BLEND 0x0BE2
+#define GL_SRC_ALPHA 0x0302
+#define GL_ONE_MINUS_SRC_ALPHA 0x0303
+#define GL_COLOR_BUFFER_BIT 0x00004000
+#define GL_RENDERER 0x1F01
+
 #ifdef __cplusplus
 extern "C" {
 #endif //__cplusplus
+
+const GLubyte* glGetString(GLenum name);
+void glEnable(GLenum cap);
+void glBlendFunc(GLenum sfactor, GLenum dfactor);
+void glClearColor(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
+void glClear(GLbitfield mask);
 
 void * glXCreateContext(void *, void *, void *, int);
 void glXDestroyContext(void *, void*);

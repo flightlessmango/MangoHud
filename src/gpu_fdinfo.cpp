@@ -1,4 +1,5 @@
 #include "gpu_fdinfo.h"
+#include "file_utils.h"
 
 #ifndef TEST_ONLY
 #include "hud_elements.h"
@@ -107,6 +108,39 @@ void GPU_fdinfo::gather_fdinfo_data() {
             fdinfo_data[i][key] = val;
         }
     }
+}
+
+bool GPU_fdinfo::fdinfo_data_has_key(const std::string& key) const
+{
+    for (const auto& fd : fdinfo_data) {
+        if (fd.find(key) != fd.end())
+            return true;
+    }
+
+    return false;
+}
+
+void GPU_fdinfo::update_intel_memory_type()
+{
+    if (module != "i915" && module != "xe")
+        return;
+
+    if (fdinfo_data.empty() || fdinfo_data_has_key(drm_memory_type))
+        return;
+
+    const auto old_type = drm_memory_type;
+    const auto integrated_type = module == "i915" ? "drm-resident-system0" : "drm-resident-gtt";
+
+    if (!fdinfo_data_has_key(integrated_type))
+        return;
+
+    drm_memory_type = integrated_type;
+    intel_gpu_integrated = true;
+
+    SPDLOG_DEBUG(
+        "\"{}\" is not found, you probably have an integrated GPU. "
+        "Using \"{}\"", old_type, drm_memory_type
+    );
 }
 
 uint64_t GPU_fdinfo::get_gpu_time()
@@ -303,10 +337,107 @@ void GPU_fdinfo::get_current_hwmon_readings()
     }
 }
 
+bool GPU_fdinfo::has_hwmon_sensor(const std::string& key) const
+{
+    auto sensor = hwmon_sensors.find(key);
+    return sensor != hwmon_sensors.end() && sensor->second.stream.is_open();
+}
+
+void GPU_fdinfo::find_intel_gpu_rapl_power()
+{
+    std::string powercap = "/sys/class/powercap/";
+    auto powercap_dirs = ls(powercap.c_str());
+
+    for (auto& dir : powercap_dirs) {
+        auto path = powercap + dir;
+        auto name = read_line(path + "/name");
+
+        if (name != "uncore")
+            continue;
+
+        auto energy_path = path + "/energy_uj";
+        auto energy_stream = std::ifstream(energy_path);
+
+        if (!energy_stream.good()) {
+            SPDLOG_DEBUG(
+                "powercap: Intel GPU RAPL energy is not accessible at {}",
+                energy_path
+            );
+            continue;
+        }
+
+        intel_gpu_rapl_energy_stream = std::move(energy_stream);
+
+        try {
+            auto max_energy_range = read_line(path + "/max_energy_range_uj");
+            if (!max_energy_range.empty())
+                intel_gpu_rapl_max_energy_range_uj = std::stoull(max_energy_range);
+        } catch (...) {
+            intel_gpu_rapl_max_energy_range_uj = 0;
+        }
+
+        SPDLOG_DEBUG("powercap: using Intel GPU RAPL energy at {}", energy_path);
+        return;
+    }
+}
+
+bool GPU_fdinfo::read_intel_gpu_rapl_energy(uint64_t& energy_uj)
+{
+    if (!intel_gpu_rapl_energy_stream.is_open())
+        return false;
+
+    intel_gpu_rapl_energy_stream.clear();
+    intel_gpu_rapl_energy_stream.seekg(0);
+
+    std::string energy;
+    std::getline(intel_gpu_rapl_energy_stream, energy);
+
+    if (energy.empty())
+        return false;
+
+    try {
+        energy_uj = std::stoull(energy);
+    } catch (...) {
+        return false;
+    }
+
+    return true;
+}
+
+float GPU_fdinfo::get_intel_gpu_rapl_power_usage()
+{
+    uint64_t now = 0;
+    if (!read_intel_gpu_rapl_energy(now))
+        return 0.f;
+
+    if (!intel_gpu_rapl_energy_initialized) {
+        intel_gpu_rapl_last_energy_uj = now;
+        intel_gpu_rapl_energy_initialized = true;
+        return 0.f;
+    }
+
+    uint64_t delta = 0;
+    if (now >= intel_gpu_rapl_last_energy_uj) {
+        delta = now - intel_gpu_rapl_last_energy_uj;
+    } else if (intel_gpu_rapl_max_energy_range_uj > intel_gpu_rapl_last_energy_uj) {
+        delta = intel_gpu_rapl_max_energy_range_uj - intel_gpu_rapl_last_energy_uj + now;
+    }
+
+    intel_gpu_rapl_last_energy_uj = now;
+
+    return (static_cast<float>(delta) / (METRICS_UPDATE_PERIOD_MS / 1000.f)) / 1'000'000;
+}
+
 float GPU_fdinfo::get_power_usage()
 {
-    if (!hwmon_sensors["power"].filename.empty())
+    if (intel_gpu_rapl_energy_stream.is_open())
+        return get_intel_gpu_rapl_power_usage();
+
+    if (has_hwmon_sensor("power"))
         return static_cast<float>(hwmon_sensors["power"].val) / 1'000'000;
+
+    if (!has_hwmon_sensor("energy"))
+        return -1.0f;
 
     float now = hwmon_sensors["energy"].val;
 
@@ -540,7 +671,7 @@ int GPU_fdinfo::get_gpu_clock()
         return get_gpu_clock_mali();
 
     if (!gpu_clock_stream.is_open())
-        return 0;
+        return -1;
 
     std::string clock_str;
 
@@ -549,14 +680,14 @@ int GPU_fdinfo::get_gpu_clock()
     std::getline(gpu_clock_stream, clock_str);
 
     if (clock_str.empty())
-        return 0;
+        return -1;
 
     return std::stoi(clock_str);
 }
 
 int GPU_fdinfo::get_gpu_clock_mali() {
     if (fdinfo_data.empty())
-        return 0;
+        return -1;
 
     std::string key;
 
@@ -568,7 +699,7 @@ int GPU_fdinfo::get_gpu_clock_mali() {
     std::string freq_str = fdinfo_data[0][key];
 
     if (freq_str.empty())
-        return 0;
+        return -1;
 
     float freq = std::stoull(freq_str) / 1'000'000;
 
@@ -688,7 +819,7 @@ int GPU_fdinfo::get_kgsl_temp() {
     std::ifstream* s = &kgsl_streams["temp"];
 
     if (!s->is_open())
-        return 0;
+        return -1;
 
     std::string temp_str;
 
@@ -697,7 +828,7 @@ int GPU_fdinfo::get_kgsl_temp() {
     std::getline(*s, temp_str);
 
     if (temp_str.empty())
-        return 0;
+        return -1;
 
     return std::round(std::stoi(temp_str) / 1'000.f);
 }
@@ -726,26 +857,47 @@ void GPU_fdinfo::main_thread()
         }
 
         gather_fdinfo_data();
+        update_intel_memory_type();
         get_current_hwmon_readings();
 
         metrics.load = get_gpu_load();
-        metrics.proc_vram_used = get_memory_used();
+        const float memory_used = get_memory_used();
+        metrics.proc_vram_used = memory_used;
+        metrics.gtt_used = 0.0f;
+        if (intel_gpu_integrated)
+            metrics.gtt_used = memory_used;
 
         metrics.powerUsage = get_power_usage();
-        metrics.powerLimit = static_cast<float>(hwmon_sensors["power_limit"].val) / 1'000'000;
+        if (has_hwmon_sensor("power_limit"))
+            metrics.powerLimit = static_cast<float>(hwmon_sensors["power_limit"].val) / 1'000'000;
+        else
+            metrics.powerLimit = -1.0f;
 
         metrics.CoreClock = get_gpu_clock();
-        metrics.voltage = hwmon_sensors["voltage"].val;
+        if (has_hwmon_sensor("voltage"))
+            metrics.voltage = hwmon_sensors["voltage"].val;
+        else
+            metrics.voltage = -1;
 
         if (module == "msm_drm")
             metrics.temp = get_kgsl_temp();
-        else
+        else if (has_hwmon_sensor("temp"))
             metrics.temp = hwmon_sensors["temp"].val / 1000.f;
+        else
+            metrics.temp = -1;
 
-        metrics.memory_temp = hwmon_sensors["vram_temp"].val / 1000.f;
+        if (has_hwmon_sensor("vram_temp"))
+            metrics.memory_temp = hwmon_sensors["vram_temp"].val / 1000.f;
+        else
+            metrics.memory_temp = -1;
 
-        metrics.fan_speed = hwmon_sensors["fan_speed"].val;
-        metrics.fan_rpm = true; // Fan data is pulled from hwmon
+        if (has_hwmon_sensor("fan_speed")) {
+            metrics.fan_speed = hwmon_sensors["fan_speed"].val;
+            metrics.fan_rpm = true; // Fan data is pulled from hwmon
+        } else {
+            metrics.fan_speed = -1;
+            metrics.fan_rpm = false;
+        }
 
         int throttling = get_throttling_status();
         metrics.is_power_throttled = throttling & GPU_throttle_status::POWER;

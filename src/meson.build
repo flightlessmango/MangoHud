@@ -263,6 +263,7 @@ if get_option('mangoapp')
     'mangoapp',
     files(
       'app/main.cpp',
+      'app/frame_feed.cpp',
     ),
     c_args : [
       pre_args,

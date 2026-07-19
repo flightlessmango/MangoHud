@@ -66,6 +66,8 @@ private:
 
     std::vector<std::map<std::string, std::string>> fdinfo_data;
     void gather_fdinfo_data();
+    bool fdinfo_data_has_key(const std::string& key) const;
+    void update_intel_memory_type();
 
     void main_thread();
 
@@ -86,10 +88,19 @@ private:
     void find_hwmon_sensors();
     std::string find_hwmon_dir();
     std::string find_hwmon_sensor_dir(std::string name);
+    bool has_hwmon_sensor(const std::string& key) const;
     void get_current_hwmon_readings();
 
     float get_power_usage();
     float last_power = 0;
+    bool intel_gpu_integrated = false;
+    std::ifstream intel_gpu_rapl_energy_stream;
+    uint64_t intel_gpu_rapl_last_energy_uj = 0;
+    uint64_t intel_gpu_rapl_max_energy_range_uj = 0;
+    bool intel_gpu_rapl_energy_initialized = false;
+    void find_intel_gpu_rapl_power();
+    bool read_intel_gpu_rapl_energy(uint64_t& energy_uj);
+    float get_intel_gpu_rapl_power_usage();
 
     std::ifstream gpu_clock_stream;
     void find_i915_gt_dir();
@@ -156,21 +167,7 @@ public:
             drm_memory_type = "drm-resident-memory";
         }
 
-        if (fdinfo_data.size() > 0 &&
-            fdinfo_data[0].find(drm_memory_type) == fdinfo_data[0].end())
-        {
-            auto old_type = drm_memory_type;
-
-            if (module == "i915")
-                drm_memory_type = "drm-resident-system0";
-            else if (module == "xe")
-                drm_memory_type = "drm-resident-gtt";
-
-            SPDLOG_DEBUG(
-                "\"{}\" is not found, you probably have an integrated GPU. "
-                "Using \"{}\"", old_type, drm_memory_type
-            );
-        }
+        update_intel_memory_type();
 
         SPDLOG_DEBUG(
             "drm_engine_type = {}, drm_memory_type = {}",
@@ -208,6 +205,9 @@ public:
 
         find_hwmon_sensors();
 
+        if (intel_gpu_integrated && !has_hwmon_sensor("energy") && !has_hwmon_sensor("power"))
+            find_intel_gpu_rapl_power();
+
         if (module == "i915")
             find_i915_gt_dir();
         else if (module == "xe")
@@ -242,4 +242,9 @@ public:
     }
 
     float amdgpu_helper_get_proc_vram();
+
+    bool uses_integrated_memory() const
+    {
+        return intel_gpu_integrated;
+    }
 };
