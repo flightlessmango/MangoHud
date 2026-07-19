@@ -778,7 +778,8 @@ void HudElements::ram(){
         ImGui::PopFont();
     }
 
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram_temp]) {
+    // only when an spd5118 RAM temp sensor exists, else mem_temp is a bogus 0
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram_temp] && mem_temp_available) {
         ImguiNextColumnOrNewRow();
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit])
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", HUDElements.convert_to_fahrenheit(mem_temp));

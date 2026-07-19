@@ -506,6 +506,13 @@ class AMDGPU {
             cond_var.notify_one();
         }
 
+        bool has_fan_sensor()           const { return sysfs_nodes.fan != nullptr; }
+        bool has_junction_temp_sensor() const { return sysfs_nodes.junction_temp != nullptr; }
+        bool has_memory_temp_sensor()   const { return sysfs_nodes.memory_temp != nullptr; }
+        bool has_power_limit_sensor()   const { return sysfs_nodes.power_limit != nullptr; }
+        // in0_input exists on some APUs but always reads 0, so require a reading
+        bool has_voltage_sensor()       const { return sysfs_nodes.gpu_voltage_soc != nullptr && voltage_is_valid; }
+
 	private:
 		std::string pci_dev;
 		std::string gpu_metrics_path;
@@ -515,6 +522,7 @@ class AMDGPU {
 		std::thread thread;
 		struct amdgpu_files sysfs_nodes = {};
 		bool gpu_metrics_is_valid = false;
+		bool voltage_is_valid = false;  // gpu_voltage_soc read non-zero at init
 		std::condition_variable cond_var;
 		std::atomic<bool> stop_thread{false};
         std::atomic<bool> paused{false};

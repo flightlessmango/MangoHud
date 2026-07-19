@@ -60,6 +60,8 @@ private:
     uint64_t fdinfo_last_update_ms = 0;
 
     std::map<std::string, hwmon_sensor> hwmon_sensors;
+    bool fan_avail = false, voltage_avail = false;
+    bool mem_temp_avail = false, power_limit_avail = false;
 
     std::string drm_engine_type = "EMPTY";
     std::string drm_memory_type = "EMPTY";
@@ -83,6 +85,10 @@ private:
 
     float get_memory_used();
 
+    bool hwmon_has(const std::string& key) const {
+        auto it = hwmon_sensors.find(key);
+        return it != hwmon_sensors.end() && !it->second.filename.empty();
+    }
     void find_hwmon_sensors();
     std::string find_hwmon_dir();
     std::string find_hwmon_sensor_dir(std::string name);
@@ -208,6 +214,12 @@ public:
 
         find_hwmon_sensors();
 
+        // Snapshot availability before the worker thread starts mutating the map.
+        fan_avail         = hwmon_has("fan_speed");
+        voltage_avail     = hwmon_has("voltage");
+        mem_temp_avail    = hwmon_has("vram_temp");
+        power_limit_avail = hwmon_has("power_limit");
+
         if (module == "i915")
             find_i915_gt_dir();
         else if (module == "xe")
@@ -242,4 +254,10 @@ public:
     }
 
     float amdgpu_helper_get_proc_vram();
+
+    bool has_fan_sensor()           const { return fan_avail; }
+    bool has_voltage_sensor()       const { return voltage_avail; }
+    bool has_memory_temp_sensor()   const { return mem_temp_avail; }
+    bool has_power_limit_sensor()   const { return power_limit_avail; }
+    bool has_junction_temp_sensor() const { return false; }  // not exposed via fdinfo
 };

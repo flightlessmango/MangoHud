@@ -12,6 +12,7 @@
 
 float memused, memmax, swapused;
 int mem_temp;
+bool mem_temp_available = false;
 uint64_t proc_mem_resident, proc_mem_shared, proc_mem_virt;
 
 void update_meminfo() {
@@ -46,6 +47,7 @@ void update_mem_temp() {
             if (read_line(path + dir + "/name") == "spd5118")
                 mem_temp_files.emplace_back(path + dir + "/temp1_input");
         }
+        mem_temp_available = !mem_temp_files.empty();
         if (mem_temp_files.empty())
             SPDLOG_ERROR("failed to find known ram temp sensors");
     }
