@@ -295,7 +295,7 @@ bool CPUStats::ReadcpuTempFile(int& temp) {
 bool CPUStats::UpdateCpuTemp() {
     if (gpus) {
         for (auto gpu : gpus->available_gpus) {
-            if (gpu->is_apu()) {
+            if (gpu->is_apu() && gpu->metrics.apu_cpu_temp > 0) {
                 m_cpuDataTotal.temp = gpu->metrics.apu_cpu_temp;
                 return true;
             }
