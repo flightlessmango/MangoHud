@@ -78,7 +78,7 @@ Install necessary development packages.
 - GBM (libgbm-dev)
 - libdrm (libdrm-dev)
 - libcap (libcap-dev)
-- libsystemd (libsystemd-dev)
+- sd-bus (libsystemd-dev, or elogind on non-systemd distributions)
 - yaml-cpp (libyaml-cpp-dev)
 - X11 (libx11-dev)
 - XNVCtrl (libxnvctrl-dev), optional, use `-Dwith_xnvctrl=disabled` option with `meson` to disable
