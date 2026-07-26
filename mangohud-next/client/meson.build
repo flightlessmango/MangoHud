@@ -5,6 +5,7 @@ wayland_protocols_dir = wayland_protocols_dep.get_variable(pkgconfig: 'pkgdatadi
 linux_dmabuf_xml = wayland_protocols_dir / 'stable/linux-dmabuf/linux-dmabuf-v1.xml'
 fractional_scale_xml = wayland_protocols_dir / 'staging/fractional-scale/fractional-scale-v1.xml'
 viewporter_xml = wayland_protocols_dir / 'stable/viewporter/viewporter.xml'
+presentation_time_xml = wayland_protocols_dir / 'stable/presentation-time/presentation-time.xml'
 
 overlay_shaders = [
   'overlay.frag',
@@ -56,6 +57,19 @@ viewporter_protocol = [
     command: [wayland_scanner, 'private-code', '@INPUT@', '@OUTPUT@']),
 ]
 
+presentation_time_protocol = [
+  custom_target(
+    'presentation-time-client-protocol.h',
+    input: presentation_time_xml,
+    output: 'presentation-time-client-protocol.h',
+    command: [wayland_scanner, 'client-header', '@INPUT@', '@OUTPUT@']),
+  custom_target(
+    'presentation-time-protocol.c',
+    input: presentation_time_xml,
+    output: 'presentation-time-protocol.c',
+    command: [wayland_scanner, 'private-code', '@INPUT@', '@OUTPUT@']),
+]
+
 vulkan_layer = shared_library(
     'MangoHud-next',
     files('layer.cpp',
@@ -69,6 +83,7 @@ vulkan_layer = shared_library(
     linux_dmabuf_protocol,
     fractional_scale_protocol,
     viewporter_protocol,
+    presentation_time_protocol,
     dependencies: [vulkan_dep,
                    vulkan_wsi_deps,
                    spdlog_dep,
@@ -77,6 +92,7 @@ vulkan_layer = shared_library(
                    dearimgui_dep,
                    dependency('egl'),
                    dependency('wayland-egl'),
+                   dependency('wayland-egl-backend'),
                    dependency('gl'),
                    vkbootstrap_dep,
                    dep_vulkan_utility_libraries],

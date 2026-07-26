@@ -36,10 +36,19 @@ public:
     void stop();
 
     void add_to_queue(uint64_t now) {
-        static uint64_t seq;
-        std::unique_lock lock(samples_mtx);
-        samples.push_back({seq, now});
-        seq++;
+        {
+            static uint64_t frame_seq = 0;
+            std::unique_lock lock(samples_mtx);
+            samples.push_back({SampleType::Frame, frame_seq, now});
+            frame_seq++;
+        }
+    }
+
+    void add_to_queue(SampleType type, uint64_t seq, uint64_t now) {
+        {
+            std::unique_lock lock(samples_mtx);
+            samples.push_back({type, seq, now});
+        }
     }
 
     int push_queue();

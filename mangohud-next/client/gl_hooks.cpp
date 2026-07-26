@@ -1,6 +1,7 @@
 #include <EGL/egl.h>
 #define EGL_EGLEXT_PROTOTYPES
 #include <EGL/eglext.h>
+#include <wayland-egl-backend.h>
 #include <wayland-egl.h>
 #include <dlfcn.h>
 #include <pthread.h>
@@ -26,9 +27,20 @@ std::mutex egl_displays_m;
 std::unordered_map<EGLDisplay, wl_display*> egl_displays;
 
 static wl_surface* get_wl_egl_surface(wl_egl_window* window) {
-    std::lock_guard lock(wl_egl_windows_m);
-    auto it = wl_egl_windows.find(window);
-    return it != wl_egl_windows.end() ? it->second : nullptr;
+    if (!window)
+        return nullptr;
+
+    {
+        std::lock_guard lock(wl_egl_windows_m);
+        auto it = wl_egl_windows.find(window);
+        if (it != wl_egl_windows.end())
+            return it->second;
+    }
+
+    if (window->version == WL_EGL_WINDOW_VERSION)
+        return window->surface;
+
+    return reinterpret_cast<wl_surface*>(window->version);
 }
 
 static wl_display* get_egl_display(EGLDisplay dpy) {
@@ -54,6 +66,23 @@ static void add_egl_display(EGLDisplay dpy, void* native_display) {
 
     std::lock_guard lock(egl_displays_m);
     egl_displays[dpy] = static_cast<wl_display*>(native_display);
+}
+
+static void register_egl_surface(EGLDisplay dpy, EGLSurface surf, void* native_window) {
+    if (surf == EGL_NO_SURFACE || !native_window)
+        return;
+
+    auto* wl_surface = get_wl_egl_surface(reinterpret_cast<wl_egl_window*>(native_window));
+    auto* wl_display = get_egl_display(dpy);
+    if (!wl_surface || !wl_display)
+        return;
+
+    add_egl_display(dpy, wl_display);
+
+    if (!ipc) ipc = std::make_shared<IPCClient>(nullptr, Backend::EGL);
+    if (!wayland)
+        wayland = std::make_unique<Wayland>(ipc);
+    wayland->add_surface(surf, wl_surface, wl_display);
 }
 
 static bool present_wayland(EGLSurface surf) {
@@ -128,18 +157,39 @@ EXPORT_C_(EGLSurface) eglCreateWindowSurface(EGLDisplay dpy, EGLConfig config,
         real_eglCreateWindowSurface = (decltype(real_eglCreateWindowSurface)) real_dlsym(RTLD_NEXT, "eglCreateWindowSurface");
 
     EGLSurface surf = real_eglCreateWindowSurface(dpy, config, native_window, attrib_list);
-    if (surf == EGL_NO_SURFACE)
-        return surf;
+    register_egl_surface(dpy, surf, reinterpret_cast<void*>(native_window));
 
-    auto* wl_surface = get_wl_egl_surface(reinterpret_cast<wl_egl_window*>(native_window));
-    auto* wl_display = get_egl_display(dpy);
-    if (!wl_surface || !wl_display)
-        return surf;
+    return surf;
+}
 
-    if (!ipc) ipc = std::make_shared<IPCClient>(nullptr, Backend::EGL);
-    if (!wayland)
-        wayland = std::make_unique<Wayland>(ipc);
-    wayland->add_surface(surf, wl_surface, wl_display);
+EXPORT_C_(EGLSurface) eglCreatePlatformWindowSurface(EGLDisplay dpy, EGLConfig config,
+                                                     void* native_window,
+                                                     const EGLAttrib* attrib_list) {
+    static EGLSurface (*real_eglCreatePlatformWindowSurface)(EGLDisplay, EGLConfig, void*, const EGLAttrib*) = nullptr;
+    if (!real_eglCreatePlatformWindowSurface)
+        real_eglCreatePlatformWindowSurface =
+            (decltype(real_eglCreatePlatformWindowSurface)) real_dlsym(RTLD_NEXT, "eglCreatePlatformWindowSurface");
+
+    EGLSurface surf = real_eglCreatePlatformWindowSurface
+        ? real_eglCreatePlatformWindowSurface(dpy, config, native_window, attrib_list)
+        : EGL_NO_SURFACE;
+    register_egl_surface(dpy, surf, native_window);
+
+    return surf;
+}
+
+EXPORT_C_(EGLSurface) eglCreatePlatformWindowSurfaceEXT(EGLDisplay dpy, EGLConfig config,
+                                                        void* native_window,
+                                                        const EGLint* attrib_list) {
+    static EGLSurface (*real_eglCreatePlatformWindowSurfaceEXT)(EGLDisplay, EGLConfig, void*, const EGLint*) = nullptr;
+    if (!real_eglCreatePlatformWindowSurfaceEXT)
+        real_eglCreatePlatformWindowSurfaceEXT =
+            (decltype(real_eglCreatePlatformWindowSurfaceEXT)) real_dlsym(RTLD_NEXT, "eglCreatePlatformWindowSurfaceEXT");
+
+    EGLSurface surf = real_eglCreatePlatformWindowSurfaceEXT
+        ? real_eglCreatePlatformWindowSurfaceEXT(dpy, config, native_window, attrib_list)
+        : EGL_NO_SURFACE;
+    register_egl_surface(dpy, surf, native_window);
 
     return surf;
 }
@@ -272,8 +322,11 @@ struct func_ptr {
     void* ptr;
 };
 
+EXPORT_C_(__eglMustCastToProperFunctionPointerType) eglGetProcAddress(const char* procName);
+
 static const auto name_to_funcptr_map = std::array{
 #define ADD_HOOK(fn) func_ptr{ #fn, (void*)fn }
+    ADD_HOOK(eglGetProcAddress),
     ADD_HOOK(eglSwapBuffers),
     ADD_HOOK(glXSwapBuffers),
     ADD_HOOK(glXSwapBuffersMscOML),
@@ -283,6 +336,8 @@ static const auto name_to_funcptr_map = std::array{
     ADD_HOOK(eglGetPlatformDisplayEXT),
     ADD_HOOK(eglGetDisplay),
     ADD_HOOK(eglCreateWindowSurface),
+    ADD_HOOK(eglCreatePlatformWindowSurface),
+    ADD_HOOK(eglCreatePlatformWindowSurfaceEXT),
     ADD_HOOK(eglDestroySurface),
     ADD_HOOK(eglTerminate),
     ADD_HOOK(wl_egl_window_create),
@@ -291,10 +346,36 @@ static const auto name_to_funcptr_map = std::array{
 #undef ADD_HOOK
 };
 
-extern "C" void* dlsym(void* handle, const char* symbol)
+static void* find_hook(const char* name)
 {
     for (const auto& f : name_to_funcptr_map)
-        if (std::strcmp(symbol, f.name) == 0) return f.ptr;
+        if (std::strcmp(name, f.name) == 0) return f.ptr;
+
+    return nullptr;
+}
+
+EXPORT_C_(__eglMustCastToProperFunctionPointerType) eglGetProcAddress(const char* procName)
+{
+    static __eglMustCastToProperFunctionPointerType (*real_eglGetProcAddress)(const char*) = nullptr;
+    if (!real_eglGetProcAddress)
+        real_eglGetProcAddress =
+            (decltype(real_eglGetProcAddress)) real_dlsym(RTLD_NEXT, "eglGetProcAddress");
+
+    auto real_func = real_eglGetProcAddress ? real_eglGetProcAddress(procName) : nullptr;
+    if (real_func) {
+        auto* func = find_hook(procName);
+        if (func)
+            return reinterpret_cast<__eglMustCastToProperFunctionPointerType>(func);
+    }
+
+    return real_func;
+}
+
+extern "C" void* dlsym(void* handle, const char* symbol)
+{
+    auto* func = find_hook(symbol);
+    if (func)
+        return func;
 
     return real_dlsym(handle, symbol);
 }

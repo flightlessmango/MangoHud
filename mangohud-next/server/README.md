@@ -72,7 +72,7 @@ Each entry in `hud.windows` defines one hud window.
 | --- | --- | --- | --- |
 | Text | `text` | `color`, `font_size`, `font_scale`, `truncate` | Static text. |
 | Value | `value` | `unit`, `color`, `precision`, `font_size`, `font_scale`, `truncate` | Metric value. If `unit` is omitted, the metric's default unit is used. Float values use one decimal by default. |
-| Graph | `graph` | none currently used | Graph data. Currently only supports `FRAMETIMES`. |
+| Graph | `graph` | none currently used | Graph data. Supports `FRAMETIMES`, `OUTPUT_FRAMETIMES`, and `HUD_FRAMETIMES`. |
 | Exec | `exec` | `unit`, `color`, `font_size`, `font_scale`, `truncate` | Output of a shell command. |
 
 Color values are `RRGGBB` or `RRGGBBAA` hex strings, with an optional leading `#`. When `color` is omitted, the default is white.
@@ -100,7 +100,7 @@ Available metrics currently include:
 | `[GPU, index, KEY]` | `LOAD`, `VRAM_USED`, `GTT_USED`, `VRAM_TOTAL`, `VRAM_CLOCK`, `VRAM_TEMP`, `TEMP`, `JUNCTION_TEMP`, `CORE_CLOCK`, `VOLTAGE`, `POWER`, `POWER_LIMIT`, `FAN_SPEED` |
 | `[CPU, KEY]` | `LOAD`, `FREQ`, `TEMP`, `POWER` |
 | `[RAM, KEY]` | `USED`, `TOTAL`, `SWAP_USED` |
-| `KEY` | `ENGINE_NAME`, `GPU_NAME`, `VULKAN_DRIVER`, `RESOLUTION`, `FPS`, `FRAMETIME`, `FRAMETIMES` |
+| `KEY` | `ENGINE_NAME`, `GPU_NAME`, `VULKAN_DRIVER`, `RESOLUTION`, `FPS`, `FRAMETIME`, `FRAMETIMES`, `OUTPUT_FPS`, `OUTPUT_FRAMETIME`, `OUTPUT_FRAMETIMES`, `HUD_FPS`, `HUD_FRAMETIME`, `HUD_FRAMETIMES` |
 
 Some single-name references are backed by small shell commands:
 

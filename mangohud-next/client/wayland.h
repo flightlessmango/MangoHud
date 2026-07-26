@@ -18,6 +18,7 @@
 #include "fractional-scale-v1-client-protocol.h"
 #include "ipc.h"
 #include "linux-dmabuf-v1-client-protocol.h"
+#include "presentation-time-client-protocol.h"
 #include "viewporter-client-protocol.h"
 
 struct shm_buffer {
@@ -39,6 +40,20 @@ struct shm_buffer {
             wl_buffer_destroy(buffer);
             buffer = nullptr;
         }
+    }
+};
+
+struct presentation_feedback_state {
+    std::atomic<bool> output_pending{false};
+    std::atomic<bool> hud_pending{false};
+    std::atomic<uint64_t> hud_seq{0};
+
+    std::atomic<bool>& pending(SampleType type) {
+        return type == SampleType::Hud ? hud_pending : output_pending;
+    }
+
+    uint64_t next_hud_seq() {
+        return hud_seq.fetch_add(1, std::memory_order_relaxed);
     }
 };
 
@@ -64,6 +79,8 @@ struct surface_data {
     wp_viewport* viewport = nullptr;
     wp_fractional_scale_v1* fractional_scale = nullptr;
     std::atomic<uint32_t> preferred_scale{120};
+    std::shared_ptr<presentation_feedback_state> presentation_feedback =
+        std::make_shared<presentation_feedback_state>();
     bool attached = false;
 
     std::vector<std::shared_ptr<shm_buffer>> buffers;
@@ -79,12 +96,28 @@ struct wl_globals {
     zwp_linux_dmabuf_v1* dmabuf = nullptr;
     wp_viewporter* viewporter = nullptr;
     wp_fractional_scale_manager_v1* fractional_scale_manager = nullptr;
+    wp_presentation* presentation = nullptr;
 
     uint32_t compositor_name = 0;
     uint32_t subcompositor_name = 0;
     uint32_t dmabuf_name = 0;
     uint32_t viewporter_name = 0;
     uint32_t fractional_scale_manager_name = 0;
+    uint32_t presentation_name = 0;
+    uint32_t presentation_clock_id = 0;
+    bool have_presentation_clock_id = false;
+};
+
+struct presentation_feedback_data {
+    std::weak_ptr<IPCClient> ipc;
+    std::shared_ptr<presentation_feedback_state> feedback_state;
+    SampleType type = SampleType::Frame;
+    const char* surface = nullptr;
+
+    void clear_pending() {
+        if (feedback_state)
+            feedback_state->pending(type).store(false, std::memory_order_release);
+    }
 };
 
 class Wayland {
@@ -173,6 +206,14 @@ private:
                                    const char* interface, uint32_t version);
     static void on_registry_global_remove(void* data, wl_registry* registry, uint32_t name);
     static void on_preferred_scale(void* data, wp_fractional_scale_v1*, uint32_t scale);
+    static void on_presentation_clock_id(void* data, wp_presentation*, uint32_t clock_id);
+    static void on_presentation_feedback_sync_output(void*, struct wp_presentation_feedback*, wl_output*) {}
+    static void on_presentation_feedback_presented(void* data, struct wp_presentation_feedback* feedback,
+                                                   uint32_t tv_sec_hi, uint32_t tv_sec_lo,
+                                                   uint32_t tv_nsec, uint32_t refresh,
+                                                   uint32_t seq_hi, uint32_t seq_lo,
+                                                   uint32_t flags);
+    static void on_presentation_feedback_discarded(void* data, struct wp_presentation_feedback* feedback);
     static void release_to_server(shm_buffer* buf);
     static void buffer_release(void* data, wl_buffer* = nullptr);
 
@@ -189,6 +230,21 @@ private:
         .preferred_scale = Wayland::on_preferred_scale,
     };
 
+    inline static const wp_presentation_listener presentation_listener = {
+        .clock_id = Wayland::on_presentation_clock_id,
+    };
+
+    inline static const wp_presentation_feedback_listener presentation_feedback_listener = {
+        .sync_output = Wayland::on_presentation_feedback_sync_output,
+        .presented = Wayland::on_presentation_feedback_presented,
+        .discarded = Wayland::on_presentation_feedback_discarded,
+    };
+
+    inline static char app_surface_name[] = "app";
+    inline static char hud_surface_name[] = "hud";
+
+    bool request_presentation_feedback(const std::shared_ptr<surface_data>& surf_data, wl_globals& globals,
+                                       wl_surface* surface, SampleType type, const char* surface_name);
     bool ensure_overlay_data(const std::shared_ptr<surface_data>& surf_data);
     void update_import(const std::shared_ptr<surface_data>& surf_data);
     void dispatch_events(const std::shared_ptr<surface_data>& surf_data);

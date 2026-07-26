@@ -469,15 +469,15 @@ int IPCClient::push_queue() {
             return r;
         }
 
-        r = sd_bus_message_open_container(m, 'a', "(tt)");
+        r = sd_bus_message_open_container(m, 'a', "(ytt)");
         if (r < 0) {
             SPDLOG_ERROR("push_queue: open_container {} ({})", r, strerror(-r));
             sd_bus_message_unref(m);
             return r;
         }
 
-        for (auto& [seq, now] : out) {
-            r = sd_bus_message_append(m, "(tt)", (uint64_t)seq, (uint64_t)now);
+        for (auto& [type, seq, now] : out) {
+            r = sd_bus_message_append(m, "(ytt)", (uint8_t)type, (uint64_t)seq, (uint64_t)now);
             if (r < 0) {
                 SPDLOG_ERROR("push_queue: append {} ({})", r, strerror(-r));
                 sd_bus_message_unref(m);

@@ -143,11 +143,19 @@ void Metrics::update_client() {
             std::lock_guard clients_lock(ipc.clients_mtx);
             for (auto client : ipc.clients) {
                 std::vector<float> frametimes;
+                std::vector<float> output_frametimes;
+                std::vector<float> hud_frametimes;
                 float avg_fps;
+                float output_fps;
+                float hud_fps;
                 {
                     std::lock_guard lock(client->m);
-                    frametimes.assign(client->frametimes.begin(), client->frametimes.end());
-                    avg_fps = client->avg_fps_from_samples();
+                    frametimes = client->stats_for(SampleType::Frame).frametimes_copy();
+                    output_frametimes = client->stats_for(SampleType::Output).frametimes_copy();
+                    hud_frametimes = client->stats_for(SampleType::Hud).frametimes_copy();
+                    avg_fps = client->stats_for(SampleType::Frame).avg_fps();
+                    output_fps = client->stats_for(SampleType::Output).avg_fps();
+                    hud_fps = client->stats_for(SampleType::Hud).avg_fps();
                     auto& metrics = new_metrics[std::to_string(client->pid)];
                     metrics["ENGINE_NAME"] = {engine_name(client->pEngineName)};
                     metrics["GPU_NAME"] = {client->gpuName};
@@ -158,8 +166,14 @@ void Metrics::update_client() {
                 // TODO fps and frametime updates should match other metrics at 500ms
                 // frametimes should still be this fast
                 new_metrics[std::to_string(client->pid)]["FPS"] = {int(round(avg_fps)), "FPS"};
+                new_metrics[std::to_string(client->pid)]["OUTPUT_FPS"] = {int(round(output_fps)), "FPS"};
+                new_metrics[std::to_string(client->pid)]["HUD_FPS"] = {int(round(hud_fps)), "FPS"};
                 new_metrics[std::to_string(client->pid)]["FRAMETIME"] = {1000.f / avg_fps, "ms"};
+                new_metrics[std::to_string(client->pid)]["OUTPUT_FRAMETIME"] = {output_fps > 0 ? 1000.f / output_fps : 0.f, "ms"};
+                new_metrics[std::to_string(client->pid)]["HUD_FRAMETIME"] = {hud_fps > 0 ? 1000.f / hud_fps : 0.f, "ms"};
                 new_metrics[std::to_string(client->pid)]["FRAMETIMES"] = {frametimes};
+                new_metrics[std::to_string(client->pid)]["OUTPUT_FRAMETIMES"] = {output_frametimes};
+                new_metrics[std::to_string(client->pid)]["HUD_FRAMETIMES"] = {hud_frametimes};
             }
         }
 

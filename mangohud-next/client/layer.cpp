@@ -235,7 +235,9 @@ public:
         }
 
         layer->init_overlay_resources(pCreateInfo, pDispatch, count);
-        layer->create_swapchain_data(pSwapchain, pCreateInfo, pDispatch);
+        r = layer->create_swapchain_data(pSwapchain, pCreateInfo, pDispatch);
+        if (r != VK_SUCCESS)
+            return r;
         layer->ipc->send_resolution(pCreateInfo->imageExtent.width, pCreateInfo->imageExtent.height);
 
         layer->g_vkSetDebugUtilsObjectNameEXT =

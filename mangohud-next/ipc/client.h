@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <mutex>
 #include <deque>
 #include <string>
@@ -8,6 +9,7 @@
 #include <queue>
 #include <memory>
 #include <future>
+#include <vector>
 #include <systemd/sd-bus.h>
 #include "../render/shared.h"
 #include <poll.h>
@@ -16,9 +18,84 @@
 constexpr size_t   FT_MAX = 200;
 constexpr uint64_t KEEP_NS = 500000000ULL;
 
+enum class SampleType : uint8_t {
+    Frame,
+    Output,
+    Hud,
+    Count,
+};
+
 struct Sample {
+    SampleType type = SampleType::Frame;
     uint64_t seq;
     uint64_t t_ns;
+};
+
+struct SampleStats {
+    mutable std::mutex m;
+    std::deque<Sample> samples;
+    std::vector<float> frametimes;
+    uint64_t n_samples = 0;
+    uint64_t last_fps_update = 0;
+    uint64_t seq_last = 0, t_last = 0;
+    uint64_t dropped = 0;
+    double previous_fps = 0;
+    bool have_prev = false;
+
+    void add_sample(SampleType type, uint64_t seq, uint64_t t_ns) {
+        std::lock_guard lock(m);
+        if (have_prev) {
+            if (seq <= seq_last || t_ns <= t_last)
+                return;
+
+            uint64_t dt_ns = t_ns - t_last;
+            uint64_t dseq  = seq - seq_last;
+
+            if (dseq > 1)
+                dropped += (dseq - 1);
+
+            double ft_ms = (double)dt_ns / (double)dseq / 1e6;
+            frametimes.push_back(ft_ms);
+            if (frametimes.size() > FT_MAX)
+                frametimes.erase(frametimes.begin());
+        } else {
+            have_prev = true;
+        }
+
+        samples.push_back({type, seq, t_ns});
+        while (samples.size() > 2 && (t_ns - samples.front().t_ns) > KEEP_NS)
+            samples.pop_front();
+
+        t_last = t_ns;
+        seq_last = seq;
+        n_samples++;
+    }
+
+    float avg_fps() {
+        std::lock_guard lock(m);
+        if (samples.size() < 2) return previous_fps;
+
+        const auto& b = samples.back();
+
+        if (last_fps_update != 0 &&
+            (b.t_ns - last_fps_update) < 500000000ULL) {
+            return previous_fps;
+        }
+
+        const auto& a = samples.front();
+        uint64_t dseq = b.seq - a.seq;
+        uint64_t dt   = b.t_ns - a.t_ns;
+        if (dseq == 0 || dt == 0) return previous_fps;
+
+        previous_fps = (float)(1e9 * (double)dseq / (double)dt);
+        last_fps_update = b.t_ns;
+        return previous_fps;
+    }
+
+    std::vector<float> frametimes_copy() const {
+        std::lock_guard lock(m);
+        return frametimes;
+    }
 };
 
 struct Fdinfo {
@@ -84,16 +161,8 @@ public:
     pid_t pid;
     std::mutex m;
     std::condition_variable cv;
-    std::deque<Sample> samples;
-    std::mutex samples_m;
-    std::deque<float> frametimes;
+    std::vector<SampleStats> samples{static_cast<size_t>(SampleType::Count)};
     std::string name;
-    uint64_t n_frames = 0;
-    uint64_t last_fps_update = 0;
-    uint64_t seq_last = 0, t_last = 0;
-    uint64_t dropped = 0;
-    double previous_fps = 0;
-    bool have_prev = false;
     std::string pEngineName;
     std::string vulkanDriver;
     std::string gpuName;
@@ -110,28 +179,14 @@ public:
     std::atomic<bool> stop {false};
 
     Client(pid_t pid_, IPCServer* ipc_, MangoHudServer* server_, sd_bus* bus_)
-           : pid(pid_), frametimes(200, 0.0f), resources(std::make_shared<clientRes>()),
+           : pid(pid_), resources(std::make_shared<clientRes>()),
            ipc(ipc_), server(server_), bus(bus_) {}
 
-    float avg_fps_from_samples() {
-        std::lock_guard lock(samples_m);
-        if (samples.size() < 2) return previous_fps;
-
-        const auto& b = samples.back();
-
-        if (last_fps_update != 0 &&
-            (b.t_ns - last_fps_update) < 500000000ULL) {
-            return previous_fps;
-        }
-
-        const auto& a = samples.front();
-        uint64_t dseq = b.seq - a.seq;
-        uint64_t dt   = b.t_ns - a.t_ns;
-        if (dseq == 0 || dt == 0) return previous_fps;
-
-        previous_fps = (float)(1e9 * (double)dseq / (double)dt);
-        last_fps_update = b.t_ns;
-        return previous_fps;
+    SampleStats& stats_for(SampleType type) {
+        auto idx = static_cast<size_t>(type);
+        if (idx >= samples.size())
+            idx = static_cast<size_t>(SampleType::Frame);
+        return samples[idx];
     }
 
     void init(std::shared_ptr<Client>& shared);

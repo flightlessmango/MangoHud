@@ -27,6 +27,34 @@ wl_globals& Wayland::get_global(wl_display* display)
     return global;
 }
 
+bool Wayland::request_presentation_feedback(const std::shared_ptr<surface_data>& surf_data, wl_globals& globals,
+                                            wl_surface* surface, SampleType type, const char* surface_name)
+{
+    if (!surf_data || !surface || !globals.presentation)
+        return false;
+
+    auto feedback_state = surf_data->presentation_feedback;
+    if (feedback_state->pending(type).exchange(true, std::memory_order_acq_rel))
+        return false;
+
+    auto* feedback = wp_presentation_feedback(globals.presentation, surface);
+    if (!feedback) {
+        feedback_state->pending(type).store(false, std::memory_order_release);
+        return false;
+    }
+
+    wl_proxy_set_queue(reinterpret_cast<wl_proxy*>(feedback), globals.queue);
+    auto* feedback_data = new presentation_feedback_data{ipc, feedback_state, type, surface_name};
+    if (wp_presentation_feedback_add_listener(feedback, &presentation_feedback_listener, feedback_data) != 0) {
+        wp_presentation_feedback_destroy(feedback);
+        delete feedback_data;
+        feedback_state->pending(type).store(false, std::memory_order_release);
+        return false;
+    }
+
+    return true;
+}
+
 bool Wayland::ensure_overlay_data(const std::shared_ptr<surface_data>& surf_data)
 {
     if (!surf_data || !surf_data->display || !surf_data->surface)
@@ -35,6 +63,9 @@ bool Wayland::ensure_overlay_data(const std::shared_ptr<surface_data>& surf_data
     std::lock_guard lock(surf_data->m);
 
     auto& globals = get_global(surf_data->display);
+    if (request_presentation_feedback(surf_data, globals, surf_data->surface, SampleType::Output, app_surface_name))
+        wl_display_flush(surf_data->display);
+
     if (!globals.compositor || !globals.subcompositor || !globals.dmabuf)
         return false;
     surf_data->queue = globals.queue;
@@ -104,6 +135,14 @@ void Wayland::on_registry_global(void* data, wl_registry* registry, uint32_t nam
         global.fractional_scale_manager = reinterpret_cast<wp_fractional_scale_manager_v1*>(
             wl_registry_bind(registry, name, &wp_fractional_scale_manager_v1_interface, 1));
         global.fractional_scale_manager_name = name;
+    } else if (strcmp(interface, wp_presentation_interface.name) == 0) {
+        global.presentation = reinterpret_cast<wp_presentation*>(
+            wl_registry_bind(registry, name, &wp_presentation_interface, std::min(version, 2u)));
+        if (!global.presentation)
+            return;
+        wl_proxy_set_queue(reinterpret_cast<wl_proxy*>(global.presentation), global.queue);
+        global.presentation_name = name;
+        wp_presentation_add_listener(global.presentation, &presentation_listener, &global);
     }
 }
 
@@ -127,6 +166,12 @@ void Wayland::on_registry_global_remove(void* data, wl_registry*, uint32_t name)
         wp_fractional_scale_manager_v1_destroy(global.fractional_scale_manager);
         global.fractional_scale_manager = nullptr;
         global.fractional_scale_manager_name = 0;
+    } else if (name == global.presentation_name) {
+        wp_presentation_destroy(global.presentation);
+        global.presentation = nullptr;
+        global.presentation_name = 0;
+        global.presentation_clock_id = 0;
+        global.have_presentation_clock_id = false;
     }
 }
 
@@ -138,6 +183,59 @@ void Wayland::on_preferred_scale(void* data, wp_fractional_scale_v1*, uint32_t s
 
     surf_data->preferred_scale.store(scale, std::memory_order_release);
     SPDLOG_DEBUG("wl fractional scale changed: preferred_scale={}", scale);
+}
+
+void Wayland::on_presentation_clock_id(void* data, wp_presentation*, uint32_t clock_id)
+{
+    auto* global = reinterpret_cast<wl_globals*>(data);
+    if (!global)
+        return;
+
+    global->presentation_clock_id = clock_id;
+    global->have_presentation_clock_id = true;
+    SPDLOG_DEBUG("wl presentation clock id: {}", clock_id);
+}
+
+void Wayland::on_presentation_feedback_presented(void* data, struct wp_presentation_feedback* feedback,
+                                                uint32_t tv_sec_hi, uint32_t tv_sec_lo,
+                                                uint32_t tv_nsec, uint32_t refresh,
+                                                uint32_t seq_hi, uint32_t seq_lo,
+                                                uint32_t flags)
+{
+    auto* feedback_data = static_cast<presentation_feedback_data*>(data);
+    auto* surface = feedback_data && feedback_data->surface ? feedback_data->surface : "unknown";
+    uint64_t tv_sec = (uint64_t(tv_sec_hi) << 32) | tv_sec_lo;
+    uint64_t seq = (uint64_t(seq_hi) << 32) | seq_lo;
+    uint64_t presented_ns = tv_sec * 1000000000ULL + tv_nsec;
+    if (feedback_data) {
+        uint64_t sample_seq = seq;
+        if (feedback_data->type == SampleType::Output)
+            sample_seq = refresh > 0 ? presented_ns / refresh : seq;
+        else if (feedback_data->type == SampleType::Hud && feedback_data->feedback_state)
+            sample_seq = feedback_data->feedback_state->next_hud_seq();
+
+        if (auto ipc = feedback_data->ipc.lock())
+            ipc->add_to_queue(feedback_data->type, sample_seq, presented_ns);
+    }
+
+    SPDLOG_TRACE("wl presentation feedback: {} presented={}.{:09} refresh={} seq={} flags=0x{:x}",
+                 surface, tv_sec, tv_nsec, refresh, seq, flags);
+
+    if (feedback_data)
+        feedback_data->clear_pending();
+    wp_presentation_feedback_destroy(feedback);
+    delete feedback_data;
+}
+
+void Wayland::on_presentation_feedback_discarded(void* data, struct wp_presentation_feedback* feedback)
+{
+    auto* feedback_data = static_cast<presentation_feedback_data*>(data);
+    auto* surface = feedback_data && feedback_data->surface ? feedback_data->surface : "unknown";
+    SPDLOG_TRACE("wl presentation feedback: {} discarded", surface);
+    if (feedback_data)
+        feedback_data->clear_pending();
+    wp_presentation_feedback_destroy(feedback);
+    delete feedback_data;
 }
 
 void Wayland::release_to_server(shm_buffer* buf)
@@ -292,6 +390,8 @@ std::shared_ptr<shm_buffer> Wayland::present(const std::shared_ptr<surface_data>
     }
     wl_surface_damage(surf_data->overlay_surf, 0, 0, slot->width, slot->height);
     wl_surface_damage_buffer(surf_data->overlay_surf, 0, 0, slot->width, slot->height);
+    auto& globals = get_global(surf_data->display);
+    request_presentation_feedback(surf_data, globals, surf_data->overlay_surf, SampleType::Hud, hud_surface_name);
     wl_surface_commit(surf_data->overlay_surf);
     wl_display_flush(surf_data->display);
     surf_data->attached = true;
