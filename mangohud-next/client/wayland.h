@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <string>
 #include <thread>
 #include <type_traits>
 #include <unordered_map>
@@ -20,6 +21,8 @@
 #include "linux-dmabuf-v1-client-protocol.h"
 #include "presentation-time-client-protocol.h"
 #include "viewporter-client-protocol.h"
+
+class Wayland;
 
 struct shm_buffer {
     wl_buffer* buffer = nullptr;
@@ -57,6 +60,116 @@ struct presentation_feedback_state {
     }
 };
 
+struct focus_signal_state {
+    bool active = false;
+    uint64_t time_ns = 0;
+};
+
+struct focus_state {
+    focus_signal_state keyboard;
+    // TODO: wire wl_pointer enter/leave as a focus tie-breaker.
+    focus_signal_state pointer;
+    focus_signal_state presentation;
+
+    bool focused() const {
+        return presentation.active && (keyboard.active || pointer.active);
+    }
+};
+
+struct seat_focus_snapshot {
+    std::string identifier;
+    focus_state focus;
+};
+
+struct seat_data {
+    static constexpr uint64_t presentation_timeout_ns = 1000000000ULL;
+
+    wl_seat* seat = nullptr;
+    wl_keyboard* keyboard = nullptr;
+    wl_event_queue* queue = nullptr;
+    wl_display* display = nullptr;
+    uint32_t registry_name = 0;
+    std::string seat_name;
+    focus_state focus;
+    mutable std::mutex state_m;
+
+    ~seat_data() {
+        destroy();
+    }
+
+    seat_focus_snapshot update(uint64_t now) {
+        std::lock_guard lock(state_m);
+        auto& presentation = focus.presentation;
+        if (presentation.active &&
+            presentation.time_ns != 0 &&
+            now - presentation.time_ns > presentation_timeout_ns) {
+            presentation.active = false;
+        }
+
+        return make_snapshot();
+    }
+
+    seat_focus_snapshot set_keyboard(bool active, uint64_t time_ns) {
+        std::lock_guard lock(state_m);
+        focus.keyboard.active = active;
+        focus.keyboard.time_ns = time_ns;
+        return make_snapshot();
+    }
+
+    void set_presentation(bool active, uint64_t time_ns) {
+        std::lock_guard lock(state_m);
+        focus.presentation.active = active;
+        focus.presentation.time_ns = time_ns;
+    }
+
+    seat_focus_snapshot set_name(const char* name) {
+        std::lock_guard lock(state_m);
+        seat_name = name ? name : "";
+        return make_snapshot();
+    }
+
+    std::string identifier() const {
+        std::lock_guard lock(state_m);
+        return current_identifier();
+    }
+
+    seat_focus_snapshot snapshot() const {
+        std::lock_guard lock(state_m);
+        return make_snapshot();
+    }
+
+    void release_keyboard() {
+        if (!keyboard)
+            return;
+
+        if (wl_keyboard_get_version(keyboard) >= WL_KEYBOARD_RELEASE_SINCE_VERSION)
+            wl_keyboard_release(keyboard);
+        else
+            wl_keyboard_destroy(keyboard);
+        keyboard = nullptr;
+    }
+
+    void destroy() {
+        release_keyboard();
+        if (seat) {
+            if (wl_seat_get_version(seat) >= WL_SEAT_RELEASE_SINCE_VERSION)
+                wl_seat_release(seat);
+            else
+                wl_seat_destroy(seat);
+            seat = nullptr;
+        }
+    }
+
+private:
+    std::string current_identifier() const {
+        return !seat_name.empty() ? seat_name : std::to_string(registry_name);
+    }
+
+    seat_focus_snapshot make_snapshot() const {
+        return {current_identifier(), focus};
+    }
+};
+
 struct surface_data {
     ~surface_data() {
         std::lock_guard lock(m);
@@ -90,6 +203,7 @@ struct surface_data {
 
 struct wl_globals {
     wl_event_queue* queue = nullptr;
+    wl_display* display = nullptr;
     wl_registry* registry = nullptr;
     wl_compositor* compositor = nullptr;
     wl_subcompositor* subcompositor = nullptr;
@@ -106,6 +220,7 @@ struct wl_globals {
     uint32_t presentation_name = 0;
     uint32_t presentation_clock_id = 0;
     bool have_presentation_clock_id = false;
+    Wayland* wayland = nullptr;
 };
 
 struct presentation_feedback_data {
@@ -113,6 +228,7 @@ struct presentation_feedback_data {
     std::shared_ptr<presentation_feedback_state> feedback_state;
     SampleType type = SampleType::Frame;
     const char* surface = nullptr;
+    Wayland* wayland = nullptr;
 
     void clear_pending() {
         if (feedback_state)
@@ -157,16 +273,6 @@ public:
         }
     }
 
-    void destroy_egl_display_surfaces(wl_display* display) {
-        std::lock_guard lock(surf_m);
-        for (auto it = egl_surfaces.begin(); it != egl_surfaces.end();) {
-            if (it->second && it->second->display == display)
-                it = egl_surfaces.erase(it);
-            else
-                ++it;
-        }
-    }
-
     template <typename Surface>
     bool ensure_overlay(Surface surface) {
         if (!ensure_overlay_data(get_surface(surface))) return false;
@@ -195,6 +301,8 @@ private:
     std::mutex surf_m;
     std::unordered_map<wl_display*, wl_globals> globals;
     std::mutex globals_m;
+    std::vector<std::unique_ptr<seat_data>> seats;
+    std::mutex seats_m;
     std::shared_ptr<IPCClient> ipc;
     Fdinfo fdinfo;
     uint64_t imported_generation = 0;
@@ -205,6 +313,14 @@ private:
     static void on_registry_global(void* data, wl_registry* registry, uint32_t name,
                                    const char* interface, uint32_t version);
     static void on_registry_global_remove(void* data, wl_registry* registry, uint32_t name);
+    static void on_seat_capabilities(void* data, wl_seat*, uint32_t capabilities);
+    static void on_seat_name(void* data, wl_seat*, const char* name);
+    static void on_keyboard_keymap(void*, wl_keyboard*, uint32_t, int32_t fd, uint32_t);
+    static void on_keyboard_enter(void* data, wl_keyboard*, uint32_t, wl_surface*, wl_array*);
+    static void on_keyboard_leave(void* data, wl_keyboard*, uint32_t, wl_surface*);
+    static void on_keyboard_key(void*, wl_keyboard*, uint32_t, uint32_t, uint32_t, uint32_t) {}
+    static void on_keyboard_modifiers(void*, wl_keyboard*, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t) {}
+    static void on_keyboard_repeat_info(void*, wl_keyboard*, int32_t, int32_t) {}
     static void on_preferred_scale(void* data, wp_fractional_scale_v1*, uint32_t scale);
     static void on_presentation_clock_id(void* data, wp_presentation*, uint32_t clock_id);
     static void on_presentation_feedback_sync_output(void*, struct wp_presentation_feedback*, wl_output*) {}
@@ -224,6 +340,20 @@ private:
 
     inline static const wl_buffer_listener buffer_listener = {
         .release = Wayland::buffer_release,
+    };
+
+    inline static const wl_seat_listener seat_listener = {
+        .capabilities = Wayland::on_seat_capabilities,
+        .name = Wayland::on_seat_name,
+    };
+
+    inline static const wl_keyboard_listener keyboard_listener = {
+        .keymap = Wayland::on_keyboard_keymap,
+        .enter = Wayland::on_keyboard_enter,
+        .leave = Wayland::on_keyboard_leave,
+        .key = Wayland::on_keyboard_key,
+        .modifiers = Wayland::on_keyboard_modifiers,
+        .repeat_info = Wayland::on_keyboard_repeat_info,
     };
 
     inline static const wp_fractional_scale_v1_listener fractional_scale_listener = {
@@ -246,7 +376,10 @@ private:
     bool request_presentation_feedback(const std::shared_ptr<surface_data>& surf_data, wl_globals& globals,
                                        wl_surface* surface, SampleType type, const char* surface_name);
     bool ensure_overlay_data(const std::shared_ptr<surface_data>& surf_data);
+    void remove_seat(uint32_t name, wl_display* display);
     void update_import(const std::shared_ptr<surface_data>& surf_data);
+    void set_presentation_focus(bool active, uint64_t time_ns);
+    void update_focus();
     void dispatch_events(const std::shared_ptr<surface_data>& surf_data);
     std::shared_ptr<shm_buffer> present(const std::shared_ptr<surface_data>& surf_data);
     void detach(const std::shared_ptr<surface_data>& surf_data, bool wait_for_server = true);

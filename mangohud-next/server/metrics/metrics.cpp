@@ -5,6 +5,7 @@
 #include <cctype>
 #include <algorithm>
 #include <sys/stat.h>
+#include <spdlog/fmt/bundled/format.h>
 #include "../common/json.h"
 #include "../common/table_structs.h"
 #include "../common/helpers.hpp"
@@ -160,6 +161,8 @@ void Metrics::update_client() {
                     metrics["ENGINE_NAME"] = {engine_name(client->pEngineName)};
                     metrics["GPU_NAME"] = {client->gpuName};
                     metrics["VULKAN_DRIVER"] = {client->vulkanDriver};
+                    metrics["FOCUSED"] = {client->focused() ? "true" : "false"};
+                    metrics["FOCUSED_SEATS"] = {fmt::format("{}", fmt::join(client->focused_seats, ","))};
                     if (client->resolutionWidth && client->resolutionHeight)
                         metrics["RESOLUTION"] = {std::to_string(client->resolutionWidth) + "x" + std::to_string(client->resolutionHeight)};
                 }

@@ -211,10 +211,8 @@ EXPORT_C_(EGLBoolean) eglTerminate(EGLDisplay dpy) {
         real_eglTerminate = (decltype(real_eglTerminate)) real_dlsym(RTLD_NEXT, "eglTerminate");
 
     auto* display = remove_egl_display(dpy);
-    if (wayland && display) {
-        wayland->destroy_egl_display_surfaces(display);
+    if (wayland && display)
         wayland.reset();
-    }
 
     return real_eglTerminate(dpy);
 }
@@ -244,7 +242,8 @@ EXPORT_C_(void) wl_egl_window_destroy(wl_egl_window* window) {
         wl_egl_windows.erase(window);
     }
 
-    wayland.reset();
+    if (wayland)
+        wayland.reset();
     real_wl_egl_window_destroy(window);
 }
 
@@ -253,7 +252,8 @@ EXPORT_C_(void) wl_display_disconnect(wl_display* display) {
     if (!real_wl_display_disconnect)
         real_wl_display_disconnect = (decltype(real_wl_display_disconnect)) real_dlsym(RTLD_NEXT, "wl_display_disconnect");
 
-    wayland.reset();
+    if (wayland)
+        wayland.reset();
     real_wl_display_disconnect(display);
 }
 

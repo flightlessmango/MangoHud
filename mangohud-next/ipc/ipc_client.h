@@ -5,6 +5,9 @@
 #include <atomic>
 #include <thread>
 #include <string>
+#include <utility>
+#include <vector>
+#include <memory>
 #include <mutex>
 #include <future>
 #include <spdlog/spdlog.h>
@@ -51,6 +54,15 @@ public:
         }
     }
 
+    bool set_focused_seats(std::vector<std::string> seats) {
+        auto current = focused_seats.load();
+        if (current && *current == seats)
+            return false;
+
+        focused_seats.store(std::make_shared<const std::vector<std::string>>(std::move(seats)));
+        return true;
+    }
+
     int push_queue();
     bool on_connect();
     void send_resolution(uint32_t width, uint32_t height);
@@ -89,6 +101,8 @@ private:
     std::thread thread;
     std::deque<Sample> samples;
     std::mutex samples_mtx;
+    std::atomic<std::shared_ptr<const std::vector<std::string>>> focused_seats{
+        std::make_shared<const std::vector<std::string>>()};
     std::mutex sync_mtx;
     std::atomic<bool> stop_wait {false};
     std::thread wait_thread;

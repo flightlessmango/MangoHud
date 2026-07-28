@@ -11,6 +11,8 @@ wl_globals& Wayland::get_global(wl_display* display)
 {
     std::lock_guard lock(globals_m);
     auto& global = globals[display];
+    global.display = display;
+    global.wayland = this;
 
     if (!global.registry) {
         global.queue = wl_display_create_queue(display);
@@ -44,7 +46,7 @@ bool Wayland::request_presentation_feedback(const std::shared_ptr<surface_data>&
     }
 
     wl_proxy_set_queue(reinterpret_cast<wl_proxy*>(feedback), globals.queue);
-    auto* feedback_data = new presentation_feedback_data{ipc, feedback_state, type, surface_name};
+    auto* feedback_data = new presentation_feedback_data{ipc, feedback_state, type, surface_name, this};
     if (wp_presentation_feedback_add_listener(feedback, &presentation_feedback_listener, feedback_data) != 0) {
         wp_presentation_feedback_destroy(feedback);
         delete feedback_data;
@@ -135,6 +137,22 @@ void Wayland::on_registry_global(void* data, wl_registry* registry, uint32_t nam
         global.fractional_scale_manager = reinterpret_cast<wp_fractional_scale_manager_v1*>(
             wl_registry_bind(registry, name, &wp_fractional_scale_manager_v1_interface, 1));
         global.fractional_scale_manager_name = name;
+    } else if (strcmp(interface, wl_seat_interface.name) == 0 && global.wayland) {
+        auto seat = std::make_unique<seat_data>();
+        seat->seat = reinterpret_cast<wl_seat*>(
+            wl_registry_bind(registry, name, &wl_seat_interface, std::min(version, 5u)));
+        if (!seat->seat)
+            return;
+
+        seat->queue = global.queue;
+        seat->display = global.display;
+        seat->registry_name = name;
+        wl_proxy_set_queue(reinterpret_cast<wl_proxy*>(seat->seat), global.queue);
+        if (wl_seat_add_listener(seat->seat, &seat_listener, seat.get()) != 0)
+            return;
+
+        std::lock_guard lock(global.wayland->seats_m);
+        global.wayland->seats.push_back(std::move(seat));
     } else if (strcmp(interface, wp_presentation_interface.name) == 0) {
         global.presentation = reinterpret_cast<wp_presentation*>(
             wl_registry_bind(registry, name, &wp_presentation_interface, std::min(version, 2u)));
@@ -172,6 +190,87 @@ void Wayland::on_registry_global_remove(void* data, wl_registry*, uint32_t name)
         global.presentation_name = 0;
         global.presentation_clock_id = 0;
         global.have_presentation_clock_id = false;
+    }
+
+    if (global.wayland)
+        global.wayland->remove_seat(name, global.display);
+}
+
+void Wayland::on_seat_capabilities(void* data, wl_seat* wl_seat, uint32_t capabilities)
+{
+    auto* seat = static_cast<seat_data*>(data);
+    if (!seat || !wl_seat)
+        return;
+
+    if (capabilities & WL_SEAT_CAPABILITY_KEYBOARD) {
+        if (seat->keyboard)
+            return;
+
+        seat->keyboard = wl_seat_get_keyboard(wl_seat);
+        if (!seat->keyboard)
+            return;
+
+        wl_proxy_set_queue(reinterpret_cast<wl_proxy*>(seat->keyboard), seat->queue);
+        if (wl_keyboard_add_listener(seat->keyboard, &keyboard_listener, seat) != 0)
+            seat->release_keyboard();
+    } else if (seat->keyboard) {
+        auto snapshot = seat->set_keyboard(false, os_time_get_nano());
+        SPDLOG_DEBUG("wl focus signal: keyboard=false keyboard_entered={} pointer_entered={} presentation={} focused={} seat={}",
+                     snapshot.focus.keyboard.active,
+                     snapshot.focus.pointer.active,
+                     snapshot.focus.presentation.active,
+                     snapshot.focus.focused(),
+                     snapshot.identifier);
+        seat->release_keyboard();
+    }
+}
+
+void Wayland::on_seat_name(void* data, wl_seat*, const char* name)
+{
+    auto* seat = static_cast<seat_data*>(data);
+    if (!seat || !name)
+        return;
+
+    auto snapshot = seat->set_name(name);
+
+    SPDLOG_DEBUG("wl seat name: registry_name={} seat={}", seat->registry_name, snapshot.identifier);
+}
+
+void Wayland::on_keyboard_keymap(void*, wl_keyboard*, uint32_t, int32_t fd, uint32_t)
+{
+    if (fd >= 0)
+        close(fd);
+}
+
+void Wayland::on_keyboard_enter(void* data, wl_keyboard*, uint32_t serial, wl_surface* surface, wl_array*)
+{
+    auto* seat = static_cast<seat_data*>(data);
+    SPDLOG_DEBUG("wl keyboard enter: seat={} serial={} surface=0x{:x}",
+                 seat ? seat->identifier() : "unknown", serial, (uint64_t)surface);
+    if (seat) {
+        auto snapshot = seat->set_keyboard(true, os_time_get_nano());
+        SPDLOG_DEBUG("wl focus signal: keyboard=true keyboard_entered={} pointer_entered={} presentation={} focused={} seat={}",
+                     snapshot.focus.keyboard.active,
+                     snapshot.focus.pointer.active,
+                     snapshot.focus.presentation.active,
+                     snapshot.focus.focused(),
+                     snapshot.identifier);
+    }
+}
+
+void Wayland::on_keyboard_leave(void* data, wl_keyboard*, uint32_t serial, wl_surface* surface)
+{
+    auto* seat = static_cast<seat_data*>(data);
+    SPDLOG_DEBUG("wl keyboard leave: seat={} serial={} surface=0x{:x}",
+                 seat ? seat->identifier() : "unknown", serial, (uint64_t)surface);
+    if (seat) {
+        auto snapshot = seat->set_keyboard(false, os_time_get_nano());
+        SPDLOG_DEBUG("wl focus signal: keyboard=false keyboard_entered={} pointer_entered={} presentation={} focused={} seat={}",
+                     snapshot.focus.keyboard.active,
+                     snapshot.focus.pointer.active,
+                     snapshot.focus.presentation.active,
+                     snapshot.focus.focused(),
+                     snapshot.identifier);
     }
 }
 
@@ -216,6 +315,9 @@ void Wayland::on_presentation_feedback_presented(void* data, struct wp_presentat
 
         if (auto ipc = feedback_data->ipc.lock())
             ipc->add_to_queue(feedback_data->type, sample_seq, presented_ns);
+
+        if (feedback_data->type == SampleType::Output && feedback_data->wayland)
+            feedback_data->wayland->set_presentation_focus(true, os_time_get_nano());
     }
 
     SPDLOG_TRACE("wl presentation feedback: {} presented={}.{:09} refresh={} seq={} flags=0x{:x}",
@@ -232,6 +334,8 @@ void Wayland::on_presentation_feedback_discarded(void* data, struct wp_presentat
     auto* feedback_data = static_cast<presentation_feedback_data*>(data);
     auto* surface = feedback_data && feedback_data->surface ? feedback_data->surface : "unknown";
     SPDLOG_TRACE("wl presentation feedback: {} discarded", surface);
+    if (feedback_data && feedback_data->type == SampleType::Output && feedback_data->wayland)
+        feedback_data->wayland->set_presentation_focus(false, os_time_get_nano());
     if (feedback_data)
         feedback_data->clear_pending();
     wp_presentation_feedback_destroy(feedback);
@@ -271,6 +375,22 @@ void Wayland::buffer_release(void* data, wl_buffer*)
 
     buf->busy.store(false, std::memory_order_release);
     release_to_server(buf);
+}
+
+void Wayland::remove_seat(uint32_t name, wl_display* display)
+{
+    {
+        std::lock_guard lock(seats_m);
+        for (auto it = seats.begin(); it != seats.end();) {
+            auto& seat = *it;
+            if (seat->registry_name == name && seat->display == display)
+                it = seats.erase(it);
+            else
+                ++it;
+        }
+    }
+
+    update_focus();
 }
 
 void Wayland::update_import(const std::shared_ptr<surface_data>& surf_data)
@@ -343,6 +463,8 @@ void Wayland::update_import(const std::shared_ptr<surface_data>& surf_data)
 
 void Wayland::dispatch_events(const std::shared_ptr<surface_data>& surf_data)
 {
+    update_focus();
+
     if (!surf_data || !surf_data->display)
         return;
 
@@ -352,6 +474,47 @@ void Wayland::dispatch_events(const std::shared_ptr<surface_data>& surf_data)
 
     wl_display_dispatch_queue_pending(surf_data->display, globals.queue);
     wl_display_flush(surf_data->display);
+}
+
+void Wayland::update_focus()
+{
+    bool is_focused = false;
+    bool keyboard_active = false;
+    bool pointer_active = false;
+    bool presentation_active = false;
+    std::vector<std::string> focused_seats;
+    uint64_t now = os_time_get_nano();
+    {
+        std::lock_guard lock(seats_m);
+        for (auto& seat : seats) {
+            auto snapshot = seat->update(now);
+            keyboard_active |= snapshot.focus.keyboard.active;
+            pointer_active |= snapshot.focus.pointer.active;
+            presentation_active |= snapshot.focus.presentation.active;
+            if (snapshot.focus.focused())
+                focused_seats.push_back(snapshot.identifier);
+        }
+    }
+
+    is_focused = !focused_seats.empty();
+    if (ipc) {
+        if (ipc->set_focused_seats(focused_seats)) {
+            SPDLOG_DEBUG("wl focus changed: focused={} seats={} keyboard={} pointer={} presentation={}",
+                         is_focused, fmt::join(focused_seats, ","),
+                         keyboard_active, pointer_active, presentation_active);
+        }
+    }
+}
+
+void Wayland::set_presentation_focus(bool active, uint64_t time_ns)
+{
+    {
+        std::lock_guard lock(seats_m);
+        for (auto& seat : seats)
+            seat->set_presentation(active, time_ns);
+    }
+
+    update_focus();
 }
 
 std::shared_ptr<shm_buffer> Wayland::present(const std::shared_ptr<surface_data>& surf_data)

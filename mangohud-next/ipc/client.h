@@ -168,6 +168,7 @@ public:
     std::string gpuName;
     uint32_t resolutionWidth = 0;
     uint32_t resolutionHeight = 0;
+    std::vector<std::string> focused_seats;
     int64_t renderMinor = 0;
     std::shared_ptr<clientRes> resources;
     IPCServer* ipc;
@@ -181,6 +182,10 @@ public:
     Client(pid_t pid_, IPCServer* ipc_, MangoHudServer* server_, sd_bus* bus_)
            : pid(pid_), resources(std::make_shared<clientRes>()),
            ipc(ipc_), server(server_), bus(bus_) {}
+
+    bool focused() const {
+        return !focused_seats.empty();
+    }
 
     SampleStats& stats_for(SampleType type) {
         auto idx = static_cast<size_t>(type);

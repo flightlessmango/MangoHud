@@ -459,9 +459,40 @@ int Client::frame_samples(sd_bus_message* m, void* userdata, sd_bus_error* ret_e
     if (!self)
         return 0;
 
-    int r = sd_bus_message_enter_container(m, 'a', "(ytt)");
+    std::vector<std::string> focused_seats;
+    int r = sd_bus_message_enter_container(m, 'a', "s");
+    if (r < 0) {
+        SPDLOG_ERROR("frame_samples: enter focused seats {} ({})", r, strerror(-r));
+        return r;
+    }
+
+    for (;;) {
+        const char* seat = nullptr;
+        r = sd_bus_message_read(m, "s", &seat);
+        if (r < 0) {
+            SPDLOG_ERROR("frame_samples: read focused seat {} ({})", r, strerror(-r));
+            return r;
+        }
+        if (r == 0)
+            break;
+        if (seat)
+            focused_seats.emplace_back(seat);
+    }
+
+    r = sd_bus_message_exit_container(m);
+    if (r < 0) {
+        SPDLOG_ERROR("frame_samples: exit focused seats {} ({})", r, strerror(-r));
+        return r;
+    }
+
+    r = sd_bus_message_enter_container(m, 'a', "(ytt)");
+    if (r < 0) {
+        SPDLOG_ERROR("frame_samples: enter samples {} ({})", r, strerror(-r));
+        return r;
+    }
 
     std::lock_guard client_lock(self->m);
+    self->focused_seats = std::move(focused_seats);
     for (;;) {
         uint8_t type_raw = 0;
         uint64_t seq = 0, t_ns = 0;
