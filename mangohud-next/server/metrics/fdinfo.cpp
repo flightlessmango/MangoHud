@@ -60,7 +60,9 @@ std::vector<std::string> FDInfoBase::find_fds() {
 
     std::vector<std::string> fds;
 
-    for (const auto& entry : fs::directory_iterator(path)) {
+    for (const auto& entry : fs::directory_iterator(
+        path, fs::directory_options::skip_permission_denied
+    )) {
         if (!entry.is_symlink())
             continue;
 
