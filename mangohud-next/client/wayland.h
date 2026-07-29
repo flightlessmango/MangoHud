@@ -16,11 +16,8 @@
 #include <vector>
 
 #include "../server/common/helpers.hpp"
-#include "fractional-scale-v1-client-protocol.h"
 #include "ipc.h"
-#include "linux-dmabuf-v1-client-protocol.h"
-#include "presentation-time-client-protocol.h"
-#include "viewporter-client-protocol.h"
+#include "../wayland/wayland_ctx.h"
 
 class Wayland;
 
@@ -201,28 +198,6 @@ struct surface_data {
     std::mutex m;
 };
 
-struct wl_globals {
-    wl_event_queue* queue = nullptr;
-    wl_display* display = nullptr;
-    wl_registry* registry = nullptr;
-    wl_compositor* compositor = nullptr;
-    wl_subcompositor* subcompositor = nullptr;
-    zwp_linux_dmabuf_v1* dmabuf = nullptr;
-    wp_viewporter* viewporter = nullptr;
-    wp_fractional_scale_manager_v1* fractional_scale_manager = nullptr;
-    wp_presentation* presentation = nullptr;
-
-    uint32_t compositor_name = 0;
-    uint32_t subcompositor_name = 0;
-    uint32_t dmabuf_name = 0;
-    uint32_t viewporter_name = 0;
-    uint32_t fractional_scale_manager_name = 0;
-    uint32_t presentation_name = 0;
-    uint32_t presentation_clock_id = 0;
-    bool have_presentation_clock_id = false;
-    Wayland* wayland = nullptr;
-};
-
 struct presentation_feedback_data {
     std::weak_ptr<IPCClient> ipc;
     std::shared_ptr<presentation_feedback_state> feedback_state;
@@ -238,7 +213,9 @@ struct presentation_feedback_data {
 
 class Wayland {
 public:
-    Wayland(std::shared_ptr<IPCClient> ipc_) : ipc(std::move(ipc_)) {
+    Wayland(std::shared_ptr<IPCClient> ipc_) :
+        ctx({this, Wayland::on_global, Wayland::on_global_remove}),
+        ipc(std::move(ipc_)) {
         if (ipc) ipc->start(4);
     }
 
@@ -294,13 +271,10 @@ private:
         }
     }
 
-    wl_globals& get_global(wl_display* display);
-
+    WaylandCtx ctx;
     std::unordered_map<VkSurfaceKHR, std::shared_ptr<surface_data>> surfaces;
     std::unordered_map<EGLSurface, std::shared_ptr<surface_data>> egl_surfaces;
     std::mutex surf_m;
-    std::unordered_map<wl_display*, wl_globals> globals;
-    std::mutex globals_m;
     std::vector<std::unique_ptr<seat_data>> seats;
     std::mutex seats_m;
     std::shared_ptr<IPCClient> ipc;
@@ -310,9 +284,9 @@ private:
     std::thread thread;
     std::atomic<bool> quit{false};
 
-    static void on_registry_global(void* data, wl_registry* registry, uint32_t name,
-                                   const char* interface, uint32_t version);
-    static void on_registry_global_remove(void* data, wl_registry* registry, uint32_t name);
+    static void on_global(void* data, wl_globals& global, wl_registry* registry,
+                          uint32_t name, const char* interface, uint32_t version);
+    static void on_global_remove(void* data, wl_globals& global, uint32_t name);
     static void on_seat_capabilities(void* data, wl_seat*, uint32_t capabilities);
     static void on_seat_name(void* data, wl_seat*, const char* name);
     static void on_keyboard_keymap(void*, wl_keyboard*, uint32_t, int32_t fd, uint32_t);
@@ -322,7 +296,6 @@ private:
     static void on_keyboard_modifiers(void*, wl_keyboard*, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t) {}
     static void on_keyboard_repeat_info(void*, wl_keyboard*, int32_t, int32_t) {}
     static void on_preferred_scale(void* data, wp_fractional_scale_v1*, uint32_t scale);
-    static void on_presentation_clock_id(void* data, wp_presentation*, uint32_t clock_id);
     static void on_presentation_feedback_sync_output(void*, struct wp_presentation_feedback*, wl_output*) {}
     static void on_presentation_feedback_presented(void* data, struct wp_presentation_feedback* feedback,
                                                    uint32_t tv_sec_hi, uint32_t tv_sec_lo,
@@ -332,11 +305,6 @@ private:
     static void on_presentation_feedback_discarded(void* data, struct wp_presentation_feedback* feedback);
     static void release_to_server(shm_buffer* buf);
     static void buffer_release(void* data, wl_buffer* = nullptr);
-
-    inline static const wl_registry_listener registry_listener = {
-        Wayland::on_registry_global,
-        Wayland::on_registry_global_remove,
-    };
 
     inline static const wl_buffer_listener buffer_listener = {
         .release = Wayland::buffer_release,
@@ -358,10 +326,6 @@ private:
 
     inline static const wp_fractional_scale_v1_listener fractional_scale_listener = {
         .preferred_scale = Wayland::on_preferred_scale,
-    };
-
-    inline static const wp_presentation_listener presentation_listener = {
-        .clock_id = Wayland::on_presentation_clock_id,
     };
 
     inline static const wp_presentation_feedback_listener presentation_feedback_listener = {

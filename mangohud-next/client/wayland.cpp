@@ -7,28 +7,6 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-wl_globals& Wayland::get_global(wl_display* display)
-{
-    std::lock_guard lock(globals_m);
-    auto& global = globals[display];
-    global.display = display;
-    global.wayland = this;
-
-    if (!global.registry) {
-        global.queue = wl_display_create_queue(display);
-        auto* wrapped_display = reinterpret_cast<wl_display*>(wl_proxy_create_wrapper(display));
-        wl_proxy_set_queue(reinterpret_cast<wl_proxy*>(wrapped_display), global.queue);
-
-        global.registry = wl_display_get_registry(wrapped_display);
-        wl_proxy_wrapper_destroy(wrapped_display);
-        wl_registry_add_listener(global.registry, &registry_listener, &global);
-
-        wl_display_roundtrip_queue(display, global.queue);
-    }
-
-    return global;
-}
-
 bool Wayland::request_presentation_feedback(const std::shared_ptr<surface_data>& surf_data, wl_globals& globals,
                                             wl_surface* surface, SampleType type, const char* surface_name)
 {
@@ -64,37 +42,40 @@ bool Wayland::ensure_overlay_data(const std::shared_ptr<surface_data>& surf_data
 
     std::lock_guard lock(surf_data->m);
 
-    auto& globals = get_global(surf_data->display);
-    if (request_presentation_feedback(surf_data, globals, surf_data->surface, SampleType::Output, app_surface_name))
+    auto* globals = ctx.get_global(surf_data->display);
+    if (!globals)
+        return false;
+
+    if (request_presentation_feedback(surf_data, *globals, surf_data->surface, SampleType::Output, app_surface_name))
         wl_display_flush(surf_data->display);
 
-    if (!globals.compositor || !globals.subcompositor || !globals.dmabuf)
+    if (!globals->compositor || !globals->subcompositor || !globals->dmabuf)
         return false;
-    surf_data->queue = globals.queue;
+    surf_data->queue = globals->queue;
 
     if (!surf_data->overlay_surf) {
-        surf_data->overlay_surf = wl_compositor_create_surface(globals.compositor);
-        wl_proxy_set_queue(reinterpret_cast<wl_proxy*>(surf_data->overlay_surf), globals.queue);
+        surf_data->overlay_surf = wl_compositor_create_surface(globals->compositor);
+        wl_proxy_set_queue(reinterpret_cast<wl_proxy*>(surf_data->overlay_surf), globals->queue);
 
-        wl_region* input_region = wl_compositor_create_region(globals.compositor);
+        wl_region* input_region = wl_compositor_create_region(globals->compositor);
         wl_surface_set_input_region(surf_data->overlay_surf, input_region);
         wl_region_destroy(input_region);
 
-        surf_data->sub_surf = wl_subcompositor_get_subsurface(globals.subcompositor,
+        surf_data->sub_surf = wl_subcompositor_get_subsurface(globals->subcompositor,
                                                               surf_data->overlay_surf,
                                                               surf_data->surface);
-        wl_proxy_set_queue(reinterpret_cast<wl_proxy*>(surf_data->sub_surf), globals.queue);
+        wl_proxy_set_queue(reinterpret_cast<wl_proxy*>(surf_data->sub_surf), globals->queue);
 
-        if (globals.viewporter)
-            surf_data->viewport = wp_viewporter_get_viewport(globals.viewporter, surf_data->overlay_surf);
+        if (globals->viewporter)
+            surf_data->viewport = wp_viewporter_get_viewport(globals->viewporter, surf_data->overlay_surf);
         if (surf_data->viewport)
-            wl_proxy_set_queue(reinterpret_cast<wl_proxy*>(surf_data->viewport), globals.queue);
+            wl_proxy_set_queue(reinterpret_cast<wl_proxy*>(surf_data->viewport), globals->queue);
 
-        if (globals.fractional_scale_manager) {
+        if (globals->fractional_scale_manager) {
             surf_data->fractional_scale =
                 wp_fractional_scale_manager_v1_get_fractional_scale(
-                    globals.fractional_scale_manager, surf_data->surface);
-            wl_proxy_set_queue(reinterpret_cast<wl_proxy*>(surf_data->fractional_scale), globals.queue);
+                    globals->fractional_scale_manager, surf_data->surface);
+            wl_proxy_set_queue(reinterpret_cast<wl_proxy*>(surf_data->fractional_scale), globals->queue);
             wp_fractional_scale_v1_add_listener(
                 surf_data->fractional_scale, &fractional_scale_listener, surf_data.get());
         }
@@ -110,90 +91,38 @@ bool Wayland::ensure_overlay_data(const std::shared_ptr<surface_data>& surf_data
     return true;
 }
 
-void Wayland::on_registry_global(void* data, wl_registry* registry, uint32_t name,
-                                 const char* interface, uint32_t version)
+void Wayland::on_global(void* data, wl_globals& global, wl_registry* registry,
+                        uint32_t name, const char* interface, uint32_t version)
 {
-    auto& global = *reinterpret_cast<wl_globals*>(data);
+    if (strcmp(interface, wl_seat_interface.name) != 0)
+        return;
 
-    uint32_t compositor_version = std::min(version, 4u);
+    auto* wayland = static_cast<Wayland*>(data);
+    if (!wayland)
+        return;
 
-    if (strcmp(interface, wl_compositor_interface.name) == 0) {
-        global.compositor = reinterpret_cast<wl_compositor*>(
-            wl_registry_bind(registry, name, &wl_compositor_interface, compositor_version));
-        global.compositor_name = name;
-    } else if (strcmp(interface, wl_subcompositor_interface.name) == 0) {
-        global.subcompositor = reinterpret_cast<wl_subcompositor*>(
-            wl_registry_bind(registry, name, &wl_subcompositor_interface, compositor_version));
-        global.subcompositor_name = name;
-    } else if (strcmp(interface, zwp_linux_dmabuf_v1_interface.name) == 0) {
-        global.dmabuf = reinterpret_cast<zwp_linux_dmabuf_v1*>(
-            wl_registry_bind(registry, name, &zwp_linux_dmabuf_v1_interface, 3));
-        global.dmabuf_name = name;
-    } else if (strcmp(interface, wp_viewporter_interface.name) == 0) {
-        global.viewporter = reinterpret_cast<wp_viewporter*>(
-            wl_registry_bind(registry, name, &wp_viewporter_interface, 1));
-        global.viewporter_name = name;
-    } else if (strcmp(interface, wp_fractional_scale_manager_v1_interface.name) == 0) {
-        global.fractional_scale_manager = reinterpret_cast<wp_fractional_scale_manager_v1*>(
-            wl_registry_bind(registry, name, &wp_fractional_scale_manager_v1_interface, 1));
-        global.fractional_scale_manager_name = name;
-    } else if (strcmp(interface, wl_seat_interface.name) == 0 && global.wayland) {
-        auto seat = std::make_unique<seat_data>();
-        seat->seat = reinterpret_cast<wl_seat*>(
-            wl_registry_bind(registry, name, &wl_seat_interface, std::min(version, 5u)));
-        if (!seat->seat)
-            return;
+    auto seat = std::make_unique<seat_data>();
+    seat->seat = reinterpret_cast<wl_seat*>(
+        wl_registry_bind(registry, name, &wl_seat_interface, std::min(version, 5u)));
+    if (!seat->seat)
+        return;
 
-        seat->queue = global.queue;
-        seat->display = global.display;
-        seat->registry_name = name;
-        wl_proxy_set_queue(reinterpret_cast<wl_proxy*>(seat->seat), global.queue);
-        if (wl_seat_add_listener(seat->seat, &seat_listener, seat.get()) != 0)
-            return;
+    seat->queue = global.queue;
+    seat->display = global.display;
+    seat->registry_name = name;
+    wl_proxy_set_queue(reinterpret_cast<wl_proxy*>(seat->seat), global.queue);
+    if (wl_seat_add_listener(seat->seat, &seat_listener, seat.get()) != 0)
+        return;
 
-        std::lock_guard lock(global.wayland->seats_m);
-        global.wayland->seats.push_back(std::move(seat));
-    } else if (strcmp(interface, wp_presentation_interface.name) == 0) {
-        global.presentation = reinterpret_cast<wp_presentation*>(
-            wl_registry_bind(registry, name, &wp_presentation_interface, std::min(version, 2u)));
-        if (!global.presentation)
-            return;
-        wl_proxy_set_queue(reinterpret_cast<wl_proxy*>(global.presentation), global.queue);
-        global.presentation_name = name;
-        wp_presentation_add_listener(global.presentation, &presentation_listener, &global);
-    }
+    std::lock_guard lock(wayland->seats_m);
+    wayland->seats.push_back(std::move(seat));
 }
 
-void Wayland::on_registry_global_remove(void* data, wl_registry*, uint32_t name)
+void Wayland::on_global_remove(void* data, wl_globals& global, uint32_t name)
 {
-    auto& global = *reinterpret_cast<wl_globals*>(data);
-
-    if (name == global.compositor_name) {
-        wl_compositor_destroy(global.compositor);
-        global.compositor = nullptr;
-        global.compositor_name = 0;
-    } else if (name == global.subcompositor_name) {
-        wl_subcompositor_destroy(global.subcompositor);
-        global.subcompositor = nullptr;
-        global.subcompositor_name = 0;
-    } else if (name == global.viewporter_name) {
-        wp_viewporter_destroy(global.viewporter);
-        global.viewporter = nullptr;
-        global.viewporter_name = 0;
-    } else if (name == global.fractional_scale_manager_name) {
-        wp_fractional_scale_manager_v1_destroy(global.fractional_scale_manager);
-        global.fractional_scale_manager = nullptr;
-        global.fractional_scale_manager_name = 0;
-    } else if (name == global.presentation_name) {
-        wp_presentation_destroy(global.presentation);
-        global.presentation = nullptr;
-        global.presentation_name = 0;
-        global.presentation_clock_id = 0;
-        global.have_presentation_clock_id = false;
-    }
-
-    if (global.wayland)
-        global.wayland->remove_seat(name, global.display);
+    auto* wayland = static_cast<Wayland*>(data);
+    if (wayland)
+        wayland->remove_seat(name, global.display);
 }
 
 void Wayland::on_seat_capabilities(void* data, wl_seat* wl_seat, uint32_t capabilities)
@@ -282,17 +211,6 @@ void Wayland::on_preferred_scale(void* data, wp_fractional_scale_v1*, uint32_t s
 
     surf_data->preferred_scale.store(scale, std::memory_order_release);
     SPDLOG_DEBUG("wl fractional scale changed: preferred_scale={}", scale);
-}
-
-void Wayland::on_presentation_clock_id(void* data, wp_presentation*, uint32_t clock_id)
-{
-    auto* global = reinterpret_cast<wl_globals*>(data);
-    if (!global)
-        return;
-
-    global->presentation_clock_id = clock_id;
-    global->have_presentation_clock_id = true;
-    SPDLOG_DEBUG("wl presentation clock id: {}", clock_id);
 }
 
 void Wayland::on_presentation_feedback_presented(void* data, struct wp_presentation_feedback* feedback,
@@ -399,8 +317,8 @@ void Wayland::update_import(const std::shared_ptr<surface_data>& surf_data)
         return;
 
     std::lock_guard lock(surf_data->m);
-    auto& globals = get_global(surf_data->display);
-    if (!globals.dmabuf)
+    auto* globals = ctx.get_global(surf_data->display);
+    if (!globals || !globals->dmabuf)
         return;
 
     Fdinfo next_fdinfo;
@@ -423,7 +341,7 @@ void Wayland::update_import(const std::shared_ptr<surface_data>& surf_data)
         wl_surface_attach(surf_data->overlay_surf, nullptr, 0, 0);
         wl_surface_commit(surf_data->overlay_surf);
         wl_display_flush(surf_data->display);
-        wl_display_roundtrip_queue(surf_data->display, globals.queue);
+        wl_display_roundtrip_queue(surf_data->display, globals->queue);
         surf_data->attached = false;
     }
     surf_data->buffers.clear();
@@ -440,7 +358,7 @@ void Wayland::update_import(const std::shared_ptr<surface_data>& surf_data)
         buf->stride = fdinfo.stride;
         buf->offset = fdinfo.dmabuf_offset;
         buf->modifier = fdinfo.modifier;
-        buf->params = zwp_linux_dmabuf_v1_create_params(globals.dmabuf);
+        buf->params = zwp_linux_dmabuf_v1_create_params(globals->dmabuf);
         zwp_linux_buffer_params_v1_add(buf->params, dmabuf.get(), 0, fdinfo.dmabuf_offset,
                                        fdinfo.stride, fdinfo.modifier >> 32,
                                        fdinfo.modifier & 0xffffffff);
@@ -468,11 +386,11 @@ void Wayland::dispatch_events(const std::shared_ptr<surface_data>& surf_data)
     if (!surf_data || !surf_data->display)
         return;
 
-    auto& globals = get_global(surf_data->display);
-    if (!globals.queue)
+    auto* globals = ctx.get_global(surf_data->display);
+    if (!globals || !globals->queue)
         return;
 
-    wl_display_dispatch_queue_pending(surf_data->display, globals.queue);
+    wl_display_dispatch_queue_pending(surf_data->display, globals->queue);
     wl_display_flush(surf_data->display);
 }
 
@@ -553,8 +471,9 @@ std::shared_ptr<shm_buffer> Wayland::present(const std::shared_ptr<surface_data>
     }
     wl_surface_damage(surf_data->overlay_surf, 0, 0, slot->width, slot->height);
     wl_surface_damage_buffer(surf_data->overlay_surf, 0, 0, slot->width, slot->height);
-    auto& globals = get_global(surf_data->display);
-    request_presentation_feedback(surf_data, globals, surf_data->overlay_surf, SampleType::Hud, hud_surface_name);
+    auto* globals = ctx.get_global(surf_data->display);
+    if (globals)
+        request_presentation_feedback(surf_data, *globals, surf_data->overlay_surf, SampleType::Hud, hud_surface_name);
     wl_surface_commit(surf_data->overlay_surf);
     wl_display_flush(surf_data->display);
     surf_data->attached = true;
@@ -581,9 +500,9 @@ void Wayland::detach(const std::shared_ptr<surface_data>& surf_data, bool wait_f
     wl_surface_commit(surf_data->overlay_surf);
     wl_display_flush(surf_data->display);
     if (wait_for_server) {
-        auto& globals = get_global(surf_data->display);
-        if (globals.queue)
-            wl_display_roundtrip_queue(surf_data->display, globals.queue);
+        auto* globals = ctx.get_global(surf_data->display);
+        if (globals && globals->queue)
+            wl_display_roundtrip_queue(surf_data->display, globals->queue);
     }
     surf_data->attached = false;
 }

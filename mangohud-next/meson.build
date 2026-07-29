@@ -4,7 +4,9 @@ inc_common += [
     include_directories('server'),
     include_directories('utils'),
     include_directories('client'),
+    include_directories('wayland'),
 ]
+subdir('wayland')
 subdir('utils')
 vkbootstrap_dep = subproject('vk-bootstrap').get_variable('vkbootstrap_dep')
 libdrm_dep = dependency('libdrm')
