@@ -23,7 +23,6 @@ class Wayland;
 
 struct shm_buffer {
     wl_buffer* buffer = nullptr;
-    zwp_linux_buffer_params_v1* params = nullptr;
 
     IPCClient* ipc = nullptr;
     int idx = -1;
@@ -89,10 +88,6 @@ struct seat_data {
     std::string seat_name;
     focus_state focus;
     mutable std::mutex state_m;
-
-    ~seat_data() {
-        destroy();
-    }
 
     seat_focus_snapshot update(uint64_t now) {
         std::lock_guard lock(state_m);
@@ -168,17 +163,26 @@ private:
 };
 
 struct surface_data {
-    ~surface_data() {
+    void destroy_wayland_objects() {
         std::lock_guard lock(m);
         buffers.clear();
-        if (fractional_scale)
+        if (fractional_scale) {
             wp_fractional_scale_v1_destroy(fractional_scale);
-        if (viewport)
+            fractional_scale = nullptr;
+        }
+        if (viewport) {
             wp_viewport_destroy(viewport);
-        if (sub_surf)
+            viewport = nullptr;
+        }
+        if (sub_surf) {
             wl_subsurface_destroy(sub_surf);
-        if (overlay_surf)
+            sub_surf = nullptr;
+        }
+        if (overlay_surf) {
             wl_surface_destroy(overlay_surf);
+            overlay_surf = nullptr;
+        }
+        attached = false;
     }
 
     wl_display* display = nullptr;
@@ -219,11 +223,9 @@ public:
         if (ipc) ipc->start(4);
     }
 
-    ~Wayland() {
-        quit.store(true);
-        if (thread.joinable())
-            thread.join();
-    }
+    ~Wayland();
+
+    void destroy_wayland_objects();
 
     template <typename Surface>
     void add_surface(Surface key, wl_surface* wl_surface, wl_display* display) {
@@ -241,19 +243,46 @@ public:
 
     template <typename Surface>
     void destroy_surface(Surface key) {
-        std::lock_guard lock(surf_m);
-        if constexpr (std::is_same_v<Surface, VkSurfaceKHR>) {
-            surfaces.erase(key);
-        } else {
-            static_assert(std::is_same_v<Surface, EGLSurface>);
-            egl_surfaces.erase(key);
+        std::shared_ptr<surface_data> surf_data;
+        {
+            std::lock_guard lock(surf_m);
+            if constexpr (std::is_same_v<Surface, VkSurfaceKHR>) {
+                auto it = surfaces.find(key);
+                if (it != surfaces.end()) {
+                    surf_data = it->second;
+                    surfaces.erase(it);
+                }
+            } else {
+                static_assert(std::is_same_v<Surface, EGLSurface>);
+                auto it = egl_surfaces.find(key);
+                if (it != egl_surfaces.end()) {
+                    surf_data = it->second;
+                    egl_surfaces.erase(it);
+                }
+            }
         }
+
+        if (surf_data == active_surface) {
+            quit.store(true);
+            if (thread.joinable())
+                thread.join();
+            active_surface.reset();
+        }
+
+        if (surf_data)
+            surf_data->destroy_wayland_objects();
     }
 
     template <typename Surface>
     bool ensure_overlay(Surface surface) {
-        if (!ensure_overlay_data(get_surface(surface))) return false;
-        if (!thread.joinable()) thread = std::thread([this, surface] { run_thread(surface); });
+        auto surf_data = get_surface(surface);
+        if (!ensure_overlay_data(surf_data)) return false;
+        // TODO: expand this to one worker per surface if we support multiple active overlay surfaces.
+        if (!thread.joinable()) {
+            active_surface = surf_data;
+            quit.store(false);
+            thread = std::thread([this, surf_data] { run_thread(surf_data); });
+        }
         return true;
     }
 
@@ -283,6 +312,7 @@ private:
 
     std::thread thread;
     std::atomic<bool> quit{false};
+    std::shared_ptr<surface_data> active_surface;
 
     static void on_global(void* data, wl_globals& global, wl_registry* registry,
                           uint32_t name, const char* interface, uint32_t version);
@@ -348,26 +378,5 @@ private:
     std::shared_ptr<shm_buffer> present(const std::shared_ptr<surface_data>& surf_data);
     void detach(const std::shared_ptr<surface_data>& surf_data, bool wait_for_server = true);
 
-    template <typename Surface>
-    void run_thread(Surface surface) {
-        while (!quit.load()) {
-            {
-                auto surf_data = get_surface(surface);
-                dispatch_events(surf_data);
-                if (!ipc->connected.load(std::memory_order_acquire)) {
-                    detach(surf_data);
-                } else {
-                    update_import(surf_data);
-                    present(surf_data);
-                    dispatch_events(surf_data);
-                }
-
-                if (quit.load())
-                    break;
-            }
-            int sleep = ipc->connected.load(std::memory_order_acquire) ? 4 : 100;
-            std::this_thread::sleep_for(std::chrono::milliseconds(sleep));
-        }
-        detach(get_surface(surface), false);
-    }
+    void run_thread(std::shared_ptr<surface_data> surf_data);
 };

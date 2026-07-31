@@ -49,23 +49,19 @@ static wl_display* get_egl_display(EGLDisplay dpy) {
     return it != egl_displays.end() ? it->second : nullptr;
 }
 
-static wl_display* remove_egl_display(EGLDisplay dpy) {
-    std::lock_guard lock(egl_displays_m);
-    auto it = egl_displays.find(dpy);
-    if (it == egl_displays.end())
-        return nullptr;
-
-    auto* display = it->second;
-    egl_displays.erase(it);
-    return display;
-}
-
 static void add_egl_display(EGLDisplay dpy, void* native_display) {
     if (dpy == EGL_NO_DISPLAY || !native_display)
         return;
 
     std::lock_guard lock(egl_displays_m);
     egl_displays[dpy] = static_cast<wl_display*>(native_display);
+}
+
+static void reset_wayland() {
+    if (!wayland)
+        return;
+
+    wayland.reset();
 }
 
 static void register_egl_surface(EGLDisplay dpy, EGLSurface surf, void* native_window) {
@@ -210,9 +206,7 @@ EXPORT_C_(EGLBoolean) eglTerminate(EGLDisplay dpy) {
     if (!real_eglTerminate)
         real_eglTerminate = (decltype(real_eglTerminate)) real_dlsym(RTLD_NEXT, "eglTerminate");
 
-    auto* display = remove_egl_display(dpy);
-    if (wayland && display)
-        wayland.reset();
+    reset_wayland();
 
     return real_eglTerminate(dpy);
 }
@@ -242,8 +236,7 @@ EXPORT_C_(void) wl_egl_window_destroy(wl_egl_window* window) {
         wl_egl_windows.erase(window);
     }
 
-    if (wayland)
-        wayland.reset();
+    reset_wayland();
     real_wl_egl_window_destroy(window);
 }
 
@@ -252,8 +245,7 @@ EXPORT_C_(void) wl_display_disconnect(wl_display* display) {
     if (!real_wl_display_disconnect)
         real_wl_display_disconnect = (decltype(real_wl_display_disconnect)) real_dlsym(RTLD_NEXT, "wl_display_disconnect");
 
-    if (wayland)
-        wayland.reset();
+    reset_wayland();
     real_wl_display_disconnect(display);
 }
 

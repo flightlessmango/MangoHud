@@ -7,6 +7,15 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+Wayland::~Wayland()
+{
+    quit.store(true);
+    if (thread.joinable())
+        thread.join();
+
+    destroy_wayland_objects();
+}
+
 bool Wayland::request_presentation_feedback(const std::shared_ptr<surface_data>& surf_data, wl_globals& globals,
                                             wl_surface* surface, SampleType type, const char* surface_name)
 {
@@ -111,8 +120,10 @@ void Wayland::on_global(void* data, wl_globals& global, wl_registry* registry,
     seat->display = global.display;
     seat->registry_name = name;
     wl_proxy_set_queue(reinterpret_cast<wl_proxy*>(seat->seat), global.queue);
-    if (wl_seat_add_listener(seat->seat, &seat_listener, seat.get()) != 0)
+    if (wl_seat_add_listener(seat->seat, &seat_listener, seat.get()) != 0) {
+        seat->destroy();
         return;
+    }
 
     std::lock_guard lock(wayland->seats_m);
     wayland->seats.push_back(std::move(seat));
@@ -295,16 +306,46 @@ void Wayland::buffer_release(void* data, wl_buffer*)
     release_to_server(buf);
 }
 
+void Wayland::destroy_wayland_objects()
+{
+    std::vector<std::shared_ptr<surface_data>> surface_list;
+    {
+        std::lock_guard lock(surf_m);
+        for (auto& [_, surf_data] : surfaces) {
+            if (surf_data)
+                surface_list.push_back(surf_data);
+        }
+        surfaces.clear();
+
+        for (auto& [_, surf_data] : egl_surfaces) {
+            if (surf_data)
+                surface_list.push_back(surf_data);
+        }
+        egl_surfaces.clear();
+    }
+
+    active_surface.reset();
+    for (auto& surf_data : surface_list)
+        surf_data->destroy_wayland_objects();
+
+    {
+        std::lock_guard lock(seats_m);
+        seats.clear();
+    }
+}
+
 void Wayland::remove_seat(uint32_t name, wl_display* display)
 {
     {
         std::lock_guard lock(seats_m);
         for (auto it = seats.begin(); it != seats.end();) {
             auto& seat = *it;
-            if (seat->registry_name == name && seat->display == display)
+            if (seat->registry_name == name && seat->display == display) {
+                seat->destroy();
                 it = seats.erase(it);
-            else
+            } else {
                 ++it;
+            }
         }
     }
 
@@ -347,8 +388,7 @@ void Wayland::update_import(const std::shared_ptr<surface_data>& surf_data)
     surf_data->buffers.clear();
     ipc->clear_frames();
 
-    for (uint32_t idx = 0; idx < fdinfo.dmabuf_buffer.size(); idx++) {
-        auto& dmabuf = fdinfo.dmabuf_buffer[idx];
+    for (auto [idx, dmabuf] : enumerate(fdinfo.dmabuf_buffer)) {
         std::shared_ptr<shm_buffer> buf = std::make_shared<shm_buffer>();
         buf->ipc = ipc.get();
         buf->idx = idx;
@@ -358,18 +398,18 @@ void Wayland::update_import(const std::shared_ptr<surface_data>& surf_data)
         buf->stride = fdinfo.stride;
         buf->offset = fdinfo.dmabuf_offset;
         buf->modifier = fdinfo.modifier;
-        buf->params = zwp_linux_dmabuf_v1_create_params(globals->dmabuf);
-        zwp_linux_buffer_params_v1_add(buf->params, dmabuf.get(), 0, fdinfo.dmabuf_offset,
+        auto* params = zwp_linux_dmabuf_v1_create_params(globals->dmabuf);
+        zwp_linux_buffer_params_v1_add(params, dmabuf.get(), 0, fdinfo.dmabuf_offset,
                                        fdinfo.stride, fdinfo.modifier >> 32,
                                        fdinfo.modifier & 0xffffffff);
 
-        buf->buffer = zwp_linux_buffer_params_v1_create_immed(buf->params, fdinfo.w,
+        buf->buffer = zwp_linux_buffer_params_v1_create_immed(params, fdinfo.w,
                                                               fdinfo.h,
                                                               fdinfo.fourcc, 0);
 
         wl_buffer_add_listener(buf->buffer, &Wayland::buffer_listener, buf.get());
 
-        zwp_linux_buffer_params_v1_destroy(buf->params);
+        zwp_linux_buffer_params_v1_destroy(params);
         surf_data->buffers.push_back(std::move(buf));
     }
 
@@ -505,4 +545,24 @@ void Wayland::detach(const std::shared_ptr<surface_data>& surf_data, bool wait_f
             wl_display_roundtrip_queue(surf_data->display, globals->queue);
     }
     surf_data->attached = false;
+}
+
+void Wayland::run_thread(std::shared_ptr<surface_data> surf_data)
+{
+    while (!quit.load()) {
+        dispatch_events(surf_data);
+        if (!ipc->connected.load(std::memory_order_acquire)) {
+            detach(surf_data);
+        } else {
+            update_import(surf_data);
+            present(surf_data);
+            dispatch_events(surf_data);
+        }
+
+        if (quit.load())
+            break;
+
+        int sleep = ipc->connected.load(std::memory_order_acquire) ? 4 : 100;
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleep));
+    }
 }
