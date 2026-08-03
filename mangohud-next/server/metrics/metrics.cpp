@@ -162,7 +162,7 @@ void Metrics::update_client() {
                     metrics["GPU_NAME"] = {client->gpuName};
                     metrics["VULKAN_DRIVER"] = {client->vulkanDriver};
                     metrics["FOCUSED"] = {client->focused() ? "true" : "false"};
-                    metrics["FOCUSED_SEATS"] = {fmt::format("{}", fmt::join(client->focused_seats, ","))};
+                    metrics["FOCUSED_SEATS"] = {join_strings(client->focused_seats, ",")};
                     if (client->resolutionWidth && client->resolutionHeight)
                         metrics["RESOLUTION"] = {std::to_string(client->resolutionWidth) + "x" + std::to_string(client->resolutionHeight)};
                 }

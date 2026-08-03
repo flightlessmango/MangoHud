@@ -6,6 +6,7 @@
 #include <spdlog/spdlog.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
+#include "string_utils.h"
 
 Wayland::~Wayland()
 {
@@ -458,7 +459,7 @@ void Wayland::update_focus()
     if (ipc) {
         if (ipc->set_focused_seats(focused_seats)) {
             SPDLOG_DEBUG("wl focus changed: focused={} seats={} keyboard={} pointer={} presentation={}",
-                         is_focused, fmt::join(focused_seats, ","),
+                         is_focused, join_strings(focused_seats, ","),
                          keyboard_active, pointer_active, presentation_active);
         }
     }

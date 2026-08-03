@@ -131,6 +131,17 @@ static std::vector<std::string> str_tokenize(const std::string& s, const std::st
    return v;
 }
 
+static std::string join_strings(const std::vector<std::string>& strings, const std::string& delimiter)
+{
+    std::string joined;
+    for (const auto& string : strings) {
+        if (!joined.empty())
+            joined += delimiter;
+        joined += string;
+    }
+    return joined;
+}
+
 static void trim_char(char* str) {
     if(!str)
         return;
