@@ -9,6 +9,8 @@ project('MangoHud',
 cc = meson.get_compiler('c')
 cpp = meson.get_compiler('cpp')
 
+add_global_arguments('-DFMT_CONSTEVAL=', language: 'cpp')
+
 prog_python = import('python').find_installation('python3', modules: ['mako'])
 null_dep = dependency('', required : false)
 vcs_tag_command = ['git', 'describe', '--tags', '--dirty=+']
