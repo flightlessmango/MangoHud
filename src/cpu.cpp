@@ -359,21 +359,24 @@ static bool get_cpu_power_k10temp(CPUPowerData* cpuPowerData, float& power) {
 static bool get_cpu_power_zenpower(CPUPowerData* cpuPowerData, float& power) {
     CPUPowerData_zenpower* powerData_zenpower = (CPUPowerData_zenpower*)cpuPowerData;
 
-    if (!powerData_zenpower->corePowerFile || !powerData_zenpower->socPowerFile)
+    if (!powerData_zenpower->corePowerFile)
         return false;
 
     rewind(powerData_zenpower->corePowerFile);
-    rewind(powerData_zenpower->socPowerFile);
-
     fflush(powerData_zenpower->corePowerFile);
-    fflush(powerData_zenpower->socPowerFile);
 
-    int corePower, socPower;
+    int corePower = 0, socPower = 0;
 
     if (fscanf(powerData_zenpower->corePowerFile, "%d", &corePower) != 1)
         return false;
-    if (fscanf(powerData_zenpower->socPowerFile, "%d", &socPower) != 1)
-        return false;
+
+    // socPowerFile is null for zenpower5/Zen5 which reports a single RAPL_P_Package value
+    if (powerData_zenpower->socPowerFile) {
+        rewind(powerData_zenpower->socPowerFile);
+        fflush(powerData_zenpower->socPowerFile);
+        if (fscanf(powerData_zenpower->socPowerFile, "%d", &socPower) != 1)
+            return false;
+    }
 
     power = (corePower + socPower) / 1000000;
 
@@ -677,16 +680,25 @@ static CPUPowerData_zenpower* init_cpu_power_data_zenpower(const std::string pat
 
     std::string corePowerInput, socPowerInput;
 
-    if(!find_input(path, "power", corePowerInput, "SVI2_P_Core")) return nullptr;
-    if(!find_input(path, "power", socPowerInput, "SVI2_P_SoC")) return nullptr;
+    // Zen 4 and older: SVI2 separate core and SoC power rails
+    if(find_input(path, "power", corePowerInput, "SVI2_P_Core") &&
+       find_input(path, "power", socPowerInput, "SVI2_P_SoC")) {
+        SPDLOG_DEBUG("hwmon: using input: {}", corePowerInput);
+        SPDLOG_DEBUG("hwmon: using input: {}", socPowerInput);
+        powerData->corePowerFile = fopen(corePowerInput.c_str(), "r");
+        powerData->socPowerFile = fopen(socPowerInput.c_str(), "r");
+        return powerData.release();
+    }
 
-    SPDLOG_DEBUG("hwmon: using input: {}", corePowerInput);
-    SPDLOG_DEBUG("hwmon: using input: {}", socPowerInput);
+    // Zen 5 (zenpower5): single RAPL package power reading
+    if(find_input(path, "power", corePowerInput, "RAPL_P_Package")) {
+        SPDLOG_DEBUG("hwmon: using input (RAPL_P_Package): {}", corePowerInput);
+        powerData->corePowerFile = fopen(corePowerInput.c_str(), "r");
+        // socPowerFile intentionally left null; get_cpu_power_zenpower handles this
+        return powerData.release();
+    }
 
-    powerData->corePowerFile = fopen(corePowerInput.c_str(), "r");
-    powerData->socPowerFile = fopen(socPowerInput.c_str(), "r");
-
-    return powerData.release();
+    return nullptr;
 }
 
 static CPUPowerData_zenergy* init_cpu_power_data_zenergy(const std::string path) {
@@ -755,7 +767,7 @@ bool CPUStats::InitCpuPowerData() {
             cpuPowerData = (CPUPowerData*)init_cpu_power_data_k10temp(path);
         } else if (name == "zenpower") {
             cpuPowerData = (CPUPowerData*)init_cpu_power_data_zenpower(path);
-            break;
+            if (cpuPowerData) break;
         } else if (name == "zenergy") {
             cpuPowerData = (CPUPowerData*)init_cpu_power_data_zenergy(path);
             break;
