@@ -321,6 +321,8 @@ You can find an example config in /usr/share/doc/mangohud
 
 [GOverlay](https://github.com/benjamimgois/goverlay) is a GUI application that can be used to manage the config
 
+[MangoJuice](https://github.com/radiolamp/mangojuice) an alternative to GOverlay written in GTK/Adwaita
+
 ---
 
 ### Environment Variables
