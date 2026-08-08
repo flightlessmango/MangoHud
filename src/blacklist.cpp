@@ -1,16 +1,13 @@
-#include <vector>
+#include <set>
 #include <string>
 #include <algorithm>
 #include <spdlog/spdlog.h>
 #include <filesystem.h>
 
 #include "blacklist.h"
-#include "string_utils.h"
 #include "file_utils.h"
 
 namespace fs = ghc::filesystem;
-std::string global_proc_name;
-std::string global_engine_name;
 
 static std::string get_proc_name() {
    // Note: It is possible to use GNU program_invocation_short_name.
@@ -21,7 +18,11 @@ static std::string get_proc_name() {
    return get_basename(get_exe_path());
 }
 
-static  std::vector<std::string> blacklist {
+// Assign global_proc_name once, and use its cached value, it is runtime-constant.
+std::string global_proc_name = get_proc_name();
+std::string global_engine_name;
+
+static std::set<std::string> blacklist {
     "Amazon Games UI.exe",
     "Battle.net.exe",
     "BethesdaNetLauncher.exe",
@@ -69,23 +70,20 @@ static  std::vector<std::string> blacklist {
     "vulkandriverquery",
 };
 
-static std::vector<std::string> blacklist_engine {
+static std::set<std::string> blacklist_engine {
     "GTK"
 };
 
 static bool check_blacklisted() {
-    std::string proc_name = get_proc_name();
-    std::string engine_name = global_engine_name;
-    global_proc_name = proc_name;
-    bool blacklisted = std::find(blacklist.begin(), blacklist.end(), proc_name) != blacklist.end();
-    blacklisted |= std::find(blacklist_engine.begin(), blacklist_engine.end(), engine_name) != blacklist_engine.end();
+    bool blacklisted = blacklist.find(global_proc_name) != blacklist.end();
+    bool blacklisted_engine = blacklist_engine.find(global_engine_name) != blacklist_engine.end();
+    blacklisted |= blacklisted_engine;
 
     static bool printed = false;
     if(blacklisted && !printed) {
         printed = true;
-        SPDLOG_INFO("process '{}' is blacklisted in MangoHud", proc_name);
+        SPDLOG_INFO("process '{}' is blacklisted in MangoHud", global_proc_name);
     }
-
     return blacklisted;
 }
 
@@ -97,13 +95,10 @@ bool is_blacklisted(bool force_recheck) {
 }
 
 void add_blacklist(const std::string& new_item) {
-    // check if item exits in blacklist before adding new item
-    if(std::find(blacklist.begin(), blacklist.end(), new_item) != blacklist.end()) {
-        return;
+    SPDLOG_DEBUG("add {} to blacklist", new_item);
+    auto [_, inserted] = blacklist.insert(new_item);
+    if (inserted) {
+        // TODO: actually the checking should be done, after __all__ items have been added, right?
+        is_blacklisted(true);
     }
-
-    blacklist.push_back (new_item);
-    is_blacklisted(true);
 }
-
-
