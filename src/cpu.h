@@ -200,7 +200,7 @@ private:
    double m_cpuPeriod = 0;
    bool m_updatedCPUs = false; // TODO use caching or just update?
    bool m_inited = false;
-   FILE *m_cpuTempFile = nullptr;
+   int m_cpuTempFd = -1;
    std::unique_ptr<CPUPowerData> m_cpuPowerData;
 
    const std::map<std::string, std::string> intel_cores = {

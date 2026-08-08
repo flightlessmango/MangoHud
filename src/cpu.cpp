@@ -3,6 +3,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <unistd.h>
 #include <sstream>
 #include <dirent.h>
 #include <string.h>
@@ -108,9 +109,9 @@ CPUStats::CPUStats()
 
 CPUStats::~CPUStats()
 {
-    if (m_cpuTempFile) {
-        fclose(m_cpuTempFile);
-        m_cpuTempFile = nullptr;
+    if (m_cpuTempFd != -1) {
+        close(m_cpuTempFd);
+        m_cpuTempFd = -1;
     }
 }
 
@@ -281,14 +282,26 @@ bool CPUStats::UpdateCoreMhz() {
 }
 
 bool CPUStats::ReadcpuTempFile(int& temp) {
-	if (!m_cpuTempFile)
+	if (m_cpuTempFd == -1)
 		return false;
-
-	rewind(m_cpuTempFile);
-	fflush(m_cpuTempFile);
-	bool ret = (fscanf(m_cpuTempFile, "%d", &temp) == 1);
-	temp = temp / 1000;
-
+    int ret = -1;
+    char buf[21];
+    /* lseek + read */
+    ssize_t read_sz = pread(m_cpuTempFd, buf, sizeof(buf), 0);
+    /* valid temp */
+    if (read_sz > 3) {
+        if (buf[read_sz] == '\n') /* sysfs guarantees newline? */
+            --read_sz;
+        /* extract degrees */
+        read_sz -= 3;
+        buf[read_sz] = '\0';
+        char *buf_e;
+        const long n = strtol(buf, &buf_e, 10);
+        if (n >= INT_MIN && n <= INT_MAX) {
+            temp = n;
+            ret = buf_e - buf;
+        }
+    }
 	return ret;
 }
 
@@ -559,7 +572,7 @@ static void check_thermal_zones(std::string& path, std::string& input) {
 }
 
 bool CPUStats::GetCpuFile() {
-    if (m_cpuTempFile)
+    if (m_cpuTempFd != -1)
         return true;
 
     std::string name, path, input;
@@ -634,7 +647,7 @@ bool CPUStats::GetCpuFile() {
     }
 
     SPDLOG_INFO("hwmon: using input: {}", input);
-    m_cpuTempFile = fopen(input.c_str(), "r");
+    m_cpuTempFd = open(input.c_str(), O_RDONLY);
 
     return true;
 }
@@ -739,7 +752,6 @@ bool CPUStats::InitCpuPowerData() {
         return true;
 
     retries++;
-    
     std::string name, path;
     std::string hwmon = "/sys/class/hwmon/";
 
@@ -789,7 +801,6 @@ bool CPUStats::InitCpuPowerData() {
             }
         }
     }
-    
     if(cpuPowerData == nullptr) {
         SPDLOG_ERROR("Failed to initialize CPU power data");
         return false;
