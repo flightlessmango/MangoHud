@@ -284,12 +284,8 @@ bool CPUStats::ReadcpuTempFile(int& temp) {
 	if (!m_cpuTempFile)
 		return false;
 
-	rewind(m_cpuTempFile);
-	fflush(m_cpuTempFile);
-	bool ret = (fscanf(m_cpuTempFile, "%d", &temp) == 1);
-	temp = temp / 1000;
-
-	return ret;
+    temp = read_as<int>(m_cpuTempFile).value_or(0) / 1000;
+    return temp == 0;
 }
 
 bool CPUStats::UpdateCpuTemp() {
@@ -314,44 +310,32 @@ static bool get_cpu_power_k10temp(CPUPowerData* cpuPowerData, float& power) {
 
     if(powerData_k10temp->corePowerFile || powerData_k10temp->socPowerFile)
     {
-        rewind(powerData_k10temp->corePowerFile);
-        rewind(powerData_k10temp->socPowerFile);
-        fflush(powerData_k10temp->corePowerFile);
-        fflush(powerData_k10temp->socPowerFile);
-        int corePower, socPower;
-        if (fscanf(powerData_k10temp->corePowerFile, "%d", &corePower) != 1)
-            goto voltagebased;
-        if (fscanf(powerData_k10temp->socPowerFile, "%d", &socPower) != 1)
-            goto voltagebased;
-        power = (corePower + socPower) / 1000000;
-        return true;
+        auto const corePower = read_as<int>(powerData_k10temp->corePowerFile);
+        auto const socPower = read_as<int>(powerData_k10temp->socPowerFile);
+        if (corePower and socPower) {
+            power = (corePower.value() + socPower.value()) / 1000000;
+            return true;
+        }
     }
-    voltagebased:
+
     if (!powerData_k10temp->coreVoltageFile || !powerData_k10temp->coreCurrentFile || !powerData_k10temp->socVoltageFile || !powerData_k10temp->socCurrentFile)
         return false;
-    rewind(powerData_k10temp->coreVoltageFile);
-    rewind(powerData_k10temp->coreCurrentFile);
-    rewind(powerData_k10temp->socVoltageFile);
-    rewind(powerData_k10temp->socCurrentFile);
 
-    fflush(powerData_k10temp->coreVoltageFile);
-    fflush(powerData_k10temp->coreCurrentFile);
-    fflush(powerData_k10temp->socVoltageFile);
-    fflush(powerData_k10temp->socCurrentFile);
-
-    int coreVoltage, coreCurrent;
-    int socVoltage, socCurrent;
-
-    if (fscanf(powerData_k10temp->coreVoltageFile, "%d", &coreVoltage) != 1)
+    auto const coreVoltage = read_as<int>(powerData_k10temp->coreVoltageFile);
+    if (not coreVoltage)
         return false;
-    if (fscanf(powerData_k10temp->coreCurrentFile, "%d", &coreCurrent) != 1)
+    auto const coreCurrent = read_as<int>(powerData_k10temp->coreCurrentFile);
+    if (not coreCurrent)
         return false;
-    if (fscanf(powerData_k10temp->socVoltageFile, "%d", &socVoltage) != 1)
+    auto const socVoltage = read_as<int>(powerData_k10temp->socVoltageFile);
+    if (not socVoltage)
         return false;
-    if (fscanf(powerData_k10temp->socCurrentFile, "%d", &socCurrent) != 1)
+    auto const socCurrent = read_as<int>(powerData_k10temp->socCurrentFile);
+    if (not socCurrent)
         return false;
 
-    power = (coreVoltage * coreCurrent + socVoltage * socCurrent) / 1000000;
+    power = (coreVoltage.value() * coreCurrent.value() +
+             socVoltage.value() * socCurrent.value()) / 1000000;
 
     return true;
 }
@@ -362,20 +346,14 @@ static bool get_cpu_power_zenpower(CPUPowerData* cpuPowerData, float& power) {
     if (!powerData_zenpower->corePowerFile || !powerData_zenpower->socPowerFile)
         return false;
 
-    rewind(powerData_zenpower->corePowerFile);
-    rewind(powerData_zenpower->socPowerFile);
-
-    fflush(powerData_zenpower->corePowerFile);
-    fflush(powerData_zenpower->socPowerFile);
-
-    int corePower, socPower;
-
-    if (fscanf(powerData_zenpower->corePowerFile, "%d", &corePower) != 1)
+    auto const corePower = read_as<int>(powerData_zenpower->corePowerFile);
+    if (not corePower)
         return false;
-    if (fscanf(powerData_zenpower->socPowerFile, "%d", &socPower) != 1)
+    auto const socPower = read_as<int>(powerData_zenpower->socPowerFile);
+    if (not socPower)
         return false;
 
-    power = (corePower + socPower) / 1000000;
+    power = (corePower.value() + socPower.value()) / 1000000;
 
     return true;
 }
@@ -385,23 +363,20 @@ static bool get_cpu_power_zenergy(CPUPowerData* cpuPowerData, float& power) {
     if (!powerData_zenergy->energyCounterFile)
         return false;
 
-    rewind(powerData_zenergy->energyCounterFile);
-    fflush(powerData_zenergy->energyCounterFile);
-
-    uint64_t energyCounterValue = 0;
-    if (fscanf(powerData_zenergy->energyCounterFile, "%" SCNu64, &energyCounterValue) != 1)
+    auto const energyCounterValue = read_as<uint64_t>(powerData_zenergy->energyCounterFile);
+    if (not energyCounterValue)
         return false;
 
     Clock::time_point now = Clock::now();
     Clock::duration timeDiff = now - powerData_zenergy->lastCounterValueTime;
     int64_t timeDiffMicro = std::chrono::duration_cast<std::chrono::microseconds>(timeDiff).count();
-    uint64_t energyCounterDiff = energyCounterValue - powerData_zenergy->lastCounterValue;
+    uint64_t energyCounterDiff = energyCounterValue.value() - powerData_zenergy->lastCounterValue;
 
 
     if (powerData_zenergy->lastCounterValue > 0 && energyCounterValue > powerData_zenergy->lastCounterValue)
         power = (float) energyCounterDiff / (float) timeDiffMicro;
 
-    powerData_zenergy->lastCounterValue = energyCounterValue;
+    powerData_zenergy->lastCounterValue = energyCounterValue.value();
     powerData_zenergy->lastCounterValueTime = now;
 
     return true;
@@ -413,22 +388,19 @@ static bool get_cpu_power_rapl(CPUPowerData* cpuPowerData, float& power) {
     if (!powerData_rapl->energyCounterFile)
         return false;
 
-    rewind(powerData_rapl->energyCounterFile);
-    fflush(powerData_rapl->energyCounterFile);
-
-    uint64_t energyCounterValue = 0;
-    if (fscanf(powerData_rapl->energyCounterFile, "%" SCNu64, &energyCounterValue) != 1)
+    auto const energyCounterValue = read_as<uint64_t>(powerData_rapl->energyCounterFile);
+    if (not energyCounterValue)
         return false;
 
     Clock::time_point now = Clock::now();
     Clock::duration timeDiff = now - powerData_rapl->lastCounterValueTime;
     int64_t timeDiffMicro = std::chrono::duration_cast<std::chrono::microseconds>(timeDiff).count();
-    uint64_t energyCounterDiff = energyCounterValue - powerData_rapl->lastCounterValue;
+    uint64_t energyCounterDiff = energyCounterValue.value() - powerData_rapl->lastCounterValue;
 
     if (powerData_rapl->lastCounterValue > 0 && energyCounterValue > powerData_rapl->lastCounterValue)
         power = energyCounterDiff / timeDiffMicro;
 
-    powerData_rapl->lastCounterValue = energyCounterValue;
+    powerData_rapl->lastCounterValue = energyCounterValue.value();
     powerData_rapl->lastCounterValueTime = now;
 
     return true;
@@ -450,14 +422,11 @@ static bool get_cpu_power_xgene(CPUPowerData* cpuPowerData, float& power) {
     if (!powerData_xgene->powerFile)
         return false;
 
-    rewind(powerData_xgene->powerFile);
-    fflush(powerData_xgene->powerFile);
-
-    uint64_t powerValue = 0;
-    if (fscanf(powerData_xgene->powerFile, "%" SCNu64, &powerValue) != 1)
+    auto const powerValue = read_as<uint64_t>(powerData_xgene->powerFile);
+    if (not powerValue)
         return false;
 
-    power = (float) powerValue / 1000000.0f;
+    power = (float) powerValue.value() / 1000000.0f;
 
     return true;
 }
