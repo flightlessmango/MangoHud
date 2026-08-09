@@ -255,6 +255,8 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
       FTrace::object->update();
    }
 #endif
+   if (params.enabled[OVERLAY_PARAM_ENABLED_obs])
+      HUDElements.obs_ptr->update();
    frametime = frametime_ms;
    fps = double(1000 / frametime_ms);
    if (fpsmetrics) fpsmetrics->update(frametime_ms);

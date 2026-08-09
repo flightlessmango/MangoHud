@@ -54,7 +54,9 @@ vklayer_files = files(
   'file_utils.cpp',
   'nvidia.cpp',
   'gpu_fdinfo.cpp',
-  'amdgpu.cpp'
+  'amdgpu.cpp',
+  'obs/obs_studio.cpp',
+  'obs/obs_shared.c',
 )
 
 opengl_files  = []
@@ -165,6 +167,11 @@ if is_unixy
       'dbus.cpp',
       'loaders/loader_dbus.cpp',
     )
+  endif
+
+  if obs.found() and obs_frontend_api.found() and get_option('with_obs').enabled()
+    pre_args += '-DHAVE_OBS'
+    subdir('obs')
   endif
 endif
 

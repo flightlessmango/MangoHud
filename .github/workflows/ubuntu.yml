@@ -26,7 +26,8 @@ jobs:
           libcmocka-dev \
           libglfw3-dev \
           sudo \
-          git
+          git \
+          libobs-dev
     - name: 'Install Meson'
       run: |
         MESON_MIN_VERSION="$(sed -n "s/.*meson_version:[[:space:]]*'>=\([^']*\)'.*/\1/p" meson.build)"
@@ -52,6 +53,7 @@ jobs:
           -D with_x11=enabled
           -D with_wayland=enabled
           -D with_dbus=enabled
+          -D with_obs=enabled
           -D mangoapp=true
           -D mangohudctl=true
           -D tests=enabled
