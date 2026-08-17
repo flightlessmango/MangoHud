@@ -319,7 +319,9 @@ If you start the game from the terminal with MangoHud enabled (for example by st
 
 You can find an example config in /usr/share/doc/mangohud
 
-[GOverlay](https://github.com/benjamimgois/goverlay) is a GUI application that can be used to manage the config
+[GOverlay](https://github.com/benjamimgois/goverlay) Qt GUI for configuring MangoHud.
+
+[MangoJuice](https://github.com/radiolamp/mangojuice) GTK GUI for configuring MangoHud.
 
 ---
 
