@@ -366,17 +366,30 @@ static void device_map_queues(struct device_data *data,
 
    uint32_t queue_index = 0;
    for (uint32_t i = 0; i < pCreateInfo->queueCreateInfoCount; i++) {
-      for (uint32_t j = 0; j < pCreateInfo->pQueueCreateInfos[i].queueCount; j++) {
-         VkQueue queue;
-         data->vtable.GetDeviceQueue(data->device,
-                                     pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex,
-                                     j, &queue);
+      const VkDeviceQueueCreateInfo *queue_info = &pCreateInfo->pQueueCreateInfos[i];
+      for (uint32_t j = 0; j < queue_info->queueCount; j++) {
+         VkQueue queue = VK_NULL_HANDLE;
+
+         /* vkGetDeviceQueue returns NULL for queues created with a non-zero
+          * flags value; those must be retrieved with vkGetDeviceQueue2. */
+         if (queue_info->flags && data->vtable.GetDeviceQueue2) {
+            VkDeviceQueueInfo2 get_info = {};
+            get_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2;
+            get_info.flags = queue_info->flags;
+            get_info.queueFamilyIndex = queue_info->queueFamilyIndex;
+            get_info.queueIndex = j;
+            data->vtable.GetDeviceQueue2(data->device, &get_info, &queue);
+         } else {
+            data->vtable.GetDeviceQueue(data->device,
+                                        queue_info->queueFamilyIndex,
+                                        j, &queue);
+         }
 
          VK_CHECK(data->set_device_loader_data(data->device, queue));
 
          data->queues[queue_index++] =
-            new_queue_data(queue, &family_props[pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex],
-                           pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex, data);
+            new_queue_data(queue, &family_props[queue_info->queueFamilyIndex],
+                           queue_info->queueFamilyIndex, data);
       }
    }
 }
