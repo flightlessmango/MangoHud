@@ -512,14 +512,21 @@ AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id) {
 	this->vendor_id = vendor_id;
 	const std::string device_path = "/sys/bus/pci/devices/" + pci_dev;
 	gpu_metrics_path = device_path + "/gpu_metrics";
-    // Just check that the metrics file exists and is readable
+    // Verify that the metrics file is actually readable, not just present.
+    // Some APUs (e.g. Picasso/Raven2, smu10) expose the file but return
+    // EOPNOTSUPP on read; treating it as valid would overwrite the working
+    // sysfs/hwmon values (busy %, temp) with zeros.
     FILE *f = fopen(gpu_metrics_path.c_str(), "rb");
     if (f) {
-        gpu_metrics_is_valid = true;
+        metrics_table_header header{};
+        gpu_metrics_is_valid = fread(&header, 1, sizeof(header), f) == sizeof(header);
         fclose(f);
     } else {
         gpu_metrics_is_valid = false;
         SPDLOG_DEBUG("Failed to open gpu_metrics at '{}'", gpu_metrics_path);
+    }
+    if (!gpu_metrics_is_valid) {
+        SPDLOG_DEBUG("gpu_metrics at '{}' is not readable, falling back to sysfs/hwmon", gpu_metrics_path);
     }
 
 	sysfs_nodes.busy = fopen((device_path + "/gpu_busy_percent").c_str(), "r");
