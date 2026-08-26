@@ -368,9 +368,19 @@ static void device_map_queues(struct device_data *data,
    for (uint32_t i = 0; i < pCreateInfo->queueCreateInfoCount; i++) {
       for (uint32_t j = 0; j < pCreateInfo->pQueueCreateInfos[i].queueCount; j++) {
          VkQueue queue;
-         data->vtable.GetDeviceQueue(data->device,
-                                     pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex,
-                                     j, &queue);
+         if (pCreateInfo->pQueueCreateInfos[i].flags) {
+            /* non-zero flags require GetDeviceQueue2, GetDeviceQueue returns VK_NULL_HANDLE */
+            VkDeviceQueueInfo2 queue_info = {};
+            queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2;
+            queue_info.flags = pCreateInfo->pQueueCreateInfos[i].flags;
+            queue_info.queueFamilyIndex = pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex;
+            queue_info.queueIndex = j;
+            data->vtable.GetDeviceQueue2(data->device, &queue_info, &queue);
+         } else {
+            data->vtable.GetDeviceQueue(data->device,
+                                        pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex,
+                                        j, &queue);
+         }
 
          VK_CHECK(data->set_device_loader_data(data->device, queue));
 
