@@ -393,6 +393,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `fps_metrics`                      | Takes a list of decimal values or the value avg, e.g `avg,0.001`                      |
 | `reset_fps_metrics`                | Reset fps metrics keybind, default is `Shift_R+F9`                                    |
 | `fps_text`                         | Display custom text for engine name in front of FPS                                   |
+| `no_engine_name_label`              | Hide the engine or process name shown before the FPS value (e.g. `gamescope`)         |
 | `frame_count`                      | Display frame count                                                                   |
 | `frametime`                        | Display frametime next to FPS text                                                    |
 | `frame_timing_detailed`            | Display frame timing in a more detailed chart                                         |
