@@ -43,7 +43,8 @@ void update_mem_temp() {
         std::string path = "/sys/class/hwmon/";
         auto dirs = ls(path.c_str(), "hwmon", LS_DIRS);
         for (auto &dir : dirs) {
-            if (read_line(path + dir + "/name") == "spd5118")
+            const auto name = read_line(path + dir + "/name");
+            if (name == "spd5118" || name == "jc42")
                 mem_temp_files.emplace_back(path + dir + "/temp1_input");
         }
         if (mem_temp_files.empty())
