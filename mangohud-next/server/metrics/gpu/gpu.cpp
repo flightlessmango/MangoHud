@@ -30,6 +30,9 @@ void GPU::poll() {
             if (stop_thread)
                 break;
 
+            if (samples >= gpu_metrics_sample_count)
+                continue;
+
             auto current_time = std::chrono::steady_clock::now();
             delta_time_ns = current_time - previous_time;
             previous_time = current_time;
@@ -85,9 +88,6 @@ void GPU::poll() {
             }
 
             samples++;
-
-            if (samples >= gpu_metrics_sample_count)
-                continue;
 
             auto elapsed = std::chrono::steady_clock::now() - current_time;
             if (elapsed < gpu_metrics_polling_period)
