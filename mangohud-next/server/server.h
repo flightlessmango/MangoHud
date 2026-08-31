@@ -11,6 +11,7 @@
 class MangoHudServer {
 public:
     std::shared_ptr<Config> config;
+    std::unique_ptr<Metrics> metrics;
 
     MangoHudServer() {
         auto name = std::string("\x1b[38;2;173;100;193m") + "MANGOHUD" + "\x1b[0m" +
@@ -36,7 +37,6 @@ public:
 
 private:
     std::unique_ptr<IPCServer> ipc;
-    std::unique_ptr<Metrics> metrics;
     std::shared_ptr<spdlog::logger> logger;
     std::unordered_map<int, std::weak_ptr<VkCtx>> vk_ctx;
     std::mutex vk_ctx_m;

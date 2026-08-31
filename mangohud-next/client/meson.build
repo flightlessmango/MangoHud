@@ -15,11 +15,14 @@ vulkan_layer = shared_library(
     'MangoHud-next',
     files('layer.cpp',
           'vulkan.cpp',
+          'wayland.cpp',
           'gl.cpp',
           'gl_hooks.cpp',
           'real_dlsym.c',
           'elfhacks.c'),
+    wayland_ctx_sources,
     overlay_spv,
+    wayland_protocols,
     dependencies: [vulkan_dep,
                    vulkan_wsi_deps,
                    spdlog_dep,
@@ -27,24 +30,24 @@ vulkan_layer = shared_library(
                    ipc_dep,
                    dearimgui_dep,
                    dependency('egl'),
+                   dependency('wayland-egl'),
+                   dependency('wayland-egl-backend'),
                    dependency('gl'),
                    vkbootstrap_dep,
                    dep_vulkan_utility_libraries],
+    cpp_args: vulkan_wsi_args,
     include_directories: inc_common,
     install: true,
-    link_args: ['-static-libstdc++'],
+    link_args: [
+      '-static-libstdc++',
+      '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version')),
+    ],
 )
 
 conf_data = configuration_data()
 
-if get_option('dynamic_string_tokens')
-  next_ld_libdir_mangohud = get_option('prefix') + '/lib/mangohud/\$LIB/'
-else
-  next_ld_libdir_mangohud = libdir_mangohud + '/'
-endif
-
 conf_data.set('ld_libdir_mangohud_abs', libdir_mangohud)
-conf_data.set('ld_libdir_mangohud', next_ld_libdir_mangohud)
+conf_data.set('ld_libdir_mangohud', ld_libdir_mangohud)
 conf_data.set('mangohud_lib_name', 'libMangoHud-next.so')
 conf_data.set('mangohud_env', 'MANGOHUD_NEXT')
 conf_data.set('cpu_family', host_machine.cpu_family())

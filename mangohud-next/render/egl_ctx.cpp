@@ -105,6 +105,16 @@ EglCtx::EglCtx(int renderer_, std::shared_ptr<ImGuiCtx> imgui) : renderer(render
 
 bool EglCtx::init_client(clientRes* r, int buffer_size) {
     std::lock_guard lock(m);
+    if (dpy == EGL_NO_DISPLAY || ctx == EGL_NO_CONTEXT) {
+        SPDLOG_ERROR("EGL context is not initialized");
+        return false;
+    }
+
+    if (!p_glEGLImageTargetTexture2DOES) {
+        SPDLOG_ERROR("glEGLImageTargetTexture2DOES is unavailable");
+        return false;
+    }
+
     r->buffer.resize(buffer_size);
     for (auto& buf : r->buffer) {
         dmabuf_t& dmabuf = buf.dmabuf;
@@ -399,21 +409,7 @@ void EglCtx::destroy_dmabuf_res(dmabuf_t& dmabuf) {
         dmabuf.egl_res.image = EGL_NO_IMAGE;
     }
 
-    if (dmabuf.gbm.bo) {
-        gbm_bo_destroy(dmabuf.gbm.bo);
-        dmabuf.gbm.bo = nullptr;
-    }
-
-    if (dmabuf.gbm.dev) {
-        gbm_device_destroy(dmabuf.gbm.dev);
-        dmabuf.gbm.dev = nullptr;
-    }
-
-    dmabuf.gbm.fd.reset();
-    dmabuf.gbm.modifier = 0;
-    dmabuf.gbm.stride = 0;
-    dmabuf.gbm.offset = 0;
-    dmabuf.gbm.plane_size = 0;
+    dmabuf.gbm = {};
 }
 
 bool EglCtx::init_dmabuf(clientRes* r, dmabuf_t& dmabuf) {

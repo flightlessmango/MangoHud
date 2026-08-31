@@ -171,7 +171,12 @@ build() {
         DESTDIR="$PWD/build/release" ninja -C build/meson32 install
     fi
 
-    sed -i 's:/usr/\\$LIB:/usr/lib/mangohud/\\$LIB:g' "$PWD/build/release/usr/bin/mangohud"
+    if [[ -f "$PWD/build/release/usr/bin/mangohud" ]]; then
+        sed -i 's:/usr/\\$LIB:/usr/lib/mangohud/\\$LIB:g' "$PWD/build/release/usr/bin/mangohud"
+    fi
+    if [[ -f "$PWD/build/release/usr/bin/mangohud-next" ]]; then
+        sed -i 's:/usr/\\$LIB:/usr/lib/mangohud/\\$LIB:g' "$PWD/build/release/usr/bin/mangohud-next"
+    fi
 }
 
 package() {

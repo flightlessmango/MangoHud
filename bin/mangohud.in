@@ -22,6 +22,35 @@ if [ "$1" = "--version" ]; then
     exit 0
 fi
 
+if [ "@mangohud_env@" = "MANGOHUD_NEXT" ]; then
+    mangohud_next_dbus_json() {
+        reply=$(busctl --user call io.mangohud.socket /io/mangohud/socket io.mangohud.socket1 "$1") || exit $?
+        case "$reply" in
+            s\ \"*\")
+                reply=${reply#s \"}
+                reply=${reply%\"}
+                reply=$(printf '%s\n' "$reply" | sed 's/\\"/"/g')
+                printf '%b\n' "$reply"
+                ;;
+            *)
+                printf 'Unexpected DBus reply: %s\n' "$reply" >&2
+                return 1
+                ;;
+        esac
+    }
+
+    case "$1" in
+        get_system)
+            mangohud_next_dbus_json get_system
+            exit $?
+            ;;
+        get_clients)
+            mangohud_next_dbus_json get_clients
+            exit $?
+            ;;
+    esac
+fi
+
 if [ "$1" = "--dlsym" ]; then
     # no-op, dlsym enabled by default
     shift

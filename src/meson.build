@@ -207,6 +207,7 @@ mangohud_static_lib = static_library(
     mangohud_version_dep],
   include_directories : [inc_common],
   link_args : link_args,
+  link_with: mangohud_legacy_gpu_wrapper,
   install_dir : libdir_mangohud,
   install : false
 )

@@ -92,6 +92,7 @@ void Client::init(std::shared_ptr<Client>& shared) {
 
     setup_handshake("on_connect", &handshake_slot, &Client::on_connect, shared);
     setup_handshake("frame_samples", &frame_samples_slot, &Client::frame_samples, shared);
+    setup_handshake("resolution", &resolution_slot, &Client::resolution, shared);
     setup_handshake("spdlog", &spdlog_slot, &Client::spdlog_msg, shared);
     setup_handshake("frame_ready", &frame_slot, &Client::on_frame, shared);
     setup_handshake("import_failed", &import_failed_slot,
@@ -196,7 +197,6 @@ int Client::on_bus_disconnected(sd_bus_message *m, void *userdata, sd_bus_error 
 
 void Client::dbus_thread() {
     pthread_setname_np(pthread_self(), ("c_dbus " + std::to_string(pid)).substr(0, 15).c_str());
-    send_config();
 
     int r = sd_event_loop(event);
     if (r < 0 && !stop.load())
@@ -251,17 +251,46 @@ int Client::on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_erro
     }
 
     const char* engine = "";
+    const char* vulkan_driver = "";
+    const char* gpu_name = "";
     int32_t raw_api = 0;
-    r = sd_bus_message_read(m, "sxii", &engine, &self->renderMinor, &self->buffer_size, &raw_api);
+    r = sd_bus_message_read(m, "sxiiss", &engine, &self->renderMinor, &self->buffer_size, &raw_api, &vulkan_driver, &gpu_name);
     if (r < 0) {
-        SPDLOG_ERROR("on_connect append(sxii) {} ({})", r, strerror(-r));
+        SPDLOG_ERROR("on_connect append(sxiiss) {} ({})", r, strerror(-r));
         self->set_dead();
         return false;
     }
     self->pEngineName = engine;
+    self->vulkanDriver = vulkan_driver;
+    self->gpuName = gpu_name;
     self->resources->api = static_cast<Backend>(raw_api);
 
+    self->send_config();
+
     return 0;
+}
+
+int Client::resolution(sd_bus_message* m, void* userdata, sd_bus_error*) {
+    auto* w = static_cast<std::weak_ptr<Client>*>(userdata);
+    auto self = w->lock();
+    if (!self)
+        return 0;
+
+    uint32_t width = 0;
+    uint32_t height = 0;
+    int r = sd_bus_message_read(m, "uu", &width, &height);
+    if (r < 0) {
+        SPDLOG_ERROR("resolution: read {} ({})", r, strerror(-r));
+        return 0;
+    }
+
+    {
+        std::lock_guard lock(self->m);
+        self->resolutionWidth = width;
+        self->resolutionHeight = height;
+    }
+
+    return sd_bus_reply_method_return(m, "");
 }
 
 void Client::send_dmabuf(){
@@ -419,6 +448,7 @@ void Client::send_config() {
             SPDLOG_DEBUG("failed to send message {}", r);
             return r;
         }
+        sd_bus_flush(self->bus);
         return 0;
     });
 }
@@ -429,41 +459,55 @@ int Client::frame_samples(sd_bus_message* m, void* userdata, sd_bus_error* ret_e
     if (!self)
         return 0;
 
-    int r = sd_bus_message_enter_container(m, 'a', "(tt)");
+    std::vector<std::string> focused_seats;
+    int r = sd_bus_message_enter_container(m, 'a', "s");
+    if (r < 0) {
+        SPDLOG_ERROR("frame_samples: enter focused seats {} ({})", r, strerror(-r));
+        return r;
+    }
+
+    for (;;) {
+        const char* seat = nullptr;
+        r = sd_bus_message_read(m, "s", &seat);
+        if (r < 0) {
+            SPDLOG_ERROR("frame_samples: read focused seat {} ({})", r, strerror(-r));
+            return r;
+        }
+        if (r == 0)
+            break;
+        if (seat)
+            focused_seats.emplace_back(seat);
+    }
+
+    r = sd_bus_message_exit_container(m);
+    if (r < 0) {
+        SPDLOG_ERROR("frame_samples: exit focused seats {} ({})", r, strerror(-r));
+        return r;
+    }
+
+    r = sd_bus_message_enter_container(m, 'a', "(ytt)");
+    if (r < 0) {
+        SPDLOG_ERROR("frame_samples: enter samples {} ({})", r, strerror(-r));
+        return r;
+    }
 
     std::lock_guard client_lock(self->m);
+    self->focused_seats = std::move(focused_seats);
     for (;;) {
+        uint8_t type_raw = 0;
         uint64_t seq = 0, t_ns = 0;
-        r = sd_bus_message_read(m, "(tt)", &seq, &t_ns);
+        r = sd_bus_message_read(m, "(ytt)", &type_raw, &seq, &t_ns);
         if (r < 0) return r;
         if (r == 0) break;
-        std::lock_guard lock(self->samples_m);
-        self->samples.push_back({seq, t_ns});
-
-        // 500ms windows
-        while (self->samples.size() > 2 && (t_ns - self->samples.front().t_ns) > KEEP_NS)
-            self->samples.pop_front();
-
-        if (self->have_prev) {
-            uint64_t dt_ns = t_ns - self->t_last;
-            uint64_t dseq  = seq  - self->seq_last;
-
-            if (dseq > 1)
-                self->dropped += (dseq - 1);
-
-            if (dseq > 0 && dt_ns > 0) {
-                double ft_ms = (double)dt_ns / (double)dseq / 1e6;
-                self->frametimes.push_back(ft_ms);
-                if (self->frametimes.size() > FT_MAX)
-                    self->frametimes.pop_front();
-            }
-        } else {
-            self->have_prev = true;
+        if (type_raw >= static_cast<uint8_t>(SampleType::Count)) {
+            SPDLOG_ERROR("Invalid sample type {}", type_raw);
+            return sd_bus_error_setf(ret_error, SD_BUS_ERROR_INVALID_ARGS,
+                                     "Invalid sample type %u", type_raw);
         }
 
-        self->t_last = t_ns;
-        self->seq_last = seq;
-        self->n_frames++;
+        auto type = static_cast<SampleType>(type_raw);
+        auto& stats = self->stats_for(type);
+        stats.add_sample(type, seq, t_ns);
     }
 
     r = sd_bus_message_exit_container(m);
@@ -516,7 +560,7 @@ void Client::run() {
         if (!renderer)
             renderer = std::make_unique<Renderer>(server, resources.get(), renderMinor, buffer_size);
 
-        if (!resources->table)
+        if (!resources->hud)
             return;
 
         if (resources->send_dmabuf)
@@ -544,14 +588,9 @@ void Client::run() {
 Client::~Client() {
     renderer.reset();
 
-    {
-        std::lock_guard lock(samples_m);
-        samples.clear();
-        frametimes.clear();
-    }
-
     sd_bus_slot_unref(handshake_slot);
     sd_bus_slot_unref(frame_samples_slot);
+    sd_bus_slot_unref(resolution_slot);
     sd_bus_slot_unref(spdlog_slot);
     sd_bus_slot_unref(frame_slot);
     sd_bus_slot_unref(import_failed_slot);
@@ -607,6 +646,12 @@ void Client::stop_and_join() {
     if (run_t.joinable()) {
         run_t.join();
     }
+
+    std::queue<std::packaged_task<void()>> drain;
+    {
+        std::lock_guard<std::mutex> lock(work_mtx);
+        work_q.swap(drain);
+    }
 }
 
 int Client::spdlog_msg(sd_bus_message* m, void* userdata, sd_bus_error*) {
@@ -655,6 +700,9 @@ void Client::frame_ready(uint32_t idx, unique_fd fd) {
             return r;
         }
 
+        self->stats_for(SampleType::Hud).add_sample(SampleType::Hud,
+                                                    self->hud_seq.fetch_add(1, std::memory_order_relaxed),
+                                                    os_time_get_nano());
         return 0;
     });
 }

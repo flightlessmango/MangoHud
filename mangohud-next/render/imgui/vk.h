@@ -19,8 +19,6 @@ public:
         implot = ImPlot::CreateContext();
         ImPlot::SetCurrentContext(implot);
         ImGui::StyleColorsDark();
-        fonts = std::make_shared<Font>();
-
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard;
         io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableGamepad;
@@ -52,8 +50,14 @@ public:
         ii.PipelineRenderingCreateInfo.pColorAttachmentFormats = &vk->fmt;
 
         ImGui_ImplVulkan_Init(&ii);
-        ImGui_ImplVulkan_CreateFontsTexture();
+        fonts = std::make_shared<Font>([] {
+            ImGui_ImplVulkan_CreateFontsTexture();
+        });
     };
+
+    std::mutex& mutex() {
+        return vk->m;
+    }
 
     void record_cmd(slot_t& buf, uint32_t w, uint32_t h) {
         vkResetFences(vk->device, 1, &buf.sync.fence);

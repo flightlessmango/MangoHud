@@ -14,13 +14,10 @@ IPCClient::IPCClient(Layer* layer_, Backend api_) : layer(layer_), api(api_){
     work_eventfd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
 }
 
-void IPCClient::start(int64_t renderMinor_, std::string& pEngineName_,
-                      int image_count) {
+void IPCClient::start(int image_count) {
     if (thread.joinable())
         return;
 
-    renderMinor = renderMinor_;
-    pEngineName = pEngineName_;
     buffer_size = image_count;
     thread = std::thread([this] { bus_thread(); });
 }
@@ -48,6 +45,16 @@ int IPCClient::on_incompatible(sd_bus_message* m, void* userdata, sd_bus_error*)
     SPDLOG_ERROR("IPC ABI mismatch. Restart game/client and server.");
     self->connected.store(false);
     self->quit.store(true);
+    sd_event_exit(self->event, 0);
+    return 0;
+}
+
+int IPCClient::on_bus_disconnected(sd_bus_message* m, void* userdata, sd_bus_error*) {
+    (void)m;
+
+    auto* self = static_cast<IPCClient*>(userdata);
+    SPDLOG_DEBUG("IPC server disconnected");
+    self->connected.store(false);
     sd_event_exit(self->event, 0);
     return 0;
 }
@@ -115,6 +122,13 @@ int IPCClient::on_dmabuf(sd_bus_message* m, void* userdata, sd_bus_error*) {
 
     {
         if (self->layer) {
+            if (!self->layer->overlay_vk) {
+                std::lock_guard lock(self->m);
+                self->fdinfo = std::move(fdinfo);
+                self->import_generation.fetch_add(1, std::memory_order_release);
+                return 0;
+            }
+
             const bool import_success = self->layer->overlay_vk->init_dmabufs(fdinfo);
             if (!import_success) {
                 self->send_import_failed();
@@ -124,7 +138,7 @@ int IPCClient::on_dmabuf(sd_bus_message* m, void* userdata, sd_bus_error*) {
 
         std::lock_guard lock(self->m);
         self->fdinfo = std::move(fdinfo);
-        self->needs_import.store(true);
+        self->import_generation.fetch_add(1, std::memory_order_release);
     }
 
     return 0;
@@ -151,6 +165,10 @@ void IPCClient::disconnect_bus() {
     if (incompatible_slot) {
         sd_bus_slot_unref(incompatible_slot);
         incompatible_slot = nullptr;
+    }
+    if (disconnected_slot) {
+        sd_bus_slot_unref(disconnected_slot);
+        disconnected_slot = nullptr;
     }
 
     if (bus) {
@@ -243,6 +261,20 @@ bool IPCClient::connect_bus() {
         return false;
     }
 
+    std::string match_disconnected =
+        "type='signal',"
+        "sender='org.freedesktop.DBus.Local',"
+        "path='/org/freedesktop/DBus/Local',"
+        "interface='org.freedesktop.DBus.Local',"
+        "member='Disconnected'";
+
+    r = sd_bus_add_match(b, &disconnected_slot, match_disconnected.c_str(), &IPCClient::on_bus_disconnected, this);
+    if (r < 0) {
+        SPDLOG_ERROR("match disconnected: {} ({})", r, strerror(-r));
+        sd_bus_unref(b);
+        return false;
+    }
+
     r = sd_event_new(&event);
     if (r < 0) {
         SPDLOG_ERROR("sd_event_new {} ({})", r, strerror(-r));
@@ -311,8 +343,8 @@ void IPCClient::stop() {
 bool IPCClient::on_connect() {
     post([this] {
         int r = 0;
-        sd_bus_message *m = nullptr;
-        r = sd_bus_message_new_signal(bus, &m, kObjPath, kIface, "on_connect");
+        sd_bus_message *msg = nullptr;
+        r = sd_bus_message_new_signal(bus, &msg, kObjPath, kIface, "on_connect");
         if (r < 0) {
             SPDLOG_ERROR("sd_bus_message_new_signal {} ({})", r, strerror(-r));
             return false;
@@ -322,32 +354,100 @@ bool IPCClient::on_connect() {
         uint64_t abi_hash = MANGOHUD_IPC_ABI_HASH;
 
         r = sd_bus_message_append(
-            m,
-            "tsxii",
+            msg,
+            "tsxiiss",
             abi_hash,
             pEngineName.c_str(),
             int64_t(renderMinor),
             (buffer_size),
-            raw_api
+            raw_api,
+            vulkanDriver.c_str(),
+            gpuName.c_str()
         );
 
-        r = sd_bus_send(bus, m, nullptr);
-        sd_bus_message_unref(m);
+        r = sd_bus_send(bus, msg, nullptr);
+        sd_bus_message_unref(msg);
 
         if (r < 0) {
             SPDLOG_ERROR("sd_bus_send {} ({})", r, strerror(-r));
             return false;
         }
 
-        std::lock_guard lock(sync_mtx);
-        for (int i = 0; i < buffer_size; i++)
-            frame_queue.push_back({i, unique_fd::adopt(-1)});
+        {
+            std::lock_guard lock(sync_mtx);
+            for (int i = 0; i < buffer_size; i++)
+                frame_queue.push_back({i, unique_fd::adopt(-1)});
+        }
+
+        uint32_t width = 0;
+        uint32_t height = 0;
+        {
+            std::lock_guard lock(m);
+            width = resolution_width;
+            height = resolution_height;
+        }
+
+        if (width && height && send_resolution_signal(width, height)) {
+            std::lock_guard lock(m);
+            sent_resolution_width = width;
+            sent_resolution_height = height;
+        }
 
         return true;
     });
 
     connected.store(true);
     return true;
+}
+
+bool IPCClient::send_resolution_signal(uint32_t width, uint32_t height) {
+    sd_bus_message* m = nullptr;
+    int r = sd_bus_message_new_signal(bus, &m, kObjPath, kIface, "resolution");
+    if (r < 0) {
+        SPDLOG_ERROR("resolution: new_signal {} ({})", r, strerror(-r));
+        return false;
+    }
+
+    r = sd_bus_message_append(m, "uu", width, height);
+    if (r < 0) {
+        SPDLOG_ERROR("resolution: append {} ({})", r, strerror(-r));
+        sd_bus_message_unref(m);
+        return false;
+    }
+
+    r = sd_bus_send(bus, m, nullptr);
+    sd_bus_message_unref(m);
+    if (r < 0) {
+        SPDLOG_ERROR("resolution: send {} ({})", r, strerror(-r));
+        return false;
+    }
+
+    return true;
+}
+
+void IPCClient::send_resolution(uint32_t width, uint32_t height) {
+    if (!width || !height)
+        return;
+
+    {
+        std::lock_guard lock(m);
+        resolution_width = width;
+        resolution_height = height;
+
+        if (!connected.load() ||
+            (sent_resolution_width == width && sent_resolution_height == height)) {
+            return;
+        }
+    }
+
+    post([this, width, height] {
+        if (!send_resolution_signal(width, height))
+            return;
+
+        std::lock_guard lock(m);
+        sent_resolution_width = width;
+        sent_resolution_height = height;
+    });
 }
 
 int IPCClient::push_queue() {
@@ -361,6 +461,7 @@ int IPCClient::push_queue() {
     }
 
     post([this, out = std::move(out)] {
+        auto focused_seats = this->focused_seats.load();
         sd_bus_message* m = nullptr;
 
         int r = sd_bus_message_new_signal(bus, &m, kObjPath, kIface, "frame_samples");
@@ -369,15 +470,38 @@ int IPCClient::push_queue() {
             return r;
         }
 
-        r = sd_bus_message_open_container(m, 'a', "(tt)");
+        r = sd_bus_message_open_container(m, 'a', "s");
+        if (r < 0) {
+            SPDLOG_ERROR("push_queue: open focused seats {} ({})", r, strerror(-r));
+            sd_bus_message_unref(m);
+            return r;
+        }
+
+        for (const auto& seat : *focused_seats) {
+            r = sd_bus_message_append(m, "s", seat.c_str());
+            if (r < 0) {
+                SPDLOG_ERROR("push_queue: append focused seat {} ({})", r, strerror(-r));
+                sd_bus_message_unref(m);
+                return r;
+            }
+        }
+
+        r = sd_bus_message_close_container(m);
+        if (r < 0) {
+            SPDLOG_ERROR("push_queue: close focused seats {} ({})", r, strerror(-r));
+            sd_bus_message_unref(m);
+            return r;
+        }
+
+        r = sd_bus_message_open_container(m, 'a', "(ytt)");
         if (r < 0) {
             SPDLOG_ERROR("push_queue: open_container {} ({})", r, strerror(-r));
             sd_bus_message_unref(m);
             return r;
         }
 
-        for (auto& [seq, now] : out) {
-            r = sd_bus_message_append(m, "(tt)", (uint64_t)seq, (uint64_t)now);
+        for (auto& [type, seq, now] : out) {
+            r = sd_bus_message_append(m, "(ytt)", (uint8_t)type, (uint64_t)seq, (uint64_t)now);
             if (r < 0) {
                 SPDLOG_ERROR("push_queue: append {} ({})", r, strerror(-r));
                 sd_bus_message_unref(m);
@@ -492,7 +616,7 @@ void IPCClient::send_import_failed() {
     {
         std::lock_guard lock(m);
         fdinfo = {};
-        needs_import.store(true);
+        import_generation.fetch_add(1, std::memory_order_release);
     }
 
     if (!bus)
@@ -567,7 +691,10 @@ int IPCClient::on_frame(sd_bus_message* m, void* userdata, sd_bus_error*) {
     }
 
     frame.fd = unique_fd::dup(fd);
-    std::lock_guard lock(self->sync_mtx);
-    self->frame_queue.push_back(std::move(frame));
+    {
+        std::lock_guard lock(self->sync_mtx);
+        self->frame_queue.push_back(std::move(frame));
+    }
+    self->push_queue();
     return 0;
 }

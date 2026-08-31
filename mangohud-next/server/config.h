@@ -41,11 +41,11 @@ inline std::string get_config_dir() {
 class Config {
 public:
     std::mutex m;
-    std::shared_ptr<hudTable> table;
+    std::shared_ptr<HudConfig> hud;
 
     Config() {
         config_path = get_config_dir() + "/MangoHud/MangoHud.yml";
-        table = std::make_shared<hudTable>();
+        hud = std::make_shared<HudConfig>();
         for (const auto& [key, spec] : possible_)
             options_.emplace(std::string(key), spec.val);
     }
@@ -55,7 +55,7 @@ public:
     void update(YAML::Node doc) {
         std::lock_guard lock(m);
         for (const auto& [key, spec] : possible_)
-            options_.emplace(std::string(key), spec.val);
+            options_[std::string(key)] = spec.val;
 
         load_yaml(doc);
         inited = true;
@@ -112,7 +112,7 @@ public:
     }
 
     void parse_table(std::string);
-    bool parse_table_yaml(hudTable& table, YAML::Node doc);
+    bool parse_table_yaml(HudConfig& hud, YAML::Node doc);
 
 private:
     enum Type { Int, Double, Bool, String };
@@ -219,7 +219,7 @@ hud_table:
         {value: [RAM, TEMP]}
     ]
 
-    - [ {text: VULKAN, color: "eb5b5b"},
+    - [ {value: ENGINE_NAME, color: "eb5b5b"},
         {value: FPS},
         {value: FRAMETIME}
     ]

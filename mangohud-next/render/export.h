@@ -5,9 +5,13 @@
 #include <spdlog/spdlog.h>
 
 inline bool create_gbm(clientRes* r, dmabuf_t* buf, int dev_fd, const uint64_t modifier) {
+    buf->gbm = {};
     buf->gbm.fourcc = DRM_FORMAT_ARGB8888;
-    if (!buf->gbm.dev)
-        buf->gbm.dev = gbm_create_device(dev_fd);
+    buf->gbm.dev = gbm_create_device(dev_fd);
+    if (!buf->gbm.dev) {
+        SPDLOG_ERROR("gbm_create_device failed for fd={}", dev_fd);
+        return false;
+    }
 
     SPDLOG_INFO("gbm alloc: fd={}, w={}, h={}, fourcc=0x{:x}", dev_fd, r->w, r->h, buf->gbm.fourcc);
 
@@ -19,16 +23,15 @@ inline bool create_gbm(clientRes* r, dmabuf_t* buf, int dev_fd, const uint64_t m
 
     buf->gbm.fd = unique_fd::adopt(gbm_bo_get_fd(buf->gbm.bo));
     if (!buf->gbm.fd) {
-        fprintf(stderr, "Failed to get gbm fd\n");
-        throw;
+        SPDLOG_ERROR("gbm_bo_get_fd failed");
+        buf->gbm = {};
         return false;
     }
 
     buf->gbm.modifier = gbm_bo_get_modifier(buf->gbm.bo);
     if (buf->gbm.modifier != modifier) {
         SPDLOG_ERROR("Expected {} modifier, got 0x{:016x}", modifier, buf->gbm.modifier);
-        gbm_bo_destroy(buf->gbm.bo);
-        buf->gbm.bo = nullptr;
+        buf->gbm = {};
         return false;
     }
 

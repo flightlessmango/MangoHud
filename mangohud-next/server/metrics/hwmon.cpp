@@ -106,19 +106,30 @@ std::string HwmonBase::find_hwmon_dir_by_name(const std::string& name) {
         auto hwmon_dir = entry.path().string();
         auto hwmon_name = hwmon_dir + "/name";
 
+        SPDLOG_TRACE("Opening {}", hwmon_name);
+
         std::ifstream name_stream(hwmon_name);
         std::string name_content;
 
-        if (!name_stream.is_open())
+        if (!name_stream.is_open()) {
+            SPDLOG_TRACE("Failed to open {}", hwmon_name);
             continue;
+        }
 
         std::getline(name_stream, name_content);
 
         std::smatch matches;
         std::regex rx(name);
 
-        if (!std::regex_match(name_content, matches, rx))
+        if (!std::regex_search(name_content, matches, rx)) {
+            SPDLOG_TRACE(
+                "'{}' sensor name '{}' doesn't match regex '{}'",
+                hwmon_dir, name_content, name
+            );
             continue;
+        }
+
+        SPDLOG_TRACE("'{}' sensor name '{}' matches regex '{}'", hwmon_dir, name_content, name);
 
         // return the first sensor with specified name
         return hwmon_dir;

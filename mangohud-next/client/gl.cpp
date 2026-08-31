@@ -423,7 +423,11 @@ OverlayGL::OverlayGL(Display* xdpy_, std::shared_ptr<IPCClient> ipc_) : xdpy(xdp
     }
 
     std::string node = *nodes.begin();
-    ipc->start(renderer, pEngineName, 4);
+    ipc->renderMinor = renderer;
+    ipc->pEngineName = pEngineName;
+    if (const GLubyte* gpu_name = glGetString(GL_RENDERER))
+        ipc->gpuName = clean_gpu_name(reinterpret_cast<const char*>(gpu_name));
+    ipc->start(4);
 }
 
 CtxRes* OverlayGL::get_ctx() {
@@ -465,20 +469,28 @@ void OverlayGL::draw() {
     GLState s;
     CtxRes* c = nullptr;
     c = get_ctx();
-    if (ipc->needs_import.load()) {
+    uint64_t generation = ipc->import_generation.load(std::memory_order_acquire);
+    bool do_import = generation != imported_generation;
+    if (do_import) {
         if (!c)
             return;
 
-        {
-            std::lock_guard lock(ipc->m);
+        std::lock_guard lock(ipc->m);
+        generation = ipc->import_generation.load(std::memory_order_acquire);
+        if (generation != imported_generation) {
             fdinfo = std::move(ipc->fdinfo);
             ipc->fdinfo = {};
+        } else {
+            do_import = false;
         }
+    }
 
+    if (do_import) {
         if (fdinfo.dmabuf_buffer.empty()) {
             c->dmabufs.clear();
             current_slot = -1;
             inited = false;
+            imported_generation = generation;
             return;
         }
 
@@ -495,7 +507,7 @@ void OverlayGL::draw() {
             }
             c->dmabufs.push_back(std::move(buf));
         }
-        ipc->needs_import.store(false);
+        imported_generation = generation;
         inited = true;
     }
 
@@ -522,6 +534,14 @@ void OverlayGL::draw() {
     const int surfH = s.saved.viewport[3];
     if (surfW <= 0 || surfH <= 0)
         return;
+
+    static int lastSurfW = 0;
+    static int lastSurfH = 0;
+    if (surfW != lastSurfW || surfH != lastSurfH) {
+        ipc->send_resolution(static_cast<uint32_t>(surfW), static_cast<uint32_t>(surfH));
+        lastSurfW = surfW;
+        lastSurfH = surfH;
+    }
 
     glBindFramebuffer(GL_FRAMEBUFFER, s.saved.fbo);
     glViewport(s.saved.viewport[0], s.saved.viewport[1], s.saved.viewport[2], s.saved.viewport[3]);

@@ -3,8 +3,13 @@
 #include "stdio.h"
 #include "mesa/os_time.h"
 #include "vulkan_ctx.h"
+#include <cstdlib>
 
 int main() {
+  // Prevent the MangoHud client from injecting into the server.
+  setenv("DISABLE_MANGOHUD_NEXT", "1", 1);
+  unsetenv("MANGOHUD_NEXT");
+  unsetenv("LD_PRELOAD");
   MangoHudServer();
   return 0;
 }

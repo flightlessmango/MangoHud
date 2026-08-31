@@ -6,8 +6,9 @@
 #include <atomic>
 #include <string_view>
 #include "../config.h"
-#include "gpu/gpu.hpp"
+#include "gpu/gpus.hpp"
 #include "cpu/cpu.hpp"
+#include "exec.h"
 #include "../../ipc/ipc.h"
 #include "../../render/colors.h"
 
@@ -27,6 +28,8 @@ public:
     void update_table();
     void populate_tables();
     void update_client();
+    std::string system_json_snapshot();
+    std::string clients_json_snapshot();
     std::vector<std::shared_ptr<GPU>> available_gpus() const { return gpus.available(); }
 
     ~Metrics() {
@@ -47,6 +50,7 @@ private:
     std::thread client_thread;
     std::atomic<bool> stop {false};
     ColorCache color;
+    Exec exec;
     MetricTable metrics;
     MetricTable client_metrics;
 

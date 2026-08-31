@@ -9,6 +9,7 @@ namespace fs = std::filesystem;
 using namespace std::chrono_literals;
 
 FDInfoBase::FDInfoBase(const std::string& drm_node, const pid_t pid) : drm_node(drm_node), pid(pid) {
+    card_node = get_card_node();
     init();
 }
 
@@ -72,10 +73,10 @@ std::vector<std::string> FDInfoBase::find_fds() {
             continue;
         }
 
+        // comparison to both renderD* and card* is required because
         // for some reason supertuxkart opens /dev/dri/card and not renderD
         // inside podman container.
-        // this is only for testing, so remove it later
-        if (link.filename() != drm_node && link.string().substr(0, 13) != "/dev/dri/card")
+        if (link.filename() != drm_node && link.filename() != card_node)
             continue;
 
         fds.push_back(entry.path().filename());
@@ -119,6 +120,29 @@ void FDInfoBase::open_fds(const std::vector<std::string>& fds) {
     }
 
     SPDLOG_DEBUG("Received {} ids, opened {} unique ids", fds.size(), total);
+}
+
+std::string FDInfoBase::get_card_node() {
+    const std::string device = "/sys/class/drm/" + drm_node + "/device/drm";
+
+    if (!std::filesystem::exists(device)) {
+        SPDLOG_DEBUG("drm dir doesn't exist for {}", drm_node);
+        return "";
+    }
+
+    // Find first dir which starts with name "card"
+    for (const auto& entry : fs::directory_iterator(device)) {
+        std::filesystem::path path = entry.path();
+
+        if (path.filename().string().substr(0, 4) == "card") {
+            const std::string filename = path.filename();
+            SPDLOG_DEBUG("found card node for {}: {}", drm_node, filename);
+            return filename;
+        }
+    }
+
+    SPDLOG_DEBUG("didn't find card node for {}", drm_node);
+    return "";
 }
 
 void FDInfoWrapper::add_pid(pid_t pid) {

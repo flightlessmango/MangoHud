@@ -78,7 +78,7 @@ Install necessary development packages.
 - GBM (libgbm-dev)
 - libdrm (libdrm-dev)
 - libcap (libcap-dev)
-- libsystemd (libsystemd-dev)
+- sd-bus (libsystemd-dev, or elogind on non-systemd distributions)
 - yaml-cpp (libyaml-cpp-dev)
 - X11 (libx11-dev)
 - XNVCtrl (libxnvctrl-dev), optional, use `-Dwith_xnvctrl=disabled` option with `meson` to disable
@@ -319,7 +319,9 @@ If you start the game from the terminal with MangoHud enabled (for example by st
 
 You can find an example config in /usr/share/doc/mangohud
 
-[GOverlay](https://github.com/benjamimgois/goverlay) is a GUI application that can be used to manage the config
+[GOverlay](https://github.com/benjamimgois/goverlay) Qt GUI for configuring MangoHud.
+
+[MangoJuice](https://github.com/radiolamp/mangojuice) GTK GUI for configuring MangoHud.
 
 ---
 
@@ -561,6 +563,7 @@ Example output:
 		<th colspan="2">Intel Discrete</th>
 		<th>Intel Integrated</th>
 		<th>Panfrost/Panthor driver</th>
+		<th colspan="2">Qualcomm</th>
 	</tr>
 	<tr>
 		<th></th>
@@ -570,9 +573,13 @@ Example output:
 		<th>xe</th>
 		<th>i915/xe</th>
 		<th></th>
+		<th>msm_drm (kgsl)</th>
+		<th>msm_dpu</th>
 	</tr>
 	<tr>
 		<td>Usage%</td>
+		<td>🟢</td>
+		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
@@ -588,11 +595,15 @@ Example output:
 		<td>🟢</td>
 		<td>🔴</td>
 		<td>🟢</td>
+		<td>🟢</td>
+		<td>🟢</td>
 	</tr>
 	<tr>
 		<td>Junction Temperature</td>
 		<td>🔴</td>
 		<td>🟢</td>
+		<td>🔴</td>
+		<td>🔴</td>
 		<td>🔴</td>
 		<td>🔴</td>
 		<td>🔴</td>
@@ -606,6 +617,8 @@ Example output:
 		<td>🟢</td>
 		<td>🔴</td>
 		<td>🔴</td>
+		<td>🔴</td>
+		<td>🔴</td>
 	</tr>
 	<tr>
 		<td>Process VRAM</td>
@@ -614,6 +627,8 @@ Example output:
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
+		<td>🟢</td>
+		<td>🔴</td>
 		<td>🟢</td>
 	</tr>
 	<tr>
@@ -624,9 +639,13 @@ Example output:
 		<td>🔴</td>
 		<td>🔴</td>
 		<td>🔴</td>
+		<td>🔴</td>
+		<td>🔴</td>
 	</tr>
 	<tr>
 		<td>Total VRAM</td>
+		<td>🟢</td>
+		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🔴</td>
@@ -642,6 +661,8 @@ Example output:
 		<td>🔴</td>
 		<td>🔴</td>
 		<td>🔴</td>
+		<td>🔴</td>
+		<td>🔴</td>
 	</tr>
 	<tr>
 		<td>Core Clock</td>
@@ -651,6 +672,8 @@ Example output:
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
+		<td>🟢</td>
+		<td>🔴</td>
 	</tr>
 	<tr>
 		<td>Power Usage</td>
@@ -658,6 +681,8 @@ Example output:
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
+		<td>🔴</td>
+		<td>🔴</td>
 		<td>🔴</td>
 		<td>🔴</td>
 	</tr>
@@ -669,6 +694,8 @@ Example output:
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🔴</td>
+		<td>🔴</td>
+		<td>🔴</td>
 	</tr>
 	<tr>
 		<td>Fan Speed</td>
@@ -678,6 +705,8 @@ Example output:
 		<td>🟢</td>
 		<td>🔴</td>
 		<td>🔴</td>
+		<td>🔴</td>
+		<td>🔴</td>
 	</tr>
 	<tr>
 		<td>Voltage</td>
@@ -685,6 +714,8 @@ Example output:
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
+		<td>🔴</td>
+		<td>🔴</td>
 		<td>🔴</td>
 		<td>🔴</td>
 	</tr>
@@ -703,3 +734,6 @@ Example output:
 #### Panfrost and Panthor notes
 - GPU usage requires `echo N | sudo tee /sys/class/drm/renderD*/device/profiling`
   - Where N is a number, 1 for panfrost and 3 for panthor.
+
+#### Qualcomm notes
+- GPU usage on `msm_dpu` shows usage of the current process, not total system usage

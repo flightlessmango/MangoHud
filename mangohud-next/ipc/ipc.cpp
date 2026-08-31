@@ -11,6 +11,7 @@
 #include "ipc.h"
 #include "ipc_client.h"
 #include "../server/config.h"
+#include "../server/server.h"
 
 IPCServer::IPCServer(MangoHudServer* server_) : server(server_) {
     SPDLOG_DEBUG("init IPCServer");
@@ -146,10 +147,26 @@ int IPCServer::on_request_fd(sd_bus_message *m, void *userdata, sd_bus_error *) 
     return r;
 }
 
+int IPCServer::on_get_clients(sd_bus_message *m, void *userdata, sd_bus_error *) {
+    auto *self = static_cast<IPCServer *>(userdata);
+
+    auto json = self->server->metrics->clients_json_snapshot();
+    return sd_bus_reply_method_return(m, "s", json.c_str());
+}
+
+int IPCServer::on_get_system(sd_bus_message *m, void *userdata, sd_bus_error *) {
+    auto *self = static_cast<IPCServer *>(userdata);
+
+    auto json = self->server->metrics->system_json_snapshot();
+    return sd_bus_reply_method_return(m, "s", json.c_str());
+}
+
 void IPCServer::dbus_thread() {
     static const sd_bus_vtable vtable[] = {
         SD_BUS_VTABLE_START(0),
         SD_BUS_METHOD("request_fd", "", "h", IPCServer::on_request_fd, SD_BUS_VTABLE_UNPRIVILEGED),
+        SD_BUS_METHOD("get_clients", "", "s", IPCServer::on_get_clients, SD_BUS_VTABLE_UNPRIVILEGED),
+        SD_BUS_METHOD("get_system", "", "s", IPCServer::on_get_system, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_VTABLE_END
     };
 

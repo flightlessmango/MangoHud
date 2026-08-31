@@ -24,8 +24,6 @@ public:
         implot = ImPlot::CreateContext();
         ImPlot::SetCurrentContext(implot);
         ImGui::StyleColorsDark();
-        fonts = std::make_shared<Font>();
-
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard;
         io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableGamepad;
@@ -40,7 +38,10 @@ public:
         style.WindowMinSize = ImVec2(4, 4);
 
         ImGui_ImplOpenGL3_Init("#version 130");
-        ImGui_ImplOpenGL3_CreateFontsTexture();
+        fonts = std::make_shared<Font>([] {
+            ImGui_ImplOpenGL3_DestroyFontsTexture();
+            ImGui_ImplOpenGL3_CreateFontsTexture();
+        });
     }
 
     ~ImGuiEGL() {

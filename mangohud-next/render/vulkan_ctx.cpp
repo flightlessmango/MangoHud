@@ -198,12 +198,6 @@ void VkCtx::init_client(clientRes* r, size_t buffer_size) {
     if (r->buffer.size() < buffer_size)
         r->buffer.resize(buffer_size);
 
-    gbm_dev = gbm_create_device(phys_fd());
-    if (!gbm_dev) {
-        SPDLOG_ERROR("gbm_create_device failed");
-        return;
-    }
-
     for (auto& buf : r->buffer) {
         if (!create_gbm(r, &buf.dmabuf, phys_fd(), DRM_FORMAT_MOD_LINEAR))
             SPDLOG_ERROR("init gbm failed");
@@ -745,9 +739,6 @@ VkCtx::~VkCtx() {
         vkDestroyInstance(instance, nullptr);
         instance = VK_NULL_HANDLE;
     }
-
-    if (gbm_dev)
-        gbm_device_destroy(gbm_dev);
 
     physicalDevice = VK_NULL_HANDLE;
     graphicsQueue = VK_NULL_HANDLE;

@@ -1,3 +1,4 @@
+#include <set>
 #include "gpu.h"
 #include "file_utils.h"
 #include "hud_elements.h"

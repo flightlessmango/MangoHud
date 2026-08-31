@@ -14,23 +14,6 @@ T max(T a, T b) {
     return val;
 }
 
-#define UPDATE_METRIC_AVERAGE(FIELD, T)                                 \
-    do {                                                                \
-        T value_sum = 0;                                                \
-        for (size_t s = 0; s < METRICS_SAMPLE_COUNT; s++)               \
-            value_sum += metrics_buffer[s].FIELD;                       \
-                                                                        \
-        amdgpu_common_metrics.FIELD = value_sum / METRICS_SAMPLE_COUNT; \
-    } while(0)
-
-#define UPDATE_METRIC_MAX(FIELD)                                        \
-    do {                                                                \
-        int cur_max = metrics_buffer[0].FIELD;                          \
-        for (size_t s = 1; s < METRICS_SAMPLE_COUNT; s++)               \
-            cur_max = max(cur_max, metrics_buffer[s].FIELD);            \
-        amdgpu_common_metrics.FIELD = cur_max;                          \
-    } while(0)
-
 struct metrics_table_header {
 	uint16_t			structure_size;
 	uint8_t				format_revision;

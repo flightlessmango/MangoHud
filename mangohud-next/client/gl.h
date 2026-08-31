@@ -246,6 +246,7 @@ private:
     uint32_t w = 0;
     uint32_t h = 0;
     bool inited = false;
+    uint64_t imported_generation = 0;
 
     static GLuint compile_shader(GLenum type, const char *src);
     static GLuint link_program(GLuint vs, GLuint fs);

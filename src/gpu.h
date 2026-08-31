@@ -40,14 +40,14 @@ class GPU {
                     nvidia = std::make_unique<NVIDIA>(pci_dev);
 
                 if (vendor_id == 0x1002)
-                    amdgpu = std::make_unique<AMDGPU>(pci_dev, device_id, vendor_id);
+                    amdgpu = std::make_unique<AMDGPU>(pci_dev, device_id, vendor_id, drm_node);
 
                 if (
                     driver == "i915" || driver == "xe" ||
                     driver == "panfrost" || driver == "panthor" ||
                     driver == "msm_dpu" || driver == "msm_drm"
                 )
-                    fdinfo = std::make_unique<GPU_fdinfo>(driver, pci_dev, drm_node);
+                    fdinfo = std::make_unique<GPU_fdinfo>(driver, pci_dev, drm_node, device_id, vendor_id);
         }
 
         gpu_metrics get_metrics() {

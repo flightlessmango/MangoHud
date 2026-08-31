@@ -93,7 +93,36 @@ struct gbmBuffer {
     uint32_t fourcc = 0;
     uint64_t plane_size = 0;
 
-    gbmBuffer() {
+    gbmBuffer() = default;
+
+    gbmBuffer(const gbmBuffer&) = delete;
+    gbmBuffer& operator=(const gbmBuffer&) = delete;
+
+    gbmBuffer(gbmBuffer&& o) noexcept { *this = std::move(o); }
+
+    gbmBuffer& operator=(gbmBuffer&& o) noexcept {
+        if (this != &o) {
+            if (bo)
+                gbm_bo_destroy(bo);
+            if (dev)
+                gbm_device_destroy(dev);
+
+            dev = o.dev;
+            bo = o.bo;
+            fd = std::move(o.fd);
+            modifier = o.modifier;
+            stride = o.stride;
+            offset = o.offset;
+            fourcc = o.fourcc;
+            plane_size = o.plane_size;
+
+            o.dev = nullptr;
+            o.bo = nullptr;
+        }
+        return *this;
+    }
+
+    ~gbmBuffer() {
         if (bo)
             gbm_bo_destroy(bo);
 
@@ -158,11 +187,11 @@ struct clientRes {
     std::vector<slot_t> buffer;
     VkCommandPool   cmd_pool            = VK_NULL_HANDLE;
     std::mutex      m;
-    std::mutex      table_m;
+    std::mutex      hud_m;
     std::shared_ptr<GPU> server_gpu;
 
     std::string     client_id;
-    std::shared_ptr<hudTable> table     = nullptr;
+    std::shared_ptr<HudConfig> hud      = nullptr;
     uint32_t        w                   = 500;
     uint32_t        h                   = 500;
 
@@ -178,7 +207,7 @@ struct clientRes {
     std::shared_ptr<X11Session> x11;
 
     clientRes() {
-        table = std::make_shared<hudTable>();
+        hud = std::make_shared<HudConfig>();
     }
 
     bool is_vulkan() {
