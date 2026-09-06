@@ -2,12 +2,11 @@
 #ifndef MANGOHUD_FILE_UTILS_H
 #define MANGOHUD_FILE_UTILS_H
 
+#include <cinttypes>
+#include <filesystem.h>
+#include <optional>
 #include <string>
 #include <vector>
-#include <regex>
-#include <array>
-#include <filesystem.h>
-namespace fs = ghc::filesystem;
 
 enum LS_FLAGS
 {
@@ -30,5 +29,29 @@ std::string get_config_dir();
 bool lib_loaded(const std::string& lib, pid_t pid);
 std::string remove_parentheses(const std::string&);
 std::string to_lower(const std::string& str);
+
+
+namespace detail {
+
+    // using template specialization to let the compiler figure it out
+    template<typename T> const char* type_to_fmt();
+    template<> inline const char* type_to_fmt<int>() { return "%d"; }
+    template<> inline const char* type_to_fmt<int64_t>() { return "%" PRIi64; }
+    template<> inline const char* type_to_fmt<uint64_t>() { return "%" SCNi64; }
+    template<> inline const char* type_to_fmt<float>() { return "%f"; }
+    template<> inline const char* type_to_fmt<double>() { return "%lf"; }
+
+}
+
+/** Read a single value from sysfs file */
+template<typename ValueType>
+std::optional<ValueType> read_as(FILE* f) {
+    rewind(f);
+    fflush(f);
+    ValueType v;
+    if (fscanf(f, detail::type_to_fmt<ValueType>(), &v) != 1)
+        return {};
+    return v;
+}
 
 #endif //MANGOHUD_FILE_UTILS_H
