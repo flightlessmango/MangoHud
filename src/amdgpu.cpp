@@ -520,14 +520,10 @@ AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id, std:
 	const std::string device_path = "/sys/bus/pci/devices/" + pci_dev;
 	gpu_metrics_path = device_path + "/gpu_metrics";
     // Just check that the metrics file exists and is readable
-    FILE *f = fopen(gpu_metrics_path.c_str(), "rb");
-    if (f) {
-        gpu_metrics_is_valid = true;
-        fclose(f);
-    } else {
-        gpu_metrics_is_valid = false;
-        SPDLOG_DEBUG("Failed to open gpu_metrics at '{}'", gpu_metrics_path);
-    }
+    // Force sysfs-only mode: use hwmon (same data source as amdgpu_top)
+    // The SMU gpu_metrics blob returns incorrect values on Vega20/MI50
+    gpu_metrics_is_valid = false;
+    SPDLOG_INFO("gpu_metrics disabled — using sysfs hwmon only (amdgpu_top compatible)");
 
 	sysfs_nodes.busy = fopen((device_path + "/gpu_busy_percent").c_str(), "r");
 	sysfs_nodes.vram_total = fopen((device_path + "/mem_info_vram_total").c_str(), "r");
