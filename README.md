@@ -4,6 +4,12 @@ A Vulkan and OpenGL overlay for monitoring FPS, temperatures, CPU/GPU load and m
 
 ![Example gif showing a standard performance readout with frametimes](assets/overlay_example.gif)
 
+> **Fork note:** This fork adds **Super I/O fan support**. The `fan` element shows the
+> Steam Deck fan, and a new **`cfan`** element shows motherboard / Super I/O chip fans
+> (Nuvoton, ITE, Fintek, Winbond, SMSC) via `hwmon`, with `cfan_custom_sensor` for manual
+> selection and `cfan_color` for its label color. See [`FAN_SUPERIO.md`](FAN_SUPERIO.md)
+> for full details.
+
 ---
 
 - [MangoHud](#mangohud)
@@ -379,7 +385,10 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `engine_version`                   | Display OpenGL or vulkan and vulkan-based render engine's version                     |
 | `exec`                             | Display output of bash command in next column, e.g. `custom_text=/home` , `exec=df -h /home \| tail -n 1`. Only works with `legacy_layout=0` |
 | `exec_name`                        | Display current exec name                                                             |
-| `fan`                              | Shows the Steam Deck fan rpm                                                          |
+| `fan`                              | Shows fan rpm. Auto-detects the Steam Deck fan, or uses `fan_custom_sensor` if set. |
+| `fan_custom_sensor`                | Selects the hwmon sensor(s) used by `fan`. One or more `chip,input[,label]` entries separated by `;`. e.g `fan_custom_sensor=nct6799,fan2_input` or `fan_custom_sensor=nct6799,fan2_input,CPU;nct6799,fan7_input,GPU`. |
+| `cfan`                             | Shows custom / Super I/O fan rpm. Auto-detects a Super I/O chip (e.g. nct6799) and picks the first spinning fan, or uses `cfan_custom_sensor` if set. |
+| `cfan_custom_sensor`                | Selects the hwmon sensor(s) used by `cfan`. Same `chip,input[,label]` format as `fan_custom_sensor`, separated by `;`. e.g `cfan_custom_sensor=nct6799,fan2_input,RAD;nct6799,fan4_input,BTM`. |
 | `fcat`                             | Enables frame capture analysis                                                        |
 | `fcat_overlay_width=`              | Sets the width of fcat. Default is `24`                                               |
 | `fcat_screen_edge=`                | Decides the edge fcat is displayed on. A value between `1` and `4`                    |
@@ -409,7 +418,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `refresh_rate`                     | Display the current refresh rate (only works in gamescope)                            |
 | `full`                             | Enable most of the toggleable parameters (currently excludes `histogram`)             |
 | `gamemode`                         | Show if GameMode is on                                                                |
-| `gpu_color`<br>`cpu_color`<br>`vram_color`<br>`ram_color`<br>`io_color`<br>`engine_color`<br>`frametime_color`<br>`background_color`<br>`text_color`<br>`media_player_color`<br>`network_color`         | Change default colors: `gpu_color=RRGGBB` |
+| `gpu_color`<br>`cpu_color`<br>`vram_color`<br>`ram_color`<br>`io_color`<br>`engine_color`<br>`fan_color`<br>`cfan_color`<br>`frametime_color`<br>`background_color`<br>`text_color`<br>`media_player_color`<br>`network_color`         | Change default colors: `gpu_color=RRGGBB` |
 | `gpu_core_clock`<br>`gpu_mem_clock`| Display GPU core/memory frequency                                                     |
 | `gpu_fan`                          | GPU fan in RPM, except NVIDIA where it is a percentage |
 | `gpu_load_change`                  | Change the color of the GPU load depending on load                                    |

@@ -170,6 +170,8 @@ void HudElements::convert_colors(const struct overlay_params& params)
     HUDElements.colors.vram = convert(params.vram_color);
     HUDElements.colors.ram = convert(params.ram_color);
     HUDElements.colors.engine = convert(params.engine_color);
+    HUDElements.colors.fan = convert(params.fan_color);
+    HUDElements.colors.cfan = convert(params.cfan_color);
     HUDElements.colors.io = convert(params.io_color);
     HUDElements.colors.frametime = convert(params.frametime_color);
     HUDElements.colors.background = convert(params.background_color);
@@ -1460,11 +1462,46 @@ void HudElements::frame_count(){
 }
 
 void HudElements::fan(){
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fan] && fan_speed != -1) {
+    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fan])
+        return;
+
+    bool first = true;
+    for (auto& s : fan_sensors) {
+        if (s.rpm < 0)
+            continue;
+        // The render loop gives this element one row; start a fresh row for
+        // each additional fan so labels don't spill into trailing columns.
+        if (!first && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
+            ImGui::TableNextRow();
+        first = false;
         ImguiNextColumnFirstItem();
-        HUDElements.TextColored(HUDElements.colors.engine, "%s", "FAN");
+        HUDElements.TextColored(HUDElements.colors.fan, "%s", s.label.c_str());
         ImguiNextColumnOrNewRow();
-        right_aligned_text(HUDElements.colors.text,HUDElements.ralign_width, "%i", fan_speed);
+        right_aligned_text(HUDElements.colors.text,HUDElements.ralign_width, "%i", s.rpm);
+        ImGui::SameLine(0, 1.0f);
+        ImGui::PushFont(HUDElements.sw_stats->font_small);
+        HUDElements.TextColored(HUDElements.colors.text, "RPM");
+        ImGui::PopFont();
+    }
+}
+
+void HudElements::cfan(){
+    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cfan])
+        return;
+
+    bool first = true;
+    for (auto& s : cfan_sensors) {
+        if (s.rpm < 0)
+            continue;
+        // The render loop gives this element one row; start a fresh row for
+        // each additional fan so labels don't spill into trailing columns.
+        if (!first && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
+            ImGui::TableNextRow();
+        first = false;
+        ImguiNextColumnFirstItem();
+        HUDElements.TextColored(HUDElements.colors.cfan, "%s", s.label.c_str());
+        ImguiNextColumnOrNewRow();
+        right_aligned_text(HUDElements.colors.text,HUDElements.ralign_width, "%i", s.rpm);
         ImGui::SameLine(0, 1.0f);
         ImGui::PushFont(HUDElements.sw_stats->font_small);
         HUDElements.TextColored(HUDElements.colors.text, "RPM");
@@ -1988,6 +2025,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
         {"device_battery", {device_battery}},
         {"frame_count", {frame_count}},
         {"fan", {fan}},
+        {"cfan", {cfan}},
         {"throttling_status", {throttling_status}},
         {"exec_name", {exec_name}},
         {"duration", {duration}},
@@ -2068,6 +2106,8 @@ void HudElements::legacy_elements(const overlay_params* temp_params){
         ordered_functions.push_back({battery, "battery", value});
     if (temp_params->enabled[OVERLAY_PARAM_ENABLED_fan])
         ordered_functions.push_back({fan, "fan", value});
+    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_cfan])
+        ordered_functions.push_back({cfan, "cfan", value});
     if (temp_params->enabled[OVERLAY_PARAM_ENABLED_fsr])
         ordered_functions.push_back({gamescope_fsr, "gamescope_fsr", value});
     if (temp_params->enabled[OVERLAY_PARAM_ENABLED_hdr])

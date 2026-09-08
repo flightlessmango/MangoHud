@@ -146,7 +146,13 @@ extern std::string wineVersion;
 extern std::deque<logData> graph_data;
 extern double min_frametime, max_frametime;
 extern bool steam_focused;
-extern int fan_speed;
+struct fan_sensor {
+   std::string label; // display label, e.g. "FAN", "FAN1", or a user-provided name
+   std::string path;  // resolved hwmon sysfs path (e.g. .../fanN_input)
+   int rpm = -1;      // last read value; -1 means unavailable
+};
+extern std::vector<fan_sensor> fan_sensors;   // "fan": Steam Deck APU fan
+extern std::vector<fan_sensor> cfan_sensors;  // "cfan": custom / Super I/O fan(s)
 extern int current_preset;
 extern std::vector<float> frametime_data;
 
