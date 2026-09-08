@@ -49,6 +49,18 @@ static uint8_t raw_msg[1024] = {0};
 static uint32_t screenWidth, screenHeight;
 static std::atomic_bool g_x_dead{false};
 
+static int x_error_handler(Display* dpy, XErrorEvent* event) {
+    g_x_dead.store(true);
+
+    char error_text[256] = "unknown";
+    if (dpy)
+        XGetErrorText(dpy, event->error_code, error_text, sizeof(error_text));
+    fprintf(stderr, "mangoapp: X11 error %u (%s), request %u.%u, resource 0x%lx\n",
+            event->error_code, error_text, event->request_code, event->minor_code, event->resourceid);
+
+    return 0;
+}
+
 static bool x_connection_ok(Display* dpy) {
     if (!dpy)
         return false;
@@ -62,6 +74,19 @@ static bool x_connection_ok(Display* dpy) {
         return false;
 
     return (p.revents & (POLLERR | POLLHUP | POLLNVAL)) == 0;
+}
+
+static bool set_x_cardinal_property(Display* dpy, Window window, Atom property, uint32_t value) {
+    if (g_x_dead.load() || !window || !x_connection_ok(dpy)) {
+        g_x_dead.store(true);
+        return false;
+    }
+
+    XChangeProperty(dpy, window, property, XA_CARDINAL, 32, PropModeReplace,
+                    (unsigned char *)&value, 1);
+    XSync(dpy, 0);
+
+    return !g_x_dead.load();
 }
 
 static unsigned int get_prop(const char* propName){
@@ -256,7 +281,7 @@ static GLFWwindow* init(const char* glsl_version){
         // Set atom for gamescope to render as an overlay.
         Atom overlay_atom = XInternAtom (x11_display, GamescopeOverlayProperty, False);
         uint32_t value = 1;
-        XChangeProperty(x11_display, x11_window, overlay_atom, XA_CARDINAL, 32, PropertyNewValue, (unsigned char *)&value, 1);
+        set_x_cardinal_property(x11_display, x11_window, overlay_atom, value);
     }
 
     glfwMakeContextCurrent(window);
@@ -320,6 +345,7 @@ static bool render(GLFWwindow* window, overlay_params& real_params) {
 int main(int, char**)
 {
     XInitThreads();
+    XSetErrorHandler(x_error_handler);
 
     // Setup window
     glfwSetErrorCallback(glfw_error_callback);
@@ -378,12 +404,16 @@ int main(int, char**)
     std::thread(msg_read_thread).detach();
     std::thread(ctrl_thread).detach();
     if (!logger) logger = std::make_unique<Logger>(&params);
-    Atom noFocusAtom = XInternAtom(x11_display, "GAMESCOPE_NO_FOCUS", False);
-    uint32_t value = 1;
-    XChangeProperty(x11_display, x11_window, noFocusAtom, XA_CARDINAL, 32,
-                    PropModeReplace, (unsigned char *)&value, 1);
+    if (!g_x_dead.load()) {
+        Atom noFocusAtom = XInternAtom(x11_display, "GAMESCOPE_NO_FOCUS", False);
+        uint32_t value = 1;
+        set_x_cardinal_property(x11_display, x11_window, noFocusAtom, value);
+    }
     // Main loop
-    while (!glfwWindowShouldClose(window)){
+    while (true){
+        if (g_x_dead.load() || glfwWindowShouldClose(window))
+            break;
+
         real_params = get_params();
         check_keybinds(*real_params);
         if (!real_params->no_display){
@@ -391,8 +421,7 @@ int main(int, char**)
                 glfwShowWindow(window);
                 render(window, *real_params);
                 uint32_t value = 1;
-                XChangeProperty(x11_display, x11_window, overlay_atom, XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&value, 1);
-                XSync(x11_display, 0);
+                set_x_cardinal_property(x11_display, x11_window, overlay_atom, value);
                 mangoapp_paused = false;
                 // resume all GPU threads
                 if (gpus)
@@ -442,8 +471,7 @@ int main(int, char**)
             glfwSwapBuffers(window);
             glfwHideWindow(window);
             uint32_t value = 0;
-            XChangeProperty(x11_display, x11_window, overlay_atom, XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&value, 1);
-            XSync(x11_display, 0);
+            set_x_cardinal_property(x11_display, x11_window, overlay_atom, value);
             mangoapp_paused = true;
             // pause all GPUs threads
             if (gpus)
@@ -464,7 +492,6 @@ int main(int, char**)
         }
     }
 
-    // Cleanup
     shutdown(window);
 
     glfwTerminate();
