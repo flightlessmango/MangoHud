@@ -15,7 +15,7 @@ static void fileChanged(notify_thread *nt) {
     char buffer[EVENT_BUF_LEN];
     overlay_params local_params = *nt->params;
 
-    while (!nt->quit) {
+    while (!nt->quit.load()) {
         length = read( nt->fd, buffer, EVENT_BUF_LEN );
         while (i < length) {
             struct inotify_event *event =
@@ -42,6 +42,7 @@ static void fileChanged(notify_thread *nt) {
 
 bool start_notifier(notify_thread& nt)
 {
+    nt.quit.store(false);
     nt.fd = inotify_init1(IN_NONBLOCK);
     if (nt.fd < 0) {
         SPDLOG_ERROR("inotify_init1 failed: {}", strerror(errno));
@@ -61,15 +62,16 @@ bool start_notifier(notify_thread& nt)
     return true;
 }
 
-void stop_notifier(notify_thread& nt)
+notify_thread::~notify_thread()
 {
-    if (nt.fd < 0)
+    quit.store(true);
+    if (thread.joinable())
+        thread.join();
+
+    if (fd < 0)
         return;
 
-    nt.quit = true;
-    if (nt.thread.joinable())
-        nt.thread.join();
-    inotify_rm_watch(nt.fd, nt.wd);
-    close(nt.fd);
-    nt.fd = -1;
+    inotify_rm_watch(fd, wd);
+    close(fd);
+    fd = -1;
 }

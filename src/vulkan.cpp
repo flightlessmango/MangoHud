@@ -2105,10 +2105,6 @@ static void overlay_DestroyInstance(
    struct instance_data *instance_data = FIND(struct instance_data, instance);
    instance_data_map_physical_devices(instance_data, false);
    instance_data->vtable.DestroyInstance(instance, pAllocator);
-#ifdef __linux__
-   if (!is_blacklisted())
-      stop_notifier(instance_data->notifier);
-#endif
    destroy_instance_data(instance_data);
 }
 
