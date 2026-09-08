@@ -519,13 +519,31 @@ AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id, std:
 	this->vendor_id = vendor_id;
 	const std::string device_path = "/sys/bus/pci/devices/" + pci_dev;
 	gpu_metrics_path = device_path + "/gpu_metrics";
-    // Just check that the metrics file exists and is readable
+    // Check that the metrics file exists, is readable, and uses a version we support.
+    // Some GPUs (e.g. older Vega/Instinct) expose an old gpu_metrics_v1 that is
+    // smaller than gpu_metrics_v1_3. If unreadable/unsupported we fall back to
+    // the hwmon sysfs nodes (gpu_busy_percent + power1_input).
     FILE *f = fopen(gpu_metrics_path.c_str(), "rb");
+    gpu_metrics_is_valid = false;
     if (f) {
-        gpu_metrics_is_valid = true;
+        metrics_table_header mhdr {};
+        size_t nread = fread(&mhdr, 1, sizeof(mhdr), f);
+        if (nread == sizeof(mhdr)) {
+            if (mhdr.format_revision == 1) {
+                gpu_metrics_is_valid = mhdr.structure_size >= sizeof(gpu_metrics_v1_3);
+                if (!gpu_metrics_is_valid)
+                    SPDLOG_DEBUG("amdgpu gpu_metrics v1 too small (have {}, need {}) for '{}'; using hwmon fallback",
+                                 mhdr.structure_size, sizeof(gpu_metrics_v1_3), gpu_metrics_path);
+            } else if (mhdr.format_revision == 2) {
+                gpu_metrics_is_valid = mhdr.structure_size >= sizeof(gpu_metrics_v2_1);
+            } else if (mhdr.format_revision == 3) {
+                gpu_metrics_is_valid = mhdr.structure_size >= sizeof(gpu_metrics_v3_0);
+            } else {
+                gpu_metrics_is_valid = false;
+            }
+        }
         fclose(f);
     } else {
-        gpu_metrics_is_valid = false;
         SPDLOG_DEBUG("Failed to open gpu_metrics at '{}'", gpu_metrics_path);
     }
 
