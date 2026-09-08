@@ -367,10 +367,31 @@ static void device_map_queues(struct device_data *data,
    uint32_t queue_index = 0;
    for (uint32_t i = 0; i < pCreateInfo->queueCreateInfoCount; i++) {
       for (uint32_t j = 0; j < pCreateInfo->pQueueCreateInfos[i].queueCount; j++) {
-         VkQueue queue;
-         data->vtable.GetDeviceQueue(data->device,
-                                     pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex,
-                                     j, &queue);
+         VkQueue queue = VK_NULL_HANDLE;
+         if (pCreateInfo->pQueueCreateInfos[i].flags) {
+            if (!data->vtable.GetDeviceQueue2) {
+               SPDLOG_ERROR("vkGetDeviceQueue2 is unavailable for flagged queue {} from family {}",
+                            j, pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex);
+               continue;
+            }
+
+            VkDeviceQueueInfo2 queue_info = {};
+            queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2;
+            queue_info.flags = pCreateInfo->pQueueCreateInfos[i].flags;
+            queue_info.queueFamilyIndex = pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex;
+            queue_info.queueIndex = j;
+            data->vtable.GetDeviceQueue2(data->device, &queue_info, &queue);
+         } else {
+            data->vtable.GetDeviceQueue(data->device,
+                                        pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex,
+                                        j, &queue);
+         }
+
+         if (!queue) {
+            SPDLOG_ERROR("Failed to retrieve device queue {} from family {}",
+                         j, pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex);
+            continue;
+         }
 
          VK_CHECK(data->set_device_loader_data(data->device, queue));
 
