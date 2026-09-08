@@ -104,7 +104,7 @@ void imgui_init()
 void imgui_create(gl_context *ctx, const gl_wsi plat)
 {
     //SPDLOG_DEBUG("ctx {}", (void *)ctx);
-    if (!ctx)
+    if (!ctx || !ctx->ctx)
         return;
 
     if (inited)
