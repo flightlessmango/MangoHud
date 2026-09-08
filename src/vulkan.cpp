@@ -1557,6 +1557,19 @@ static struct overlay_draw *before_present(struct swapchain_data *swapchain_data
    return draw;
 }
 
+static std::string present_modes_string(const std::vector<VkPresentModeKHR>& presentModes)
+{
+   std::ostringstream ss;
+
+   for (size_t i = 0; i < presentModes.size(); i++) {
+      if (i > 0)
+         ss << ", ";
+      ss << string_VkPresentModeKHR(presentModes[i]);
+   }
+
+   return ss.str();
+}
+
 static bool is_present_mode_supported(VkPhysicalDevice device, VkSurfaceKHR surface, VkPresentModeKHR targetPresentMode)
 {
    struct instance_data *instance_data = FIND(struct instance_data, device);
@@ -1580,6 +1593,9 @@ static bool is_present_mode_supported(VkPhysicalDevice device, VkSurfaceKHR surf
          for (const auto& mode : presentModes)
             if (mode == targetPresentMode)
                return true;
+
+         SPDLOG_WARN("Present mode is not supported: {}", string_VkPresentModeKHR(targetPresentMode));
+         SPDLOG_WARN("Advertised present modes: {}", present_modes_string(presentModes));
       }
       else {
          SPDLOG_ERROR("Failed to get presentModes: vkGetPhysicalDeviceSurfacePresentModesKHR failed with {}", vk_Result_to_str(result));
@@ -1609,9 +1625,6 @@ static VkResult overlay_CreateSwapchainKHR(
    if (target_present_mode.has_value()) {
       if (is_present_mode_supported(device_data->physical_device, createInfo.surface, target_present_mode.value())) {
          createInfo.presentMode = target_present_mode.value();
-      }
-      else {
-         SPDLOG_WARN("Present mode is not supported: {}", string_VkPresentModeKHR(target_present_mode.value()));
       }
    }
 
