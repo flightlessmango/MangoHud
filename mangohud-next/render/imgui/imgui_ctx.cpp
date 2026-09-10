@@ -14,6 +14,7 @@ static constexpr float unit_gap = -1.5f;
 static constexpr float hud_cell_padding_x = 0.0f;
 static constexpr float hud_cell_padding_y = 2.0f;
 static constexpr float outline_padding_x = 1.5f;
+static constexpr float graph_plot_height = 50.0f;
 
 ImGuiCtx::ImGuiCtx() {
     std::lock_guard lock(init_m);
@@ -341,14 +342,6 @@ static float cell_height(const hudTable& table, const TextCell& tc, Font* fonts)
     return std::max(value.max - value.min, unit.max - unit.min) + std::ceil(outline_padding_x) * 2.0f;
 }
 
-static float graph_height(const hudTable& table, const TextCell& tc, Font* fonts) {
-    ImGui::PushFont(fonts->get(unit_font_size(table, tc)));
-    const float header_h = outlined_text_size_current_font("frametime").y;
-    ImGui::PopFont();
-
-    return header_h + 50.0f;
-}
-
 static float progress_height(const hudTable& table, const ProgressCell& pc, Font* fonts) {
     const std::string& text = pc.layout_text.empty() ? pc.text : pc.layout_text;
     if (text.empty())
@@ -422,7 +415,7 @@ static float row_height(hudTable& table, const std::vector<MaybeCell>& row, Font
         }
 
         if (!tc->data.empty()) {
-            height = std::max(height, graph_height(table, *tc, fonts));
+            height = std::max(height, graph_plot_height);
             continue;
         }
 
@@ -543,23 +536,10 @@ void ImGuiCtx::draw_value_with_unit(int col_index,
     ImGui::SetCursorPos(ImVec2(base.x, base.y + row_h));
 }
 
-void ImGuiCtx::draw_graph_header(const TextCell& tc, Font* fonts, const hudTable& table, const HudLayout& L) {
-    const ImVec2 base = ImGui::GetCursorPos();
-    const float content_w = std::max(0.0f, L.content_size.x - hud_cell_padding_x * 2.0f);
-    ImGui::PushFont(fonts->get(unit_font_size(table, tc)));
-    RenderOutlinedText(colors.get("eb5b5b"), "frametime");
-
-    float max = *std::max_element(tc.data.begin(), tc.data.end());
-    float min = *std::min_element(tc.data.begin(), tc.data.end());
-    ImGui::SetCursorPos(ImVec2(base.x + content_w - ralign_width, base.y));
-    right_aligned(colors.get("FFFFFF"), ralign_width, "min: %.1fms, max: %.1fms", min, max);
-    ImGui::PopFont();
-}
-
 void ImGuiCtx::draw_graph_plot(const TextCell& tc, float width) {
     ImGui::PushID(&tc);
-    if (ImGui::BeginChild("my_child_window", ImVec2(width, 50), false, ImGuiWindowFlags_NoDecoration)) {
-        if (ImPlot::BeginPlot("My Plot", ImVec2(width, 50), ImPlotFlags_CanvasOnly | ImPlotFlags_NoInputs)) {
+    if (ImGui::BeginChild("my_child_window", ImVec2(width, graph_plot_height), false, ImGuiWindowFlags_NoDecoration)) {
+        if (ImPlot::BeginPlot("My Plot", ImVec2(width, graph_plot_height), ImPlotFlags_CanvasOnly | ImPlotFlags_NoInputs)) {
             ImPlotStyle& implot_style = ImPlot::GetStyle();
             implot_style.Colors[ImPlotCol_PlotBg]      = ImVec4(0.92f, 0.92f, 0.95f, 0.00f);
             implot_style.Colors[ImPlotCol_AxisGrid]    = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -911,16 +891,8 @@ void ImGuiCtx::draw_table(hudTable& table, Font* fonts, const HudLayout& layout,
                 continue;
 
             if (!tc->data.empty()) {
-                ImGui::SetCursorPos(ImVec2(origin.x + hud_cell_padding_x, row_y));
-                draw_graph_header(*tc, fonts, table, layout);
-
-                ImGui::PushFont(fonts->get(unit_font_size(table, *tc)));
-                const float header_h = outlined_text_size_current_font("frametime").y;
-                ImGui::PopFont();
-
-                ImGui::SetCursorPos(ImVec2(origin.x + hud_cell_padding_x, row_y + header_h));
-                const float full_width = std::max(0.0f, layout.content_size.x - hud_cell_padding_x * 2.0f);
-                draw_graph_plot(*tc, colspan > 1 ? cell_w : full_width);
+                ImGui::SetCursorPos(ImVec2(cell_x, row_y));
+                draw_graph_plot(*tc, std::max(0.0f, cell_w - hud_cell_padding_x));
                 continue;
             }
 

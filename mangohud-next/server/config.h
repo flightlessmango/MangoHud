@@ -224,5 +224,5 @@ hud_table:
         {value: FRAMETIME}
     ]
 
-    - [ {graph: FRAMETIMES}]
+    - [ {graph: FRAMETIMES, colspan: 3}]
 )YAML";
