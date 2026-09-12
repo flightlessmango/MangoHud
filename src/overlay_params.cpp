@@ -591,6 +591,7 @@ parse_ftrace(const char *str) {
 #define parse_io_read(s) parse_unsigned(s)
 #define parse_io_write(s) parse_unsigned(s)
 #define parse_pci_dev(s) parse_str(s)
+#define parse_gpu_voltage_pci_dev(s) parse_str(s)
 #define parse_media_player_name(s) parse_str(s)
 #define parse_font_scale_media_player(s) parse_float(s)
 #define parse_cpu_text(s) parse_str(s)
@@ -1199,6 +1200,9 @@ parse_overlay_config(struct overlay_params *params,
 
    if (!params->pci_dev.empty())
       params->pci_dev = verify_pci_dev(params->pci_dev);
+
+   if (!params->gpu_voltage_pci_dev.empty())
+      params->gpu_voltage_pci_dev = verify_pci_dev(params->gpu_voltage_pci_dev);
 
    if (!params->vulkan_present_mode.empty()) {
       VkPresentModeKHR present_mode;

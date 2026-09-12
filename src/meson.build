@@ -53,6 +53,7 @@ vklayer_files = files(
   'blacklist.cpp',
   'file_utils.cpp',
   'nvidia.cpp',
+  'nvapi_sensors.cpp',
   'gpu_fdinfo.cpp',
   'amdgpu.cpp'
 )
