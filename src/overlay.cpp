@@ -104,19 +104,19 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
    auto real_params = get_params();
    if (real_params->enabled[OVERLAY_PARAM_ENABLED_fan])
       update_fan();
-   if (real_params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
+   if (real_params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || real_params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp_only] || logger->is_active()) {
       cpuStats.UpdateCPUData();
 
 #ifdef __linux__
       if (real_params->enabled[OVERLAY_PARAM_ENABLED_core_load] || real_params->enabled[OVERLAY_PARAM_ENABLED_cpu_mhz] || logger->is_active())
          cpuStats.UpdateCoreMhz();
-      if (real_params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp] || logger->is_active() || real_params->enabled[OVERLAY_PARAM_ENABLED_graphs])
+      if (real_params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp] || real_params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp_only] || logger->is_active() || real_params->enabled[OVERLAY_PARAM_ENABLED_graphs])
          cpuStats.UpdateCpuTemp();
       if (real_params->enabled[OVERLAY_PARAM_ENABLED_cpu_power] || logger->is_active())
          cpuStats.UpdateCpuPower();
 #endif
    }
-   if (real_params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || logger->is_active()) {
+   if (real_params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] || real_params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp_only] || logger->is_active()) {
       if (gpus)
          gpus->get_metrics();
    }
@@ -752,6 +752,8 @@ void init_cpu_stats(overlay_params& params)
                            && enabled[OVERLAY_PARAM_ENABLED_cpu_stats];
    enabled[OVERLAY_PARAM_ENABLED_cpu_temp] = cpuStats.GetCpuFile()
                            && enabled[OVERLAY_PARAM_ENABLED_cpu_temp];
+   enabled[OVERLAY_PARAM_ENABLED_cpu_temp_only] = cpuStats.GetCpuFile()
+                           && enabled[OVERLAY_PARAM_ENABLED_cpu_temp_only];
 #endif
 }
 

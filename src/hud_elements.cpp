@@ -281,8 +281,23 @@ void HudElements::version(){
     }
 }
 
+static void display_temp(int temp){
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit])
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", HUDElements.convert_to_fahrenheit(temp));
+    else
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", temp);
+    ImGui::SameLine(0, 1.0f);
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact])
+        HUDElements.TextColored(HUDElements.colors.text, "°");
+    else if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit])
+        HUDElements.TextColored(HUDElements.colors.text, "°F");
+    else
+        HUDElements.TextColored(HUDElements.colors.text, "°C");
+}
+
 void HudElements::gpu_stats(){
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] && gpus){
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] &&
+        !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp_only] && gpus){
         for (auto& gpu : gpus->selected_gpus()) {
             ImguiNextColumnFirstItem();
             HUDElements.TextColored(HUDElements.colors.gpu, "%s", gpu->gpu_text().c_str());
@@ -313,18 +328,7 @@ void HudElements::gpu_stats(){
 
             if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp]){
                 ImguiNextColumnOrNewRow();
-                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit])
-                    right_aligned_text(text_color, HUDElements.ralign_width, "%i", HUDElements.convert_to_fahrenheit(gpu->metrics.temp));
-                else
-                    right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu->metrics.temp);
-                ImGui::SameLine(0, 1.0f);
-                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact])
-                    HUDElements.TextColored(HUDElements.colors.text, "°");
-                else
-                    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit])
-                        HUDElements.TextColored(HUDElements.colors.text, "°F");
-                    else
-                        HUDElements.TextColored(HUDElements.colors.text, "°C");
+                display_temp(gpu->metrics.temp);
             }
 
             if (gpu->metrics.junction_temp > -1 && HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_junction_temp]) {
@@ -418,8 +422,24 @@ void HudElements::gpu_stats(){
     }
 }
 
+void HudElements::gpu_temp_only(){
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp_only] && gpus){
+        for (auto& gpu : gpus->selected_gpus()) {
+            ImguiNextColumnFirstItem();
+            HUDElements.TextColored(HUDElements.colors.gpu, "%s", gpu->gpu_text().c_str());
+
+            ImguiNextColumnOrNewRow();
+            display_temp(gpu->metrics.temp);
+
+            if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
+                ImGui::TableNextRow();
+        }
+    }
+}
+
 void HudElements::cpu_stats(){
-    if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats]){
+    if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats] &&
+       !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp_only]){
         ImguiNextColumnFirstItem();
         const char* cpu_text;
         if (HUDElements.params->cpu_text.empty())
@@ -453,18 +473,7 @@ void HudElements::cpu_stats(){
 
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp]){
             ImguiNextColumnOrNewRow();
-            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit])
-                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", HUDElements.convert_to_fahrenheit(cpuStats.GetCPUDataTotal().temp));
-            else
-                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", cpuStats.GetCPUDataTotal().temp);
-            ImGui::SameLine(0, 1.0f);
-            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact])
-                HUDElements.TextColored(HUDElements.colors.text, "°");
-            else
-                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit])
-                    HUDElements.TextColored(HUDElements.colors.text, "°F");
-                else
-                    HUDElements.TextColored(HUDElements.colors.text, "°C");
+            display_temp(cpuStats.GetCPUDataTotal().temp);
         }
 
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_mhz]){
@@ -507,6 +516,21 @@ void HudElements::cpu_stats(){
             HUDElements.TextColored(HUDElements.colors.text, efficiency_unit);
             ImGui::PopFont();
         }
+    }
+}
+
+void HudElements::cpu_temp_only(){
+    if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp_only]){
+        ImguiNextColumnFirstItem();
+        const char* cpu_text;
+        if (HUDElements.params->cpu_text.empty())
+            cpu_text = "CPU";
+        else
+            cpu_text = HUDElements.params->cpu_text.c_str();
+
+        HUDElements.TextColored(HUDElements.colors.cpu, "%s", cpu_text);
+        ImguiNextColumnOrNewRow();
+        display_temp(cpuStats.GetCPUDataTotal().temp);
     }
 }
 
@@ -1953,12 +1977,18 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
     const auto& param = option.first;
     const auto& value = option.second;
 
+    if ((param == "gpu_stats" && get_params()->enabled[OVERLAY_PARAM_ENABLED_gpu_temp_only]) ||
+        (param == "cpu_stats" && get_params()->enabled[OVERLAY_PARAM_ENABLED_cpu_temp_only]))
+        return;
+
     // Initialize a map of display parameters and their corresponding functions.
     const std::map<std::string, Function> display_params = {
         {"version", {version}},
         {"time", {time}},
         {"gpu_stats", {gpu_stats}},
+        {"gpu_temp_only", {gpu_temp_only}},
         {"cpu_stats", {cpu_stats}},
+        {"cpu_temp_only", {cpu_temp_only}},
         {"core_load", {core_load}},
         {"io_read", {io_stats}},
         {"io_write", {io_stats}},
@@ -2046,10 +2076,16 @@ void HudElements::legacy_elements(const overlay_params* temp_params){
         ordered_functions.push_back({time, "time", value});
     if (temp_params->enabled[OVERLAY_PARAM_ENABLED_version])
         ordered_functions.push_back({version, "version", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
+    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] &&
+        !temp_params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp_only])
         ordered_functions.push_back({gpu_stats, "gpu_stats", value});
-    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats])
+    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp_only])
+        ordered_functions.push_back({gpu_temp_only, "gpu_temp_only", value});
+    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats] &&
+        !temp_params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp_only])
         ordered_functions.push_back({cpu_stats, "cpu_stats", value});
+    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp_only])
+        ordered_functions.push_back({cpu_temp_only, "cpu_temp_only", value});
     if (temp_params->enabled[OVERLAY_PARAM_ENABLED_core_load])
         ordered_functions.push_back({core_load, "core_load", value});
     if (temp_params->enabled[OVERLAY_PARAM_ENABLED_io_read] || temp_params->enabled[OVERLAY_PARAM_ENABLED_io_write])
