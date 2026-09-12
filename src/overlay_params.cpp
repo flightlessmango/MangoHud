@@ -147,7 +147,7 @@ parse_control(const char *str)
       path.replace(npos, 2, std::to_string(getpid()));
    SPDLOG_DEBUG("Socket: {}", path);
 
-   int ret = os_socket_listen_abstract(path.c_str(), 1);
+   int ret = control_socket_listen(path.c_str());
    if (ret < 0) {
       SPDLOG_DEBUG("Couldn't create socket pipe at '{}'", path);
       SPDLOG_DEBUG("ERROR: '{}'", strerror(errno));

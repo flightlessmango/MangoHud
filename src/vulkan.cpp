@@ -285,8 +285,6 @@ static struct instance_data *new_instance_data(VkInstance instance)
 
 static void destroy_instance_data(struct instance_data *data)
 {
-   if (data->params.control >= 0)
-      os_socket_close(data->params.control);
    unmap_object(HKEY(data->instance));
    delete data;
 }
