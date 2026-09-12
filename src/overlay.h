@@ -8,6 +8,7 @@
 #include <deque>
 #include <imgui.h>
 #include "imgui_internal.h"
+#include "fps_metrics.h"
 #include "overlay_params.h"
 #include "hud_elements.h"
 
@@ -80,7 +81,7 @@ struct swapchain_stats {
 struct benchmark_stats {
    float total;
    std::vector<float> fps_data;
-   std::vector<std::pair<std::string, float>> percentile_data;
+   std::vector<metric_t> metrics;
 };
 
 struct LOAD_DATA {

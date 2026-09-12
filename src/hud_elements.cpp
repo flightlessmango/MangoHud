@@ -1655,11 +1655,13 @@ void HudElements::fps_metrics(){
         ImguiNextColumnFirstItem();
         HUDElements.TextColored(HUDElements.colors.engine, "%s", metric.display_name.c_str());
         ImguiNextColumnOrNewRow();
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", metric.value);
+        const bool is_percent = metric.unit == fps_metric_unit::percent;
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width,
+                           is_percent ? "%.2f" : "%.0f", metric.value);
         ImGui::SameLine(0, 1.0f);
-        if(!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hide_fps_superscript]){
+        if (is_percent || !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hide_fps_superscript]){
             ImGui::PushFont(HUDElements.sw_stats->font_small);
-            HUDElements.TextColored(HUDElements.colors.text, "FPS");
+            HUDElements.TextColored(HUDElements.colors.text, "%s", is_percent ? "%" : "FPS");
             ImGui::PopFont();
         }
         ImguiNextColumnOrNewRow();
