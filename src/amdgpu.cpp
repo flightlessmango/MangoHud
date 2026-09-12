@@ -291,21 +291,25 @@ void AMDGPU::get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[ME
 
 		if (stop_thread) break;
 
-        std::unique_lock<std::mutex> lock(metrics_mutex);
-        cond_var.wait(lock, [this]() { return !paused || stop_thread; });
+		std::unique_lock<std::mutex> lock(metrics_mutex);
+		cond_var.wait(lock, [this]() { return !paused || stop_thread; });
+		lock.unlock();
+
+#ifndef TEST_ONLY
+		if (HUDElements.g_gamescopePid > 0 && HUDElements.g_gamescopePid != pid) {
+			pid = HUDElements.g_gamescopePid;
+			fdinfo.add_pid(pid);
+		}
+#endif
+
+		fdinfo.poll_all();
+		float proc_vram_used = fdinfo.get_memory_used(pid, "drm-memory-vram");
+
+		lock.lock();
 		// do one pass of metrics from sysfs nodes
 		// then we replace with GPU metrics if it's available
 		get_sysfs_metrics();
-
-#ifndef TEST_ONLY
-        if (HUDElements.g_gamescopePid > 0 && HUDElements.g_gamescopePid != pid) {
-            pid = HUDElements.g_gamescopePid;
-            fdinfo.add_pid(pid);
-        }
-#endif
-
-    	fdinfo.poll_all();
-		metrics.proc_vram_used = fdinfo.get_memory_used(pid, "drm-memory-vram");
+		metrics.proc_vram_used = proc_vram_used;
 
 		if (gpu_metrics_is_valid) {
 			UPDATE_METRIC_AVERAGE(gpu_load_percent);
