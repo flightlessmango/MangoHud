@@ -121,11 +121,15 @@ void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics, struct overla
         }
 
         if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_power] || (logger && logger->is_active())) {
-            unsigned int power, limit;
-            nvml->nvmlDeviceGetPowerUsage(device, &power);
-            nvml->nvmlDeviceGetPowerManagementLimit(device, &limit);
-            metrics->powerUsage = power / 1000;
-            metrics->powerLimit = limit / 1000;
+            unsigned int power = 0, limit = 0;
+            if (nvml->nvmlDeviceGetPowerUsage(device, &power) == NVML_SUCCESS && power < 2000000)
+                metrics->powerUsage = power / 1000.0f;
+            else
+                metrics->powerUsage = 0.0f;
+            if (nvml->nvmlDeviceGetPowerManagementLimit(device, &limit) == NVML_SUCCESS && limit < 2000000)
+                metrics->powerLimit = limit / 1000.0f;
+            else
+                metrics->powerLimit = 0.0f;
         }
 
         if (params->enabled[OVERLAY_PARAM_ENABLED_throttling_status]) {
