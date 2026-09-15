@@ -6,6 +6,7 @@
 #include <dlfcn.h>
 #include <pthread.h>
 #include <array>
+#include <cstdarg>
 #include <cstring>
 #include <cstdio>
 #include <mutex>
@@ -13,6 +14,7 @@
 #include "elfhacks.h"
 #include "real_dlsym.h"
 #include "gl.h"
+#include "hooks_helper.h"
 #include "mesa/os_time.h"
 #include <GL/glx.h>
 #include <GL/glxext.h>
@@ -315,6 +317,9 @@ struct func_ptr {
 };
 
 EXPORT_C_(__eglMustCastToProperFunctionPointerType) eglGetProcAddress(const char* procName);
+EXPORT_C_(wl_proxy*) wl_proxy_marshal_flags(wl_proxy* proxy, uint32_t opcode,
+                                            const wl_interface* interface,
+                                            uint32_t version, uint32_t flags, ...);
 EXPORT_C_(wl_proxy*) wl_proxy_marshal_array_flags(wl_proxy* proxy, uint32_t opcode,
                                                   const wl_interface* interface,
                                                   uint32_t version, uint32_t flags,
@@ -339,6 +344,7 @@ static const auto name_to_funcptr_map = std::array{
     ADD_HOOK(wl_egl_window_create),
     ADD_HOOK(wl_egl_window_destroy),
     ADD_HOOK(wl_display_disconnect),
+    ADD_HOOK(wl_proxy_marshal_flags),
     ADD_HOOK(wl_proxy_marshal_array_flags),
 #undef ADD_HOOK
 };
@@ -351,31 +357,37 @@ static void* find_hook(const char* name)
     return nullptr;
 }
 
+EXPORT_C_(wl_proxy*) wl_proxy_marshal_flags(wl_proxy* proxy, uint32_t opcode,
+                                            const wl_interface* interface,
+                                            uint32_t version, uint32_t flags, ...)
+{
+    auto* real = wl_marshal_real_array_flags();
+    if (!real)
+        return nullptr;
+
+    if (wl_marshal_is_surface_commit(proxy, opcode) && wayland)
+        wayland->request_commit_presentation_feedback(proxy);
+
+    va_list args_in;
+    va_start(args_in, flags);
+    auto* result = wl_marshal_forward_flags(real, proxy, opcode, interface,
+                                            version, flags, args_in);
+    va_end(args_in);
+
+    return result;
+}
+
 EXPORT_C_(wl_proxy*) wl_proxy_marshal_array_flags(wl_proxy* proxy, uint32_t opcode,
                                                   const wl_interface* interface,
                                                   uint32_t version, uint32_t flags,
                                                   wl_argument* args)
 {
-    static wl_proxy* (*real_wl_proxy_marshal_array_flags)(wl_proxy*, uint32_t,
-                                                          const wl_interface*,
-                                                          uint32_t, uint32_t,
-                                                          wl_argument*) = nullptr;
-    if (!real_wl_proxy_marshal_array_flags)
-        real_wl_proxy_marshal_array_flags =
-            (decltype(real_wl_proxy_marshal_array_flags))
-            real_dlsym(RTLD_NEXT, "wl_proxy_marshal_array_flags");
+    auto* real = wl_marshal_real_array_flags();
 
-    if (proxy && opcode == WL_SURFACE_COMMIT) {
-        auto* proxy_class = wl_proxy_get_class(proxy);
-        if (proxy_class && std::strcmp(proxy_class, wl_surface_interface.name) == 0) {
-            if (wayland)
-                wayland->request_commit_presentation_feedback(proxy);
-        }
-    }
+    if (wl_marshal_is_surface_commit(proxy, opcode) && wayland)
+        wayland->request_commit_presentation_feedback(proxy);
 
-    return real_wl_proxy_marshal_array_flags
-        ? real_wl_proxy_marshal_array_flags(proxy, opcode, interface, version, flags, args)
-        : nullptr;
+    return real ? real(proxy, opcode, interface, version, flags, args) : nullptr;
 }
 
 EXPORT_C_(__eglMustCastToProperFunctionPointerType) eglGetProcAddress(const char* procName)
