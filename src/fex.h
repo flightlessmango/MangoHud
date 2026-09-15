@@ -11,7 +11,6 @@ bool is_fex_capable();
 bool is_fex_pid_found();
 const char* get_fex_app_type();
 
-extern const char* fex_status;
 extern std::string fex_version;
 
 extern std::vector<float> fex_load_data;
@@ -51,6 +50,7 @@ extern fex_event_counts softfloat_counts;
 
 extern std::vector<float> fex_max_thread_loads;
 void update_fex_stats();
+const char* get_fex_status();
 }
 
 #endif //MANGOHUD_FEX_H

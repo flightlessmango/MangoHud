@@ -16,7 +16,7 @@ constexpr uint64_t AlignUp(uint64_t Value, uint64_t Alignment) {
 }
 
 namespace fex {
-const char* fex_status = "Not Found!";
+const char* fex_status = nullptr;
 std::string fex_version;
 std::vector<float> fex_load_data(200,0.f);
 
@@ -238,7 +238,7 @@ static void init_shm(int pid) {
 
     fd = shm_open(f.c_str(), O_RDONLY, 0);
     if (fd == -1) {
-        fex_status = "Not Found!";
+        fex_status = nullptr;
         goto err;
     }
 
@@ -445,5 +445,9 @@ void update_fex_stats() {
 
     fex_load_data.push_back(fex_load);
     fex_load_data.erase(fex_load_data.begin());
+}
+
+const char* get_fex_status() {
+    return fex_status;
 }
 }
