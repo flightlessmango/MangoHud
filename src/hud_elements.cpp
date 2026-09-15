@@ -1783,6 +1783,12 @@ void HudElements::fex_stats()
         return;
     }
 
+    auto status = fex::get_fex_status();
+    if (!status) {
+        // If FEX isn't found then status won't be set. Skip displaying anything.
+        return;
+    }
+
     ImGui::PushFont(HUDElements.sw_stats->font_small);
 
     if (HUDElements.params->fex_stats.status) {
@@ -1791,7 +1797,7 @@ void HudElements::fex_stats()
         ImguiNextColumnOrNewRow();
         ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
         ImguiNextColumnOrNewRow();
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", fex::fex_status);
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", status);
     }
 
     if (!fex::is_fex_pid_found()) {
