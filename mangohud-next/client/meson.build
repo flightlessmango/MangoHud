@@ -41,6 +41,7 @@ vulkan_layer = shared_library(
     link_args: [
       '-static-libstdc++',
       '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version')),
+      '-Wl,--undefined-version',
     ],
 )
 
