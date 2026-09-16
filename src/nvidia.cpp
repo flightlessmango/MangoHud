@@ -92,7 +92,7 @@ void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics, struct overla
 
         metrics->load = nvml_utilization.gpu;
 
-        if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp] || (logger && logger->is_active())) {
+        if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp] || params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp_only] || (logger && logger->is_active())) {
             unsigned int temp;
             nvml->nvmlDeviceGetTemperature(device, NVML_TEMPERATURE_GPU, &temp);
             metrics->temp = temp;
