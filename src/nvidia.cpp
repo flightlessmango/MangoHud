@@ -46,6 +46,16 @@ NVIDIA::NVIDIA(const char* pciBusId) {
     }
 #endif
 
+    // NVML has no hotspot sensor on GeForce; NVAPI does.
+    if (nvapi.init(pciBusId)) {
+        // Seed before the sampling thread starts. Whether the sensor exists is
+        // known now, so the first frame can already show it - otherwise the row
+        // only appears one update later and shifts the layout under it.
+        metrics.junction_temp = nvapi.hotspot();
+        metrics.memory_temp = nvapi.vram();
+        metrics.voltage = nvapi.voltage();
+    }
+
 #if defined(HAVE_XNVCTRL) && defined(HAVE_X11)
     if (!get_libx11()->IsLoaded())
         SPDLOG_DEBUG("XNVCtrl: X11 not loaded");
@@ -75,6 +85,23 @@ NVIDIA::NVIDIA(const char* pciBusId) {
 }
 
 #ifdef HAVE_NVML
+// NVAPI is independent of NVML, so this is sampled on its own rather than from
+// inside the NVML path: with only XNVCtrl available the values would otherwise
+// never be refreshed after the constructor seeded them.
+void NVIDIA::get_instant_metrics_nvapi(struct gpu_metrics *metrics, struct overlay_params *params) {
+    if (!nvapi.available())
+        return;
+
+    if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_junction_temp] || (logger && logger->is_active()))
+        metrics->junction_temp = nvapi.hotspot();
+
+    if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_mem_temp] || (logger && logger->is_active()))
+        metrics->memory_temp = nvapi.vram();
+
+    if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_voltage] || (logger && logger->is_active()))
+        metrics->voltage = nvapi.voltage();
+}
+
 void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics, struct overlay_params *params) {
     nvmlReturn_t response;
 
@@ -235,6 +262,7 @@ void NVIDIA::get_samples_and_copy() {
 #endif
 
         for (size_t cur_sample_id=0; cur_sample_id < METRICS_SAMPLE_COUNT; cur_sample_id++) {
+            NVIDIA::get_instant_metrics_nvapi(&metrics_buffer[cur_sample_id], params_p);
 #ifdef HAVE_NVML
         if (nvml_available)
             NVIDIA::get_instant_metrics_nvml(&metrics_buffer[cur_sample_id], params_p);
@@ -257,6 +285,9 @@ void NVIDIA::get_samples_and_copy() {
         GPU_UPDATE_METRIC_AVERAGE(MemClock);
 
         GPU_UPDATE_METRIC_AVERAGE(temp);
+        GPU_UPDATE_METRIC_AVERAGE(junction_temp);
+        GPU_UPDATE_METRIC_AVERAGE(memory_temp);
+        GPU_UPDATE_METRIC_AVERAGE(voltage);
 
         GPU_UPDATE_METRIC_AVERAGE_FLOAT(memoryTotal);
         GPU_UPDATE_METRIC_AVERAGE_FLOAT(sys_vram_used);
