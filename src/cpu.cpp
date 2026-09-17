@@ -248,8 +248,9 @@ bool CPUStats::UpdateCoreMhz() {
             std::string path = "/sys/devices/system/cpu/cpu" + std::to_string(cpu.cpu_id) + "/cpufreq/scaling_cur_freq";
             if ((fp = fopen(path.c_str(), "r"))){
                 int64_t temp;
-                if (fscanf(fp, "%" PRId64, &temp) != 1)
+                if (fscanf(fp, "%" PRId64, &temp) != 1) {
                     temp = 0;
+                    }
                 cpu.mhz = temp / 1000;
                 fclose(fp);
                 scaling_freq = true;
@@ -609,7 +610,7 @@ bool CPUStats::GetCpuFile() {
             // E2K (Elbrus 2000) CPU temperature module
             find_input(path, "temp", input, "Node 0 Max");
             break;
-        } else if (std::regex_match(name, match, std::regex("cpu\\d*_thermal"))) {
+        } else if (std::regex_match(name, match, std::regex("cpu_\\d+(_\\d+)*_thermal(_\\d+)*"))) {
             find_fallback_input(path, "temp1", input);
             break;
         } else if (name == "apm_xgene") {
