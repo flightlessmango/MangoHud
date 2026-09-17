@@ -30,6 +30,57 @@ struct metrics_table_header {
 	uint8_t				format_revision;
 	uint8_t				content_revision;
 };
+struct gpu_metrics_v1_0 {
+        struct metrics_table_header common_header;
+
+        uint16_t temperature_edge;
+        uint16_t temperature_hotspot;
+        uint16_t temperature_mem;
+        uint16_t temperature_vrgfx;
+        uint16_t temperature_vrsoc;
+        uint16_t temperature_vrmem;
+
+        uint16_t average_gfx_activity;
+        uint16_t average_umc_activity;
+
+        uint16_t average_socket_power;
+
+        uint64_t energy_accumulator;
+
+        uint64_t system_clock_counter;
+
+        uint16_t current_gfxclk;
+        uint16_t current_socclk;
+        uint16_t current_uclk;
+
+        uint16_t padding[18];
+};
+
+struct gpu_metrics_v1_0_ext {
+        struct metrics_table_header common_header;
+
+        uint16_t temperature_edge;
+        uint16_t temperature_hotspot;
+        uint16_t temperature_mem;
+        uint16_t temperature_vrgfx;
+        uint16_t temperature_vrsoc;
+        uint16_t temperature_vrmem;
+
+        uint16_t average_gfx_activity;
+        uint16_t average_umc_activity;
+
+        uint16_t average_socket_power;
+
+        uint64_t energy_accumulator;
+
+        uint64_t system_clock_counter;
+
+        uint16_t current_gfxclk;
+        uint16_t current_socclk;
+        uint16_t current_uclk;
+
+        uint16_t padding[22];
+};
 
 struct gpu_metrics_v1_3 {
 	struct metrics_table_header	common_header;
