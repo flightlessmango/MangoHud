@@ -99,6 +99,9 @@ struct Tracepoint;
    OVERLAY_PARAM_BOOL(device_battery_icon)           \
    OVERLAY_PARAM_BOOL(hide_fsr_sharpness)            \
    OVERLAY_PARAM_BOOL(fan)                           \
+   OVERLAY_PARAM_BOOL(cfan)                          \
+   OVERLAY_PARAM_CUSTOM(fan_custom_sensor)           \
+   OVERLAY_PARAM_CUSTOM(cfan_custom_sensor)          \
    OVERLAY_PARAM_BOOL(throttling_status)             \
    OVERLAY_PARAM_BOOL(throttling_status_graph)       \
    OVERLAY_PARAM_BOOL(fcat)                          \
@@ -180,6 +183,8 @@ struct Tracepoint;
    OVERLAY_PARAM_CUSTOM(vram_color)                  \
    OVERLAY_PARAM_CUSTOM(ram_color)                   \
    OVERLAY_PARAM_CUSTOM(engine_color)                \
+   OVERLAY_PARAM_CUSTOM(fan_color)                   \
+   OVERLAY_PARAM_CUSTOM(cfan_color)                  \
    OVERLAY_PARAM_CUSTOM(frametime_color)             \
    OVERLAY_PARAM_CUSTOM(background_color)            \
    OVERLAY_PARAM_CUSTOM(io_color)                    \
@@ -310,7 +315,7 @@ struct overlay_params {
    bool gl_dont_flip {false};
    int64_t log_duration, log_interval;
    unsigned cpu_color, gpu_color, vram_color, ram_color,
-            engine_color, io_color, frametime_color, background_color,
+            engine_color, fan_color, cfan_color, io_color, frametime_color, background_color,
             text_color, wine_color, battery_color, network_color,
             horizontal_separator_color;
    std::vector<unsigned> gpu_load_color;
@@ -341,6 +346,8 @@ struct overlay_params {
    std::string media_player_name;
    std::string cpu_text, fps_text;
    std::map<std::string, std::string> cpu_custom_temp_sensor;
+   std::vector<std::map<std::string, std::string>> fan_custom_sensor;
+   std::vector<std::map<std::string, std::string>> cfan_custom_sensor;
    std::vector<std::string> blacklist;
    unsigned autostart_log;
    std::vector<std::string> media_player_format;

@@ -250,6 +250,48 @@ static std::map<std::string, std::string> parse_cpu_custom_temp_sensor(const std
    return map;
 }
 
+static std::vector<std::map<std::string, std::string>> parse_fan_custom_sensor(const std::string str) {
+   // Accepts one or more sensors separated by ';'. Each sensor is
+   // "hwmon_name,hwmon_input[,label]", e.g.
+   //   "nct6799,fan2_input"
+   //   "nct6799,fan2_input,CPU;nct6799,fan7_input,GPU"
+   std::vector<std::map<std::string, std::string>> sensors;
+
+   std::stringstream ss(str);
+   std::string segment;
+   while (std::getline(ss, segment, ';')) {
+      trim(segment);
+      if (segment.empty())
+         continue;
+
+      size_t c1 = segment.find(',');
+      if (c1 == std::string::npos || c1 == segment.length() - 1)
+         continue; // need at least name,input
+
+      std::map<std::string, std::string> map;
+      map["hwmon_name"] = segment.substr(0, c1);
+
+      size_t c2 = segment.find(',', c1 + 1);
+      if (c2 == std::string::npos) {
+         map["hwmon_input"] = segment.substr(c1 + 1);
+      } else {
+         map["hwmon_input"] = segment.substr(c1 + 1, c2 - (c1 + 1));
+         map["label"] = segment.substr(c2 + 1);
+      }
+
+      if (map["hwmon_name"].empty() || map["hwmon_input"].empty())
+         continue;
+
+      SPDLOG_DEBUG(
+         "fan_custom_sensor: name=\"{}\" input=\"{}\" label=\"{}\"",
+         map["hwmon_name"], map["hwmon_input"], map["label"]
+      );
+      sensors.push_back(map);
+   }
+
+   return sensors;
+}
+
 static uint32_t
 parse_fps_sampling_period(const char *str)
 {
@@ -620,6 +662,9 @@ parse_ftrace(const char *str) {
 #define parse_vram_color(s) parse_color(s)
 #define parse_ram_color(s) parse_color(s)
 #define parse_engine_color(s) parse_color(s)
+#define parse_fan_color(s) parse_color(s)
+#define parse_cfan_color(s) parse_color(s)
+#define parse_cfan_custom_sensor(s) parse_fan_custom_sensor(s)
 #define parse_io_color(s) parse_color(s)
 #define parse_frametime_color(s) parse_color(s)
 #define parse_background_color(s) parse_color(s)
@@ -902,6 +947,8 @@ static void set_param_defaults(struct overlay_params *params){
    params->vram_color = 0xad64c1;
    params->ram_color = 0xc26693;
    params->engine_color = 0xeb5b5b;
+   params->fan_color = 0xeb5b5b;
+   params->cfan_color = 0xeb5b5b;
    params->io_color = 0xa491d3;
    params->frametime_color = 0x00ff00;
    params->background_color = 0x020202;
@@ -1056,12 +1103,14 @@ parse_overlay_config(struct overlay_params *params,
       params->font_scale_media_player = 0.55f;
 
    // Convert from 0xRRGGBB to ImGui's format
-   std::array<unsigned *, 24> colors = {
+   std::array<unsigned *, 26> colors = {
       &params->cpu_color,
       &params->gpu_color,
       &params->vram_color,
       &params->ram_color,
       &params->engine_color,
+      &params->fan_color,
+      &params->cfan_color,
       &params->io_color,
       &params->background_color,
       &params->frametime_color,
