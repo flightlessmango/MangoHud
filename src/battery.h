@@ -8,7 +8,8 @@ class BatteryStats{
         float getPower();
         float getPercent();
         float getTimeRemaining();
-        std::string battPath[2];
+        std::string battPath[2]; // I guess this is why it triggered a segfault earlier when working on this?
+        std::string battType[2];
         float current_watt = 0;
         float current_percent = 0;
         float remaining_time = 0;
