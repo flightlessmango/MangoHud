@@ -89,9 +89,10 @@ static void* get_egl_proc_address(const char* name) {
 
 static gl_context *create_gl_context(void *ctx)
 {
-    gl_context *gl_ctx;
+    if (!ctx)
+        return nullptr;
 
-    gl_ctx = (gl_context *)calloc(1, sizeof(*gl_ctx));
+    gl_context *gl_ctx = (gl_context *)calloc(1, sizeof(*gl_ctx));
     gl_ctx->ctx = ctx;
     gl_contexts[ctx] = gl_ctx;
     //SPDLOG_DEBUG("created gl_context {} for GLX context {}", (void *)gl_ctx, ctx);
@@ -164,12 +165,16 @@ EXPORT_C_(unsigned int) eglSwapBuffers(void* dpy, void* surf)
 
         if (!gl_ctx)
             gl_ctx = create_gl_context(ctx);
-        imgui_create(gl_ctx, gl_wsi::GL_WSI_EGL);
 
-        int width=0, height=0;
-        if (pfn_eglQuerySurface(dpy, surf, EGL_HEIGHT, &height) &&
-            pfn_eglQuerySurface(dpy, surf, EGL_WIDTH, &width))
-            imgui_render(gl_ctx, width, height);
+        if (gl_ctx) {
+            imgui_create(gl_ctx, gl_wsi::GL_WSI_EGL);
+
+            int width=0, height=0;
+            if (pfn_eglQuerySurface(dpy, surf, EGL_HEIGHT, &height) &&
+                pfn_eglQuerySurface(dpy, surf, EGL_WIDTH, &width))
+                imgui_render(gl_ctx, width, height);
+        } else
+            spdlog::warn("eglSwapBuffers called without an OpenGL context");
 
         if (fps_limiter)
             fps_limiter->limit(true);
