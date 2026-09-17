@@ -223,7 +223,8 @@ private:
       {"0xd47", "A710"},
       {"0xd4f", "A720"},
       {"0xd4b", "X4"},
-
+      {"0xd85", "X925"},
+      
       // Efficiency Cores
       {"0xd03", "A53"},
       {"0xd05", "A55"},
@@ -232,7 +233,11 @@ private:
 
       // General-Purpose Cores
       {"0xd04", "A35"},
-      {"0xd06", "A65"}
+      {"0xd06", "A65"},
+
+      //Qualcomm Oryon Cores
+      {"0x001", "Oryon-1"},
+      {"0x002", "Oryon-3"}
    };
 };
 
