@@ -115,6 +115,14 @@ GPUS::GPUS(const overlay_params* early_params) {
 
 }
 
+bool GPU::is_steam_frame() {
+    if (driver != "msm_dpu" && driver != "msm_drm")
+        return false;
+
+    const std::string modalias_path = "/sys/class/drm/" + drm_node + "/device/modalias";
+    return read_line(modalias_path).find("Cqcom,sm8650-dpu") != std::string::npos;
+}
+
 std::string GPUS::get_driver(const std::string& node) {
     std::string path = "/sys/class/drm/" + node + "/device/driver";
 
