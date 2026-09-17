@@ -257,7 +257,8 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
 #endif
    frametime = frametime_ms;
    fps = double(1000 / frametime_ms);
-   if (fpsmetrics) fpsmetrics->update(frametime_ms);
+   if (fpsmetrics && sw_stats.last_present_time)
+      fpsmetrics->update(frametime_ms);
 
    if (elapsed >= real_params->fps_sampling_period) {
       if (!hw_update_thread)
@@ -541,7 +542,7 @@ void render_mpris_metadata(const struct overlay_params& params, mutexed_metadata
 
 static void render_benchmark(swapchain_stats& data, const struct overlay_params& params, const ImVec2& window_size, unsigned height, Clock::time_point now){
    // TODO, FIX LOG_DURATION FOR BENCHMARK
-   int benchHeight = (2 + benchmark.percentile_data.size()) * real_font_size.x + 10.0f + 58;
+   int benchHeight = (2 + benchmark.metrics.size()) * real_font_size.x + 10.0f + 58;
    ImGui::SetNextWindowSize(ImVec2(window_size.x, benchHeight), ImGuiCond_Always);
    if (height - (window_size.y + data.main_window_pos.y + 5) < benchHeight)
       ImGui::SetNextWindowPos(ImVec2(data.main_window_pos.x, data.main_window_pos.y - benchHeight - 5), ImGuiCond_Always);
@@ -589,11 +590,14 @@ static void render_benchmark(swapchain_stats& data, const struct overlay_params&
    snprintf(duration, sizeof(duration), "Duration: %.1fs", std::chrono::duration<float>(logger->last_log_end() - logger->last_log_begin()).count());
    ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2 )- (ImGui::CalcTextSize(duration).x / 2));
    ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), "%s", duration);
-   for (auto& data_ : benchmark.percentile_data){
-      char buffer[20];
-      snprintf(buffer, sizeof(buffer), "%s %.1f", data_.first.c_str(), data_.second);
+   for (const auto& metric : benchmark.metrics){
+      char buffer[32];
+      if (metric.unit == fps_metric_unit::percent)
+         snprintf(buffer, sizeof(buffer), "%s %.2f%%", metric.display_name.c_str(), metric.value);
+      else
+         snprintf(buffer, sizeof(buffer), "%s %.1f", metric.display_name.c_str(), metric.value);
       ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2 )- (ImGui::CalcTextSize(buffer).x / 2));
-      ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), "%s %.1f", data_.first.c_str(), data_.second);
+      ImGui::TextColored(ImVec4(1.0, 1.0, 1.0, alpha / params.background_alpha), "%s", buffer);
    }
 
    float max = benchmark.fps_data.empty() ? 0.0f : *max_element(benchmark.fps_data.begin(), benchmark.fps_data.end());
