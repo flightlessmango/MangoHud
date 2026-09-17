@@ -112,6 +112,7 @@ class GPU {
 
         std::string gpu_text();
         std::string vram_text();
+        bool is_steam_frame();
 
     private:
         std::thread thread;

@@ -1402,4 +1402,18 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
          break;
 
    }
+
+   if (!gpus)
+      gpus = std::make_unique<GPUS>(params);
+
+   for (const auto& gpu : gpus->available_gpus) {
+      if (!gpu || !gpu->is_steam_frame())
+         continue;
+
+      add_to_options(params, "gpu_voltage", "0");
+      add_to_options(params, "gpu_power_limit", "0");
+      add_to_options(params, "gpu_efficiency", "0");
+      add_to_options(params, "gpu_power", "0");
+      break;
+   }
 }
