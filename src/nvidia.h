@@ -94,6 +94,9 @@ class NVIDIA {
 #ifdef HAVE_NVML
         nvmlDevice_t device;
 
+        unsigned int slow_sample_counter = 0;
+        gpu_metrics cached_slow_metrics {};
+
         std::vector<nvmlProcessInfo_v1_t> process_info = {};
 
         void get_instant_metrics_nvml(struct gpu_metrics *metrics, struct overlay_params *params);

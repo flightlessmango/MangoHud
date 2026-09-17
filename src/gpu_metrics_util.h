@@ -36,6 +36,7 @@ struct gpu_metrics {
 #define METRICS_UPDATE_PERIOD_MS 500
 #define METRICS_POLLING_PERIOD_MS 25
 #define METRICS_SAMPLE_COUNT (METRICS_UPDATE_PERIOD_MS/METRICS_POLLING_PERIOD_MS)
+#define NVML_SLOW_POLL_PERIOD_MS METRICS_UPDATE_PERIOD_MS
 
 #define GPU_UPDATE_METRIC_AVERAGE(FIELD) do { int value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer[s].FIELD; } metrics.FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
 #define GPU_UPDATE_METRIC_AVERAGE_FLOAT(FIELD) do { float value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer[s].FIELD; } metrics.FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
