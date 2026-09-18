@@ -14,6 +14,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <unistd.h>
 #include "../overlay.h"
 #include "notify.h"
@@ -54,6 +55,48 @@ static long mangoapp_ctrl_msg_type()
 {
     long type = mangoapp_msg_type();
     return type == 1 ? 2 : type + 1;
+}
+
+static const char* mangoapp_upscaler_name(uint8_t upscaler, const char* fallback)
+{
+    switch (upscaler) {
+        case MANGOAPP_UPSCALER_LINEAR:  return "LINEAR";
+        case MANGOAPP_UPSCALER_NEAREST: return "NEAREST";
+        case MANGOAPP_UPSCALER_FSR:     return "FSR";
+        case MANGOAPP_UPSCALER_NIS:     return "NIS";
+        case MANGOAPP_UPSCALER_PIXEL:   return "PIXEL";
+        case MANGOAPP_UPSCALER_SGSR:    return "SGSR";
+        default:                        return fallback;
+    }
+}
+
+static bool mangoapp_upscaler_sharpens(uint8_t upscaler)
+{
+    return upscaler == MANGOAPP_UPSCALER_FSR ||
+           upscaler == MANGOAPP_UPSCALER_NIS ||
+           upscaler == MANGOAPP_UPSCALER_SGSR;
+}
+
+static std::string mangoapp_engine_name(const char (&engine_name)[40])
+{
+    std::string name(engine_name, strnlen(engine_name, sizeof(engine_name)));
+
+    if (name == "DXVK")
+        return "DXVK";
+    if (name == "vkd3d")
+        return "VKD3D";
+    if (name == "mesa zink")
+        return "ZINK";
+    if (name == "Damavand")
+        return "DAMAVAND";
+    if (name == "Feral3D")
+        return "Feral3D";
+    if (name == "SDLGPU")
+        return "SDL";
+    if (name == "gamescope")
+        return "GAMESCOPE";
+
+    return "GAMESCOPE";
 }
 
 swapchain_stats sw_stats {};
@@ -240,7 +283,10 @@ static void msg_read_thread(){
         if (msg_size != size_t(-1))
         {
             if (hdr->version == 1){
-                if (msg_size > offsetof(struct mangoapp_msg_v1, pid)) {
+                // msgrcv's size excludes msg_type, which offsetof counts.
+                const size_t msg_bytes = msg_size + sizeof(hdr->msg_type);
+
+                if (msg_bytes > offsetof(struct mangoapp_msg_v1, pid)) {
                     HUDElements.g_gamescopePid = mangoapp_v1->pid;
 
                     if (previous_game_pid != mangoapp_v1->pid) {
@@ -249,7 +295,7 @@ static void msg_read_thread(){
                     }
                 }
 
-                if (msg_size > offsetof(struct mangoapp_msg_v1, visible_frametime_ns)){
+                if (msg_bytes > offsetof(struct mangoapp_msg_v1, visible_frametime_ns)){
                     auto real_params = get_params();
                     bool should_new_frame = false;
                     if (mangoapp_v1->visible_frametime_ns != ~(0lu) && (!real_params->no_display || logger->is_active())) {
@@ -257,20 +303,39 @@ static void msg_read_thread(){
                         should_new_frame = true;
                     }
 
-                    if (msg_size > offsetof(mangoapp_msg_v1, fsrUpscale)){
+                    if (msg_bytes > offsetof(mangoapp_msg_v1, fsrUpscale)){
                         HUDElements.g_fsrUpscale = mangoapp_v1->fsrUpscale;
                         if (real_params->fsr_steam_sharpness < 0)
                             HUDElements.g_fsrSharpness = mangoapp_v1->fsrSharpness;
                         else
                         HUDElements.g_fsrSharpness = real_params->fsr_steam_sharpness - mangoapp_v1->fsrSharpness;
                     }
+                    uint8_t upscaler = mangoapp_v1->fsrUpscale ? MANGOAPP_UPSCALER_FSR : MANGOAPP_UPSCALER_LINEAR;
+                    if (msg_bytes > offsetof(mangoapp_msg_v1, upscaler))
+                        upscaler = mangoapp_v1->upscaler;
+
+                    uint8_t wanted_upscaler = upscaler;
+                    if (upscaler == MANGOAPP_UPSCALER_LINEAR)
+                        wanted_upscaler = MANGOAPP_UPSCALER_FSR;
+                    if (msg_bytes > offsetof(mangoapp_msg_v1, wantedUpscaler))
+                        wanted_upscaler = mangoapp_v1->wantedUpscaler;
+
+                    HUDElements.g_upscaler = mangoapp_upscaler_name(upscaler, "LINEAR");
+                    HUDElements.g_wantedUpscaler = mangoapp_upscaler_name(wanted_upscaler, "SCALING");
+                    HUDElements.g_upscaling = upscaler != MANGOAPP_UPSCALER_LINEAR;
+                    HUDElements.g_upscalerSharpens = mangoapp_upscaler_sharpens(upscaler);
                     if (!real_params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam]){
                         steam_focused = get_prop("GAMESCOPE_FOCUSED_APP_GFX") == 769;
                     } else {
                         steam_focused = false;
                     }
 
-                    if (msg_size > offsetof(mangoapp_msg_v1, latency_ns))
+                    if (msg_bytes > offsetof(mangoapp_msg_v1, engineName) && !steam_focused)
+                        sw_stats.engineName = mangoapp_engine_name(mangoapp_v1->engineName);
+                    else
+                        sw_stats.engineName = "GAMESCOPE";
+
+                    if (msg_bytes > offsetof(mangoapp_msg_v1, latency_ns))
                         gamescope_frametime(mangoapp_v1->app_frametime_ns, mangoapp_v1->latency_ns);
 
                     if (should_new_frame)

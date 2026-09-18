@@ -38,6 +38,10 @@ class HudElements{
         int table_columns_count = 0;
         pid_t g_gamescopePid = -1;
         int g_fsrUpscale = -1;
+        std::string g_upscaler = "LINEAR";
+        std::string g_wantedUpscaler = "SCALING";
+        bool g_upscaling = false;
+        bool g_upscalerSharpens = false;
         int g_fsrSharpness = -1;
         Clock::time_point last_exec;
         std::vector<std::pair<std::string, std::string>> options;
