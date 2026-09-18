@@ -12,6 +12,8 @@
 #include <stdio.h>
 #include <thread>
 #include <chrono>
+#include <cstdint>
+#include <cstdlib>
 #include <unistd.h>
 #include "../overlay.h"
 #include "notify.h"
@@ -33,6 +35,25 @@ using namespace std;
 static void glfw_error_callback(int error, const char* description)
 {
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
+}
+
+static long mangoapp_msg_type()
+{
+    const char* env = getenv("MANGOAPP_MSG_TYPE");
+    if (env) {
+        long type = atol(env);
+        if (type > 0 && type <= INT32_MAX)
+            return type;
+    }
+
+    return 1;
+}
+
+// gamescope relays mangohudctl's messages onto the stream type plus one.
+static long mangoapp_ctrl_msg_type()
+{
+    long type = mangoapp_msg_type();
+    return type == 1 ? 2 : type + 1;
 }
 
 swapchain_stats sw_stats {};
@@ -121,10 +142,14 @@ static unsigned int get_prop(const char* propName){
 }
 
 static void ctrl_thread(){
+    // Own buffer, msg_read_thread is reading into raw_msg at the same time.
+    static uint8_t ctrl_msg[1024] = {0};
+    const long ctrl_msg_type = mangoapp_ctrl_msg_type();
+
     while (1){
-        const struct mangoapp_ctrl_msgid1_v1 *mangoapp_ctrl_v1 = (const struct mangoapp_ctrl_msgid1_v1*) raw_msg;
-        memset(raw_msg, 0, sizeof(raw_msg));
-        msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 2, 0);
+        const struct mangoapp_ctrl_msgid1_v1 *mangoapp_ctrl_v1 = (const struct mangoapp_ctrl_msgid1_v1*) ctrl_msg;
+        memset(ctrl_msg, 0, sizeof(ctrl_msg));
+        msgrcv(msgid, (void *) ctrl_msg, sizeof(ctrl_msg), ctrl_msg_type, 0);
         switch (mangoapp_ctrl_v1->log_session) {
             case 0:
                 // Keep as-is
@@ -206,11 +231,12 @@ static void msg_read_thread(){
     const struct mangoapp_msg_v1 *mangoapp_v1 = (const struct mangoapp_msg_v1*) raw_msg;
 
     uint32_t previous_game_pid = 0;
+    const long msg_type = mangoapp_msg_type();
 
     while (1){
         // make sure that the message recieved is compatible
         // and that we're not trying to use variables that don't exist (yet)
-        size_t msg_size = msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), 1, 0);
+        size_t msg_size = msgrcv(msgid, (void *) raw_msg, sizeof(raw_msg), msg_type, 0);
         if (msg_size != size_t(-1))
         {
             if (hdr->version == 1){
@@ -279,6 +305,13 @@ static GLFWwindow* init(const char* glsl_version){
     if (x11_window && x11_display)
     {
         // Set atom for gamescope to render as an overlay.
+        const long msg_type = mangoapp_msg_type();
+        if (msg_type != 1) {
+            // Tag before the overlay property.
+            Atom msg_type_atom = XInternAtom(x11_display, "GAMESCOPE_MANGOAPP_MSG_TYPE", False);
+            set_x_cardinal_property(x11_display, x11_window, msg_type_atom, msg_type);
+        }
+
         Atom overlay_atom = XInternAtom (x11_display, GamescopeOverlayProperty, False);
         uint32_t value = 1;
         set_x_cardinal_property(x11_display, x11_window, overlay_atom, value);
