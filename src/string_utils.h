@@ -11,6 +11,7 @@
 #include <cctype>
 #include <locale>
 #include <cstring>
+#include <spdlog/spdlog.h>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -116,6 +117,18 @@ static bool try_stoull(unsigned long long& val, const std::string& str)
     if (sscanf(str.c_str(), "%llu", &val) == 1)
         return true;
     return false;
+}
+
+static bool try_stof(float& val, const std::string& str)
+{
+    try {
+        size_t parsed = 0;
+        val = std::stof(str, &parsed);
+        return parsed > 0;
+    } catch (const std::exception& e) {
+        SPDLOG_WARN("Failed to parse float '{}': {}", str, e.what());
+        return false;
+    }
 }
 
 static float parse_float(const std::string& s, std::size_t* float_len = nullptr){

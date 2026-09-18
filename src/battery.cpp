@@ -1,23 +1,28 @@
 #include <spdlog/spdlog.h>
 #include <filesystem.h>
 #include "battery.h"
+#include "file_utils.h"
+#include "string_utils.h"
 
 namespace fs = ghc::filesystem;
 using namespace std;
 
 void BatteryStats::numBattery() {
     int batteryCount = 0;
-    if (!fs::exists("/sys/class/power_supply/")) {
-         batteryCount = 0;
-    }
-    fs::path path("/sys/class/power_supply/");
-    for (auto& p : fs::directory_iterator(path)) {
-        string fileName = p.path().filename();
-        if (fileName.find("BAT") != std::string::npos) {
-            battPath[batteryCount] = p.path();
-            batteryCount += 1;
+
+    for (const auto& path : { fs::path("/sys/class/power_supply/"), fs::path("/run/deckardcharger/") }) {
+        if (!fs::exists(path))
+            continue;
+
+        for (auto& p : fs::directory_iterator(path)) {
+            string fileName = p.path().filename();
+            if (fileName.find("BAT") != std::string::npos && batteryCount < battery_count_max) {
+                battPath[batteryCount] = p.path();
+                batteryCount += 1;
+            }
         }
     }
+
     batt_count = batteryCount;
     batt_check = true;
 }
@@ -41,6 +46,14 @@ float BatteryStats::getPercent()
 {
     float charge_n = 0;
     float charge_f = 0;
+
+    std::string deckard_percent = read_line("/run/deckardcharger/battery_percent");
+    if (!deckard_percent.empty()) {
+        float percent = 0.0f;
+        if (try_stof(percent, deckard_percent))
+            return percent;
+    }
+
     for(int i = 0; i < batt_count; i++) {
         string syspath = battPath[i];
         string charge_now = syspath + "/charge_now";
