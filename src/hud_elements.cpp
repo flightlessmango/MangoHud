@@ -1305,7 +1305,7 @@ void HudElements::gamescope_fsr(){
         ImguiNextColumnFirstItem();
         string FSR_TEXT;
         ImVec4 FSR_COLOR;
-        if (HUDElements.g_fsrUpscale){
+        if (HUDElements.g_upscaling){
             FSR_TEXT = "ON";
             FSR_COLOR = HUDElements.colors.fps_value_high;
         } else {
@@ -1313,10 +1313,10 @@ void HudElements::gamescope_fsr(){
             FSR_COLOR = HUDElements.colors.fps_value_low;
         }
 
-        HUDElements.TextColored(HUDElements.colors.engine, "%s", "FSR");
+        HUDElements.TextColored(HUDElements.colors.engine, "%s", HUDElements.g_wantedUpscaler.c_str());
         ImguiNextColumnOrNewRow();
         right_aligned_text(FSR_COLOR, HUDElements.ralign_width, "%s", FSR_TEXT.c_str());
-        if (HUDElements.g_fsrUpscale){
+        if (HUDElements.g_upscalerSharpens){
             if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hide_fsr_sharpness]) {
                 ImguiNextColumnOrNewRow();
                 right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", HUDElements.g_fsrSharpness);

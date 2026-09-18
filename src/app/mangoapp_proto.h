@@ -17,8 +17,24 @@ struct mangoapp_msg_v1 {
     uint64_t latency_ns;
     uint32_t outputWidth;
     uint32_t outputHeight;
+    uint16_t displayRefresh;
+    bool bAppWantsHDR : 1;
+    bool bSteamFocused : 1;
+    char engineName[40];
+    uint8_t upscaler; // mangoapp_upscaler that produced the frame, LINEAR for none
+    uint8_t wantedUpscaler; // mangoapp_upscaler the user selected
     // WARNING: Always ADD fields, never remove or repurpose fields
 } __attribute__((packed));
+
+// gamescope's GamescopeUpscaleFilter values, as Steam writes them to the scaling atom.
+enum mangoapp_upscaler : uint8_t {
+    MANGOAPP_UPSCALER_LINEAR = 0,
+    MANGOAPP_UPSCALER_NEAREST = 1,
+    MANGOAPP_UPSCALER_FSR = 2,
+    MANGOAPP_UPSCALER_NIS = 3,
+    MANGOAPP_UPSCALER_PIXEL = 4,
+    MANGOAPP_UPSCALER_SGSR = 5,
+};
 
 struct mangoapp_ctrl_header {
     long msg_type;  // Message queue ID, never change

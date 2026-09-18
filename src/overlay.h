@@ -120,6 +120,9 @@ inline const char* engine_name(const swapchain_stats& sw_stats) {
    if (en[OVERLAY_PARAM_ENABLED_horizontal] && !en[OVERLAY_PARAM_ENABLED_engine_short_names])
       return "FPS";
 
+   if (engine == EngineTypes::GAMESCOPE && !sw_stats.engineName.empty())
+      return sw_stats.engineName.c_str();
+
    if (en[OVERLAY_PARAM_ENABLED_dx_api]) {
       if (engine == EngineTypes::VKD3D)
          return "DX12";
