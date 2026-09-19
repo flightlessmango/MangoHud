@@ -462,6 +462,14 @@ static bool get_cpu_power_xgene(CPUPowerData* cpuPowerData, float& power) {
     return true;
 }
 
+static bool get_cpu_power_deckard(float& power) {
+    std::string value = read_line("/run/power-monitor/power/cores_total");
+    if (value.empty())
+        return false;
+
+    return try_stof(power, value);
+}
+
 bool CPUStats::UpdateCpuPower() {
     InitCpuPowerData();
 
@@ -488,6 +496,9 @@ bool CPUStats::UpdateCpuPower() {
             break;
         case CPU_POWER_XGENE:
             if (!get_cpu_power_xgene(m_cpuPowerData.get(), power)) return false;
+            break;
+        case CPU_POWER_DECKARD:
+            if (!get_cpu_power_deckard(power)) return false;
             break;
         default:
             return false;
@@ -773,6 +784,14 @@ bool CPUStats::InitCpuPowerData() {
                     cpuPowerData = (CPUPowerData*)powerData.release();
                 }
             }
+        }
+    }
+
+    if (!cpuPowerData) {
+        float power = 0.0f;
+        if (get_cpu_power_deckard(power)) {
+            auto powerData = std::make_unique<CPUPowerData_deckard>();
+            cpuPowerData = (CPUPowerData*)powerData.release();
         }
     }
 
