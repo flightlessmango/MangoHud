@@ -112,6 +112,10 @@ CPUStats::~CPUStats()
         fclose(m_cpuTempFile);
         m_cpuTempFile = nullptr;
     }
+    if (m_platformFanFile) {
+        fclose(m_platformFanFile);
+        m_platformFanFile = nullptr;
+    }
 }
 
 bool CPUStats::Init()
@@ -306,6 +310,21 @@ bool CPUStats::UpdateCpuTemp() {
     bool ret = ReadcpuTempFile(temp);
     m_cpuDataTotal.temp = temp;
 
+    return ret;
+}
+
+bool CPUStats::UpdatePlatformFanSpeed() {
+    if (!GetPlatformFanFile()) {
+        m_platformFanSpeed = -1;
+        return false;
+    }
+
+    rewind(m_platformFanFile);
+    fflush(m_platformFanFile);
+
+    int fan_speed = 0;
+    bool ret = fscanf(m_platformFanFile, "%d", &fan_speed) == 1;
+    m_platformFanSpeed = ret ? fan_speed / m_platformFanDivisor : -1;
     return ret;
 }
 
@@ -648,6 +667,36 @@ bool CPUStats::GetCpuFile() {
     m_cpuTempFile = fopen(input.c_str(), "r");
 
     return true;
+}
+
+bool CPUStats::GetPlatformFanFile() {
+    if (m_platformFanFile)
+        return true;
+
+    std::string hwmon = "/sys/class/hwmon/";
+    auto dirs = ls(hwmon.c_str());
+    for (auto& dir : dirs) {
+        std::string path = hwmon + dir;
+        std::string name = read_line(path + "/name");
+        std::string input = path + "/fan1_input";
+
+        if (!file_exists(input))
+            continue;
+
+        if (name.find("steamdeck_hwmon") != std::string::npos) {
+            m_platformFanDivisor = 1;
+        } else if (name.find("slg4ax46073v") != std::string::npos) {
+            m_platformFanDivisor = 2;
+        } else {
+            continue;
+        }
+
+        SPDLOG_INFO("hwmon: using platform fan input: {}", input);
+        m_platformFanFile = fopen(input.c_str(), "r");
+        return m_platformFanFile != nullptr;
+    }
+
+    return false;
 }
 
 static CPUPowerData_k10temp* init_cpu_power_data_k10temp(const std::string path) {
