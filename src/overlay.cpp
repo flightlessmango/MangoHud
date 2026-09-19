@@ -49,7 +49,6 @@ double min_frametime, max_frametime;
 bool gpu_metrics_exists = false;
 bool steam_focused = false;
 vector<float> frametime_data(200,0.f);
-int fan_speed;
 fcatoverlay fcatstatus;
 std::string drm_dev;
 int current_preset;
@@ -102,8 +101,6 @@ void init_spdlog()
 void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
 {
    auto real_params = get_params();
-   if (real_params->enabled[OVERLAY_PARAM_ENABLED_fan])
-      update_fan();
    if (real_params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
       cpuStats.UpdateCPUData();
 
@@ -122,6 +119,8 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
    }
 
 #ifdef __linux__
+   if (real_params->enabled[OVERLAY_PARAM_ENABLED_fan])
+      cpuStats.UpdatePlatformFanSpeed();
    if (real_params->enabled[OVERLAY_PARAM_ENABLED_battery])
       Battery_Stats.update();
    if (!real_params->device_battery.empty()) {
@@ -880,29 +879,6 @@ void check_for_vkbasalt_and_gamemode() {
 
    checked = true;
 #endif
-}
-
-void update_fan(){
-   // This just handles steam deck fan for now
-   static bool init;
-   string hwmon_path;
-
-   if (!init){
-      string path = "/sys/class/hwmon/";
-      auto dirs = ls(path.c_str(), "hwmon", LS_DIRS);
-      for (auto& dir : dirs) {
-         string full_path = (path + dir + "/name").c_str();
-         if (read_line(full_path).find("steamdeck_hwmon") != string::npos){
-            hwmon_path = path + dir + "/fan1_input";
-            break;
-         }
-      }
-   }
-
-   if (!hwmon_path.empty())
-      fan_speed = stoi(read_line(hwmon_path));
-   else
-      fan_speed = -1;
 }
 
 void next_hud_position(){

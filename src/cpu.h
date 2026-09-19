@@ -185,10 +185,12 @@ public:
    bool UpdateCoreMhz();
    bool UpdateCpuTemp();
    bool UpdateCpuPower();
+   bool UpdatePlatformFanSpeed();
    bool ReadcpuTempFile(int& temp);
    bool GetCpuFile();
    bool InitCpuPowerData();
    double GetCPUPeriod() { return m_cpuPeriod; }
+   int GetPlatformFanSpeed() const { return m_platformFanSpeed; }
    void get_cpu_cores_types();
    void get_cpu_cores_types_intel();
    void get_cpu_cores_types_arm();
@@ -208,7 +210,12 @@ private:
    bool m_updatedCPUs = false; // TODO use caching or just update?
    bool m_inited = false;
    FILE *m_cpuTempFile = nullptr;
+   FILE *m_platformFanFile = nullptr;
+   int m_platformFanDivisor = 1;
+   int m_platformFanSpeed = -1;
    std::unique_ptr<CPUPowerData> m_cpuPowerData;
+
+   bool GetPlatformFanFile();
 
    const std::map<std::string, std::string> intel_cores = {
       {"P", "/sys/devices/cpu_core/cpus"},

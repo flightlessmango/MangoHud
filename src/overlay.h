@@ -149,7 +149,6 @@ extern std::string wineVersion;
 extern std::deque<logData> graph_data;
 extern double min_frametime, max_frametime;
 extern bool steam_focused;
-extern int fan_speed;
 extern int current_preset;
 extern std::vector<float> frametime_data;
 
@@ -178,7 +177,6 @@ extern int global_control_client;
 #ifdef HAVE_DBUS
 void render_mpris_metadata(const overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing);
 #endif
-void update_fan();
 void next_hud_position();
 void horizontal_separator(struct overlay_params& params);
 void RenderOutlinedText(const char* text, ImU32 textColor);

@@ -1460,7 +1460,11 @@ void HudElements::frame_count(){
 }
 
 void HudElements::fan(){
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fan] && fan_speed != -1) {
+    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fan])
+        return;
+
+    int fan_speed = cpuStats.GetPlatformFanSpeed();
+    if (fan_speed != -1) {
         ImguiNextColumnFirstItem();
         HUDElements.TextColored(HUDElements.colors.engine, "%s", "FAN");
         ImguiNextColumnOrNewRow();
