@@ -25,6 +25,7 @@ public:
 
     // System-related functions
     int     get_temperature()                   override;
+    float   get_power_usage()                   override;
 
     // Process-related functions
     int     get_process_load(pid_t pid)         override;
