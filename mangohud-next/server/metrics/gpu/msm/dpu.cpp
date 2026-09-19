@@ -1,5 +1,7 @@
 #include "dpu.hpp"
 #include <cmath>
+#include <fstream>
+#include "../../../../../src/string_utils.h"
 
 MSM_DPU::MSM_DPU(
     const std::string& drm_node, const std::string& pci_dev,
@@ -16,6 +18,23 @@ void MSM_DPU::pre_poll_overrides() {
 
 int MSM_DPU::get_temperature() {
     return static_cast<int>(::lroundf(hwmon.get_sensor_value("temp") / 1000.0f));
+}
+
+float MSM_DPU::get_power_usage() {
+    std::ifstream file("/run/power-monitor/power/gfx");
+    if (file.fail())
+        return 0.0f;
+
+    std::string value;
+    std::getline(file, value);
+    if (value.empty())
+        return 0.0f;
+
+    float power = 0.0f;
+    if (try_stof(power, value))
+        return power;
+
+    return 0.0f;
 }
 
 int MSM_DPU::get_process_load(pid_t pid) {
