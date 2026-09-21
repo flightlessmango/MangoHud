@@ -210,6 +210,7 @@ private:
    bool m_updatedCPUs = false; // TODO use caching or just update?
    bool m_inited = false;
    FILE *m_cpuTempFile = nullptr;
+   std::vector<FILE*> m_cpuTempFiles;
    FILE *m_platformFanFile = nullptr;
    int m_platformFanDivisor = 1;
    int m_platformFanSpeed = -1;
