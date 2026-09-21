@@ -112,6 +112,9 @@ CPUStats::~CPUStats()
         fclose(m_cpuTempFile);
         m_cpuTempFile = nullptr;
     }
+    for (auto file : m_cpuTempFiles)
+        fclose(file);
+    m_cpuTempFiles.clear();
     if (m_platformFanFile) {
         fclose(m_platformFanFile);
         m_platformFanFile = nullptr;
@@ -285,8 +288,31 @@ bool CPUStats::UpdateCoreMhz() {
 }
 
 bool CPUStats::ReadcpuTempFile(int& temp) {
-	if (!m_cpuTempFile)
+	if (!m_cpuTempFile && m_cpuTempFiles.empty())
 		return false;
+
+    if (!m_cpuTempFiles.empty()) {
+        int total_temp = 0;
+        int count = 0;
+
+        for (auto file : m_cpuTempFiles) {
+            rewind(file);
+            fflush(file);
+
+            int current_temp = 0;
+            if (fscanf(file, "%d", &current_temp) != 1)
+                continue;
+
+            total_temp += current_temp / 1000;
+            count++;
+        }
+
+        if (!count)
+            return false;
+
+        temp = total_temp / count;
+        return true;
+    }
 
 	rewind(m_cpuTempFile);
 	fflush(m_cpuTempFile);
@@ -588,8 +614,32 @@ static void check_thermal_zones(std::string& path, std::string& input) {
     }
 }
 
+static void find_cpu_thermal_zones(std::vector<std::string>& inputs) {
+    std::string sysfs_thermal = "/sys/class/thermal/";
+
+    if (!fs::exists(sysfs_thermal))
+        return;
+
+    std::regex cpu_thermal("cpu\\d+(-top)?-thermal");
+
+    for (auto& d : fs::directory_iterator(sysfs_thermal)) {
+        if (d.path().filename().string().substr(0, 12) != "thermal_zone")
+            continue;
+
+        std::string type = read_line(d / "type");
+        if (!std::regex_match(type, cpu_thermal))
+            continue;
+
+        std::string input = d / "temp";
+        if (file_exists(input))
+            inputs.push_back(input);
+    }
+
+    std::sort(inputs.begin(), inputs.end());
+}
+
 bool CPUStats::GetCpuFile() {
-    if (m_cpuTempFile)
+    if (m_cpuTempFile || !m_cpuTempFiles.empty())
         return true;
 
     std::string name, path, input;
@@ -659,6 +709,20 @@ bool CPUStats::GetCpuFile() {
     }
 
     if (input.empty() || !file_exists(input)) {
+        std::vector<std::string> inputs;
+        find_cpu_thermal_zones(inputs);
+        for (auto& temp_input : inputs) {
+            FILE* file = fopen(temp_input.c_str(), "r");
+            if (!file)
+                continue;
+
+            SPDLOG_INFO("thermal: using cpu temp input: {}", temp_input);
+            m_cpuTempFiles.push_back(file);
+        }
+
+        if (!m_cpuTempFiles.empty())
+            return true;
+
         SPDLOG_ERROR("Could not find cpu temp sensor location");
         return false;
     }
