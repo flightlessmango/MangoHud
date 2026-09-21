@@ -1,7 +1,10 @@
 #include "dpu.hpp"
 #include <cmath>
 #include <fstream>
+#include <filesystem>
 #include "../../../../../src/string_utils.h"
+
+namespace fs = std::filesystem;
 
 MSM_DPU::MSM_DPU(
     const std::string& drm_node, const std::string& pci_dev,
@@ -9,6 +12,8 @@ MSM_DPU::MSM_DPU(
 ) : GPU(drm_node, pci_dev, vendor_id, device_id, "gpu-msm-dpu"), FDInfo(drm_node) {
     hwmon.base_dir = hwmon.find_hwmon_dir_by_name("gpu");
     hwmon.setup(sensors, drm_node);
+    junction_temp_file = open_thermal_zone("gpuss-0-thermal");
+    memory_temp_file = open_thermal_zone("ddr-thermal");
 }
 
 void MSM_DPU::pre_poll_overrides() {
@@ -18,6 +23,54 @@ void MSM_DPU::pre_poll_overrides() {
 
 int MSM_DPU::get_temperature() {
     return static_cast<int>(::lroundf(hwmon.get_sensor_value("temp") / 1000.0f));
+}
+
+std::ifstream MSM_DPU::open_thermal_zone(const std::string& type) {
+    std::ifstream file;
+    const fs::path sysfs_thermal = "/sys/class/thermal";
+
+    if (!fs::exists(sysfs_thermal))
+        return file;
+
+    for (auto& entry : fs::directory_iterator(sysfs_thermal)) {
+        if (!entry.path().filename().string().starts_with("thermal_zone"))
+            continue;
+
+        std::ifstream type_file(entry.path() / "type");
+        std::string zone_type;
+        std::getline(type_file, zone_type);
+        if (zone_type != type)
+            continue;
+
+        file.open(entry.path() / "temp");
+        if (file.is_open())
+            SPDLOG_INFO("thermal: using {} input: {}", type, (entry.path() / "temp").string());
+        return file;
+    }
+
+    return file;
+}
+
+int MSM_DPU::read_thermal_zone(std::ifstream& file) {
+    if (!file.is_open())
+        return 0;
+
+    file.clear();
+    file.seekg(0, std::ios::beg);
+
+    int temp = 0;
+    if (!(file >> temp))
+        return 0;
+
+    return static_cast<int>(::lroundf(temp / 1000.0f));
+}
+
+int MSM_DPU::get_junction_temperature() {
+    return read_thermal_zone(junction_temp_file);
+}
+
+int MSM_DPU::get_memory_temp() {
+    return read_thermal_zone(memory_temp_file);
 }
 
 float MSM_DPU::get_power_usage() {

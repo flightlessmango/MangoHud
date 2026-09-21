@@ -13,6 +13,11 @@ private:
     };
 
     std::map<pid_t, uint64_t> previous_gpu_times;
+    std::ifstream junction_temp_file;
+    std::ifstream memory_temp_file;
+
+    std::ifstream open_thermal_zone(const std::string& type);
+    int read_thermal_zone(std::ifstream& file);
 
 protected:
     void pre_poll_overrides() override;
@@ -25,6 +30,8 @@ public:
 
     // System-related functions
     int     get_temperature()                   override;
+    int     get_junction_temperature()          override;
+    int     get_memory_temp()                   override;
     float   get_power_usage()                   override;
 
     // Process-related functions
