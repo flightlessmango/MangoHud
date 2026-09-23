@@ -14,6 +14,7 @@ MSM_DPU::MSM_DPU(
     hwmon.setup(sensors, drm_node);
     junction_temp_file = open_thermal_zone("gpuss-0-thermal");
     memory_temp_file = open_thermal_zone("ddr-thermal");
+    core_clock_file = open_core_clock();
 }
 
 void MSM_DPU::pre_poll_overrides() {
@@ -51,6 +52,28 @@ std::ifstream MSM_DPU::open_thermal_zone(const std::string& type) {
     return file;
 }
 
+std::ifstream MSM_DPU::open_core_clock() {
+    std::ifstream file;
+    const fs::path sysfs_devfreq = "/sys/class/devfreq";
+
+    if (!fs::exists(sysfs_devfreq))
+        return file;
+
+    for (auto& entry : fs::directory_iterator(sysfs_devfreq)) {
+        std::string name = entry.path().filename().string();
+        if (!name.ends_with(".gpu"))
+            continue;
+
+        fs::path cur_freq = entry.path() / "cur_freq";
+        file.open(cur_freq);
+        if (file.is_open())
+            SPDLOG_INFO("devfreq: using gpu clock input: {}", cur_freq.string());
+        return file;
+    }
+
+    return file;
+}
+
 int MSM_DPU::read_thermal_zone(std::ifstream& file) {
     if (!file.is_open())
         return 0;
@@ -71,6 +94,20 @@ int MSM_DPU::get_junction_temperature() {
 
 int MSM_DPU::get_memory_temp() {
     return read_thermal_zone(memory_temp_file);
+}
+
+int MSM_DPU::get_core_clock() {
+    if (!core_clock_file.is_open())
+        return 0;
+
+    core_clock_file.clear();
+    core_clock_file.seekg(0, std::ios::beg);
+
+    int clock = 0;
+    if (!(core_clock_file >> clock))
+        return 0;
+
+    return clock / 1'000'000;
 }
 
 float MSM_DPU::get_power_usage() {
