@@ -22,7 +22,8 @@ mangohud_legacy_gpu_wrapper = static_library(
   cpp_args: '-DMANGOHUD_LEGACY -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE',
   include_directories: [
     '../server/metrics',
-    '../server/metrics/gpu'
+    '../server/metrics/gpu',
+    '../../src'
   ],
   dependencies: [spdlog_dep, libcap_dep, libdrm_dep]
 )
