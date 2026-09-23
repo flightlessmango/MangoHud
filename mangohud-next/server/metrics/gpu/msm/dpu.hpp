@@ -16,9 +16,11 @@ private:
     std::ifstream junction_temp_file;
     std::ifstream memory_temp_file;
     std::ifstream core_clock_file;
+    std::ifstream load_file;
 
     std::ifstream open_thermal_zone(const std::string& type);
     std::ifstream open_core_clock();
+    std::ifstream open_load();
     int read_thermal_zone(std::ifstream& file);
 
 protected:
@@ -31,6 +33,7 @@ public:
     );
 
     // System-related functions
+    int     get_load()                          override;
     int     get_temperature()                   override;
     int     get_junction_temperature()          override;
     int     get_memory_temp()                   override;

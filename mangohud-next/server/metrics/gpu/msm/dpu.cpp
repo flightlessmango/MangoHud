@@ -15,6 +15,7 @@ MSM_DPU::MSM_DPU(
     junction_temp_file = open_thermal_zone("gpuss-0-thermal");
     memory_temp_file = open_thermal_zone("ddr-thermal");
     core_clock_file = open_core_clock();
+    load_file = open_load();
 }
 
 void MSM_DPU::pre_poll_overrides() {
@@ -24,6 +25,20 @@ void MSM_DPU::pre_poll_overrides() {
 
 int MSM_DPU::get_temperature() {
     return static_cast<int>(::lroundf(hwmon.get_sensor_value("temp") / 1000.0f));
+}
+
+int MSM_DPU::get_load() {
+    if (!load_file.is_open())
+        return -1;
+
+    load_file.clear();
+    load_file.seekg(0, std::ios::beg);
+
+    float load = 0.0f;
+    if (!(load_file >> load))
+        return -1;
+
+    return static_cast<int>(::lroundf(load));
 }
 
 std::ifstream MSM_DPU::open_thermal_zone(const std::string& type) {
@@ -68,6 +83,28 @@ std::ifstream MSM_DPU::open_core_clock() {
         file.open(cur_freq);
         if (file.is_open())
             SPDLOG_INFO("devfreq: using gpu clock input: {}", cur_freq.string());
+        return file;
+    }
+
+    return file;
+}
+
+std::ifstream MSM_DPU::open_load() {
+    std::ifstream file;
+    fs::path drm_dir = fs::path("/sys/class/drm") / drm_node / "device/drm";
+
+    if (!fs::exists(drm_dir))
+        return file;
+
+    for (auto& entry : fs::directory_iterator(drm_dir)) {
+        std::string name = entry.path().filename().string();
+        if (!name.starts_with("card"))
+            continue;
+
+        fs::path perf_now = fs::path("/sys/kernel/debug/dri") / name.substr(4) / "perf_now";
+        file.open(perf_now);
+        if (file.is_open())
+            SPDLOG_INFO("debugfs: using msm load input: {}", perf_now.string());
         return file;
     }
 
