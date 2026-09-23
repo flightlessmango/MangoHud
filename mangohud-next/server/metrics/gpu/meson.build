@@ -18,7 +18,9 @@ gpu_lib = static_library(
         '../',
         '../../../../src'
     ],
+    cpp_args: gpu_tracefs_args,
     dependencies: [libdrm_dep,
                    libcap_dep,
-                   spdlog_dep]
+                   spdlog_dep,
+                   gpu_tracefs_deps]
 )

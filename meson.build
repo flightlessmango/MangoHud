@@ -314,6 +314,13 @@ endif
 
 libdrm_dep = dependency('libdrm')
 libcap_dep = dependency('libcap')
+tracefs_dep = dependency('libtracefs', required: false)
+gpu_tracefs_deps = []
+gpu_tracefs_args = []
+if tracefs_dep.found()
+  gpu_tracefs_deps += tracefs_dep
+  gpu_tracefs_args += '-DHAVE_TRACEFS_GPU_MEM'
+endif
 
 subdir('mangohud-next/legacy_gpu_wrapper')
 subdir('src')
