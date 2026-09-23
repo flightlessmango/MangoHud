@@ -190,17 +190,18 @@ bool lib_loaded(const std::string& lib, pid_t pid) {
    std::string who = pid != -1 ? std::to_string(pid) : "self";
    auto paths = { fs::path("/proc") / who / "map_files",
             fs::path("/proc") / who / "fd" };
-    for (auto& path : paths) {
-        if (dir_exists(path.string())) {
-            for (auto& p : fs::directory_iterator(path)) {
+    for (const auto& path : paths) {
+        try {
+            for (const auto& p : fs::directory_iterator(path)) {
                 auto file = p.path().string();
                 auto sym = read_symlink(file.c_str());
                 if (to_lower(sym).find(lib) != std::string::npos) {
                     return true;
                 }
             }
-        } else {
-            SPDLOG_DEBUG("tried to access path that doesn't exist {}", path.string());
+        }
+        catch (const fs::filesystem_error& e) {
+            SPDLOG_DEBUG("failed to iterate {}: {}", path.string(), e.what());
         }
     }
     return false;
