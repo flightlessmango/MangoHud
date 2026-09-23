@@ -2,7 +2,8 @@
 #include <cmath>
 #include <fstream>
 #include <filesystem>
-#include "../../../../../src/string_utils.h"
+#include "gpu_metrics_util.h"
+#include "string_utils.h"
 
 namespace fs = std::filesystem;
 
@@ -10,6 +11,7 @@ MSM_DPU::MSM_DPU(
     const std::string& drm_node, const std::string& pci_dev,
     uint16_t vendor_id, uint16_t device_id
 ) : GPU(drm_node, pci_dev, vendor_id, device_id, "gpu-msm-dpu"), FDInfo(drm_node) {
+    steam_frame = drm_node_is_steam_frame(drm_node);
     hwmon.base_dir = hwmon.find_hwmon_dir_by_name("gpu");
     hwmon.setup(sensors, drm_node);
     junction_temp_file = open_thermal_zone("gpuss-0-thermal");
@@ -131,6 +133,14 @@ int MSM_DPU::get_junction_temperature() {
 
 int MSM_DPU::get_memory_temp() {
     return read_thermal_zone(memory_temp_file);
+}
+
+float MSM_DPU::get_memory_total() {
+    return steam_frame ? 16.0f : 0.0f;
+}
+
+int MSM_DPU::get_memory_clock() {
+    return steam_frame ? 4200 : 0;
 }
 
 int MSM_DPU::get_core_clock() {

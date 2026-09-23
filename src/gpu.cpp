@@ -119,8 +119,7 @@ bool GPU::is_steam_frame() {
     if (driver != "msm_dpu" && driver != "msm_drm")
         return false;
 
-    const std::string modalias_path = "/sys/class/drm/" + drm_node + "/device/modalias";
-    return read_line(modalias_path).find("Cqcom,sm8650-dpu") != std::string::npos;
+    return drm_node_is_steam_frame(drm_node);
 }
 
 std::string GPUS::get_driver(const std::string& node) {

@@ -14,7 +14,10 @@ gpu_lib = static_library(
           'nvidia/nvml_loader.cpp',
           'panthor.cpp',
           'panfrost.cpp'),
-    include_directories: '../',
+    include_directories: [
+        '../',
+        '../../../../src'
+    ],
     dependencies: [libdrm_dep,
                    libcap_dep,
                    spdlog_dep]

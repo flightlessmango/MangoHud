@@ -17,6 +17,7 @@ private:
     std::ifstream memory_temp_file;
     std::ifstream core_clock_file;
     std::ifstream load_file;
+    bool steam_frame = false;
 
     std::ifstream open_thermal_zone(const std::string& type);
     std::ifstream open_core_clock();
@@ -37,6 +38,8 @@ public:
     int     get_temperature()                   override;
     int     get_junction_temperature()          override;
     int     get_memory_temp()                   override;
+    float   get_memory_total()                  override;
+    int     get_memory_clock()                  override;
     int     get_core_clock()                    override;
     float   get_power_usage()                   override;
 
