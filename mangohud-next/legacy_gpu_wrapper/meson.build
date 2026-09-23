@@ -19,11 +19,11 @@ mangohud_legacy_gpu_wrapper = static_library(
     '../server/metrics/gpu/panfrost.cpp',
     '../server/metrics/gpu/panthor.cpp'
   ),
-  cpp_args: '-DMANGOHUD_LEGACY -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE',
+  cpp_args: ['-DMANGOHUD_LEGACY', '-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE', gpu_tracefs_args],
   include_directories: [
     '../server/metrics',
     '../server/metrics/gpu',
     '../../src'
   ],
-  dependencies: [spdlog_dep, libcap_dep, libdrm_dep]
+  dependencies: [spdlog_dep, libcap_dep, libdrm_dep, gpu_tracefs_deps]
 )

@@ -1,10 +1,13 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 
 #include "../gpu.hpp"
 #include "../hwmon.hpp"
 #include "fdinfo.hpp"
+
+class MSM_GPUMemTrace;
 
 class MSM_DPU : public GPU, private Hwmon, public FDInfo {
 private:
@@ -17,6 +20,7 @@ private:
     std::ifstream memory_temp_file;
     std::ifstream core_clock_file;
     std::ifstream load_file;
+    std::unique_ptr<MSM_GPUMemTrace> gpu_mem_trace;
     bool steam_frame = false;
 
     std::ifstream open_thermal_zone(const std::string& type);
@@ -32,9 +36,11 @@ public:
         const std::string& drm_node, const std::string& pci_dev,
         uint16_t vendor_id, uint16_t device_id
     );
+    ~MSM_DPU();
 
     // System-related functions
     int     get_load()                          override;
+    float   get_vram_used()                     override;
     int     get_temperature()                   override;
     int     get_junction_temperature()          override;
     int     get_memory_temp()                   override;
