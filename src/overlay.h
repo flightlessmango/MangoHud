@@ -135,9 +135,6 @@ inline const char* engine_name(const swapchain_stats& sw_stats) {
       }
    }
 
-   if (engine == EngineTypes::GAMESCOPE && !sw_stats.engineName.empty())
-      return sw_stats.engineName.c_str();
-
    return en[OVERLAY_PARAM_ENABLED_engine_short_names] ? engines_short[engine] : engines[engine];
 }
 
