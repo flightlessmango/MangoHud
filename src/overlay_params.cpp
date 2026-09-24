@@ -764,6 +764,7 @@ set_parameters_from_options(struct overlay_params *params)
       params->enabled[OVERLAY_PARAM_ENABLED_hide_fps_superscript] = 0;
       params->enabled[OVERLAY_PARAM_ENABLED_dynamic_frame_timing] = 0;
       params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_dx_api] = 0;
       params->enabled[OVERLAY_PARAM_ENABLED_duration] = false;
       params->enabled[OVERLAY_PARAM_ENABLED_core_bars] = false;
       params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = read_cfg;
