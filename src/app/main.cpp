@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <string_view>
 #include <unistd.h>
 #include "../overlay.h"
 #include "notify.h"
@@ -77,26 +78,22 @@ static bool mangoapp_upscaler_sharpens(uint8_t upscaler)
            upscaler == MANGOAPP_UPSCALER_SGSR;
 }
 
-static std::string mangoapp_engine_name(const char (&engine_name)[40])
+static EngineTypes mangoapp_engine_type(std::string_view engine_name)
 {
-    std::string name(engine_name, strnlen(engine_name, sizeof(engine_name)));
+    if (engine_name == "DXVK")
+        return EngineTypes::DXVK;
+    if (engine_name == "vkd3d")
+        return EngineTypes::VKD3D;
+    if (engine_name == "mesa zink")
+        return EngineTypes::ZINK;
+    if (engine_name == "Damavand")
+        return EngineTypes::DAMAVAND;
+    if (engine_name == "Feral3D")
+        return EngineTypes::FERAL3D;
+    if (engine_name == "SDLGPU")
+        return EngineTypes::SDL;
 
-    if (name == "DXVK")
-        return "DXVK";
-    if (name == "vkd3d")
-        return "VKD3D";
-    if (name == "mesa zink")
-        return "ZINK";
-    if (name == "Damavand")
-        return "DAMAVAND";
-    if (name == "Feral3D")
-        return "Feral3D";
-    if (name == "SDLGPU")
-        return "SDL";
-    if (name == "gamescope")
-        return "GAMESCOPE";
-
-    return "GAMESCOPE";
+    return EngineTypes::GAMESCOPE;
 }
 
 swapchain_stats sw_stats {};
@@ -330,10 +327,13 @@ static void msg_read_thread(){
                         steam_focused = false;
                     }
 
-                    if (msg_bytes > offsetof(mangoapp_msg_v1, engineName) && !steam_focused)
-                        sw_stats.engineName = mangoapp_engine_name(mangoapp_v1->engineName);
-                    else
+                    if (msg_bytes > offsetof(mangoapp_msg_v1, engineName) && !steam_focused) {
+                        sw_stats.engineName = std::string(mangoapp_v1->engineName, strnlen(mangoapp_v1->engineName, sizeof(mangoapp_v1->engineName)));
+                        sw_stats.engine = mangoapp_engine_type(sw_stats.engineName);
+                    } else {
                         sw_stats.engineName = "GAMESCOPE";
+                        sw_stats.engine = EngineTypes::GAMESCOPE;
+                    }
 
                     if (msg_bytes > offsetof(mangoapp_msg_v1, latency_ns))
                         gamescope_frametime(mangoapp_v1->app_frametime_ns, mangoapp_v1->latency_ns);
