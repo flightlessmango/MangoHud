@@ -1413,6 +1413,7 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
       add_to_options(params, "gpu_voltage", "0");
       add_to_options(params, "gpu_power_limit", "0");
       add_to_options(params, "gpu_efficiency", "0");
+      add_to_options(params, "gpu_fan", "0");
       add_to_options(params, "gpu_power", "0");
 #ifdef HAVE_FEX
       if (preset == 4)
