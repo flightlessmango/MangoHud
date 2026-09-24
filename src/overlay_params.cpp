@@ -1415,6 +1415,7 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
       add_to_options(params, "gpu_efficiency", "0");
       add_to_options(params, "gpu_fan", "0");
       add_to_options(params, "gpu_power", "0");
+      add_to_options(params, "network", "");
 #ifdef HAVE_FEX
       if (preset == 4)
          add_to_options(params, "fex_stats", "status+apptype+hotthreads+jitload+sigbus+smc+softfloat");
