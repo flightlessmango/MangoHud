@@ -60,7 +60,7 @@ static long mangoapp_ctrl_msg_type()
 static const char* mangoapp_upscaler_name(uint8_t upscaler, const char* fallback)
 {
     switch (upscaler) {
-        case MANGOAPP_UPSCALER_LINEAR:  return "LINEAR";
+        case MANGOAPP_UPSCALER_LINEAR:  return "SCALING";
         case MANGOAPP_UPSCALER_NEAREST: return "NEAREST";
         case MANGOAPP_UPSCALER_FSR:     return "FSR";
         case MANGOAPP_UPSCALER_NIS:     return "NIS";
