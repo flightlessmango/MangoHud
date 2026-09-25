@@ -401,7 +401,6 @@ void AMDGPU::get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[ME
 			UPDATE_METRIC_MAX(fan_speed);
 			metrics.fan_rpm = true;
 
-			metrics.load = amdgpu_common_metrics.gpu_load_percent;
 			metrics.powerUsage = amdgpu_common_metrics.average_gfx_power_w;
 			metrics.MemClock = amdgpu_common_metrics.current_uclk_mhz;
 
