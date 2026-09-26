@@ -401,7 +401,8 @@ void AMDGPU::get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[ME
 			UPDATE_METRIC_MAX(fan_speed);
 			metrics.fan_rpm = true;
 
-			metrics.powerUsage = amdgpu_common_metrics.average_gfx_power_w;
+			if (amdgpu_common_metrics.average_gfx_power_w > 0)
+                           metrics.powerUsage = amdgpu_common_metrics.average_gfx_power_w;
 			metrics.MemClock = amdgpu_common_metrics.current_uclk_mhz;
 
 			// Use hwmon instead, see gpu.cpp
