@@ -397,6 +397,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `fps_limit`                        | Limit the apps framerate. Comma-separated list of one or more FPS values. `0` means unlimited |
 | `fps_only`                         | Show FPS only. ***Not meant to be used with other display params***                   |
 | `fps_sampling_period=`             | Time interval between two sampling points for gathering the FPS in milliseconds. Default is `500`   |
+| `base_fps`                         | Enabled by default. In Vulkan, compare present FPS with application-frame markers from `VK_NV_low_latency2`, `VK_AMD_anti_lag`, or `VK_EXT_frame_boundary`. When the output rate indicates frame generation, label present FPS as FG and show base FPS separately. Otherwise, show ordinary FPS. Live FPS metrics reset when the detected state changes. Set `base_fps=0` to disable. |
 | `fps_value`                        | Choose the break points where `fps_color_change` changes colors between. E.g `60,144`, default is `30,60` |
 | `fps_metrics`                      | Takes a list of decimal values or the value avg, e.g `avg,0.001`                      |
 | `reset_fps_metrics`                | Reset fps metrics keybind, default is `Shift_R+F9`                                    |

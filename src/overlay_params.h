@@ -38,6 +38,7 @@ struct Tracepoint;
 
 #define OVERLAY_PARAMS                               \
    OVERLAY_PARAM_BOOL(fps)                           \
+   OVERLAY_PARAM_BOOL(base_fps)                      \
    OVERLAY_PARAM_BOOL(frame_timing)                  \
    OVERLAY_PARAM_BOOL(core_load)                     \
    OVERLAY_PARAM_BOOL(core_bars)                     \

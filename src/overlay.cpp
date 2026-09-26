@@ -697,14 +697,25 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    if (!real_params->no_display && !steam_focused && get_params()->table_columns){
       ImGui::Begin("Main", &gui_open, ImGuiWindowFlags_NoDecoration);
       if (ImGui::BeginTable("hud", real_params->table_columns, table_flags )) {
-         HUDElements.place = 0;
-         for (auto& func : HUDElements.ordered_functions){
+         for (size_t i = 0; i < HUDElements.ordered_functions.size(); ++i){
+            auto& func = HUDElements.ordered_functions[i];
+            if (func.name == "base_fps" && !data.fg_active)
+               continue;
+            HUDElements.place = static_cast<int>(i);
             if(!real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && func.name != "exec")
                ImGui::TableNextRow();
             func.run();
-            HUDElements.place += 1;
-            if(!HUDElements.ordered_functions.empty() && real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && HUDElements.ordered_functions.size() != (size_t)HUDElements.place)
-               horizontal_separator(params);
+            if (real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
+               bool more_visible_elements = false;
+               for (size_t j = i + 1; j < HUDElements.ordered_functions.size(); ++j) {
+                  if (HUDElements.ordered_functions[j].name != "base_fps" || data.fg_active) {
+                     more_visible_elements = true;
+                     break;
+                  }
+               }
+               if (more_visible_elements)
+                  horizontal_separator(params);
+            }
          }
 
          if (real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal]) {

@@ -323,6 +323,17 @@ if get_option('include_doc')
 endif
 
 if get_option('tests').enabled()
+  base_fps_test = executable('base-fps-meter-test',
+    'tests/test_base_fps_meter.cpp',
+    dependencies: [vulkan_headers_dep])
+  test('base fps meter', base_fps_test)
+
+  fps_metrics_reset_test = executable('fps-metrics-reset-test',
+    'tests/test_fps_metrics_reset.cpp',
+    include_directories: inc_common + [include_directories('src')],
+    dependencies: [spdlog_dep, dep_pthread])
+  test('fps metrics reset', fps_metrics_reset_test)
+
   # cmocka_dep = dependency('cmocka', fallback: ['cmocka', 'cmocka_dep'])
 
   # e = executable('amdgpu', 'tests/test_amdgpu.cpp',
