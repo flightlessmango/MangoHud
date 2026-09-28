@@ -57,26 +57,30 @@ std::vector<std::string> FDInfoBase::find_fds() {
 
     std::vector<std::string> fds;
 
-    for (const auto& entry : fs::directory_iterator(path)) {
-        if (!entry.is_symlink())
-            continue;
+    try {
+        for (const auto& entry : fs::directory_iterator(path)) {
+            if (!entry.is_symlink())
+                continue;
 
-        std::filesystem::path link;
+            std::filesystem::path link;
 
-        try {
-            link = fs::read_symlink(entry);
-        } catch(const std::filesystem::filesystem_error& ex) {
-            SPDLOG_TRACE("{}", ex.what());
-            continue;
+            try {
+                link = fs::read_symlink(entry);
+            } catch(const std::filesystem::filesystem_error& ex) {
+                SPDLOG_TRACE("{}", ex.what());
+                continue;
+            }
+
+            // comparison to both renderD* and card* is required because
+            // for some reason supertuxkart opens /dev/dri/card and not renderD
+            // inside podman container.
+            if (link.filename() != drm_node && link.filename() != card_node)
+                continue;
+
+            fds.push_back(entry.path().filename());
         }
-
-        // comparison to both renderD* and card* is required because
-        // for some reason supertuxkart opens /dev/dri/card and not renderD
-        // inside podman container.
-        if (link.filename() != drm_node && link.filename() != card_node)
-            continue;
-
-        fds.push_back(entry.path().filename());
+    } catch (const std::filesystem::filesystem_error& ex) {
+        SPDLOG_TRACE("failed to iterate {}: {}", path.string(), ex.what());
     }
 
     return fds;
