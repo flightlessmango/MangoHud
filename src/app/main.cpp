@@ -333,9 +333,11 @@ static bool render(GLFWwindow* window, overlay_params& real_params) {
     glfwGetWindowSize(window, &w, &h);
     window_size_changed = w != window_size.x || h != window_size.y;
     if (real_params.enabled[OVERLAY_PARAM_ENABLED_horizontal])
-    // trying to reduce height will break direct scanout in some cases
-    // just leave it for now, we'll revisit it in server
-    glfwSetWindowSize(window, screenWidth, screenHeight);
+        // trying to reduce height will break direct scanout in some cases
+        // just leave it for now, we'll revisit it in server
+        glfwSetWindowSize(window, screenWidth, screenHeight);
+    else
+        glfwSetWindowSize(window, window_size.x, window_size.y);
 
     ImGui::EndFrame();
 
