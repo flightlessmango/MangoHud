@@ -5,6 +5,7 @@
  */
 
 #include <dlfcn.h>
+#include <link.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -105,6 +106,34 @@ void *real_dlsym(void *handle, const char *symbol)
         printf("dlsym(%p, %s) = %p\n", handle, symbol, result);
 
     return result;
+}
+
+void *real_dlsym_next_from(void *caller, const char *name)
+{
+    if (__dlsym == NULL || __dlopen == NULL)
+        get_real_functions();
+
+    Dl_info info = {};
+    void *extra_info = NULL;
+    if (!caller || !name || !dladdr1(caller, &info, &extra_info, RTLD_DL_LINKMAP))
+        return NULL;
+
+    struct link_map *map = extra_info;
+    for (map = map ? map->l_next : NULL; map; map = map->l_next)
+    {
+        if (!map->l_name || !map->l_name[0])
+            continue;
+
+        void *handle = __dlopen(map->l_name, RTLD_LAZY | RTLD_NOLOAD);
+        if (!handle)
+            continue;
+
+        void *result = __dlsym(handle, name);
+        if (result)
+            return result;
+    }
+
+    return NULL;
 }
 
 char* real_dlerror(void)

@@ -413,5 +413,12 @@ extern "C" void* dlsym(void* handle, const char* symbol)
     if (func)
         return func;
 
+    if (handle == RTLD_NEXT) {
+        void* caller = __builtin_extract_return_addr(__builtin_return_address(0));
+        void* real = real_dlsym_next_from(caller, symbol);
+        if (real)
+            return real;
+    }
+
     return real_dlsym(handle, symbol);
 }

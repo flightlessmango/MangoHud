@@ -9,6 +9,7 @@ extern "C" {
 #endif
 void *real_dlopen(const char *filename, int flag);
 void* real_dlsym( void*, const char* );
+void* real_dlsym_next_from(void* caller, const char* name);
 void* get_proc_address(const char* name);
 char* real_dlerror(void);
 #ifdef __cplusplus
