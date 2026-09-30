@@ -172,6 +172,7 @@ extern void control_client_check(int control, int& control_client, const std::st
 extern void process_control_socket(int& control_client, overlay_params &params);
 extern void control_send(int control_client, const char *cmd, unsigned cmdlen, const char *param, unsigned paramlen);
 extern int global_control_client;
+extern int control_socket_listen(const char *path);
 #ifdef HAVE_DBUS
 void render_mpris_metadata(const overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing);
 #endif
