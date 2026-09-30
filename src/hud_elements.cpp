@@ -184,6 +184,12 @@ void HudElements::convert_colors(const struct overlay_params& params)
     HUDElements.colors.cpu_load_low = convert(params.cpu_load_color[0]);
     HUDElements.colors.cpu_load_med = convert(params.cpu_load_color[1]);
     HUDElements.colors.cpu_load_high = convert(params.cpu_load_color[2]);
+    HUDElements.colors.gpu_temp_low = convert(params.gpu_temp_color[0]);
+    HUDElements.colors.gpu_temp_med = convert(params.gpu_temp_color[1]);
+    HUDElements.colors.gpu_temp_high = convert(params.gpu_temp_color[2]);
+    HUDElements.colors.cpu_temp_low = convert(params.cpu_temp_color[0]);
+    HUDElements.colors.cpu_temp_med = convert(params.cpu_temp_color[1]);
+    HUDElements.colors.cpu_temp_high = convert(params.cpu_temp_color[2]);
     HUDElements.colors.fps_value_low = convert(params.fps_color[0]);
     HUDElements.colors.fps_value_med = convert(params.fps_color[1]);
     HUDElements.colors.fps_value_high = convert(params.fps_color[2]);
@@ -312,19 +318,27 @@ void HudElements::gpu_stats(){
             }
 
             if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp]){
+                struct LOAD_DATA gpu_temp_data = {
+                    HUDElements.colors.gpu_temp_low,
+                    HUDElements.colors.gpu_temp_med,
+                    HUDElements.colors.gpu_temp_high,
+                    HUDElements.params->gpu_temp_value[0],
+                    HUDElements.params->gpu_temp_value[1]
+                };
+                auto temp_color = HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp_change] ? change_on_temp(gpu_temp_data, gpu->metrics.temp, 40) : text_color;
                 ImguiNextColumnOrNewRow();
                 if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit])
-                    right_aligned_text(text_color, HUDElements.ralign_width, "%i", HUDElements.convert_to_fahrenheit(gpu->metrics.temp));
+                    right_aligned_text(temp_color, HUDElements.ralign_width, "%i", HUDElements.convert_to_fahrenheit(gpu->metrics.temp));
                 else
-                    right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu->metrics.temp);
+                    right_aligned_text(temp_color, HUDElements.ralign_width, "%i", gpu->metrics.temp);
                 ImGui::SameLine(0, 1.0f);
                 if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact])
-                    HUDElements.TextColored(HUDElements.colors.text, "°");
+                    HUDElements.TextColored(temp_color, "°");
                 else
                     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit])
-                        HUDElements.TextColored(HUDElements.colors.text, "°F");
+                        HUDElements.TextColored(temp_color, "°F");
                     else
-                        HUDElements.TextColored(HUDElements.colors.text, "°C");
+                        HUDElements.TextColored(temp_color, "°C");
             }
 
             if (gpu->metrics.junction_temp > -1 && HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_junction_temp]) {
@@ -452,19 +466,27 @@ void HudElements::cpu_stats(){
         }
 
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp]){
+            struct LOAD_DATA cpu_temp_data = {
+                HUDElements.colors.cpu_temp_low,
+                HUDElements.colors.cpu_temp_med,
+                HUDElements.colors.cpu_temp_high,
+                HUDElements.params->cpu_temp_value[0],
+                HUDElements.params->cpu_temp_value[1]
+            };
+            auto cpu_temp_color = HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp_change] ? change_on_temp(cpu_temp_data, cpuStats.GetCPUDataTotal().temp, 40) : HUDElements.colors.text;
             ImguiNextColumnOrNewRow();
             if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit])
-                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", HUDElements.convert_to_fahrenheit(cpuStats.GetCPUDataTotal().temp));
+                right_aligned_text(cpu_temp_color, HUDElements.ralign_width, "%i", HUDElements.convert_to_fahrenheit(cpuStats.GetCPUDataTotal().temp));
             else
-                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", cpuStats.GetCPUDataTotal().temp);
+                right_aligned_text(cpu_temp_color, HUDElements.ralign_width, "%i", cpuStats.GetCPUDataTotal().temp);
             ImGui::SameLine(0, 1.0f);
             if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact])
-                HUDElements.TextColored(HUDElements.colors.text, "°");
+                HUDElements.TextColored(cpu_temp_color, "°");
             else
                 if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit])
-                    HUDElements.TextColored(HUDElements.colors.text, "°F");
+                    HUDElements.TextColored(cpu_temp_color, "°F");
                 else
-                    HUDElements.TextColored(HUDElements.colors.text, "°C");
+                    HUDElements.TextColored(cpu_temp_color, "°C");
         }
 
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_mhz]){

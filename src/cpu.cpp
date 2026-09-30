@@ -584,9 +584,12 @@ bool CPUStats::GetCpuFile() {
             find_input(path, "temp", input, "Package id 0");
             break;
         } else if ((name == "zenpower" || name == "k10temp")) {
-            if (!find_input(path, "temp", input, "Tdie"))
-                find_input(path, "temp", input, "Tctl");
-            break;
+   	    if (!find_input(path, "temp", input, "Tdie")) {
+     	        if (!find_input(path, "temp", input, "Tctl")) {
+                    find_fallback_input(path, "temp1", input);
+                }
+            }
+ 	    break;
         } else if (name == "atk0110") {
             find_input(path, "temp", input, "CPU Temperature");
             break;
