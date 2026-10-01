@@ -9,6 +9,7 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
 #include <array>
+#include <optional>
 #include "net.h"
 #include "overlay_params.h"
 #include "shell.h"
@@ -18,6 +19,7 @@ struct Function {
     std::function<void()> run;  // Using std::function instead of a raw function pointer for more flexibility
     std::string name;
     std::string value;
+    std::optional<unsigned> color;  // custom_text_color, ImGui-packed, before HDR conversion
 };
 
 class HudElements{
@@ -50,6 +52,7 @@ class HudElements{
             "vram", "ram", "cpu_temp", "gpu_temp"
         };
         std::vector<exec_entry> exec_list;
+        std::optional<unsigned> next_custom_text_color;
         std::chrono::steady_clock::time_point overlay_start = std::chrono::steady_clock::now();
         uint32_t vendorID;
         int hdr_status = 0;
@@ -121,8 +124,11 @@ class HudElements{
 
         void convert_colors(const struct overlay_params& params);
         void convert_colors(bool do_conv, const struct overlay_params& params);
+        ImVec4 convert_color(unsigned color);
         struct hud_colors {
             bool convert, update;
+            float alpha;
+            int transfer_function;
             ImVec4 cpu,
                 gpu,
                 vram,

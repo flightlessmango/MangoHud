@@ -442,7 +442,8 @@ void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...)
    vsnprintf(buffer, sizeof(buffer), fmt, args);
    va_end(args);
 
-   if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
+   if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact] &&
+       !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_left_align_values]){
       ImVec2 sz = ImGui::CalcTextSize(buffer);
       ImGui::SetCursorPosX(pos.x + off_x - sz.x);
    }

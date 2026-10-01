@@ -87,6 +87,7 @@ struct Tracepoint;
    OVERLAY_PARAM_BOOL(fps_color_change)              \
    OVERLAY_PARAM_BOOL(custom_text_center)            \
    OVERLAY_PARAM_BOOL(custom_text)                   \
+   OVERLAY_PARAM_BOOL(custom_text_color)             \
    OVERLAY_PARAM_BOOL(exec)                          \
    OVERLAY_PARAM_BOOL(vkbasalt)                      \
    OVERLAY_PARAM_BOOL(gamemode)                      \
@@ -107,6 +108,7 @@ struct Tracepoint;
    OVERLAY_PARAM_BOOL(horizontal_stretch)            \
    OVERLAY_PARAM_BOOL(hud_no_margin)                 \
    OVERLAY_PARAM_BOOL(hud_compact)                   \
+   OVERLAY_PARAM_BOOL(left_align_values)             \
    OVERLAY_PARAM_BOOL(battery_watt)                  \
    OVERLAY_PARAM_BOOL(battery_time)                  \
    OVERLAY_PARAM_BOOL(exec_name)                     \
@@ -219,6 +221,7 @@ struct Tracepoint;
    OVERLAY_PARAM_CUSTOM(text_outline_color)          \
    OVERLAY_PARAM_CUSTOM(text_outline_thickness)      \
    OVERLAY_PARAM_CUSTOM(fps_text)                    \
+   OVERLAY_PARAM_CUSTOM(frametime_text)              \
    OVERLAY_PARAM_CUSTOM(device_battery)              \
    OVERLAY_PARAM_CUSTOM(fps_metrics)                 \
    OVERLAY_PARAM_CUSTOM(network)                     \
@@ -339,7 +342,7 @@ struct overlay_params {
    std::string time_format, output_folder, output_file;
    std::string pci_dev;
    std::string media_player_name;
-   std::string cpu_text, fps_text;
+   std::string cpu_text, fps_text, frametime_text;
    std::map<std::string, std::string> cpu_custom_temp_sensor;
    std::vector<std::string> blacklist;
    unsigned autostart_log;

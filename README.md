@@ -370,6 +370,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `cpu_efficiency`                   | Display CPU efficiency in frames per joule                                            |
 | `custom_text_center`               | Display a custom text centered useful for a header e.g `custom_text_center=FlightLessMango Benchmarks` |
 | `custom_text`                      | Display a custom text e.g `custom_text=Fsync enabled`                                 |
+| `custom_text_color`                | Set the color of the next `custom_text` or `custom_text_center` e.g. `custom_text_color=FF0000`. Only works with `legacy_layout=0` |
 | `debug`                            | Shows the graph of gamescope app frametimes and latency (only on gamescope obviously) |
 | `device_battery_icon`              | Display wirless device battery icon.                                                  |
 | `device_battery`                   | Display wireless device battery percent. Currently supported arguments `gamepad` and `mouse` e.g `device_battery=gamepad,mouse` |
@@ -404,6 +405,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `frame_count`                      | Display frame count                                                                   |
 | `frametime`                        | Display frametime next to FPS text                                                    |
 | `frame_timing_detailed`            | Display frame timing in a more detailed chart                                         |
+| `frametime_text`                   | Display a label in front of frametime and put it on its own row. Ignored in `horizontal` mode |
 | `fsr`                              | Display the status of FSR (only works in gamescope)                                   |
 | `hdr`                              | Display the status of HDR (only works in gamescope)                                   |
 | `refresh_rate`                     | Display the current refresh rate (only works in gamescope)                            |
@@ -428,6 +430,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `hud_compact`                      | Display compact version of MangoHud                                                   |
 | `hud_no_margin`                    | Remove margins around MangoHud                                                        |
 | `io_read`<br> `io_write`           | Show non-cached IO read/write, in MiB/s                                               |
+| `left_align_values`                | Align values to the left of their column instead of the right                         |
 | `log_duration`                     | Set amount of time the logging will run for (in seconds)                              |
 | `log_interval`                     | Change the default log interval in milliseconds. Default is `0`                       |
 | `log_versioning`                   | Adds more headers and information such as versioning to the log. This format is not supported on flightlessmango.com (yet)    |

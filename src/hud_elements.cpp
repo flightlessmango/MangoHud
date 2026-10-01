@@ -141,29 +141,34 @@ R format_units(T value, const char*& unit)
     return out_value;
 }
 
+ImVec4 HudElements::convert_color(unsigned color)
+{
+    ImVec4 fc = ImGui::ColorConvertU32ToFloat4(color);
+    fc.w = colors.alpha;
+    if (colors.convert)
+    {
+        switch (colors.transfer_function)
+        {
+            case PQ:
+                fc = SRGBToLinear(fc);
+                return LinearToPQ(fc);
+            case HLG:
+                fc = SRGBToLinear(fc);
+                return LinearToHLG(fc);
+            case SRGB:
+                return SRGBToLinear(fc);
+            default: break;
+        }
+    }
+    return fc;
+}
+
 void HudElements::convert_colors(const struct overlay_params& params)
 {
     HUDElements.colors.update = false;
-    auto convert = [&params](unsigned color) -> ImVec4 {
-        ImVec4 fc = ImGui::ColorConvertU32ToFloat4(color);
-        fc.w = params.alpha;
-        if (HUDElements.colors.convert)
-        {
-            switch (params.transfer_function)
-            {
-                case PQ:
-                    fc = SRGBToLinear(fc);
-                    return LinearToPQ(fc);
-                case HLG:
-                    fc = SRGBToLinear(fc);
-                    return LinearToHLG(fc);
-                case SRGB:
-                    return SRGBToLinear(fc);
-                default: break;
-            }
-        }
-        return fc;
-    };
+    HUDElements.colors.alpha = params.alpha;
+    HUDElements.colors.transfer_function = params.transfer_function;
+    auto convert = [](unsigned color) { return HUDElements.convert_color(color); };
 
     HUDElements.colors.cpu = convert(params.cpu_color);
     HUDElements.colors.gpu = convert(params.gpu_color);
@@ -864,6 +869,13 @@ void HudElements::fps(){
             ImGui::PopFont();
         }
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_frametime]){
+            // A label moves frametime to its own row
+            if (!HUDElements.params->frametime_text.empty() &&
+                !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
+                ImGui::TableNextRow();
+                ImguiNextColumnFirstItem();
+                HUDElements.TextColored(HUDElements.colors.engine, "%s", HUDElements.params->frametime_text.c_str());
+            }
             ImguiNextColumnOrNewRow();
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", 1000 / HUDElements.sw_stats->fps);
             ImGui::SameLine(0, 1.0f);
@@ -1159,10 +1171,12 @@ void HudElements::custom_text_center(){
         ImguiNextColumnFirstItem();
         ImGui::PushFont(HUDElements.sw_stats->font_secondary);
 
-        const std::string& value = HUDElements.ordered_functions[HUDElements.place].value;
+        const Function& item = HUDElements.ordered_functions[HUDElements.place];
+        const std::string& value = item.value;
+        auto color = item.color ? HUDElements.convert_color(*item.color) : HUDElements.colors.text;
 
         center_text(value);
-        HUDElements.TextColored(HUDElements.colors.text, "%s", value.c_str());
+        HUDElements.TextColored(color, "%s", value.c_str());
 
         ImGui::NewLine();
         ImGui::PopFont();
@@ -1172,14 +1186,13 @@ void HudElements::custom_text_center(){
 void HudElements::custom_text(){
     ImguiNextColumnFirstItem();
     ImGui::PushFont(HUDElements.sw_stats->font_secondary);
-    const char* value;
-    if (size_t(HUDElements.place) < HUDElements.ordered_functions.size())
-        value = HUDElements.ordered_functions[HUDElements.place].value.c_str();
-    else {
+    if (size_t(HUDElements.place) >= HUDElements.ordered_functions.size()) {
         ImGui::PopFont();
         return;
     }
-    HUDElements.TextColored(HUDElements.colors.text, "%s",value);
+    const Function& item = HUDElements.ordered_functions[HUDElements.place];
+    auto color = item.color ? HUDElements.convert_color(*item.color) : HUDElements.colors.text;
+    HUDElements.TextColored(color, "%s", item.value.c_str());
     ImGui::PopFont();
 }
 
@@ -1959,6 +1972,13 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
     const auto& param = option.first;
     const auto& value = option.second;
 
+    // Applies to the next custom_text or custom_text_center only
+    if (param == "custom_text_color") {
+        unsigned rgb = strtol(value.c_str(), NULL, 16);
+        next_custom_text_color = IM_COL32(RGBGetRValue(rgb), RGBGetGValue(rgb), RGBGetBValue(rgb), 255);
+        return;
+    }
+
     // Initialize a map of display parameters and their corresponding functions.
     const std::map<std::string, Function> display_params = {
         {"version", {version}},
@@ -2026,6 +2046,9 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
         } else if (param == "exec") {
             ordered_functions.push_back({_exec, "exec", value});
             exec_list.push_back({int(ordered_functions.size() - 1), value});
+        } else if (param == "custom_text" || param == "custom_text_center") {
+            ordered_functions.push_back({func.run, param, value, next_custom_text_color});
+            next_custom_text_color.reset();
         } else if (param == "graphs") {
             auto values = str_tokenize(value);
             for (auto& val : values) {
