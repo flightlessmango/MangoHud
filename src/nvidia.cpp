@@ -84,7 +84,6 @@ NVIDIA::NVIDIA(const char* pciBusId) {
     }
 }
 
-#ifdef HAVE_NVML
 // NVAPI is independent of NVML, so this is sampled on its own rather than from
 // inside the NVML path: with only XNVCtrl available the values would otherwise
 // never be refreshed after the constructor seeded them.
@@ -102,6 +101,7 @@ void NVIDIA::get_instant_metrics_nvapi(struct gpu_metrics *metrics, struct overl
         metrics->voltage = nvapi.voltage();
 }
 
+#ifdef HAVE_NVML
 void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics, struct overlay_params *params) {
     nvmlReturn_t response;
 
