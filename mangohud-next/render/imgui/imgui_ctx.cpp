@@ -446,21 +446,41 @@ void ImGuiCtx::draw_value_with_unit(int col_index,
     const float value_top_y = text_y + value_y.min;
     const float unit_pos_y = value_top_y - unit_y.min;
 
-    if (tc.style.align != CellAlign::Default && tc.unit.empty()) {
+    if (tc.style.align != CellAlign::Default) {
         ImFont* font = fonts->get(text_font_sz);
         const TextXBounds x_bounds = text_x_bounds(tc.text.c_str(), font, text_font_sz);
-        const float visual_w = x_bounds.max - x_bounds.min;
+        ImFont* unit_font = nullptr;
+        float unit_w = 0.0f;
+        if (!tc.unit.empty()) {
+            unit_font = fonts->get(tc.unit == "%" ? text_font_sz : unit_font_size(table, tc));
+            ImGui::PushFont(unit_font);
+            unit_w = outlined_text_size_current_font(tc.unit.c_str()).x;
+            ImGui::PopFont();
+        }
+
+        // The unit follows the value, so align value and unit as one block
+        const float unit_x_offset = unit_font ? value_sz.x + unit_gap : 0.0f;
+        const float visual_w = unit_font ? unit_x_offset + unit_w : x_bounds.max - x_bounds.min;
+        const float right_edge = unit_font ? unit_x_offset + unit_w : x_bounds.max;
         float text_x = base.x - x_bounds.min;
 
         if (tc.style.align == CellAlign::Center)
             text_x = base.x + (cell_w - visual_w) * 0.5f - x_bounds.min;
         else if (tc.style.align == CellAlign::Right)
-            text_x = base.x + cell_w - std::ceil(outline_padding_x) - x_bounds.max;
+            text_x = base.x + cell_w - std::ceil(outline_padding_x) - right_edge;
 
         ImGui::SetCursorPos(ImVec2(text_x, text_y));
         ImGui::PushFont(font);
         RenderOutlinedText(tc.vec, tc.text.c_str());
         ImGui::PopFont();
+
+        if (unit_font) {
+            ImGui::SetCursorPos(ImVec2(text_x + unit_x_offset, unit_pos_y));
+            ImGui::PushFont(unit_font);
+            RenderOutlinedText(unit_col, tc.unit.c_str());
+            ImGui::PopFont();
+        }
+
         ImGui::SetCursorPos(ImVec2(base.x, base.y + row_h));
         return;
     }
@@ -673,6 +693,7 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
     L.col_boxes.resize(L.cols);
 
     float max_col0_w = 0.0f;
+    std::vector<std::pair<int, float>> col0_spans;
     std::vector<bool> separator_cols(L.cols, false);
     std::vector<float> separator_col_widths(L.cols, 0.0f);
 
@@ -698,7 +719,9 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
                     }
                 }
 
-                if (w > max_col0_w)
+                if (tc0->style.colspan > 1)
+                    col0_spans.emplace_back(tc0->style.colspan, w);
+                else if (w > max_col0_w)
                     max_col0_w = w;
             } else if (const auto* pc0 = std::get_if<ProgressCell>(&v0)) {
                 const std::string& text = pc0->layout_text.empty() ? pc0->text : pc0->layout_text;
@@ -790,6 +813,16 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
             const float unit_w = L.max_value_w[c] + (has_units ? (unit_gap + L.max_unit_w[c]) : 0.0f);
             L.col_boxes[c].size.x = std::max(L.max_cell_w[c], unit_w);
         }
+    }
+
+    // A spanning text in column 0 only has to fit across the columns it spans
+    for (const auto& [span, w] : col0_spans) {
+        const int end_col = std::min(L.cols, span) - 1;
+        float spanned_w = table->col_gap * end_col;
+        for (int c = 0; c <= end_col; c++)
+            spanned_w += L.col_boxes[c].size.x;
+        if (w > spanned_w)
+            L.col_boxes[end_col].size.x += w - spanned_w;
     }
 
     float x = 0.0f;
