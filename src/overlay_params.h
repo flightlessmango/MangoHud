@@ -191,6 +191,7 @@ struct Tracepoint;
    OVERLAY_PARAM_CUSTOM(alpha)                       \
    OVERLAY_PARAM_CUSTOM(log_duration)                \
    OVERLAY_PARAM_CUSTOM(pci_dev)                     \
+   OVERLAY_PARAM_CUSTOM(gpu_voltage_pci_dev)         \
    OVERLAY_PARAM_CUSTOM(media_player_name)           \
    OVERLAY_PARAM_CUSTOM(media_player_color)          \
    OVERLAY_PARAM_CUSTOM(media_player_format)         \
@@ -338,6 +339,7 @@ struct overlay_params {
    std::vector<KeySym> reset_fps_metrics;
    std::string time_format, output_folder, output_file;
    std::string pci_dev;
+   std::string gpu_voltage_pci_dev;
    std::string media_player_name;
    std::string cpu_text, fps_text;
    std::map<std::string, std::string> cpu_custom_temp_sensor;
