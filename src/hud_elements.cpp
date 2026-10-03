@@ -835,7 +835,8 @@ void HudElements::procmem()
 void HudElements::fps(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_only]){
         ImguiNextColumnFirstItem();
-        HUDElements.TextColored(HUDElements.colors.engine, "%s", engine_name(*HUDElements.sw_stats));
+        HUDElements.TextColored(HUDElements.colors.engine, "%s",
+                                HUDElements.sw_stats->fg_active ? "FG" : engine_name(*HUDElements.sw_stats));
 
         ImguiNextColumnOrNewRow();
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_color_change]){
@@ -858,7 +859,8 @@ void HudElements::fps(){
         bool horizontal_fps_label = HUDElements.params->fps_text.empty() &&
                                     HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] &&
                                     !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names];
-        if(!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hide_fps_superscript] && !horizontal_fps_label){
+        if(!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hide_fps_superscript] &&
+           !horizontal_fps_label && !HUDElements.sw_stats->fg_active){
             ImGui::PushFont(HUDElements.sw_stats->font_small);
             HUDElements.TextColored(HUDElements.colors.text, "FPS");
             ImGui::PopFont();
@@ -875,6 +877,20 @@ void HudElements::fps(){
         ImguiNextColumnOrNewRow();
         HUDElements.TextColored(HUDElements.colors.engine, "%s", HUDElements.sw_stats->engineName.c_str());
     }
+}
+
+void HudElements::base_fps(){
+    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_base_fps])
+        return;
+
+    ImguiNextColumnFirstItem();
+    HUDElements.TextColored(HUDElements.colors.engine, "FPS");
+    ImguiNextColumnOrNewRow();
+    if (HUDElements.sw_stats->base_fps > 0.0)
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width,
+                           "%.0f", HUDElements.sw_stats->base_fps);
+    else
+        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "N/A");
 }
 
 void HudElements::fps_only(){
@@ -1985,6 +2001,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
         {"proc_vram", {proc_vram}},
         {"ram", {ram}},
         {"fps", {fps}},
+        {"base_fps", {base_fps}},
         {"gpu_name", {gpu_name}},
         {"frame_timing", {frame_timing}},
         {"media_player", {media_player}},
@@ -2086,6 +2103,8 @@ void HudElements::legacy_elements(const overlay_params* temp_params){
         ordered_functions.push_back({throttling_status, "throttling_status", value});
     if (temp_params->enabled[OVERLAY_PARAM_ENABLED_fps])
         ordered_functions.push_back({fps, "fps", value});
+    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_base_fps])
+        ordered_functions.push_back({base_fps, "base_fps", value});
     for (const auto& pair : options) {
         if (pair.first.find("graphs") != std::string::npos) {
             std::stringstream ss(pair.second);
