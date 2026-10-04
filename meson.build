@@ -313,7 +313,6 @@ if get_option('mangoapp')
 endif
 
 libdrm_dep = dependency('libdrm')
-libcap_dep = dependency('libcap')
 tracefs_dep = dependency('libtracefs', required: false)
 gpu_tracefs_deps = []
 gpu_tracefs_args = []
