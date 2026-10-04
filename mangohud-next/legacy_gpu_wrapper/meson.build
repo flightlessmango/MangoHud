@@ -25,5 +25,5 @@ mangohud_legacy_gpu_wrapper = static_library(
     '../server/metrics/gpu',
     '../../src'
   ],
-  dependencies: [spdlog_dep, libcap_dep, libdrm_dep, gpu_tracefs_deps]
+  dependencies: [spdlog_dep, libdrm_dep, gpu_tracefs_deps]
 )
