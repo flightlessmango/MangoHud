@@ -175,6 +175,7 @@ public:
     uint32_t resolutionWidth = 0;
     uint32_t resolutionHeight = 0;
     std::vector<std::string> focused_seats;
+    bool x11_focused = false;
     int64_t renderMinor = 0;
     std::shared_ptr<clientRes> resources;
     IPCServer* ipc;
@@ -191,7 +192,7 @@ public:
            ipc(ipc_), server(server_), bus(bus_) {}
 
     bool focused() const {
-        return !focused_seats.empty();
+        return x11_focused || !focused_seats.empty();
     }
 
     SampleStats& stats_for(SampleType type) {

@@ -54,6 +54,8 @@ public:
         }
     }
 
+    std::atomic<bool> x11_focused{false};
+
     bool set_focused_seats(std::vector<std::string> seats) {
         auto current = focused_seats.load();
         if (current && *current == seats)

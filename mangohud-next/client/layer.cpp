@@ -9,12 +9,14 @@
 #include "layer.h"
 #include "file_utils.h"
 #include "wayland.h"
+#include "x11.h"
 
 static char pendingEngineName[VK_MAX_DESCRIPTION_SIZE]{};
 std::unique_ptr<fpsLimiter> fps_limiter;
 std::unique_ptr<presentLimiter> present_limiter;
 std::unique_ptr<Layer> layer;
 static std::unique_ptr<Wayland> wayland;
+static std::unique_ptr<X11> x11;
 
 static const uint32_t overlay_vert_spv[] = {
     #include "overlay.vert.spv.h"
@@ -168,6 +170,36 @@ public:
         return r;
     }
 
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    static VkResult CreateXlibSurfaceKHR(const vkroots::VkInstanceDispatch* dispatch, VkInstance instance,
+                                        const VkXlibSurfaceCreateInfoKHR* info,
+                                        const VkAllocationCallbacks* allocator, VkSurfaceKHR* surface)
+    {
+        auto result = dispatch->CreateXlibSurfaceKHR(instance, info, allocator, surface);
+        if (result == VK_SUCCESS) {
+            if (!layer) layer = std::make_unique<Layer>();
+            if (!x11) x11 = std::make_unique<X11>(layer->ipc);
+            x11->set_window(info->window, DisplayString(info->dpy));
+        }
+        return result;
+    }
+#endif
+
+    static VkResult CreateXcbSurfaceKHR(const vkroots::VkInstanceDispatch* dispatch, VkInstance instance,
+                                       const VkXcbSurfaceCreateInfoKHR* info,
+                                       const VkAllocationCallbacks* allocator, VkSurfaceKHR* surface)
+    {
+        auto result = dispatch->CreateXcbSurfaceKHR(instance, info, allocator, surface);
+        if (result == VK_SUCCESS) {
+            if (!layer) layer = std::make_unique<Layer>();
+            if (!x11) x11 = std::make_unique<X11>(layer->ipc);
+            // TODO: we assume the application's XCB connection uses $DISPLAY. If it connects
+            // to another X server, our focus listener watches the window on the wrong server.
+            x11->set_window(info->window);
+        }
+        return result;
+    }
+
     static void DestroySurfaceKHR(const vkroots::VkInstanceDispatch* dispatch, VkInstance instance,
                                   VkSurfaceKHR surface, const VkAllocationCallbacks *pAllocator)
     {
@@ -268,6 +300,7 @@ public:
         const VkPresentInfoKHR* pPresentInfo)
     {
         if (layer) layer->ipc->add_to_queue(os_time_get_nano());
+        if (x11) x11->dispatch_events();
         if (wayland) {
             auto swapchain_data = layer->get_swapchain_data(pPresentInfo->pSwapchains[0]);
             wayland->ensure_overlay(swapchain_data->vk_surface);

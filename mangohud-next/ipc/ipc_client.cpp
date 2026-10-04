@@ -302,9 +302,16 @@ bool IPCClient::connect_bus() {
 }
 
 void IPCClient::run_bus() {
-    int r = sd_event_loop(event);
-    if (r < 0 && !quit.load())
-        SPDLOG_ERROR("sd_event_loop {} ({})", r, strerror(-r));
+    while (!quit.load() && sd_event_get_state(event) != SD_EVENT_FINISHED) {
+        // Focus and samples must not depend on receiving rendered HUD frames.
+        push_queue();
+        int r = sd_event_run(event, 10000);
+        if (r < 0) {
+            if (!quit.load())
+                SPDLOG_ERROR("sd_event_run {} ({})", r, strerror(-r));
+            break;
+        }
+    }
 }
 
 void IPCClient::bus_thread() {
@@ -467,6 +474,13 @@ int IPCClient::push_queue() {
         int r = sd_bus_message_new_signal(bus, &m, kObjPath, kIface, "frame_samples");
         if (r < 0) {
             SPDLOG_ERROR("push_queue: new_signal {} ({})", r, strerror(-r));
+            return r;
+        }
+
+        r = sd_bus_message_append(m, "b", static_cast<int>(x11_focused.load()));
+        if (r < 0) {
+            SPDLOG_ERROR("push_queue: append X11 focus {} ({})", r, strerror(-r));
+            sd_bus_message_unref(m);
             return r;
         }
 

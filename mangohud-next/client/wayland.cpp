@@ -340,8 +340,6 @@ void Wayland::on_presentation_feedback_discarded(void* data, struct wp_presentat
     auto* feedback_data = static_cast<presentation_feedback_data*>(data);
     SPDLOG_TRACE("wl presentation feedback: app discarded");
     if (feedback_data && feedback_data->wayland)
-        feedback_data->wayland->set_presentation_focus(false, os_time_get_nano());
-    if (feedback_data && feedback_data->wayland)
         feedback_data->wayland->release_app_feedback_request();
     wp_presentation_feedback_destroy(feedback);
     delete feedback_data;

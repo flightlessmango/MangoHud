@@ -1,4 +1,5 @@
 glslang = find_program('glslang', 'glslangValidator')
+xcb_dep = dependency('xcb')
 
 overlay_shaders = [
   'overlay.frag',
@@ -16,6 +17,7 @@ vulkan_layer = shared_library(
     files('layer.cpp',
           'vulkan.cpp',
           'wayland.cpp',
+          'x11.cpp',
           'gl.cpp',
           'gl_hooks.cpp',
           'real_dlsym.c',
@@ -25,6 +27,8 @@ vulkan_layer = shared_library(
     wayland_protocols,
     dependencies: [vulkan_dep,
                    vulkan_wsi_deps,
+                   dep_x11,
+                   xcb_dep,
                    spdlog_dep,
                    vkroots_dep,
                    ipc_dep,
@@ -35,7 +39,7 @@ vulkan_layer = shared_library(
                    dependency('gl'),
                    vkbootstrap_dep,
                    dep_vulkan_utility_libraries],
-    cpp_args: vulkan_wsi_args,
+    cpp_args: vulkan_wsi_args + ['-DVK_USE_PLATFORM_XCB_KHR'],
     include_directories: inc_common,
     install: true,
     link_args: [

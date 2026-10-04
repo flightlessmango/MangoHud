@@ -19,16 +19,21 @@
 #include <GL/glx.h>
 #include <GL/glxext.h>
 #include "wayland.h"
+#include "x11.h"
 
 std::unique_ptr<OverlayGL> overlay;
 std::shared_ptr<IPCClient> ipc;
 static std::unique_ptr<Wayland> wayland;
+static std::unique_ptr<X11> x11;
+static std::mutex glx_windows_m;
+static std::unordered_map<Display*, std::unordered_map<GLXWindow, Window>> glx_windows;
 std::mutex wl_egl_windows_m;
 std::unordered_map<wl_egl_window*, wl_surface*> wl_egl_windows;
 std::mutex egl_displays_m;
 std::unordered_map<EGLDisplay, wl_display*> egl_displays;
+static std::unordered_map<EGLDisplay, EGLenum> egl_platforms;
 
-static wl_surface* get_wl_egl_surface(wl_egl_window* window) {
+static wl_surface* get_wl_egl_surface(wl_egl_window* window, bool known_wayland) {
     if (!window)
         return nullptr;
 
@@ -38,6 +43,9 @@ static wl_surface* get_wl_egl_surface(wl_egl_window* window) {
         if (it != wl_egl_windows.end())
             return it->second;
     }
+
+    if (!known_wayland)
+        return nullptr;
 
     if (window->version == WL_EGL_WINDOW_VERSION)
         return window->surface;
@@ -51,12 +59,13 @@ static wl_display* get_egl_display(EGLDisplay dpy) {
     return it != egl_displays.end() ? it->second : nullptr;
 }
 
-static void add_egl_display(EGLDisplay dpy, void* native_display) {
-    if (dpy == EGL_NO_DISPLAY || !native_display)
+static void add_egl_display(EGLDisplay dpy, void* native_display, EGLenum platform = 0) {
+    if (dpy == EGL_NO_DISPLAY)
         return;
 
     std::lock_guard lock(egl_displays_m);
     egl_displays[dpy] = static_cast<wl_display*>(native_display);
+    egl_platforms[dpy] = platform;
 }
 
 static void reset_wayland() {
@@ -66,16 +75,31 @@ static void reset_wayland() {
     wayland.reset();
 }
 
-static void register_egl_surface(EGLDisplay dpy, EGLSurface surf, void* native_window) {
+static void register_egl_surface(EGLDisplay dpy, EGLSurface surf, void* native_window, bool platform_window = false) {
     if (surf == EGL_NO_SURFACE || !native_window)
         return;
 
-    auto* wl_surface = get_wl_egl_surface(reinterpret_cast<wl_egl_window*>(native_window));
+    EGLenum platform = 0;
+    {
+        std::lock_guard lock(egl_displays_m);
+        auto it = egl_platforms.find(dpy);
+        if (it != egl_platforms.end())
+            platform = it->second;
+    }
+    if (platform == EGL_PLATFORM_X11_KHR) {
+        auto window = platform_window ? *static_cast<Window*>(native_window)
+                                     : static_cast<Window>(reinterpret_cast<uintptr_t>(native_window));
+        if (!ipc) ipc = std::make_shared<IPCClient>(nullptr, Backend::EGL);
+        if (!x11) x11 = std::make_unique<X11>(ipc);
+        auto* display = reinterpret_cast<Display*>(get_egl_display(dpy));
+        x11->set_window(window, display ? DisplayString(display) : nullptr);
+        return;
+    }
+    // Legacy eglGetDisplay does not identify its platform. Only trust tracked windows there.
+    auto* wl_surface = get_wl_egl_surface(reinterpret_cast<wl_egl_window*>(native_window), platform == EGL_PLATFORM_WAYLAND_KHR);
     auto* wl_display = get_egl_display(dpy);
     if (!wl_surface || !wl_display)
         return;
-
-    add_egl_display(dpy, wl_display);
 
     if (!ipc) ipc = std::make_shared<IPCClient>(nullptr, Backend::EGL);
     if (!wayland)
@@ -91,9 +115,24 @@ static bool present_wayland(EGLSurface surf) {
     return wayland->ensure_overlay(surf);
 }
 
-static void mangohud(Display *dpy = nullptr) {
+static void mangohud(Display *dpy = nullptr, GLXDrawable drawable = 0) {
     auto api = dpy ? Backend::GLX : Backend::EGL;
     if (!ipc) ipc = std::make_shared<IPCClient>(nullptr, api);
+    if (dpy && drawable) {
+        if (!x11) x11 = std::make_unique<X11>(ipc);
+        Window window = drawable;
+        {
+            std::lock_guard lock(glx_windows_m);
+            auto display = glx_windows.find(dpy);
+            if (display != glx_windows.end()) {
+                auto wrapped = display->second.find(drawable);
+                if (wrapped != display->second.end())
+                    window = wrapped->second;
+            }
+        }
+        x11->set_window(window, DisplayString(dpy));
+    }
+    if (x11) x11->dispatch_events();
     if (!overlay) overlay = std::make_unique<OverlayGL>(nullptr, ipc);
     if (dpy) overlay->xdpy = dpy;
     overlay->ipc->add_to_queue(os_time_get_nano());
@@ -118,8 +157,7 @@ EXPORT_C_(EGLDisplay) eglGetPlatformDisplay(EGLenum platform, void* native_displ
         real_eglGetPlatformDisplay = (decltype(real_eglGetPlatformDisplay)) real_dlsym(RTLD_NEXT, "eglGetPlatformDisplay");
 
     EGLDisplay dpy = real_eglGetPlatformDisplay(platform, native_display, attrib_list);
-    if (platform == EGL_PLATFORM_WAYLAND_KHR)
-        add_egl_display(dpy, native_display);
+    add_egl_display(dpy, native_display, platform);
 
     return dpy;
 }
@@ -130,8 +168,7 @@ EXPORT_C_(EGLDisplay) eglGetPlatformDisplayEXT(EGLenum platform, void* native_di
         real_eglGetPlatformDisplayEXT = (decltype(real_eglGetPlatformDisplayEXT)) real_dlsym(RTLD_NEXT, "eglGetPlatformDisplayEXT");
 
     EGLDisplay dpy = real_eglGetPlatformDisplayEXT(platform, native_display, attrib_list);
-    if (platform == EGL_PLATFORM_WAYLAND_KHR)
-        add_egl_display(dpy, native_display);
+    add_egl_display(dpy, native_display, platform);
 
     return dpy;
 }
@@ -142,7 +179,12 @@ EXPORT_C_(EGLDisplay) eglGetDisplay(EGLNativeDisplayType native_display) {
         real_eglGetDisplay = (decltype(real_eglGetDisplay)) real_dlsym(RTLD_NEXT, "eglGetDisplay");
 
     EGLDisplay dpy = real_eglGetDisplay(native_display);
-    add_egl_display(dpy, reinterpret_cast<void*>(native_display));
+    EGLenum platform = 0;
+    if (const char* name = std::getenv("EGL_PLATFORM")) {
+        if (std::strcmp(name, "wayland") == 0) platform = EGL_PLATFORM_WAYLAND_KHR;
+        if (std::strcmp(name, "x11") == 0) platform = EGL_PLATFORM_X11_KHR;
+    }
+    add_egl_display(dpy, reinterpret_cast<void*>(native_display), platform);
 
     return dpy;
 }
@@ -171,7 +213,7 @@ EXPORT_C_(EGLSurface) eglCreatePlatformWindowSurface(EGLDisplay dpy, EGLConfig c
     EGLSurface surf = real_eglCreatePlatformWindowSurface
         ? real_eglCreatePlatformWindowSurface(dpy, config, native_window, attrib_list)
         : EGL_NO_SURFACE;
-    register_egl_surface(dpy, surf, native_window);
+    register_egl_surface(dpy, surf, native_window, true);
 
     return surf;
 }
@@ -187,7 +229,7 @@ EXPORT_C_(EGLSurface) eglCreatePlatformWindowSurfaceEXT(EGLDisplay dpy, EGLConfi
     EGLSurface surf = real_eglCreatePlatformWindowSurfaceEXT
         ? real_eglCreatePlatformWindowSurfaceEXT(dpy, config, native_window, attrib_list)
         : EGL_NO_SURFACE;
-    register_egl_surface(dpy, surf, native_window);
+    register_egl_surface(dpy, surf, native_window, true);
 
     return surf;
 }
@@ -287,6 +329,30 @@ EXPORT_C_(EGLBoolean) eglSwapBuffersWithDamageEXT(EGLDisplay dpy, EGLSurface sur
         : EGL_FALSE;
 }
 
+EXPORT_C_(GLXWindow) glXCreateWindow(Display* dpy, GLXFBConfig config, Window window, const int* attribs) {
+    static auto real = reinterpret_cast<decltype(&glXCreateWindow)>(real_dlsym(RTLD_NEXT, "glXCreateWindow"));
+    auto drawable = real(dpy, config, window, attribs);
+    if (drawable) {
+        std::lock_guard lock(glx_windows_m);
+        glx_windows[dpy][drawable] = window;
+    }
+    return drawable;
+}
+
+EXPORT_C_(void) glXDestroyWindow(Display* dpy, GLXWindow window) {
+    static auto real = reinterpret_cast<decltype(&glXDestroyWindow)>(real_dlsym(RTLD_NEXT, "glXDestroyWindow"));
+    {
+        std::lock_guard lock(glx_windows_m);
+        auto display = glx_windows.find(dpy);
+        if (display != glx_windows.end()) {
+            display->second.erase(window);
+            if (display->second.empty())
+                glx_windows.erase(display);
+        }
+    }
+    real(dpy, window);
+}
+
 EXPORT_C_(void) glXSwapBuffers(Display* dpy, GLXDrawable drawable) {
     static void (*real_glXSwapBuffers)(Display*, GLXDrawable) = nullptr;
     if (!real_glXSwapBuffers)
@@ -295,7 +361,7 @@ EXPORT_C_(void) glXSwapBuffers(Display* dpy, GLXDrawable drawable) {
     if (!dpy || drawable == 0)
         return real_glXSwapBuffers(dpy, drawable);
 
-    mangohud(dpy);
+    mangohud(dpy, drawable);
 
     return real_glXSwapBuffers(dpy, drawable);
 }
@@ -306,7 +372,7 @@ EXPORT_C_(int64_t) glXSwapBuffersMscOML(Display *dpy, GLXDrawable drawable, int6
     if (!real_glXSwapBuffersMscOML)
         real_glXSwapBuffersMscOML = (int64_t (*)(Display*, GLXDrawable, int64_t, int64_t, int64_t))real_dlsym(RTLD_NEXT, "glXSwapBuffersMscOML");
 
-    mangohud(dpy);
+    mangohud(dpy, drawable);
 
     return real_glXSwapBuffersMscOML(dpy, drawable, target_msc, divisor, remainder);
 }
@@ -330,6 +396,10 @@ static const auto name_to_funcptr_map = std::array{
     ADD_HOOK(eglGetProcAddress),
     ADD_HOOK(eglSwapBuffers),
     ADD_HOOK(glXSwapBuffers),
+    ADD_HOOK(glXCreateWindow),
+    ADD_HOOK(glXDestroyWindow),
+    ADD_HOOK(glXGetProcAddress),
+    ADD_HOOK(glXGetProcAddressARB),
     ADD_HOOK(glXSwapBuffersMscOML),
     ADD_HOOK(eglSwapBuffersWithDamageKHR),
     ADD_HOOK(eglSwapBuffersWithDamageEXT),
@@ -355,6 +425,22 @@ static void* find_hook(const char* name)
         if (std::strcmp(name, f.name) == 0) return f.ptr;
 
     return nullptr;
+}
+
+EXPORT_C_(__GLXextFuncPtr) glXGetProcAddress(const GLubyte* name) {
+    if (std::strncmp(reinterpret_cast<const char*>(name), "glX", 3) == 0)
+        if (auto* hook = find_hook(reinterpret_cast<const char*>(name)))
+            return reinterpret_cast<__GLXextFuncPtr>(hook);
+    static auto real = reinterpret_cast<decltype(&glXGetProcAddress)>(real_dlsym(RTLD_NEXT, "glXGetProcAddress"));
+    return real(name);
+}
+
+EXPORT_C_(__GLXextFuncPtr) glXGetProcAddressARB(const GLubyte* name) {
+    if (std::strncmp(reinterpret_cast<const char*>(name), "glX", 3) == 0)
+        if (auto* hook = find_hook(reinterpret_cast<const char*>(name)))
+            return reinterpret_cast<__GLXextFuncPtr>(hook);
+    static auto real = reinterpret_cast<decltype(&glXGetProcAddressARB)>(real_dlsym(RTLD_NEXT, "glXGetProcAddressARB"));
+    return real(name);
 }
 
 EXPORT_C_(wl_proxy*) wl_proxy_marshal_flags(wl_proxy* proxy, uint32_t opcode,

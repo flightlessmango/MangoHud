@@ -461,8 +461,14 @@ int Client::frame_samples(sd_bus_message* m, void* userdata, sd_bus_error* ret_e
     if (!self)
         return 0;
 
+    int x11_focused = 0;
+    int r = sd_bus_message_read(m, "b", &x11_focused);
+    if (r <= 0) {
+        SPDLOG_ERROR("frame_samples: missing X11 focus ({})", r);
+        return r < 0 ? r : -EINVAL;
+    }
     std::vector<std::string> focused_seats;
-    int r = sd_bus_message_enter_container(m, 'a', "s");
+    r = sd_bus_message_enter_container(m, 'a', "s");
     if (r < 0) {
         SPDLOG_ERROR("frame_samples: enter focused seats {} ({})", r, strerror(-r));
         return r;
@@ -495,6 +501,7 @@ int Client::frame_samples(sd_bus_message* m, void* userdata, sd_bus_error* ret_e
 
     std::lock_guard client_lock(self->m);
     self->focused_seats = std::move(focused_seats);
+    self->x11_focused = x11_focused;
     for (;;) {
         uint8_t type_raw = 0;
         uint64_t seq = 0, t_ns = 0;
