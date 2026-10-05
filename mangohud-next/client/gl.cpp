@@ -6,6 +6,7 @@
 #include <GL/glext.h>
 #include <GL/glx.h>
 #include <drm/drm_fourcc.h>
+#include <cstdlib>
 #include <iterator>
 
 GLX::GLX() {
@@ -13,6 +14,20 @@ GLX::GLX() {
     p_glDeleteMemoryObjectsEXT = (PFNGLDELETEMEMORYOBJECTSEXTPROC)glx_gp("glDeleteMemoryObjectsEXT");
     p_glImportMemoryFdEXT      = (PFNGLIMPORTMEMORYFDEXTPROC)glx_gp("glImportMemoryFdEXT");
     p_glTexStorageMem2DEXT     = (PFNGLTEXSTORAGEMEM2DEXTPROC)glx_gp("glTexStorageMem2DEXT");
+}
+
+static int64_t render_minor_from_path(const std::string& path) {
+    auto pos = path.rfind("renderD");
+    if (pos == std::string::npos)
+        return -1;
+
+    const char* begin = path.c_str() + pos + 7;
+    char* end = nullptr;
+    long minor = std::strtol(begin, &end, 10);
+    if (begin == end || (end && *end != '\0') || minor < 0)
+        return -1;
+
+    return minor;
 }
 
 bool GLX::import_dmabuf(const Fdinfo& fdinfo, GLuint& tex, GLuint& memobj, int f) {
@@ -197,23 +212,28 @@ EGL::EGL() {
 int64_t EGL::renderer() {
     EGLDisplay dpy = eglGetCurrentDisplay();
     if (dpy == EGL_NO_DISPLAY)
-        return 1;
+        return -1;
 
+    if (!p_eglQueryDisplayAttribEXT || !p_eglQueryDeviceStringEXT)
+        return -1;
 
     if (!eglInitialize(dpy, NULL, NULL)) {
         printf("eglInitialize failed, err=0x%04x\n", eglGetError());
-        return 1;
+        return -1;
     }
 
     EGLAttrib dev_attrib = 0;
     if (!p_eglQueryDisplayAttribEXT(dpy, EGL_DEVICE_EXT, &dev_attrib)) {
         printf("eglQueryDisplayAttribEXT(EGL_DEVICE_EXT) failed, err=0x%04x\n", eglGetError());
-        return 1;
+        return -1;
     }
 
     EGLDeviceEXT dev = (EGLDeviceEXT)dev_attrib;
     const char *render = p_eglQueryDeviceStringEXT(dev, EGL_DRM_RENDER_NODE_FILE_EXT);
-    return atoi(strrchr(render, 'D') + 1);
+    if (!render)
+        return -1;
+
+    return render_minor_from_path(render);
 }
 
 EGLDisplay EGL::import_dmabuf(const Fdinfo& fdinfo, GLuint& tex, EGLImageKHR& image, int f, Display* xdpy) {
@@ -416,14 +436,16 @@ OverlayGL::OverlayGL(Display* xdpy_, std::shared_ptr<IPCClient> ipc_) : xdpy(xdp
     SPDLOG_INFO("OpenGL overlay init");
     glx = std::make_unique<GLX>();
     egl = std::make_unique<EGL>();
-    auto nodes = find_render_nodes(-1);
-    int renderer = -1;
-    for (auto node : nodes) {
-        renderer = atoi(strrchr(node.c_str(), 'D') + 1);
-        SPDLOG_DEBUG("OpenGL renderer: {}", renderer);
-    }
 
-    std::string node = *nodes.begin();
+    int64_t renderer = -1;
+    if (!xdpy)
+        renderer = egl->renderer();
+
+    if (renderer >= 0)
+        SPDLOG_DEBUG("OpenGL renderer: renderD{} (egl)", renderer);
+    else
+        SPDLOG_DEBUG("OpenGL renderer: unknown");
+
     ipc->renderMinor = renderer;
     ipc->pEngineName = pEngineName;
     if (const GLubyte* gpu_name = glGetString(GL_RENDERER))

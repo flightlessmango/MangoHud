@@ -44,7 +44,7 @@ public:
     std::mutex m;
     Fdinfo fdinfo;
     float fps_limit = 0;
-    int64_t renderMinor = 0;
+    int64_t renderMinor = -1;
     std::string pEngineName;
     std::string vulkanDriver;
     std::string gpuName;

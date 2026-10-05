@@ -240,7 +240,7 @@ public:
         if (!layer) layer = std::make_unique<Layer>();
         layer->ipc->pEngineName = pendingEngineName;
 
-        if (!layer->ipc->renderMinor || layer->ipc->vulkanDriver.empty()) {
+        if (layer->ipc->renderMinor < 0 || layer->ipc->vulkanDriver.empty()) {
             VkPhysicalDeviceDrmPropertiesEXT drm_props{};
             drm_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRM_PROPERTIES_EXT;
 
@@ -258,7 +258,7 @@ public:
                     pDispatch->pPhysicalDeviceDispatch->Instance, "vkGetPhysicalDeviceProperties2KHR"));
 
             fpGetPhysicalDeviceProperties2KHR(pDispatch->PhysicalDevice, &props2);
-            if (drm_props.hasPrimary)
+            if (drm_props.hasRender)
                 layer->ipc->renderMinor = drm_props.renderMinor;
             if (driver_props.driverInfo[0] != '\0')
                 layer->ipc->vulkanDriver = driver_props.driverInfo;

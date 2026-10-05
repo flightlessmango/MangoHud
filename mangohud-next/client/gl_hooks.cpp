@@ -133,7 +133,7 @@ static void mangohud(Display *dpy = nullptr, GLXDrawable drawable = 0) {
         x11->set_window(window, DisplayString(dpy));
     }
     if (x11) x11->dispatch_events();
-    if (!overlay) overlay = std::make_unique<OverlayGL>(nullptr, ipc);
+    if (!overlay) overlay = std::make_unique<OverlayGL>(dpy, ipc);
     if (dpy) overlay->xdpy = dpy;
     overlay->ipc->add_to_queue(os_time_get_nano());
     overlay->draw();
