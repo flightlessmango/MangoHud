@@ -10,10 +10,10 @@
 #include "vk.h"
 #include "egl.h"
 std::mutex init_m;
-static constexpr float unit_gap = -1.5f;
 static constexpr float hud_cell_padding_x = 0.0f;
 static constexpr float hud_cell_padding_y = 2.0f;
 static constexpr float outline_padding_x = 1.5f;
+static constexpr float unit_gap = 1.0f;
 static constexpr float graph_plot_height = 50.0f;
 
 ImGuiCtx::ImGuiCtx() {
