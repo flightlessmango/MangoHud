@@ -316,7 +316,14 @@ libdrm_dep = dependency('libdrm')
 tracefs_dep = dependency('libtracefs', required: false)
 gpu_tracefs_deps = []
 gpu_tracefs_args = []
+tracefs_links = false
 if tracefs_dep.found()
+  tracefs_links = cc.links('''
+    #include <tracefs.h>
+    int main(void) { return tracefs_tracing_dir() == 0; }
+  ''', dependencies: tracefs_dep, name: 'usable libtracefs')
+endif
+if tracefs_links
   gpu_tracefs_deps += tracefs_dep
   gpu_tracefs_args += '-DHAVE_TRACEFS_GPU_MEM'
 endif
