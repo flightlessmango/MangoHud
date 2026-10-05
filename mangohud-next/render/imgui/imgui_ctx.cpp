@@ -694,6 +694,7 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
     L.col_boxes.resize(L.cols);
 
     float max_col0_w = 0.0f;
+    std::vector<float> col0_span_widths(L.cols, 0.0f);
     std::vector<bool> separator_cols(L.cols, false);
     std::vector<float> separator_col_widths(L.cols, 0.0f);
 
@@ -719,7 +720,10 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
                     }
                 }
 
-                if (w > max_col0_w)
+                if (tc0->style.colspan > 1 && L.cols > 0) {
+                    const int end_col = std::min(L.cols, tc0->style.colspan) - 1;
+                    col0_span_widths[end_col] = std::max(col0_span_widths[end_col], w);
+                } else if (w > max_col0_w)
                     max_col0_w = w;
             } else if (const auto* pc0 = std::get_if<ProgressCell>(&v0)) {
                 const std::string& text = pc0->layout_text.empty() ? pc0->text : pc0->layout_text;
@@ -811,6 +815,15 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
             const float unit_w = L.max_value_w[c] + (has_units ? (unit_gap + L.max_unit_w[c]) : 0.0f);
             L.col_boxes[c].size.x = std::max(L.max_cell_w[c], unit_w);
         }
+    }
+
+    // Fit shorter spans first so wider spans include any earlier column growth.
+    float spanned_w = 0.0f;
+    for (int c = 0; c < L.cols; c++) {
+        spanned_w += L.col_boxes[c].size.x + (c > 0 ? table->col_gap : 0.0f);
+        const float extra = std::max(0.0f, col0_span_widths[c] - spanned_w);
+        L.col_boxes[c].size.x += extra;
+        spanned_w += extra;
     }
 
     float x = 0.0f;
