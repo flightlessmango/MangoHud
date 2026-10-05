@@ -265,6 +265,24 @@ public:
         return true;
     }
 
+    template <typename Surface>
+    bool request_presentation_feedback(Surface surface) {
+        auto surf_data = get_surface(surface);
+        if (!surf_data || surf_data->app_feedback_via_commit)
+            return false;
+
+        auto* globals = ctx.get_global(surf_data->display);
+        if (!globals)
+            return false;
+
+        bool requested = request_app_presentation_feedback(surf_data, *globals, surf_data->surface,
+                                                           max_sampled_app_feedback_pending);
+        if (requested)
+            wl_display_flush(surf_data->display);
+
+        return requested;
+    }
+
 private:
     template <typename Surface>
     std::shared_ptr<surface_data> get_surface(Surface key) {
@@ -295,8 +313,12 @@ private:
     std::thread thread;
     std::atomic<bool> quit{false};
     std::atomic<uint32_t> refresh_ns{0};
-    inline static constexpr uint32_t max_app_feedback_pending = 8;
+    inline static constexpr uint32_t max_commit_app_feedback_pending = 8;
+    inline static constexpr uint32_t max_sampled_app_feedback_pending = 256;
     std::atomic<uint32_t> app_feedback_pending{0};
+    std::atomic<uint64_t> last_app_feedback_block_log_ns{0};
+    std::atomic<uint64_t> app_feedback_discarded{0};
+    std::atomic<uint64_t> last_app_feedback_discard_log_ns{0};
     std::mutex app_feedback_m;
     uint64_t app_seq = 0;
     uint64_t last_app_presented_ns = 0;
@@ -354,7 +376,7 @@ private:
     };
 
     bool request_app_presentation_feedback(const std::shared_ptr<surface_data>& surf_data, wl_globals& globals,
-                                           wl_surface* surface);
+                                           wl_surface* surface, uint32_t max_pending = max_commit_app_feedback_pending);
     bool ensure_overlay_data(const std::shared_ptr<surface_data>& surf_data);
     void remove_seat(uint32_t name, wl_display* display);
     void update_import(const std::shared_ptr<surface_data>& surf_data);

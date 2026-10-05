@@ -28,14 +28,21 @@ void Wayland::release_app_feedback_request()
 }
 
 bool Wayland::request_app_presentation_feedback(const std::shared_ptr<surface_data>& surf_data, wl_globals& globals,
-                                                wl_surface* surface)
+                                                wl_surface* surface, uint32_t max_pending)
 {
     if (!surf_data || !surface || !globals.presentation)
         return false;
 
     auto pending = app_feedback_pending.fetch_add(1, std::memory_order_acq_rel);
-    if (pending >= max_app_feedback_pending) {
+    if (pending >= max_pending) {
         release_app_feedback_request();
+        auto now = os_time_get_nano();
+        auto last_log = last_app_feedback_block_log_ns.load(std::memory_order_acquire);
+        if (now - last_log > 1000000000ULL &&
+            last_app_feedback_block_log_ns.compare_exchange_strong(last_log, now, std::memory_order_acq_rel)) {
+            SPDLOG_TRACE("wl presentation feedback: app request blocked pending={} max={} commit_hook={}",
+                         pending, max_pending, surf_data->app_feedback_via_commit);
+        }
         return false;
     }
 
@@ -90,7 +97,7 @@ std::shared_ptr<surface_data> Wayland::get_surface(wl_proxy* proxy)
 bool Wayland::request_commit_presentation_feedback(wl_proxy* surface_proxy)
 {
     auto surf_data = get_surface(surface_proxy);
-    if (!surf_data)
+    if (!surf_data || !surf_data->app_feedback_via_commit)
         return false;
 
     auto* globals = ctx.get_global(surf_data->display);
@@ -117,10 +124,6 @@ bool Wayland::ensure_overlay_data(const std::shared_ptr<surface_data>& surf_data
     auto* globals = ctx.get_global(surf_data->display);
     if (!globals)
         return false;
-
-    if (!surf_data->app_feedback_via_commit &&
-        request_app_presentation_feedback(surf_data, *globals, surf_data->surface))
-        wl_display_flush(surf_data->display);
 
     if (!globals->compositor || !globals->subcompositor || !globals->dmabuf)
         return false;
@@ -338,9 +341,20 @@ void Wayland::on_presentation_feedback_presented(void* data, struct wp_presentat
 void Wayland::on_presentation_feedback_discarded(void* data, struct wp_presentation_feedback* feedback)
 {
     auto* feedback_data = static_cast<presentation_feedback_data*>(data);
-    SPDLOG_TRACE("wl presentation feedback: app discarded");
-    if (feedback_data && feedback_data->wayland)
-        feedback_data->wayland->release_app_feedback_request();
+    if (feedback_data && feedback_data->wayland) {
+        auto* wayland = feedback_data->wayland;
+        wayland->app_feedback_discarded.fetch_add(1, std::memory_order_relaxed);
+
+        auto now = os_time_get_nano();
+        auto last_log = wayland->last_app_feedback_discard_log_ns.load(std::memory_order_acquire);
+        if (now - last_log > 1000000000ULL &&
+            wayland->last_app_feedback_discard_log_ns.compare_exchange_strong(last_log, now, std::memory_order_acq_rel)) {
+            auto discarded = wayland->app_feedback_discarded.exchange(0, std::memory_order_acq_rel);
+            SPDLOG_TRACE("wl presentation feedback: app discarded count={}", discarded);
+        }
+
+        wayland->release_app_feedback_request();
+    }
     wp_presentation_feedback_destroy(feedback);
     delete feedback_data;
 }
@@ -636,7 +650,7 @@ void Wayland::run_thread(std::shared_ptr<surface_data> surf_data)
         std::chrono::nanoseconds sleep = std::chrono::milliseconds(100);
         if (ipc->connected.load(std::memory_order_acquire)) {
             auto refresh = refresh_ns.load(std::memory_order_acquire);
-            sleep = refresh > 0 ? std::chrono::nanoseconds(refresh / 2) : std::chrono::milliseconds(7);
+            sleep = refresh > 0 ? std::chrono::nanoseconds(refresh) : std::chrono::milliseconds(7);
         }
         std::this_thread::sleep_for(sleep);
     }

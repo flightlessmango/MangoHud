@@ -304,6 +304,7 @@ public:
         if (wayland) {
             auto swapchain_data = layer->get_swapchain_data(pPresentInfo->pSwapchains[0]);
             wayland->ensure_overlay(swapchain_data->vk_surface);
+            wayland->request_presentation_feedback(swapchain_data->vk_surface);
             return pDispatch->QueuePresentKHR(queue, pPresentInfo);
         }
 
