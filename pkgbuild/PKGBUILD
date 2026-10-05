@@ -22,6 +22,7 @@ source=(
         "vk-bootstrap::git+https://github.com/charles-lunarg/vk-bootstrap.git#tag=v1.4.328"
         "implot-0.16.zip::https://github.com/epezent/implot/archive/refs/tags/v0.16.zip"
         "implot_0.16-1_patch.zip::https://wrapdb.mesonbuild.com/v2/implot_0.16-1/get_patch"
+        "wlr-protocols::git+https://gitlab.freedesktop.org/wlroots/wlr-protocols.git#commit=bf4fc79abc359eea5a0edec0ac6d4a2b2955f82a"
         )
 
 sha256sums=(
@@ -36,6 +37,7 @@ sha256sums=(
             'SKIP' # vk-bootstrap
             "24f772c688f6b8a6e19d7efc10e4923a04a915f13d487b08b83553aa62ae1708" # implot-0.16.zip
             "1c6b1462066a5452fa50c1da1dd47fed841f28232972c82d778f2962936568c7" # implot_0.16-1_patch.zip
+            'SKIP' # wlr-protocols
             )
 
 _build_args="-Dappend_libdir_mangohud=false -Dwith_xnvctrl=disabled -Dtests=disabled"
@@ -64,6 +66,8 @@ prepare() {
   ln -sv "$srcdir/vk-bootstrap" subprojects
   cp -rvt "subprojects/vk-bootstrap" -- "subprojects/packagefiles/vk-bootstrap/"*
   ln -sv "$srcdir/implot-0.16" subprojects
+  ln -sv "$srcdir/wlr-protocols" subprojects
+  cp -rvt "subprojects/wlr-protocols" -- "subprojects/packagefiles/wlr-protocols/"*
 }
 
 build() {
