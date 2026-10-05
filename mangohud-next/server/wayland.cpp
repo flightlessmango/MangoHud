@@ -3,6 +3,7 @@
 #include "../ipc/client.h"
 #include "../ipc/ipc.h"
 #include "../render/renderer.h"
+#include "server.h"
 
 #include <chrono>
 #include <algorithm>
@@ -167,7 +168,7 @@ void Wayland::run()
         });
 
         auto focused = ipc->focused_client(display_name);
-        if (!focused) {
+        if (!focused && ipc->server->config->get<bool>("remember_focus")) {
             std::lock_guard lock(frame_m);
             if (active)
                 focused = active->client.lock();
@@ -189,7 +190,30 @@ void Wayland::run()
                 import_resources(focused);
         }
 
-        present();
+        if (!focused) {
+            if (!hidden) {
+                wl_surface_attach(surface, nullptr, 0, 0);
+                wl_surface_commit(surface);
+                wl_display_flush(display);
+                configured = false;
+                hidden = true;
+            }
+        } else {
+            if (hidden) {
+                // Unmapping resets layer-shell state; remap with a bufferless commit.
+                zwlr_layer_surface_v1_set_anchor(layer_surface,
+                    ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP | ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT);
+                zwlr_layer_surface_v1_set_size(layer_surface, 500, 500);
+                zwlr_layer_surface_v1_set_exclusive_zone(layer_surface, -1);
+                zwlr_layer_surface_v1_set_keyboard_interactivity(
+                    layer_surface, ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE);
+                configured = false;
+                wl_surface_commit(surface);
+                wl_display_flush(display);
+                hidden = false;
+            }
+            present();
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(7));
     }
 }

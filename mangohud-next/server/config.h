@@ -131,6 +131,7 @@ private:
         {"font_size", Spec{Int, 24}},
         {"fps_limit", Spec{Double, 0.0}},
         {"output", Spec{String, std::string("app")}},
+        {"remember_focus", Spec{Bool, false}},
     };
 
     const Value& raw(std::string_view key) const

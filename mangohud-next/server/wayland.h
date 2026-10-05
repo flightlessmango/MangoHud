@@ -109,6 +109,7 @@ private:
     uint32_t preferred_scale = 120;
     zwlr_layer_surface_v1* layer_surface = nullptr;
     bool configured = false;
+    bool hidden = false;
     std::thread thread;
     std::atomic<bool> quit{false};
     std::mutex frame_m;
