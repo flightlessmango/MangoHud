@@ -59,4 +59,4 @@ presentation_time_protocol = [
 ]
 
 wayland_protocols = linux_dmabuf_protocol + fractional_scale_protocol + viewporter_protocol + presentation_time_protocol
-wayland_ctx_sources = files('wayland_ctx.cpp')
+wayland_ctx_sources = files('wayland_ctx.cpp', 'wayland.cpp')
