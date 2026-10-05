@@ -3,6 +3,8 @@
 #include "../client/layer.h"
 #include "ipc_abi_hash.h"
 
+#include <cstdlib>
+
 IPCClient::IPCClient(Layer* layer_, Backend api_) : layer(layer_), api(api_){
     auto console = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
     auto spdlog_sink = std::make_shared<spdlogSink>(this);
@@ -10,6 +12,8 @@ IPCClient::IPCClient(Layer* layer_, Backend api_) : layer(layer_), api(api_){
     spdlog::set_default_logger(logger);
     spdlog::set_level(spdlog::level::level_enum::debug);
     SPDLOG_DEBUG("init dbus client");
+    if (const char* display = std::getenv("WAYLAND_DISPLAY"))
+        waylandDisplay = display;
     wake_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
     work_eventfd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
 }
@@ -362,14 +366,15 @@ bool IPCClient::on_connect() {
 
         r = sd_bus_message_append(
             msg,
-            "tsxiiss",
+            "tsxiisss",
             abi_hash,
             pEngineName.c_str(),
             int64_t(renderMinor),
             (buffer_size),
             raw_api,
             vulkanDriver.c_str(),
-            gpuName.c_str()
+            gpuName.c_str(),
+            waylandDisplay.c_str()
         );
 
         r = sd_bus_send(bus, msg, nullptr);

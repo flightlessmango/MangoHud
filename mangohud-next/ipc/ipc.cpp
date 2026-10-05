@@ -24,6 +24,23 @@ IPCServer::IPCServer(MangoHudServer* server_) : server(server_) {
     thread = std::thread(&IPCServer::dbus_thread, this);
 }
 
+std::shared_ptr<Client> IPCServer::focused_client(std::string_view display)
+{
+    std::vector<std::shared_ptr<Client>> candidates;
+    {
+        std::lock_guard lock(clients_mtx);
+        candidates = clients;
+    }
+
+    for (const auto& client : candidates) {
+        std::lock_guard lock(client->m);
+        if (client->active.load() &&
+            client->wayland_display == display && client->focused())
+            return client;
+    }
+    return nullptr;
+}
+
 IPCServer::~IPCServer() {
     stop.store(true);
     if (thread.joinable())

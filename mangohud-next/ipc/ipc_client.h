@@ -48,6 +48,7 @@ public:
     std::string pEngineName;
     std::string vulkanDriver;
     std::string gpuName;
+    std::string waylandDisplay;
     int buffer_size = 0;
 
     IPCClient(Layer* layer_ = nullptr, Backend api_ = Backend::NONE);

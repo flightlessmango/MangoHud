@@ -8,6 +8,7 @@
 #include <mutex>
 #include <unordered_map>
 #include <memory>
+#include <string_view>
 #include <numeric>
 #include <spdlog/spdlog.h>
 #include "mesa/os_time.h"
@@ -27,6 +28,7 @@ public:
     IPCServer(MangoHudServer *server_);
 
     void prune_clients();
+    std::shared_ptr<Client> focused_client(std::string_view display);
     ~IPCServer();
 
 private:

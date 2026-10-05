@@ -27,6 +27,11 @@ enum class SampleType : uint8_t {
     Count,
 };
 
+enum class OutputMode : uint8_t {
+    App,
+    Layer,
+};
+
 struct Sample {
     SampleType type = SampleType::Frame;
     uint64_t seq;
@@ -107,6 +112,7 @@ struct SampleStats {
 
 class IPCServer;
 class MangoHudServer;
+class Wayland;
 
 class Client {
 public:
@@ -121,7 +127,10 @@ public:
     uint32_t resolutionHeight = 0;
     std::vector<std::string> focused_seats;
     bool x11_focused = false;
+    std::string wayland_display;
+    OutputMode output_mode = OutputMode::App;
     std::unique_ptr<Renderer> renderer;
+    std::shared_ptr<Wayland> wayland;
     IPCServer* ipc;
     MangoHudServer* server;
     sd_bus* bus;
@@ -173,6 +182,11 @@ private:
     std::weak_ptr<Client> self_weak;
 
     void dbus_thread();
+    void send_dmabuf_ipc(const std::vector<BufferSet>& buffers, uint32_t width, uint32_t height,
+                         ExportMethod method);
+    void send_dmabuf_wayland(const std::vector<BufferSet>& buffers, uint32_t width, uint32_t height,
+                             ExportMethod method);
+    std::shared_ptr<Wayland> ensure_wayland();
     void setup_handshake(std::string member, sd_bus_slot** slot,
                          sd_bus_message_handler_t callback, std::shared_ptr<Client>& shared);
 

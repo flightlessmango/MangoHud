@@ -7,6 +7,21 @@
 
 class IPCServer;
 
+static OutputMode configured_output_mode(MangoHudServer* server)
+{
+    if (!server || !server->config)
+        return OutputMode::App;
+
+    const auto& output = server->config->get<std::string>("output");
+    if (output == "app")
+        return OutputMode::App;
+    if (output == "layer")
+        return OutputMode::Layer;
+
+    SPDLOG_ERROR("invalid output mode '{}', expected 'app' or 'layer'", output);
+    return OutputMode::App;
+}
+
 Client::Client(pid_t pid_, IPCServer* ipc_, MangoHudServer* server_, sd_bus* bus_)
     : pid(pid_),
       ipc(ipc_),
@@ -203,21 +218,41 @@ int Client::on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_erro
     const char* engine = "";
     const char* vulkan_driver = "";
     const char* gpu_name = "";
+    const char* wayland_display = "";
     int64_t render_minor = -1;
     int buffer_size = 0;
     int32_t raw_api = 0;
-    r = sd_bus_message_read(m, "sxiiss", &engine, &render_minor, &buffer_size, &raw_api,
-                            &vulkan_driver, &gpu_name);
+    r = sd_bus_message_read(m, "sxiisss", &engine, &render_minor, &buffer_size, &raw_api,
+                            &vulkan_driver, &gpu_name, &wayland_display);
     if (r < 0) {
-        SPDLOG_ERROR("on_connect read(sxiiss) {} ({})", r, strerror(-r));
+        SPDLOG_ERROR("on_connect read(sxiisss) {} ({})", r, strerror(-r));
         self->set_dead();
         return false;
     }
     self->pEngineName = engine;
     self->vulkanDriver = vulkan_driver;
     self->gpuName = gpu_name;
+    self->wayland_display = wayland_display;
+    self->output_mode = configured_output_mode(self->server);
+    if (self->output_mode == OutputMode::Layer) {
+        if (self->wayland_display.empty()) {
+            SPDLOG_DEBUG("wayland output requested but client {} has no WAYLAND_DISPLAY", self->pid);
+            self->output_mode = OutputMode::App;
+        } else if (!(self->wayland = self->ensure_wayland())) {
+            SPDLOG_DEBUG("wayland output unavailable display={}, falling back to app output", self->wayland_display);
+            self->output_mode = OutputMode::App;
+        }
+    }
+
+    SPDLOG_DEBUG("client {} output mode={} wayland_display={}",
+                 self->pid,
+                 self->output_mode == OutputMode::Layer ? "layer" : "app",
+                 self->wayland_display);
+
     if (self->server && self->server->metrics)
         self->server->metrics->add_client_pid(self->pid);
+    if (self->output_mode == OutputMode::Layer)
+        render_minor = self->wayland->render_minor;
     self->renderer = std::make_unique<Renderer>(self->server, self.get(), render_minor, buffer_size);
 
     self->send_config();
@@ -250,6 +285,33 @@ int Client::resolution(sd_bus_message* m, void* userdata, sd_bus_error*) {
 
 void Client::send_dmabuf(const std::vector<BufferSet>& buffers, uint32_t width, uint32_t height,
                          ExportMethod method)
+{
+    if (output_mode == OutputMode::Layer) {
+        send_dmabuf_wayland(buffers, width, height, method);
+        return;
+    }
+
+    send_dmabuf_ipc(buffers, width, height, method);
+}
+
+void Client::send_dmabuf_wayland(const std::vector<BufferSet>& buffers, uint32_t width, uint32_t height,
+                                 ExportMethod method)
+{
+    auto target = ensure_wayland();
+    if (!target) {
+        SPDLOG_DEBUG("wayland output unavailable display={}", wayland_display);
+        return;
+    }
+
+    auto self = self_weak.lock();
+    if (!self)
+        return;
+
+    target->import_dmabuf(std::move(self), buffers, width, height, method);
+}
+
+void Client::send_dmabuf_ipc(const std::vector<BufferSet>& buffers, uint32_t width, uint32_t height,
+                             ExportMethod method)
 {
     if (buffers.empty()) {
         SPDLOG_ERROR("renderer: failed to export buffers, no buffers available");
@@ -618,6 +680,20 @@ void Client::frame_ready(int idx, unique_fd fd, std::shared_ptr<Renderer::Resour
     if (!self)
         return;
 
+    if (output_mode == OutputMode::Layer) {
+        auto target = ensure_wayland();
+        if (!target) {
+            SPDLOG_DEBUG("wayland output unavailable display={}", wayland_display);
+            return;
+        }
+
+        target->frame_ready(std::move(self), idx, std::move(fd), std::move(resources));
+        stats_for(SampleType::Hud).add_sample(SampleType::Hud,
+                                            hud_seq.fetch_add(1, std::memory_order_relaxed),
+                                            os_time_get_nano());
+        return;
+    }
+
     post([self, idx, fd = std::move(fd)]() {
         int r = sd_bus_emit_signal(self->bus, kObjPath, kIface, "frame_ready", "uh",
                                    static_cast<uint32_t>(idx), fd.get());
@@ -631,6 +707,18 @@ void Client::frame_ready(int idx, unique_fd fd, std::shared_ptr<Renderer::Resour
                                                     os_time_get_nano());
         return 0;
     });
+}
+
+std::shared_ptr<Wayland> Client::ensure_wayland()
+{
+    if (wayland)
+        return wayland;
+
+    if (!server || wayland_display.empty())
+        return nullptr;
+
+    wayland = server->wayland(wayland_display);
+    return wayland;
 }
 
 int Client::on_frame(sd_bus_message* m, void* userdata, sd_bus_error*) {

@@ -5,6 +5,27 @@ linux_dmabuf_xml = wayland_protocols_dir / 'stable/linux-dmabuf/linux-dmabuf-v1.
 fractional_scale_xml = wayland_protocols_dir / 'staging/fractional-scale/fractional-scale-v1.xml'
 viewporter_xml = wayland_protocols_dir / 'stable/viewporter/viewporter.xml'
 presentation_time_xml = wayland_protocols_dir / 'stable/presentation-time/presentation-time.xml'
+wlr_protocols_dep = dependency('wlr-protocols', fallback: ['wlr-protocols', 'wlr_protocols_dep'])
+if wlr_protocols_dep.type_name() == 'internal'
+  layer_shell_xml = subproject('wlr-protocols').get_variable('layer_shell_xml')
+else
+  wlr_protocols_dir = wlr_protocols_dep.get_variable(pkgconfig: 'pkgdatadir')
+  layer_shell_xml = wlr_protocols_dir / 'unstable/wlr-layer-shell-unstable-v1.xml'
+endif
+xdg_shell_protocol = custom_target('xdg-shell-protocol.c',
+  input: wayland_protocols_dir / 'stable/xdg-shell/xdg-shell.xml',
+  output: 'xdg-shell-protocol.c',
+  command: [wayland_scanner, 'private-code', '@INPUT@', '@OUTPUT@'])
+layer_shell_protocol = [
+  custom_target('wlr-layer-shell-unstable-v1-client-protocol.h',
+    input: layer_shell_xml,
+    output: 'wlr-layer-shell-unstable-v1-client-protocol.h',
+    command: [wayland_scanner, 'client-header', '@INPUT@', '@OUTPUT@']),
+  custom_target('wlr-layer-shell-unstable-v1-protocol.c',
+    input: layer_shell_xml,
+    output: 'wlr-layer-shell-unstable-v1-protocol.c',
+    command: [wayland_scanner, 'private-code', '@INPUT@', '@OUTPUT@']),
+]
 
 linux_dmabuf_protocol = [
   custom_target(
@@ -58,5 +79,6 @@ presentation_time_protocol = [
     command: [wayland_scanner, 'private-code', '@INPUT@', '@OUTPUT@']),
 ]
 
-wayland_protocols = linux_dmabuf_protocol + fractional_scale_protocol + viewporter_protocol + presentation_time_protocol
-wayland_ctx_sources = files('wayland_ctx.cpp', 'wayland.cpp')
+wayland_protocols = linux_dmabuf_protocol + fractional_scale_protocol + viewporter_protocol + presentation_time_protocol + layer_shell_protocol + [xdg_shell_protocol]
+wayland_sources = files('wayland.cpp', 'wayland_ctx.cpp')
+wayland_ctx_sources = wayland_sources

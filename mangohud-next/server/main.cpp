@@ -45,3 +45,40 @@ std::shared_ptr<EglCtx> MangoHudServer::egl(int64_t renderer) {
 std::vector<std::shared_ptr<GPU>> MangoHudServer::available_gpus() const {
     return metrics->available_gpus();
 }
+
+std::shared_ptr<Wayland> MangoHudServer::wayland(std::string_view display) {
+    if (display.empty())
+        return nullptr;
+
+    const std::string display_name(display);
+    if (auto wayland = waylands[display_name].lock())
+        return wayland;
+
+    auto next = std::make_shared<Wayland>(ipc.get(), display_name);
+    if (!next->connected())
+        return nullptr;
+
+    waylands[display_name] = next;
+    return next;
+}
+
+std::vector<std::shared_ptr<Client>> MangoHudServer::clients_for_wayland(std::string_view display) {
+    std::vector<std::shared_ptr<Client>> out;
+    if (display.empty())
+        return out;
+
+    const std::string display_name(display);
+    std::vector<std::shared_ptr<Client>> clients;
+    {
+        std::lock_guard lock(ipc->clients_mtx);
+        clients = ipc->clients;
+    }
+
+    for (auto& client : clients) {
+        std::lock_guard lock(client->m);
+        if (client->wayland_display == display_name)
+            out.push_back(client);
+    }
+
+    return out;
+}

@@ -68,7 +68,7 @@ void WaylandCtx::on_registry_global(void* data, wl_registry* registry, uint32_t 
         global.subcompositor_name = name;
     } else if (strcmp(interface, zwp_linux_dmabuf_v1_interface.name) == 0) {
         global.dmabuf = reinterpret_cast<zwp_linux_dmabuf_v1*>(
-            wl_registry_bind(registry, name, &zwp_linux_dmabuf_v1_interface, 3));
+            wl_registry_bind(registry, name, &zwp_linux_dmabuf_v1_interface, std::min(version, 4u)));
         if (!global.dmabuf)
             return;
         global.dmabuf_name = name;

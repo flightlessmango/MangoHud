@@ -130,6 +130,7 @@ private:
     static inline const std::unordered_map<std::string_view, Spec> possible_ = {
         {"font_size", Spec{Int, 24}},
         {"fps_limit", Spec{Double, 0.0}},
+        {"output", Spec{String, std::string("app")}},
     };
 
     const Value& raw(std::string_view key) const

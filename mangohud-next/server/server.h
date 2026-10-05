@@ -6,6 +6,7 @@
 #include "../ipc/ipc.h"
 #include "metrics/metrics.h"
 #include "config.h"
+#include "wayland.h"
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/cfg/env.h>
@@ -29,6 +30,7 @@ public:
         spdlog::set_level(spdlog::level::debug);
         spdlog::cfg::load_env_levels();
         config  = std::make_shared<Config>();
+        config->maybe_reload_config();
         ipc     = std::make_unique<IPCServer>(this);
         metrics = std::make_unique<Metrics>(*ipc, config);
         loop();
@@ -37,6 +39,8 @@ public:
     std::shared_ptr<VkCtx> vk(int64_t renderer = -1);
     std::shared_ptr<EglCtx> egl(int64_t renderer);
     std::vector<std::shared_ptr<GPU>> available_gpus() const;
+    std::shared_ptr<Wayland> wayland(std::string_view display);
+    std::vector<std::shared_ptr<Client>> clients_for_wayland(std::string_view display);
 
     ~MangoHudServer() {
         stop.store(true);
@@ -44,6 +48,7 @@ public:
 
 private:
     std::unique_ptr<IPCServer> ipc;
+    std::unordered_map<std::string, std::weak_ptr<Wayland>> waylands;
     std::shared_ptr<spdlog::logger> logger;
     std::unordered_map<int64_t, std::weak_ptr<VkCtx>> vk_ctx;
     std::mutex vk_ctx_m;

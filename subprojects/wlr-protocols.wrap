@@ -1,0 +1,9 @@
+[wrap-git]
+directory = wlr-protocols
+url = https://gitlab.freedesktop.org/wlroots/wlr-protocols.git
+revision = bf4fc79abc359eea5a0edec0ac6d4a2b2955f82a
+depth = 1
+patch_directory = wlr-protocols
+
+[provide]
+wlr-protocols = wlr_protocols_dep
