@@ -452,9 +452,18 @@ void ImGuiCtx::draw_value_with_unit(int col_index,
     const float value_top_y = text_y + value_y.min;
     const float unit_pos_y = value_top_y - unit_y.min;
 
-    if (tc.style.align != CellAlign::Default && tc.unit.empty()) {
+    if (tc.style.align != CellAlign::Default) {
         ImFont* font = fonts->get(text_font_sz);
-        const TextXBounds x_bounds = text_x_bounds(tc.text.c_str(), font, text_font_sz);
+        TextXBounds x_bounds = text_x_bounds(tc.text.c_str(), font, text_font_sz);
+        ImFont* unit_font = nullptr;
+        const float unit_x = value_sz.x + unit_gap;
+        if (!tc.unit.empty()) {
+            const float unit_size = tc.unit == "%" ? text_font_sz : unit_font_size(table, tc);
+            unit_font = fonts->get(unit_size);
+            const TextXBounds unit_bounds = text_x_bounds(tc.unit.c_str(), unit_font, unit_size);
+            x_bounds.min = std::min(x_bounds.min, unit_x + unit_bounds.min);
+            x_bounds.max = std::max(x_bounds.max, unit_x + unit_bounds.max);
+        }
         const float visual_w = x_bounds.max - x_bounds.min;
         float text_x = base.x - x_bounds.min;
 
@@ -467,6 +476,12 @@ void ImGuiCtx::draw_value_with_unit(int col_index,
         ImGui::PushFont(font);
         RenderOutlinedText(tc.vec, tc.text.c_str());
         ImGui::PopFont();
+        if (unit_font) {
+            ImGui::SetCursorPos(ImVec2(text_x + unit_x, unit_pos_y));
+            ImGui::PushFont(unit_font);
+            RenderOutlinedText(unit_col, tc.unit.c_str());
+            ImGui::PopFont();
+        }
         ImGui::SetCursorPos(ImVec2(base.x, base.y + row_h));
         return;
     }
