@@ -21,6 +21,7 @@ bool OverlayVK::draw(VkSwapchainKHR swapchain, uint32_t img_idx, VkQueue q, VkPr
 bool OverlayVK::init_dmabufs(Fdinfo& fdinfo) {
     std::lock_guard lock(m);
     sc->d->DeviceWaitIdle(sc->d->Device);
+    current_slot = -1;
     last_slot = -1;
     dmabufs.clear();
     for (auto [i, fd] : enumerate(fdinfo.dmabuf_buffer)) {

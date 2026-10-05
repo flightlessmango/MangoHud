@@ -6,6 +6,7 @@
 #include <GL/glext.h>
 #include <GL/glx.h>
 #include <drm/drm_fourcc.h>
+#include <iterator>
 
 GLX::GLX() {
     p_glCreateMemoryObjectsEXT = (PFNGLCREATEMEMORYOBJECTSEXTPROC)glx_gp("glCreateMemoryObjectsEXT");
@@ -486,9 +487,11 @@ void OverlayGL::draw() {
     }
 
     if (do_import) {
+        current_slot = -1;
+
         if (fdinfo.dmabuf_buffer.empty()) {
+            ipc->clear_frames();
             c->dmabufs.clear();
-            current_slot = -1;
             inited = false;
             imported_generation = generation;
             return;
@@ -500,15 +503,19 @@ void OverlayGL::draw() {
             if (!import_dmabuf(buf.get(), fdinfo.dmabuf_buffer[i], fdinfo.opaque_buffer[i])) {
                 c->dmabufs.clear();
                 fdinfo = {};
-                current_slot = -1;
                 inited = false;
+                ipc->clear_frames();
                 ipc->send_import_failed();
                 return;
             }
             c->dmabufs.push_back(std::move(buf));
         }
+        ipc->clear_frames();
         imported_generation = generation;
         inited = true;
+
+        for (int slot = 0; slot < std::ssize(fdinfo.dmabuf_buffer); slot++)
+            release_slot_to_server(ipc.get(), slot, fdinfo.dmabuf_buffer[slot].get());
     }
 
     if (!inited)
@@ -518,13 +525,14 @@ void OverlayGL::draw() {
         current_slot = ipc->next_frame();
 
     if (current_slot >= 0) {
+        const int slot = current_slot;
         const bool dst_encodes_srgb = framebuffer_encodes_srgb(s.saved.fbo);
         glDisable(GL_FRAMEBUFFER_SRGB);
-        sample_dmabuf(c, fdinfo, s.saved, dst_encodes_srgb);
+        sample_dmabuf(c, fdinfo, slot, s.saved, dst_encodes_srgb);
         // Do not remove this dma-buf fd dependency yet: GL uses it only to export
         // the release fence when the image itself came from an opaque fd.
         // TODO: split GL release fencing from image transport.
-        release_fence(ipc.get(), fdinfo.dmabuf_buffer[current_slot].get());
+        release_fence(ipc.get(), slot, fdinfo.dmabuf_buffer[slot].get());
     }
 
     if (!c)
@@ -696,7 +704,7 @@ void OverlayGL::create_cache(CtxRes* r, int w, int h) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void OverlayGL::sample_dmabuf(CtxRes* r, const Fdinfo& fdinfo, const GLState::state& saved, bool framebuffer_encodes_srgb) {
+void OverlayGL::sample_dmabuf(CtxRes* r, const Fdinfo& fdinfo, int slot, const GLState::state& saved, bool framebuffer_encodes_srgb) {
     create_cache(r, (int)fdinfo.w, (int)fdinfo.h);
 
     glBindFramebuffer(GL_FRAMEBUFFER, r->cache_fbo);
@@ -714,7 +722,7 @@ void OverlayGL::sample_dmabuf(CtxRes* r, const Fdinfo& fdinfo, const GLState::st
     if (r->uDecodeSRGBLoc >= 0) glUniform1i(r->uDecodeSRGBLoc, framebuffer_encodes_srgb);
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, r->dmabufs[current_slot]->tex);
+    glBindTexture(GL_TEXTURE_2D, r->dmabufs[slot]->tex);
 
     // Fullscreen quad into cache
     const float verts[] = {
@@ -735,8 +743,8 @@ void OverlayGL::sample_dmabuf(CtxRes* r, const Fdinfo& fdinfo, const GLState::st
     glViewport(saved.viewport[0], saved.viewport[1], saved.viewport[2], saved.viewport[3]);
 }
 
-int OverlayGL::release_fence(IPCClient* ipc, int dmabuf_fd, bool write) {
-    if (!ipc || dmabuf_fd < 0) return -1;
+int OverlayGL::release_slot_to_server(IPCClient* ipc, int slot, int dmabuf_fd, bool write) {
+    if (!ipc || slot < 0 || dmabuf_fd < 0) return -1;
 
     glFlush();
 
@@ -755,7 +763,12 @@ int OverlayGL::release_fence(IPCClient* ipc, int dmabuf_fd, bool write) {
         return -1;
     }
 
-    ipc->frame_ready(current_slot, data.fd);
-    current_slot = -1;
+    ipc->frame_ready(slot, data.fd);
     return 0;
+}
+
+int OverlayGL::release_fence(IPCClient* ipc, int slot, int dmabuf_fd, bool write) {
+    int ret = release_slot_to_server(ipc, slot, dmabuf_fd, write);
+    current_slot = -1;
+    return ret;
 }

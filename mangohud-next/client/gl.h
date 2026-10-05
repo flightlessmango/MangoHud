@@ -271,9 +271,10 @@ private:
     }
 
     void create_cache(CtxRes* r, int w, int h);
-    void sample_dmabuf(CtxRes* r, const Fdinfo& fdinfo, const GLState::state& saved, bool framebuffer_encodes_srgb);
+    void sample_dmabuf(CtxRes* r, const Fdinfo& fdinfo, int slot, const GLState::state& saved, bool framebuffer_encodes_srgb);
     void draw_dmabuf(CtxRes* r);
-    int release_fence(IPCClient* ipc, int dmabuf_fd, bool write = false);
+    int release_slot_to_server(IPCClient* ipc, int slot, int dmabuf_fd, bool write = false);
+    int release_fence(IPCClient* ipc, int slot, int dmabuf_fd, bool write = false);
     bool import_dmabuf(dmabuf* buf, int fd, int opaque) {
         bool imported = false;
         auto r = glx->ctx();
