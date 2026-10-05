@@ -17,6 +17,7 @@ public:
     std::shared_ptr<Font> fonts;
 
     ImGuiEGL(ImGuiCtx* imgui_ctx_) : imgui_ctx(imgui_ctx_) {
+        std::lock_guard global_lock(ImGuiCtx::global_m);
         std::lock_guard lock(imgui_ctx->m);
         IMGUI_CHECKVERSION();
         imgui = ImGui::CreateContext();
@@ -45,6 +46,7 @@ public:
     }
 
     ~ImGuiEGL() {
+        std::lock_guard global_lock(ImGuiCtx::global_m);
         std::lock_guard lock(imgui_ctx->m);
         if (imgui) {
             ImGui::SetCurrentContext(imgui);

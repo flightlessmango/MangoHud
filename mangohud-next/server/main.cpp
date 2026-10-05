@@ -2,8 +2,10 @@
 #include "config.h"
 #include "stdio.h"
 #include "mesa/os_time.h"
+#include "egl_ctx.h"
 #include "vulkan_ctx.h"
 #include <cstdlib>
+#include <utility>
 
 int main() {
   // Prevent the MangoHud client from injecting into the server.
@@ -25,7 +27,7 @@ void MangoHudServer::loop() {
     }
 }
 
-std::shared_ptr<VkCtx> MangoHudServer::vk(int renderer) {
+std::shared_ptr<VkCtx> MangoHudServer::vk(int64_t renderer) {
     std::lock_guard lock(vk_ctx_m);
 
     if (auto ctx = vk_ctx[renderer].lock())
@@ -34,6 +36,10 @@ std::shared_ptr<VkCtx> MangoHudServer::vk(int renderer) {
     auto ctx = std::make_shared<VkCtx>(renderer);
     vk_ctx[renderer] = ctx;
     return ctx;
+}
+
+std::shared_ptr<EglCtx> MangoHudServer::egl(int64_t renderer) {
+    return std::make_shared<EglCtx>(renderer);
 }
 
 std::vector<std::shared_ptr<GPU>> MangoHudServer::available_gpus() const {

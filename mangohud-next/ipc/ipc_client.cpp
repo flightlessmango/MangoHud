@@ -678,10 +678,14 @@ int IPCClient::on_work_event(sd_event_source *s, int fd, uint32_t revents, void 
     return 0;
 }
 
-void IPCClient::frame_ready(uint32_t idx, int f) {
+void IPCClient::frame_ready(int idx, int f) {
+    if (idx < 0)
+        return;
+
     auto fd = unique_fd::adopt(f);
     post([this, idx, fd = std::move(fd)]() {
-        int r = sd_bus_emit_signal(bus, kObjPath, kIface, "frame_ready", "uh", idx, fd.get());
+        int r = sd_bus_emit_signal(bus, kObjPath, kIface, "frame_ready", "uh",
+                                   static_cast<uint32_t>(idx), fd.get());
 
         if (r < 0) {
             SPDLOG_ERROR("sd_bus_emit_signal {} ({}) ObjPath: {} Iface: {}",
@@ -695,8 +699,9 @@ int IPCClient::on_frame(sd_bus_message* m, void* userdata, sd_bus_error*) {
     auto* self = static_cast<IPCClient*>(userdata);
 
     ready_frame frame;
+    uint32_t idx = 0;
     int fd;
-    int r = sd_bus_message_read(m, "uh", &frame.idx, &fd);
+    int r = sd_bus_message_read(m, "uh", &idx, &fd);
     if (r < 0) {
         SPDLOG_ERROR("sd_bus_message_read {} ({})", r, strerror(-r));
         if (fd >= 0)
@@ -704,6 +709,7 @@ int IPCClient::on_frame(sd_bus_message* m, void* userdata, sd_bus_error*) {
         return r;
     }
 
+    frame.idx = static_cast<int>(idx);
     frame.fd = unique_fd::dup(fd);
     {
         std::lock_guard lock(self->sync_mtx);

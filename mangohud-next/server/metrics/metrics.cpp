@@ -188,7 +188,7 @@ void Metrics::update_client() {
             std::lock_guard lock(m);
             new_metrics.swap(client_metrics);
         }
-        populate_tables();
+        populate_tables(clients);
         std::this_thread::sleep_for(std::chrono::milliseconds(7));
     }
 }
@@ -306,35 +306,41 @@ Metric Metrics::get(const char* a, const char* b, const pid_t pid = 0)
     return null_out;
 }
 
-void Metrics::populate_tables() {
-    if (cfg->hud) {
-        HudConfig local;
+void Metrics::populate_tables(const std::vector<std::shared_ptr<Client>>& clients)
+{
+    if (!cfg->hud)
+        return;
+
+    HudConfig local;
+    {
+        std::lock_guard lock(cfg->m);
+        local = *cfg->hud;
+    }
+
+    for (const auto& client : clients) {
+        Renderer* renderer = nullptr;
         {
-            std::lock_guard lock(cfg->m);
-            local = *cfg->hud;
-        }
-        std::unordered_map<pid_t, std::shared_ptr<clientRes>> client_res;
-        {
-            std::lock_guard lock(ipc.clients_mtx);
-            for (auto client : ipc.clients)
-                client_res.emplace(client->pid, client->resources);
+            std::lock_guard lock(client->m);
+            renderer = client->renderer.get();
         }
 
-        {
-            for (auto& [pid, r] : client_res) {
-                std::lock_guard lock(r->hud_m);
-                r->hud->windows.clear();
-                r->hud->windows.reserve(local.windows.size());
-                for (auto& window : local.windows) {
-                    HudWindow out;
-                    out.background = window.background;
-                    out.padding = window.padding;
-                    out.position = window.position;
-                    assign_values(&window.table, pid, &out.table);
-                    r->hud->windows.push_back(std::move(out));
-                }
-            }
+        if (!renderer)
+            continue;
+
+        HudConfig out;
+        out.windows.clear();
+        out.windows.reserve(local.windows.size());
+
+        for (auto& window : local.windows) {
+            HudWindow out_window;
+            out_window.background = window.background;
+            out_window.padding = window.padding;
+            out_window.position = window.position;
+            assign_values(&window.table, client->pid, &out_window.table);
+            out.windows.push_back(std::move(out_window));
         }
+
+        renderer->set_hud(std::move(out));
     }
 }
 

@@ -35,13 +35,15 @@ class ImGuiCtx {
 public:
     std::shared_ptr<ImGuiEGL> egl;
     VkSemaphore sema = VK_NULL_HANDLE;
-    inline static std::mutex m;
+    inline static std::mutex global_m;
+    std::mutex m;
 
     ImGuiCtx();
     bool init();
-    bool draw(clientRes* r, slot_t* buf, Backend backend);
+    bool draw(uint32_t w, uint32_t h, Resolution& size, BufferSet* buf, Backend backend,
+              std::shared_ptr<HudConfig> hud, std::mutex& hud_m);
 
-    void init_vk(std::shared_ptr<VkCtx> vk_);
+    void init_vk(VkCtx* vk);
     void init_egl();
 
     void teardown();
@@ -57,7 +59,7 @@ private:
 
     inline static ColorCache colors;
 
-    void record_cmd(slot_t& buf, uint32_t w, uint32_t h);
+    void record_cmd(BufferSet& buf, uint32_t w, uint32_t h);
     static uint32_t calculate_width(const HudLayout& L, const HudWindow& window);
     static uint32_t calculate_height(const HudLayout& L, const HudWindow& window);
     static void right_aligned(const ImVec4& col, float off_x, const char *fmt, ...);

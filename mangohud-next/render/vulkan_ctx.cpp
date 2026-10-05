@@ -50,14 +50,17 @@ vkb::PhysicalDevice VkCtx::pick_device(vkb::Instance instance) {
             continue;
 
         if (renderer >= 0 &&
-            drm.renderMinor != static_cast<uint32_t>(renderer))
+            static_cast<int64_t>(drm.renderMinor) != renderer)
             continue;
 
         renderer = drm.renderMinor;
         return dev;
     }
 
-    SPDLOG_ERROR("No Vulkan device with render node + dmabuf/modifier support\n");
+    if (renderer >= 0)
+        SPDLOG_DEBUG("No Vulkan device matching renderD{}", renderer);
+    else
+        SPDLOG_ERROR("No Vulkan device with render node + dmabuf/modifier support");
     return {};
 }
 
@@ -104,9 +107,16 @@ void VkCtx::init(bool enableValidation = true) {
     pfn_vkSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetDeviceProcAddr(device, "vkSetDebugUtilsObjectNameEXT");
 }
 
-VkCtx::VkCtx(int renderer_) : renderer(renderer_) {
+VkCtx::VkCtx(int64_t renderer_) : renderer(renderer_), imgui(std::make_shared<ImGuiCtx>()) {
     init(true);
 };
+
+void VkCtx::init_imgui()
+{
+    std::call_once(imgui_once, [&] {
+        imgui->init_vk(this);
+    });
+}
 
 int VkCtx::phys_fd() {
     if (phys_fd_)
@@ -187,47 +197,57 @@ uint32_t VkCtx::compatible_bits_for_dmabuf_import(VkImage image, int import_fd) 
     return imgBits & fdProps.memoryTypeBits;
 }
 
-void VkCtx::init_client(clientRes* r, size_t buffer_size) {
+bool VkCtx::init_client(std::vector<BufferSet>& buffers, VkCommandPool& cmd_pool,
+                        uint32_t w, uint32_t h, size_t buffer_size, bool use_opaque) {
     std::lock_guard lock(m);
-    if (!r->w) r->w = 500;
-    if (!r->h) r->h = 500;
+    if (!w) w = 500;
+    if (!h) h = 500;
     if (!device)
-        return;
+        return false;
 
-    r->device = device;
-    if (r->buffer.size() < buffer_size)
-        r->buffer.resize(buffer_size);
+    if (buffers.size() < buffer_size)
+        buffers.resize(buffer_size);
 
-    for (auto& buf : r->buffer) {
-        if (!create_gbm(r, &buf.dmabuf, phys_fd(), DRM_FORMAT_MOD_LINEAR))
+    for (auto& buf : buffers) {
+        if (!create_gbm(w, h, &buf.dmabuf, phys_fd(), DRM_FORMAT_MOD_LINEAR)) {
             SPDLOG_ERROR("init gbm failed");
+            return false;
+        }
 
-        if (!create_dmabuf(r, &buf.dmabuf))
+        if (!create_dmabuf(w, h, &buf.dmabuf)) {
             SPDLOG_ERROR("init dmabuf failed");
+            return false;
+        }
 
-        if (r->export_method == OPAQUE_FD_VULKAN)
-            if (!create_opaque(r, &buf.opaque))
+        if (use_opaque)
+            if (!create_opaque(w, h, &buf.opaque)) {
                 SPDLOG_ERROR("init opaque failed");
+                return false;
+            }
 
-        if (!create_src(r, &buf.source))
+        if (!create_src(w, h, &buf.source)) {
             SPDLOG_ERROR("init source failed");
+            return false;
+        }
 
-        create_sync(&buf);
-        create_cmd(r, &buf.sync);
+        if (!create_sync(&buf))
+            return false;
+
+        if (!create_cmd(cmd_pool, &buf.sync))
+            return false;
     }
 
     // TODO run imgui->draw once to calculate the initial width/height
     // this is currently a double lock so we need to redesign this a bit
     // we want to do this so we don't end up always pushing two dmabufs on connect
     // and when the the overlay changes
-    // imgui->draw(r);
+    // imgui->draw(...);
 
-    r->send_dmabuf = true;
-    r->initialized = true;
+    return true;
 }
 
 // TODO rename this to init sync or something
-void VkCtx::create_sync(slot_t* s) {
+bool VkCtx::create_sync(BufferSet* s) {
     VkExportFenceCreateInfo export_info{};
     export_info.sType = VK_STRUCTURE_TYPE_EXPORT_FENCE_CREATE_INFO;
     export_info.handleTypes = VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT;
@@ -236,28 +256,40 @@ void VkCtx::create_sync(slot_t* s) {
     fci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fci.pNext = &export_info;
     fci.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-    vkCreateFence(device, &fci, nullptr, &s->sync.fence);
+    VkResult ret = vkCreateFence(device, &fci, nullptr, &s->sync.fence);
+    if (ret != VK_SUCCESS) {
+        SPDLOG_ERROR("vkCreateFence failed {}", string_VkResult(ret));
+        s->sync.fence = VK_NULL_HANDLE;
+        return false;
+    }
+
+    return true;
 }
 
-bool VkCtx::create_src(clientRes* r, source_t* source) {
-    create_image(NULL, r, source->image_res.image,
-                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-                VK_IMAGE_TILING_OPTIMAL, 0);
-    allocate_memory(
+bool VkCtx::create_src(uint32_t w, uint32_t h, source_t* source) {
+    if (!create_image(NULL, w, h, source->image_res.image,
+                      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                      VK_IMAGE_TILING_OPTIMAL, 0))
+        return false;
+
+    if (!allocate_memory(
         source->image_res.image,
         source->image_res.mem,
-        r,
         nullptr,
         false,           // external
         false,           // import_dmabuf
         0,               // handleType (ignored)
         -1               // fd (only for dmabuf)
-    );
-    create_view(source->image_res.image, source->image_res.mem, source->image_res.view, fmt);
+    ))
+        return false;
+
+    if (!create_view(source->image_res.image, source->image_res.mem, source->image_res.view, fmt))
+        return false;
+
     return true;
 }
 
-bool VkCtx::create_dmabuf(clientRes* r, dmabuf_t* buf) {
+bool VkCtx::create_dmabuf(uint32_t w, uint32_t h, dmabuf_t* buf) {
     VkSubresourceLayout plane0{
         .offset = buf->gbm.offset,
         .size = 0,
@@ -273,7 +305,7 @@ bool VkCtx::create_dmabuf(clientRes* r, dmabuf_t* buf) {
         .pPlaneLayouts = &plane0,
     };
 
-    if (!create_image(&drmExplicit, r, buf->image_res.image,
+    if (!create_image(&drmExplicit, w, h, buf->image_res.image,
                     VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                     VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT, VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT))
         return false;
@@ -281,7 +313,6 @@ bool VkCtx::create_dmabuf(clientRes* r, dmabuf_t* buf) {
     if (!allocate_memory(
         buf->image_res.image,
         buf->image_res.mem,
-        r,
         nullptr,         // allocSize
         true,            // external
         true,            // import_dmabuf
@@ -296,22 +327,30 @@ bool VkCtx::create_dmabuf(clientRes* r, dmabuf_t* buf) {
     return true;
 }
 
-bool VkCtx::create_opaque(clientRes* r, opauqe_t* opaque) {
-    create_image(NULL, r, opaque->image_res.image,
-                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-                VK_IMAGE_TILING_OPTIMAL, VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT);
-    allocate_memory(
+bool VkCtx::create_opaque(uint32_t w, uint32_t h, opauqe_t* opaque) {
+    if (!create_image(NULL, w, h, opaque->image_res.image,
+                      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+                      VK_IMAGE_TILING_OPTIMAL, VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT))
+        return false;
+
+    if (!allocate_memory(
         opaque->image_res.image,
         opaque->image_res.mem,
-        r,
         &opaque->size,
         true,            // external
         false,           // import_dmabuf
         VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT,
         -1               // fd (only for dmabuf)
-    );
-    create_view(opaque->image_res.image, opaque->image_res.mem, opaque->image_res.view, fmt);
+    ))
+        return false;
+
+    if (!create_view(opaque->image_res.image, opaque->image_res.mem, opaque->image_res.view, fmt))
+        return false;
+
     opaque->fd = unique_fd::adopt(export_opaquefd(opaque->image_res.mem));
+    if (!opaque->fd)
+        return false;
+
     return true;
 }
 
@@ -330,7 +369,7 @@ int VkCtx::export_opaquefd(VkDeviceMemory mem){
     return fd;
 }
 
-bool VkCtx::create_image(VkImageDrmFormatModifierExplicitCreateInfoEXT* drm, clientRes* r, VkImage& image,
+bool VkCtx::create_image(VkImageDrmFormatModifierExplicitCreateInfoEXT* drm, uint32_t w, uint32_t h, VkImage& image,
                          VkImageUsageFlags usage, VkImageTiling tiling, VkExternalMemoryHandleTypeFlags handle) {
     VkExternalMemoryImageCreateInfo extImg{
         .sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO,
@@ -344,7 +383,7 @@ bool VkCtx::create_image(VkImageDrmFormatModifierExplicitCreateInfoEXT* drm, cli
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = VK_IMAGE_TYPE_2D,
         .format = fmt,
-        .extent = {r->w, r->h, 1},
+        .extent = {w, h, 1},
         .mipLevels = 1,
         .arrayLayers = 1,
         .samples = VK_SAMPLE_COUNT_1_BIT,
@@ -368,7 +407,7 @@ bool VkCtx::create_image(VkImageDrmFormatModifierExplicitCreateInfoEXT* drm, cli
     return true;
 }
 
-bool VkCtx::allocate_memory(VkImage image, VkDeviceMemory& memory, clientRes* r,
+bool VkCtx::allocate_memory(VkImage image, VkDeviceMemory& memory,
                             VkDeviceSize* allocSize, bool external, bool import_dmabuf,
                             VkExternalMemoryHandleTypeFlags handleType, int fd) {
     VkImageMemoryRequirementsInfo2 info2{
@@ -441,7 +480,7 @@ bool VkCtx::allocate_memory(VkImage image, VkDeviceMemory& memory, clientRes* r,
         import_fd = dup(fd);
 
     if (import_dmabuf) {
-        if (!import_fd) {
+        if (import_fd < 0) {
             vkDestroyImage(device, image, nullptr);
             image = VK_NULL_HANDLE;
             return false;
@@ -454,7 +493,7 @@ bool VkCtx::allocate_memory(VkImage image, VkDeviceMemory& memory, clientRes* r,
             return false;
         }
 
-        memType = find_mem_type(bits, handleType);
+        memType = find_mem_type(bits, 0);
         if (memType == UINT32_MAX) {
             vkDestroyImage(device, image, nullptr);
             image = VK_NULL_HANDLE;
@@ -469,7 +508,8 @@ bool VkCtx::allocate_memory(VkImage image, VkDeviceMemory& memory, clientRes* r,
         ai.pNext = &importInfo;
         ai.memoryTypeIndex = memType;
     } else {
-        memType = find_mem_type(req2.memoryRequirements.memoryTypeBits, handleType);
+        memType = find_mem_type(req2.memoryRequirements.memoryTypeBits,
+                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         if (memType == UINT32_MAX) {
             vkDestroyImage(device, image, nullptr);
             image = VK_NULL_HANDLE;
@@ -534,19 +574,26 @@ bool VkCtx::create_view(VkImage image, VkDeviceMemory memory, VkImageView& view,
     return ret == VK_SUCCESS;
 }
 
-bool VkCtx::submit(clientRes* r, int idx) {
-    slot_t& buf = r->buffer[idx];
+bool VkCtx::submit(std::vector<BufferSet>& buffers, uint32_t w, uint32_t h, Resolution& size,
+                   int idx, bool use_opaque, std::shared_ptr<HudConfig> hud, std::mutex& hud_m) {
+    BufferSet& buf = buffers[idx];
+
+    if (!imgui->draw(w, h, size, &buf, Backend::VULKAN, hud, hud_m))
+        return false;
 
     transition_image(buf.sync.cmd, buf.source.image_res.image, buf.source.image_res.layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
     buf.source.image_res.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
-    if (r->export_method == DMABUF_VULKAN)
-        copy_to_dst(buf.dmabuf.image_res.image, buf.dmabuf.image_res.layout, VK_IMAGE_LAYOUT_GENERAL, r, buf);
+    if (use_opaque)
+        copy_to_dst(buf.opaque.image_res.image, buf.opaque.image_res.layout, VK_IMAGE_LAYOUT_GENERAL, w, h, buf);
+    else
+        copy_to_dst(buf.dmabuf.image_res.image, buf.dmabuf.image_res.layout, VK_IMAGE_LAYOUT_GENERAL, w, h, buf);
 
-    if (r->export_method == OPAQUE_FD_VULKAN)
-        copy_to_dst(buf.opaque.image_res.image, buf.opaque.image_res.layout, VK_IMAGE_LAYOUT_GENERAL, r, buf);
-
-    vkEndCommandBuffer(buf.sync.cmd);
+    VkResult ret = vkEndCommandBuffer(buf.sync.cmd);
+    if (ret != VK_SUCCESS) {
+        SPDLOG_ERROR("vkEndCommandBuffer failed {}", string_VkResult(ret));
+        return false;
+    }
 
     VkSubmitInfo submit{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
     submit.commandBufferCount = 1;
@@ -554,7 +601,11 @@ bool VkCtx::submit(clientRes* r, int idx) {
 
     {
         std::scoped_lock lock(m);
-        vkQueueSubmit(graphicsQueue, 1, &submit, buf.sync.fence);
+        ret = vkQueueSubmit(graphicsQueue, 1, &submit, buf.sync.fence);
+        if (ret != VK_SUCCESS) {
+            SPDLOG_ERROR("vkQueueSubmit failed {}", string_VkResult(ret));
+            return false;
+        }
     }
 
     return true;
@@ -585,7 +636,7 @@ int VkCtx::get_fence_fd(VkFence fence) {
     get_fd.sType = VK_STRUCTURE_TYPE_FENCE_GET_FD_INFO_KHR;
     get_fd.fence = fence;
     get_fd.handleType = VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT;
-    int fd;
+    int fd = -1;
 
     // This produces a sync fd that will trigger a false positive double close
     // in valgrind etc. Be warned so you don't spend 3 days like I did
@@ -682,13 +733,14 @@ void VkCtx::transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout o
                          1, &b);
 }
 
-void VkCtx::copy_to_dst(VkImage dst, VkImageLayout& curLayout, VkImageLayout finalLayout, clientRes* r, slot_t& buf) {
+void VkCtx::copy_to_dst(VkImage dst, VkImageLayout& curLayout, VkImageLayout finalLayout,
+                        uint32_t w, uint32_t h, BufferSet& buf) {
     transition_image(buf.sync.cmd, dst, curLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     VkImageCopy region{};
     region.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
     region.dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
-    region.extent = {r->w, r->h, 1};
+    region.extent = {w, h, 1};
 
     vkCmdCopyImage(buf.sync.cmd,
         buf.source.image_res.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
@@ -699,28 +751,36 @@ void VkCtx::copy_to_dst(VkImage dst, VkImageLayout& curLayout, VkImageLayout fin
     curLayout = finalLayout;
 }
 
-void VkCtx::create_cmd(clientRes* r, sync_t* s) {
-    if (!r->cmd_pool) {
+bool VkCtx::create_cmd(VkCommandPool& cmd_pool, sync_t* s) {
+    if (!cmd_pool) {
         VkCommandPoolCreateInfo cp{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
         cp.queueFamilyIndex = graphicsQueueFamilyIndex;
         cp.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-        VkResult ret = vkCreateCommandPool(device, &cp, nullptr, &r->cmd_pool);
-        if (ret != VK_SUCCESS)
+        VkResult ret = vkCreateCommandPool(device, &cp, nullptr, &cmd_pool);
+        if (ret != VK_SUCCESS) {
             SPDLOG_ERROR("vkCreateCommandPool failed {}", string_VkResult(ret));
+            return false;
+        }
     }
 
     VkCommandBufferAllocateInfo ca{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
-    ca.commandPool = r->cmd_pool;
+    ca.commandPool = cmd_pool;
     ca.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     ca.commandBufferCount = 1;
     VkResult ret = vkAllocateCommandBuffers(device, &ca, &s->cmd);
-    if (ret != VK_SUCCESS)
+    if (ret != VK_SUCCESS) {
         SPDLOG_ERROR("vkAllocateCommandBuffers failed {}", string_VkResult(ret));
+        s->cmd = VK_NULL_HANDLE;
+        return false;
+    }
 
     SetName(device, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)s->cmd, "buffer_cmd");
+    return true;
 }
 
 VkCtx::~VkCtx() {
+    imgui.reset();
+
     if (device) {
         vkDeviceWaitIdle(device);
         vkDestroyDevice(device, nullptr);
@@ -746,91 +806,3 @@ VkCtx::~VkCtx() {
     pfn_vkGetMemoryFdPropertiesKHR = nullptr;
     pfn_vkGetSemaphoreFdKHR = nullptr;
 }
-
-// void VkCtx::sync_wait(std::shared_ptr<Client> client) {
-//     pthread_setname_np(pthread_self(), "mangohud_sync");
-//     while (!client->stop_wait.load()) {
-//         std::vector<VkFence> fences;
-//         {
-//             std::scoped_lock lock(client->resources->m, client->m);
-//             for (auto [i, buf] : enumerate(client->resources->buffer)) {
-//                 if (!contains(client->frame_queue, i))
-//                     fences.push_back(buf.sync.fence);
-//             }
-//         }
-
-//         if (fences.empty())
-//             continue;
-
-//         VkResult r = vkWaitForFences(device, fences.size(), fences.data(), VK_FALSE, 100'000'000);
-
-//         if (r == VK_TIMEOUT) {
-//             std::vector<VkSemaphore> semaphores;
-//             for (auto& buf : client->resources->buffer)
-//                 semaphores.push_back(buf.sync.semaphore);
-//             VkSubmitInfo si{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
-//             si.signalSemaphoreCount = semaphores.size();
-//             si.pSignalSemaphores = semaphores.data();
-
-//             std::lock_guard lock(m);
-//             vkQueueSubmit(graphicsQueue, 1, &si, VK_NULL_HANDLE);
-//             continue;
-//         }
-
-//         for (auto [i, fence] : enumerate(fences)) {
-//             if (vkGetFenceStatus(device, fence) == VK_SUCCESS) {
-//                 std::lock_guard lock(client->m);
-//                 client->frame_queue.push_back(i);
-//                 vkResetFences(device, 1, &fence);
-//                 SPDLOG_DEBUG("add frame {}", i);
-//                 client->cv.notify_all();
-//                 break;
-//             }
-//         }
-//     }
-//     SPDLOG_DEBUG("exited sync thread");
-// }
-
-// void VkCtx::wait_on_semaphores(std::shared_ptr<Client> client) {
-//     std::vector<VkSemaphore> semaphores;
-//     std::vector<uint64_t> values;
-
-//     {
-//         std::lock_guard lock(client->resources->m);
-//         for (auto& buf : client->resources->buffer) {
-//             semaphores.push_back(buf.sync.consumer_semaphore);
-//             values.push_back(buf.sync.consumer_last);
-//         }
-//     }
-
-//     VkSemaphoreWaitInfo info{};
-//     info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
-//     info.flags = VK_SEMAPHORE_WAIT_ANY_BIT;
-//     info.semaphoreCount = static_cast<uint32_t>(semaphores.size());
-//     info.pSemaphores = semaphores.data();
-//     info.pValues = values.data();
-//     while (!client->semaphores_stop.load()) {
-//         VkResult r = vkWaitSemaphores(device, &info, 100'000'000);
-
-//         if (r == VK_TIMEOUT)
-//             continue;
-
-//         for (auto [i, sem] : enumerate(semaphores)) {
-//             uint64_t v;
-//             vkGetSemaphoreCounterValue(device, sem, &v);
-//             if (v >= values[i]) {
-//                 values[i] = v + 1;
-//                 {
-//                     std::lock_guard lock(client->resources->m);
-//                     client->resources->buffer[i].sync.consumer_last = v;
-//                 }
-
-//                 std::lock_guard lock(client->m);
-//                 SPDLOG_DEBUG("queue slot {} counter {} pid {}", i, v, client->pid);
-//                 client->frame_queue.push_back(i);
-//                 client->cv.notify_one();
-//                 continue;
-//             }
-//         }
-//     }
-// }

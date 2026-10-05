@@ -10,10 +10,11 @@
 #include <memory>
 #include <future>
 #include <vector>
-#include "../render/shared.h"
+#include "../render/renderer.h"
+#include "protocol.h"
 #include <poll.h>
-#include <sys/eventfd.h>
 #include <systemd/sd-bus.h>
+#include <sys/eventfd.h>
 
 constexpr size_t   FT_MAX = 200;
 constexpr uint64_t KEEP_NS = 500000000ULL;
@@ -104,69 +105,13 @@ struct SampleStats {
     }
 };
 
-struct Fdinfo {
-    uint64_t modifier = 0;
-    uint32_t dmabuf_offset = 0;
-    uint32_t stride = 0;
-    uint32_t fourcc = 0;
-    uint64_t plane_size = 0;
-
-    uint32_t w = 0;
-    uint32_t h = 0;
-
-    uint64_t opaque_size = 0;
-    uint64_t opaque_offset = 0;
-
-    std::vector<unique_fd> dmabuf_buffer;
-    std::vector<unique_fd> opaque_buffer;
-    std::vector<unique_fd> semaphores;
-};
-
 class IPCServer;
 class MangoHudServer;
-
-struct RenderMethod {
-    ExportMethod export_method = EXPORT_NONE;
-    std::shared_ptr<GPU> gpu;
-};
-
-class Renderer {
-public:
-    Renderer(MangoHudServer* server, clientRes* r_, int render_minor, int buffer_size);
-    unique_fd render(slot_t* buf, int idx);
-    void consumer_import_failed();
-
-    ~Renderer();
-
-private:
-    std::shared_ptr<VkCtx> vk;
-    std::shared_ptr<EglCtx> egl;
-    std::shared_ptr<ImGuiCtx> imgui;
-    mutable std::mutex m;
-    RenderMethod method;
-    MangoHudServer* server;
-    clientRes* r;
-    int render_minor;
-    int buffer_size;
-    size_t method_idx = 0;
-    std::vector<RenderMethod> methods;
-
-    bool configure(RenderMethod next_method);
-    bool configure_current_or_advance();
-    bool advance_method();
-    std::vector<RenderMethod> build_methods() const;
-    RenderMethod current_method() const;
-    int producer_renderer() const;
-    bool init_vk();
-    bool init_egl();
-    void reset_resources();
-};
 
 class Client {
 public:
     pid_t pid;
     std::mutex m;
-    std::condition_variable cv;
     std::vector<SampleStats> samples{static_cast<size_t>(SampleType::Count)};
     std::string name;
     std::string pEngineName;
@@ -176,20 +121,16 @@ public:
     uint32_t resolutionHeight = 0;
     std::vector<std::string> focused_seats;
     bool x11_focused = false;
-    int64_t renderMinor = 0;
-    std::shared_ptr<clientRes> resources;
+    std::unique_ptr<Renderer> renderer;
     IPCServer* ipc;
     MangoHudServer* server;
     sd_bus* bus;
     sd_bus_slot* slot;
     std::atomic<bool> active {true};
-    std::deque<ready_frame> frame_queue;
     std::atomic<uint64_t> hud_seq{0};
     std::atomic<bool> stop {false};
 
-    Client(pid_t pid_, IPCServer* ipc_, MangoHudServer* server_, sd_bus* bus_)
-           : pid(pid_), resources(std::make_shared<clientRes>()),
-           ipc(ipc_), server(server_), bus(bus_) {}
+    Client(pid_t pid_, IPCServer* ipc_, MangoHudServer* server_, sd_bus* bus_);
 
     bool focused() const {
         return x11_focused || !focused_seats.empty();
@@ -203,11 +144,12 @@ public:
     }
 
     void init(std::shared_ptr<Client>& shared);
-    void send_dmabuf();
+    void send_dmabuf(const std::vector<BufferSet>& buffers, uint32_t width, uint32_t height,
+                     ExportMethod method);
     void send_config();
     static int on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_error);
     void set_dead();
-    void frame_ready(uint32_t idx, unique_fd fd);
+    void frame_ready(int idx, unique_fd fd, std::shared_ptr<Renderer::Resources> resources);
     void stop_and_join();
 
     ~Client();
@@ -220,8 +162,6 @@ private:
     sd_bus_slot* spdlog_slot = nullptr;
     sd_bus_slot* frame_slot = nullptr;
     sd_bus_slot* import_failed_slot = nullptr;
-    std::mutex frame_m;
-    std::thread run_t;
     sd_event* event = nullptr;
     sd_event_source* stop_src = nullptr;
     sd_event_source* work_src = nullptr;
@@ -230,15 +170,9 @@ private:
     std::mutex work_mtx;
     std::queue<std::packaged_task<void()>> work_q;
     std::shared_ptr<spdlog::logger> logger;
-    int buffer_size;
     std::weak_ptr<Client> self_weak;
-    std::unique_ptr<Renderer> renderer;
 
-    bool ready_frame_blocking();
-    void queue_frame();
     void dbus_thread();
-    void run();
-    int try_acquire_buffer();
     void setup_handshake(std::string member, sd_bus_slot** slot,
                          sd_bus_message_handler_t callback, std::shared_ptr<Client>& shared);
 

@@ -4,7 +4,7 @@
 #include "shared.h"
 #include <spdlog/spdlog.h>
 
-inline bool create_gbm(clientRes* r, dmabuf_t* buf, int dev_fd, const uint64_t modifier) {
+inline bool create_gbm(uint32_t w, uint32_t h, dmabuf_t* buf, int dev_fd, const uint64_t modifier) {
     buf->gbm = {};
     buf->gbm.fourcc = DRM_FORMAT_ARGB8888;
     buf->gbm.dev = gbm_create_device(dev_fd);
@@ -13,9 +13,9 @@ inline bool create_gbm(clientRes* r, dmabuf_t* buf, int dev_fd, const uint64_t m
         return false;
     }
 
-    SPDLOG_INFO("gbm alloc: fd={}, w={}, h={}, fourcc=0x{:x}", dev_fd, r->w, r->h, buf->gbm.fourcc);
+    SPDLOG_INFO("gbm alloc: fd={}, w={}, h={}, fourcc=0x{:x}", dev_fd, w, h, buf->gbm.fourcc);
 
-    buf->gbm.bo = gbm_bo_create_with_modifiers(buf->gbm.dev, r->w, r->h, buf->gbm.fourcc, &modifier, 1);
+    buf->gbm.bo = gbm_bo_create_with_modifiers(buf->gbm.dev, w, h, buf->gbm.fourcc, &modifier, 1);
     if (!buf->gbm.bo) {
         SPDLOG_ERROR("gbm_bo_create_with_modifiers failed for modifier=0x{:016x}", modifier);
         return false;
@@ -37,7 +37,7 @@ inline bool create_gbm(clientRes* r, dmabuf_t* buf, int dev_fd, const uint64_t m
 
     buf->gbm.stride   = gbm_bo_get_stride_for_plane(buf->gbm.bo, 0);
     buf->gbm.offset   = gbm_bo_get_offset(buf->gbm.bo, 0);
-    buf->gbm.plane_size = (uint64_t)buf->gbm.stride * (uint64_t)r->h;
+    buf->gbm.plane_size = (uint64_t)buf->gbm.stride * (uint64_t)h;
 
     SPDLOG_INFO("gbm bo: fourcc=0x{:x}, modifier=0x{:x}, planes={}",
         gbm_bo_get_format(buf->gbm.bo),

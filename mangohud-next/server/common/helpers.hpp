@@ -1,11 +1,20 @@
 #pragma once
 
-#include <string>
+#include <algorithm>
+#include <cerrno>
 #include <cstdint>
+#include <cstring>
 #include <deque>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <tuple>
 #include <type_traits>
 #include <utility>
+#include <vector>
 #include <unistd.h>
+
+#include <spdlog/spdlog.h>
 
 std::string read_line(const std::string& filename);
 bool ends_with(std::string s1, std::string s2, bool ignore_case = false);

@@ -1,64 +1,17 @@
 #include "client.h"
 #include "ipc.h"
 #include "server.h"
-#include "../render/vulkan_ctx.h"
-#include "../render/imgui/imgui_ctx.h"
-#include "../render/egl_ctx.h"
-#include "../render/imgui/vk.h"
-#include "../render/imgui/egl.h"
-#include "../server/metrics/gpu/gpu.hpp"
 #include "ipc_abi_hash.h"
-#include <algorithm>
+
+#include <utility>
 
 class IPCServer;
 
-void destroy_client_res(clientRes* r, VkCtx* vk) {
-    if (!vk || !r->device)
-        return;
-
-    std::scoped_lock lock(r->m, vk->m);
-    vkDeviceWaitIdle(r->device);
-
-    for (auto& buf : r->buffer) {
-        destroy_vk_images(r->device, buf.dmabuf.image_res);
-        destroy_vk_images(r->device, buf.opaque.image_res);
-        destroy_vk_images(r->device, buf.source.image_res);
-        // TODO clean up EGL resources
-
-        buf.dmabuf.gbm = {};
-
-        if (buf.sync.fence) {
-            vkDestroyFence(r->device, buf.sync.fence, nullptr);
-            buf.sync.fence = VK_NULL_HANDLE;
-        }
-
-        if (buf.sync.cmd && r->cmd_pool) {
-            vkFreeCommandBuffers(r->device, r->cmd_pool, 1, &buf.sync.cmd);
-            buf.sync.cmd = VK_NULL_HANDLE;
-        }
-
-    }
-
-    if (r->cmd_pool) {
-        vkDestroyCommandPool(r->device, r->cmd_pool, nullptr);
-        r->cmd_pool = VK_NULL_HANDLE;
-    }
-}
-
-int Client::try_acquire_buffer() {
-    std::unique_lock lock(m);
-    cv.wait_for(lock, std::chrono::milliseconds(500));
-
-    if (frame_queue.empty())
-        return -1;
-
-    ready_frame& frame = frame_queue.front();
-    int ret = frame.idx;
-    if (sync_fd_blocking(frame.fd.get()))
-        frame_queue.pop_front();
-
-    return ret;
-}
+Client::Client(pid_t pid_, IPCServer* ipc_, MangoHudServer* server_, sd_bus* bus_)
+    : pid(pid_),
+      ipc(ipc_),
+      server(server_),
+      bus(bus_) {}
 
 void Client::setup_handshake(std::string member, sd_bus_slot** slot,
                              sd_bus_message_handler_t callback, std::shared_ptr<Client>& shared) {
@@ -160,7 +113,6 @@ void Client::init(std::shared_ptr<Client>& shared) {
     }
 
     thread = std::thread([this] { dbus_thread(); });
-    run_t = std::thread([this] { run(); });
 }
 
 int Client::on_stop_event(sd_event_source *s, int fd, uint32_t revents, void *userdata) {
@@ -211,8 +163,6 @@ int Client::on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_erro
     if (!self)
         return 0;
 
-    std::lock_guard lock(self->resources->m);
-
     uint64_t peer_hash = 0;
 
     int r = sd_bus_message_read(m, "t", &peer_hash);
@@ -253,19 +203,22 @@ int Client::on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_erro
     const char* engine = "";
     const char* vulkan_driver = "";
     const char* gpu_name = "";
+    int64_t render_minor = -1;
+    int buffer_size = 0;
     int32_t raw_api = 0;
-    r = sd_bus_message_read(m, "sxiiss", &engine, &self->renderMinor, &self->buffer_size, &raw_api, &vulkan_driver, &gpu_name);
+    r = sd_bus_message_read(m, "sxiiss", &engine, &render_minor, &buffer_size, &raw_api,
+                            &vulkan_driver, &gpu_name);
     if (r < 0) {
-        SPDLOG_ERROR("on_connect append(sxiiss) {} ({})", r, strerror(-r));
+        SPDLOG_ERROR("on_connect read(sxiiss) {} ({})", r, strerror(-r));
         self->set_dead();
         return false;
     }
     self->pEngineName = engine;
     self->vulkanDriver = vulkan_driver;
     self->gpuName = gpu_name;
-    self->resources->api = static_cast<Backend>(raw_api);
     if (self->server && self->server->metrics)
         self->server->metrics->add_client_pid(self->pid);
+    self->renderer = std::make_unique<Renderer>(self->server, self.get(), render_minor, buffer_size);
 
     self->send_config();
 
@@ -295,45 +248,51 @@ int Client::resolution(sd_bus_message* m, void* userdata, sd_bus_error*) {
     return sd_bus_reply_method_return(m, "");
 }
 
-void Client::send_dmabuf(){
-    Fdinfo fdinfo;
-    {
-        std::lock_guard lock(resources->m);
-        resources->send_dmabuf = false;
-
-        for (auto& buf : resources->buffer) {
-            unique_fd dmabuf = unique_fd::dup(buf.dmabuf.gbm.fd);
-            // Keep sending this for GL release_fence(), even when the visible
-            // image is imported from an opaque Vulkan fd. Removing it will break
-            // GL sync. TODO: add a separate non-image GL fence path.
-            unique_fd opaque = resources->export_method == OPAQUE_FD_VULKAN
-                ? unique_fd::dup(buf.opaque.fd)
-                : unique_fd::dup(buf.dmabuf.gbm.fd);
-
-            if (!dmabuf || !opaque) {
-                SPDLOG_ERROR("send_dmabuf: failed to dup an fd. critical error");
-                return;
-            }
-
-            fdinfo.dmabuf_buffer.push_back(std::move(dmabuf));
-            fdinfo.opaque_buffer.push_back(std::move(opaque));
-        }
-        fdinfo.w = resources->w;
-        fdinfo.h = resources->h;
-        fdinfo.modifier = resources->buffer.back().dmabuf.gbm.modifier;
-        fdinfo.dmabuf_offset = resources->buffer.back().dmabuf.gbm.offset;
-        fdinfo.stride = resources->buffer.back().dmabuf.gbm.stride;
-        fdinfo.fourcc = resources->buffer.back().dmabuf.gbm.fourcc;
-        fdinfo.plane_size = resources->buffer.back().dmabuf.gbm.plane_size;
-        fdinfo.opaque_size = resources->buffer.back().opaque.size;
-        fdinfo.opaque_offset = resources->buffer.back().opaque.offset;
+void Client::send_dmabuf(const std::vector<BufferSet>& buffers, uint32_t width, uint32_t height,
+                         ExportMethod method)
+{
+    if (buffers.empty()) {
+        SPDLOG_ERROR("renderer: failed to export buffers, no buffers available");
+        return;
     }
+
+    std::vector<std::pair<unique_fd, unique_fd>> fds;
+    fds.reserve(buffers.size());
+
+    const bool use_opaque = method == OPAQUE_VULKAN;
+    for (const auto& buf : buffers) {
+        unique_fd dmabuf = unique_fd::dup(buf.dmabuf.gbm.fd);
+        // Keep sending this for GL release_fence(), even when the visible image
+        // is imported from an opaque Vulkan fd. TODO: add a separate non-image
+        // GL fence path.
+        unique_fd opaque = use_opaque
+            ? unique_fd::dup(buf.opaque.fd)
+            : unique_fd::dup(buf.dmabuf.gbm.fd);
+
+        if (!dmabuf || !opaque) {
+            SPDLOG_ERROR("renderer: failed to dup buffer fd");
+            return;
+        }
+
+        fds.emplace_back(std::move(dmabuf), std::move(opaque));
+    }
+
+    const auto& last = buffers.back();
+    const auto modifier = last.dmabuf.gbm.modifier;
+    const auto offset = last.dmabuf.gbm.offset;
+    const auto stride = last.dmabuf.gbm.stride;
+    const auto fourcc = last.dmabuf.gbm.fourcc;
+    const auto plane_size = last.dmabuf.gbm.plane_size;
+    const auto opaque_size = last.opaque.size;
+    const auto opaque_offset = last.opaque.offset;
+    const Resolution resolution{width, height};
 
     auto self = self_weak.lock();
     if (!self)
         return;
 
-    post([self, fdinfo = std::move(fdinfo)]() {
+    post([self, modifier, offset, stride, fourcc, plane_size, opaque_size,
+          opaque_offset, resolution, fds = std::move(fds)]() {
         SPDLOG_DEBUG("sending dmabuf");
         sd_bus_message* msg = nullptr;
         int ret = sd_bus_message_new_signal(self->bus, &msg, kObjPath, kIface, "dmabuf");
@@ -346,15 +305,15 @@ void Client::send_dmabuf(){
         ret = sd_bus_message_append(
             msg,
             "tuuutttuu",
-            fdinfo.modifier,
-            fdinfo.dmabuf_offset,
-            fdinfo.stride,
-            fdinfo.fourcc,
-            fdinfo.plane_size,
-            fdinfo.opaque_size,
-            fdinfo.opaque_offset,
-            fdinfo.w,
-            fdinfo.h
+            modifier,
+            offset,
+            stride,
+            fourcc,
+            plane_size,
+            opaque_size,
+            opaque_offset,
+            resolution.w,
+            resolution.h
         );
 
         if (ret < 0) {
@@ -370,7 +329,7 @@ void Client::send_dmabuf(){
             return ret;
         }
 
-        for (size_t i = 0; i < fdinfo.dmabuf_buffer.size(); i++) {
+        for (const auto& fd_pair : fds) {
             ret = sd_bus_message_open_container(msg, 'r', "hh");
             if (ret < 0) {
                 SPDLOG_DEBUG("sd_bus_message_open_container struct {} ({})", ret, strerror(-ret));
@@ -380,8 +339,8 @@ void Client::send_dmabuf(){
             ret = sd_bus_message_append(
                 msg,
                 "hh",
-                fdinfo.dmabuf_buffer[i].get(),
-                fdinfo.opaque_buffer[i].get()
+                fd_pair.first.get(),
+                fd_pair.second.get()
             );
 
             if (ret < 0) {
@@ -554,49 +513,7 @@ int Client::on_work_event(sd_event_source *s, int fd, uint32_t revents, void *us
     return 0;
 }
 
-void Client::run() {
-    pthread_setname_np(pthread_self(), ("c_run-" + std::to_string(pid)).substr(0, 15).c_str());
-    int buf_idx = -1;
-    while (!stop.load()) {
-        if (!active.load())
-            return;
-
-        if (resources->api == Backend::NONE) {
-            sleep(1);
-            continue;
-        }
-
-        if (!renderer)
-            renderer = std::make_unique<Renderer>(server, resources.get(), renderMinor, buffer_size);
-
-        if (!resources->hud)
-            return;
-
-        if (resources->send_dmabuf)
-            send_dmabuf();
-
-        if (buf_idx == -1)
-            buf_idx = try_acquire_buffer();
-
-        if (buf_idx >= 0) {
-            if (static_cast<size_t>(buf_idx) >= resources->buffer.size()) {
-                buf_idx = -1;
-                continue;
-            }
-
-            auto& buf = resources->buffer[buf_idx];
-            auto fd = renderer->render(&buf, buf_idx);
-            if (fd) {
-                frame_ready(buf_idx, std::move(fd));
-                buf_idx = -1;
-            }
-        }
-    }
-}
-
 Client::~Client() {
-    renderer.reset();
-
     sd_bus_slot_unref(handshake_slot);
     sd_bus_slot_unref(frame_samples_slot);
     sd_bus_slot_unref(resolution_slot);
@@ -636,7 +553,6 @@ void Client::stop_and_join() {
         std::lock_guard lock(m);
         stop.store(true, std::memory_order_release);
     }
-    cv.notify_all();
     uint64_t one = 1;
     for (;;) {
         ssize_t n = write(stop_eventfd, &one, sizeof(one));
@@ -651,9 +567,6 @@ void Client::stop_and_join() {
 
     if (thread.joinable()) {
         thread.join();
-    }
-    if (run_t.joinable()) {
-        run_t.join();
     }
 
     std::queue<std::packaged_task<void()>> drain;
@@ -697,13 +610,17 @@ int Client::spdlog_msg(sd_bus_message* m, void* userdata, sd_bus_error*) {
     return 0;
 }
 
-void Client::frame_ready(uint32_t idx, unique_fd fd) {
+void Client::frame_ready(int idx, unique_fd fd, std::shared_ptr<Renderer::Resources> resources) {
+    if (idx < 0)
+        return;
+
     auto self = self_weak.lock();
     if (!self)
         return;
 
     post([self, idx, fd = std::move(fd)]() {
-        int r = sd_bus_emit_signal(self->bus, kObjPath, kIface, "frame_ready", "uh", idx, fd.get());
+        int r = sd_bus_emit_signal(self->bus, kObjPath, kIface, "frame_ready", "uh",
+                                   static_cast<uint32_t>(idx), fd.get());
         if (r < 0) {
             SPDLOG_ERROR("sd_bus_emit_signal {} ({})", r, strerror(-r));
             return r;
@@ -722,18 +639,16 @@ int Client::on_frame(sd_bus_message* m, void* userdata, sd_bus_error*) {
     if (!self)
         return 0;
 
-    ready_frame frame;
+    uint32_t idx = 0;
     int fd;
-    int r = sd_bus_message_read(m, "uh", &frame.idx, &fd);
+    int r = sd_bus_message_read(m, "uh", &idx, &fd);
     if (r < 0) {
         SPDLOG_ERROR("sd_bus_call_method {} ({})", r, strerror(-r));
         return r;
     }
 
-    frame.fd = unique_fd::dup(fd);
-    std::lock_guard lock(self->frame_m);
-    self->frame_queue.push_back(std::move(frame));
-    self->cv.notify_all();
+    if (self->renderer)
+        self->renderer->frame_ready(static_cast<int>(idx), unique_fd::dup(fd));
     return 0;
 }
 
@@ -745,198 +660,6 @@ int Client::on_import_failed(sd_bus_message* m, void* userdata, sd_bus_error*) {
         return 0;
 
     if (self->renderer)
-        self->renderer->consumer_import_failed();
-
+        self->renderer->method_failed();
     return 0;
-}
-
-Renderer::Renderer(MangoHudServer* server, clientRes* r_, int render_minor, int buffer_size)
-    : server(server), r(r_), render_minor(render_minor), buffer_size(buffer_size) {
-    imgui = std::make_shared<ImGuiCtx>();
-    methods = build_methods();
-    configure_current_or_advance();
-}
-
-unique_fd Renderer::render(slot_t* buf, int idx) {
-    std::lock_guard lock(m);
-
-    unique_fd fd;
-    if (method.export_method == DMABUF_VULKAN || method.export_method == OPAQUE_FD_VULKAN) {
-        if (!imgui->draw(r, buf, Backend::VULKAN)) {
-            if (!configure(method))
-                configure_current_or_advance();
-            return fd;
-        }
-
-        vk->submit(r, idx);
-        fd = unique_fd::adopt(vk->get_fence_fd(buf->sync.fence));
-    }
-
-    if (method.export_method == DMABUF_EGL) {
-        int fd_ = egl->submit(r, idx);
-        if (fd_ == -1) {
-            if (!configure(method))
-                configure_current_or_advance();
-            return fd;
-        }
-
-        fd = unique_fd::adopt(fd_);
-    }
-
-    return fd;
-}
-
-void Renderer::consumer_import_failed() {
-    std::lock_guard renderer_lock(m);
-
-    {
-        std::lock_guard lock(r->m);
-        if (r->buffer.empty()) {
-            SPDLOG_ERROR("Client failed to import dmabuf fd: no buffer context available");
-            return;
-        }
-
-        const auto& dmabuf = r->buffer.back().dmabuf.gbm;
-        SPDLOG_ERROR(
-            "Client failed to import method={} backend={} producer_renderer={} client_renderer={} fourcc=0x{:08x} '{}' modifier=0x{:016x}",
-            static_cast<int32_t>(r->export_method),
-            static_cast<int32_t>(r->api),
-            producer_renderer(),
-            render_minor,
-            dmabuf.fourcc,
-            fourcc_to_string(dmabuf.fourcc),
-            static_cast<unsigned long long>(dmabuf.modifier)
-        );
-    }
-
-    if (!advance_method()) {
-        SPDLOG_ERROR(
-            "No usable render method for backend={} client_renderer={}",
-            static_cast<int32_t>(r->api),
-            render_minor
-        );
-        configure({EXPORT_NONE, nullptr});
-        return;
-    }
-
-    configure_current_or_advance();
-}
-
-Renderer::~Renderer() {
-    std::lock_guard lock(m);
-    reset_resources();
-    imgui->teardown();
-    vk.reset();
-    egl.reset();
-}
-
-bool Renderer::configure(RenderMethod next_method) {
-    reset_resources();
-    imgui->teardown();
-    vk.reset();
-    egl.reset();
-
-    method = std::move(next_method);
-    r->export_method = method.export_method;
-    r->server_gpu = method.gpu;
-
-    if (method.export_method == EXPORT_NONE)
-        return false;
-
-    SPDLOG_DEBUG(
-        "Trying render method idx={} method={} producer_renderer={} client_renderer={}",
-        method_idx,
-        static_cast<int32_t>(method.export_method),
-        producer_renderer(),
-        render_minor
-    );
-
-    if (method.export_method == DMABUF_VULKAN || method.export_method == OPAQUE_FD_VULKAN)
-        return init_vk();
-
-    if (method.export_method == DMABUF_EGL)
-        return init_egl();
-
-    return false;
-}
-
-bool Renderer::configure_current_or_advance() {
-    for (;;) {
-        if (configure(current_method()))
-            return true;
-
-        if (!advance_method()) {
-            SPDLOG_ERROR(
-                "No usable render method for backend={} client_renderer={}",
-                static_cast<int32_t>(r->api),
-                render_minor
-            );
-            configure({EXPORT_NONE, nullptr});
-            return false;
-        }
-    }
-}
-
-bool Renderer::advance_method() {
-    method_idx++;
-    if (method_idx >= methods.size())
-        return false;
-
-    return true;
-}
-
-std::vector<RenderMethod> Renderer::build_methods() const {
-    std::vector<std::shared_ptr<GPU>> gpus;
-    gpus.push_back(nullptr);
-    for (auto& gpu : server->available_gpus()) {
-        if (gpu->renderer() != render_minor)
-            gpus.push_back(gpu);
-    }
-
-    std::vector<RenderMethod> result;
-    for (auto& gpu : gpus) {
-        result.push_back({DMABUF_VULKAN, gpu});
-        result.push_back({OPAQUE_FD_VULKAN, gpu});
-        result.push_back({DMABUF_EGL, gpu});
-    }
-
-    return result;
-}
-
-RenderMethod Renderer::current_method() const {
-    if (method_idx >= methods.size())
-        return {EXPORT_NONE, nullptr};
-
-    return methods[method_idx];
-}
-
-int Renderer::producer_renderer() const {
-    if (method.gpu)
-        return method.gpu->renderer();
-
-    return render_minor;
-}
-
-bool Renderer::init_vk() {
-    vk = server->vk(producer_renderer());
-    vk->init_client(r, buffer_size);
-    if (!r->initialized)
-        return false;
-
-    imgui->init_vk(vk);
-    return true;
-}
-
-bool Renderer::init_egl() {
-    // TODO: split egl so multiple clients can use it at the same time
-    egl = std::make_shared<EglCtx>(producer_renderer(), imgui);
-    return egl->init_client(r, buffer_size);
-}
-
-void Renderer::reset_resources() {
-    destroy_client_res(r, vk.get());
-    if (egl)
-        egl->destroy_client(r);
-    r->reinit_dmabuf = false;
-    r->initialized = false;
 }

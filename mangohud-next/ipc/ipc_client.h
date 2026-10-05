@@ -1,5 +1,4 @@
 #pragma once
-#include <systemd/sd-bus.h>
 #include <deque>
 #include "imgui.h"
 #include <atomic>
@@ -15,9 +14,29 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/pattern_formatter.h>
 #include "client.h"
+#include "protocol.h"
 
 class spdlogSink;
 class Layer;
+
+struct Fdinfo {
+    uint64_t modifier = 0;
+    uint32_t dmabuf_offset = 0;
+    uint32_t stride = 0;
+    uint32_t fourcc = 0;
+    uint64_t plane_size = 0;
+
+    uint32_t w = 0;
+    uint32_t h = 0;
+
+    uint64_t opaque_size = 0;
+    uint64_t opaque_offset = 0;
+
+    std::vector<unique_fd> dmabuf_buffer;
+    std::vector<unique_fd> opaque_buffer;
+    std::vector<unique_fd> semaphores;
+};
+
 class IPCClient {
 public:
     std::atomic<uint64_t> import_generation{0};
@@ -71,7 +90,7 @@ public:
     void send_spdlog(const int level, const char* file, const int line, const std::string& text);
     void send_import_failed();
     void send_semaphores(std::vector<int> sema);
-    void frame_ready(uint32_t idx, int fd);
+    void frame_ready(int idx, int fd);
     void clear_frames() {
         std::lock_guard lock(sync_mtx);
         frame_queue.clear();

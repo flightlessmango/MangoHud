@@ -5,6 +5,7 @@ render_lib = static_library(
     files(
       'vulkan_ctx.cpp',
       'egl_ctx.cpp',
+      'renderer.cpp',
       ),
     dependencies: [vulkan_dep,
                    dearimgui_dep,

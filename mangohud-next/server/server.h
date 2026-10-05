@@ -1,12 +1,18 @@
 #pragma once
 #include <atomic>
-#include "ipc.h"
+#include <cstdint>
+#include <string>
+#include <string_view>
+#include "../ipc/ipc.h"
 #include "metrics/metrics.h"
 #include "config.h"
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/cfg/env.h>
+#include <memory>
 #include <unordered_map>
+
+class EglCtx;
 
 class MangoHudServer {
 public:
@@ -28,7 +34,8 @@ public:
         loop();
     }
 
-    std::shared_ptr<VkCtx> vk(int renderer = -1);
+    std::shared_ptr<VkCtx> vk(int64_t renderer = -1);
+    std::shared_ptr<EglCtx> egl(int64_t renderer);
     std::vector<std::shared_ptr<GPU>> available_gpus() const;
 
     ~MangoHudServer() {
@@ -38,7 +45,7 @@ public:
 private:
     std::unique_ptr<IPCServer> ipc;
     std::shared_ptr<spdlog::logger> logger;
-    std::unordered_map<int, std::weak_ptr<VkCtx>> vk_ctx;
+    std::unordered_map<int64_t, std::weak_ptr<VkCtx>> vk_ctx;
     std::mutex vk_ctx_m;
     std::atomic<bool> stop {false};
 

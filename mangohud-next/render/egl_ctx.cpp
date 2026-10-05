@@ -16,7 +16,7 @@
 #include "egl_ctx.h"
 #include "imgui/egl.h"
 
-EglCtx::EglCtx(int renderer_, std::shared_ptr<ImGuiCtx> imgui) : renderer(renderer_), imgui(imgui) {
+EglCtx::EglCtx(int64_t renderer_) : renderer(renderer_), imgui(std::make_shared<ImGuiCtx>()) {
     p_glEGLImageTargetTexture2DOES =
         reinterpret_cast<PFNGLEGLIMAGETARGETTEXTURE2DOESPROC>(
             eglGetProcAddress("glEGLImageTargetTexture2DOES"));
@@ -103,7 +103,7 @@ EglCtx::EglCtx(int renderer_, std::shared_ptr<ImGuiCtx> imgui) : renderer(render
     eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 }
 
-bool EglCtx::init_client(clientRes* r, int buffer_size) {
+bool EglCtx::init_client(std::vector<BufferSet>& buffers, uint32_t w, uint32_t h, int buffer_size) {
     std::lock_guard lock(m);
     if (dpy == EGL_NO_DISPLAY || ctx == EGL_NO_CONTEXT) {
         SPDLOG_ERROR("EGL context is not initialized");
@@ -115,8 +115,8 @@ bool EglCtx::init_client(clientRes* r, int buffer_size) {
         return false;
     }
 
-    r->buffer.resize(buffer_size);
-    for (auto& buf : r->buffer) {
+    buffers.resize(buffer_size);
+    for (auto& buf : buffers) {
         dmabuf_t& dmabuf = buf.dmabuf;
         if (!dev_fd) dev_fd = unique_fd::adopt(pick_device());
 
@@ -127,13 +127,12 @@ bool EglCtx::init_client(clientRes* r, int buffer_size) {
             return false;
         }
 
-        if (!init_dmabuf(r, dmabuf)) {
+        if (!init_dmabuf(w, h, dmabuf)) {
             eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
             return false;
         }
 
-        if (imgui && !imgui->egl)
-            imgui->init_egl();
+        imgui->init_egl();
 
         glGenTextures(1, &dmabuf.egl_res.tex);
 
@@ -155,12 +154,10 @@ bool EglCtx::init_client(clientRes* r, int buffer_size) {
         eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
     }
 
-    r->initialized = true;
-    r->send_dmabuf = true;
     return true;
 }
 
-void EglCtx::destroy_client(clientRes* r) {
+void EglCtx::destroy_client(std::vector<BufferSet>& buffers) {
     std::lock_guard lock(m);
 
     if (dpy == EGL_NO_DISPLAY || ctx == EGL_NO_CONTEXT)
@@ -172,13 +169,14 @@ void EglCtx::destroy_client(clientRes* r) {
         return;
     }
 
-    for (auto& buf : r->buffer)
-        destroy_dmabuf_res(buf.dmabuf);
+    for (auto& buffer : buffers)
+        destroy_dmabuf_res(buffer.dmabuf);
 
     eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 }
 
-int EglCtx::submit(clientRes* r, int idx) {
+int EglCtx::submit(std::vector<BufferSet>& buffers, uint32_t w, uint32_t h, Resolution& size,
+                   int idx, std::shared_ptr<HudConfig> hud, std::mutex& hud_m) {
     std::lock_guard lock(m);
 
     if (!eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, ctx)) {
@@ -192,7 +190,7 @@ int EglCtx::submit(clientRes* r, int idx) {
 
     glGenTextures(1, &intermediate_tex);
     glBindTexture(GL_TEXTURE_2D, intermediate_tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, r->w, r->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -212,10 +210,10 @@ int EglCtx::submit(clientRes* r, int idx) {
         return -1;
     }
 
-    auto* buf = &r->buffer[idx];
+    auto* buf = &buffers[idx];
 
     glBindFramebuffer(GL_FRAMEBUFFER, intermediate_fbo);
-    glViewport(0, 0, r->w, r->h);
+    glViewport(0, 0, w, h);
 
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
@@ -230,12 +228,12 @@ int EglCtx::submit(clientRes* r, int idx) {
                         GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
     glEnable(GL_SCISSOR_TEST);
-    glScissor(0, 0, r->w, r->h);
+    glScissor(0, 0, w, h);
 
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    if (!imgui->draw(r, buf, Backend::EGL)) {
+    if (!imgui->draw(w, h, size, buf, Backend::EGL, hud, hud_m)) {
         glDeleteFramebuffers(1, &intermediate_fbo);
         glDeleteTextures(1, &intermediate_tex);
         eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
@@ -247,8 +245,8 @@ int EglCtx::submit(clientRes* r, int idx) {
 
     glDisable(GL_SCISSOR_TEST);
     glBlitFramebuffer(
-        0, 0, r->w, r->h,
-        0, r->h, r->w, 0,
+        0, 0, w, h,
+        0, h, w, 0,
         GL_COLOR_BUFFER_BIT,
         GL_NEAREST
     );
@@ -298,7 +296,7 @@ int EglCtx::pick_device() {
         if (!(dev->available_nodes & (1 << DRM_NODE_RENDER)))
             continue;
 
-        int minor = -1;
+        int64_t minor = -1;
         if (const char* render = strrchr(dev->nodes[DRM_NODE_RENDER], 'D'))
             minor = atoi(render + 1);
 
@@ -412,7 +410,7 @@ void EglCtx::destroy_dmabuf_res(dmabuf_t& dmabuf) {
     dmabuf.gbm = {};
 }
 
-bool EglCtx::init_dmabuf(clientRes* r, dmabuf_t& dmabuf) {
+bool EglCtx::init_dmabuf(uint32_t w, uint32_t h, dmabuf_t& dmabuf) {
     constexpr uint32_t fourcc = DRM_FORMAT_ARGB8888;
     auto modifiers = get_modifiers(dpy, fourcc);
     if (modifiers.empty())
@@ -421,12 +419,12 @@ bool EglCtx::init_dmabuf(clientRes* r, dmabuf_t& dmabuf) {
     for (uint64_t modifier : modifiers) {
         destroy_dmabuf_res(dmabuf);
 
-        if (!create_gbm(r, &dmabuf, dev_fd.get(), modifier))
+        if (!create_gbm(w, h, &dmabuf, dev_fd.get(), modifier))
             continue;
 
         const EGLAttrib img_attrs[] = {
-            EGL_WIDTH, EGLint(r->w),
-            EGL_HEIGHT, EGLint(r->h),
+            EGL_WIDTH, EGLint(w),
+            EGL_HEIGHT, EGLint(h),
             EGL_LINUX_DRM_FOURCC_EXT, EGLint(dmabuf.gbm.fourcc),
             EGL_DMA_BUF_PLANE0_FD_EXT, dmabuf.gbm.fd.get(),
             EGL_DMA_BUF_PLANE0_OFFSET_EXT, EGLint(dmabuf.gbm.offset),
@@ -466,6 +464,7 @@ bool EglCtx::init_dmabuf(clientRes* r, dmabuf_t& dmabuf) {
 EglCtx::~EglCtx() {
     if (dpy != EGL_NO_DISPLAY) {
         eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, ctx);
+        imgui.reset();
         eglDestroyContext(dpy, ctx);
         eglTerminate(dpy);
     }

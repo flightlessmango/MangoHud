@@ -8,25 +8,11 @@
 #include <GL/gl.h>
 #include <EGL/egl.h>
 
-static constexpr const char* kBusName = "io.mangohud.socket";
-static constexpr const char* kObjPath = "/io/mangohud/socket";
-static constexpr const char* kIface   = "io.mangohud.socket1";
-static constexpr uint32_t kProtoVersion = 1;
-
-class GPU;
-
 enum class Backend : int32_t {
     NONE = 0,
     GLX = 1,
     EGL = 2,
     VULKAN = 3,
-};
-
-enum ExportMethod : int32_t {
-    DMABUF_VULKAN = 0,
-    DMABUF_EGL,
-    OPAQUE_FD_VULKAN,
-    EXPORT_NONE,
 };
 
 __attribute__((unused))
@@ -60,8 +46,7 @@ static bool sync_fd_blocking(int fd) {
         if (r == 1)
             return (pfd.revents & (POLLIN | POLLHUP)) != 0;
         if (r == 0)
-        // timeout hit
-            return true;
+            continue;
         if (errno == EINTR)
             continue;
 
@@ -135,7 +120,6 @@ struct gbmBuffer {
 class VkCtx;
 class EglCtx;
 class ImGuiCtx;
-class X11Session;
 
 struct vk_image_res_t {
     VkImage         image               = VK_NULL_HANDLE;
@@ -174,53 +158,11 @@ struct sync_t {
     VkFence                 fence               = VK_NULL_HANDLE;
 };
 
-struct slot_t {
+struct BufferSet {
     dmabuf_t dmabuf{};
     opauqe_t opaque{};
     source_t source{};
-    sync_t  sync{};
-};
-
-struct clientRes {
-    VkDevice device;
-
-    std::vector<slot_t> buffer;
-    VkCommandPool   cmd_pool            = VK_NULL_HANDLE;
-    std::mutex      m;
-    std::mutex      hud_m;
-    std::shared_ptr<GPU> server_gpu;
-
-    std::string     client_id;
-    std::shared_ptr<HudConfig> hud      = nullptr;
-    uint32_t        w                   = 500;
-    uint32_t        h                   = 500;
-
-    bool            send_dmabuf         = false;
-    bool            reinit_dmabuf       = false;
-    bool            initialized         = false;
-
-    Backend         api                 = Backend::NONE;
-    ExportMethod    export_method       = EXPORT_NONE;
-    float           fps_limit           = 0;
-    Resolution      resolution          {};
-
-    std::shared_ptr<X11Session> x11;
-
-    clientRes() {
-        hud = std::make_shared<HudConfig>();
-    }
-
-    bool is_vulkan() {
-        return api == Backend::VULKAN;
-    }
-
-    bool is_egl() {
-        return api == Backend::EGL;
-    }
-
-    bool is_glx() {
-        return api == Backend::GLX;
-    }
+    sync_t sync{};
 };
 
 inline void destroy_vk_images(VkDevice device, vk_image_res_t& res) {
@@ -239,9 +181,6 @@ inline void destroy_vk_images(VkDevice device, vk_image_res_t& res) {
 
     res.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 }
-
-__attribute__((unused))
-void destroy_client_res(clientRes* r, VkCtx* vk);
 
 inline const char* fourcc_to_string(uint32_t fourcc)
 {

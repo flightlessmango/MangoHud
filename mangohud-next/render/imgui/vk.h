@@ -4,6 +4,7 @@
 #include "backends/imgui_impl_vulkan.h"
 #include "../vulkan_ctx.h"
 #include "font/font.h"
+#include <spdlog/spdlog.h>
 
 class ImGuiVK {
 public:
@@ -11,8 +12,9 @@ public:
     ImPlotContext* implot;
     std::shared_ptr<Font> fonts;
 
-    ImGuiVK(std::shared_ptr<VkCtx> vk_, ImGuiCtx* imgui_ctx_) : vk(std::move(vk_)), imgui_ctx(imgui_ctx_) {
-        std::scoped_lock mutex(vk->m, imgui_ctx->m);
+    ImGuiVK(VkCtx* vk_, ImGuiCtx* imgui_ctx_) : vk(vk_), imgui_ctx(imgui_ctx_) {
+        std::lock_guard global_lock(ImGuiCtx::global_m);
+        std::scoped_lock lock(vk->m, imgui_ctx->m);
         IMGUI_CHECKVERSION();
         imgui = ImGui::CreateContext();
         ImGui::SetCurrentContext(imgui);
@@ -59,12 +61,26 @@ public:
         return vk->m;
     }
 
-    void record_cmd(slot_t& buf, uint32_t w, uint32_t h) {
-        vkResetFences(vk->device, 1, &buf.sync.fence);
-        vkResetCommandBuffer(buf.sync.cmd, 0);
+    bool record_cmd(BufferSet& buf, uint32_t w, uint32_t h) {
+        VkResult ret = vkResetFences(vk->device, 1, &buf.sync.fence);
+        if (ret != VK_SUCCESS) {
+            SPDLOG_ERROR("vkResetFences failed {}", static_cast<int32_t>(ret));
+            return false;
+        }
+
+        ret = vkResetCommandBuffer(buf.sync.cmd, 0);
+        if (ret != VK_SUCCESS) {
+            SPDLOG_ERROR("vkResetCommandBuffer failed {}", static_cast<int32_t>(ret));
+            return false;
+        }
+
         VkCommandBufferBeginInfo bi{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
         bi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        vkBeginCommandBuffer(buf.sync.cmd, &bi);
+        ret = vkBeginCommandBuffer(buf.sync.cmd, &bi);
+        if (ret != VK_SUCCESS) {
+            SPDLOG_ERROR("vkBeginCommandBuffer failed {}", static_cast<int32_t>(ret));
+            return false;
+        }
 
         vk->transition_image(buf.sync.cmd, buf.source.image_res.image, buf.source.image_res.layout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
         buf.source.image_res.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -92,12 +108,14 @@ public:
         vkCmdBeginRendering(buf.sync.cmd, &ri);
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), buf.sync.cmd);
         vkCmdEndRendering(buf.sync.cmd);
+        return true;
     }
 
     ~ImGuiVK() {
-        if (!vk->device)
+        if (!vk || !vk->device)
             return;
 
+        std::lock_guard global_lock(ImGuiCtx::global_m);
         std::scoped_lock lock(vk->m, imgui_ctx->m);
         vkDeviceWaitIdle(vk->device);
         ImGui::SetCurrentContext(imgui);
@@ -114,7 +132,7 @@ public:
     };
 
 private:
-    std::shared_ptr<VkCtx> vk;
+    VkCtx* vk = nullptr;
     ImGuiCtx* imgui_ctx;
     VkDescriptorPool desc_pool = VK_NULL_HANDLE;
 

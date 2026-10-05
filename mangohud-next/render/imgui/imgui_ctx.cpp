@@ -20,11 +20,17 @@ ImGuiCtx::ImGuiCtx() {
     std::lock_guard lock(init_m);
 };
 
-void ImGuiCtx::init_vk(std::shared_ptr<VkCtx> vk_) {
-    vk = std::make_shared<ImGuiVK>(std::move(vk_), this);
+void ImGuiCtx::init_vk(VkCtx* vk_) {
+    if (vk)
+        return;
+
+    vk = std::make_shared<ImGuiVK>(vk_, this);
 }
 
 void ImGuiCtx::init_egl() {
+    if (egl)
+        return;
+
     egl = std::make_shared<ImGuiEGL>(this);
 }
 
@@ -919,7 +925,11 @@ void ImGuiCtx::end_window() {
     ImGui::PopStyleVar();
 }
 
-bool ImGuiCtx::draw(clientRes* r, slot_t* buf, Backend backend) {
+bool ImGuiCtx::draw(uint32_t w, uint32_t h, Resolution& size, BufferSet* buf, Backend backend,
+                    std::shared_ptr<HudConfig> hud, std::mutex& hud_m) {
+    size = {w, h};
+
+    std::unique_lock<std::mutex> global_lock(global_m);
     std::unique_lock<std::mutex> imgui_lock(m);
     std::unique_lock<std::mutex> vk_lock;
     ImGuiContext* imgui = nullptr;
@@ -940,8 +950,8 @@ bool ImGuiCtx::draw(clientRes* r, slot_t* buf, Backend backend) {
 
     std::vector<HudWindow> windows;
     {
-        std::lock_guard lock(r->hud_m);
-        windows = r->hud->windows;
+        std::lock_guard lock(hud_m);
+        windows = hud->windows;
     }
     ImGui::SetCurrentContext(imgui);
     ImPlot::SetCurrentContext(implot);
@@ -949,7 +959,7 @@ bool ImGuiCtx::draw(clientRes* r, slot_t* buf, Backend backend) {
         prepare_table_fonts(window.table, fonts);
 
     ImGuiIO& io = ImGui::GetIO();
-    io.DisplaySize = {float(r->w), float(r->h)};
+    io.DisplaySize = {float(w), float(h)};
 
 
     ImGui::NewFrame();
@@ -973,20 +983,15 @@ bool ImGuiCtx::draw(clientRes* r, slot_t* buf, Backend backend) {
         max_y = std::max(max_y, window.position.y + (float)window_h);
     }
 
-    uint32_t w = (uint32_t)std::ceil(max_x);
-    uint32_t h = (uint32_t)std::ceil(max_y);
+    size = {(uint32_t)std::ceil(max_x), (uint32_t)std::ceil(max_y)};
 
     ImGui::Render();
 
-    if (w != r->w || h != r->h) {
-        SPDLOG_DEBUG("resizing image from: {} {} to {} {}", r->w, r->h, w, h);
-        r->w = w;
-        r->h = h;
+    if (size != Resolution{w, h})
         return false;
-    }
 
     if (backend == Backend::VULKAN)
-        vk->record_cmd(*buf, w, h);
+        return vk->record_cmd(*buf, w, h);
 
     if (backend == Backend::EGL)
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

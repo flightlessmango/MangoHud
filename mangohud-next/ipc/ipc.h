@@ -12,8 +12,8 @@
 #include <spdlog/spdlog.h>
 #include "mesa/os_time.h"
 #include "../server/common/table_structs.h"
-#include "../render/shared.h"
 #include "client.h"
+#include "protocol.h"
 
 class MangoHudServer;
 class IPCServer {
@@ -38,7 +38,6 @@ private:
     std::mutex q_mtx;
     std::deque<sd_bus_message*> msgs;
     std::deque<std::pair<std::string, int>> fences;
-    std::deque<clientRes*> dmabufs;
     std::deque<std::string> dmabuf_q;
     std::mutex dmabuf_m;
     std::deque<std::string> configs;

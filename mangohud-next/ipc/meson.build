@@ -6,6 +6,7 @@ ipc_abi_inputs = files(
   'client.h',
   'ipc.h',
   'ipc_client.h',
+  'protocol.h',
   'client.cpp',
   'ipc.cpp',
   'ipc_client.cpp',
