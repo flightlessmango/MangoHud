@@ -13,7 +13,13 @@ IPCClient::IPCClient(Layer* layer_, Backend api_) : layer(layer_), api(api_){
     spdlog::set_default_logger(logger);
     spdlog::set_level(spdlog::level::level_enum::debug);
     SPDLOG_DEBUG("init dbus client");
-    if (const char* display = std::getenv("WAYLAND_DISPLAY"))
+    // Gamescope always sets GAMESCOPE_WAYLAND_DISPLAY for its nested compositor;
+    // WAYLAND_DISPLAY is set only with --expose-wayland.
+    const char* display = std::getenv("GAMESCOPE_WAYLAND_DISPLAY");
+    gamescopeSession = display && *display;
+    if (!display || !*display)
+        display = std::getenv("WAYLAND_DISPLAY");
+    if (display && *display)
         waylandDisplay = display;
     wake_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
     work_eventfd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
@@ -367,7 +373,7 @@ bool IPCClient::on_connect() {
 
         r = sd_bus_message_append(
             msg,
-            "tsxiisss",
+            "tsxiisssb",
             abi_hash,
             pEngineName.c_str(),
             int64_t(renderMinor),
@@ -375,7 +381,8 @@ bool IPCClient::on_connect() {
             raw_api,
             vulkanDriver.c_str(),
             gpuName.c_str(),
-            waylandDisplay.c_str()
+            waylandDisplay.c_str(),
+            static_cast<int>(gamescopeSession)
         );
 
         r = sd_bus_send(bus, msg, nullptr);

@@ -222,10 +222,11 @@ int Client::on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_erro
     int64_t render_minor = -1;
     int buffer_size = 0;
     int32_t raw_api = 0;
-    r = sd_bus_message_read(m, "sxiisss", &engine, &render_minor, &buffer_size, &raw_api,
-                            &vulkan_driver, &gpu_name, &wayland_display);
+    int gamescope_session = 0;
+    r = sd_bus_message_read(m, "sxiisssb", &engine, &render_minor, &buffer_size, &raw_api,
+                            &vulkan_driver, &gpu_name, &wayland_display, &gamescope_session);
     if (r < 0) {
-        SPDLOG_ERROR("on_connect read(sxiisss) {} ({})", r, strerror(-r));
+        SPDLOG_ERROR("on_connect read(sxiisssb) {} ({})", r, strerror(-r));
         self->set_dead();
         return false;
     }
@@ -233,7 +234,7 @@ int Client::on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_erro
     self->vulkanDriver = vulkan_driver;
     self->gpuName = gpu_name;
     self->wayland_display = wayland_display;
-    self->output_mode = configured_output_mode(self->server);
+    self->output_mode = gamescope_session ? OutputMode::Layer : configured_output_mode(self->server);
     if (self->output_mode == OutputMode::Layer) {
         if (self->wayland_display.empty()) {
             SPDLOG_DEBUG("wayland output requested but client {} has no WAYLAND_DISPLAY", self->pid);
@@ -244,10 +245,10 @@ int Client::on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_erro
         }
     }
 
-    SPDLOG_DEBUG("client {} output mode={} wayland_display={}",
+    SPDLOG_DEBUG("client {} output mode={} wayland_display={} gamescope_session={}",
                  self->pid,
                  self->output_mode == OutputMode::Layer ? "layer" : "app",
-                 self->wayland_display);
+                 self->wayland_display, gamescope_session != 0);
 
     if (self->server && self->server->metrics)
         self->server->metrics->add_client_pid(self->pid);

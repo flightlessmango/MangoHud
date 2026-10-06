@@ -170,8 +170,20 @@ EXPORT_C_(EGLDisplay) eglGetPlatformDisplay(EGLenum platform, void* native_displ
 
 EXPORT_C_(EGLDisplay) eglGetPlatformDisplayEXT(EGLenum platform, void* native_display, const EGLint* attrib_list) {
     static EGLDisplay (*real_eglGetPlatformDisplayEXT)(EGLenum, void*, const EGLint*) = nullptr;
-    if (!real_eglGetPlatformDisplayEXT)
+    if (!real_eglGetPlatformDisplayEXT) {
         real_eglGetPlatformDisplayEXT = (decltype(real_eglGetPlatformDisplayEXT)) real_dlsym(RTLD_NEXT, "eglGetPlatformDisplayEXT");
+        // EGL extensions need not be exported symbols (notably with GLVND).
+        // XWayland obtains this entry point through eglGetProcAddress.
+        if (!real_eglGetPlatformDisplayEXT) {
+            auto get_proc = reinterpret_cast<decltype(&eglGetProcAddress)>(
+                real_dlsym(RTLD_NEXT, "eglGetProcAddress"));
+            if (get_proc)
+                real_eglGetPlatformDisplayEXT = reinterpret_cast<decltype(real_eglGetPlatformDisplayEXT)>(
+                    get_proc("eglGetPlatformDisplayEXT"));
+        }
+    }
+    if (!real_eglGetPlatformDisplayEXT)
+        return EGL_NO_DISPLAY;
 
     if (IPCClient::is_blacklisted())
         return real_eglGetPlatformDisplayEXT(platform, native_display, attrib_list);

@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #include <sys/sysmacros.h>
 #include <unistd.h>
+#include <sys/mman.h>
 
 Wayland::Wayland(IPCServer* ipc_, std::string display_name_)
     : display_name(std::move(display_name_)), ipc(ipc_),
@@ -121,8 +122,20 @@ Wayland::Wayland(IPCServer* ipc_, std::string display_name_)
     wl_surface_commit(surface);
     wl_display_flush(display);
 
-    thread = std::thread([this] { run(); });
+    // Keep the layer surface mapped while hidden. A transparent buffer avoids
+    // compositor-specific unmap/reconfigure behavior and releases the HUD slot.
+    unique_fd blank_fd = unique_fd::adopt(memfd_create("mangohud-hidden", MFD_CLOEXEC));
+    if (!shm || !blank_fd || ftruncate(blank_fd.get(), 4) != 0) {
+        SPDLOG_ERROR("wayland: failed to create hidden buffer display={}", display_name);
+        return;
+    }
+    auto* pool = wl_shm_create_pool(shm, blank_fd.get(), 4);
+    hidden_buffer = wl_shm_pool_create_buffer(pool, 0, 1, 1, 4, WL_SHM_FORMAT_ARGB8888);
+    wl_shm_pool_destroy(pool);
+    if (!hidden_buffer)
+        return;
 
+    thread = std::thread([this] { run(); });
     SPDLOG_DEBUG("wayland: connected display={}", display_name);
 }
 
@@ -140,6 +153,8 @@ Wayland::~Wayland()
     previous.reset();
     retired.clear();
 
+    if (hidden_buffer)
+        wl_buffer_destroy(hidden_buffer);
     if (layer_surface)
         zwlr_layer_surface_v1_destroy(layer_surface);
     if (fractional_scale)
@@ -148,6 +163,8 @@ Wayland::~Wayland()
         wp_viewport_destroy(viewport);
     if (surface)
         wl_surface_destroy(surface);
+    if (shm)
+        wl_shm_destroy(shm);
     if (layer_shell)
         zwlr_layer_shell_v1_destroy(layer_shell);
 
@@ -191,27 +208,18 @@ void Wayland::run()
         }
 
         if (!focused) {
-            if (!hidden) {
-                wl_surface_attach(surface, nullptr, 0, 0);
+            if (mapped && !hidden) {
+                if (viewport)
+                    wp_viewport_set_destination(viewport, 1, 1);
+                zwlr_layer_surface_v1_set_size(layer_surface, 1, 1);
+                wl_surface_attach(surface, hidden_buffer, 0, 0);
+                wl_surface_damage_buffer(surface, 0, 0, 1, 1);
                 wl_surface_commit(surface);
                 wl_display_flush(display);
-                configured = false;
                 hidden = true;
             }
         } else {
-            if (hidden) {
-                // Unmapping resets layer-shell state; remap with a bufferless commit.
-                zwlr_layer_surface_v1_set_anchor(layer_surface,
-                    ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP | ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT);
-                zwlr_layer_surface_v1_set_size(layer_surface, 500, 500);
-                zwlr_layer_surface_v1_set_exclusive_zone(layer_surface, -1);
-                zwlr_layer_surface_v1_set_keyboard_interactivity(
-                    layer_surface, ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE);
-                configured = false;
-                wl_surface_commit(surface);
-                wl_display_flush(display);
-                hidden = false;
-            }
+            hidden = false;
             present();
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(7));
@@ -256,6 +264,8 @@ void Wayland::on_registry_global(void* data, wl_globals&, wl_registry* registry,
                                  uint32_t name, const char* interface, uint32_t version)
 {
     auto* self = static_cast<Wayland*>(data);
+    if (std::strcmp(interface, wl_shm_interface.name) == 0)
+        self->shm = static_cast<wl_shm*>(wl_registry_bind(registry, name, &wl_shm_interface, 1));
     if (std::strcmp(interface, zwlr_layer_shell_v1_interface.name) == 0)
         self->layer_shell = static_cast<zwlr_layer_shell_v1*>(
             wl_registry_bind(registry, name, &zwlr_layer_shell_v1_interface, std::min(version, 4u)));
@@ -466,6 +476,7 @@ void Wayland::present()
     wl_surface_damage_buffer(surface, 0, 0, buffer->resources->width, buffer->resources->height);
     wl_surface_commit(surface);
     wl_display_flush(display);
+    mapped = true;
     SPDLOG_TRACE("wayland: committed frame={} idx={}", frame_seq++, buffer->slot.idx);
 }
 

@@ -104,12 +104,15 @@ private:
     WaylandCtx ctx;
     zwlr_layer_shell_v1* layer_shell = nullptr;
     wl_surface* surface = nullptr;
+    wl_shm* shm = nullptr;
+    wl_buffer* hidden_buffer = nullptr;
     wp_viewport* viewport = nullptr;
     wp_fractional_scale_v1* fractional_scale = nullptr;
     uint32_t preferred_scale = 120;
     zwlr_layer_surface_v1* layer_surface = nullptr;
     bool configured = false;
     bool hidden = false;
+    bool mapped = false;
     std::thread thread;
     std::atomic<bool> quit{false};
     std::mutex frame_m;

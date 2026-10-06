@@ -49,6 +49,7 @@ public:
     std::string vulkanDriver;
     std::string gpuName;
     std::string waylandDisplay;
+    bool gamescopeSession = false;
     int buffer_size = 0;
 
     IPCClient(Layer* layer_ = nullptr, Backend api_ = Backend::NONE);
