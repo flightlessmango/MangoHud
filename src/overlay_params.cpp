@@ -1415,7 +1415,8 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
       add_to_options(params, "gpu_power_limit", "0");
       add_to_options(params, "gpu_efficiency", "0");
       add_to_options(params, "gpu_fan", "0");
-      add_to_options(params, "gpu_power", "0");
+      if (!file_exists("/run/power-monitor/power/gfx"))
+         add_to_options(params, "gpu_power", "0");
       add_to_options(params, "network", "");
       if (preset == 4) {
          add_to_options(params, "ram_temp", "0");
