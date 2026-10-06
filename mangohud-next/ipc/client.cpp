@@ -632,6 +632,14 @@ void Client::stop_and_join() {
         thread.join();
     }
 
+    std::unique_ptr<Renderer> stopped_renderer;
+    {
+        std::lock_guard lock(m);
+        stopped_renderer = std::move(renderer);
+    }
+    stopped_renderer.reset();
+    wayland.reset();
+
     std::queue<std::packaged_task<void()>> drain;
     {
         std::lock_guard<std::mutex> lock(work_mtx);

@@ -44,11 +44,22 @@ public:
 
     ~MangoHudServer() {
         stop.store(true);
+        std::vector<std::shared_ptr<Client>> clients;
+        {
+            std::lock_guard lock(ipc->clients_mtx);
+            clients = ipc->clients;
+        }
+        for (auto& client : clients)
+            client->stop_and_join();
+        metrics.reset();
+        waylands.clear();
+        ipc.reset();
     }
 
 private:
     std::unique_ptr<IPCServer> ipc;
-    std::unordered_map<std::string, std::weak_ptr<Wayland>> waylands;
+    std::unordered_map<std::string, std::shared_ptr<Wayland>> waylands;
+    std::mutex waylands_m;
     std::shared_ptr<spdlog::logger> logger;
     std::unordered_map<int64_t, std::weak_ptr<VkCtx>> vk_ctx;
     std::mutex vk_ctx_m;

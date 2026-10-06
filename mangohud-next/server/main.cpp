@@ -50,9 +50,10 @@ std::shared_ptr<Wayland> MangoHudServer::wayland(std::string_view display) {
     if (display.empty())
         return nullptr;
 
+    std::lock_guard lock(waylands_m);
     const std::string display_name(display);
-    if (auto wayland = waylands[display_name].lock())
-        return wayland;
+    if (auto it = waylands.find(display_name); it != waylands.end())
+        return it->second;
 
     auto next = std::make_shared<Wayland>(ipc.get(), display_name);
     if (!next->connected())
