@@ -86,6 +86,7 @@ public:
     }
 
     int push_queue();
+    static bool is_blacklisted();
     bool on_connect();
     void send_resolution(uint32_t width, uint32_t height);
     void send_spdlog(const int level, const char* file, const int line, const std::string& text);

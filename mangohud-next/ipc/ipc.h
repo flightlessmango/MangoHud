@@ -48,6 +48,7 @@ private:
     void socket_thread();
     int make_socket(const std::string &path);
     void dbus_thread();
+    static int on_is_blacklisted(sd_bus_message* m, void* userdata, sd_bus_error* ret_error);
     static int on_request_fd(sd_bus_message *m, void *userdata, sd_bus_error*);
     static int on_get_clients(sd_bus_message *m, void *userdata, sd_bus_error*);
     static int on_get_system(sd_bus_message *m, void *userdata, sd_bus_error*);

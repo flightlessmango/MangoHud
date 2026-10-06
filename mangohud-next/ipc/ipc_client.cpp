@@ -4,6 +4,7 @@
 #include "ipc_abi_hash.h"
 
 #include <cstdlib>
+#include "file_utils.h"
 
 IPCClient::IPCClient(Layer* layer_, Backend api_) : layer(layer_), api(api_){
     auto console = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
@@ -722,4 +723,31 @@ int IPCClient::on_frame(sd_bus_message* m, void* userdata, sd_bus_error*) {
     }
     self->push_queue();
     return 0;
+}
+
+bool IPCClient::is_blacklisted()
+{
+    static const bool blacklisted = [] {
+        auto name = get_wine_exe_name(true);
+        if (name.empty())
+            name = get_basename(get_exe_path());
+        bool ignored = false;
+        sd_bus* bus = nullptr;
+        sd_bus_message* reply = nullptr;
+        if (sd_bus_open_user(&bus) >= 0) {
+            sd_bus_set_method_call_timeout(bus, 500000);
+            int excluded = 0;
+            int result = sd_bus_call_method(bus, kBusName, kObjPath, kIface,
+                                            "is_blacklisted", nullptr, &reply,
+                                            "s", name.c_str());
+            if (result >= 0 && sd_bus_message_read(reply, "b", &excluded) > 0)
+                ignored = excluded != 0;
+        }
+        sd_bus_message_unref(reply);
+        sd_bus_flush_close_unref(bus);
+        if (ignored)
+            SPDLOG_INFO("process '{}' is blacklisted in MangoHud Next", name);
+        return ignored;
+    }();
+    return blacklisted;
 }

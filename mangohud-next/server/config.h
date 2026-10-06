@@ -15,6 +15,8 @@
 #include <stdexcept>
 #include <spdlog/spdlog.h>
 #include "common/table_structs.h"
+#include <algorithm>
+#include <array>
 #include <sys/stat.h>
 
 #ifdef Bool
@@ -74,6 +76,13 @@ public:
         std::terminate();
     }
 
+    bool is_blacklisted(std::string_view name) const
+    {
+        const auto& names = get<std::vector<std::string>>("blacklist");
+        return std::find(default_blacklist.begin(), default_blacklist.end(), name) != default_blacklist.end()
+            || std::find(names.begin(), names.end(), name) != names.end();
+    }
+
     void load_yaml(const YAML::Node& root)
     {
         if (!root || !root.IsMap()) {
@@ -89,7 +98,9 @@ public:
                 continue;
 
             try {
-                options_[std::string(key_sv)] = to_value(spec.type, n);
+                auto value = to_value(spec.type, n);
+                if (value)
+                    options_[std::string(key_sv)] = std::move(*value);
             } catch (const YAML::BadConversion&) {
                 SPDLOG_ERROR("bad conversion for key: {}", key_sv);
             }
@@ -115,8 +126,31 @@ public:
     bool parse_table_yaml(HudConfig& hud, YAML::Node doc);
 
 private:
-    enum Type { Int, Double, Bool, String };
-    using Value = std::variant<int, double, bool, std::string>;
+    static inline constexpr std::array default_blacklist = {
+        std::string_view{"gamescope"},
+    };
+
+    static std::optional<std::vector<std::string>> parse_process_blacklist(const YAML::Node& node)
+    {
+        if (!node.IsSequence()) {
+            SPDLOG_ERROR("blacklist must be a sequence of executable names");
+            return std::nullopt;
+        }
+        std::vector<std::string> names;
+        for (const auto& entry : node) {
+            std::string name;
+            if (!entry.IsScalar() || !YAML::convert<std::string>::decode(entry, name)
+                || name.empty() || name.find('\n') != std::string::npos || name.find('\0') != std::string::npos) {
+                SPDLOG_ERROR("blacklist entries must be nonempty executable names without newlines or NUL bytes");
+                return std::nullopt;
+            }
+            names.push_back(std::move(name));
+        }
+        return names;
+    }
+
+    enum Type { Int, Double, Bool, String, StringList };
+    using Value = std::variant<int, double, bool, std::string, std::vector<std::string>>;
     using ValueMap = std::unordered_map<std::string, Value>;
     std::string config_path;
     ValueMap options_;
@@ -128,6 +162,7 @@ private:
     };
 
     static inline const std::unordered_map<std::string_view, Spec> possible_ = {
+        {"blacklist", Spec{StringList, std::vector<std::string>{}}},
         {"font_size", Spec{Int, 24}},
         {"fps_limit", Spec{Double, 0.0}},
         {"output", Spec{String, std::string("app")}},
@@ -145,7 +180,7 @@ private:
         return it->second;
     }
 
-    static Value to_value(Type type, const YAML::Node& n)
+    static std::optional<Value> to_value(Type type, const YAML::Node& n)
     {
         switch (type)
         {
@@ -157,8 +192,15 @@ private:
             return n.as<bool>();
         case String:
             return n.as<std::string>();
+        case StringList: {
+            auto names = parse_process_blacklist(n);
+            if (!names)
+                return std::nullopt;
+            return Value{std::move(*names)};
         }
-        throw std::runtime_error("unhandled Spec");
+        }
+        SPDLOG_ERROR("unhandled config type: {}", static_cast<int>(type));
+        return std::nullopt;
     }
 
     bool sig_changed(const configSig& a, const configSig& b) {

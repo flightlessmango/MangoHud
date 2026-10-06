@@ -24,6 +24,22 @@ IPCServer::IPCServer(MangoHudServer* server_) : server(server_) {
     thread = std::thread(&IPCServer::dbus_thread, this);
 }
 
+int IPCServer::on_is_blacklisted(sd_bus_message* message, void* userdata, sd_bus_error*)
+{
+    auto* self = static_cast<IPCServer*>(userdata);
+    const char* name = nullptr;
+    int result = sd_bus_message_read(message, "s", &name);
+    if (result <= 0)
+        return result < 0 ? result : -EINVAL;
+
+    bool excluded;
+    {
+        std::lock_guard lock(self->server->config->m);
+        excluded = self->server->config->is_blacklisted(name);
+    }
+    return sd_bus_reply_method_return(message, "b", static_cast<int>(excluded));
+}
+
 std::shared_ptr<Client> IPCServer::focused_client(std::string_view display)
 {
     std::vector<std::shared_ptr<Client>> candidates;
@@ -182,6 +198,7 @@ void IPCServer::dbus_thread() {
     static const sd_bus_vtable vtable[] = {
         SD_BUS_VTABLE_START(0),
         SD_BUS_METHOD("request_fd", "", "h", IPCServer::on_request_fd, SD_BUS_VTABLE_UNPRIVILEGED),
+        SD_BUS_METHOD("is_blacklisted", "s", "b", IPCServer::on_is_blacklisted, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("get_clients", "", "s", IPCServer::on_get_clients, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("get_system", "", "s", IPCServer::on_get_system, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_VTABLE_END

@@ -503,12 +503,20 @@ public:
     }
 };
 
-VKROOTS_DEFINE_LAYER_INTERFACES(
-  VkInstanceOverrides,
-  vkroots::NoOverrides,
-  VkDeviceOverrides
-);
+// An empty override type keeps vkroots' loader/dispatch plumbing enabled
+// without intercepting application calls. NoOverrides disables that plumbing.
+struct ForwardingOverrides {};
 
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
+vkNegotiateLoaderLayerInterfaceVersion(VkNegotiateLayerInterface* version)
+{
+    if (IPCClient::is_blacklisted())
+        return vkroots::NegotiateLoaderLayerInterfaceVersion<
+            ForwardingOverrides, vkroots::NoOverrides, ForwardingOverrides>(version);
+
+    return vkroots::NegotiateLoaderLayerInterfaceVersion<
+        VkInstanceOverrides, vkroots::NoOverrides, VkDeviceOverrides>(version);
+}
 
 void Layer::init_overlay_resources(const VkSwapchainCreateInfoKHR* pCreateInfo, const vkroots::VkDeviceDispatch* pDispatch, uint32_t image_count) {
     if (ovl_res)
