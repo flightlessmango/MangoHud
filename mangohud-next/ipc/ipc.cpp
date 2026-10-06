@@ -20,7 +20,9 @@ IPCServer::IPCServer(MangoHudServer* server_) : server(server_) {
         SPDLOG_ERROR("sd_id128_randomize {} ({})", r, strerror(-r));
         server_id = SD_ID128_NULL;
     }
+}
 
+void IPCServer::start() {
     thread = std::thread(&IPCServer::dbus_thread, this);
 }
 
@@ -205,33 +207,27 @@ void IPCServer::dbus_thread() {
     };
 
     int r = sd_bus_open_user(&bus);
+    if (r >= 0)
+        r = sd_bus_add_object_vtable(bus, &slot, kObjPath, kIface, vtable, this);
+    if (r >= 0)
+        r = sd_bus_request_name(bus, kBusName, 0);
     if (r < 0) {
-        return;
-    }
-
-    r = sd_bus_request_name(bus, kBusName, 0);
-    if (r < 0) {
-        sd_bus_unref(bus);
-        return;
-    }
-
-    r = sd_bus_add_object_vtable(bus, &slot, kObjPath, kIface, vtable, this);
-    if (r < 0) {
-        sd_bus_unref(bus);
+        SPDLOG_ERROR("server bus setup failed: {} ({})", r, strerror(-r));
+        stop.store(true);
         return;
     }
 
     while (!stop.load()) {
         r = sd_bus_process(bus, nullptr);
-        if (r < 0) {
+        if (r < 0)
             break;
-        }
-        if (r > 0) {
+
+        if (r > 0)
             continue;
-        }
-        r = sd_bus_wait(bus, UINT64_MAX);
-        if (r < 0) {
+        r = sd_bus_wait(bus, 1000000);
+        if (r < 0)
             break;
-        }
     }
+    bus = sd_bus_flush_close_unref(bus);
+    stop.store(true);
 }

@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=io.mangohud.socket
+Exec="@SERVER_EXECUTABLE@"
+SystemdService=mangohud-server.service

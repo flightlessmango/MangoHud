@@ -27,6 +27,8 @@ public:
 
     IPCServer(MangoHudServer *server_);
 
+    void start();
+    bool stopped() const { return stop.load(); }
     void prune_clients();
     std::shared_ptr<Client> focused_client(std::string_view display);
     ~IPCServer();

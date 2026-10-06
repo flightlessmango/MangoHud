@@ -213,6 +213,8 @@ uninstall() {
     rm -fv "/usr/bin/mangohud"
     rm -fv "/usr/bin/mangohud-next"
     rm -fv "/usr/bin/mangohud-server"
+    rm -fv "/usr/share/dbus-1/services/io.mangohud.socket.service"
+    rm -fv "/usr/share/systemd/user/mangohud-server.service"
     rm -fv "/usr/bin/mangoplot"
     rm -fv "/usr/bin/mangohud.x86"
 }
@@ -245,35 +247,25 @@ install() {
     /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud.so /usr/lib/mangohud/lib64/libMangoHud.so
     /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud_opengl.so /usr/lib/mangohud/lib64/libMangoHud_opengl.so
     /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud_shim.so /usr/lib/mangohud/lib64/libMangoHud_shim.so
-    if [[ -f ./build/release/usr/lib/mangohud/lib64/libMangoHud-next.so ]]; then
-      /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud-next.so /usr/lib/mangohud/lib64/libMangoHud-next.so
-    fi
+    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud-next.so /usr/lib/mangohud/lib64/libMangoHud-next.so
     if [ "$MACHINE" = "x86_64" ]; then
       /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud.so /usr/lib/mangohud/lib32/libMangoHud.so
       /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud_opengl.so /usr/lib/mangohud/lib32/libMangoHud_opengl.so
       /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud_shim.so /usr/lib/mangohud/lib32/libMangoHud_shim.so
-      if [[ -f ./build/release/usr/lib/mangohud/lib32/libMangoHud-next.so ]]; then
-        /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud-next.so /usr/lib/mangohud/lib32/libMangoHud-next.so
-      fi
+      /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud-next.so /usr/lib/mangohud/lib32/libMangoHud-next.so
     fi
 
     /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json
     /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86.json
-    if [[ -f ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud-next.x86_64.json ]]; then
-      /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud-next.x86_64.json /usr/share/vulkan/implicit_layer.d/MangoHud-next.x86_64.json
-    fi
-    if [[ -f ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud-next.x86.json ]]; then
-      /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud-next.x86.json /usr/share/vulkan/implicit_layer.d/MangoHud-next.x86.json
-    fi
+    /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud-next.x86_64.json /usr/share/vulkan/implicit_layer.d/MangoHud-next.x86_64.json
+    /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud-next.x86.json /usr/share/vulkan/implicit_layer.d/MangoHud-next.x86.json
     /usr/bin/install -Dvm644 ./build/release/usr/share/man/man1/mangohud.1 /usr/share/man/man1/mangohud.1
     /usr/bin/install -Dvm644 ./build/release/usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
     /usr/bin/install -vm755  ./build/release/usr/bin/mangohud /usr/bin/mangohud
-    if [[ -f ./build/release/usr/bin/mangohud-next ]]; then
-      /usr/bin/install -vm755  ./build/release/usr/bin/mangohud-next /usr/bin/mangohud-next
-    fi
-    if [[ -f ./build/release/usr/bin/mangohud-server ]]; then
-      /usr/bin/install -vm755  ./build/release/usr/bin/mangohud-server /usr/bin/mangohud-server
-    fi
+    /usr/bin/install -vm755  ./build/release/usr/bin/mangohud-next /usr/bin/mangohud-next
+    /usr/bin/install -vm755  ./build/release/usr/bin/mangohud-server /usr/bin/mangohud-server
+    /usr/bin/install -Dvm644 ./build/release/usr/share/dbus-1/services/io.mangohud.socket.service /usr/share/dbus-1/services/io.mangohud.socket.service
+    /usr/bin/install -Dvm644 ./build/release/usr/share/systemd/user/mangohud-server.service /usr/share/systemd/user/mangohud-server.service
     /usr/bin/install -vm755  ./build/release/usr/bin/mangoplot /usr/bin/mangoplot
 
     ln -sv $DEFAULTLIB /usr/lib/mangohud/lib

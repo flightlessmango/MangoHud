@@ -5,6 +5,7 @@
 #include "egl_ctx.h"
 #include "vulkan_ctx.h"
 #include <cstdlib>
+#include <chrono>
 #include <utility>
 
 int main() {
@@ -17,12 +18,31 @@ int main() {
 }
 
 void MangoHudServer::loop() {
-    while (!stop.load()) {
-        if (config->maybe_reload_config())
-            for (auto client : ipc->clients)
+    auto idle_since = std::chrono::steady_clock::now();
+    while (true) {
+        if (ipc->stopped())
+            break;
+        if (config->maybe_reload_config()) {
+            std::vector<std::shared_ptr<Client>> clients;
+            {
+                std::lock_guard lock(ipc->clients_mtx);
+                clients = ipc->clients;
+            }
+            for (auto& client : clients)
                 client->send_config();
+        }
 
         ipc->prune_clients();
+        const auto now = std::chrono::steady_clock::now();
+        {
+            std::lock_guard lock(ipc->clients_mtx);
+            if (!ipc->clients.empty())
+                idle_since = now;
+            else if (now - idle_since >= std::chrono::seconds(5)) {
+                SPDLOG_DEBUG("No clients remain; stopping server");
+                break;
+            }
+        }
         sleep(1);
     }
 }

@@ -1,5 +1,4 @@
 #pragma once
-#include <atomic>
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -33,6 +32,7 @@ public:
         config->maybe_reload_config();
         ipc     = std::make_unique<IPCServer>(this);
         metrics = std::make_unique<Metrics>(*ipc, config);
+        ipc->start();
         loop();
     }
 
@@ -43,7 +43,6 @@ public:
     std::vector<std::shared_ptr<Client>> clients_for_wayland(std::string_view display);
 
     ~MangoHudServer() {
-        stop.store(true);
         std::vector<std::shared_ptr<Client>> clients;
         {
             std::lock_guard lock(ipc->clients_mtx);
@@ -63,7 +62,6 @@ private:
     std::shared_ptr<spdlog::logger> logger;
     std::unordered_map<int64_t, std::weak_ptr<VkCtx>> vk_ctx;
     std::mutex vk_ctx_m;
-    std::atomic<bool> stop {false};
 
     void loop();
 };

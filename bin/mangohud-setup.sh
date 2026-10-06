@@ -39,6 +39,8 @@ mangohud_uninstall() {
     rm -frv "/usr/share/doc/mangohud"
     rm -fv "/usr/share/man/man1/mangohud.1"
     rm -fv "/usr/bin/mangohud"
+    rm -fv "/usr/share/dbus-1/services/io.mangohud.socket.service"
+    rm -fv "/usr/share/systemd/user/mangohud-server.service"
     rm -fv "/usr/bin/mangoplot"
     rm -fv "/usr/bin/mangohud.x86"
 }
@@ -87,6 +89,8 @@ mangohud_install() {
     /usr/bin/install -Dvm644 ./usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
     /usr/bin/install -vm755  ./usr/bin/mangohud /usr/bin/mangohud
     /usr/bin/install -vm755  ./usr/bin/mangohud-server /usr/bin/mangohud-server
+    /usr/bin/install -Dvm644 ./usr/share/dbus-1/services/io.mangohud.socket.service /usr/share/dbus-1/services/io.mangohud.socket.service
+    /usr/bin/install -Dvm644 ./usr/share/systemd/user/mangohud-server.service /usr/share/systemd/user/mangohud-server.service
     /usr/bin/install -vm755  ./usr/bin/mangoplot /usr/bin/mangoplot
 
     ln -sv $DEFAULTLIB /usr/lib/mangohud/lib

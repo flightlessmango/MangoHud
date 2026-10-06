@@ -4,13 +4,6 @@ MangoHud Next is a server/client rewrite of MangoHud.
 
 ## Usage
 
-The server and clients may be started independently and in any order.
-
-Start the server:
-```sh
-mangohud-server
-```
-
 Run an application through the launcher for OpenGL or mixed Vulkan/OpenGL use:
 
 ```sh

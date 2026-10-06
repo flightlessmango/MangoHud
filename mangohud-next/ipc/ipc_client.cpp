@@ -574,8 +574,7 @@ int IPCClient::request_fd_from_server() {
         return -1;
     }
 
-    static constexpr uint64_t kTimeoutUsec = 2ULL * 1000ULL * 1000ULL; // 2 s
-    r = sd_bus_call(bus_, m, kTimeoutUsec, nullptr, &reply);
+    r = sd_bus_call(bus_, m, 0, nullptr, &reply);
 
     if (r < 0) {
         SPDLOG_ERROR("sd_bus_call {} ({})", r, strerror(-r));
@@ -742,7 +741,6 @@ bool IPCClient::is_blacklisted()
         sd_bus* bus = nullptr;
         sd_bus_message* reply = nullptr;
         if (sd_bus_open_user(&bus) >= 0) {
-            sd_bus_set_method_call_timeout(bus, 500000);
             int excluded = 0;
             int result = sd_bus_call_method(bus, kBusName, kObjPath, kIface,
                                             "is_blacklisted", nullptr, &reply,

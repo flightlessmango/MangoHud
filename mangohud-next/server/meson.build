@@ -58,3 +58,20 @@ server = executable(
 #                   )
 
 # test('config', e, workdir: meson.project_source_root())
+
+service_config = configuration_data()
+service_config.set('SERVER_EXECUTABLE', get_option('prefix') / get_option('bindir') / 'mangohud-server')
+
+configure_file(
+    input: 'mangohud-server.service.in',
+    output: 'mangohud-server.service',
+    configuration: service_config,
+    install_dir: get_option('datadir') / 'systemd/user',
+)
+
+configure_file(
+    input: 'io.mangohud.socket.service.in',
+    output: 'io.mangohud.socket.service',
+    configuration: service_config,
+    install_dir: get_option('datadir') / 'dbus-1/services',
+)
