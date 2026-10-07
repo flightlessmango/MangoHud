@@ -85,6 +85,26 @@ struct overlay_resources {
     }
 };
 
+#ifdef VK_EXT_present_timing
+struct presentation_timing {
+    bool enabled = false;
+    VkPresentStageFlagsEXT stage = 0;
+    uint64_t domain = 0;
+    uint64_t domain_counter = 0;
+    uint64_t timestamp_origin = 0;
+    uint64_t sample_origin = 0;
+    uint64_t last_timestamp = 0;
+    uint32_t pending = 0;
+    VkDevice device = VK_NULL_HANDLE;
+    VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+    PFN_vkGetSwapchainTimeDomainPropertiesEXT get_domains = nullptr;
+    PFN_vkGetPastPresentationTimingEXT get_results = nullptr;
+
+    bool update_domain();
+    void drain(IPCClient& ipc);
+};
+#endif
+
 struct swapchain_data {
     std::shared_ptr<const vkroots::VkDeviceDispatch> d;
     VkFormat format = VK_FORMAT_UNDEFINED;
@@ -99,6 +119,9 @@ struct swapchain_data {
     VkPipeline pipe = VK_NULL_HANDLE;
 
     VkSurfaceKHR vk_surface;
+#ifdef VK_EXT_present_timing
+    presentation_timing timing;
+#endif
 
     std::mutex m;
     swapchain_data(std::shared_ptr<const vkroots::VkDeviceDispatch> d_) : d(d_) {}
