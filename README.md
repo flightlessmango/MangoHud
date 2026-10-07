@@ -417,6 +417,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `gpu_load_value`                   | Set the values for medium and high load e.g `gpu_load_value=50,90`                    |
 | `gpu_name`                         | Display GPU name from pci.ids                                                         |
 | `gpu_voltage`                      | Display GPU voltage                                                                   |
+| `gpu_voltage_pci_dev`              | Show GPU voltage only for the given PCI address, e.g. `0000:01:00.0`                  |
 | `gpu_list`                         | List GPUs to display `gpu_list=0,1`                                                   |
 | `gpu_efficiency`                   | Display GPU efficiency in frames per joule                                            |
 | `gpu_power_limit`                  | Display GPU power limit                                                               |
