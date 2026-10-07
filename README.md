@@ -366,7 +366,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `cpu_power`<br>`gpu_power`         | Display CPU/GPU draw in watts                                                         |
 | `cpu_temp`<br>`gpu_temp`<br>`gpu_junction_temp`<br>`gpu_mem_temp`           | Display current CPU/GPU temperature                                                  |
 | `cpu_custom_temp_sensor`           | Use custom hwmon sensor for cpu temperature. e.g `cpu_custom_temp_sensor=cpuss0_2,temp3_input`.|
-| `cpu_text`<br>`gpu_text`           | Override CPU and GPU text. `gpu_text` is a list in case of multiple GPUs              |
+| `cpu_text`<br>`gpu_text`           | Override CPU and GPU text. Leave option empty or use "" to hide the corresponding label. `gpu_text` is a list in case of multiple GPUs |
 | `cpu_efficiency`                   | Display CPU efficiency in frames per joule                                            |
 | `custom_text_center`               | Display a custom text centered useful for a header e.g `custom_text_center=FlightLessMango Benchmarks` |
 | `custom_text`                      | Display a custom text e.g `custom_text=Fsync enabled`                                 |
@@ -400,7 +400,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `fps_value`                        | Choose the break points where `fps_color_change` changes colors between. E.g `60,144`, default is `30,60` |
 | `fps_metrics`                      | Takes a list of decimal values or the value avg, e.g `avg,0.001`                      |
 | `reset_fps_metrics`                | Reset fps metrics keybind, default is `Shift_R+F9`                                    |
-| `fps_text`                         | Display custom text for engine name in front of FPS                                   |
+| `fps_text`                         | Display custom text for engine name in front of FPS. Leave option empty or use "" to hide the label |
 | `frame_count`                      | Display frame count                                                                   |
 | `frametime`                        | Display frametime next to FPS text                                                    |
 | `frame_timing_detailed`            | Display frame timing in a more detailed chart                                         |
