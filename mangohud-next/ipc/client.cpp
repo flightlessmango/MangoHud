@@ -223,10 +223,11 @@ int Client::on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_erro
     int buffer_size = 0;
     int32_t raw_api = 0;
     int gamescope_session = 0;
-    r = sd_bus_message_read(m, "sxiisssb", &engine, &render_minor, &buffer_size, &raw_api,
-                            &vulkan_driver, &gpu_name, &wayland_display, &gamescope_session);
+    int wayland_surface = 0;
+    r = sd_bus_message_read(m, "sxiisssbb", &engine, &render_minor, &buffer_size, &raw_api,
+                            &vulkan_driver, &gpu_name, &wayland_display, &gamescope_session, &wayland_surface);
     if (r < 0) {
-        SPDLOG_ERROR("on_connect read(sxiisssb) {} ({})", r, strerror(-r));
+        SPDLOG_ERROR("on_connect read(sxiisssbb) {} ({})", r, strerror(-r));
         self->set_dead();
         return false;
     }
@@ -254,6 +255,16 @@ int Client::on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_erro
         self->server->metrics->add_client_pid(self->pid);
     if (self->output_mode == OutputMode::Layer)
         render_minor = self->wayland->render_minor;
+    else if (wayland_surface) {
+        auto renderer = Wayland::render_device(self->wayland_display);
+        if (renderer < 0) {
+            SPDLOG_DEBUG("wayland: device feedback unavailable display={}, using application renderer",
+                         self->wayland_display);
+        } else {
+            render_minor = renderer;
+            SPDLOG_DEBUG("wayland: feedback render minor={} display={}", renderer, self->wayland_display);
+        }
+    }
     self->renderer = std::make_unique<Renderer>(self->server, self.get(), render_minor, buffer_size);
 
     self->send_config();

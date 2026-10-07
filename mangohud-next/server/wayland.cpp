@@ -19,6 +19,81 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
+static int64_t render_device(wl_display* display, zwp_linux_dmabuf_v1* dmabuf,
+                             wl_event_queue* queue = nullptr, wl_surface* surface = nullptr)
+{
+    if (!dmabuf || zwp_linux_dmabuf_v1_get_version(dmabuf) < 4)
+        return -1;
+
+    auto* feedback = surface ? zwp_linux_dmabuf_v1_get_surface_feedback(dmabuf, surface)
+                             : zwp_linux_dmabuf_v1_get_default_feedback(dmabuf);
+    if (!feedback)
+        return -1;
+
+    int64_t renderer = -1;
+    static const zwp_linux_dmabuf_feedback_v1_listener listener = {
+        .done = [](void*, zwp_linux_dmabuf_feedback_v1*) {},
+        .format_table = [](void*, zwp_linux_dmabuf_feedback_v1*, int32_t fd, uint32_t) { close(fd); },
+        .main_device = [](void* data, zwp_linux_dmabuf_feedback_v1*, wl_array* array) {
+            if (array->size != sizeof(dev_t)) {
+                SPDLOG_ERROR("wayland: invalid feedback device size={}", array->size);
+                return;
+            }
+            dev_t device_id;
+            std::memcpy(&device_id, array->data, sizeof(device_id));
+            drmDevicePtr device = nullptr;
+            int result = drmGetDeviceFromDevId(device_id, 0, &device);
+            if (result < 0) {
+                SPDLOG_ERROR("wayland: resolving feedback device failed: {}", strerror(-result));
+                return;
+            }
+            if (device->available_nodes & (1 << DRM_NODE_RENDER)) {
+                struct stat node{};
+                if (stat(device->nodes[DRM_NODE_RENDER], &node) == 0)
+                    *static_cast<int64_t*>(data) = minor(node.st_rdev);
+            }
+            drmFreeDevice(&device);
+        },
+        .tranche_done = [](void*, zwp_linux_dmabuf_feedback_v1*) {},
+        .tranche_target_device = [](void*, zwp_linux_dmabuf_feedback_v1*, wl_array*) {},
+        .tranche_formats = [](void*, zwp_linux_dmabuf_feedback_v1*, wl_array*) {},
+        .tranche_flags = [](void*, zwp_linux_dmabuf_feedback_v1*, uint32_t) {},
+    };
+    int result = zwp_linux_dmabuf_feedback_v1_add_listener(feedback, &listener, &renderer);
+    if (result == 0)
+        result = queue ? wl_display_roundtrip_queue(display, queue) : wl_display_roundtrip(display);
+    zwp_linux_dmabuf_feedback_v1_destroy(feedback);
+    return result < 0 ? -1 : renderer;
+}
+
+int64_t Wayland::render_device(const std::string& display_name)
+{
+    auto* display = wl_display_connect(display_name.empty() ? nullptr : display_name.c_str());
+    if (!display)
+        return -1;
+
+    auto* registry = wl_display_get_registry(display);
+    zwp_linux_dmabuf_v1* dmabuf = nullptr;
+    static const wl_registry_listener listener = {
+        .global = [](void* data, wl_registry* registry, uint32_t name, const char* interface, uint32_t version) {
+            if (strcmp(interface, zwp_linux_dmabuf_v1_interface.name) == 0)
+                *static_cast<zwp_linux_dmabuf_v1**>(data) = static_cast<zwp_linux_dmabuf_v1*>(
+                    wl_registry_bind(registry, name, &zwp_linux_dmabuf_v1_interface, std::min(version, 4u)));
+        },
+        .global_remove = [](void*, wl_registry*, uint32_t) {},
+    };
+    int64_t renderer = -1;
+    if (registry && wl_registry_add_listener(registry, &listener, &dmabuf) == 0 &&
+        wl_display_roundtrip(display) >= 0)
+        renderer = ::render_device(display, dmabuf);
+    if (dmabuf)
+        zwp_linux_dmabuf_v1_destroy(dmabuf);
+    if (registry)
+        wl_registry_destroy(registry);
+    wl_display_disconnect(display);
+    return renderer;
+}
+
 Wayland::Wayland(IPCServer* ipc_, std::string display_name_)
     : display_name(std::move(display_name_)), ipc(ipc_),
       ctx(wayland_ctx_listener{.data = this, .global = on_registry_global})
@@ -45,48 +120,8 @@ Wayland::Wayland(IPCServer* ipc_, std::string display_name_)
     if (!surface)
         return;
 
-    if (!globals->dmabuf || zwp_linux_dmabuf_v1_get_version(globals->dmabuf) < 4) {
-        SPDLOG_DEBUG("wayland: device feedback unavailable display={}", display_name);
-        return;
-    }
-
-    auto* feedback = zwp_linux_dmabuf_v1_get_surface_feedback(globals->dmabuf, surface);
-    if (!feedback)
-        return;
-    static const zwp_linux_dmabuf_feedback_v1_listener feedback_listener = {
-        .done = [](void*, zwp_linux_dmabuf_feedback_v1*) {},
-        .format_table = [](void*, zwp_linux_dmabuf_feedback_v1*, int32_t fd, uint32_t) { close(fd); },
-        .main_device = [](void* data, zwp_linux_dmabuf_feedback_v1*, wl_array* array) {
-            auto* self = static_cast<Wayland*>(data);
-            if (array->size != sizeof(dev_t)) {
-                SPDLOG_ERROR("wayland: invalid feedback device size={}", array->size);
-                return;
-            }
-            dev_t device_id;
-            std::memcpy(&device_id, array->data, sizeof(device_id));
-            drmDevicePtr device = nullptr;
-            int result = drmGetDeviceFromDevId(device_id, 0, &device);
-            if (result < 0) {
-                SPDLOG_ERROR("wayland: resolving feedback device failed: {}", strerror(-result));
-                return;
-            }
-            if (device->available_nodes & (1 << DRM_NODE_RENDER)) {
-                struct stat node{};
-                if (stat(device->nodes[DRM_NODE_RENDER], &node) == 0)
-                    self->render_minor = minor(node.st_rdev);
-            }
-            drmFreeDevice(&device);
-        },
-        .tranche_done = [](void*, zwp_linux_dmabuf_feedback_v1*) {},
-        .tranche_target_device = [](void*, zwp_linux_dmabuf_feedback_v1*, wl_array*) {},
-        .tranche_formats = [](void*, zwp_linux_dmabuf_feedback_v1*, wl_array*) {},
-        .tranche_flags = [](void*, zwp_linux_dmabuf_feedback_v1*, uint32_t) {},
-    };
-    int feedback_result = zwp_linux_dmabuf_feedback_v1_add_listener(feedback, &feedback_listener, this);
-    if (feedback_result == 0)
-        feedback_result = wl_display_roundtrip_queue(display, globals->queue);
-    zwp_linux_dmabuf_feedback_v1_destroy(feedback);
-    if (feedback_result < 0 || render_minor < 0) {
+    render_minor = ::render_device(display, globals->dmabuf, globals->queue, surface);
+    if (render_minor < 0) {
         SPDLOG_ERROR("wayland: no renderer device from feedback display={}", display_name);
         return;
     }

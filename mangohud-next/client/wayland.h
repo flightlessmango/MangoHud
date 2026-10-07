@@ -197,7 +197,10 @@ public:
     Wayland(std::shared_ptr<IPCClient> ipc_) :
         ctx({this, Wayland::on_global, Wayland::on_global_remove}),
         ipc(std::move(ipc_)) {
-        if (ipc) ipc->start(4);
+        if (ipc) {
+            ipc->waylandSurface = true;
+            ipc->start(4);
+        }
     }
 
     ~Wayland();

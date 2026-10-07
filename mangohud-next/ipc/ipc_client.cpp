@@ -373,7 +373,7 @@ bool IPCClient::on_connect() {
 
         r = sd_bus_message_append(
             msg,
-            "tsxiisssb",
+            "tsxiisssbb",
             abi_hash,
             pEngineName.c_str(),
             int64_t(renderMinor),
@@ -382,7 +382,8 @@ bool IPCClient::on_connect() {
             vulkanDriver.c_str(),
             gpuName.c_str(),
             waylandDisplay.c_str(),
-            static_cast<int>(gamescopeSession)
+            static_cast<int>(gamescopeSession),
+            static_cast<int>(waylandSurface)
         );
 
         r = sd_bus_send(bus, msg, nullptr);

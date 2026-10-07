@@ -33,6 +33,8 @@ public:
         return display && layer_surface && render_minor >= 0;
     }
 
+    static int64_t render_device(const std::string& display_name);
+
     int64_t render_minor = -1;
 
     const std::string& name() const {

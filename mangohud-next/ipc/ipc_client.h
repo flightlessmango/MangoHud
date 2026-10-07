@@ -50,6 +50,7 @@ public:
     std::string gpuName;
     std::string waylandDisplay;
     bool gamescopeSession = false;
+    bool waylandSurface = false;
     int buffer_size = 0;
 
     IPCClient(Layer* layer_ = nullptr, Backend api_ = Backend::NONE);
