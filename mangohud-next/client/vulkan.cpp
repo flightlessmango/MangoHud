@@ -454,7 +454,7 @@ VkResult OverlayVK::copy_dmabuf_to_cache(VkQueue queue, int img_idx, VkPresentIn
 
     if (current_slot >= 0) {
         slot = current_slot;
-        refresh_cache = (slot != last_slot);
+        refresh_cache = true;
     } else if (last_slot >= 0) {
         slot = last_slot;
     }
