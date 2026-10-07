@@ -609,6 +609,33 @@ static void render_benchmark(swapchain_stats& data, const struct overlay_params&
    ImGui::End();
 }
 
+ImVec4 change_on_temp(LOAD_DATA& data, unsigned current, unsigned low_temp)
+{
+   if (data.med_load <= low_temp || data.high_load <= data.med_load)
+      return data.color_low;
+   if (current <= low_temp)
+      return data.color_low;
+   if (current >= data.high_load)
+      return data.color_high;
+
+   ImVec4 from, to;
+   float diff;
+   if (current < data.med_load) {
+      from = data.color_low;
+      to = data.color_med;
+      diff = float(current - low_temp) / float(data.med_load - low_temp);
+   } else {
+      from = data.color_med;
+      to = data.color_high;
+      diff = float(current - data.med_load) / float(data.high_load - data.med_load);
+   }
+
+   return ImVec4(from.x + (to.x - from.x) * diff,
+                 from.y + (to.y - from.y) * diff,
+                 from.z + (to.z - from.z) * diff,
+                 HUDElements.params->alpha);
+}
+
 ImVec4 change_on_load_temp(LOAD_DATA& data, unsigned current)
 {
    if (current >= data.high_load){

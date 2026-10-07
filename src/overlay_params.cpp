@@ -632,6 +632,10 @@ parse_ftrace(const char *str) {
 #define parse_cpu_load_color(s) parse_load_color(s)
 #define parse_gpu_load_value(s) parse_load_value(s)
 #define parse_cpu_load_value(s) parse_load_value(s)
+#define parse_gpu_temp_color(s) parse_load_color(s)
+#define parse_cpu_temp_color(s) parse_load_color(s)
+#define parse_gpu_temp_value(s) parse_load_value(s)
+#define parse_cpu_temp_value(s) parse_load_value(s)
 #define parse_blacklist(s) parse_str_tokenize(s)
 #define parse_custom_text_center(s) parse_str(s)
 #define parse_custom_text(s) parse_str(s)
@@ -865,6 +869,8 @@ static void set_param_defaults(struct overlay_params *params){
    params->enabled[OVERLAY_PARAM_ENABLED_io_write] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_wine] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_load_change] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp_change] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp_change] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_cpu_load_change] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_core_load_change] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_gpu_voltage] = false;
@@ -922,6 +928,10 @@ static void set_param_defaults(struct overlay_params *params){
    params->benchmark_percentiles = { "97", "AVG"};
    params->gpu_load_value = { 60, 90 };
    params->cpu_load_value = { 60, 90 };
+   params->gpu_temp_color = { 0x39f900, 0xfdfd09, 0xb22222 };
+   params->cpu_temp_color = { 0x39f900, 0xfdfd09, 0xb22222 };
+   params->gpu_temp_value = { 60, 90 };
+   params->cpu_temp_value = { 60, 90 };
    params->cellpadding_y = -0.085;
    params->fps_color = { 0xb22222, 0xfdfd09, 0x39f900 };
    params->fps_value = { 30, 60 };
@@ -1057,7 +1067,7 @@ parse_overlay_config(struct overlay_params *params,
       params->font_scale_media_player = 0.55f;
 
    // Convert from 0xRRGGBB to ImGui's format
-   std::array<unsigned *, 24> colors = {
+   std::array<unsigned *, 30> colors = {
       &params->cpu_color,
       &params->gpu_color,
       &params->vram_color,
@@ -1077,6 +1087,12 @@ parse_overlay_config(struct overlay_params *params,
       &params->cpu_load_color[0],
       &params->cpu_load_color[1],
       &params->cpu_load_color[2],
+      &params->gpu_temp_color[0],
+      &params->gpu_temp_color[1],
+      &params->gpu_temp_color[2],
+      &params->cpu_temp_color[0],
+      &params->cpu_temp_color[1],
+      &params->cpu_temp_color[2],
       &params->fps_color[0],
       &params->fps_color[1],
       &params->fps_color[2],
@@ -1365,6 +1381,8 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
          add_to_options(params, "show_fps_limit", "0");
          add_to_options(params, "resolution", "0");
          add_to_options(params, "gpu_load_change", "0");
+         add_to_options(params, "gpu_temp_change", "0");
+         add_to_options(params, "cpu_temp_change", "0");
          add_to_options(params, "core_load_change", "0");
          add_to_options(params, "cpu_load_change", "0");
          add_to_options(params, "fps_color_change", "0");

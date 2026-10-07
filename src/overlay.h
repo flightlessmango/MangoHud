@@ -165,6 +165,7 @@ void create_fonts(ImFontAtlas* font_atlas, const overlay_params& params, ImFont*
 void right_aligned_text(ImVec4& col, float off_x, const char *fmt, ...);
 void center_text(const std::string& text);
 ImVec4 change_on_load_temp(LOAD_DATA& data, unsigned current);
+ImVec4 change_on_temp(LOAD_DATA& data, unsigned current, unsigned low_temp);
 float get_time_stat(void *_data, int _idx);
 void stop_hw_updater();
 extern void control_client_check(int control, int& control_client, const std::string& deviceName);
