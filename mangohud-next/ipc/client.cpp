@@ -731,7 +731,7 @@ void Client::frame_ready(int idx, unique_fd fd, std::shared_ptr<Renderer::Resour
 
 std::shared_ptr<Wayland> Client::ensure_wayland()
 {
-    if (wayland)
+    if (wayland && wayland->connected())
         return wayland;
 
     if (!server || wayland_display.empty())
