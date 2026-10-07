@@ -70,9 +70,10 @@ bool glx_mesa_queryInteger(int attrib, unsigned int *value)
 
 static gl_context *create_gl_context(void *ctx)
 {
-    gl_context *gl_ctx;
+    if (!ctx)
+        return nullptr;
 
-    gl_ctx = (gl_context *)calloc(1, sizeof(*gl_ctx));
+    gl_context *gl_ctx = (gl_context *)calloc(1, sizeof(*gl_ctx));
     gl_ctx->ctx = ctx;
     gl_contexts[ctx] = gl_ctx;
     //SPDLOG_DEBUG("created gl_context {} for GLX context {}", (void *)gl_ctx, ctx);
@@ -148,6 +149,12 @@ static void do_imgui_swap(void *dpy, void *drawable)
         //SPDLOG_TRACE("ctx {}, gl_ctx {}", ctx, (void *)gl_ctx);
         if (!gl_ctx)
             gl_ctx = create_gl_context(ctx);
+
+        if (!gl_ctx) {
+            spdlog::warn("do_imgui_swap called without an OpenGL context");
+            return;
+        }
+
         imgui_create(gl_ctx, gl_wsi::GL_WSI_GLX);
 
         unsigned int width = -1, height = -1;
