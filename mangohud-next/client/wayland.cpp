@@ -3,9 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstring>
-#include <linux/dma-buf.h>
 #include <spdlog/spdlog.h>
-#include <sys/ioctl.h>
 #include <unistd.h>
 #include "string_utils.h"
 
@@ -367,21 +365,11 @@ void Wayland::release_to_server(shm_buffer* buf)
     if (!buf->ipc->connected.load(std::memory_order_acquire))
         return;
 
-    dma_buf_export_sync_file sync_file{};
-    sync_file.flags = DMA_BUF_SYNC_READ;
-    sync_file.fd = -1;
-
-    if (ioctl(buf->dmabuf_fd.get(), DMA_BUF_IOCTL_EXPORT_SYNC_FILE, &sync_file) != 0) {
-        SPDLOG_ERROR("DMA_BUF_IOCTL_EXPORT_SYNC_FILE failed: errno={}", errno);
+    auto fd = IPCClient::export_dmabuf_sync_file(buf->dmabuf_fd.get());
+    if (!fd)
         return;
-    }
 
-    if (sync_file.fd < 0) {
-        SPDLOG_ERROR("DMA_BUF_IOCTL_EXPORT_SYNC_FILE returned invalid fd");
-        return;
-    }
-
-    buf->ipc->frame_ready(buf->idx, sync_file.fd);
+    buf->ipc->frame_ready(buf->idx, std::move(fd));
 }
 
 void Wayland::buffer_release(void* data, wl_buffer*)

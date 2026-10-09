@@ -4,6 +4,8 @@
 #include "ipc_abi_hash.h"
 
 #include <cstdlib>
+#include <linux/dma-buf.h>
+#include <sys/ioctl.h>
 #include "file_utils.h"
 
 IPCClient::IPCClient(Layer* layer_, Backend api_) : layer(layer_), api(api_){
@@ -691,11 +693,27 @@ int IPCClient::on_work_event(sd_event_source *s, int fd, uint32_t revents, void 
     return 0;
 }
 
-void IPCClient::frame_ready(int idx, int f) {
-    if (idx < 0)
+unique_fd IPCClient::export_dmabuf_sync_file(int dmabuf_fd, bool write)
+{
+    dma_buf_export_sync_file data{};
+    data.flags = write ? DMA_BUF_SYNC_WRITE : DMA_BUF_SYNC_READ;
+    data.fd = -1;
+
+    if (ioctl(dmabuf_fd, DMA_BUF_IOCTL_EXPORT_SYNC_FILE, &data) != 0) {
+        SPDLOG_ERROR("DMA_BUF_IOCTL_EXPORT_SYNC_FILE failed: errno={}", errno);
+        return {};
+    }
+    if (data.fd < 0) {
+        SPDLOG_ERROR("DMA_BUF_IOCTL_EXPORT_SYNC_FILE returned invalid fd");
+        return {};
+    }
+    return unique_fd::adopt(data.fd);
+}
+
+void IPCClient::frame_ready(int idx, unique_fd fd) {
+    if (idx < 0 || !fd)
         return;
 
-    auto fd = unique_fd::adopt(f);
     post([this, idx, fd = std::move(fd)]() {
         int r = sd_bus_emit_signal(bus, kObjPath, kIface, "frame_ready", "uh",
                                    static_cast<uint32_t>(idx), fd.get());

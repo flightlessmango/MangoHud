@@ -94,7 +94,8 @@ public:
     void send_spdlog(const int level, const char* file, const int line, const std::string& text);
     void send_import_failed();
     void send_semaphores(std::vector<int> sema);
-    void frame_ready(int idx, int fd);
+    static unique_fd export_dmabuf_sync_file(int dmabuf_fd, bool write = false);
+    void frame_ready(int idx, unique_fd fd);
     void clear_frames() {
         std::lock_guard lock(sync_mtx);
         frame_queue.clear();

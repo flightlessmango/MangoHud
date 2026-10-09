@@ -770,22 +770,11 @@ int OverlayGL::release_slot_to_server(IPCClient* ipc, int slot, int dmabuf_fd, b
 
     glFlush();
 
-    dma_buf_export_sync_file data{};
-    data.flags = write ? DMA_BUF_SYNC_WRITE : DMA_BUF_SYNC_READ;
-    data.fd = -1;
-
-    if (ioctl(dmabuf_fd, DMA_BUF_IOCTL_EXPORT_SYNC_FILE, &data) != 0) {
-        const int err = errno;
-        SPDLOG_ERROR("DMA_BUF_IOCTL_EXPORT_SYNC_FILE failed: errno={}", err);
+    auto fd = IPCClient::export_dmabuf_sync_file(dmabuf_fd, write);
+    if (!fd)
         return -1;
-    }
 
-    if (data.fd < 0) {
-        SPDLOG_ERROR("DMA_BUF_IOCTL_EXPORT_SYNC_FILE returned invalid fd");
-        return -1;
-    }
-
-    ipc->frame_ready(slot, data.fd);
+    ipc->frame_ready(slot, std::move(fd));
     return 0;
 }
 

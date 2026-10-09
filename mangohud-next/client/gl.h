@@ -5,8 +5,6 @@
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include <GL/glx.h>
-#include <sys/ioctl.h>
-#include <linux/dma-buf.h>
 
 #include <cstdio>
 #include <cstring>

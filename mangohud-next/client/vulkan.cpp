@@ -32,6 +32,18 @@ bool OverlayVK::init_dmabufs(Fdinfo& fdinfo) {
         cache_descriptor_set(dmabufs.back());
     }
 
+    std::vector<unique_fd> fences;
+    for (auto& fd : fdinfo.dmabuf_buffer) {
+        auto fence = IPCClient::export_dmabuf_sync_file(fd.get());
+        if (!fence)
+            return false;
+        fences.push_back(std::move(fence));
+    }
+
+    layer->ipc->clear_frames();
+    for (size_t i = 0; i < fences.size(); i++)
+        layer->ipc->frame_ready(i, std::move(fences[i]));
+
     return true;
 }
 
@@ -586,7 +598,7 @@ VkResult OverlayVK::copy_dmabuf_to_cache(VkQueue queue, int img_idx, VkPresentIn
 
         VkResult gr = sc->d->GetSemaphoreFdKHR(sc->d->Device, &gi, &fd);
         if (gr == VK_SUCCESS && fd >= 0) {
-            layer->ipc->frame_ready(slot, fd);
+            layer->ipc->frame_ready(slot, unique_fd::adopt(fd));
         }
     }
 
