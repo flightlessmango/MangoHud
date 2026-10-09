@@ -7,6 +7,12 @@
 namespace fs = ghc::filesystem;
 using namespace std;
 
+// A peripheral's battery (a gamepad, a mouse) has the scope "Device"
+static bool is_system_battery(const fs::path& path) {
+    return read_line((path / "type").string()) == "Battery" &&
+           read_line((path / "scope").string()) != "Device";
+}
+
 void BatteryStats::numBattery() {
     int batteryCount = 0;
 
@@ -14,9 +20,12 @@ void BatteryStats::numBattery() {
         if (!fs::exists(path))
             continue;
 
+        const bool is_deckard = path == fs::path("/run/deckardcharger/");
+
         for (auto& p : fs::directory_iterator(path)) {
             string fileName = p.path().filename();
-            if (fileName.find("BAT") != std::string::npos && batteryCount < battery_count_max) {
+            if (batteryCount < battery_count_max &&
+                (is_deckard ? fileName.find("BAT") != std::string::npos : is_system_battery(p.path()))) {
                 battPath[batteryCount] = p.path();
                 batteryCount += 1;
             }
