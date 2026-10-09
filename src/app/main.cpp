@@ -122,6 +122,11 @@ static int x_error_handler(Display* dpy, XErrorEvent* event) {
     return 0;
 }
 
+static int x_io_error_handler(Display* dpy) {
+    g_x_dead.store(true);
+    _exit(0);
+}
+
 static bool x_connection_ok(Display* dpy) {
     if (!dpy)
         return false;
@@ -444,9 +449,13 @@ int main(int, char**)
 {
     XInitThreads();
     XSetErrorHandler(x_error_handler);
+    XSetIOErrorHandler(x_io_error_handler);
 
     // Setup window
     glfwSetErrorCallback(glfw_error_callback);
+#ifdef GLFW_PLATFORM
+    glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
+#endif
     if (!glfwInit())
         return 1;
 
@@ -461,8 +470,13 @@ int main(int, char**)
 
     // Create window with graphics context
     GLFWwindow* window = init(glsl_version);
+    if (!window)
+        return 1;
 
     Display *x11_display = glfwGetX11Display();
+    if (!x11_display)
+        return 1;
+
     Window x11_window = glfwGetX11Window(window);
     Atom overlay_atom = XInternAtom (x11_display, GamescopeOverlayProperty, False);
 
