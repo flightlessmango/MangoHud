@@ -1,0 +1,4 @@
+# Allow video group to read RAPL energy counter for MangoHud CPU power
+# Without this rule, /sys/class/powercap/intel-rapl:0/energy_uj is 0400 root:root
+# and MangoHud cannot display CPU power consumption on Intel CPUs
+SUBSYSTEM=="powercap", KERNEL=="intel-rapl:0", RUN+="/bin/chgrp video /sys/class/powercap/intel-rapl:0/energy_uj", RUN+="/bin/chmod 040 /sys/class/powercap/intel-rapl:0/energy_uj"
