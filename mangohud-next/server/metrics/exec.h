@@ -112,6 +112,12 @@ public:
              "fi ;; "
              "*) basename \"$exe\" ;; "
              "esac"},
+            {"POWER_PROFILE",
+             "power_profile=$(dbus-send --system --print-reply --dest=net.hadess.PowerProfiles /net/hadess/PowerProfiles "
+             "org.freedesktop.DBus.Properties.Get string:'net.hadess.PowerProfiles' string:'ActiveProfile') && "
+             "case \"$power_profile\" in "
+             "*power-saver*) printf '%s' 'Power Save';; *balanced*) printf '%s' Balanced;; *performance*) printf '%s' Performance;; esac"
+            },
         };
 
         for (const auto& [key, command] : commands) {

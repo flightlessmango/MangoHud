@@ -112,6 +112,7 @@ Some single-name references are backed by small shell commands:
 | `CPU_NAME` | CPU model name. |
 | `DESKTOP_SESSION` | Current desktop session from `XDG_CURRENT_DESKTOP`. |
 | `GAMEMODE` | `ON` when GameMode appears in the client process maps, otherwise `OFF`. |
+| `POWER_PROFILE` | Current power profile. |
 | `KERNEL` | Kernel release. |
 | `MEDIA_ALBUM` | Current MPRIS media album from `playerctl`. |
 | `MEDIA_ARTIST` | Current MPRIS media artist from `playerctl`. |
