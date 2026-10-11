@@ -286,6 +286,7 @@ if get_option('mangoapp')
       dep_x11,
       dep_wayland_client,
       glfw3_dep,
+      xi_dep,
       implot_dep
     ],
     include_directories : [inc_common],

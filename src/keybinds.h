@@ -3,6 +3,7 @@
 #define MANGOHUD_KEYBINDS_H
 
 #ifdef HAVE_X11
+#include <cstring>
 #include "shared_x11.h"
 #include "loaders/loader_x11.h"
 #endif
@@ -15,7 +16,7 @@ typedef unsigned long KeySym;
 #endif
 
 #if defined(HAVE_X11) || defined(HAVE_WAYLAND)
-static inline bool keys_are_pressed(const std::vector<KeySym>& keys)
+static inline bool keys_are_pressed(const std::vector<KeySym>& keys, const char* keymap = nullptr)
 {
     if (keys.size() == 0)
         return false;
@@ -37,7 +38,10 @@ static inline bool keys_are_pressed(const std::vector<KeySym>& keys)
         size_t pressed = 0;
 
         auto libx11 = get_libx11();
-        libx11->XQueryKeymap(get_xdisplay(), keys_return);
+        if (keymap)
+            memcpy(keys_return, keymap, sizeof(keys_return));
+        else
+            libx11->XQueryKeymap(get_xdisplay(), keys_return);
 
         for (KeySym ks : keys) {
             KeyCode kc2 = libx11->XKeysymToKeycode(get_xdisplay(), ks);
@@ -58,7 +62,7 @@ static inline bool keys_are_pressed(const std::vector<KeySym>& keys)
 }
 #elif defined(_WIN32)
 #include <windows.h>
-static inline bool keys_are_pressed(const std::vector<KeySym>& keys) {
+static inline bool keys_are_pressed(const std::vector<KeySym>& keys, const char* keymap = nullptr) {
     size_t pressed = 0;
 
     for (KeySym ks : keys) {
