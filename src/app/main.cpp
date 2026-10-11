@@ -30,7 +30,9 @@
 #include <GLFW/glfw3native.h>
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
+#include <X11/extensions/XInput2.h>
 #include <poll.h>
+#include "shared_x11.h"
 
 using namespace std;
 
@@ -179,6 +181,78 @@ static unsigned int get_prop(const char* propName){
         return i;
     }
     return -1;
+}
+
+static int xi_opcode = -1;
+static char key_state[32];
+static unsigned long key_state_serial;
+
+// Use the keybind connection so GLFW cannot consume these events.
+static bool init_key_events() {
+    if (!init_x11())
+        return false;
+
+    Display *dpy = get_xdisplay();
+    int event, error;
+    if (!XQueryExtension(dpy, "XInputExtension", &xi_opcode, &event, &error))
+        return false;
+
+    int major = 2, minor = 2;
+    return XIQueryVersion(dpy, &major, &minor) == Success;
+}
+
+// Raw events detect key presses even when another window has focus.
+static void select_key_events(bool enable) {
+    Display *dpy = get_xdisplay();
+    unsigned char mask[XIMaskLen(XI_RawKeyRelease)] = {};
+    if (enable) {
+        XISetMask(mask, XI_RawKeyPress);
+        XISetMask(mask, XI_RawKeyRelease);
+    }
+
+    XIEventMask event_mask = { XIAllMasterDevices, sizeof(mask), mask };
+    XISelectEvents(dpy, DefaultRootWindow(dpy), &event_mask, 1);
+    if (!enable) {
+        XFlush(dpy);
+        return;
+    }
+
+    // Skip events already reflected in the initial keymap.
+    key_state_serial = NextRequest(dpy);
+    XQueryKeymap(dpy, key_state);
+}
+
+// Replay key state so short taps still count after their keys are released.
+static void handle_key_events(int timeout_ms, overlay_params& params) {
+    Display *dpy = get_xdisplay();
+    // Check Xlib's queue before polling to avoid sleeping through queued events.
+    if (!XPending(dpy)) {
+        pollfd p{XConnectionNumber(dpy), POLLIN, 0};
+        if (poll(&p, 1, timeout_ms) > 0 && (p.revents & (POLLERR | POLLHUP | POLLNVAL))) {
+            g_x_dead.store(true);
+            return;
+        }
+    }
+
+    while (XPending(dpy)) {
+        XEvent ev;
+        XNextEvent(dpy, &ev);
+        XGenericEventCookie *cookie = &ev.xcookie;
+        if (cookie->type != GenericEvent || cookie->extension != xi_opcode ||
+            cookie->serial < key_state_serial || !XGetEventData(dpy, cookie))
+            continue;
+
+        int keycode = ((XIRawEvent *)cookie->data)->detail;
+        if (keycode >= 0 && keycode < 256) {
+            if (cookie->evtype == XI_RawKeyPress) {
+                key_state[keycode >> 3] |= 1 << (keycode & 7);
+                check_keybinds(params, key_state);
+            } else if (cookie->evtype == XI_RawKeyRelease) {
+                key_state[keycode >> 3] &= ~(1 << (keycode & 7));
+            }
+        }
+        XFreeEventData(dpy, cookie);
+    }
 }
 
 static void ctrl_thread(){
@@ -501,6 +575,7 @@ int main(int, char**)
     sw_stats.engine = EngineTypes::GAMESCOPE;
     std::thread(msg_read_thread).detach();
     std::thread(ctrl_thread).detach();
+    const bool key_events = init_key_events();
     if (!logger) logger = std::make_unique<Logger>(&params);
     if (!g_x_dead.load()) {
         Atom noFocusAtom = XInternAtom(x11_display, "GAMESCOPE_NO_FOCUS", False);
@@ -521,6 +596,8 @@ int main(int, char**)
                 uint32_t value = 1;
                 set_x_cardinal_property(x11_display, x11_window, overlay_atom, value);
                 mangoapp_paused = false;
+                if (key_events)
+                    select_key_events(false);
                 // resume all GPU threads
                 if (gpus)
                     for (auto gpu : gpus->available_gpus)
@@ -571,20 +648,14 @@ int main(int, char**)
             uint32_t value = 0;
             set_x_cardinal_property(x11_display, x11_window, overlay_atom, value);
             mangoapp_paused = true;
+            if (key_events)
+                select_key_events(true);
             // pause all GPUs threads
             if (gpus)
                 for (auto gpu : gpus->available_gpus)
                     gpu->pause();
-
-            // If mangoapp is hidden, using mangoapp_cv.wait() causes a hang.
-            // Because of this hang, we can't detect if the user presses R_SHIFT + F12,
-            // which prevents mangoapp from being unhidden.
-            // To address this, replace mangoapp_cv.wait() with sleep().
-            //
-            // If severe power usage issues arise, find an alternative solution.
-
-            // std::unique_lock<std::mutex> lk(mangoapp_m);
-            // mangoapp_cv.wait(lk, []{return !get_params()->no_display;});
+        } else if (key_events) {
+            handle_key_events(500, *real_params);
         } else {
             usleep(500000);
         }

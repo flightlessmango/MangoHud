@@ -25,6 +25,7 @@ jobs:
           appstream \
           libcmocka-dev \
           libglfw3-dev \
+          libxi-dev \
           sudo \
           git
     - name: 'Install Meson'

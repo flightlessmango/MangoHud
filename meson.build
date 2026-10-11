@@ -310,6 +310,7 @@ endif
 
 if get_option('mangoapp')
   glfw3_dep = dependency('glfw3')
+  xi_dep = dependency('xi')
 endif
 
 libdrm_dep = dependency('libdrm')
