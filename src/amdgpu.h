@@ -12,6 +12,8 @@
 #include <atomic>
 #include <thread>
 #include "gpu_metrics_util.h"
+#include "amdgpu_grbm.h"
+#include <memory>
 
 #include "../mangohud-next/legacy_gpu_wrapper/wrapper.hpp"
 
@@ -437,6 +439,9 @@ struct amdgpu_files
     FILE *power_limit;
     FILE *gtt_used;
     FILE *fan;
+    /* pwm1 / pwm1_max: duty cycle, used when fan1_input is unsupported (e.g. Oland) */
+    FILE *fan_pwm;
+    FILE *fan_pwm_max;
     FILE *gpu_voltage_soc;
 };
 
@@ -496,11 +501,15 @@ class AMDGPU {
 
         void pause() {
             paused = true;
+            if (grbm)
+                grbm->pause();
             cond_var.notify_one();
         };
 
         void resume() {
             paused = false;
+            if (grbm)
+                grbm->resume();
             cond_var.notify_one();
         }
 
@@ -522,6 +531,11 @@ class AMDGPU {
 		LegacyFDInfoWrapper fdinfo;
 		struct amdgpu_common_metrics amdgpu_common_metrics;
 		struct gpu_metrics_v3_0 previous_metrics{};
+		/* Fallback for GPUs without a working gpu_busy_percent / gpu_metrics
+		 * (Southern Islands, e.g. Radeon R7 240): GRBM_STATUS via the render node. */
+		std::unique_ptr<AMDGPUGrbm> grbm;
+		/* true when the fan is reported as a duty cycle (%) instead of RPM */
+		bool fan_pwm_mode = false;
 		#define V3_THROTTLING_DELTA(name) \
 		((amdgpu_metrics)->throttle_residency_##name - (previous_metrics).throttle_residency_##name)
 
