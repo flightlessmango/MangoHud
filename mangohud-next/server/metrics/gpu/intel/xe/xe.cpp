@@ -1,6 +1,7 @@
 #include <filesystem>
 #include "xe.hpp"
 #include <cmath>
+#include <fstream>
 
 Intel_xe::Intel_xe(
     const std::string& drm_node, const std::string& pci_dev,
@@ -18,18 +19,30 @@ void Intel_xe::pre_poll_overrides() {
     throttling = get_throttling_status();
 }
 
+bool Intel_xe::is_integrated() {
+    return drm_available && !drm.has_vram_region();
+}
+
+// Integrated GPUs: report the GPU's system memory usage as VRAM, since that is
+// where all of its buffers live.
 float Intel_xe::get_vram_used() {
     if (!drm_available)
         return 0.f;
 
-    return drm.get_used_memory() / 1024.f / 1024.f / 1024.f;
+    uint64_t used = is_integrated() ? drm.get_sysmem_used() : drm.get_used_memory();
+    return used / 1024.f / 1024.f / 1024.f;
 }
 
 float Intel_xe::get_memory_total() {
     if (!drm_available)
         return 0.f;
 
-    return drm.get_total_memory() / 1024.f / 1024.f / 1024.f;
+    uint64_t total = is_integrated() ? drm.get_sysmem_total() : drm.get_total_memory();
+    return total / 1024.f / 1024.f / 1024.f;
+}
+
+bool Intel_xe::get_is_apu() {
+    return is_integrated();
 }
 
 int Intel_xe::get_memory_temp() {
@@ -60,7 +73,84 @@ int Intel_xe::get_voltage() {
     return hwmon.get_sensor_value("voltage");
 }
 
+// Local helper: this file is also linked into the legacy HUD, which has its own
+// read_line(), so don't pull in server/common/helpers.cpp.
+static std::string read_first_line(const std::string& path) {
+    std::ifstream file(path);
+    std::string line;
+    std::getline(file, line);
+    return line;
+}
+
+void Intel_xe::find_rapl_uncore() {
+    uncore_searched = true;
+
+    // Prefer the MSR-based intel-rapl domains over intel-rapl-mmio.
+    std::string uncore;
+    std::error_code ec;
+    for (const auto& entry : std::filesystem::directory_iterator("/sys/class/powercap", ec)) {
+        const std::string path = entry.path().string();
+        const std::string dir = entry.path().filename().string();
+
+        if (dir.rfind("intel-rapl", 0) != 0 || read_first_line(path + "/name") != "uncore")
+            continue;
+
+        if (uncore.empty() || dir.rfind("intel-rapl:", 0) == 0)
+            uncore = path;
+    }
+
+    if (uncore.empty()) {
+        SPDLOG_DEBUG("No RAPL uncore domain found for GPU power");
+        return;
+    }
+
+    ifs_uncore_energy.open(uncore + "/energy_uj");
+    if (!ifs_uncore_energy.is_open()) {
+        SPDLOG_WARN("{}/energy_uj is not readable (root-only by default); GPU power unavailable", uncore);
+        return;
+    }
+
+    std::string range = read_first_line(uncore + "/max_energy_range_uj");
+    uncore_max_range = range.empty() ? 0 : std::strtoull(range.c_str(), nullptr, 10);
+    SPDLOG_DEBUG("Using RAPL {} for integrated GPU power", uncore);
+}
+
+float Intel_xe::get_uncore_power_usage() {
+    if (!uncore_searched)
+        find_rapl_uncore();
+
+    if (!ifs_uncore_energy.is_open())
+        return 0.f;
+
+    uint64_t energy = 0;
+    ifs_uncore_energy.clear();
+    ifs_uncore_energy.seekg(0);
+    if (!(ifs_uncore_energy >> energy))
+        return 0.f;
+
+    uint64_t previous = previous_uncore_energy;
+    previous_uncore_energy = energy;
+    if (!previous)
+        return 0.f;
+
+    // energy_uj wraps at max_energy_range_uj
+    uint64_t delta = 0;
+    if (energy >= previous)
+        delta = energy - previous;
+    else if (uncore_max_range > previous)
+        delta = uncore_max_range - previous + energy;
+
+    auto us = std::chrono::duration_cast<std::chrono::microseconds>(delta_time_ns).count();
+    if (us <= 0)
+        return 0.f;
+
+    return static_cast<float>(delta) / us;    // uJ per us = W
+}
+
 float Intel_xe::get_power_usage() {
+    if (!hwmon.is_open("energy"))
+        return get_uncore_power_usage();
+
     uint64_t current_power_usage = hwmon.get_sensor_value("energy");
 
     if (!previous_power_usage) {
@@ -151,6 +241,10 @@ int Intel_xe::get_process_load(pid_t pid) {
 }
 
 float Intel_xe::get_process_vram_used(pid_t pid) {
+    // Integrated GPUs have no vram0 region; client buffers are accounted as gtt.
+    if (is_integrated())
+        return fdinfo.get_memory_used(pid, "drm-resident-gtt");
+
     return fdinfo.get_memory_used(pid, "drm-resident-vram0");
 }
 
