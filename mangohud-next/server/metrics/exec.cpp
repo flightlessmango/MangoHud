@@ -216,6 +216,7 @@ void Exec::finish_job(const std::string& command, Entry* entry, std::unique_ptr<
     if (!timed_out && WIFEXITED(status) && WEXITSTATUS(status) == 0) {
         entry->cached_output = std::move(stdout_text);
         entry->valid = true;
+        entry->last_failure_log.clear();
 
         if (entry->cached_output.empty() && !stderr_text.empty() &&
             entry->last_stderr_log != stderr_text) {
@@ -223,25 +224,24 @@ void Exec::finish_job(const std::string& command, Entry* entry, std::unique_ptr<
                          command, stderr_text);
             entry->last_stderr_log = stderr_text;
         }
-    } else if (timed_out) {
-        if (!stderr_text.empty())
-            SPDLOG_ERROR("exec '{}' timed out: {}", command, stderr_text);
+    } else {
+        std::string failure;
+        if (timed_out)
+            failure = "timed out";
+        else if (WIFEXITED(status))
+            failure = "exited with status " + std::to_string(WEXITSTATUS(status));
+        else if (WIFSIGNALED(status))
+            failure = "killed by signal " + std::to_string(WTERMSIG(status));
         else
-            SPDLOG_ERROR("exec '{}' timed out", command);
-    } else if (WIFEXITED(status)) {
+            return;
+
         if (!stderr_text.empty())
-            SPDLOG_DEBUG("exec '{}' exited with status {}: {}",
-                         command, WEXITSTATUS(status), stderr_text);
-        else
-            SPDLOG_DEBUG("exec '{}' exited with status {}",
-                         command, WEXITSTATUS(status));
-    } else if (WIFSIGNALED(status)) {
-        if (!stderr_text.empty())
-            SPDLOG_DEBUG("exec '{}' killed by signal {}: {}",
-                         command, WTERMSIG(status), stderr_text);
-        else
-            SPDLOG_DEBUG("exec '{}' killed by signal {}",
-                         command, WTERMSIG(status));
+            failure += ": " + stderr_text;
+
+        if (entry->last_failure_log != failure) {
+            SPDLOG_WARN("exec '{}' {}", command, failure);
+            entry->last_failure_log = std::move(failure);
+        }
     }
 }
 
@@ -314,6 +314,6 @@ void Exec::log_spawn_error(const std::string& command, Entry& entry, const char*
     if (entry.last_spawn_error == message)
         return;
 
-    SPDLOG_DEBUG("exec '{}' spawn failed: {}", command, message);
+    SPDLOG_WARN("exec '{}' spawn failed: {}", command, message);
     entry.last_spawn_error = std::move(message);
 }

@@ -146,6 +146,7 @@ private:
         std::mutex m;
         std::string cached_output;
         std::string last_stderr_log;
+        std::string last_failure_log;
         std::string last_spawn_error;
         std::chrono::steady_clock::time_point last_request;
         std::unique_ptr<Job> job;
