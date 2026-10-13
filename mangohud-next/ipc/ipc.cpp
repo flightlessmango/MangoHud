@@ -13,6 +13,7 @@
 #include "ipc_client.h"
 #include "../server/config.h"
 #include "../server/server.h"
+#include "../server/common/helpers.hpp"
 
 IPCServer::IPCServer(MangoHudServer* server_) : server(server_) {
     SPDLOG_DEBUG("init IPCServer");
@@ -70,11 +71,7 @@ int IPCServer::on_is_blacklisted(sd_bus_message* message, void* userdata, sd_bus
 
 std::shared_ptr<Client> IPCServer::focused_client(std::string_view display)
 {
-    std::vector<std::shared_ptr<Client>> candidates;
-    {
-        std::lock_guard lock(clients_mtx);
-        candidates = clients;
-    }
+    const auto candidates = snapshot(clients, clients_mtx);
 
     for (const auto& client : candidates) {
         std::lock_guard lock(client->m);
@@ -105,11 +102,7 @@ IPCServer::~IPCServer() {
 }
 
 void IPCServer::prune_clients() {
-    std::vector<std::shared_ptr<Client>> candidates;
-    {
-        std::lock_guard lock(clients_mtx);
-        candidates = clients;
-    }
+    const auto candidates = snapshot(clients, clients_mtx);
 
     for (const auto& client : candidates) {
         if (kill(client->pid, 0) != 0)
