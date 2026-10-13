@@ -28,7 +28,8 @@ public:
     IPCServer(MangoHudServer *server_);
 
     void start();
-    bool stopped() const { return stop.load(); }
+    bool should_stop();
+    void record_server_request();
     void prune_clients();
     std::shared_ptr<Client> focused_client(std::string_view display);
     ~IPCServer();
@@ -39,6 +40,8 @@ private:
     sd_id128_t server_id;
     std::thread thread;
     std::atomic<bool> stop {false};
+    int64_t server_request_time = 0;
+    int64_t idle_since = 0;
     std::mutex q_mtx;
     std::deque<sd_bus_message*> msgs;
     std::deque<std::pair<std::string, int>> fences;

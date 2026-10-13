@@ -1,11 +1,9 @@
 #include "server.h"
 #include "config.h"
 #include "stdio.h"
-#include "mesa/os_time.h"
 #include "egl_ctx.h"
 #include "vulkan_ctx.h"
 #include <cstdlib>
-#include <chrono>
 #include <utility>
 
 int main() {
@@ -18,10 +16,7 @@ int main() {
 }
 
 void MangoHudServer::loop() {
-    auto idle_since = std::chrono::steady_clock::now();
-    while (true) {
-        if (ipc->stopped())
-            break;
+    while (!ipc->should_stop()) {
         if (config->maybe_reload_config()) {
             std::vector<std::shared_ptr<Client>> clients;
             {
@@ -32,17 +27,6 @@ void MangoHudServer::loop() {
                 client->send_config();
         }
 
-        ipc->prune_clients();
-        const auto now = std::chrono::steady_clock::now();
-        {
-            std::lock_guard lock(ipc->clients_mtx);
-            if (!ipc->clients.empty())
-                idle_since = now;
-            else if (now - idle_since >= std::chrono::seconds(5)) {
-                SPDLOG_DEBUG("No clients remain; stopping server");
-                break;
-            }
-        }
         sleep(1);
     }
 }

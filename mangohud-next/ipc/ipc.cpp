@@ -1,5 +1,6 @@
 #include <systemd/sd-bus.h>
 #include <cstdint>
+#include <algorithm>
 #include <vector>
 #include <drm/drm_fourcc.h>
 #include <thread>
@@ -22,13 +23,38 @@ IPCServer::IPCServer(MangoHudServer* server_) : server(server_) {
     }
 }
 
+void IPCServer::record_server_request() {
+    std::lock_guard lock(clients_mtx);
+    server_request_time = os_time_get_nano();
+}
+
 void IPCServer::start() {
+    idle_since = os_time_get_nano();
     thread = std::thread(&IPCServer::dbus_thread, this);
+}
+
+bool IPCServer::should_stop() {
+    if (stop.load())
+        return true;
+
+    prune_clients();
+    std::lock_guard lock(clients_mtx);
+    const auto now = os_time_get_nano();
+    if (!clients.empty()) {
+        idle_since = now;
+        return false;
+    }
+    if (now - std::max(idle_since, server_request_time) < 5'000'000'000LL)
+        return false;
+
+    SPDLOG_DEBUG("No clients remain; stopping server");
+    return true;
 }
 
 int IPCServer::on_is_blacklisted(sd_bus_message* message, void* userdata, sd_bus_error*)
 {
     auto* self = static_cast<IPCServer*>(userdata);
+    self->record_server_request();
     const char* name = nullptr;
     int result = sd_bus_message_read(message, "s", &name);
     if (result <= 0)
@@ -184,6 +210,7 @@ int IPCServer::on_request_fd(sd_bus_message *m, void *userdata, sd_bus_error *) 
 
 int IPCServer::on_get_clients(sd_bus_message *m, void *userdata, sd_bus_error *) {
     auto *self = static_cast<IPCServer *>(userdata);
+    self->record_server_request();
 
     auto json = self->server->metrics->clients_json_snapshot();
     return sd_bus_reply_method_return(m, "s", json.c_str());
@@ -191,6 +218,7 @@ int IPCServer::on_get_clients(sd_bus_message *m, void *userdata, sd_bus_error *)
 
 int IPCServer::on_get_system(sd_bus_message *m, void *userdata, sd_bus_error *) {
     auto *self = static_cast<IPCServer *>(userdata);
+    self->record_server_request();
 
     auto json = self->server->metrics->system_json_snapshot();
     return sd_bus_reply_method_return(m, "s", json.c_str());
