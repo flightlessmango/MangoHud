@@ -16,7 +16,7 @@
 #include <vector>
 
 #include "../server/common/helpers.hpp"
-#include "ipc.h"
+#include "../ipc/ipc_client.h"
 #include "../wayland/wayland_ctx.h"
 
 class Wayland;
@@ -258,7 +258,12 @@ public:
     template <typename Surface>
     bool ensure_overlay(Surface surface) {
         auto surf_data = get_surface(surface);
-        if (!ensure_overlay_data(surf_data)) return false;
+        if (ipc->gamescopeSession) {
+            if (!surf_data || !ctx.get_global(surf_data->display))
+                return false;
+        } else if (!ensure_overlay_data(surf_data)) {
+            return false;
+        }
         // TODO: expand this to one worker per surface if we support multiple active overlay surfaces.
         if (!thread.joinable()) {
             active_surface = surf_data;

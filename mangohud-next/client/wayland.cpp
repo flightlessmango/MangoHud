@@ -1,10 +1,11 @@
 #include "wayland.h"
 
-#include <algorithm>
 #include <chrono>
 #include <cstring>
+#include <algorithm>
 #include <spdlog/spdlog.h>
 #include <unistd.h>
+#include "mesa/os_time.h"
 #include "string_utils.h"
 
 Wayland::~Wayland()
@@ -440,6 +441,7 @@ void Wayland::update_import(const std::shared_ptr<surface_data>& surf_data)
 
     Fdinfo next_fdinfo;
     uint64_t generation = 0;
+    bool unsupported_transport = false;
     {
         std::lock_guard lock(ipc->m);
         generation = ipc->import_generation.load(std::memory_order_acquire);
@@ -449,8 +451,20 @@ void Wayland::update_import(const std::shared_ptr<surface_data>& surf_data)
         if (ipc->fdinfo.dmabuf_buffer.empty())
             return;
 
-        next_fdinfo = std::move(ipc->fdinfo);
-        ipc->fdinfo = {};
+        if (ipc->fdinfo.opaque_size > 0) {
+            unsupported_transport = true;
+            ipc->fdinfo = {};
+        } else {
+            next_fdinfo = std::move(ipc->fdinfo);
+            ipc->fdinfo = {};
+        }
+    }
+
+    if (unsupported_transport) {
+        SPDLOG_DEBUG("wl dmabuf import rejected opaque-fd transport");
+        ipc->clear_frames();
+        ipc->send_import_failed();
+        return;
     }
 
     fdinfo = std::move(next_fdinfo);
@@ -630,6 +644,7 @@ void Wayland::run_thread(std::shared_ptr<surface_data> surf_data)
             update_import(surf_data);
             present(surf_data);
             dispatch_events(surf_data);
+            ipc->push_queue();
         }
 
         if (quit.load())
