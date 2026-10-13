@@ -13,7 +13,11 @@
 #include "../render/renderer.h"
 #include "protocol.h"
 #include <poll.h>
+#if defined(HAVE_LIBSYSTEMD)
 #include <systemd/sd-bus.h>
+#elif defined(HAVE_LIBELOGIND)
+#include <elogind/sd-bus.h>
+#endif
 #include <sys/eventfd.h>
 
 constexpr size_t   FT_MAX = 200;

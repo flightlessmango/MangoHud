@@ -1,4 +1,14 @@
-sdbus_dep = dependency('libsystemd', 'libelogind')
+sdbus_lib_dep = dependency('libsystemd', required: false)
+if sdbus_lib_dep.found()
+  sdbus_args = ['-DHAVE_LIBSYSTEMD']
+else
+  sdbus_lib_dep = dependency('libelogind')
+  sdbus_args = ['-DHAVE_LIBELOGIND']
+endif
+sdbus_dep = declare_dependency(
+  dependencies: [sdbus_lib_dep],
+  compile_args: sdbus_args,
+)
 
 ipc_inc = include_directories('.')
 

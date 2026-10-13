@@ -8,6 +8,7 @@ render_lib = static_library(
       'renderer.cpp',
       ),
     dependencies: [vulkan_dep,
+                   sdbus_dep,
                    dearimgui_dep,
                    implot_dep,
                    dependency('gbm'),

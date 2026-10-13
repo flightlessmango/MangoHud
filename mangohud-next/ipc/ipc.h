@@ -1,5 +1,9 @@
 #pragma once
+#if defined(HAVE_LIBSYSTEMD)
 #include <systemd/sd-bus.h>
+#elif defined(HAVE_LIBELOGIND)
+#include <elogind/sd-bus.h>
+#endif
 #include <cstdint>
 #include <vector>
 #include <drm/drm_fourcc.h>
