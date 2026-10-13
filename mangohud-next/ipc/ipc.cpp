@@ -105,31 +105,31 @@ IPCServer::~IPCServer() {
 }
 
 void IPCServer::prune_clients() {
-    std::vector<std::shared_ptr<Client>> clients_;
+    std::vector<std::shared_ptr<Client>> candidates;
     {
         std::lock_guard lock(clients_mtx);
-        clients_ = clients;
+        candidates = clients;
     }
 
-    int num_dead = 0;
-    for (auto& client : clients_) {
-        if (kill(client->pid, 0) != 0 || !client->active.load()) {
+    for (const auto& client : candidates) {
+        if (kill(client->pid, 0) != 0)
             client->active.store(false);
-            num_dead++;
-        }
     }
 
-    if (num_dead == 0) return;
+    std::vector<std::shared_ptr<Client>> retired;
+    {
+        std::lock_guard lock(clients_mtx);
+        std::erase_if(clients, [&](const auto& client) {
+            if (client->active.load())
+                return false;
+            retired.push_back(client);
+            return true;
+        });
+    }
 
-    std::lock_guard lock(clients_mtx);
-    for (auto it = clients.begin(); it != clients.end(); ) {
-        if (!(*it)->active.load()) {
-            SPDLOG_DEBUG("Client disconnected {}", (*it)->pid);
-            (*it)->stop_and_join();
-            it = clients.erase(it);
-        } else {
-            ++it;
-        }
+    for (const auto& client : retired) {
+        SPDLOG_DEBUG("Client disconnected {}", client->pid);
+        client->stop_and_join();
     }
 }
 
