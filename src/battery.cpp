@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <vector>
 #include <spdlog/spdlog.h>
 #include <filesystem.h>
 #include "battery.h"
@@ -15,6 +17,7 @@ static bool is_system_battery(const fs::path& path) {
 
 void BatteryStats::numBattery() {
     int batteryCount = 0;
+    std::vector<fs::path> found;
 
     for (const auto& path : { fs::path("/sys/class/power_supply/"), fs::path("/run/deckardcharger/") }) {
         if (!fs::exists(path))
@@ -26,6 +29,12 @@ void BatteryStats::numBattery() {
             string fileName = p.path().filename();
             if (batteryCount < battery_count_max &&
                 (is_deckard ? fileName.find("BAT") != std::string::npos : is_system_battery(p.path()))) {
+                // Skip duplicate battery symlinks
+                std::error_code ec;
+                fs::path real = fs::canonical(p.path(), ec);
+                if (!ec && std::find(found.begin(), found.end(), real) != found.end())
+                    continue;
+                found.push_back(real);
                 battPath[batteryCount] = p.path();
                 batteryCount += 1;
             }
@@ -109,8 +118,24 @@ float BatteryStats::getPercent()
     return (charge_n / charge_f) * 100;
 }
 
+// vph is the measured system rail, bl_power the backlight
+static bool get_power_deckard(float& power) {
+    std::string vph = read_line("/run/power-monitor/power/vph");
+    std::string bl_power = read_line("/run/power-monitor/power/bl_power");
+    if (vph.empty() || bl_power.empty())
+        return false;
+
+    float vph_w = 0.0f, bl_power_w = 0.0f;
+    if (!try_stof(vph_w, vph) || !try_stof(bl_power_w, bl_power))
+        return false;
+
+    power = vph_w + bl_power_w;
+    return true;
+}
+
 float BatteryStats::getPower() {
     float power_w = 0.0f;
+    const bool deckard = fs::exists("/run/power-monitor/power/vph");
 
     for (int i = 0; i < batt_count; i++) {
         string syspath = battPath[i];
@@ -132,6 +157,9 @@ float BatteryStats::getPower() {
             // TODO if we have multiple batteries, we will return 0 if just one of them is charging
             return 0.0f;
         }
+
+        if (deckard)
+            continue;
 
         // Prefer power_now (µW) when available.
         if (fs::exists(power_now)) {
@@ -165,6 +193,10 @@ float BatteryStats::getPower() {
             power_w += (std::fabs(i_ua) * std::fabs(v_uv)) * 1e-12f;
         }
     }
+
+    // Keep previous power on empty or invalid reads
+    if (deckard)
+        return get_power_deckard(power_w) ? power_w : current_watt;
 
     return power_w;
 }
