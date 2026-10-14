@@ -138,6 +138,7 @@ float BatteryStats::getPower() {
     const bool deckard = fs::exists("/run/power-monitor/power/vph");
     // the fuel gauge status flaps with the current sign while held near full
     const std::string deckard_status = read_line("/run/deckardcharger/battery_status");
+    bool discharging = false;
 
     for (int i = 0; i < batt_count; i++) {
         string syspath = battPath[i];
@@ -154,11 +155,11 @@ float BatteryStats::getPower() {
             }
         }
 
-        if (state[i] == "Charging" || state[i] == "Unknown" || state[i] == "Full") {
-            // TODO if we have multiple batteries, we will return 0 if just one of them is charging
-            return 0.0f;
-        }
+        // idle batteries report Not charging or Full, e.g. on dual-battery laptops
+        if (state[i] != "Discharging")
+            continue;
 
+        discharging = true;
         if (deckard)
             continue;
 
@@ -194,6 +195,9 @@ float BatteryStats::getPower() {
             power_w += (std::fabs(i_ua) * std::fabs(v_uv)) * 1e-12f;
         }
     }
+
+    if (!discharging)
+        return 0.0f;
 
     // Keep previous power on empty or invalid reads
     if (deckard)
