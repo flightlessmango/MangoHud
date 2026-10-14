@@ -11,7 +11,7 @@
 #include "hud_elements.h"
 
 float memused, memmax, swapused;
-int mem_temp;
+int mem_temp = -1;
 uint64_t proc_mem_resident, proc_mem_shared, proc_mem_virt;
 
 void update_meminfo() {
@@ -49,6 +49,9 @@ void update_mem_temp() {
         if (mem_temp_files.empty())
             SPDLOG_ERROR("failed to find known ram temp sensors");
     }
+
+    if (mem_temp_files.empty())
+        return;
 
     int temp = 0;
     for (auto &file : mem_temp_files) {
