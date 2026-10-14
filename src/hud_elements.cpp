@@ -753,7 +753,7 @@ void HudElements::proc_vram() {
 void HudElements::ram(){
 #ifdef __linux__
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram] ||
-        HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram_temp]) {
+        (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram_temp] && mem_temp > -1)) {
         ImguiNextColumnFirstItem();
         HUDElements.TextColored(HUDElements.colors.ram, "RAM");
     }
@@ -778,7 +778,7 @@ void HudElements::ram(){
         ImGui::PopFont();
     }
 
-    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram_temp]) {
+    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram_temp] && mem_temp > -1) {
         ImguiNextColumnOrNewRow();
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit])
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", HUDElements.convert_to_fahrenheit(mem_temp));
