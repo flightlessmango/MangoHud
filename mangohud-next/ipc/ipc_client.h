@@ -61,6 +61,8 @@ public:
     void stop();
 
     void add_to_queue(uint64_t now) {
+        if (is_incompatible())
+            return;
         {
             static uint64_t frame_seq = 0;
             std::unique_lock lock(samples_mtx);
@@ -70,6 +72,8 @@ public:
     }
 
     void add_to_queue(SampleType type, uint64_t seq, uint64_t now) {
+        if (is_incompatible())
+            return;
         {
             std::unique_lock lock(samples_mtx);
             samples.push_back({type, seq, now});
@@ -88,7 +92,8 @@ public:
     }
 
     int push_queue();
-    static bool is_blacklisted();
+    static bool should_disable();
+    static bool is_incompatible() { return incompatible.load(); }
     bool on_connect();
     void send_resolution(uint32_t width, uint32_t height);
     void send_spdlog(const int level, const char* file, const int line, const std::string& text);
@@ -123,6 +128,7 @@ private:
     Layer* layer;
     Backend api = Backend::NONE;
 
+    inline static std::atomic<bool> incompatible{false};
     std::atomic<bool> quit{false};
     std::thread thread;
     std::deque<Sample> samples;

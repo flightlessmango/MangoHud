@@ -55,6 +55,7 @@ int IPCClient::on_config(sd_bus_message* m, void* userdata, sd_bus_error*) {
 
 int IPCClient::on_incompatible(sd_bus_message* m, void* userdata, sd_bus_error*) {
     auto* self = static_cast<IPCClient*>(userdata);
+    incompatible.store(true);
     SPDLOG_ERROR("IPC ABI mismatch. Restart game/client and server.");
     self->connected.store(false);
     self->quit.store(true);
@@ -750,28 +751,39 @@ int IPCClient::on_frame(sd_bus_message* m, void* userdata, sd_bus_error*) {
     return 0;
 }
 
-bool IPCClient::is_blacklisted()
+bool IPCClient::should_disable()
 {
-    static const bool blacklisted = [] {
+    static const bool disabled = [] {
         auto name = get_wine_exe_name(true);
         if (name.empty())
             name = get_basename(get_exe_path());
-        bool ignored = false;
         sd_bus* bus = nullptr;
         sd_bus_message* reply = nullptr;
-        if (sd_bus_open_user(&bus) >= 0) {
-            int excluded = 0;
-            int result = sd_bus_call_method(bus, kBusName, kObjPath, kIface,
-                                            "is_blacklisted", nullptr, &reply,
-                                            "s", name.c_str());
-            if (result >= 0 && sd_bus_message_read(reply, "b", &excluded) > 0)
-                ignored = excluded != 0;
-        }
+        int excluded = 0;
+        uint64_t server_hash = 0;
+        int result = sd_bus_open_user(&bus);
+        if (result >= 0)
+            result = sd_bus_call_method(bus, kBusName, kObjPath, kIface,
+                                       "preflight", nullptr, &reply,
+                                       "s", name.c_str());
+        if (result >= 0)
+            result = sd_bus_message_read(reply, "bt", &excluded, &server_hash);
         sd_bus_message_unref(reply);
         sd_bus_flush_close_unref(bus);
-        if (ignored)
+        if (result <= 0) {
+            SPDLOG_ERROR("IPC preflight failed: {} ({}); disabling hud", result,
+                         result < 0 ? strerror(-result) : "invalid reply");
+            return true;
+        }
+        if (server_hash != MANGOHUD_IPC_ABI_HASH) {
+            incompatible.store(true);
+            SPDLOG_ERROR("IPC ABI mismatch: client=0x{:016x}, server=0x{:016x}. Restart game/client and server.",
+                         uint64_t(MANGOHUD_IPC_ABI_HASH), server_hash);
+            return true;
+        }
+        if (excluded)
             SPDLOG_INFO("process '{}' is blacklisted in MangoHud Next", name);
-        return ignored;
+        return excluded != 0;
     }();
-    return blacklisted;
+    return disabled || is_incompatible();
 }

@@ -144,7 +144,7 @@ EXPORT_C_(EGLBoolean)eglSwapBuffers(EGLDisplay dpy, EGLSurface surf) {
     if (!real_eglSwapBuffers)
         real_eglSwapBuffers = (decltype(real_eglSwapBuffers)) real_dlsym(RTLD_NEXT, "eglSwapBuffers");
 
-    if (IPCClient::is_blacklisted())
+    if (IPCClient::should_disable())
         return real_eglSwapBuffers(dpy, surf);
 
     if (dpy != EGL_NO_DISPLAY && surf != EGL_NO_SURFACE)
@@ -159,7 +159,7 @@ EXPORT_C_(EGLDisplay) eglGetPlatformDisplay(EGLenum platform, void* native_displ
     if (!real_eglGetPlatformDisplay)
         real_eglGetPlatformDisplay = (decltype(real_eglGetPlatformDisplay)) real_dlsym(RTLD_NEXT, "eglGetPlatformDisplay");
 
-    if (IPCClient::is_blacklisted())
+    if (IPCClient::should_disable())
         return real_eglGetPlatformDisplay(platform, native_display, attrib_list);
 
     EGLDisplay dpy = real_eglGetPlatformDisplay(platform, native_display, attrib_list);
@@ -185,7 +185,7 @@ EXPORT_C_(EGLDisplay) eglGetPlatformDisplayEXT(EGLenum platform, void* native_di
     if (!real_eglGetPlatformDisplayEXT)
         return EGL_NO_DISPLAY;
 
-    if (IPCClient::is_blacklisted())
+    if (IPCClient::should_disable())
         return real_eglGetPlatformDisplayEXT(platform, native_display, attrib_list);
 
     EGLDisplay dpy = real_eglGetPlatformDisplayEXT(platform, native_display, attrib_list);
@@ -199,7 +199,7 @@ EXPORT_C_(EGLDisplay) eglGetDisplay(EGLNativeDisplayType native_display) {
     if (!real_eglGetDisplay)
         real_eglGetDisplay = (decltype(real_eglGetDisplay)) real_dlsym(RTLD_NEXT, "eglGetDisplay");
 
-    if (IPCClient::is_blacklisted())
+    if (IPCClient::should_disable())
         return real_eglGetDisplay(native_display);
 
     EGLDisplay dpy = real_eglGetDisplay(native_display);
@@ -220,7 +220,7 @@ EXPORT_C_(EGLSurface) eglCreateWindowSurface(EGLDisplay dpy, EGLConfig config,
     if (!real_eglCreateWindowSurface)
         real_eglCreateWindowSurface = (decltype(real_eglCreateWindowSurface)) real_dlsym(RTLD_NEXT, "eglCreateWindowSurface");
 
-    if (IPCClient::is_blacklisted())
+    if (IPCClient::should_disable())
         return real_eglCreateWindowSurface(dpy, config, native_window, attrib_list);
 
     EGLSurface surf = real_eglCreateWindowSurface(dpy, config, native_window, attrib_list);
@@ -237,7 +237,7 @@ EXPORT_C_(EGLSurface) eglCreatePlatformWindowSurface(EGLDisplay dpy, EGLConfig c
         real_eglCreatePlatformWindowSurface =
             (decltype(real_eglCreatePlatformWindowSurface)) real_dlsym(RTLD_NEXT, "eglCreatePlatformWindowSurface");
 
-    if (IPCClient::is_blacklisted())
+    if (IPCClient::should_disable())
         return real_eglCreatePlatformWindowSurface
             ? real_eglCreatePlatformWindowSurface(dpy, config, native_window, attrib_list)
             : EGL_NO_SURFACE;
@@ -258,7 +258,7 @@ EXPORT_C_(EGLSurface) eglCreatePlatformWindowSurfaceEXT(EGLDisplay dpy, EGLConfi
         real_eglCreatePlatformWindowSurfaceEXT =
             (decltype(real_eglCreatePlatformWindowSurfaceEXT)) real_dlsym(RTLD_NEXT, "eglCreatePlatformWindowSurfaceEXT");
 
-    if (IPCClient::is_blacklisted())
+    if (IPCClient::should_disable())
         return real_eglCreatePlatformWindowSurfaceEXT
             ? real_eglCreatePlatformWindowSurfaceEXT(dpy, config, native_window, attrib_list)
             : EGL_NO_SURFACE;
@@ -276,7 +276,7 @@ EXPORT_C_(EGLBoolean) eglDestroySurface(EGLDisplay dpy, EGLSurface surf) {
     if (!real_eglDestroySurface)
         real_eglDestroySurface = (decltype(real_eglDestroySurface)) real_dlsym(RTLD_NEXT, "eglDestroySurface");
 
-    if (IPCClient::is_blacklisted())
+    if (IPCClient::should_disable())
         return real_eglDestroySurface(dpy, surf);
 
     if (wayland)
@@ -290,7 +290,7 @@ EXPORT_C_(EGLBoolean) eglTerminate(EGLDisplay dpy) {
     if (!real_eglTerminate)
         real_eglTerminate = (decltype(real_eglTerminate)) real_dlsym(RTLD_NEXT, "eglTerminate");
 
-    if (IPCClient::is_blacklisted())
+    if (IPCClient::should_disable())
         return real_eglTerminate(dpy);
 
     reset_wayland();
@@ -303,7 +303,7 @@ EXPORT_C_(wl_egl_window*) wl_egl_window_create(wl_surface* surface, int width, i
     if (!real_wl_egl_window_create)
         real_wl_egl_window_create = (decltype(real_wl_egl_window_create)) real_dlsym(RTLD_NEXT, "wl_egl_window_create");
 
-    if (IPCClient::is_blacklisted())
+    if (IPCClient::should_disable())
         return real_wl_egl_window_create(surface, width, height);
 
     auto* window = real_wl_egl_window_create(surface, width, height);
@@ -321,7 +321,7 @@ EXPORT_C_(void) wl_egl_window_destroy(wl_egl_window* window) {
     if (!real_wl_egl_window_destroy)
         real_wl_egl_window_destroy = (decltype(real_wl_egl_window_destroy)) real_dlsym(RTLD_NEXT, "wl_egl_window_destroy");
 
-    if (IPCClient::is_blacklisted())
+    if (IPCClient::should_disable())
         return real_wl_egl_window_destroy(window);
 
     {
@@ -338,7 +338,7 @@ EXPORT_C_(void) wl_display_disconnect(wl_display* display) {
     if (!real_wl_display_disconnect)
         real_wl_display_disconnect = (decltype(real_wl_display_disconnect)) real_dlsym(RTLD_NEXT, "wl_display_disconnect");
 
-    if (IPCClient::is_blacklisted())
+    if (IPCClient::should_disable())
         return real_wl_display_disconnect(display);
 
     reset_wayland();
@@ -353,7 +353,7 @@ EXPORT_C_(EGLBoolean) eglSwapBuffersWithDamageKHR(EGLDisplay dpy, EGLSurface sur
             real_dlsym(RTLD_NEXT, "eglSwapBuffersWithDamageKHR");
     }
 
-    if (IPCClient::is_blacklisted())
+    if (IPCClient::should_disable())
         return real_eglSwapBuffersWithDamageKHR
             ? real_eglSwapBuffersWithDamageKHR(dpy, surf, rects, n_rects)
             : EGL_FALSE;
@@ -376,7 +376,7 @@ EXPORT_C_(EGLBoolean) eglSwapBuffersWithDamageEXT(EGLDisplay dpy, EGLSurface sur
             real_dlsym(RTLD_NEXT, "eglSwapBuffersWithDamageEXT");
     }
 
-    if (IPCClient::is_blacklisted())
+    if (IPCClient::should_disable())
         return real_eglSwapBuffersWithDamageEXT
             ? real_eglSwapBuffersWithDamageEXT(dpy, surf, rects, n_rects)
             : EGL_FALSE;
@@ -393,7 +393,7 @@ EXPORT_C_(EGLBoolean) eglSwapBuffersWithDamageEXT(EGLDisplay dpy, EGLSurface sur
 
 EXPORT_C_(GLXWindow) glXCreateWindow(Display* dpy, GLXFBConfig config, Window window, const int* attribs) {
     static auto real = reinterpret_cast<decltype(&glXCreateWindow)>(real_dlsym(RTLD_NEXT, "glXCreateWindow"));
-    if (IPCClient::is_blacklisted())
+    if (IPCClient::should_disable())
         return real(dpy, config, window, attribs);
     auto drawable = real(dpy, config, window, attribs);
     if (drawable) {
@@ -405,7 +405,7 @@ EXPORT_C_(GLXWindow) glXCreateWindow(Display* dpy, GLXFBConfig config, Window wi
 
 EXPORT_C_(void) glXDestroyWindow(Display* dpy, GLXWindow window) {
     static auto real = reinterpret_cast<decltype(&glXDestroyWindow)>(real_dlsym(RTLD_NEXT, "glXDestroyWindow"));
-    if (IPCClient::is_blacklisted())
+    if (IPCClient::should_disable())
         return real(dpy, window);
 
     {
@@ -425,7 +425,7 @@ EXPORT_C_(void) glXSwapBuffers(Display* dpy, GLXDrawable drawable) {
     if (!real_glXSwapBuffers)
         real_glXSwapBuffers = (void (*)(Display*, GLXDrawable))real_dlsym(RTLD_NEXT, "glXSwapBuffers");
 
-    if (IPCClient::is_blacklisted() || !dpy || drawable == 0)
+    if (IPCClient::should_disable() || !dpy || drawable == 0)
         return real_glXSwapBuffers(dpy, drawable);
 
     mangohud(dpy, drawable);
@@ -439,7 +439,7 @@ EXPORT_C_(int64_t) glXSwapBuffersMscOML(Display *dpy, GLXDrawable drawable, int6
     if (!real_glXSwapBuffersMscOML)
         real_glXSwapBuffersMscOML = (int64_t (*)(Display*, GLXDrawable, int64_t, int64_t, int64_t))real_dlsym(RTLD_NEXT, "glXSwapBuffersMscOML");
 
-    if (IPCClient::is_blacklisted())
+    if (IPCClient::should_disable())
         return real_glXSwapBuffersMscOML(dpy, drawable, target_msc, divisor, remainder);
 
     mangohud(dpy, drawable);
@@ -493,7 +493,7 @@ static void* find_hook(const char* name)
 {
     for (const auto& f : name_to_funcptr_map)
         if (std::strcmp(name, f.name) == 0)
-            return IPCClient::is_blacklisted() ? nullptr : f.ptr;
+            return IPCClient::should_disable() ? nullptr : f.ptr;
 
     return nullptr;
 }
@@ -522,7 +522,7 @@ EXPORT_C_(wl_proxy*) wl_proxy_marshal_flags(wl_proxy* proxy, uint32_t opcode,
     if (!real)
         return nullptr;
 
-    if (!IPCClient::is_blacklisted() && wl_marshal_is_surface_commit(proxy, opcode) && wayland)
+    if (!IPCClient::should_disable() && wl_marshal_is_surface_commit(proxy, opcode) && wayland)
         wayland->request_commit_presentation_feedback(proxy);
 
     va_list args_in;
@@ -541,7 +541,7 @@ EXPORT_C_(wl_proxy*) wl_proxy_marshal_array_flags(wl_proxy* proxy, uint32_t opco
 {
     auto* real = wl_marshal_real_array_flags();
 
-    if (IPCClient::is_blacklisted())
+    if (IPCClient::should_disable())
         return real ? real(proxy, opcode, interface, version, flags, args) : nullptr;
 
     if (wl_marshal_is_surface_commit(proxy, opcode) && wayland)

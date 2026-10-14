@@ -753,7 +753,7 @@ struct ForwardingOverrides {};
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL
 vkNegotiateLoaderLayerInterfaceVersion(VkNegotiateLayerInterface* version)
 {
-    if (IPCClient::is_blacklisted())
+    if (IPCClient::should_disable())
         return vkroots::NegotiateLoaderLayerInterfaceVersion<
             ForwardingOverrides, vkroots::NoOverrides, ForwardingOverrides>(version);
 

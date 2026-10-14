@@ -1,4 +1,3 @@
-#include <systemd/sd-bus.h>
 #include <cstdint>
 #include <algorithm>
 #include <vector>
@@ -11,6 +10,7 @@
 #include <sys/socket.h>
 #include "ipc.h"
 #include "ipc_client.h"
+#include "ipc_abi_hash.h"
 #include "../server/config.h"
 #include "../server/server.h"
 #include "../server/common/helpers.hpp"
@@ -52,7 +52,7 @@ bool IPCServer::should_stop() {
     return true;
 }
 
-int IPCServer::on_is_blacklisted(sd_bus_message* message, void* userdata, sd_bus_error*)
+int IPCServer::on_preflight(sd_bus_message* message, void* userdata, sd_bus_error*)
 {
     auto* self = static_cast<IPCServer*>(userdata);
     self->record_server_request();
@@ -66,7 +66,7 @@ int IPCServer::on_is_blacklisted(sd_bus_message* message, void* userdata, sd_bus
         std::lock_guard lock(self->server->config->m);
         excluded = self->server->config->is_blacklisted(name);
     }
-    return sd_bus_reply_method_return(message, "b", static_cast<int>(excluded));
+    return sd_bus_reply_method_return(message, "bt", static_cast<int>(excluded), uint64_t(MANGOHUD_IPC_ABI_HASH));
 }
 
 std::shared_ptr<Client> IPCServer::focused_client(std::string_view display)
@@ -221,7 +221,7 @@ void IPCServer::dbus_thread() {
     static const sd_bus_vtable vtable[] = {
         SD_BUS_VTABLE_START(0),
         SD_BUS_METHOD("request_fd", "", "h", IPCServer::on_request_fd, SD_BUS_VTABLE_UNPRIVILEGED),
-        SD_BUS_METHOD("is_blacklisted", "s", "b", IPCServer::on_is_blacklisted, SD_BUS_VTABLE_UNPRIVILEGED),
+        SD_BUS_METHOD("preflight", "s", "bt", IPCServer::on_preflight, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("get_clients", "", "s", IPCServer::on_get_clients, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("get_system", "", "s", IPCServer::on_get_system, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_VTABLE_END
