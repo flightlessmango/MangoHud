@@ -832,6 +832,26 @@ void HudElements::procmem()
 #endif
 }
 
+void HudElements::cgroup_mem()
+{
+#ifdef __linux__
+    const char* unit = nullptr;
+    uint64_t used = cgroup_mem_used;
+
+    if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cgroup_mem] || !used)
+        return;
+
+    ImguiNextColumnFirstItem();
+    HUDElements.TextColored(HUDElements.colors.ram, "CGROUP");
+    ImguiNextColumnOrNewRow();
+    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", format_units(used, unit));
+    ImGui::SameLine(0, 1.0f);
+    ImGui::PushFont(HUDElements.sw_stats->font_small);
+    HUDElements.TextColored(HUDElements.colors.text, "%s", unit);
+    ImGui::PopFont();
+#endif
+}
+
 void HudElements::fps(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_only]){
         ImguiNextColumnFirstItem();
@@ -1975,6 +1995,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
         {"arch", {arch}},
         {"wine", {wine}},
         {"procmem", {procmem}},
+        {"cgroup_mem", {cgroup_mem}},
         {"gamemode", {gamemode}},
         {"vkbasalt", {vkbasalt}},
         {"engine_version", {engine_version}},
@@ -2072,6 +2093,8 @@ void HudElements::legacy_elements(const overlay_params* temp_params){
         ordered_functions.push_back({ram, "ram", value});
     if (temp_params->enabled[OVERLAY_PARAM_ENABLED_procmem])
         ordered_functions.push_back({procmem, "procmem", value});
+    if (temp_params->enabled[OVERLAY_PARAM_ENABLED_cgroup_mem])
+        ordered_functions.push_back({cgroup_mem, "cgroup_mem", value});
     if (!temp_params->network.empty())
         ordered_functions.push_back({network, "network", value});
     if (temp_params->enabled[OVERLAY_PARAM_ENABLED_battery])

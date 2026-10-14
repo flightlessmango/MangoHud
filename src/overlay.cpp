@@ -135,6 +135,8 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
       update_mem_temp();
    if (real_params->enabled[OVERLAY_PARAM_ENABLED_procmem])
       update_procmem();
+   if (real_params->enabled[OVERLAY_PARAM_ENABLED_cgroup_mem])
+      update_cgroup_mem();
    if (real_params->enabled[OVERLAY_PARAM_ENABLED_io_read] || real_params->enabled[OVERLAY_PARAM_ENABLED_io_write])
       getIoStats(g_io_stats);
 #endif

@@ -7,9 +7,11 @@
 extern float memused, memmax, swapused;
 extern int mem_temp;
 extern uint64_t proc_mem_resident, proc_mem_shared, proc_mem_virt;
+extern uint64_t cgroup_mem_used;
 
 void update_meminfo();
 void update_mem_temp();
 void update_procmem();
+void update_cgroup_mem();
 
 #endif //MANGOHUD_MEMORY_H
