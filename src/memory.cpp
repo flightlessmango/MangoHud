@@ -1,6 +1,8 @@
 #include <array>
+#include <cstring>
 #include <fstream>
 #include <map>
+#include <sstream>
 #include <spdlog/spdlog.h>
 #include <string>
 #include <unistd.h>
@@ -9,10 +11,12 @@
 #include "memory.h"
 #include "file_utils.h"
 #include "hud_elements.h"
+#include "string_utils.h"
 
 float memused, memmax, swapused;
 int mem_temp = -1;
 uint64_t proc_mem_resident, proc_mem_shared, proc_mem_virt;
+uint64_t cgroup_mem_used;
 
 void update_meminfo() {
     std::ifstream file("/proc/meminfo");
@@ -104,4 +108,64 @@ void update_procmem()
     proc_mem_virt = meminfo[0];
     proc_mem_resident = meminfo[1];
     proc_mem_shared = meminfo[2];
+}
+
+// systemd app units, app.slice/app-*.scope or app-*.service
+static std::string app_cgroup(const std::string& proc)
+{
+    std::ifstream file(proc + "/cgroup");
+
+    for (std::string line; std::getline(file, line);) {
+        if (!starts_with(line, "0::") || ends_with(line, " (deleted)"))
+            continue;
+
+        auto path = line.substr(3);
+        auto slice = path.find("/app.slice/");
+        if (slice == std::string::npos)
+            continue;
+
+        // match whole unit names, not e.g. app-dbus-*.slice
+        std::istringstream units(path.substr(slice + strlen("/app.slice/")));
+        for (std::string unit; std::getline(units, unit, '/');) {
+            if (starts_with(unit, "app-") &&
+                (ends_with(unit, ".scope") || ends_with(unit, ".service")))
+                return "/sys/fs/cgroup" + path;
+        }
+    }
+
+    return {};
+}
+
+// anon + shmem: what reclaim can't drop, plus GPU buffers on shmem-backed drivers
+static uint64_t read_cgroup_mem(const std::string& cgroup)
+{
+    std::ifstream file(cgroup + "/memory.stat");
+
+    uint64_t anon = 0, shmem = 0;
+    std::string key;
+    uint64_t val;
+    while (file >> key >> val) {
+        if (key == "anon")
+            anon = val;
+        else if (key == "shmem")
+            shmem = val;
+    }
+
+    return anon + shmem;
+}
+
+void update_cgroup_mem()
+{
+    static std::string cgroup;
+
+    auto gs_pid = HUDElements.g_gamescopePid;
+    std::string proc = "/proc/" + (gs_pid < 1 ? std::string("self") : std::to_string(gs_pid));
+
+    // resolve every time, the process can move between cgroups
+    auto path = app_cgroup(proc);
+    if (!path.empty() && path != cgroup)
+        SPDLOG_DEBUG("cgroup memory from {}", path);
+    cgroup = path;
+
+    cgroup_mem_used = cgroup.empty() ? 0 : read_cgroup_mem(cgroup);
 }

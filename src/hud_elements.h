@@ -87,6 +87,7 @@ class HudElements{
         static void proc_vram();
         static void ram();
         static void procmem();
+        static void cgroup_mem();
         static void fps();
         static void engine_version();
         static void gpu_name();
