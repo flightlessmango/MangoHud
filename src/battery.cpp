@@ -136,6 +136,8 @@ static bool get_power_deckard(float& power) {
 float BatteryStats::getPower() {
     float power_w = 0.0f;
     const bool deckard = fs::exists("/run/power-monitor/power/vph");
+    // the fuel gauge status flaps with the current sign while held near full
+    const std::string deckard_status = read_line("/run/deckardcharger/battery_status");
 
     for (int i = 0; i < batt_count; i++) {
         string syspath = battPath[i];
@@ -145,9 +147,8 @@ float BatteryStats::getPower() {
         string status = syspath + "/status";
 
         {
-            std::ifstream input(status);
-            std::string line;
-            if (std::getline(input, line)) {
+            std::string line = deckard_status.empty() ? read_line(status) : deckard_status;
+            if (!line.empty()) {
                 current_status = line;
                 state[i] = current_status;
             }
