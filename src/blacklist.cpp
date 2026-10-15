@@ -27,6 +27,7 @@ static  std::vector<std::string> blacklist {
     "BethesdaNetLauncher.exe",
     "CypressLauncher.exe",
     "EADesktop.exe",
+    "EACefSubProcess.exe",
     "EALauncher.exe",
     "EpicGamesLauncher.exe",
     "EpicWebHelper.exe",
