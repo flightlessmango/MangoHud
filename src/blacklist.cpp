@@ -34,6 +34,7 @@ static  std::vector<std::string> blacklist {
     "explorer.exe",
     "ffxivlauncher.exe",
     "ffxivlauncher64.exe",
+    "FrostyModManager.exe",
     "GalaxyClient.exe",
     "gamescope",
     "GardenGate_Launcher.exe",
