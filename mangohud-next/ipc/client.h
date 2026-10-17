@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <cstdint>
 #include <mutex>
 #include <deque>
@@ -17,6 +18,7 @@
 #include <sys/eventfd.h>
 
 constexpr size_t   FT_MAX = 200;
+constexpr size_t   LOWS_FT_MAX = 10000;
 constexpr uint64_t KEEP_NS = 500000000ULL;
 
 enum class SampleType : uint8_t {
@@ -42,6 +44,10 @@ struct SampleStats {
     mutable std::mutex m;
     std::deque<Sample> samples;
     std::vector<float> frametimes = std::vector<float>(FT_MAX, 0.0f);
+    // Longer window than frametimes, only used for the percentile lows
+    std::deque<float> lows_frametimes;
+    uint64_t last_lows_update = 0;
+    float fps_1_low = 0.0f, fps_0_1_low = 0.0f;
     uint64_t n_samples = 0;
     uint64_t last_fps_update = 0;
     uint64_t seq_last = 0, t_last = 0;
@@ -65,6 +71,10 @@ struct SampleStats {
             frametimes.push_back(ft_ms);
             if (frametimes.size() > FT_MAX)
                 frametimes.erase(frametimes.begin());
+
+            lows_frametimes.push_back(ft_ms);
+            if (lows_frametimes.size() > LOWS_FT_MAX)
+                lows_frametimes.pop_front();
         } else {
             have_prev = true;
         }
@@ -107,6 +117,33 @@ struct SampleStats {
     std::vector<float> frametimes_copy() const {
         std::lock_guard lock(m);
         return frametimes;
+    }
+
+    // 1% and 0.1% lows in FPS, same definition as the legacy fps_metrics:
+    // the frametime at position p * N - 1 when sorted slowest first.
+    // Recomputed at most every 500ms like avg_fps(); 0 until there are enough frames.
+    std::pair<float, float> fps_lows() {
+        std::lock_guard lock(m);
+        if (lows_frametimes.empty() ||
+            (last_lows_update != 0 && (t_last - last_lows_update) < 500000000ULL))
+            return {fps_1_low, fps_0_1_low};
+
+        std::vector<float> sorted(lows_frametimes.begin(), lows_frametimes.end());
+        // Integer math so 1% of 10000 frames is exactly the 100th slowest
+        auto low = [&sorted](size_t permille) -> float {
+            const size_t count = sorted.size() * permille / 1000;
+            if (count == 0)
+                return 0.0f;
+
+            auto nth = sorted.begin() + (count - 1);
+            std::nth_element(sorted.begin(), nth, sorted.end(), std::greater<float>());
+            return *nth > 0.0f ? 1000.0f / *nth : 0.0f;
+        };
+
+        fps_1_low = low(10);
+        fps_0_1_low = low(1);
+        last_lows_update = t_last;
+        return {fps_1_low, fps_0_1_low};
     }
 };
 

@@ -175,6 +175,9 @@ void Metrics::update_client() {
             metrics["APP_FPS"] = {int(round(app_stats.avg_fps())), "FPS"};
             metrics["HUD_FPS"] = {int(round(hud_stats.avg_fps())), "FPS"};
             metrics["FRAMETIME"] = {frame_stats.avg_frametime(), "ms"};
+            const auto [fps_1_low, fps_0_1_low] = frame_stats.fps_lows();
+            metrics["FPS_1_LOW"] = {int(round(fps_1_low)), "FPS"};
+            metrics["FPS_0_1_LOW"] = {int(round(fps_0_1_low)), "FPS"};
             metrics["REFRESH_FRAMETIME"] = {refresh_stats.avg_frametime(), "ms"};
             metrics["APP_FRAMETIME"] = {app_stats.avg_frametime(), "ms"};
             metrics["HUD_FRAMETIME"] = {hud_stats.avg_frametime(), "ms"};
