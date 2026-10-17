@@ -455,27 +455,15 @@ static bool get_cpu_power_zenergy(CPUPowerData* cpuPowerData, float& power) {
 static bool get_cpu_power_rapl(CPUPowerData* cpuPowerData, float& power) {
     CPUPowerData_rapl* powerData_rapl = (CPUPowerData_rapl*)cpuPowerData;
 
-    if (!powerData_rapl->energyCounterFile)
+    float package = 0.f;
+    if (!powerData_rapl->package.read(package))
         return false;
 
-    rewind(powerData_rapl->energyCounterFile);
-    fflush(powerData_rapl->energyCounterFile);
+    float uncore = 0.f;
+    if (powerData_rapl->uncore.read(uncore))
+        package -= uncore;
 
-    uint64_t energyCounterValue = 0;
-    if (fscanf(powerData_rapl->energyCounterFile, "%" SCNu64, &energyCounterValue) != 1)
-        return false;
-
-    Clock::time_point now = Clock::now();
-    Clock::duration timeDiff = now - powerData_rapl->lastCounterValueTime;
-    int64_t timeDiffMicro = std::chrono::duration_cast<std::chrono::microseconds>(timeDiff).count();
-    uint64_t energyCounterDiff = energyCounterValue - powerData_rapl->lastCounterValue;
-
-    if (powerData_rapl->lastCounterValue > 0 && energyCounterValue > powerData_rapl->lastCounterValue)
-        power = energyCounterDiff / timeDiffMicro;
-
-    powerData_rapl->lastCounterValue = energyCounterValue;
-    powerData_rapl->lastCounterValueTime = now;
-
+    power = package > 0.f ? package : 0.f;
     return true;
 }
 
@@ -828,15 +816,12 @@ static CPUPowerData_zenergy* init_cpu_power_data_zenergy(const std::string path)
 static CPUPowerData_rapl* init_cpu_power_data_rapl(const std::string path) {
     auto powerData = std::make_unique<CPUPowerData_rapl>();
 
-    std::string energyCounterPath = path + "/energy_uj";
-    if (!file_exists(energyCounterPath)) return nullptr;
-
-    powerData->energyCounterFile = fopen(energyCounterPath.c_str(), "r");
-    if (!powerData->energyCounterFile) {
-        SPDLOG_DEBUG("Rapl: energy_uj is not accessible");
-        powerData->energyCounterFile = nullptr;
+    if (!powerData->package.open(path))
         return nullptr;
-    }
+
+    std::string uncore = find_rapl_domain("uncore");
+    if (!uncore.empty() && powerData->uncore.open(uncore))
+        SPDLOG_DEBUG("Rapl: subtracting {} from package power", uncore);
 
     return powerData.release();
 }
@@ -857,12 +842,16 @@ bool CPUStats::InitCpuPowerData() {
     if(m_cpuPowerData != nullptr)
         return true;
 
-    // only try to find a valid method 5 times
+    // Try a few times quickly, then keep retrying slowly: sensors can become
+    // readable after startup (e.g. module load or a udev permission rule).
     static int retries = 0;
-    if (retries >= 5)
+    static Clock::time_point last_try;
+    Clock::time_point now = Clock::now();
+    if (retries >= 5 && now - last_try < std::chrono::seconds(5))
         return true;
 
     retries++;
+    last_try = now;
     
     std::string name, path;
     std::string hwmon = "/sys/class/hwmon/";
@@ -909,21 +898,14 @@ bool CPUStats::InitCpuPowerData() {
     }
 
     if (!cpuPowerData) {
-        std::string powercap = "/sys/class/powercap/";
-        auto powercap_dirs = ls(powercap.c_str());
-        for (auto& dir : powercap_dirs) {
-            path = powercap + dir;
-            name = read_line(path + "/name");
-            SPDLOG_DEBUG("powercap: name: {}", name);
-            if (name == "package-0") {
-                cpuPowerData = (CPUPowerData*)init_cpu_power_data_rapl(path);
-                break;
-            }
-        }
+        std::string package = find_rapl_domain("package-0");
+        if (!package.empty())
+            cpuPowerData = (CPUPowerData*)init_cpu_power_data_rapl(package);
     }
-    
+
     if(cpuPowerData == nullptr) {
-        SPDLOG_ERROR("Failed to initialize CPU power data");
+        if (retries == 5)
+            SPDLOG_ERROR("Failed to initialize CPU power data");
         return false;
     }
 
