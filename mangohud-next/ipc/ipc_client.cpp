@@ -3,9 +3,11 @@
 #include "../client/layer.h"
 #include "ipc_abi_hash.h"
 
+#include <chrono>
 #include <cstdlib>
 #include <linux/dma-buf.h>
 #include <sys/ioctl.h>
+#include <ranges>
 #include "file_utils.h"
 
 IPCClient::IPCClient(Layer* layer_, Backend api_) : layer(layer_), api(api_){
@@ -316,10 +318,18 @@ bool IPCClient::connect_bus() {
 }
 
 void IPCClient::run_bus() {
+    using Clock = std::chrono::steady_clock;
+    auto next_flush = Clock::now();
     while (!quit.load() && sd_event_get_state(event) != SD_EVENT_FINISHED) {
         // Focus and samples must not depend on receiving rendered HUD frames.
-        push_queue();
-        int r = sd_event_run(event, 10000);
+        // A posted flush wakes this loop itself; only schedule one per interval.
+        const auto now = Clock::now();
+        if (now >= next_flush) {
+            push_queue();
+            next_flush = now + std::chrono::milliseconds(10);
+        }
+        const auto timeout = std::chrono::duration_cast<std::chrono::microseconds>(next_flush - now);
+        int r = sd_event_run(event, timeout.count());
         if (r < 0) {
             if (!quit.load())
                 SPDLOG_ERROR("sd_event_run {} ({})", r, strerror(-r));
@@ -475,16 +485,27 @@ void IPCClient::send_resolution(uint32_t width, uint32_t height) {
 }
 
 int IPCClient::push_queue() {
-    std::deque<Sample> out;
-    {
-        std::lock_guard<std::mutex> lock(samples_mtx);
-        if (samples.empty() || !connected.load())
-            return 0;
+    if (!connected.load())
+        return 0;
 
-        out.swap(samples);
-    }
+    // Swap inside posted work so queued sends cannot reuse an in-flight buffer.
+    post([this] {
+        int count = 0;
+        uint64_t dropped = 0;
+        {
+            std::unique_lock lock(samples_mtx);
+            if (samples_count.load(std::memory_order_relaxed) == 0)
+                return 0;
 
-    post([this, out = std::move(out)] {
+            std::swap(samples_active, samples_pending);
+            count = samples_count.exchange(0, std::memory_order_relaxed);
+            dropped = samples_dropped.exchange(0, std::memory_order_relaxed);
+        }
+
+        if (dropped != 0)
+            SPDLOG_ERROR("IPC sample queue overflow: dropped {} samples (capacity {})",
+                         dropped, samples_pending->size());
+
         auto focused_seats = this->focused_seats.load();
         sd_bus_message* m = nullptr;
 
@@ -531,7 +552,7 @@ int IPCClient::push_queue() {
             return r;
         }
 
-        for (auto& [type, seq, now] : out) {
+        for (auto& [type, seq, now] : *samples_pending | std::views::take(count)) {
             r = sd_bus_message_append(m, "(ytt)", (uint8_t)type, (uint64_t)seq, (uint64_t)now);
             if (r < 0) {
                 SPDLOG_ERROR("push_queue: append {} ({})", r, strerror(-r));
@@ -747,7 +768,6 @@ int IPCClient::on_frame(sd_bus_message* m, void* userdata, sd_bus_error*) {
         std::lock_guard lock(self->sync_mtx);
         self->frame_queue.push_back(std::move(frame));
     }
-    self->push_queue();
     return 0;
 }
 

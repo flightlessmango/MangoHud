@@ -644,7 +644,6 @@ void Wayland::run_thread(std::shared_ptr<surface_data> surf_data)
             update_import(surf_data);
             present(surf_data);
             dispatch_events(surf_data);
-            ipc->push_queue();
         }
 
         if (quit.load())
