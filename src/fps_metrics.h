@@ -10,6 +10,7 @@
 #include <condition_variable>
 #include <stdexcept>
 #include <iomanip>
+#include <cmath>
 #include <spdlog/spdlog.h>
 
 struct metric_t {
@@ -27,7 +28,6 @@ class fpsMetrics {
         bool run = false;
         bool thread_init = false;
         bool terminate = false;
-        bool resetting = false;
         size_t max_size = 10000;
         std::vector<metric_t> metrics;
 
@@ -79,9 +79,8 @@ class fpsMetrics {
                         stream << std::fixed << std::setprecision(multiplied_val == static_cast<int>(multiplied_val) ? 0 : 1)
                                << multiplied_val << "%";
                         it->display_name = stream.str();
-                        uint64_t idx = val * sorted_values.size() - 1;
-                        if (idx >= sorted_values.size())
-                            break;
+                        const size_t idx = std::max<size_t>(1,
+                            static_cast<size_t>(std::ceil(val * sorted_values.size()))) - 1;
 
                         it->value = 1000.f / sorted_values[idx];
                     } catch (const std::invalid_argument& e) {
@@ -125,9 +124,6 @@ class fpsMetrics {
         };
 
         void update(float new_frametime) {
-            if (resetting)
-                return;
-
             if (new_frametime > 100000) return; // Ignore extremely long frames
 
             // lock before modifying vector
@@ -141,9 +137,6 @@ class fpsMetrics {
 
 
         void update_thread(){
-            if (resetting)
-                return;
-
             {
                 std::lock_guard<std::mutex> lock(mtx);
                 run = true;
@@ -152,10 +145,11 @@ class fpsMetrics {
         }
 
         void reset_metrics(){
-            resetting = true;
-            while (run){}
+            std::lock_guard<std::mutex> lock(mtx);
+            run = false;
             frametimes.clear();
-            resetting = false;
+            for (auto& metric : metrics)
+                metric.value = 0.0f;
         }
 
         std::vector<metric_t> copy_metrics() {
@@ -164,9 +158,9 @@ class fpsMetrics {
         }
 
         ~fpsMetrics(){
-            terminate = true;
             {
                 std::lock_guard<std::mutex> lock(mtx);
+                terminate = true;
                 run = true;
             }
             cv.notify_one();
