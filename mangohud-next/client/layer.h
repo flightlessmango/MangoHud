@@ -1,5 +1,6 @@
 #pragma once
 #include <atomic>
+#include <shared_mutex>
 #include "vulkan.h"
 
 struct overlay_resources {
@@ -123,13 +124,13 @@ struct swapchain_data {
     presentation_timing timing;
 #endif
 
-    std::mutex m;
+    std::shared_mutex m;
     swapchain_data(std::shared_ptr<const vkroots::VkDeviceDispatch> d_) : d(d_) {}
     ~swapchain_data() {
         if (!d)
             return;
 
-        std::lock_guard lock(m);
+        std::unique_lock lock(m);
 
         d->DeviceWaitIdle(d->Device);
 
@@ -167,8 +168,12 @@ public:
     std::shared_ptr<const vkroots::VkDeviceDispatch> d;
     static inline std::atomic<PFN_vkSetDeviceLoaderData> set_device_loader_data = nullptr;
     PFN_vkSetDebugUtilsObjectNameEXT g_vkSetDebugUtilsObjectNameEXT = nullptr;
-    std::mutex swapchain_mtx;
+    std::shared_mutex swapchain_mtx;
     std::unordered_map<VkSwapchainKHR, std::shared_ptr<swapchain_data>> swapchains;
+    struct last_swapchain {
+        VkSwapchainKHR handle = VK_NULL_HANDLE;
+        std::shared_ptr<swapchain_data> data;
+    } cached_swapchain;
     std::shared_ptr<overlay_resources> ovl_res;
     std::unordered_map<VkQueue, uint32_t> queue_family;
     std::mutex q_family_mtx;
@@ -198,10 +203,13 @@ public:
     }
 
     std::shared_ptr<swapchain_data> get_swapchain_data(VkSwapchainKHR swap) {
-        std::lock_guard lock(swapchain_mtx);
+        std::shared_lock lock(swapchain_mtx);
+        if (cached_swapchain.handle == swap)
+            return cached_swapchain.data;
+
         auto it = swapchains.find(swap);
         if (it != swapchains.end())
-                return it->second;
+            return it->second;
 
         SPDLOG_ERROR("No swapchain available, critical error");
         std::abort();
@@ -408,8 +416,9 @@ public:
         }
 
         {
-            std::lock_guard lock(swapchain_mtx);
+            std::unique_lock lock(swapchain_mtx);
             swapchains[*pSwapchain] = sc;
+            cached_swapchain = {*pSwapchain, sc};
         }
         return VK_SUCCESS;
     }
@@ -464,6 +473,8 @@ public:
     }
 
     ~Layer() {
+        std::unique_lock lock(swapchain_mtx);
+        cached_swapchain = {};
         swapchains.clear();
     }
 
