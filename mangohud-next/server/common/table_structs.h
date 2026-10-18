@@ -50,7 +50,7 @@ struct ValueCell {
     std::string unit;
     bool unit_override = false;
     std::string color;
-    int precision = 0;
+    int precision = 1;
     CellStyle style;
 };
 

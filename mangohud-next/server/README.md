@@ -81,6 +81,8 @@ Color values are `RRGGBB` or `RRGGBBAA` hex strings, with an optional leading `#
 
 `truncate` limits displayed text to a maximum character count. Truncated text ends with `...` when there is room.
 
+`precision` controls decimal places for floating-point values. It defaults to `1`; set `precision: 0` to round to a whole number.
+
 ## Metric References
 
 Metric references can be written in three forms:

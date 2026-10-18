@@ -398,10 +398,7 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
                     else
                         out.unit = metric.unit;
 
-                    if (!vc.precision)
-                        format_into(out.text, "%.*f", 1, value);
-                    else
-                        format_into(out.text, "%.*f", vc.precision, value);
+                    format_into(out.text, "%.*f", vc.precision, value);
                 }
 
                 if (metric.val && std::holds_alternative<int>(*metric.val)) {
