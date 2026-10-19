@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <mutex>
+#include <shared_mutex>
 #include <unordered_map>
 
 #include "fractional-scale-v1-client-protocol.h"
@@ -53,7 +54,7 @@ public:
 private:
     wayland_ctx_listener listener;
     std::unordered_map<wl_display*, wl_globals> globals;
-    std::mutex globals_m;
+    std::shared_mutex globals_m;
 
     static void on_registry_global(void* data, wl_registry* registry, uint32_t name,
                                    const char* interface, uint32_t version);

@@ -10,8 +10,18 @@ wl_globals* WaylandCtx::get_global(wl_display* display)
     if (!display)
         return nullptr;
 
-    std::lock_guard lock(globals_m);
+    {
+        std::shared_lock lock(globals_m);
+        auto it = globals.find(display);
+        if (it != globals.end() && it->second.initialized)
+            return &it->second;
+    }
+
+    std::unique_lock lock(globals_m);
     auto& global = globals[display];
+    if (global.initialized)
+        return &global;
+
     global.display = display;
     global.ctx = this;
 

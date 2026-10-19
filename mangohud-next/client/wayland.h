@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <shared_mutex>
 #include <string>
 #include <thread>
 #include <type_traits>
@@ -150,7 +151,7 @@ private:
 
 struct surface_data {
     void destroy_wayland_objects() {
-        std::lock_guard lock(m);
+        std::unique_lock lock(m);
         buffers.clear();
         if (fractional_scale) {
             wp_fractional_scale_v1_destroy(fractional_scale);
@@ -184,7 +185,7 @@ struct surface_data {
 
     std::vector<std::shared_ptr<shm_buffer>> buffers;
 
-    std::mutex m;
+    std::shared_mutex m;
 };
 
 struct presentation_feedback_data {
@@ -210,16 +211,19 @@ public:
 
     template <typename Surface>
     void add_surface(Surface key, wl_surface* wl_surface, wl_display* display) {
-        std::lock_guard lock(surf_m);
         auto surf_data = std::make_shared<surface_data>();
         surf_data->display = display;
         surf_data->surface = wl_surface;
         surf_data->app_feedback_via_commit = std::is_same_v<Surface, EGLSurface>;
-        if constexpr (std::is_same_v<Surface, VkSurfaceKHR>) {
-            surfaces[key] = std::move(surf_data);
-        } else {
-            static_assert(std::is_same_v<Surface, EGLSurface>);
-            egl_surfaces[key] = std::move(surf_data);
+        {
+            std::unique_lock lock(surf_m);
+            if constexpr (std::is_same_v<Surface, VkSurfaceKHR>) {
+                surfaces[key] = surf_data;
+            } else {
+                static_assert(std::is_same_v<Surface, EGLSurface>);
+                egl_surfaces[key] = surf_data;
+            }
+            update_surface_cache();
         }
     }
 
@@ -227,7 +231,7 @@ public:
     void destroy_surface(Surface key) {
         std::shared_ptr<surface_data> surf_data;
         {
-            std::lock_guard lock(surf_m);
+            std::unique_lock lock(surf_m);
             if constexpr (std::is_same_v<Surface, VkSurfaceKHR>) {
                 auto it = surfaces.find(key);
                 if (it != surfaces.end()) {
@@ -242,6 +246,7 @@ public:
                     egl_surfaces.erase(it);
                 }
             }
+            update_surface_cache();
         }
 
         if (surf_data == active_surface) {
@@ -292,14 +297,33 @@ public:
     }
 
 private:
+    // Updated under surf_m's unique lock; readers share the single-surface fast path.
+    void update_surface_cache() {
+        cached_surface.reset();
+        if (surfaces.size() + egl_surfaces.size() != 1)
+            return;
+
+        if (!surfaces.empty()) {
+            cached_vk_surface = surfaces.begin()->first;
+            cached_surface = surfaces.begin()->second;
+        } else {
+            cached_egl_surface = egl_surfaces.begin()->first;
+            cached_surface = egl_surfaces.begin()->second;
+        }
+    }
+
     template <typename Surface>
     std::shared_ptr<surface_data> get_surface(Surface key) {
-        std::lock_guard lock(surf_m);
+        std::shared_lock lock(surf_m);
         if constexpr (std::is_same_v<Surface, VkSurfaceKHR>) {
+            if (cached_surface && !cached_surface->app_feedback_via_commit && cached_vk_surface == key)
+                return cached_surface;
             auto it = surfaces.find(key);
             return it != surfaces.end() ? it->second : nullptr;
         } else {
             static_assert(std::is_same_v<Surface, EGLSurface>);
+            if (cached_surface && cached_surface->app_feedback_via_commit && cached_egl_surface == key)
+                return cached_surface;
             auto it = egl_surfaces.find(key);
             return it != egl_surfaces.end() ? it->second : nullptr;
         }
@@ -311,7 +335,10 @@ private:
     WaylandCtx ctx;
     std::unordered_map<VkSurfaceKHR, std::shared_ptr<surface_data>> surfaces;
     std::unordered_map<EGLSurface, std::shared_ptr<surface_data>> egl_surfaces;
-    std::mutex surf_m;
+    std::shared_mutex surf_m;
+    std::shared_ptr<surface_data> cached_surface;
+    VkSurfaceKHR cached_vk_surface = VK_NULL_HANDLE;
+    EGLSurface cached_egl_surface = EGL_NO_SURFACE;
     std::vector<std::unique_ptr<seat_data>> seats;
     std::mutex seats_m;
     std::shared_ptr<IPCClient> ipc;

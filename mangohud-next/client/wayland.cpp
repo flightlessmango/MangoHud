@@ -70,9 +70,15 @@ std::shared_ptr<surface_data> Wayland::get_surface(wl_proxy* proxy)
     if (!proxy)
         return nullptr;
 
-    uint32_t id = wl_proxy_get_id(proxy);
     auto* surface = reinterpret_cast<wl_surface*>(proxy);
-    std::lock_guard lock(surf_m);
+    std::shared_lock lock(surf_m);
+    if (cached_surface && cached_surface->surface == surface)
+        return cached_surface;
+
+    uint32_t id = wl_proxy_get_id(proxy);
+    if (cached_surface && cached_surface->surface &&
+        wl_proxy_get_id(reinterpret_cast<wl_proxy*>(cached_surface->surface)) == id)
+        return cached_surface;
 
     auto matches = [surface, id](const std::shared_ptr<surface_data>& surf_data) {
         if (!surf_data || !surf_data->surface)
@@ -118,14 +124,23 @@ bool Wayland::ensure_overlay_data(const std::shared_ptr<surface_data>& surf_data
     if (!surf_data || !surf_data->display || !surf_data->surface)
         return false;
 
-    std::lock_guard lock(surf_data->m);
-
     auto* globals = ctx.get_global(surf_data->display);
     if (!globals)
         return false;
 
     if (!globals->compositor || !globals->subcompositor || !globals->dmabuf)
         return false;
+
+    {
+        std::shared_lock lock(surf_data->m);
+        if (surf_data->overlay_surf)
+            return true;
+    }
+
+    std::unique_lock lock(surf_data->m);
+    if (surf_data->overlay_surf)
+        return true;
+
     surf_data->queue = globals->queue;
 
     if (!surf_data->overlay_surf) {
@@ -387,7 +402,7 @@ void Wayland::destroy_wayland_objects()
 {
     std::vector<std::shared_ptr<surface_data>> surface_list;
     {
-        std::lock_guard lock(surf_m);
+        std::unique_lock lock(surf_m);
         for (auto& [_, surf_data] : surfaces) {
             if (surf_data)
                 surface_list.push_back(surf_data);
@@ -399,6 +414,7 @@ void Wayland::destroy_wayland_objects()
                 surface_list.push_back(surf_data);
         }
         egl_surfaces.clear();
+        cached_surface.reset();
     }
 
     active_surface.reset();
@@ -434,7 +450,7 @@ void Wayland::update_import(const std::shared_ptr<surface_data>& surf_data)
     if (!surf_data || !surf_data->display)
         return;
 
-    std::lock_guard lock(surf_data->m);
+    std::unique_lock lock(surf_data->m);
     auto* globals = ctx.get_global(surf_data->display);
     if (!globals || !globals->dmabuf)
         return;
@@ -570,7 +586,7 @@ std::shared_ptr<shm_buffer> Wayland::present(const std::shared_ptr<surface_data>
     if (!surf_data || !surf_data->overlay_surf)
         return nullptr;
 
-    std::lock_guard lock(surf_data->m);
+    std::unique_lock lock(surf_data->m);
 
     if (surf_data->buffers.empty())
         return nullptr;
@@ -613,7 +629,7 @@ void Wayland::detach(const std::shared_ptr<surface_data>& surf_data, bool wait_f
     if (!surf_data)
         return;
 
-    std::lock_guard lock(surf_data->m);
+    std::unique_lock lock(surf_data->m);
     ipc->clear_frames();
     for (auto& buf : surf_data->buffers) {
         if (buf)
