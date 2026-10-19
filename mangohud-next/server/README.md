@@ -102,7 +102,21 @@ Available metrics currently include:
 | `[GPU, index, KEY]` | `LOAD`, `VRAM_USED`, `GTT_USED`, `VRAM_TOTAL`, `VRAM_CLOCK`, `VRAM_TEMP`, `TEMP`, `JUNCTION_TEMP`, `CORE_CLOCK`, `VOLTAGE`, `POWER`, `POWER_LIMIT`, `FAN_SPEED` |
 | `[CPU, KEY]` | `LOAD`, `FREQ`, `TEMP`, `POWER` |
 | `[RAM, KEY]` | `USED`, `TOTAL`, `SWAP_USED` |
-| `KEY` | `ENGINE_NAME`, `GPU_NAME`, `VULKAN_DRIVER`, `RESOLUTION`, `FPS`, `FRAMETIME`, `FRAMETIMES`, `REFRESH_FPS`, `REFRESH_FRAMETIME`, `REFRESH_FRAMETIMES`, `APP_FPS`, `APP_FRAMETIME`, `APP_FRAMETIMES`, `HUD_FPS`, `HUD_FRAMETIME`, `HUD_FRAMETIMES` |
+| `KEY` | `ENGINE_NAME`, `GPU_NAME`, `VULKAN_DRIVER`, `RESOLUTION`, `FPS`, `FRAMETIME`, `FRAMETIME_MIN`, `FRAMETIME_MAX`, `FRAMETIMES`, `REFRESH_FPS`, `REFRESH_FRAMETIME`, `REFRESH_FRAMETIME_MIN`, `REFRESH_FRAMETIME_MAX`, `REFRESH_FRAMETIMES`, `APP_FPS`, `APP_FRAMETIME`, `APP_FRAMETIME_MIN`, `APP_FRAMETIME_MAX`, `APP_FRAMETIMES`, `HUD_FPS`, `HUD_FRAMETIME`, `HUD_FRAMETIME_MIN`, `HUD_FRAMETIME_MAX`, `HUD_FRAMETIMES` |
+
+`FRAMETIME_MIN` and `FRAMETIME_MAX` report the minimum and maximum frametime in
+milliseconds over the same roughly 500 ms sample window as `FPS` and `FRAMETIME`.
+All numeric frame statistics refresh together every 500 ms of sample time. They
+return `0` until two samples establish an interval. The `APP_`, `HUD_`, and
+`REFRESH_` variants use their respective sample windows. Graphs retain a separate
+200-interval history, including initial zero padding.
+
+```yaml
+hud_table:
+  rows:
+    - [ {text: "Min frametime"}, {value: FRAMETIME_MIN, precision: 2} ]
+    - [ {text: "Max frametime"}, {value: FRAMETIME_MAX, precision: 2} ]
+```
 
 Some single-name references are backed by small shell commands:
 

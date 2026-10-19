@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <cstdint>
 #include <mutex>
 #include <deque>
@@ -10,6 +11,7 @@
 #include <memory>
 #include <future>
 #include <vector>
+#include <utility>
 #include "../render/renderer.h"
 #include "protocol.h"
 #include <poll.h>
@@ -43,6 +45,7 @@ struct Sample {
 };
 
 struct SampleStats {
+public:
     mutable std::mutex m;
     std::deque<Sample> samples;
     std::vector<float> frametimes = std::vector<float>(FT_MAX, 0.0f);
@@ -51,6 +54,7 @@ struct SampleStats {
     uint64_t seq_last = 0, t_last = 0;
     uint64_t dropped = 0;
     double previous_fps = 0;
+    std::pair<float, float> previous_minmax_frametime{0.0f, 0.0f};
     bool have_prev = false;
 
     void add_sample(SampleType type, uint64_t seq, uint64_t t_ns) {
@@ -84,22 +88,7 @@ struct SampleStats {
 
     float avg_fps() {
         std::lock_guard lock(m);
-        if (samples.size() < 2) return previous_fps;
-
-        const auto& b = samples.back();
-
-        if (last_fps_update != 0 &&
-            (b.t_ns - last_fps_update) < 500000000ULL) {
-            return previous_fps;
-        }
-
-        const auto& a = samples.front();
-        uint64_t dseq = b.seq - a.seq;
-        uint64_t dt   = b.t_ns - a.t_ns;
-        if (dseq == 0 || dt == 0) return previous_fps;
-
-        previous_fps = (float)(1e9 * (double)dseq / (double)dt);
-        last_fps_update = b.t_ns;
+        update_stats();
         return previous_fps;
     }
 
@@ -108,9 +97,46 @@ struct SampleStats {
         return fps > 0 ? 1000.f / fps : 0.f;
     }
 
+    std::pair<float, float> minmax_frametime() {
+        std::lock_guard lock(m);
+        update_stats();
+        return previous_minmax_frametime;
+    }
+
     std::vector<float> frametimes_copy() const {
         std::lock_guard lock(m);
         return frametimes;
+    }
+
+private:
+    void update_stats() {
+        if (samples.size() < 2) return;
+
+        const auto& b = samples.back();
+
+        if (last_fps_update != 0 &&
+            (b.t_ns - last_fps_update) < KEEP_NS) {
+            return;
+        }
+
+        const auto& a = samples.front();
+        uint64_t dseq = b.seq - a.seq;
+        uint64_t dt   = b.t_ns - a.t_ns;
+        if (dseq == 0 || dt == 0) return;
+
+        previous_fps = (float)(1e9 * (double)dseq / (double)dt);
+        float min = 0.0f, max = 0.0f;
+        for (size_t i = 1; i < samples.size(); ++i) {
+            const auto& prev = samples[i - 1];
+            const auto& current = samples[i];
+            const float ft_ms = (double)(current.t_ns - prev.t_ns) /
+                                (double)(current.seq - prev.seq) / 1e6;
+            if (i == 1 || ft_ms < min)
+                min = ft_ms;
+            max = std::max(max, ft_ms);
+        }
+        previous_minmax_frametime = {min, max};
+        last_fps_update = b.t_ns;
     }
 };
 
