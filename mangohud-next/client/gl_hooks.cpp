@@ -567,18 +567,7 @@ EXPORT_C_(__eglMustCastToProperFunctionPointerType) eglGetProcAddress(const char
     return real_func;
 }
 
-extern "C" void* dlsym(void* handle, const char* symbol)
+extern "C" void* mangohud_find_dlsym_ptr(const char* symbol)
 {
-    auto* func = find_hook(symbol);
-    if (func)
-        return func;
-
-    if (handle == RTLD_NEXT) {
-        void* caller = __builtin_extract_return_addr(__builtin_return_address(0));
-        void* real = real_dlsym_next_from(caller, symbol);
-        if (real)
-            return real;
-    }
-
-    return real_dlsym(handle, symbol);
+    return find_hook(symbol);
 }

@@ -273,19 +273,12 @@ static void save_and_consume_real_dlerror()
     memcpy(error_override, recent_error, error_length + 1);
 }
 
-void* dlsym(void *handle, const char *name)
+MANGOHUD_DLSYM_ATTRIBUTES void* dlsym(void *handle, const char *name)
 {
     void *hook = find_hook(name);
 
-    if (!hook && handle == RTLD_NEXT) {
-        void *caller = __builtin_extract_return_addr(__builtin_return_address(0));
-        void *fn_ptr = real_dlsym_next_from(caller, name);
-        if (fn_ptr)
-            return fn_ptr;
-    }
-
     if (!hook)
-        return real_dlsym(handle, name);
+        MANGOHUD_MUSTTAIL return get_next_dlsym()(handle, name);
 
     save_and_consume_real_dlerror();
     // const char* dlsym_enabled = getenv("MANGOHUD_DLSYM");

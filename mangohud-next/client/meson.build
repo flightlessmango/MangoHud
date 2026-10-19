@@ -20,6 +20,7 @@ vulkan_layer = shared_library(
           'x11.cpp',
           'gl.cpp',
           'gl_hooks.cpp',
+          'dlsym.c',
           'real_dlsym.c',
           'elfhacks.c'),
     wayland_ctx_sources,

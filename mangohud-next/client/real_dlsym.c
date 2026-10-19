@@ -108,32 +108,20 @@ void *real_dlsym(void *handle, const char *symbol)
     return result;
 }
 
-void *real_dlsym_next_from(void *caller, const char *name)
+dlsym_func get_next_dlsym(void)
 {
-    if (__dlsym == NULL || __dlopen == NULL)
-        get_real_functions();
-
-    Dl_info info = {};
-    void *extra_info = NULL;
-    if (!caller || !name || !dladdr1(caller, &info, &extra_info, RTLD_DL_LINKMAP))
-        return NULL;
-
-    struct link_map *map = extra_info;
-    for (map = map ? map->l_next : NULL; map; map = map->l_next)
+    static dlsym_func next;
+    dlsym_func result = __atomic_load_n(&next, __ATOMIC_ACQUIRE);
+    if (!result)
     {
-        if (!map->l_name || !map->l_name[0])
-            continue;
-
-        void *handle = __dlopen(map->l_name, RTLD_LAZY | RTLD_NOLOAD);
-        if (!handle)
-            continue;
-
-        void *result = __dlsym(handle, name);
-        if (result)
-            return result;
+        // Keep other interposers in the chain without reopening any libraries:
+        // even RTLD_NOLOAD can run constructors during loader initialization.
+        result = (dlsym_func)real_dlsym(RTLD_NEXT, "dlsym");
+        if (!result)
+            result = __dlsym;
+        __atomic_store_n(&next, result, __ATOMIC_RELEASE);
     }
-
-    return NULL;
+    return result;
 }
 
 char* real_dlerror(void)
