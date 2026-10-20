@@ -23,6 +23,7 @@ struct mangoapp_msg_v1 {
     char engineName[40];
     uint8_t upscaler; // mangoapp_upscaler that produced the frame, LINEAR for none
     uint8_t wantedUpscaler; // mangoapp_upscaler the user selected
+    uint32_t scanoutRefreshmHz; // refreshes the panel actually scanned out, follows VRR, 0 when unknown
     // WARNING: Always ADD fields, never remove or repurpose fields
 } __attribute__((packed));
 
