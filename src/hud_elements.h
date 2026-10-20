@@ -58,6 +58,7 @@ class HudElements{
         uint32_t vendorID;
         int hdr_status = 0;
         int refresh = 0;
+        float scanout_refresh = 0.f;
         unsigned int vsync = 10;
 
         enum display_servers {

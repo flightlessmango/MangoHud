@@ -412,6 +412,9 @@ static void msg_read_thread(){
                     if (msg_bytes > offsetof(mangoapp_msg_v1, latency_ns))
                         gamescope_frametime(mangoapp_v1->app_frametime_ns, mangoapp_v1->latency_ns);
 
+                    if (msg_bytes > offsetof(mangoapp_msg_v1, scanoutRefreshmHz))
+                        HUDElements.scanout_refresh = mangoapp_v1->scanoutRefreshmHz / 1000.f;
+
                     if (should_new_frame)
                     {
                         {

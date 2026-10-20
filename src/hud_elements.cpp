@@ -1700,12 +1700,16 @@ void HudElements::hdr() {
 }
 
 void HudElements::refresh_rate() {
-    if (HUDElements.refresh > 0) {
+    if (HUDElements.refresh > 0 || HUDElements.scanout_refresh > 0) {
         ImGui::PushFont(HUDElements.sw_stats->font_secondary);
         ImguiNextColumnFirstItem();
         HUDElements.TextColored(HUDElements.colors.engine, "%s", "Display Hz");
         ImguiNextColumnOrNewRow();
-        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", HUDElements.refresh);
+        // gamescope measures the panel's real rate, which VRR moves away from the mode's.
+        if (HUDElements.scanout_refresh > 0)
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", HUDElements.scanout_refresh);
+        else
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", HUDElements.refresh);
         ImGui::PopFont();
     }
 }
