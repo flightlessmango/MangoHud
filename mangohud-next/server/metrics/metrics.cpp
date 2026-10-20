@@ -170,10 +170,10 @@ void Metrics::update_client() {
 
             // TODO fps and frametime updates should match other metrics at 500ms
             // frametimes should still be this fast
-            metrics["FPS"] = {int(round(frame_stats.avg_fps())), "FPS"};
-            metrics["REFRESH_FPS"] = {int(round(refresh_stats.avg_fps())), "FPS"};
-            metrics["APP_FPS"] = {int(round(app_stats.avg_fps())), "FPS"};
-            metrics["HUD_FPS"] = {int(round(hud_stats.avg_fps())), "FPS"};
+            metrics["FPS"] = {frame_stats.avg_fps(), "FPS"};
+            metrics["REFRESH_FPS"] = {refresh_stats.avg_fps(), "FPS"};
+            metrics["APP_FPS"] = {app_stats.avg_fps(), "FPS"};
+            metrics["HUD_FPS"] = {hud_stats.avg_fps(), "FPS"};
             metrics["FRAMETIME"] = {frame_stats.avg_frametime(), "ms"};
             metrics["REFRESH_FRAMETIME"] = {refresh_stats.avg_frametime(), "ms"};
             metrics["APP_FRAMETIME"] = {app_stats.avg_frametime(), "ms"};
