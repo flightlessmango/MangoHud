@@ -32,9 +32,13 @@ bool Wayland::request_app_presentation_feedback(const std::shared_ptr<surface_da
     if (!surf_data || !surface || !globals.presentation)
         return false;
 
-    auto pending = app_feedback_pending.fetch_add(1, std::memory_order_acq_rel);
+    auto pending = app_feedback_pending.load(std::memory_order_relaxed);
+    while (pending < max_pending &&
+           !app_feedback_pending.compare_exchange_weak(pending, pending + 1,
+                                                       std::memory_order_acq_rel,
+                                                       std::memory_order_relaxed)) {
+    }
     if (pending >= max_pending) {
-        release_app_feedback_request();
         auto now = os_time_get_nano();
         auto last_log = last_app_feedback_block_log_ns.load(std::memory_order_acquire);
         if (now - last_log > 1000000000ULL &&
@@ -101,6 +105,9 @@ std::shared_ptr<surface_data> Wayland::get_surface(wl_proxy* proxy)
 
 bool Wayland::request_commit_presentation_feedback(wl_proxy* surface_proxy)
 {
+    if (app_feedback_pending.load(std::memory_order_relaxed) >= max_commit_app_feedback_pending)
+        return false;
+
     auto surf_data = get_surface(surface_proxy);
     if (!surf_data || !surf_data->app_feedback_via_commit)
         return false;

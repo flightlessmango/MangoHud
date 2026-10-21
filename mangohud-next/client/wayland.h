@@ -280,6 +280,9 @@ public:
 
     template <typename Surface>
     bool request_presentation_feedback(Surface surface) {
+        if (app_feedback_pending.load(std::memory_order_relaxed) >= max_sampled_app_feedback_pending)
+            return false;
+
         auto surf_data = get_surface(surface);
         if (!surf_data || surf_data->app_feedback_via_commit)
             return false;
