@@ -45,7 +45,7 @@ public:
     std::atomic<bool> connected{false};
     std::mutex m;
     Fdinfo fdinfo;
-    float fps_limit = 0;
+    std::atomic<float> fps_limit{0};
     int64_t renderMinor = -1;
     std::string pEngineName;
     std::string vulkanDriver;

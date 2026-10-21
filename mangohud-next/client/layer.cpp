@@ -6,15 +6,12 @@
 
 #include "vkroots.h"
 #include "mesa/os_time.h"
-#include "fps_limiter.h"
 #include "layer.h"
 #include "file_utils.h"
 #include "wayland.h"
 #include "x11.h"
 
 static char pendingEngineName[VK_MAX_DESCRIPTION_SIZE]{};
-std::unique_ptr<fpsLimiter> fps_limiter;
-std::unique_ptr<presentLimiter> present_limiter;
 std::unique_ptr<Layer> layer;
 static std::unique_ptr<Wayland> wayland;
 static std::unique_ptr<X11> x11;
@@ -349,15 +346,6 @@ public:
     }
 };
 
-static const VkPresentIdKHR* GetPresentId(const void* pNext) {
-    for (auto* it = (const VkBaseInStructure*)pNext; it; it = it->pNext) {
-        if (it->sType == VK_STRUCTURE_TYPE_PRESENT_ID_KHR) {
-            return (const VkPresentIdKHR*)it;
-        }
-    }
-    return nullptr;
-}
-
 class VkDeviceOverrides {
 public:
     static VkResult CreateSwapchainKHR(
@@ -575,18 +563,6 @@ public:
             }
         }
 
-        if (!fps_limiter)
-            fps_limiter = std::make_unique<fpsLimiter>(false);
-
-        {
-            std::lock_guard lock(fps_limiter->q_limiter->present_queues_mtx);
-            fps_limiter->q_limiter->present_queues.insert(queue);
-        }
-
-        fps_limiter->limit(true);
-        // TODO Probably don't do this every frame
-        fps_limiter->set_fps_limit(layer->ipc->fps_limit);
-
         layer->ipc->start(swapchain_image_count);
         bool drew;
         {
@@ -595,32 +571,6 @@ public:
         }
         if (!drew)
             return present(pPresentInfo);
-
-        if (!present_limiter)
-            present_limiter = std::make_unique<presentLimiter>(pDispatch->WaitForPresentKHR);
-
-        const VkPresentIdKHR* existing_pid = GetPresentId(pi.pNext);
-
-        static thread_local std::vector<uint64_t> tl_ids;
-        static thread_local VkPresentIdKHR tl_pid;
-
-        const uint64_t* ids_ptr = nullptr;
-
-        if (existing_pid && existing_pid->pPresentIds && existing_pid->swapchainCount == pi.swapchainCount) {
-            ids_ptr = existing_pid->pPresentIds;
-        } else {
-            tl_ids.resize(pi.swapchainCount);
-            present_limiter->on_present(&pi, tl_ids.data());
-
-            tl_pid = {};
-            tl_pid.sType = VK_STRUCTURE_TYPE_PRESENT_ID_KHR;
-            tl_pid.swapchainCount = pi.swapchainCount;
-            tl_pid.pPresentIds = tl_ids.data();
-            tl_pid.pNext = (void*)pi.pNext;
-            pi.pNext = &tl_pid;
-
-            ids_ptr = tl_ids.data();
-        }
 
         VkSemaphore signal;
         {
@@ -632,18 +582,7 @@ public:
         pi2.waitSemaphoreCount = 1;
         pi2.pWaitSemaphores = &signal;
 
-        VkResult r = present(&pi2);
-
-        if (r == VK_SUCCESS || r == VK_SUBOPTIMAL_KHR) {
-            if (ids_ptr)
-                present_limiter->on_present_result(&pi, ids_ptr, r);
-
-
-            if (fps_limiter && fps_limiter->active)
-                present_limiter->throttle(pDispatch->Device, pi.pSwapchains[0], 1);
-        }
-
-        return r;
+        return present(&pi2);
     }
 
     static void GetDeviceQueue(
@@ -680,7 +619,6 @@ public:
         d->DeviceWaitIdle(device);
         if (destroy_layer) {
             layer.reset();
-            fps_limiter.reset();
         }
 
 #ifdef VK_EXT_present_timing
@@ -692,60 +630,36 @@ public:
         d->DestroyDevice(device, pAllocator);
     }
 
-    static VkResult QueueSubmit(const vkroots::VkDeviceDispatch* d, VkQueue queue, uint32_t submitCount,
-                                const VkSubmitInfo *pSubmits, VkFence fence)
-    {
-        if (!fps_limiter)
-            fps_limiter = std::make_unique<fpsLimiter>(false);
+    template<typename Acquire>
+    static VkResult acquire_limited(VkSwapchainKHR swapchain, uint64_t timeout,
+                                    Acquire&& driver) {
+        const float fps = layer ? layer->ipc->fps_limit.load(std::memory_order_relaxed) : 0;
+        const int64_t interval = fps > 0 ? static_cast<int64_t>(1'000'000'000.0 / fps) : 0;
+        if (interval <= 0 || timeout == 0)
+            return driver(timeout);
 
-        auto& q_limiter = fps_limiter->q_limiter;
-        if (q_limiter->is_present_queue(queue))
-            q_limiter->throttle_before_submit(d);
-
-        VkResult r = d->QueueSubmit(queue, submitCount, pSubmits, fence);
-
-        if (r != VK_SUCCESS) {
-            SPDLOG_ERROR("QueueSubmit {}", string_VkResult(r));
-            return r;
-        }
-
-        if (q_limiter->is_present_queue(queue)) {
-            VkResult r2 = q_limiter->mark_after_submit(d, queue);
-            if (r2 != VK_SUCCESS) {
-                SPDLOG_ERROR("QueueSubmit limiter mark_after_submit {}", string_VkResult(r2));
-                return r2;
-            }
-        }
-
-        return r;
+        auto sc = layer->get_swapchain_data(swapchain);
+        return sc->limiter.acquire(interval, timeout, std::forward<Acquire>(driver));
     }
 
-    static VkResult AcquireNextImageKHR(const vkroots::VkDeviceDispatch* pDispatch,
-                                        VkDevice device, VkSwapchainKHR swapchain,
-                                        uint64_t timeout, VkSemaphore semaphore,
-                                        VkFence fence, uint32_t *pImageIndex)
-    {
-        if (!fps_limiter)
-            fps_limiter = std::make_unique<fpsLimiter>(false);
-
-        VkResult r = pDispatch->AcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, pImageIndex);
-        if (r == VK_SUCCESS || r == VK_SUBOPTIMAL_KHR)
-            fps_limiter->limit(false);
-
-        return r;
+    static VkResult AcquireNextImageKHR(const vkroots::VkDeviceDispatch* d,
+                                       VkDevice device, VkSwapchainKHR swapchain,
+                                       uint64_t timeout, VkSemaphore semaphore,
+                                       VkFence fence, uint32_t* image_index) {
+        return acquire_limited(swapchain, timeout, [&](uint64_t remaining) {
+            return d->AcquireNextImageKHR(device, swapchain, remaining,
+                                          semaphore, fence, image_index);
+        });
     }
 
-    static VkResult AcquireNextImage2KHR(const vkroots::VkDeviceDispatch* pDispatch,
-                                         VkDevice device, const VkAcquireNextImageInfoKHR *pAcquireInfo, uint32_t *pImageIndex)
-    {
-        if (!fps_limiter)
-            fps_limiter = std::make_unique<fpsLimiter>(false);
-
-        VkResult r = pDispatch->AcquireNextImage2KHR(device, pAcquireInfo, pImageIndex);
-        if (r == VK_SUCCESS || r == VK_SUBOPTIMAL_KHR)
-            fps_limiter->limit(false);
-
-        return r;
+    static VkResult AcquireNextImage2KHR(const vkroots::VkDeviceDispatch* d,
+                                        VkDevice device, const VkAcquireNextImageInfoKHR* info,
+                                        uint32_t* image_index) {
+        return acquire_limited(info->swapchain, info->timeout, [&](uint64_t remaining) {
+            VkAcquireNextImageInfoKHR limited = *info;
+            limited.timeout = remaining;
+            return d->AcquireNextImage2KHR(device, &limited, image_index);
+        });
     }
 };
 

@@ -2,6 +2,7 @@
 #include <atomic>
 #include <shared_mutex>
 #include "vulkan.h"
+#include "frame_limiter.h"
 
 struct overlay_resources {
     std::shared_ptr<const vkroots::VkDeviceDispatch> d = nullptr;
@@ -120,6 +121,7 @@ struct swapchain_data {
     VkPipeline pipe = VK_NULL_HANDLE;
 
     VkSurfaceKHR vk_surface;
+    frameLimiter limiter;
 #ifdef VK_EXT_present_timing
     presentation_timing timing;
 #endif
