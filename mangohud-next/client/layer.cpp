@@ -302,6 +302,8 @@ public:
                                      const VkAllocationCallbacks *pAllocator, VkSurfaceKHR *pSurface)
     {
         VkResult r = dispatch->CreateWaylandSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
+        if (r != VK_SUCCESS)
+            return r;
         if (!layer) layer = std::make_unique<Layer>();
         if (!wayland) wayland = std::make_unique<Wayland>(layer->ipc);
         wayland->add_surface(*pSurface, pCreateInfo->surface, pCreateInfo->display);
@@ -455,6 +457,8 @@ public:
         layer->g_vkSetDebugUtilsObjectNameEXT =
         reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(
             vkGetInstanceProcAddr(pDispatch->pPhysicalDeviceDispatch->Instance, "vkSetDebugUtilsObjectNameEXT"));
+        if (wayland)
+            wayland->ensure_overlay(pCreateInfo->surface);
         return VK_SUCCESS;
     }
 
@@ -531,7 +535,6 @@ public:
         if (x11) x11->dispatch_events();
         if (wayland) {
             auto swapchain_data = layer->get_swapchain_data(pPresentInfo->pSwapchains[0]);
-            wayland->ensure_overlay(swapchain_data->vk_surface);
             wayland->request_presentation_feedback(swapchain_data->vk_surface);
             return present(pPresentInfo);
         }

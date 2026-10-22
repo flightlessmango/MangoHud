@@ -51,6 +51,7 @@ public:
     std::string vulkanDriver;
     std::string gpuName;
     std::string waylandDisplay;
+    bool layer_output() const { return layer_output_.load(std::memory_order_acquire); }
     bool gamescopeSession = false;
     bool waylandSurface = false;
     int buffer_size = 0;
@@ -126,6 +127,7 @@ public:
     }
 
 private:
+    std::atomic<bool> layer_output_{true};
     Layer* layer;
     Backend api = Backend::NONE;
 

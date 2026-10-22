@@ -225,6 +225,9 @@ public:
             }
             update_surface_cache();
         }
+
+        if (ctx.get_global(display) && ipc && !ipc->layer_output())
+            ensure_overlay_data(surf_data);
     }
 
     template <typename Surface>
@@ -262,8 +265,10 @@ public:
 
     template <typename Surface>
     bool ensure_overlay(Surface surface) {
+        if (ipc->layer_output() && thread.joinable())
+            return true;
         auto surf_data = get_surface(surface);
-        if (ipc->gamescopeSession) {
+        if (ipc->layer_output()) {
             if (!surf_data || !ctx.get_global(surf_data->display))
                 return false;
         } else if (!ensure_overlay_data(surf_data)) {

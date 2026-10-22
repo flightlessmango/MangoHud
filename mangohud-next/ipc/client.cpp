@@ -467,7 +467,8 @@ void Client::send_config() {
             return r;
         }
 
-        r = sd_bus_message_append(msg, "d", fps_limit);
+        r = sd_bus_message_append(msg, "db", fps_limit,
+                                  static_cast<int>(self->output_mode == OutputMode::Layer));
         SPDLOG_DEBUG("sent fps_limit: {}", fps_limit);
 
         if (r < 0) {
