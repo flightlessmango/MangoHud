@@ -10,12 +10,19 @@
 #include <condition_variable>
 #include <stdexcept>
 #include <iomanip>
+#include <cmath>
 #include <spdlog/spdlog.h>
+
+enum class fps_metric_unit {
+    fps,
+    percent,
+};
 
 struct metric_t {
     std::string name;
     float value;
     std::string display_name;
+    fps_metric_unit unit = fps_metric_unit::fps;
 };
 
 class fpsMetrics {
@@ -50,8 +57,27 @@ class fpsMetrics {
             if (frametimes.empty())
                 return; 
 
-            std::vector<float> sorted_values = frametimes;
-            std::sort(sorted_values.begin(), sorted_values.end(), std::greater<float>());
+            const bool has_cv = std::any_of(metrics.begin(), metrics.end(), [](const auto& metric) {
+                return metric.name == "CV";
+            });
+            double mean = 0.0;
+            double m2 = 0.0;
+            if (has_cv) {
+                mean = std::accumulate(frametimes.begin(), frametimes.end(), 0.0) / frametimes.size();
+                for (const float frametime : frametimes) {
+                    const double delta = frametime - mean;
+                    m2 += delta * delta;
+                }
+            }
+
+            const bool needs_sorted_values = std::any_of(metrics.begin(), metrics.end(), [](const auto& metric) {
+                return metric.name != "CV";
+            });
+            std::vector<float> sorted_values;
+            if (needs_sorted_values) {
+                sorted_values = frametimes;
+                std::sort(sorted_values.begin(), sorted_values.end(), std::greater<float>());
+            }
 
             auto it = metrics.begin();
             while (it != metrics.end()) {
@@ -64,6 +90,9 @@ class fpsMetrics {
 
                     float avg = 1000.f / (sum / sorted_values.size());
                     it->value = avg;
+                } else if (it->name == "CV") {
+                    const double variance = m2 / frametimes.size();
+                    it->value = mean > 0.0 ? 100.0 * std::sqrt(variance) / mean : 0.0;
                 } else {
                     try {
                         float val = std::stof(it->name);
@@ -100,7 +129,12 @@ class fpsMetrics {
                 for(char& c : val) {
                     c = std::toupper(static_cast<unsigned char>(c));
                 }
-                _metrics.push_back({val, 0.0f});
+                metric_t metric {val, 0.0f, {}};
+                if (val == "CV") {
+                    metric.display_name = val;
+                    metric.unit = fps_metric_unit::percent;
+                }
+                _metrics.push_back(metric);
             }
             return _metrics;
         }
