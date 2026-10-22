@@ -20,6 +20,7 @@
 #include <GL/glxext.h>
 #include "wayland.h"
 #include "x11.h"
+#include "frame_limiter.h"
 
 std::unique_ptr<OverlayGL> overlay;
 std::shared_ptr<IPCClient> ipc;
@@ -32,6 +33,16 @@ std::unordered_map<wl_egl_window*, wl_surface*> wl_egl_windows;
 std::mutex egl_displays_m;
 std::unordered_map<EGLDisplay, wl_display*> egl_displays;
 static std::unordered_map<EGLDisplay, EGLenum> egl_platforms;
+
+static void limit_fps() {
+    if (!ipc)
+        return;
+
+    thread_local frameLimiter limiter;
+    const float fps = ipc->fps_limit.load(std::memory_order_relaxed);
+    const int64_t interval = fps > 0 ? static_cast<int64_t>(1'000'000'000.0 / fps) : 0;
+    limiter.limit(interval);
+}
 
 static wl_surface* get_wl_egl_surface(wl_egl_window* window, bool known_wayland) {
     if (!window)
@@ -151,6 +162,8 @@ EXPORT_C_(EGLBoolean)eglSwapBuffers(EGLDisplay dpy, EGLSurface surf) {
         if (!present_wayland(surf))
             mangohud();
 
+    if (dpy != EGL_NO_DISPLAY && surf != EGL_NO_SURFACE)
+        limit_fps();
     return real_eglSwapBuffers(dpy, surf);
 }
 
@@ -363,6 +376,8 @@ EXPORT_C_(EGLBoolean) eglSwapBuffersWithDamageKHR(EGLDisplay dpy, EGLSurface sur
             if (!present_wayland(surf))
                 mangohud();
 
+    if (dpy != EGL_NO_DISPLAY && surf != EGL_NO_SURFACE && eglGetCurrentContext() != EGL_NO_CONTEXT)
+        limit_fps();
     return real_eglSwapBuffersWithDamageKHR
         ? real_eglSwapBuffersWithDamageKHR(dpy, surf, rects, n_rects)
         : EGL_FALSE;
@@ -386,6 +401,8 @@ EXPORT_C_(EGLBoolean) eglSwapBuffersWithDamageEXT(EGLDisplay dpy, EGLSurface sur
             if (!present_wayland(surf))
                 mangohud();
 
+    if (dpy != EGL_NO_DISPLAY && surf != EGL_NO_SURFACE && eglGetCurrentContext() != EGL_NO_CONTEXT)
+        limit_fps();
     return real_eglSwapBuffersWithDamageEXT
         ? real_eglSwapBuffersWithDamageEXT(dpy, surf, rects, n_rects)
         : EGL_FALSE;
@@ -429,6 +446,7 @@ EXPORT_C_(void) glXSwapBuffers(Display* dpy, GLXDrawable drawable) {
         return real_glXSwapBuffers(dpy, drawable);
 
     mangohud(dpy, drawable);
+    limit_fps();
 
     return real_glXSwapBuffers(dpy, drawable);
 }
@@ -443,6 +461,7 @@ EXPORT_C_(int64_t) glXSwapBuffersMscOML(Display *dpy, GLXDrawable drawable, int6
         return real_glXSwapBuffersMscOML(dpy, drawable, target_msc, divisor, remainder);
 
     mangohud(dpy, drawable);
+    limit_fps();
 
     return real_glXSwapBuffersMscOML(dpy, drawable, target_msc, divisor, remainder);
 }

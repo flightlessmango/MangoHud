@@ -14,6 +14,10 @@ class frameLimiter {
     int64_t overhead = 0;
 
 public:
+    void limit(int64_t interval) {
+        acquire(interval, UINT64_MAX, [](uint64_t) { return VK_SUCCESS; });
+    }
+
     template<typename Acquire>
     VkResult acquire(int64_t interval, uint64_t timeout, Acquire&& driver) {
         if (interval <= 0 || timeout == 0)
