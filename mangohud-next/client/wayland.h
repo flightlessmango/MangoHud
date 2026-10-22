@@ -182,10 +182,15 @@ struct surface_data {
     wp_fractional_scale_v1* fractional_scale = nullptr;
     std::atomic<uint32_t> preferred_scale{120};
     bool attached = false;
+    bool flush_pending(bool pending) { return flush_pending_.exchange(pending, std::memory_order_acq_rel); }
 
     std::vector<std::shared_ptr<shm_buffer>> buffers;
 
     std::shared_mutex m;
+
+private:
+    // Flush initial setup, then only new requests or a previous EAGAIN.
+    std::atomic<bool> flush_pending_{true};
 };
 
 struct presentation_feedback_data {
@@ -296,12 +301,8 @@ public:
         if (!globals)
             return false;
 
-        bool requested = request_app_presentation_feedback(surf_data, *globals, surf_data->surface,
-                                                           max_sampled_app_feedback_pending);
-        if (requested)
-            wl_display_flush(surf_data->display);
-
-        return requested;
+        return request_app_presentation_feedback(surf_data, *globals, surf_data->surface,
+                                                 max_sampled_app_feedback_pending);
     }
 
 private:

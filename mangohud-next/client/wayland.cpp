@@ -1,6 +1,7 @@
 #include "wayland.h"
 
 #include <chrono>
+#include <cerrno>
 #include <cstring>
 #include <algorithm>
 #include <spdlog/spdlog.h>
@@ -56,6 +57,7 @@ bool Wayland::request_app_presentation_feedback(const std::shared_ptr<surface_da
         return false;
     }
 
+    surf_data->flush_pending(true);
     wl_proxy_set_queue(reinterpret_cast<wl_proxy*>(feedback), globals.queue);
     auto* feedback_data = new presentation_feedback_data{ipc, this};
     if (wp_presentation_feedback_add_listener(feedback, &presentation_feedback_listener, feedback_data) != 0) {
@@ -180,6 +182,7 @@ bool Wayland::ensure_overlay_data(const std::shared_ptr<surface_data>& surf_data
         wl_subsurface_set_position(surf_data->sub_surf, 0, 0);
         wl_subsurface_place_above(surf_data->sub_surf, surf_data->surface);
         wl_subsurface_set_desync(surf_data->sub_surf);
+        surf_data->flush_pending(true);
         SPDLOG_DEBUG("wl overlay created: parent=0x{:x}, overlay=0x{:x}, subsurface=0x{:x}",
                      (uint64_t)surf_data->surface, (uint64_t)surf_data->overlay_surf,
                      (uint64_t)surf_data->sub_surf);
@@ -527,6 +530,7 @@ void Wayland::update_import(const std::shared_ptr<surface_data>& surf_data)
     }
 
     imported_generation = generation;
+    surf_data->flush_pending(true);
 
     for (auto& buf : surf_data->buffers)
         release_to_server(buf.get());
@@ -534,8 +538,6 @@ void Wayland::update_import(const std::shared_ptr<surface_data>& surf_data)
 
 void Wayland::dispatch_events(const std::shared_ptr<surface_data>& surf_data)
 {
-    update_focus();
-
     if (!surf_data || !surf_data->display)
         return;
 
@@ -543,8 +545,11 @@ void Wayland::dispatch_events(const std::shared_ptr<surface_data>& surf_data)
     if (!globals || !globals->queue)
         return;
 
-    wl_display_dispatch_queue_pending(surf_data->display, globals->queue);
-    wl_display_flush(surf_data->display);
+    // Callbacks can queue requests, such as destroying presentation feedback.
+    if (wl_display_dispatch_queue_pending(surf_data->display, globals->queue) > 0)
+        surf_data->flush_pending(true);
+
+    update_focus();
 }
 
 void Wayland::update_focus()
@@ -625,7 +630,7 @@ std::shared_ptr<shm_buffer> Wayland::present(const std::shared_ptr<surface_data>
     wl_surface_damage(surf_data->overlay_surf, 0, 0, slot->width, slot->height);
     wl_surface_damage_buffer(surf_data->overlay_surf, 0, 0, slot->width, slot->height);
     wl_surface_commit(surf_data->overlay_surf);
-    wl_display_flush(surf_data->display);
+    surf_data->flush_pending(true);
     surf_data->attached = true;
 
     return slot;
@@ -668,6 +673,11 @@ void Wayland::run_thread(std::shared_ptr<surface_data> surf_data)
                 update_import(surf_data);
                 present(surf_data);
             }
+        }
+
+        if (surf_data && surf_data->display && surf_data->flush_pending(false)) {
+            if (wl_display_flush(surf_data->display) < 0 && errno == EAGAIN)
+                surf_data->flush_pending(true);
         }
 
         if (quit.load())
