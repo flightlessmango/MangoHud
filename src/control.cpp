@@ -3,12 +3,56 @@
 #include <cerrno>
 #include <cstring>
 #include <sys/socket.h>
+#include <mutex>
+#include <string>
 #include "mesa/util/os_socket.h"
 #include "overlay.h"
 #include "version.h"
 #include "app/mangoapp.h"
 
 int global_control_client;
+
+namespace {
+std::recursive_mutex control_mutex;
+int control_listener = -1;
+int control_client = -1;
+std::string control_path;
+
+struct control_lifetime {
+   ~control_lifetime() {
+      std::lock_guard<std::recursive_mutex> lock(control_mutex);
+      if (control_client >= 0)
+         os_socket_close(control_client);
+      if (control_listener >= 0)
+         os_socket_close(control_listener);
+   }
+};
+control_lifetime process_control_lifetime;
+}
+
+int control_socket_listen(const char *path)
+{
+   std::lock_guard<std::recursive_mutex> lock(control_mutex);
+   const std::string requested(path ? path : "");
+   if (requested.empty())
+      return -1;
+   if (control_listener >= 0 && control_path == requested)
+      return control_listener;
+   if (control_client >= 0) {
+      os_socket_close(control_client);
+      control_client = -1;
+   }
+   if (control_listener >= 0)
+      os_socket_close(control_listener);
+   control_listener = os_socket_listen_abstract(requested.c_str(), 1);
+   if (control_listener < 0) {
+      control_path.clear();
+      return -1;
+   }
+   os_socket_block(control_listener, false);
+   control_path = requested;
+   return control_listener;
+}
 
 using namespace std;
 static void parse_command(overlay_params &params,
@@ -152,13 +196,17 @@ static void control_send_connection_string(int control_client, const std::string
 
 void control_client_check(int control, int& control_client, const std::string& deviceName)
 {
+   std::lock_guard<std::recursive_mutex> lock(::control_mutex);
    /* Already connected, just return. */
-   if (control_client >= 0){
-      global_control_client = control_client;
+   if (::control_client >= 0){
+      control_client = ::control_client;
+      global_control_client = ::control_client;
       return;
    }
 
-   int socket = os_socket_accept(control);
+   if (::control_listener < 0)
+      return;
+   int socket = os_socket_accept(::control_listener);
    if (socket == -1) {
       if (errno != EAGAIN && errno != EWOULDBLOCK && errno != ECONNABORTED)
          fprintf(stderr, "ERROR on socket: %s\n", strerror(errno));
@@ -167,24 +215,31 @@ void control_client_check(int control, int& control_client, const std::string& d
 
    if (socket >= 0) {
       os_socket_block(socket, false);
-      control_client = socket;
-      control_send_connection_string(control_client, deviceName);
+      ::control_client = control_client = socket;
+      global_control_client = socket;
+      control_send_connection_string(socket, deviceName);
    }
 }
 
 static void control_client_disconnected(int& control_client)
 {
-   os_socket_close(control_client);
+   std::lock_guard<std::recursive_mutex> lock(::control_mutex);
+   if (control_client >= 0)
+      os_socket_close(control_client);
+   if (::control_client == control_client)
+      ::control_client = -1;
    control_client = -1;
 }
 
 void process_control_socket(int& control_client, overlay_params &params)
 {
-   if (control_client >= 0) {
+   std::lock_guard<std::recursive_mutex> lock(::control_mutex);
+   control_client = ::control_client;
+   if (::control_client >= 0) {
       char buf[BUFSIZE];
 
       while (true) {
-         ssize_t n = os_socket_recv(control_client, buf, BUFSIZE, 0);
+         ssize_t n = os_socket_recv(::control_client, buf, BUFSIZE, 0);
 
          if (n == -1) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
