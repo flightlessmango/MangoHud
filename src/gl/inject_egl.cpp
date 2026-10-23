@@ -110,9 +110,12 @@ EXPORT_C_(unsigned int) eglDestroyContext(void* dpy, void* ctx)
 {
     static unsigned int (*pfn_eglDestroyContext)(void* dpy, void* ctx) = nullptr;
     ::scoped_lock lk(global_lock);
-    gl_context *gl_ctx = gl_contexts[ctx];
+    gl_context *gl_ctx = nullptr;
     void *current_ctx, *draw, *read = nullptr;
     int r;
+
+    if (ctx)
+        gl_ctx = gl_contexts[ctx];
 
     if (!pfn_eglDestroyContext)
         pfn_eglDestroyContext = reinterpret_cast<decltype(pfn_eglDestroyContext)>(get_egl_proc_address("eglDestroyContext"));
@@ -160,16 +163,20 @@ EXPORT_C_(unsigned int) eglSwapBuffers(void* dpy, void* surf)
             pfn_eglGetCurrentContext = reinterpret_cast<decltype(pfn_eglGetCurrentContext)>(get_egl_proc_address("eglGetCurrentContext"));
         ::scoped_lock lk(global_lock);
         void* ctx = pfn_eglGetCurrentContext();
-        gl_context *gl_ctx = gl_contexts[ctx];
+        if (ctx) {
+            gl_context *gl_ctx = gl_contexts[ctx];
 
-        if (!gl_ctx)
-            gl_ctx = create_gl_context(ctx);
-        imgui_create(gl_ctx, gl_wsi::GL_WSI_EGL);
+            if (!gl_ctx)
+                gl_ctx = create_gl_context(ctx);
 
-        int width=0, height=0;
-        if (pfn_eglQuerySurface(dpy, surf, EGL_HEIGHT, &height) &&
-            pfn_eglQuerySurface(dpy, surf, EGL_WIDTH, &width))
-            imgui_render(gl_ctx, width, height);
+            imgui_create(gl_ctx, gl_wsi::GL_WSI_EGL);
+
+            int width=0, height=0;
+            if (pfn_eglQuerySurface(dpy, surf, EGL_HEIGHT, &height) &&
+                pfn_eglQuerySurface(dpy, surf, EGL_WIDTH, &width))
+                imgui_render(gl_ctx, width, height);
+        } else
+            spdlog::warn("eglSwapBuffers called without an OpenGL context");
 
         if (fps_limiter)
             fps_limiter->limit(true);

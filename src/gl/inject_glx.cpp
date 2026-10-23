@@ -143,6 +143,11 @@ static void do_imgui_swap(void *dpy, void *drawable)
     if (!is_blacklisted()) {
         ::scoped_lock lk(global_lock);
         void *ctx = glx.GetCurrentContext();
+        if (!ctx) {
+            spdlog::warn("do_imgui_swap called without an OpenGL context");
+            return;
+        }
+
         gl_context *gl_ctx = gl_contexts[ctx];
 
         //SPDLOG_TRACE("ctx {}, gl_ctx {}", ctx, (void *)gl_ctx);
@@ -179,12 +184,13 @@ static void set_swap_interval(void* dpy, void* drawable, int interval)
 {
     ::scoped_lock lk(global_lock);
     void* ctx = glx.GetCurrentContext();
-    gl_context *gl_ctx = gl_contexts[ctx];
+    gl_context *gl_ctx = nullptr;
 
-    if (!is_blacklisted() || interval >= 0)
+    if (ctx && (!is_blacklisted() || interval >= 0))
     {
         std::shared_ptr<overlay_params> real_params;
 
+        gl_ctx = gl_contexts[ctx];
         if (gl_ctx)
         {
             if (gl_ctx->swap_interval_set && interval < -1)
