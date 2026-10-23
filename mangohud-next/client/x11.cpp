@@ -2,6 +2,7 @@
 #include "ipc_client.h"
 
 #include <utility>
+#include <algorithm>
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
@@ -75,7 +76,7 @@ xcb_connection_t* X11::connect_window(xcb_window_t window, const std::string& di
     }
 
     const uint32_t mask = XCB_EVENT_MASK_FOCUS_CHANGE | XCB_EVENT_MASK_ENTER_WINDOW |
-                          XCB_EVENT_MASK_LEAVE_WINDOW;
+                          XCB_EVENT_MASK_LEAVE_WINDOW | XCB_EVENT_MASK_STRUCTURE_NOTIFY;
     auto cookie = xcb_change_window_attributes_checked(connection.get(), window, XCB_CW_EVENT_MASK, &mask);
     auto* error = xcb_request_check(connection.get(), cookie);
     if (error) {
@@ -84,11 +85,10 @@ xcb_connection_t* X11::connect_window(xcb_window_t window, const std::string& di
         return nullptr;
     }
     xcb_flush(connection.get());
-    auto* focus = xcb_get_input_focus_reply(connection.get(), xcb_get_input_focus(connection.get()), nullptr);
-    if (focus) {
-        ipc->x11_focused.store(focus->focus == window);
-        std::free(focus);
-    }
+    watched_window = window;
+    window_ancestors.clear();
+    update_ancestors(connection.get());
+    update_focus(connection.get());
     SPDLOG_DEBUG("x11: watching display={} window={}", display_name, window);
     return connection.release();
 }
@@ -156,18 +156,73 @@ void X11::run()
     ipc->x11_focused.store(false);
 }
 
+void X11::update_ancestors(xcb_connection_t* connection)
+{
+    std::vector<xcb_window_t> windows;
+    auto window = watched_window;
+    for (size_t depth = 0; window && depth < 64; ++depth) {
+        windows.push_back(window);
+        if (window != watched_window) {
+            const uint32_t mask = XCB_EVENT_MASK_FOCUS_CHANGE | XCB_EVENT_MASK_STRUCTURE_NOTIFY;
+            xcb_change_window_attributes(connection, window, XCB_CW_EVENT_MASK, &mask);
+        }
+        auto* tree = xcb_query_tree_reply(connection, xcb_query_tree(connection, window), nullptr);
+        const auto parent = tree && tree->parent != tree->root ? tree->parent : xcb_window_t{XCB_WINDOW_NONE};
+        std::free(tree);
+        if (parent == window)
+            break;
+        window = parent;
+    }
+    for (auto previous : window_ancestors) {
+        if (previous != watched_window && std::find(windows.begin(), windows.end(), previous) == windows.end()) {
+            const uint32_t mask = XCB_EVENT_MASK_NO_EVENT;
+            xcb_change_window_attributes(connection, previous, XCB_CW_EVENT_MASK, &mask);
+        }
+    }
+    window_ancestors = std::move(windows);
+    xcb_flush(connection);
+}
+
+void X11::update_focus(xcb_connection_t* connection)
+{
+    auto* reply = xcb_get_input_focus_reply(connection, xcb_get_input_focus(connection), nullptr);
+    if (!reply)
+        return;
+    const auto input_focus = reply->focus;
+    std::free(reply);
+
+    bool focused = false;
+    auto window = input_focus;
+    for (size_t depth = 0; window > XCB_INPUT_FOCUS_POINTER_ROOT && depth < 64; ++depth) {
+        if (std::find(window_ancestors.begin(), window_ancestors.end(), window) != window_ancestors.end()) {
+            focused = true;
+            break;
+        }
+        auto* tree = xcb_query_tree_reply(connection, xcb_query_tree(connection, window), nullptr);
+        const auto parent = tree && tree->parent != tree->root ? tree->parent : xcb_window_t{XCB_WINDOW_NONE};
+        std::free(tree);
+        if (parent == window)
+            break;
+        window = parent;
+    }
+    SPDLOG_DEBUG("x11: focus window={} render_window={} focused={}", input_focus, watched_window, focused);
+    ipc->x11_focused.store(focused);
+}
+
 void X11::dispatch_events(xcb_connection_t* connection)
 {
     while (auto* event = xcb_poll_for_event(connection)) {
         switch (event->response_type & 0x7f) {
+            case XCB_REPARENT_NOTIFY:
+                update_ancestors(connection);
+                update_focus(connection);
+                break;
             case XCB_FOCUS_IN:
             case XCB_FOCUS_OUT: {
                 auto* focus = reinterpret_cast<xcb_focus_in_event_t*>(event);
                 // Grabs are temporary routing changes, not application focus changes.
-                if (focus->detail != XCB_NOTIFY_DETAIL_INFERIOR &&
-                    (focus->mode == XCB_NOTIFY_MODE_NORMAL || focus->mode == XCB_NOTIFY_MODE_WHILE_GRABBED)) {
-                    ipc->x11_focused.store((event->response_type & 0x7f) == XCB_FOCUS_IN);
-                }
+                if (focus->mode == XCB_NOTIFY_MODE_NORMAL || focus->mode == XCB_NOTIFY_MODE_WHILE_GRABBED)
+                    update_focus(connection);
                 SPDLOG_DEBUG("x11: keyboard entered={} window={} mode={} detail={}",
                              (event->response_type & 0x7f) == XCB_FOCUS_IN,
                              focus->event, focus->mode, focus->detail);
