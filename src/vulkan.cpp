@@ -64,6 +64,9 @@
 #endif
 #include "imgui_utils.h"
 #include "fps_limiter.h"
+#include "base_fps_meter.h"
+#include "frame_generation_detector.h"
+#include "fps_metrics.h"
 
 using namespace std;
 
@@ -107,6 +110,8 @@ struct device_data {
    struct queue_data *graphic_queue;
 
    std::vector<struct queue_data *> queues;
+   std::mutex base_fps_mutex;
+   BaseFpsMeter base_fps_meter;
 };
 
 /* Mapped from VkCommandBuffer */
@@ -186,6 +191,9 @@ struct swapchain_data {
    ImVec2 window_size;
 
    struct swapchain_stats sw_stats;
+   std::mutex reflex_fps_mutex;
+   BaseFpsMeter reflex_fps;
+   FrameGenerationDetector fg_detector;
 };
 
 // single global lock, for simplicity
@@ -1566,7 +1574,29 @@ static struct overlay_draw *before_present(struct swapchain_data *swapchain_data
 {
    struct overlay_draw *draw = NULL;
 
+   if (swapchain_data->device->instance->params.enabled[OVERLAY_PARAM_ENABLED_base_fps]) {
+      const uint64_t now = os_time_get_nano();
+      std::optional<double> base_fps;
+      {
+         std::lock_guard<std::mutex> lock(swapchain_data->reflex_fps_mutex);
+         base_fps = swapchain_data->reflex_fps.fps(now);
+      }
+      if (!base_fps) {
+         std::lock_guard<std::mutex> lock(swapchain_data->device->base_fps_mutex);
+         base_fps = swapchain_data->device->base_fps_meter.fps(now);
+      }
+      swapchain_data->sw_stats.base_fps = base_fps.value_or(0.0);
+   }
+
    snapshot_swapchain_frame(swapchain_data);
+   bool fg_active = false;
+   if (swapchain_data->device->instance->params.enabled[OVERLAY_PARAM_ENABLED_base_fps])
+      fg_active = swapchain_data->fg_detector.observe(
+         os_time_get_nano(), swapchain_data->sw_stats.fps,
+         swapchain_data->sw_stats.base_fps);
+   if (fg_active != swapchain_data->sw_stats.fg_active && fpsmetrics)
+      fpsmetrics->reset_metrics();
+   swapchain_data->sw_stats.fg_active = fg_active;
 
    if (swapchain_data->sw_stats.n_frames > 0) {
       compute_swapchain_display(swapchain_data);
@@ -1777,6 +1807,48 @@ static VkResult overlay_QueuePresentKHR(
    return result;
 }
 
+static void overlay_SetLatencyMarkerNV(
+    VkDevice                                    device,
+    VkSwapchainKHR                              swapchain,
+    const VkSetLatencyMarkerInfoNV*             pLatencyMarkerInfo)
+{
+   struct device_data *device_data = FIND(struct device_data, device);
+   auto next = reinterpret_cast<PFN_vkSetLatencyMarkerNV>(
+      device_data->vtable.GetDeviceProcAddr(device, "vkSetLatencyMarkerNV"));
+   if (!next)
+      return;
+
+   next(device, swapchain, pLatencyMarkerInfo);
+
+   if (!pLatencyMarkerInfo || !device_data->instance->params.enabled[OVERLAY_PARAM_ENABLED_base_fps])
+      return;
+   struct swapchain_data *swapchain_data = FIND(struct swapchain_data, swapchain);
+   if (!swapchain_data)
+      return;
+   std::lock_guard<std::mutex> lock(swapchain_data->reflex_fps_mutex);
+   swapchain_data->reflex_fps.record_reflex(pLatencyMarkerInfo->marker,
+                                           pLatencyMarkerInfo->presentID,
+                                           os_time_get_nano());
+}
+
+static void overlay_AntiLagUpdateAMD(VkDevice device, const VkAntiLagDataAMD* pData)
+{
+   struct device_data *device_data = FIND(struct device_data, device);
+   auto next = reinterpret_cast<PFN_vkAntiLagUpdateAMD>(
+      device_data->vtable.GetDeviceProcAddr(device, "vkAntiLagUpdateAMD"));
+   if (!next)
+      return;
+   next(device, pData);
+
+   if (!pData || !pData->pPresentationInfo ||
+       pData->pPresentationInfo->stage != VK_ANTI_LAG_STAGE_INPUT_AMD ||
+       !device_data->instance->params.enabled[OVERLAY_PARAM_ENABLED_base_fps])
+      return;
+   std::lock_guard<std::mutex> lock(device_data->base_fps_mutex);
+   device_data->base_fps_meter.record_amd(pData->pPresentationInfo->frameIndex,
+                                          os_time_get_nano());
+}
+
 static VkResult overlay_BeginCommandBuffer(
     VkCommandBuffer                             commandBuffer,
     const VkCommandBufferBeginInfo*             pBeginInfo)
@@ -1874,7 +1946,53 @@ static VkResult overlay_QueueSubmit(
    struct queue_data *queue_data = FIND(struct queue_data, queue);
    struct device_data *device_data = queue_data->device;
 
-   return device_data->vtable.QueueSubmit(queue, submitCount, pSubmits, fence);
+   VkResult result = device_data->vtable.QueueSubmit(queue, submitCount, pSubmits, fence);
+   if (result != VK_SUCCESS || !device_data->instance->params.enabled[OVERLAY_PARAM_ENABLED_base_fps])
+      return result;
+   for (uint32_t i = 0; i < submitCount; i++) {
+      auto node = static_cast<const VkBaseInStructure*>(pSubmits[i].pNext);
+      while (node && node->sType != VK_STRUCTURE_TYPE_FRAME_BOUNDARY_EXT)
+         node = node->pNext;
+      if (node) {
+         const auto *boundary = reinterpret_cast<const VkFrameBoundaryEXT*>(node);
+         if (boundary->flags & VK_FRAME_BOUNDARY_FRAME_END_BIT_EXT) {
+            std::lock_guard<std::mutex> lock(device_data->base_fps_mutex);
+            device_data->base_fps_meter.record_frame_boundary(boundary->frameID,
+                                                               os_time_get_nano());
+         }
+      }
+   }
+   return result;
+}
+
+static VkResult overlay_QueueSubmit2(
+    VkQueue queue, uint32_t submitCount, const VkSubmitInfo2* pSubmits, VkFence fence)
+{
+   struct queue_data *queue_data = FIND(struct queue_data, queue);
+   struct device_data *device_data = queue_data->device;
+   auto next = device_data->vtable.QueueSubmit2;
+   if (!next)
+      next = reinterpret_cast<PFN_vkQueueSubmit2>(
+         device_data->vtable.GetDeviceProcAddr(device_data->device, "vkQueueSubmit2KHR"));
+   if (!next)
+      return VK_ERROR_EXTENSION_NOT_PRESENT;
+   VkResult result = next(queue, submitCount, pSubmits, fence);
+   if (result != VK_SUCCESS || !device_data->instance->params.enabled[OVERLAY_PARAM_ENABLED_base_fps])
+      return result;
+   for (uint32_t i = 0; i < submitCount; i++) {
+      auto node = static_cast<const VkBaseInStructure*>(pSubmits[i].pNext);
+      while (node && node->sType != VK_STRUCTURE_TYPE_FRAME_BOUNDARY_EXT)
+         node = node->pNext;
+      if (node) {
+         const auto *boundary = reinterpret_cast<const VkFrameBoundaryEXT*>(node);
+         if (boundary->flags & VK_FRAME_BOUNDARY_FRAME_END_BIT_EXT) {
+            std::lock_guard<std::mutex> lock(device_data->base_fps_mutex);
+            device_data->base_fps_meter.record_frame_boundary(boundary->frameID,
+                                                               os_time_get_nano());
+         }
+      }
+   }
+   return result;
 }
 
 static VkResult overlay_CreateDevice(
@@ -2215,10 +2333,14 @@ static const struct {
 #endif
    ADD_HOOK(CreateSwapchainKHR),
    ADD_HOOK(QueuePresentKHR),
+   ADD_HOOK(SetLatencyMarkerNV),
+   ADD_HOOK(AntiLagUpdateAMD),
    ADD_HOOK(DestroySwapchainKHR),
    ADD_HOOK(CreateSampler),
 
    ADD_HOOK(QueueSubmit),
+   ADD_HOOK(QueueSubmit2),
+   ADD_ALIAS_HOOK(QueueSubmit2KHR, QueueSubmit2),
 
    ADD_HOOK(CreateDevice),
    ADD_HOOK(DestroyDevice),
@@ -2249,6 +2371,16 @@ extern "C" PUBLIC VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetDeviceProc
                                                                              const char *funcName)
 {
    init_spdlog();
+   // Do not expose the optional extension when the next layer lacks it.
+   if (dev && (strcmp(funcName, "vkSetLatencyMarkerNV") == 0 ||
+               strcmp(funcName, "vkAntiLagUpdateAMD") == 0 ||
+               strcmp(funcName, "vkQueueSubmit2") == 0 ||
+               strcmp(funcName, "vkQueueSubmit2KHR") == 0)) {
+      struct device_data *device_data = FIND(struct device_data, dev);
+      if (!device_data || !device_data->vtable.GetDeviceProcAddr ||
+          !device_data->vtable.GetDeviceProcAddr(dev, funcName))
+         return NULL;
+   }
    void *ptr = find_ptr(funcName);
    if (ptr) return reinterpret_cast<PFN_vkVoidFunction>(ptr);
 

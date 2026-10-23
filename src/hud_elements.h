@@ -90,6 +90,7 @@ class HudElements{
         static void procmem();
         static void cgroup_mem();
         static void fps();
+        static void base_fps();
         static void engine_version();
         static void gpu_name();
         static void vulkan_driver();
