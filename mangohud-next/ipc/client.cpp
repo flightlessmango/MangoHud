@@ -3,9 +3,40 @@
 #include "server.h"
 #include "ipc_abi_hash.h"
 
+#include <cstdlib>
+#include <filesystem>
+#include <sys/stat.h>
 #include <utility>
 
 class IPCServer;
+
+static std::string resolve_wayland_display(pid_t pid, const char* display)
+{
+    if (!display || display[0] != '/')
+        return display ? display : "";
+
+    const auto client_path = "/proc/" + std::to_string(pid) + "/root" + display;
+    struct stat client_socket{};
+    if (stat(client_path.c_str(), &client_socket) != 0 || !S_ISSOCK(client_socket.st_mode))
+        return display;
+
+    auto matches = [&](const std::filesystem::path& path) {
+        struct stat socket{};
+        return stat(path.c_str(), &socket) == 0 &&
+               socket.st_dev == client_socket.st_dev && socket.st_ino == client_socket.st_ino;
+    };
+    if (matches(display))
+        return display;
+
+    if (const auto* runtime = std::getenv("XDG_RUNTIME_DIR")) {
+        std::error_code error;
+        const std::filesystem::directory_iterator end;
+        for (std::filesystem::directory_iterator it(runtime, error); !error && it != end; it.increment(error))
+            if (matches(it->path()))
+                return it->path().string();
+    }
+    return client_path;
+}
 
 static OutputMode configured_output_mode(MangoHudServer* server)
 {
@@ -234,7 +265,7 @@ int Client::on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_erro
     self->pEngineName = engine;
     self->vulkanDriver = vulkan_driver;
     self->gpuName = gpu_name;
-    self->wayland_display = wayland_display;
+    self->wayland_display = resolve_wayland_display(self->pid, wayland_display);
     self->output_mode = gamescope_session ? OutputMode::Layer : configured_output_mode(self->server);
     if (self->output_mode == OutputMode::Layer) {
         if (self->wayland_display.empty()) {
