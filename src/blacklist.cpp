@@ -29,6 +29,7 @@ static  std::vector<std::string> blacklist {
     "EADesktop.exe",
     "EACefSubProcess.exe",
     "EALauncher.exe",
+    "EALaunchHelper.exe",
     "EpicGamesLauncher.exe",
     "EpicWebHelper.exe",
     "explorer.exe",
