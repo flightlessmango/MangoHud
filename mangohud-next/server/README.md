@@ -53,7 +53,7 @@ Each entry in `hud.windows` defines one hud window.
 | --- | --- | --- | --- |
 | `position` | `[x, y]` | `[10, 10]` | Window position in pixels. |
 | `padding` | number | `8` | Padding around the table content. |
-| `background` | boolean | `true` | Draw the window background. |
+| `background` | boolean | `true` | Draw backgrounds behind cells, including cells with empty content. `null` cells stay transparent. |
 | `table` | map | required | Table layout for this window. |
 
 ## Hud Table

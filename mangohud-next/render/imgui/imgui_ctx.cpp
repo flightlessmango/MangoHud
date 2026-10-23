@@ -661,18 +661,45 @@ static ImVec2 local_to_screen(const ImVec2& pos) {
     return screen;
 }
 
-static void draw_debug_cell_box(bool enabled, const ImVec2& raw_pos, const ImVec2& raw_size, const ImVec2& content_pos, const ImVec2& content_size) {
+static ImRect background_bounds(ImRect bounds, const HudLayout& layout, std::size_t row, const ImRect* clip) {
+    const HudBox& current = layout.row_boxes[row];
+    if (row > 0) {
+        const HudBox& previous = layout.row_boxes[row - 1];
+        bounds.Min.y += std::max(0.0f, (previous.pos.y + previous.size.y - current.pos.y) * 0.5f);
+    }
+    if (row + 1 < layout.row_boxes.size()) {
+        bounds.Max.y -= std::max(0.0f, (current.pos.y + current.size.y - layout.row_boxes[row + 1].pos.y) * 0.5f);
+    }
+    bounds.Min = ImVec2(std::floor(bounds.Min.x + 0.5f), std::floor(bounds.Min.y + 0.5f));
+    bounds.Max = ImVec2(std::floor(bounds.Max.x + 0.5f), std::floor(bounds.Max.y + 0.5f));
+    if (clip)
+        bounds.ClipWith(*clip);
+    return bounds;
+}
+
+static void draw_background(bool enabled, const ImRect& bounds) {
+    if (!enabled || bounds.Max.x <= bounds.Min.x || bounds.Max.y <= bounds.Min.y)
+        return;
+
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    ImVec4 color = ImGui::GetStyleColorVec4(ImGuiCol_WindowBg);
+    color.w = 0.5f;
+    draw_list->ChannelsSetCurrent(0);
+    draw_list->AddRectFilled(bounds.Min, bounds.Max, ImGui::ColorConvertFloat4ToU32(color));
+    draw_list->ChannelsSetCurrent(1);
+}
+
+static void draw_debug_cell_box(bool enabled, const ImRect& bounds) {
     if (!enabled)
         return;
 
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    const ImVec2 raw_min = local_to_screen(raw_pos);
-    const ImVec2 raw_max(raw_min.x + raw_size.x, raw_min.y + raw_size.y);
-    const ImVec2 content_min = local_to_screen(content_pos);
-    const ImVec2 content_max(content_min.x + content_size.x, content_min.y + content_size.y);
+    ImRect content_bounds = bounds;
+    content_bounds.Min.x += hud_cell_padding_x;
+    content_bounds.Max.x = std::max(content_bounds.Min.x, content_bounds.Max.x);
 
-    draw_list->AddRect(raw_min, raw_max, IM_COL32(255, 220, 0, 255));
-    draw_list->AddRect(content_min, content_max, IM_COL32(0, 220, 255, 255));
+    draw_list->AddRect(bounds.Min, bounds.Max, IM_COL32(255, 220, 0, 255));
+    draw_list->AddRect(content_bounds.Min, content_bounds.Max, IM_COL32(0, 220, 255, 255));
 }
 
 static void draw_debug_separator_center(bool enabled, const ImVec2& raw_pos, const ImVec2& raw_size) {
@@ -857,7 +884,13 @@ HudLayout ImGuiCtx::build_layout(hudTable* table, Font* fonts) {
     return build_table_layout(table, fonts);
 }
 
-void ImGuiCtx::draw_table(hudTable& table, Font* fonts, const HudLayout& layout, bool first_col_numeric) {
+void ImGuiCtx::draw_table(hudTable& table, Font* fonts, const HudLayout& layout, bool background, bool first_col_numeric, const ImRect* background_clip) {
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    const bool split_channels = background && !background_clip;
+    if (split_channels) {
+        draw_list->ChannelsSplit(2);
+        draw_list->ChannelsSetCurrent(1);
+    }
     ImVec4 white = ImVec4(1, 1, 1, 1);
 
     ImGui::PushFont(fonts->get(table.font_size));
@@ -881,13 +914,10 @@ void ImGuiCtx::draw_table(hudTable& table, Font* fonts, const HudLayout& layout,
             const float raw_cell_x = origin.x + layout.col_boxes[c].pos.x;
             const float cell_x = raw_cell_x + hud_cell_padding_x;
             const float cell_w = spanned_width(layout, c, colspan);
-            draw_debug_cell_box(
-                table.debug_cell_boxes,
-                ImVec2(raw_cell_x, row_y),
-                ImVec2(cell_w, row_h),
-                ImVec2(cell_x, row_y),
-                ImVec2(std::max(0.0f, cell_w - hud_cell_padding_x), row_h)
-            );
+            const ImVec2 cell_min = local_to_screen(ImVec2(raw_cell_x, row_y));
+            const ImRect bounds(cell_min, ImVec2(cell_min.x + cell_w, cell_min.y + row_h));
+            const ImRect bg_bounds = background ? background_bounds(bounds, layout, r, background_clip) : bounds;
+            draw_debug_cell_box(table.debug_cell_boxes, bounds);
             ImGui::SetCursorPos(ImVec2(cell_x, row_y));
 
             if (auto* nested = std::get_if<TableCell>(&cell); nested && nested->table) {
@@ -902,9 +932,11 @@ void ImGuiCtx::draw_table(hudTable& table, Font* fonts, const HudLayout& layout,
                 }
 
                 ImGui::SetCursorPos(ImVec2(nested_x, nested_y));
-                draw_table(*nested->table, fonts, nested_layout, c > 0);
+                draw_table(*nested->table, fonts, nested_layout, background, c > 0, background ? &bg_bounds : nullptr);
                 continue;
             }
+
+            draw_background(background, bg_bounds);
 
             if (auto* pc = std::get_if<ProgressCell>(&cell)) {
                 draw_progress_bar(*pc, fonts, table, std::max(0.0f, cell_w - hud_cell_padding_x), row_h);
@@ -935,16 +967,16 @@ void ImGuiCtx::draw_table(hudTable& table, Font* fonts, const HudLayout& layout,
     }
     ImGui::PopID();
     ImGui::SetCursorPos(ImVec2(cursor_origin.x, cursor_origin.y + layout.content_size.y));
-
+    if (split_channels)
+        draw_list->ChannelsMerge();
 }
 
 void ImGuiCtx::begin_window(const HudWindow& window, ImVec2 size, const char* name) {
     ImGui::SetNextWindowSize(size);
     ImGui::SetNextWindowPos(window.position, ImGuiCond_Always);
-    ImGui::SetNextWindowBgAlpha(window.background ? 0.5f : 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(window.padding, window.padding));
 
-    ImGuiWindowFlags w_flags = ImGuiWindowFlags_NoDecoration;
+    ImGuiWindowFlags w_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground;
     ImGui::Begin(name, nullptr, w_flags);
 }
 
@@ -1004,7 +1036,7 @@ bool ImGuiCtx::draw(uint32_t w, uint32_t h, Resolution& size, BufferSet* buf, Ba
         const std::string name = "HUD##" + std::to_string(i);
 
         begin_window(window, {float(window_w), float(window_h)}, name.c_str());
-        draw_table(window.table, fonts, layout);
+        draw_table(window.table, fonts, layout, window.background);
         end_window();
 
         max_x = std::max(max_x, window.position.x + (float)window_w);
