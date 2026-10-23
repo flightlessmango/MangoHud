@@ -661,22 +661,6 @@ static ImVec2 local_to_screen(const ImVec2& pos) {
     return screen;
 }
 
-static ImRect background_bounds(ImRect bounds, const HudLayout& layout, std::size_t row, const ImRect* clip) {
-    const HudBox& current = layout.row_boxes[row];
-    if (row > 0) {
-        const HudBox& previous = layout.row_boxes[row - 1];
-        bounds.Min.y += std::max(0.0f, (previous.pos.y + previous.size.y - current.pos.y) * 0.5f);
-    }
-    if (row + 1 < layout.row_boxes.size()) {
-        bounds.Max.y -= std::max(0.0f, (current.pos.y + current.size.y - layout.row_boxes[row + 1].pos.y) * 0.5f);
-    }
-    bounds.Min = ImVec2(std::floor(bounds.Min.x + 0.5f), std::floor(bounds.Min.y + 0.5f));
-    bounds.Max = ImVec2(std::floor(bounds.Max.x + 0.5f), std::floor(bounds.Max.y + 0.5f));
-    if (clip)
-        bounds.ClipWith(*clip);
-    return bounds;
-}
-
 static void draw_background(bool enabled, const ImRect& bounds) {
     if (!enabled || bounds.Max.x <= bounds.Min.x || bounds.Max.y <= bounds.Min.y)
         return;
@@ -884,9 +868,9 @@ HudLayout ImGuiCtx::build_layout(hudTable* table, Font* fonts) {
     return build_table_layout(table, fonts);
 }
 
-void ImGuiCtx::draw_table(hudTable& table, Font* fonts, const HudLayout& layout, bool background, bool first_col_numeric, const ImRect* background_clip) {
+void ImGuiCtx::draw_table(hudTable& table, Font* fonts, const HudLayout& layout, bool background, bool first_col_numeric) {
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    const bool split_channels = background && !background_clip;
+    const bool split_channels = background;
     if (split_channels) {
         draw_list->ChannelsSplit(2);
         draw_list->ChannelsSetCurrent(1);
@@ -899,6 +883,13 @@ void ImGuiCtx::draw_table(hudTable& table, Font* fonts, const HudLayout& layout,
 
     const ImVec2 cursor_origin = ImGui::GetCursorPos();
     const ImVec2 origin = ImVec2(cursor_origin.x + std::ceil(outline_padding_x), cursor_origin.y);
+    // Include the window's configured padding in the background on every side.
+    // Nested tables share this fill so translucent backgrounds never overlap.
+    if (background && !layout.col_boxes.empty() && !layout.row_boxes.empty()) {
+        const ImVec2 start = ImGui::GetWindowPos();
+        const ImVec2 size = ImGui::GetWindowSize();
+        draw_background(true, ImRect(start, ImVec2(start.x + size.x, start.y + size.y)));
+    }
     ImGui::PushID(&table);
     for (std::size_t r = 0; r < table.rows.size(); r++) {
         auto& row = table.rows[r];
@@ -916,7 +907,6 @@ void ImGuiCtx::draw_table(hudTable& table, Font* fonts, const HudLayout& layout,
             const float cell_w = spanned_width(layout, c, colspan);
             const ImVec2 cell_min = local_to_screen(ImVec2(raw_cell_x, row_y));
             const ImRect bounds(cell_min, ImVec2(cell_min.x + cell_w, cell_min.y + row_h));
-            const ImRect bg_bounds = background ? background_bounds(bounds, layout, r, background_clip) : bounds;
             draw_debug_cell_box(table.debug_cell_boxes, bounds);
             ImGui::SetCursorPos(ImVec2(cell_x, row_y));
 
@@ -932,11 +922,9 @@ void ImGuiCtx::draw_table(hudTable& table, Font* fonts, const HudLayout& layout,
                 }
 
                 ImGui::SetCursorPos(ImVec2(nested_x, nested_y));
-                draw_table(*nested->table, fonts, nested_layout, background, c > 0, background ? &bg_bounds : nullptr);
+                draw_table(*nested->table, fonts, nested_layout, false, c > 0);
                 continue;
             }
-
-            draw_background(background, bg_bounds);
 
             if (auto* pc = std::get_if<ProgressCell>(&cell)) {
                 draw_progress_bar(*pc, fonts, table, std::max(0.0f, cell_w - hud_cell_padding_x), row_h);
