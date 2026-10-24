@@ -162,6 +162,12 @@ bool libnvml_loader::Load(const std::string& library_name) {
   }
 
 #if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
+  nvmlDeviceGetMemoryInfo_v2 =
+      reinterpret_cast<decltype(this->nvmlDeviceGetMemoryInfo_v2)>(
+          dlsym(library_, "nvmlDeviceGetMemoryInfo_v2"));
+#endif
+
+#if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
   nvmlDeviceGetClockInfo =
       reinterpret_cast<decltype(this->nvmlDeviceGetClockInfo)>(
           dlsym(library_, "nvmlDeviceGetClockInfo"));
@@ -266,6 +272,12 @@ bool libnvml_loader::Load(const std::string& library_name) {
   }
 
 #if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
+  nvmlDeviceGetFanSpeed_v2 =
+      reinterpret_cast<decltype(this->nvmlDeviceGetFanSpeed_v2)>(
+          dlsym(library_, "nvmlDeviceGetFanSpeed_v2"));
+#endif
+
+#if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
   nvmlDeviceGetGraphicsRunningProcesses =
       reinterpret_cast<decltype(this->nvmlDeviceGetGraphicsRunningProcesses)>(
           dlsym(library_, "nvmlDeviceGetGraphicsRunningProcesses"));
@@ -303,5 +315,7 @@ void libnvml_loader::CleanUp(bool unload) {
   nvmlUnitGetFanSpeedInfo = NULL;
   nvmlUnitGetHandleByIndex = NULL;
   nvmlDeviceGetFanSpeed = NULL;
+  nvmlDeviceGetFanSpeed_v2 = NULL;
+  nvmlDeviceGetMemoryInfo_v2 = NULL;
   nvmlDeviceGetGraphicsRunningProcesses = NULL;
 }
