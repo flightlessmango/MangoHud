@@ -86,7 +86,7 @@ static bool check_blacklisted() {
     static bool printed = false;
     if(blacklisted && !printed) {
         printed = true;
-        SPDLOG_INFO("process '{}' is blacklisted in MangoHud", proc_name);
+        SPDLOG_DEBUG("process '{}' is blacklisted in MangoHud", proc_name);
     }
 
     return blacklisted;
