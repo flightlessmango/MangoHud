@@ -804,7 +804,7 @@ bool IPCClient::should_disable()
             return true;
         }
         if (excluded)
-            SPDLOG_INFO("process '{}' is blacklisted in MangoHud Next", name);
+            SPDLOG_DEBUG("process '{}' is blacklisted in MangoHud Next", name);
         return excluded != 0;
     }();
     return disabled || is_incompatible();
