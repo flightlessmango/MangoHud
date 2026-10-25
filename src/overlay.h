@@ -53,6 +53,8 @@ struct swapchain_stats {
    size_t font_params_hash = 0;
    std::string time;
    double fps;
+   double base_fps = 0.0;
+   bool fg_active = false;
    uint64_t last_present_time;
    unsigned n_frames_since_update;
    uint64_t last_fps_update;
