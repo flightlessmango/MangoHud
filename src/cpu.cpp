@@ -716,7 +716,7 @@ bool CPUStats::GetCpuFile() {
             if (!file)
                 continue;
 
-            SPDLOG_INFO("thermal: using cpu temp input: {}", temp_input);
+            SPDLOG_DEBUG("thermal: using cpu temp input: {}", temp_input);
             m_cpuTempFiles.push_back(file);
         }
 
@@ -727,7 +727,7 @@ bool CPUStats::GetCpuFile() {
         return false;
     }
 
-    SPDLOG_INFO("hwmon: using input: {}", input);
+    SPDLOG_DEBUG("hwmon: using input: {}", input);
     m_cpuTempFile = fopen(input.c_str(), "r");
 
     return true;
@@ -755,7 +755,7 @@ bool CPUStats::GetPlatformFanFile() {
             continue;
         }
 
-        SPDLOG_INFO("hwmon: using platform fan input: {}", input);
+        SPDLOG_DEBUG("hwmon: using platform fan input: {}", input);
         m_platformFanFile = fopen(input.c_str(), "r");
         return m_platformFanFile != nullptr;
     }
@@ -954,7 +954,7 @@ void CPUStats::get_cpu_cores_types() {
         }
     }
 
-    SPDLOG_INFO("cpu vendor: {}", vendor);
+    SPDLOG_DEBUG("cpu vendor: {}", vendor);
 
     if (vendor == "GenuineIntel")
         get_cpu_cores_types_intel();
@@ -1056,7 +1056,7 @@ void CPUStats::get_cpu_cores_types_arm() {
 
         try {
             core_type = arm_cores.at(val);
-            SPDLOG_INFO("found {} core", core_type);
+            SPDLOG_DEBUG("found {} core", core_type);
         }
         catch(const std::out_of_range& ex) {
             SPDLOG_WARN("unknown cpu part {}", val);

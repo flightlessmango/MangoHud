@@ -58,7 +58,7 @@ void Font::create_fonts() {
     text_font = add_font(size);
     small_font = add_font(size / 2);
 
-    SPDLOG_INFO(
+    SPDLOG_DEBUG(
         "created fonts atlas={} texid={} text_font={} text_font_atlas={}",
         fmt::ptr(font_atlas),
         (uint64_t)(uintptr_t)font_atlas->TexID,

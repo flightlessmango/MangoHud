@@ -88,7 +88,7 @@ GPUS::GPUS(const overlay_params* early_params) {
         );
 
         if (ptr->is_active) {
-            SPDLOG_INFO(
+            SPDLOG_DEBUG(
                 "Set {} as active GPU (driver={} id={:x}:{:x} pci_dev={})",
                 node_name, driver, vendor_id, device_id, pci_dev
             );

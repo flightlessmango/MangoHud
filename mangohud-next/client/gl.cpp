@@ -433,7 +433,7 @@ bool EGL::display_supports_modifier(EGLDisplay dpy, uint32_t fourcc, uint64_t mo
 }
 
 OverlayGL::OverlayGL(Display* xdpy_, std::shared_ptr<IPCClient> ipc_) : xdpy(xdpy_), ipc(ipc_) {
-    SPDLOG_INFO("OpenGL overlay init");
+    SPDLOG_DEBUG("OpenGL overlay init");
     glx = std::make_unique<GLX>();
     egl = std::make_unique<EGL>();
 
