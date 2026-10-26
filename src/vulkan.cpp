@@ -106,6 +106,9 @@ struct device_data {
 
    struct queue_data *graphic_queue;
 
+   /* Serializes overlay resource access and submissions with device idle waits. */
+   std::mutex overlay_mutex;
+
    std::vector<struct queue_data *> queues;
 };
 
@@ -201,7 +204,8 @@ thread_local ImGuiContext* __MesaImGui;
 static void *find_object_data(uint64_t obj)
 {
    ::scoped_lock lk(global_lock);
-   return vk_object_to_data[obj];
+   auto it = vk_object_to_data.find(obj);
+   return it != vk_object_to_data.end() ? it->second : nullptr;
 }
 
 static void map_object(uint64_t obj, void *data)
@@ -334,9 +338,6 @@ static struct queue_data *new_queue_data(VkQueue queue,
    data->family_index = family_index;
    map_object(HKEY(data->queue), data);
 
-   if (data->flags & VK_QUEUE_GRAPHICS_BIT)
-      device_data->graphic_queue = data;
-
    return data;
 }
 
@@ -347,25 +348,23 @@ static void destroy_queue(struct queue_data *data)
 }
 
 static void device_map_queues(struct device_data *data,
-                              const VkDeviceCreateInfo *pCreateInfo)
+                             const VkDeviceCreateInfo *pCreateInfo,
+                             const std::vector<VkQueueFamilyProperties>& family_props)
 {
    uint32_t n_queues = 0;
    for (uint32_t i = 0; i < pCreateInfo->queueCreateInfoCount; i++)
       n_queues += pCreateInfo->pQueueCreateInfos[i].queueCount;
-   data->queues.resize(n_queues);
+   data->queues.reserve(n_queues);
 
-   struct instance_data *instance_data = data->instance;
-   uint32_t n_family_props;
-   instance_data->pd_vtable.GetPhysicalDeviceQueueFamilyProperties(data->physical_device,
-                                                                &n_family_props,
-                                                                NULL);
-   std::vector<VkQueueFamilyProperties> family_props(n_family_props);
-   instance_data->pd_vtable.GetPhysicalDeviceQueueFamilyProperties(data->physical_device,
-                                                                &n_family_props,
-                                                                family_props.data());
-
-   uint32_t queue_index = 0;
    for (uint32_t i = 0; i < pCreateInfo->queueCreateInfoCount; i++) {
+      const bool select_graphics =
+         !(pCreateInfo->pQueueCreateInfos[i].flags & VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT) &&
+         (family_props[pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex].queueFlags & VK_QUEUE_GRAPHICS_BIT);
+
+      /* Leave the overlay disabled if the selected queue cannot be retrieved. */
+      if (select_graphics)
+         data->graphic_queue = nullptr;
+
       for (uint32_t j = 0; j < pCreateInfo->pQueueCreateInfos[i].queueCount; j++) {
          VkQueue queue = VK_NULL_HANDLE;
          if (pCreateInfo->pQueueCreateInfos[i].flags) {
@@ -395,9 +394,13 @@ static void device_map_queues(struct device_data *data,
 
          VK_CHECK(data->set_device_loader_data(data->device, queue));
 
-         data->queues[queue_index++] =
+         auto *mapped =
             new_queue_data(queue, &family_props[pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex],
                            pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex, data);
+         data->queues.push_back(mapped);
+
+         if (select_graphics && j + 1 == pCreateInfo->pQueueCreateInfos[i].queueCount)
+            data->graphic_queue = mapped;
       }
    }
 }
@@ -773,8 +776,10 @@ static void check_fonts(struct swapchain_data* data)
       int width, height;
       data->font_atlas->GetTexDataAsAlpha8(&pixels, &width, &height);
 
-      // wait for rendering to complete, if any
-      device_data->vtable.DeviceWaitIdle(device_data->device);
+      /* Font uploads and draws only use the overlay queue. */
+      if (data->font_uploaded) {
+         VK_CHECK(device_data->vtable.QueueWaitIdle(device_data->graphic_queue->queue));
+      }
       shutdown_swapchain_font(data);
 
       if (desc_set)
@@ -887,7 +892,7 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
    imb.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
    imb.pNext = nullptr;
    imb.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-   imb.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+   imb.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
    imb.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
    imb.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
    imb.image = data->images[image_index];
@@ -1079,7 +1084,7 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
       submit_info.signalSemaphoreCount = 1;
       submit_info.pSignalSemaphores = &draw->cross_engine_semaphore;
 
-      device_data->vtable.QueueSubmit(present_queue->queue, 1, &submit_info, VK_NULL_HANDLE);
+      VK_CHECK(device_data->vtable.QueueSubmit(present_queue->queue, 1, &submit_info, VK_NULL_HANDLE));
 
       submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
       submit_info.commandBufferCount = 1;
@@ -1090,10 +1095,10 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
       submit_info.signalSemaphoreCount = 1;
       submit_info.pSignalSemaphores = &draw->semaphore;
 
-      device_data->vtable.QueueSubmit(device_data->graphic_queue->queue, 1, &submit_info, draw->fence);
+      VK_CHECK(device_data->vtable.QueueSubmit(device_data->graphic_queue->queue, 1, &submit_info, draw->fence));
    } else {
-      // wait in the fragment stage until the swapchain image is ready
-      std::vector<VkPipelineStageFlags> stages_wait(n_wait_semaphores, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+      /* Wait before image layout transitions and color attachment loads. */
+      std::vector<VkPipelineStageFlags> stages_wait(n_wait_semaphores, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
       VkSubmitInfo submit_info = {};
       submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -1105,7 +1110,7 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
       submit_info.signalSemaphoreCount = 1;
       submit_info.pSignalSemaphores = &draw->semaphore;
 
-      device_data->vtable.QueueSubmit(device_data->graphic_queue->queue, 1, &submit_info, draw->fence);
+      VK_CHECK(device_data->vtable.QueueSubmit(device_data->graphic_queue->queue, 1, &submit_info, draw->fence));
    }
 
    make_imgui_contexts_current(saved_imgui_context);
@@ -1423,7 +1428,7 @@ static void setup_swapchain_data(struct swapchain_data *data,
    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
    dependency.srcAccessMask = 0;
-   dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+   dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
    VkRenderPassCreateInfo render_pass_info = {};
    render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
    render_pass_info.attachmentCount = 1;
@@ -1523,6 +1528,9 @@ static void shutdown_swapchain_data(struct swapchain_data *data)
 
    for (auto draw : data->draws) {
       if (!draw) continue;
+      /* Application fences need not cover submissions on the overlay queue. */
+      VK_CHECK(device_data->vtable.WaitForFences(device_data->device, 1,
+                                                &draw->fence, VK_TRUE, ~0ull));
       device_data->vtable.FreeCommandBuffers(device_data->device, data->command_pool, 1, &draw->command_buffer);
       device_data->vtable.DestroySemaphore(device_data->device, draw->cross_engine_semaphore, NULL);
       device_data->vtable.DestroySemaphore(device_data->device, draw->semaphore, NULL);
@@ -1633,9 +1641,13 @@ static VkResult overlay_CreateSwapchainKHR(
 {
    VkSwapchainCreateInfoKHR createInfo = *pCreateInfo;
 
-   createInfo.imageUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
    struct device_data *device_data = FIND(struct device_data, device);
+   ::scoped_lock overlay_lock(device_data->overlay_mutex);
+   const bool draw_overlay = device_data->graphic_queue &&
+      !(createInfo.flags & VK_SWAPCHAIN_CREATE_PROTECTED_BIT_KHR);
+   if (draw_overlay)
+      createInfo.imageUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
    const auto& params = device_data->instance->params;
 
    std::optional<VkPresentModeKHR> target_present_mode;
@@ -1654,6 +1666,7 @@ static VkResult overlay_CreateSwapchainKHR(
 
    VkResult result = device_data->vtable.CreateSwapchainKHR(device, &createInfo, pAllocator, pSwapchain);
    if (result != VK_SUCCESS) return result;
+   if (!draw_overlay) return result;
    struct swapchain_data *swapchain_data = new_swapchain_data(*pSwapchain, device_data);
    setup_swapchain_data(swapchain_data, pCreateInfo);
 
@@ -1703,17 +1716,18 @@ static void overlay_DestroySwapchainKHR(
     VkSwapchainKHR                              swapchain,
     const VkAllocationCallbacks*                pAllocator)
 {
-   if (swapchain == VK_NULL_HANDLE) {
-      struct device_data *device_data = FIND(struct device_data, device);
+   struct device_data *device_data = FIND(struct device_data, device);
+   struct swapchain_data *swapchain_data =
+      FIND(struct swapchain_data, swapchain);
+
+   if (!swapchain_data) {
       device_data->vtable.DestroySwapchainKHR(device, swapchain, pAllocator);
       return;
    }
 
-   struct swapchain_data *swapchain_data =
-      FIND(struct swapchain_data, swapchain);
-
+   ::scoped_lock overlay_lock(device_data->overlay_mutex);
    shutdown_swapchain_data(swapchain_data);
-   swapchain_data->device->vtable.DestroySwapchainKHR(device, swapchain, pAllocator);
+   device_data->vtable.DestroySwapchainKHR(device, swapchain, pAllocator);
    destroy_swapchain_data(swapchain_data);
 }
 
@@ -1721,10 +1735,11 @@ static VkResult overlay_QueuePresentKHR(
     VkQueue                                     queue,
     const VkPresentInfoKHR*                     pPresentInfo)
 {
+   struct queue_data *queue_data = FIND(struct queue_data, queue);
+   ::scoped_lock overlay_lock(queue_data->device->overlay_mutex);
+
    if (fps_limiter)
       fps_limiter->limit(true);
-
-   struct queue_data *queue_data = FIND(struct queue_data, queue);
 
    VkPresentInfoKHR present_info = *pPresentInfo;
    VkBaseInStructure **mode_info_node = vk_find_next_struct(
@@ -1740,7 +1755,7 @@ static VkResult overlay_QueuePresentKHR(
       struct swapchain_data *swapchain_data =
          FIND(struct swapchain_data, swapchain);
 
-      if (pPresentInfo->swapchainCount > 1) {
+      if (swapchain_data && pPresentInfo->swapchainCount > 1) {
          SPDLOG_DEBUG("QueuePresentKHR has {} swapchains; drawing overlay on index 0 and forwarding all swapchains",
                       pPresentInfo->swapchainCount);
          SPDLOG_DEBUG("QueuePresentKHR selected swapchain[0]=0x{:x} image={} size={}x{}",
@@ -1752,11 +1767,13 @@ static VkResult overlay_QueuePresentKHR(
          }
       }
 
-      struct overlay_draw *draw = before_present(swapchain_data,
-                                                 queue_data,
-                                                 pPresentInfo->pWaitSemaphores,
-                                                 pPresentInfo->waitSemaphoreCount,
-                                                 pPresentInfo->pImageIndices[0]);
+      struct overlay_draw *draw = nullptr;
+      if (swapchain_data) {
+         draw = before_present(swapchain_data, queue_data,
+                               pPresentInfo->pWaitSemaphores,
+                               pPresentInfo->waitSemaphoreCount,
+                               pPresentInfo->pImageIndices[0]);
+      }
 
       /* Because the submission of the overlay draw waits on the semaphores
        * handed for present, we don't need to have this present operation
@@ -1877,6 +1894,95 @@ static VkResult overlay_QueueSubmit(
    return device_data->vtable.QueueSubmit(queue, submitCount, pSubmits, fence);
 }
 
+static VkResult overlay_DeviceWaitIdle(
+    VkDevice                                    device)
+{
+   struct device_data *device_data = FIND(struct device_data, device);
+   ::scoped_lock overlay_lock(device_data->overlay_mutex);
+   return device_data->vtable.DeviceWaitIdle(device);
+}
+
+static uint32_t advertised_queue_count(const VkQueueFamilyProperties& properties)
+{
+   /* Single-queue families must remain available to the application. */
+   return properties.queueCount -
+      ((properties.queueFlags & VK_QUEUE_GRAPHICS_BIT) && properties.queueCount > 1 ? 1 : 0);
+}
+
+static void overlay_GetPhysicalDeviceQueueFamilyProperties(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t*                                   pCount,
+    VkQueueFamilyProperties*                    pProperties)
+{
+   struct instance_data *instance_data =
+      FIND(struct instance_data, physicalDevice);
+   instance_data->pd_vtable.GetPhysicalDeviceQueueFamilyProperties(physicalDevice, pCount, pProperties);
+   if (pProperties && !is_blacklisted()) {
+      for (uint32_t i = 0; i < *pCount; i++)
+         pProperties[i].queueCount = advertised_queue_count(pProperties[i]);
+   }
+}
+
+static void overlay_GetPhysicalDeviceQueueFamilyProperties2(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t*                                   pCount,
+    VkQueueFamilyProperties2*                   pProperties)
+{
+   struct instance_data *instance_data =
+      FIND(struct instance_data, physicalDevice);
+   instance_data->pd_vtable.GetPhysicalDeviceQueueFamilyProperties2(physicalDevice, pCount, pProperties);
+   if (pProperties && !is_blacklisted()) {
+      for (uint32_t i = 0; i < *pCount; i++) {
+         auto& properties = pProperties[i].queueFamilyProperties;
+         properties.queueCount = advertised_queue_count(properties);
+      }
+   }
+}
+
+struct overlay_queue_create_info {
+   std::vector<VkDeviceQueueCreateInfo> queue_infos;
+   std::vector<float> priorities;
+   bool private_queue = false;
+
+   overlay_queue_create_info(const VkDeviceCreateInfo& info,
+                             const std::vector<VkQueueFamilyProperties>& families)
+   {
+      if (info.queueCreateInfoCount)
+         queue_infos.assign(info.pQueueCreateInfos, info.pQueueCreateInfos + info.queueCreateInfoCount);
+
+      /* Queue mapping selects the last unprotected graphics queue. */
+      for (uint32_t i = info.queueCreateInfoCount; i > 0; i--) {
+         auto& queue_info = queue_infos[i - 1];
+         const uint32_t family = queue_info.queueFamilyIndex;
+         if (family >= families.size() || (queue_info.flags & VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT) ||
+             !queue_info.queueCount ||
+             !(families[family].queueFlags & VK_QUEUE_GRAPHICS_BIT))
+            continue;
+
+         /* Protected and unprotected requests consume the same family's capacity. */
+         uint64_t requested = 0;
+         for (const auto& other : queue_infos) {
+            if (other.queueFamilyIndex == family)
+               requested += other.queueCount;
+         }
+         if (requested >= families[family].queueCount)
+            break;
+
+         /* Append the overlay queue without changing application queue indices. */
+         priorities.assign(queue_info.pQueuePriorities,
+                           queue_info.pQueuePriorities + queue_info.queueCount);
+         priorities.push_back(priorities.back());
+         queue_info.queueCount++;
+         queue_info.pQueuePriorities = priorities.data();
+         private_queue = true;
+         break;
+      }
+   }
+
+   overlay_queue_create_info(const overlay_queue_create_info&) = delete;
+   overlay_queue_create_info& operator=(const overlay_queue_create_info&) = delete;
+};
+
 static VkResult overlay_CreateDevice(
     VkPhysicalDevice                            physicalDevice,
     const VkDeviceCreateInfo*                   pCreateInfo,
@@ -1927,7 +2033,8 @@ static VkResult overlay_CreateDevice(
             }
          }
       }
-      if (extension.extensionName == std::string_view(VK_KHR_PRESENT_MODE_FIFO_LATEST_READY_EXTENSION_NAME)) {
+      if (extension.extensionName == std::string_view(VK_KHR_PRESENT_MODE_FIFO_LATEST_READY_EXTENSION_NAME) &&
+          has_extension(enabled_extensions, VK_KHR_SWAPCHAIN_EXTENSION_NAME)) {
          if (!has_extension(enabled_extensions, VK_KHR_PRESENT_MODE_FIFO_LATEST_READY_EXTENSION_NAME)) {
             enabled_extensions.push_back(VK_KHR_PRESENT_MODE_FIFO_LATEST_READY_EXTENSION_NAME);
          }
@@ -1937,6 +2044,17 @@ static VkResult overlay_CreateDevice(
    VkDeviceCreateInfo pCreateInfoPatched = *pCreateInfo;
    pCreateInfoPatched.ppEnabledExtensionNames = enabled_extensions.data();
    pCreateInfoPatched.enabledExtensionCount = (uint32_t) enabled_extensions.size();
+
+   std::vector<VkQueueFamilyProperties> families;
+   if (!is_blacklisted()) {
+      uint32_t count = 0;
+      instance_data->pd_vtable.GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, nullptr);
+      families.resize(count);
+      instance_data->pd_vtable.GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, families.data());
+      families.resize(count);
+   }
+   overlay_queue_create_info queues(*pCreateInfo, families);
+   pCreateInfoPatched.pQueueCreateInfos = queues.queue_infos.data();
 
    VkResult result = fpCreateDevice(physicalDevice, &pCreateInfoPatched, pAllocator, pDevice);
    if (result != VK_SUCCESS) return result;
@@ -1962,7 +2080,12 @@ static VkResult overlay_CreateDevice(
    }
 
    if (!is_blacklisted()) {
-      device_map_queues(device_data, pCreateInfo);
+      device_map_queues(device_data, &pCreateInfoPatched, families);
+      if (!queues.private_queue)
+         device_data->graphic_queue = nullptr;
+      if (device_data->graphic_queue)
+         SPDLOG_DEBUG("Reserved overlay queue from family {}",
+                      device_data->graphic_queue->family_index);
 #ifdef __linux__
       gpu = device_data->properties.deviceName;
       SPDLOG_DEBUG("gpu: {}", gpu);
@@ -2219,6 +2342,11 @@ static const struct {
    ADD_HOOK(CreateSampler),
 
    ADD_HOOK(QueueSubmit),
+   ADD_HOOK(DeviceWaitIdle),
+
+   ADD_HOOK(GetPhysicalDeviceQueueFamilyProperties),
+   ADD_HOOK(GetPhysicalDeviceQueueFamilyProperties2),
+   ADD_ALIAS_HOOK(GetPhysicalDeviceQueueFamilyProperties2KHR, GetPhysicalDeviceQueueFamilyProperties2),
 
    ADD_HOOK(CreateDevice),
    ADD_HOOK(DestroyDevice),
@@ -2226,6 +2354,7 @@ static const struct {
    ADD_HOOK(CreateInstance),
    ADD_HOOK(DestroyInstance),
 #undef ADD_HOOK
+#undef ADD_ALIAS_HOOK
 };
 
 static void *find_ptr(const char *name)
@@ -2264,11 +2393,11 @@ extern "C" PUBLIC VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetInstancePr
 {
    init_spdlog();
    void *ptr = find_ptr(funcName);
-   if (ptr) return reinterpret_cast<PFN_vkVoidFunction>(ptr);
-
-   if (instance == NULL) return NULL;
+   if (instance == NULL) return reinterpret_cast<PFN_vkVoidFunction>(ptr);
 
    struct instance_data *instance_data = FIND(struct instance_data, instance);
    if (instance_data->vtable.GetInstanceProcAddr == NULL) return NULL;
-   return instance_data->vtable.GetInstanceProcAddr(instance, funcName);
+   PFN_vkVoidFunction next = instance_data->vtable.GetInstanceProcAddr(instance, funcName);
+   if (next == NULL) return NULL;
+   return ptr ? reinterpret_cast<PFN_vkVoidFunction>(ptr) : next;
 }
