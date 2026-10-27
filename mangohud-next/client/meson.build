@@ -15,6 +15,7 @@ endforeach
 vulkan_layer = shared_library(
     'MangoHud-next',
     files('layer.cpp',
+          'presentation_timing.cpp',
           'vulkan.cpp',
           'wayland.cpp',
           'x11.cpp',

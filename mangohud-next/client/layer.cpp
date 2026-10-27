@@ -11,91 +11,11 @@
 #include "wayland.h"
 #include "x11.h"
 
+
 static char pendingEngineName[VK_MAX_DESCRIPTION_SIZE]{};
 std::unique_ptr<Layer> layer;
 static std::unique_ptr<Wayland> wayland;
 static std::unique_ptr<X11> x11;
-
-
-#ifdef VK_EXT_present_timing
-static std::mutex timing_devices_m;
-static std::unordered_map<VkDevice, bool> timing_devices;
-
-static constexpr uint32_t timing_queue_size = 256;
-
-bool presentation_timing::update_domain() {
-    VkSwapchainTimeDomainPropertiesEXT properties{VK_STRUCTURE_TYPE_SWAPCHAIN_TIME_DOMAIN_PROPERTIES_EXT};
-    if (!get_domains || get_domains(device, swapchain, &properties, &domain_counter) != VK_SUCCESS ||
-        properties.timeDomainCount == 0)
-        return false;
-    std::vector<VkTimeDomainKHR> types(properties.timeDomainCount);
-    std::vector<uint64_t> ids(properties.timeDomainCount);
-    properties.pTimeDomains = types.data();
-    properties.pTimeDomainIds = ids.data();
-    if (get_domains(device, swapchain, &properties, &domain_counter) != VK_SUCCESS)
-        return false;
-    if (properties.timeDomainCount == 0)
-        return false;
-    if (domain != ids[0]) {
-        timestamp_origin = 0;
-        last_timestamp = 0;
-    }
-    domain = ids[0];
-    return true;
-}
-
-void presentation_timing::drain(IPCClient& ipc) {
-    if (!enabled || pending == 0)
-        return;
-    std::array<VkPastPresentationTimingEXT, timing_queue_size> results{};
-    std::array<std::array<VkPresentStageTimeEXT, 4>, timing_queue_size> stages{};
-    for (uint32_t i = 0; i < timing_queue_size; ++i) {
-        results[i].sType = VK_STRUCTURE_TYPE_PAST_PRESENTATION_TIMING_EXT;
-        results[i].presentStageCount = stages[i].size();
-        results[i].pPresentStages = stages[i].data();
-    }
-    VkPastPresentationTimingInfoEXT query{VK_STRUCTURE_TYPE_PAST_PRESENTATION_TIMING_INFO_EXT};
-    query.swapchain = swapchain;
-    VkPastPresentationTimingPropertiesEXT properties{VK_STRUCTURE_TYPE_PAST_PRESENTATION_TIMING_PROPERTIES_EXT};
-    properties.presentationTimingCount = results.size();
-    properties.pPresentationTimings = results.data();
-    auto result = get_results(device, &query, &properties);
-    if (result != VK_SUCCESS && result != VK_INCOMPLETE) {
-        SPDLOG_DEBUG("presentation timing query failed: {}", string_VkResult(result));
-        enabled = false;
-        return;
-    }
-    for (uint32_t i = 0; i < properties.presentationTimingCount; ++i) {
-        const auto& report = results[i];
-        if (!report.reportComplete)
-            continue;
-        if (pending > 0)
-            --pending;
-        for (uint32_t j = 0; j < report.presentStageCount; ++j) {
-            auto timestamp = report.pPresentStages[j].time;
-            if (report.pPresentStages[j].stage != stage || timestamp == 0)
-                continue;
-            if (report.timeDomainId != domain) {
-                domain = report.timeDomainId;
-                timestamp_origin = 0;
-                last_timestamp = 0;
-            }
-            if (timestamp <= last_timestamp)
-                continue;
-            last_timestamp = timestamp;
-            if (timestamp_origin == 0) {
-                timestamp_origin = timestamp;
-                sample_origin = os_time_get_nano();
-                SPDLOG_DEBUG("frame timing: first presentation timestamp={} domain={} stage=0x{:x}",
-                             timestamp, domain, stage);
-            }
-            ipc.add_to_queue(sample_origin + timestamp - timestamp_origin);
-        }
-    }
-    if (domain_counter != properties.timeDomainsCounter && !update_domain())
-        enabled = false;
-}
-#endif
 
 static const uint32_t overlay_vert_spv[] = {
     #include "overlay.vert.spv.h"
@@ -196,64 +116,11 @@ public:
         }
 
 #ifdef VK_EXT_present_timing
-        VkPhysicalDevicePresentTimingFeaturesEXT timing{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_TIMING_FEATURES_EXT};
-        uint32_t extension_count = 0;
-        std::vector<VkExtensionProperties> available;
-        if (dispatch->EnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extension_count, nullptr) == VK_SUCCESS) {
-            available.resize(extension_count);
-            if (dispatch->EnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extension_count, available.data()) != VK_SUCCESS)
-                available.clear();
-        }
-        auto has_extension = [&](const char* name) {
-            for (const auto& extension : available)
-                if (std::strcmp(extension.extensionName, name) == 0)
-                    return true;
-            return false;
-        };
-        bool timing_enabled = false;
-        if (has_extension(VK_EXT_PRESENT_TIMING_EXTENSION_NAME) &&
-            has_extension(VK_KHR_PRESENT_ID_2_EXTENSION_NAME) &&
-            has_extension(VK_KHR_CALIBRATED_TIMESTAMPS_EXTENSION_NAME)) {
-            VkPhysicalDeviceFeatures2 features{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
-            features.pNext = &timing;
-            if (dispatch->GetPhysicalDeviceFeatures2)
-                dispatch->GetPhysicalDeviceFeatures2(physicalDevice, &features);
-            else {
-                auto get_features = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2KHR>(
-                    dispatch->GetInstanceProcAddr(dispatch->Instance, "vkGetPhysicalDeviceFeatures2KHR"));
-                if (get_features)
-                    get_features(physicalDevice, &features);
-            }
-            timing_enabled = timing.presentTiming;
-            for (auto* it = static_cast<const VkBaseInStructure*>(ci.pNext); it; it = it->pNext) {
-                if (it->sType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_TIMING_FEATURES_EXT) {
-                    timing_enabled = false;
-                }
-            }
-            if (timing_enabled) {
-                add(VK_EXT_PRESENT_TIMING_EXTENSION_NAME);
-                add(VK_KHR_PRESENT_ID_2_EXTENSION_NAME);
-                add(VK_KHR_CALIBRATED_TIMESTAMPS_EXTENSION_NAME);
-                if (!ChainHasSType(newPNext, timing.sType)) {
-                    timing.presentAtAbsoluteTime = VK_FALSE;
-                    timing.presentAtRelativeTime = VK_FALSE;
-                    timing.pNext = newPNext;
-                    newPNext = &timing;
-                }
-            }
-        }
-        ci.enabledExtensionCount = static_cast<uint32_t>(exts.size());
-        ci.ppEnabledExtensionNames = exts.data();
-#endif
+        return PresentationTiming::create_device(dispatch, physicalDevice, ci, pAllocator, pDevice, exts, newPNext);
+#else
         ci.pNext = newPNext;
-        auto result = dispatch->CreateDevice(physicalDevice, &ci, pAllocator, pDevice);
-#ifdef VK_EXT_present_timing
-        if (result == VK_SUCCESS) {
-            std::lock_guard lock(timing_devices_m);
-            timing_devices[*pDevice] = timing_enabled;
-        }
+        return dispatch->CreateDevice(physicalDevice, &ci, pAllocator, pDevice);
 #endif
-        return result;
     }
 
     static VkResult CreateInstance(
@@ -294,7 +161,19 @@ public:
         ci.enabledExtensionCount = (uint32_t)exts.size();
         ci.ppEnabledExtensionNames = exts.data();
 
+#ifdef VK_EXT_present_timing
+        return PresentationTiming::create_instance(pfnCreateInstance, ci, pAllocator, pInstance);
+#else
         return pfnCreateInstance(&ci, pAllocator, pInstance);
+#endif
+    }
+
+    static void DestroyInstance(const vkroots::VkInstanceDispatch* dispatch, VkInstance instance,
+                                const VkAllocationCallbacks* allocator) {
+#ifdef VK_EXT_present_timing
+        PresentationTiming::destroy_instance(instance);
+#endif
+        dispatch->DestroyInstance(instance, allocator);
     }
 
     static VkResult CreateWaylandSurfaceKHR(const vkroots::VkInstanceDispatch* dispatch, VkInstance instance,
@@ -350,6 +229,31 @@ public:
 
 class VkDeviceOverrides {
 public:
+#ifdef VK_EXT_present_timing
+    static VkResult SetSwapchainPresentTimingQueueSizeEXT(
+        const vkroots::VkDeviceDispatch* dispatch, VkDevice device,
+        VkSwapchainKHR swapchain, uint32_t size) {
+        auto set_queue = reinterpret_cast<PFN_vkSetSwapchainPresentTimingQueueSizeEXT>(
+            dispatch->GetDeviceProcAddr(device, "vkSetSwapchainPresentTimingQueueSizeEXT"));
+        auto sc = layer ? layer->get_swapchain_data(swapchain) : nullptr;
+        if (!sc || !sc->timing.managed)
+            return set_queue(device, swapchain, size);
+        std::lock_guard lock(sc->timing.m);
+        return sc->timing.set_application_queue_size(size);
+    }
+
+    static VkResult GetPastPresentationTimingEXT(
+        const vkroots::VkDeviceDispatch* dispatch, VkDevice device,
+        const VkPastPresentationTimingInfoEXT* info,
+        VkPastPresentationTimingPropertiesEXT* properties) {
+        auto sc = layer ? layer->get_swapchain_data(info->swapchain) : nullptr;
+        if (!sc || !sc->timing.managed)
+            return reinterpret_cast<PFN_vkGetPastPresentationTimingEXT>(
+                dispatch->GetDeviceProcAddr(device, "vkGetPastPresentationTimingEXT"))(device, info, properties);
+        std::lock_guard lock(sc->timing.m);
+        return sc->timing.get_application_results(properties);
+    }
+#endif
     static VkResult CreateSwapchainKHR(
         const vkroots::VkDeviceDispatch* pDispatch,
         VkDevice device,
@@ -359,33 +263,12 @@ public:
     {
         VkSwapchainCreateInfoKHR create_info = *pCreateInfo;
 #ifdef VK_EXT_present_timing
-        bool timing_enabled = false;
-        VkPresentStageFlagsEXT timing_stage = 0;
-        {
-            std::lock_guard lock(timing_devices_m);
-            auto it = timing_devices.find(device);
-            timing_enabled = it != timing_devices.end() && it->second;
-        }
-        auto get_caps = pDispatch->pPhysicalDeviceDispatch->pInstanceDispatch->GetPhysicalDeviceSurfaceCapabilities2KHR;
-        if (timing_enabled && get_caps) {
-            VkPhysicalDeviceSurfaceInfo2KHR surface_info{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR};
-            surface_info.surface = pCreateInfo->surface;
-            VkPresentTimingSurfaceCapabilitiesEXT timing_caps{VK_STRUCTURE_TYPE_PRESENT_TIMING_SURFACE_CAPABILITIES_EXT};
-            VkSurfaceCapabilities2KHR caps{VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_KHR};
-            caps.pNext = &timing_caps;
-            timing_enabled = get_caps(pDispatch->PhysicalDevice, &surface_info, &caps) == VK_SUCCESS &&
-                             timing_caps.presentTimingSupported;
-            if (timing_caps.presentStageQueries & VK_PRESENT_STAGE_QUEUE_OPERATIONS_END_BIT_EXT)
-                timing_stage = VK_PRESENT_STAGE_QUEUE_OPERATIONS_END_BIT_EXT;
-        }
-        timing_enabled = timing_enabled && timing_stage != 0;
-        if (timing_enabled)
-            create_info.flags |= VK_SWAPCHAIN_CREATE_PRESENT_TIMING_BIT_EXT;
+        auto timing_config = PresentationTiming::prepare_swapchain(pDispatch, create_info);
 #endif
         VkResult r = pDispatch->CreateSwapchainKHR(pDispatch->Device, &create_info, pAllocator, pSwapchain);
 #ifdef VK_EXT_present_timing
-        if (r != VK_SUCCESS && timing_enabled && create_info.flags != pCreateInfo->flags) {
-            timing_enabled = false;
+        if (r != VK_SUCCESS && timing_config.enabled && create_info.flags != pCreateInfo->flags) {
+            timing_config.enabled = false;
             r = pDispatch->CreateSwapchainKHR(pDispatch->Device, pCreateInfo, pAllocator, pSwapchain);
         }
 #endif
@@ -433,24 +316,8 @@ public:
         if (r != VK_SUCCESS)
             return r;
 #ifdef VK_EXT_present_timing
-        if (timing_enabled) {
-            auto sc = layer->get_swapchain_data(*pSwapchain);
-            auto& timing = sc->timing;
-            timing.device = device;
-            timing.swapchain = *pSwapchain;
-            timing.stage = timing_stage;
-            timing.get_domains = reinterpret_cast<PFN_vkGetSwapchainTimeDomainPropertiesEXT>(
-                pDispatch->GetDeviceProcAddr(device, "vkGetSwapchainTimeDomainPropertiesEXT"));
-            timing.get_results = reinterpret_cast<PFN_vkGetPastPresentationTimingEXT>(
-                pDispatch->GetDeviceProcAddr(device, "vkGetPastPresentationTimingEXT"));
-            auto set_queue = reinterpret_cast<PFN_vkSetSwapchainPresentTimingQueueSizeEXT>(
-                pDispatch->GetDeviceProcAddr(device, "vkSetSwapchainPresentTimingQueueSizeEXT"));
-            timing.enabled = timing.get_results && set_queue && timing.update_domain() &&
-                set_queue(device, *pSwapchain, timing_queue_size) == VK_SUCCESS;
-            timing_enabled = timing.enabled;
-        }
-        SPDLOG_DEBUG("frame timing: presentation feedback {} for swapchain 0x{:x}, stage=0x{:x}",
-                     timing_enabled ? "enabled" : "unavailable", (uint64_t)*pSwapchain, timing_stage);
+        auto sc = layer->get_swapchain_data(*pSwapchain);
+        layer->timing.init_swapchain(pDispatch, device, *pSwapchain, sc, timing_config);
 #endif
         layer->ipc->send_resolution(pCreateInfo->imageExtent.width, pCreateInfo->imageExtent.height);
 
@@ -468,6 +335,10 @@ public:
     VkSwapchainKHR swapchain,
     const VkAllocationCallbacks* pAllocator)
     {
+#ifdef VK_EXT_present_timing
+        if (layer)
+            layer->timing.retire(swapchain);
+#endif
         {
             std::unique_lock lock(layer->swapchain_mtx);
             auto it = layer->swapchains.find(swapchain);
@@ -490,51 +361,29 @@ public:
             ? layer->get_swapchain_data(pPresentInfo->pSwapchains[0]) : nullptr;
         bool feedback = false;
 #ifdef VK_EXT_present_timing
-        if (sc) {
-            std::lock_guard lock(sc->m);
-            if (pPresentInfo->swapchainCount != 1)
-                sc->timing.enabled = false;
-            for (auto* it = static_cast<const VkBaseInStructure*>(pPresentInfo->pNext); it; it = it->pNext)
-                if (it->sType == VK_STRUCTURE_TYPE_PRESENT_TIMINGS_INFO_EXT)
-                    sc->timing.enabled = false;
-            sc->timing.drain(*layer->ipc);
-            feedback = sc->timing.enabled;
-        }
+        feedback = PresentationTiming::check_present(sc, pPresentInfo);
 #endif
-        if (layer && !feedback)
+        bool timing_fps = false;
+#ifdef VK_EXT_present_timing
+        timing_fps = feedback && sc->lsfg_is_present &&
+            !has_type(pPresentInfo->pNext, VK_STRUCTURE_TYPE_PRESENT_TIMINGS_INFO_EXT) &&
+            (sc->timing.stage & VK_PRESENT_STAGE_QUEUE_OPERATIONS_END_BIT_EXT) &&
+            sc->timing.pending.load(std::memory_order_relaxed) +
+                sc->timing.presents_per_frame.load(std::memory_order_relaxed) <=
+                sc->timing.driver_queue_size.load(std::memory_order_relaxed);
+#endif
+        if (layer && !timing_fps)
             layer->ipc->add_to_queue(os_time_get_nano());
         auto present = [&](const VkPresentInfoKHR* info) {
 #ifdef VK_EXT_present_timing
-            if (feedback) {
-                VkPresentTimingInfoEXT timing{VK_STRUCTURE_TYPE_PRESENT_TIMING_INFO_EXT};
-                VkPresentTimingsInfoEXT timings{VK_STRUCTURE_TYPE_PRESENT_TIMINGS_INFO_EXT};
-                {
-                    std::lock_guard lock(sc->m);
-                    if (sc->timing.pending >= timing_queue_size)
-                        return pDispatch->QueuePresentKHR(queue, info);
-                    timing.timeDomainId = sc->timing.domain;
-                    timing.presentStageQueries = sc->timing.stage;
-                }
-                timings.pNext = info->pNext;
-                timings.swapchainCount = 1;
-                timings.pTimingInfos = &timing;
-                VkPresentInfoKHR timed = *info;
-                timed.pNext = &timings;
-                auto result = pDispatch->QueuePresentKHR(queue, &timed);
-                if (result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR) {
-                    std::lock_guard lock(sc->m);
-                    ++sc->timing.pending;
-                }
-                return result;
-            }
+            if (layer)
+                return layer->timing.present(pDispatch, queue, info, sc, feedback, timing_fps);
 #endif
             return pDispatch->QueuePresentKHR(queue, info);
         };
         if (!sc)
             return present(pPresentInfo);
         if (wayland) {
-            auto swapchain_data = layer->get_swapchain_data(pPresentInfo->pSwapchains[0]);
-            wayland->request_presentation_feedback(swapchain_data->vk_surface);
             return present(pPresentInfo);
         }
 
@@ -624,10 +473,7 @@ public:
         }
 
 #ifdef VK_EXT_present_timing
-        {
-            std::lock_guard lock(timing_devices_m);
-            timing_devices.erase(device);
-        }
+        PresentationTiming::destroy_device(device);
 #endif
         d->DestroyDevice(device, pAllocator);
     }
@@ -641,6 +487,10 @@ public:
             return driver(timeout);
 
         auto sc = layer->get_swapchain_data(swapchain);
+#ifdef VK_EXT_present_timing
+        if (sc->lsfg_requires_vsync)
+            return driver(timeout);
+#endif
         return sc->limiter.acquire(interval, timeout, std::forward<Acquire>(driver));
     }
 
@@ -665,6 +515,55 @@ public:
     }
 };
 
+#ifdef VK_EXT_present_timing
+static VKAPI_ATTR VkResult VKAPI_CALL set_timing_queue_size(
+    VkDevice device, VkSwapchainKHR swapchain, uint32_t size) {
+    return VkDeviceOverrides::SetSwapchainPresentTimingQueueSizeEXT(
+        vkroots::tables::LookupDeviceDispatch(device), device, swapchain, size);
+}
+
+static VKAPI_ATTR VkResult VKAPI_CALL get_past_presentation_timing(
+    VkDevice device, const VkPastPresentationTimingInfoEXT* info,
+    VkPastPresentationTimingPropertiesEXT* properties) {
+    return VkDeviceOverrides::GetPastPresentationTimingEXT(
+        vkroots::tables::LookupDeviceDispatch(device), device, info, properties);
+}
+
+static PFN_vkVoidFunction timing_entry_point(const char* name) {
+    if (!std::strcmp(name, "vkSetSwapchainPresentTimingQueueSizeEXT"))
+        return reinterpret_cast<PFN_vkVoidFunction>(set_timing_queue_size);
+    if (!std::strcmp(name, "vkGetPastPresentationTimingEXT"))
+        return reinterpret_cast<PFN_vkVoidFunction>(get_past_presentation_timing);
+    return nullptr;
+}
+
+static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL timing_device_proc_addr(VkDevice device, const char* name) {
+    const auto* dispatch = vkroots::tables::LookupDeviceDispatch(device);
+    if (dispatch && dispatch->GetDeviceProcAddr(device, name)) {
+        if (auto entry = timing_entry_point(name))
+            return entry;
+    }
+    if (!std::strcmp(name, "vkGetDeviceProcAddr"))
+        return reinterpret_cast<PFN_vkVoidFunction>(timing_device_proc_addr);
+    return vkroots::GetDeviceProcAddr<VkInstanceOverrides, vkroots::NoOverrides, VkDeviceOverrides>(device, name);
+}
+
+static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL timing_instance_proc_addr(VkInstance instance, const char* name) {
+    if (instance) {
+        const auto* dispatch = vkroots::tables::LookupInstanceDispatch(instance);
+        if (dispatch && dispatch->GetInstanceProcAddr(instance, name)) {
+            if (auto entry = timing_entry_point(name))
+                return entry;
+        }
+        if (!std::strcmp(name, "vkGetDeviceProcAddr"))
+            return reinterpret_cast<PFN_vkVoidFunction>(timing_device_proc_addr);
+        if (!std::strcmp(name, "vkGetInstanceProcAddr"))
+            return reinterpret_cast<PFN_vkVoidFunction>(timing_instance_proc_addr);
+    }
+    return vkroots::GetInstanceProcAddr<VkInstanceOverrides, vkroots::NoOverrides, VkDeviceOverrides>(instance, name);
+}
+#endif
+
 // An empty override type keeps vkroots' loader/dispatch plumbing enabled
 // without intercepting application calls. NoOverrides disables that plumbing.
 struct ForwardingOverrides {};
@@ -676,8 +575,15 @@ vkNegotiateLoaderLayerInterfaceVersion(VkNegotiateLayerInterface* version)
         return vkroots::NegotiateLoaderLayerInterfaceVersion<
             ForwardingOverrides, vkroots::NoOverrides, ForwardingOverrides>(version);
 
-    return vkroots::NegotiateLoaderLayerInterfaceVersion<
+    const auto result = vkroots::NegotiateLoaderLayerInterfaceVersion<
         VkInstanceOverrides, vkroots::NoOverrides, VkDeviceOverrides>(version);
+#ifdef VK_EXT_present_timing
+    if (result == VK_SUCCESS) {
+        version->pfnGetInstanceProcAddr = timing_instance_proc_addr;
+        version->pfnGetDeviceProcAddr = timing_device_proc_addr;
+    }
+#endif
+    return result;
 }
 
 void Layer::init_overlay_resources(const VkSwapchainCreateInfoKHR* pCreateInfo, const vkroots::VkDeviceDispatch* pDispatch, uint32_t image_count) {

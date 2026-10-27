@@ -3,6 +3,7 @@
 #include <shared_mutex>
 #include "vulkan.h"
 #include "frame_limiter.h"
+#include "presentation_timing.h"
 
 struct overlay_resources {
     std::shared_ptr<const vkroots::VkDeviceDispatch> d = nullptr;
@@ -87,25 +88,7 @@ struct overlay_resources {
     }
 };
 
-#ifdef VK_EXT_present_timing
-struct presentation_timing {
-    bool enabled = false;
-    VkPresentStageFlagsEXT stage = 0;
-    uint64_t domain = 0;
-    uint64_t domain_counter = 0;
-    uint64_t timestamp_origin = 0;
-    uint64_t sample_origin = 0;
-    uint64_t last_timestamp = 0;
-    uint32_t pending = 0;
-    VkDevice device = VK_NULL_HANDLE;
-    VkSwapchainKHR swapchain = VK_NULL_HANDLE;
-    PFN_vkGetSwapchainTimeDomainPropertiesEXT get_domains = nullptr;
-    PFN_vkGetPastPresentationTimingEXT get_results = nullptr;
 
-    bool update_domain();
-    void drain(IPCClient& ipc);
-};
-#endif
 
 struct swapchain_data {
     std::shared_ptr<const vkroots::VkDeviceDispatch> d;
@@ -123,6 +106,8 @@ struct swapchain_data {
     VkSurfaceKHR vk_surface;
     frameLimiter limiter;
 #ifdef VK_EXT_present_timing
+    bool lsfg_is_present = false;
+    bool lsfg_requires_vsync = false;
     presentation_timing timing;
 #endif
 
@@ -183,6 +168,10 @@ public:
     Layer() {
         ipc = std::make_shared<IPCClient>(this, Backend::VULKAN);
     }
+
+#ifdef VK_EXT_present_timing
+    PresentationTiming timing{*this};
+#endif
 
     void SetName(VkDevice device, VkObjectType type, uint64_t handle, const char* fmt, ...) {
         if (!g_vkSetDebugUtilsObjectNameEXT || handle == 0) {
@@ -472,12 +461,6 @@ public:
             }
         }
         return true;
-    }
-
-    ~Layer() {
-        std::unique_lock lock(swapchain_mtx);
-        cached_swapchain = {};
-        swapchains.clear();
     }
 
 private:
