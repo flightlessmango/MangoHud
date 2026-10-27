@@ -5,6 +5,7 @@
 
 #include <chrono>
 #include <cstdlib>
+#include <spdlog/cfg/env.h>
 #include <linux/dma-buf.h>
 #include <sys/ioctl.h>
 #include <ranges>
@@ -15,7 +16,14 @@ IPCClient::IPCClient(Layer* layer_, Backend api_) : layer(layer_), api(api_){
     auto spdlog_sink = std::make_shared<spdlogSink>(this);
     logger = std::make_shared<spdlog::logger>("MANGOHUD", spdlog::sinks_init_list{console, spdlog_sink});
     spdlog::set_default_logger(logger);
+#ifdef DEBUG
     spdlog::set_level(spdlog::level::level_enum::debug);
+#else
+    spdlog::set_level(spdlog::level::level_enum::info);
+#endif
+    spdlog::cfg::load_env_levels();
+    if (const char* level = std::getenv("MANGOHUD_LOG_LEVEL"))
+        spdlog::cfg::helpers::load_levels(level);
     SPDLOG_DEBUG("init dbus client");
     // Gamescope always sets GAMESCOPE_WAYLAND_DISPLAY for its nested compositor;
     // WAYLAND_DISPLAY is set only with --expose-wayland.

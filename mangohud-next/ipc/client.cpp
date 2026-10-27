@@ -714,7 +714,7 @@ int Client::spdlog_msg(sd_bus_message* m, void* userdata, sd_bus_error*) {
                     " " +
                     "\x1b[38;2;46;151;98m" + std::string("CLIENT") + "\x1b[0m";
         self->logger = std::make_shared<spdlog::logger>(name, sink);
-        self->logger->set_level(spdlog::level::debug);
+        self->logger->set_level(spdlog::get_level());
         self->logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%^%l%$] [%s:%#] %v");
     }
 
