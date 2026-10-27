@@ -5,7 +5,9 @@
 
 class Zenergy : public CPUPower, private Hwmon {
 private:
-    const std::vector<hwmon_sensor> sensors = { { "energy", "energy1_input" } };
+    const std::vector<hwmon_sensor> sensors = {
+        { "energy", "energy[0-9]+_input", "Esocket0" }
+    };
     uint64_t previous_usage = 0;
 
 protected:
