@@ -1,6 +1,7 @@
 #pragma once
 #include <algorithm>
 #include <cstdint>
+#include <chrono>
 #include <mutex>
 #include <deque>
 #include <string>
@@ -77,6 +78,7 @@ public:
             have_prev = true;
         }
 
+        last_sample_received = std::chrono::steady_clock::now();
         samples.push_back({type, seq, t_ns});
         while (samples.size() > 2 && (t_ns - samples.front().t_ns) > KEEP_NS)
             samples.pop_front();
@@ -109,7 +111,18 @@ public:
     }
 
 private:
+    std::chrono::steady_clock::time_point last_sample_received{};
+
     void update_stats() {
+        if (have_prev && std::chrono::steady_clock::now() - last_sample_received >
+                         std::chrono::nanoseconds(KEEP_NS)) {
+            previous_fps = 0;
+            previous_minmax_frametime = {0.0f, 0.0f};
+            last_fps_update = 0;
+            have_prev = false;
+            samples.clear();
+            return;
+        }
         if (samples.size() < 2) return;
 
         const auto& b = samples.back();
