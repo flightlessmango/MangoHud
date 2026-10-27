@@ -570,7 +570,13 @@ static bool find_input(const std::string& path, const char* input_prefix, std::s
             file.erase(uscore, std::string::npos);
             input = path + "/" + file + "_input";
             //9 characters should not overflow the 32-bit int
-            return std::stoi(read_line(input).substr(0, 9)) > 0;
+            int value = 0;
+            if (!try_stoi(value, read_line(input).substr(0, 9))) {
+                // unreadable: do not leave a dead input behind, GetCpuFile() falls back to the thermal zones
+                input.clear();
+                return false;
+            }
+            return value > 0;
         }
     }
     return false;
