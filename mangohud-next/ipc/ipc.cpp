@@ -72,13 +72,20 @@ int IPCServer::on_preflight(sd_bus_message* message, void* userdata, sd_bus_erro
 std::shared_ptr<Client> IPCServer::focused_client(std::string_view display)
 {
     const auto candidates = snapshot(clients, clients_mtx);
+    std::shared_ptr<Client> only_client;
+    size_t client_count = 0;
 
     for (const auto& client : candidates) {
         std::lock_guard lock(client->m);
-        if (client->active.load() &&
-            client->wayland_display == display && client->focused())
+        if (!client->active.load() || client->wayland_display != display)
+            continue;
+        if (client->focused())
             return client;
+        only_client = client;
+        ++client_count;
     }
+    if (client_count == 1)
+        return only_client;
     return nullptr;
 }
 
