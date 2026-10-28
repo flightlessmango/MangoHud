@@ -124,6 +124,10 @@ static int x_error_handler(Display* dpy, XErrorEvent* event) {
     return 0;
 }
 
+static int x_io_error_handler(Display*) {
+    _exit(0);
+}
+
 static bool x_connection_ok(Display* dpy) {
     if (!dpy)
         return false;
@@ -521,6 +525,7 @@ int main(int, char**)
 {
     XInitThreads();
     XSetErrorHandler(x_error_handler);
+    XSetIOErrorHandler(x_io_error_handler);
 
     // Setup window
     glfwSetErrorCallback(glfw_error_callback);
