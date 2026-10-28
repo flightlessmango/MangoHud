@@ -50,11 +50,6 @@ std::vector<std::string> FDInfoBase::find_fds() {
 
     SPDLOG_DEBUG("fd_dir = {}", dir);
 
-    if (!fs::exists(path)) {
-        SPDLOG_DEBUG("{} does not exist", path.string());
-        return {};
-    }
-
     std::vector<std::string> fds;
 
     try {
@@ -93,9 +88,6 @@ void FDInfoBase::open_fds(const std::vector<std::string>& fds) {
 
     for (const std::string& fd: fds) {
         fs::path p = "/proc/" + std::to_string(pid) + "/fdinfo/" + fd;
-
-        if (!fs::exists(p))
-            continue;
 
         std::ifstream file(p);
 
