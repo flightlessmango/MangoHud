@@ -2501,7 +2501,9 @@ extern "C" PUBLIC VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL overlay_GetInstancePr
 {
    init_spdlog();
    void *ptr = find_ptr(funcName);
-   if (instance == NULL) return reinterpret_cast<PFN_vkVoidFunction>(ptr);
+   /* The loader may query vkCreateInstance before this instance is mapped. */
+   if (instance == NULL || strcmp(funcName, "vkCreateInstance") == 0)
+      return reinterpret_cast<PFN_vkVoidFunction>(ptr);
 
    struct instance_data *instance_data = FIND(struct instance_data, instance);
    if (instance_data->vtable.GetInstanceProcAddr == NULL) return NULL;
