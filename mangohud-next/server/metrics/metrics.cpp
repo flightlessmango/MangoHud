@@ -497,7 +497,6 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
                         replace_all(text, "{min}", min);
                         replace_all(text, "{max}", max);
                         replace_all(text, "{percent}", percent_text);
-                        replace_all(text, "{unit}", progress.unit);
                         return text;
                     };
 

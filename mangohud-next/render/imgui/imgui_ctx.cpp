@@ -107,6 +107,7 @@ static void prepare_table_fonts(const hudTable& table, Font* fonts) {
             const auto* pc = std::get_if<ProgressCell>(&*opt);
             if (pc) {
                 fonts->get(style_font_size(table, pc->style));
+                fonts->get(style_font_size(table, pc->style) / 2.0f);
                 continue;
             }
 
@@ -346,6 +347,35 @@ static float cell_height(const hudTable& table, const TextCell& tc, Font* fonts)
     const TextYBounds value = style_y_bounds(table, tc.style, fonts);
     const TextYBounds unit = unit_y_bounds(table, tc, fonts);
     return std::max(value.max - value.min, unit.max - unit.min) + std::ceil(outline_padding_x) * 2.0f;
+}
+
+static float progress_text(const hudTable& table, const ProgressCell& pc,
+                           const std::string& text, Font* fonts, void (*draw)(ImVec4, const char*) = nullptr) {
+    const float size = style_font_size(table, pc.style);
+    const ImVec2 origin = ImGui::GetCursorPos();
+    const auto bounds = font_y_bounds(fonts->get(size), size);
+    float width = 0.0f;
+    auto run = [&](const std::string& value, float run_size) {
+        ImFont* font = fonts->get(run_size);
+        ImGui::PushFont(font);
+        if (draw) {
+            const auto run_bounds = font_y_bounds(font, run_size);
+            ImGui::SetCursorPos(ImVec2(origin.x + width, origin.y + bounds.min - run_bounds.min));
+            draw(ImVec4(1, 1, 1, 1), value.c_str());
+        }
+        width += ImGui::CalcTextSize(value.c_str()).x;
+        ImGui::PopFont();
+    };
+    std::size_t start = 0;
+    for (;;) {
+        const auto pos = text.find("{unit}", start);
+        run(text.substr(start, pos == std::string::npos ? pos : pos - start), size);
+        if (pos == std::string::npos)
+            break;
+        run(pc.unit, pc.unit == "%" ? size : size / 2.0f);
+        start = pos + 6;
+    }
+    return width;
 }
 
 static float progress_height(const hudTable& table, const ProgressCell& pc, Font* fonts) {
@@ -592,11 +622,9 @@ void ImGuiCtx::draw_progress_bar(const ProgressCell& pc, Font* fonts, const hudT
     if (!pc.text.empty()) {
         const float font_size = style_font_size(table, pc.style);
         text_font = fonts->get(font_size);
-        ImGui::PushFont(text_font);
-        const ImVec2 text_sz = ImGui::CalcTextSize(pc.text.c_str());
-        ImGui::PopFont();
+        const float text_width = progress_text(table, pc, pc.text, fonts);
         const float outline_pad = std::ceil(outline_padding_x);
-        const float outlined_text_w = text_sz.x + outline_pad * 2.0f;
+        const float outlined_text_w = text_width + outline_pad * 2.0f;
         const TextYBounds bounds = font_y_bounds(text_font, font_size);
         const float text_h = bounds.max - bounds.min + outline_pad * 2.0f;
 
@@ -619,9 +647,7 @@ void ImGuiCtx::draw_progress_bar(const ProgressCell& pc, Font* fonts, const hudT
 
     if (!pc.text.empty()) {
         ImGui::SetCursorPos(ImVec2(text_x, text_y));
-        ImGui::PushFont(text_font);
-        RenderOutlinedText(ImVec4(1, 1, 1, 1), pc.text.c_str());
-        ImGui::PopFont();
+        progress_text(table, pc, pc.text, fonts, RenderOutlinedText);
     }
 
     ImGui::SetCursorPos(ImVec2(local_pos.x, local_pos.y + height));
@@ -738,7 +764,7 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
                     max_col0_w = w;
             } else if (const auto* pc0 = std::get_if<ProgressCell>(&v0)) {
                 const std::string& text = pc0->layout_text.empty() ? pc0->text : pc0->layout_text;
-                const float w = std::max(100.0f, text_size(*table, pc0->style, text, fonts).x);
+                const float w = std::max(100.0f, progress_text(*table, *pc0, text, fonts) + std::ceil(outline_padding_x) * 2.0f);
                 if (w > max_col0_w)
                     max_col0_w = w;
             } else if (const auto* nested = std::get_if<TableCell>(&v0); nested && nested->table) {
@@ -768,7 +794,7 @@ static HudLayout build_table_layout(hudTable* table, Font* fonts) {
                 const auto* pc = std::get_if<ProgressCell>(&v);
                 if (pc) {
                     const std::string& text = pc->layout_text.empty() ? pc->text : pc->layout_text;
-                    const float w = std::max(100.0f, text_size(*table, pc->style, text, fonts).x);
+                    const float w = std::max(100.0f, progress_text(*table, *pc, text, fonts) + std::ceil(outline_padding_x) * 2.0f);
                     if (w > L.max_cell_w[c])
                         L.max_cell_w[c] = w;
                     continue;
