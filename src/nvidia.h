@@ -24,7 +24,12 @@ class NVIDIA {
 
         NVIDIA(const char* pciBusId);
         ~NVIDIA() {
-            stop_thread = true;
+            {
+                // see ~GPU_fdinfo(): wake a paused sampler
+                std::lock_guard<std::mutex> lock(metrics_mutex);
+                stop_thread = true;
+            }
+            cond_var.notify_all();
             if (thread.joinable())
                 thread.join();
         };
