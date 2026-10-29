@@ -3,6 +3,10 @@
 #include "rapl.hpp"
 
 RAPL::RAPL() {
+    std::error_code ec;
+    if (!fs::is_directory(rapl_path, ec))
+        return;
+
     hwmon.base_dir = rapl_path;
     hwmon.setup(sensors);
 
