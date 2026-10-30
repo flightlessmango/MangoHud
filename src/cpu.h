@@ -12,6 +12,7 @@
 #endif
 #include "timing.hpp"
 #include "gpu.h"
+#include "rapl.h"
 
 typedef struct CPUData_ {
    unsigned long long int totalTime;
@@ -129,18 +130,12 @@ struct CPUPowerData_zenergy : public CPUPowerData {
 struct CPUPowerData_rapl : public CPUPowerData {
    CPUPowerData_rapl() {
       this->source = CPU_POWER_RAPL;
-      this->lastCounterValue = 0;
-      this->lastCounterValueTime = Clock::now();
    };
 
-   ~CPUPowerData_rapl() {
-      if(this->energyCounterFile)
-         fclose(this->energyCounterFile);
-   };
-
-   FILE* energyCounterFile {nullptr};
-   uint64_t lastCounterValue;
-   Clock::time_point lastCounterValueTime;
+   RaplCounter package;
+   // Intel client parts account the iGPU in the "uncore" domain, which is also
+   // part of package-0. Subtract it so the iGPU is not counted as CPU power.
+   RaplCounter uncore;
 };
 
 struct CPUPowerData_amdgpu : public CPUPowerData {
