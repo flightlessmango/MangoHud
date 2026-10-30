@@ -404,7 +404,13 @@ void HudElements::gpu_stats(){
                 ImGui::PopFont();
             }
 
-            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_voltage]) {
+            // Voltage is reported by every GPU including APUs, but on a hybrid
+            // system only one of them is usually of interest. Naming a device
+            // here restricts the readout to it; unset keeps showing them all.
+            const std::string& voltage_dev = HUDElements.params->gpu_voltage_pci_dev;
+            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_voltage] &&
+                gpu->metrics.voltage >= 0 &&
+                (voltage_dev.empty() || gpu->pci_dev == voltage_dev)) {
                 ImguiNextColumnOrNewRow();
                 right_aligned_text(text_color, HUDElements.ralign_width, "%i", gpu->metrics.voltage);
                 ImGui::SameLine(0, 1.0f);
