@@ -32,7 +32,13 @@ public:
     );
 
     ~GPU_fdinfo() {
-        stop_thread = true;
+        {
+            // under the lock and with a notify: a paused sampler sleeps on
+            // cond_var and would never see stop_thread
+            std::lock_guard<std::mutex> lock(metrics_mutex);
+            stop_thread = true;
+        }
+        cond_var.notify_all();
         if (thread.joinable())
             thread.join();
     }
