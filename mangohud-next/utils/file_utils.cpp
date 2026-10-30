@@ -191,13 +191,18 @@ bool lib_loaded(const std::string& lib, pid_t pid) {
             fs::path("/proc") / who / "fd" };
     for (auto& path : paths) {
         if (dir_exists(path.string())) {
-            for (auto& p : fs::directory_iterator(path)) {
+            std::error_code iterator_ec;
+            for (fs::directory_iterator it(path, iterator_ec), end;
+                 !iterator_ec && it != end; it.increment(iterator_ec)) {
+                auto& p = *it;
                 auto file = p.path().string();
                 auto sym = read_symlink(file.c_str());
                 if (to_lower(sym).find(lib) != std::string::npos) {
                     return true;
                 }
             }
+            if (iterator_ec)
+                SPDLOG_DEBUG("Failed to iterate {}: {}", fs::path(path).string(), iterator_ec.message());
         } else {
             SPDLOG_DEBUG("tried to access path that doesn't exist {}", path.string());
         }
@@ -210,13 +215,18 @@ std::unordered_set<std::string> find_render_nodes(pid_t pid) {
     std::string who = pid != -1 ? std::to_string(pid) : "self";
     auto path = fs::path("/proc") / who / "fd" ;
     if (dir_exists(path.string())) {
-        for (auto& p : fs::directory_iterator(path)) {
+        std::error_code iterator_ec;
+        for (fs::directory_iterator it(path, iterator_ec), end;
+             !iterator_ec && it != end; it.increment(iterator_ec)) {
+            auto& p = *it;
             auto file = p.path().string();
             auto sym = read_symlink(file.c_str());
             if (to_lower(sym).find("renderd") != std::string::npos) {
                 out.insert(sym);
             }
         }
+        if (iterator_ec)
+            SPDLOG_DEBUG("Failed to iterate {}: {}", fs::path(path).string(), iterator_ec.message());
     }
     return out;
 }

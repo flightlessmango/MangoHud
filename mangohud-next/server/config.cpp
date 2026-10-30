@@ -370,6 +370,7 @@ bool Config::parse_table_yaml(HudConfig& hud, YAML::Node doc) {
 }
 
 void Config::parse_table(std::string file) {
+    std::error_code ec;
     auto load_default = [&]() -> void {
         try {
             YAML::Node def = YAML::Load(std::string{HudYaml});
@@ -387,7 +388,7 @@ void Config::parse_table(std::string file) {
     };
 
     try {
-        if (!std::filesystem::exists(file)) {
+        if (!std::filesystem::exists(file, ec)) {
             SPDLOG_DEBUG("Config file doesn't exist, falling back to default");
             update(YAML::Node());
             load_default();

@@ -45,6 +45,7 @@ void FDInfoBase::poll() {
 }
 
 std::vector<std::string> FDInfoBase::find_fds() {
+    std::error_code ec;
     std::string dir = "/proc/" + std::to_string(pid) + "/fd";
     fs::path path = dir;
 
@@ -53,14 +54,19 @@ std::vector<std::string> FDInfoBase::find_fds() {
     std::vector<std::string> fds;
 
     try {
-        for (const auto& entry : fs::directory_iterator(path)) {
-            if (!entry.is_symlink())
+        std::error_code iterator_ec;
+        for (fs::directory_iterator it(path, iterator_ec), end;
+             !iterator_ec && it != end; it.increment(iterator_ec)) {
+            const auto& entry = *it;
+            if (!entry.is_symlink(ec))
                 continue;
 
             std::filesystem::path link;
 
             try {
-                link = fs::read_symlink(entry);
+                link = fs::read_symlink(entry, ec);
+                if (ec)
+                    continue;
             } catch(const std::filesystem::filesystem_error& ex) {
                 SPDLOG_TRACE("{}", ex.what());
                 continue;
@@ -74,6 +80,8 @@ std::vector<std::string> FDInfoBase::find_fds() {
 
             fds.push_back(entry.path().filename());
         }
+        if (iterator_ec)
+            SPDLOG_DEBUG("Failed to iterate {}: {}", fs::path(path).string(), iterator_ec.message());
     } catch (const std::filesystem::filesystem_error& ex) {
         SPDLOG_TRACE("failed to iterate {}: {}", path.string(), ex.what());
     }
@@ -115,15 +123,19 @@ void FDInfoBase::open_fds(const std::vector<std::string>& fds) {
 }
 
 std::string FDInfoBase::get_card_node() {
+    std::error_code ec;
     const std::string device = "/sys/class/drm/" + drm_node + "/device/drm";
 
-    if (!std::filesystem::exists(device)) {
+    if (!std::filesystem::exists(device, ec)) {
         SPDLOG_DEBUG("drm dir doesn't exist for {}", drm_node);
         return "";
     }
 
     // Find first dir which starts with name "card"
-    for (const auto& entry : fs::directory_iterator(device)) {
+    std::error_code iterator_ec;
+    for (fs::directory_iterator it(device, iterator_ec), end;
+         !iterator_ec && it != end; it.increment(iterator_ec)) {
+        const auto& entry = *it;
         std::filesystem::path path = entry.path();
 
         if (path.filename().string().substr(0, 4) == "card") {
@@ -132,6 +144,8 @@ std::string FDInfoBase::get_card_node() {
             return filename;
         }
     }
+    if (iterator_ec)
+        SPDLOG_DEBUG("Failed to iterate {}: {}", fs::path(device).string(), iterator_ec.message());
 
     SPDLOG_DEBUG("didn't find card node for {}", drm_node);
     return "";
@@ -147,6 +161,7 @@ void FDInfoWrapper::add_pid(pid_t pid) {
 }
 
 void FDInfoWrapper::poll_all() {
+    std::error_code ec;
     std::unique_lock lock(pids_mutex);
     std::set<pid_t> pids_to_delete;
 
@@ -156,7 +171,7 @@ void FDInfoWrapper::poll_all() {
 
         SPDLOG_TRACE("polling pid {}", pid);
 
-        if (!std::filesystem::exists("/proc/" + std::to_string(pid)))
+        if (!std::filesystem::exists("/proc/" + std::to_string(pid), ec))
             pids_to_delete.insert(pid);
         else
             data->poll();

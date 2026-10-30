@@ -518,6 +518,7 @@ void AMDGPU::get_sysfs_metrics() {
 
 AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id, std::string drm_node)
 : fdinfo(drm_node) {
+	std::error_code ec;
 	this->pci_dev = pci_dev;
 	this->device_id = device_id;
 	this->vendor_id = vendor_id;
@@ -539,7 +540,7 @@ AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id, std:
 	sysfs_nodes.gtt_used = fopen((device_path + "/mem_info_gtt_used").c_str(), "r");
 
 	const std::string hwmon_path = device_path + "/hwmon/";
-	if (fs::exists(hwmon_path)){
+	if (fs::exists(hwmon_path, ec)){
 		const auto dirs = ls(hwmon_path.c_str(), "hwmon", LS_DIRS);
 		for (const auto& dir : dirs) {
 			sysfs_nodes.temp = fopen((hwmon_path + dir + "/temp1_input").c_str(), "r");
@@ -552,7 +553,7 @@ AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id, std:
 			for (std::string p : { "power1_average", "power1_input" }) {
 				std::string sensor = hwmon_path + dir + "/" + p;
 
-				if (!fs::exists(sensor))
+				if (!fs::exists(sensor, ec))
 					continue;
 
 				sysfs_nodes.power_usage = fopen(sensor.c_str(), "r");

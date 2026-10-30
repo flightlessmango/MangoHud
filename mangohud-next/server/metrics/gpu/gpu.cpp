@@ -5,12 +5,13 @@
 #include "../fdinfo.hpp"
 
 void GPU::check_pids_existence() {
+    std::error_code ec;
     std::set<pid_t> pids_to_delete;
 
     for (const auto& p : process_metrics) {
         pid_t pid = p.first;
 
-        if (!fs::exists("/proc/" + std::to_string(pid)))
+        if (!fs::exists("/proc/" + std::to_string(pid), ec))
             pids_to_delete.insert(pid);
     }
 

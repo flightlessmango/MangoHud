@@ -600,12 +600,16 @@ static bool find_fallback_input(const std::string& path, const char* input_prefi
 }
 
 static void check_thermal_zones(std::string& path, std::string& input) {
+    std::error_code ec;
     std::string sysfs_thermal = "/sys/class/thermal/";
 
-    if (!fs::exists(sysfs_thermal))
+    if (!fs::exists(sysfs_thermal, ec))
         return;
 
-    for (auto& d : fs::directory_iterator(sysfs_thermal)) {
+    std::error_code iterator_ec;
+    for (fs::directory_iterator it(sysfs_thermal, iterator_ec), end;
+         !iterator_ec && it != end; it.increment(iterator_ec)) {
+        auto& d = *it;
         if (d.path().filename().string().substr(0, 12) != "thermal_zone")
             continue;
 
@@ -618,17 +622,23 @@ static void check_thermal_zones(std::string& path, std::string& input) {
 
         return;
     }
+    if (iterator_ec)
+        SPDLOG_DEBUG("Failed to iterate {}: {}", fs::path(sysfs_thermal).string(), iterator_ec.message());
 }
 
 static void find_cpu_thermal_zones(std::vector<std::string>& inputs) {
+    std::error_code ec;
     std::string sysfs_thermal = "/sys/class/thermal/";
 
-    if (!fs::exists(sysfs_thermal))
+    if (!fs::exists(sysfs_thermal, ec))
         return;
 
     std::regex cpu_thermal("cpu\\d+(-top)?-thermal");
 
-    for (auto& d : fs::directory_iterator(sysfs_thermal)) {
+    std::error_code iterator_ec;
+    for (fs::directory_iterator it(sysfs_thermal, iterator_ec), end;
+         !iterator_ec && it != end; it.increment(iterator_ec)) {
+        auto& d = *it;
         if (d.path().filename().string().substr(0, 12) != "thermal_zone")
             continue;
 
@@ -640,6 +650,8 @@ static void find_cpu_thermal_zones(std::vector<std::string>& inputs) {
         if (file_exists(input))
             inputs.push_back(input);
     }
+    if (iterator_ec)
+        SPDLOG_DEBUG("Failed to iterate {}: {}", fs::path(sysfs_thermal).string(), iterator_ec.message());
 
     std::sort(inputs.begin(), inputs.end());
 }

@@ -11,10 +11,14 @@
 #include "gpus.hpp"
 
 GPUS::GPUS() {
+    std::error_code ec;
     std::set<std::string> gpu_entries;
 
-    for (const auto& entry : fs::directory_iterator("/sys/class/drm")) {
-        if (!entry.is_directory())
+    std::error_code iterator_ec;
+    for (fs::directory_iterator it("/sys/class/drm", iterator_ec), end;
+         !iterator_ec && it != end; it.increment(iterator_ec)) {
+        const auto& entry = *it;
+        if (!entry.is_directory(ec))
             continue;
 
         std::string node_name = entry.path().filename().string();
@@ -28,6 +32,8 @@ GPUS::GPUS() {
             }
         }
     }
+    if (iterator_ec)
+        SPDLOG_DEBUG("Failed to iterate {}: {}", fs::path("/sys/class/drm").string(), iterator_ec.message());
 
     // Now process the sorted GPU entries
     uint8_t /*idx = 0,*/ total_active = 0;
@@ -146,8 +152,11 @@ std::vector<std::shared_ptr<GPU>> GPUS::available() const {
 }
 
 std::string GPUS::get_pci_device_address(const std::string& drm_card_path) {
+    std::error_code ec;
     // /sys/class/drm/renderD128/device/subsystem -> /sys/bus/pci
-    auto subsystem = fs::canonical(drm_card_path + "/device/subsystem").string();
+    auto subsystem = fs::canonical(drm_card_path + "/device/subsystem", ec).string();
+    if (ec)
+        return "";
     auto idx = subsystem.rfind("/") + 1; // /sys/bus/pci
                                          //         ^
                                          //         |- find this guy
@@ -157,7 +166,9 @@ std::string GPUS::get_pci_device_address(const std::string& drm_card_path) {
     // /sys/class/drm/renderD128/device
     //           convert to
     // /sys/devices/pci0000:00/0000:00:01.0/0000:01:00.0/0000:02:01.0/0000:03:00.0
-    auto pci_addr = fs::read_symlink(drm_card_path + "/device").string();
+    auto pci_addr = fs::read_symlink(drm_card_path + "/device", ec).string();
+    if (ec)
+        return "";
     idx = pci_addr.rfind("/") + 1; // /sys/.../0000:03:00.0
                                    //         ^
                                    //         |- find this guy
@@ -166,19 +177,22 @@ std::string GPUS::get_pci_device_address(const std::string& drm_card_path) {
 }
 
 std::string GPUS::get_driver(const std::string& drm_card_path) {
+    std::error_code ec;
     std::string path = drm_card_path + "/device/driver";
 
-    if (!fs::exists(path)) {
+    if (!fs::exists(path, ec)) {
         SPDLOG_ERROR("{} doesn't exist", path);
         return "";
     }
 
-    if (!fs::is_symlink(path)) {
+    if (!fs::is_symlink(path, ec)) {
         SPDLOG_ERROR("{} is not a symlink (it should be)", path);
         return "";
     }
 
-    std::string driver = fs::read_symlink(path).string();
+    std::string driver = fs::read_symlink(path, ec).string();
+    if (ec)
+        return "";
     driver = driver.substr(driver.rfind("/") + 1);
 
     return driver;

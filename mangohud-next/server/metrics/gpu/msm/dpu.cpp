@@ -162,13 +162,17 @@ float MSM_DPU::get_vram_used() {
 }
 
 std::ifstream MSM_DPU::open_thermal_zone(const std::string& type) {
+    std::error_code ec;
     std::ifstream file;
     const fs::path sysfs_thermal = "/sys/class/thermal";
 
-    if (!fs::exists(sysfs_thermal))
+    if (!fs::exists(sysfs_thermal, ec))
         return file;
 
-    for (auto& entry : fs::directory_iterator(sysfs_thermal)) {
+    std::error_code iterator_ec;
+    for (fs::directory_iterator it(sysfs_thermal, iterator_ec), end;
+         !iterator_ec && it != end; it.increment(iterator_ec)) {
+        auto& entry = *it;
         if (!entry.path().filename().string().starts_with("thermal_zone"))
             continue;
 
@@ -183,18 +187,24 @@ std::ifstream MSM_DPU::open_thermal_zone(const std::string& type) {
             SPDLOG_INFO("thermal: using {} input: {}", type, (entry.path() / "temp").string());
         return file;
     }
+    if (iterator_ec)
+        SPDLOG_DEBUG("Failed to iterate {}: {}", fs::path(sysfs_thermal).string(), iterator_ec.message());
 
     return file;
 }
 
 std::ifstream MSM_DPU::open_core_clock() {
+    std::error_code ec;
     std::ifstream file;
     const fs::path sysfs_devfreq = "/sys/class/devfreq";
 
-    if (!fs::exists(sysfs_devfreq))
+    if (!fs::exists(sysfs_devfreq, ec))
         return file;
 
-    for (auto& entry : fs::directory_iterator(sysfs_devfreq)) {
+    std::error_code iterator_ec;
+    for (fs::directory_iterator it(sysfs_devfreq, iterator_ec), end;
+         !iterator_ec && it != end; it.increment(iterator_ec)) {
+        auto& entry = *it;
         std::string name = entry.path().filename().string();
         if (!name.ends_with(".gpu"))
             continue;
@@ -205,18 +215,24 @@ std::ifstream MSM_DPU::open_core_clock() {
             SPDLOG_INFO("devfreq: using gpu clock input: {}", cur_freq.string());
         return file;
     }
+    if (iterator_ec)
+        SPDLOG_DEBUG("Failed to iterate {}: {}", fs::path(sysfs_devfreq).string(), iterator_ec.message());
 
     return file;
 }
 
 std::ifstream MSM_DPU::open_load() {
+    std::error_code ec;
     std::ifstream file;
     fs::path drm_dir = fs::path("/sys/class/drm") / drm_node / "device/drm";
 
-    if (!fs::exists(drm_dir))
+    if (!fs::exists(drm_dir, ec))
         return file;
 
-    for (auto& entry : fs::directory_iterator(drm_dir)) {
+    std::error_code iterator_ec;
+    for (fs::directory_iterator it(drm_dir, iterator_ec), end;
+         !iterator_ec && it != end; it.increment(iterator_ec)) {
+        auto& entry = *it;
         std::string name = entry.path().filename().string();
         if (!name.starts_with("card"))
             continue;
@@ -227,6 +243,8 @@ std::ifstream MSM_DPU::open_load() {
             SPDLOG_INFO("debugfs: using msm load input: {}", perf_now.string());
         return file;
     }
+    if (iterator_ec)
+        SPDLOG_DEBUG("Failed to iterate {}: {}", fs::path(drm_dir).string(), iterator_ec.message());
 
     return file;
 }

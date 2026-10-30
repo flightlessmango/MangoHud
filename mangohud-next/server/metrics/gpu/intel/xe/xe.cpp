@@ -160,10 +160,11 @@ float Intel_xe::get_process_gtt_used(pid_t pid) {
 
 void Intel_xe::find_gt_dir()
 {
+    std::error_code ec;
     const std::string device = "/sys/class/drm/" + drm_node + "/device/tile0";
     std::string gt_dir;
 
-    if (!fs::exists(device)) {
+    if (!fs::exists(device, ec)) {
         SPDLOG_WARN(
             "\"{}\" doesn't exist. GPU clock and throttling status will be unavailable.",
             device
@@ -172,7 +173,10 @@ void Intel_xe::find_gt_dir()
     }
 
     // Check every "gt" dir if it has "engines/rcs" inside
-    for (const auto& entry : fs::directory_iterator(device)) {
+    std::error_code iterator_ec;
+    for (fs::directory_iterator it(device, iterator_ec), end;
+         !iterator_ec && it != end; it.increment(iterator_ec)) {
+        const auto& entry = *it;
         auto path = entry.path().string();
 
         if (path.substr(device.size() + 1, 2) != "gt")
@@ -180,7 +184,7 @@ void Intel_xe::find_gt_dir()
 
         SPDLOG_DEBUG("Checking \"{}\" for rcs.", path);
 
-        if (!fs::exists(path + "/engines/rcs")) {
+        if (!fs::exists(path + "/engines/rcs", ec)) {
             SPDLOG_DEBUG("Skipping \"{}\" because rcs doesn't exist.", path);
             continue;
         }
@@ -189,6 +193,8 @@ void Intel_xe::find_gt_dir()
         gt_dir = path;
         break;
     }
+    if (iterator_ec)
+        SPDLOG_DEBUG("Failed to iterate {}: {}", fs::path(device).string(), iterator_ec.message());
 
     if (gt_dir.empty()) {
         SPDLOG_WARN(
@@ -223,10 +229,11 @@ void Intel_xe::load_throttle_reasons(
     std::string throttle_folder, std::vector<std::string> throttle_reasons,
     std::vector<std::ifstream>& ifs_throttle_reason
 ) {
+    std::error_code ec;
     for (const auto& throttle_reason : throttle_reasons) {
         std::string throttle_path = throttle_folder + throttle_reason;
 
-        if (!fs::exists(throttle_path)) {
+        if (!fs::exists(throttle_path, ec)) {
             SPDLOG_WARN(
                 "Throttle file {} not found",
                 throttle_path

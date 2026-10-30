@@ -16,16 +16,20 @@ static bool is_system_battery(const fs::path& path) {
 }
 
 void BatteryStats::numBattery() {
+    std::error_code ec;
     int batteryCount = 0;
     std::vector<fs::path> found;
 
     for (const auto& path : { fs::path("/sys/class/power_supply/"), fs::path("/run/deckardcharger/") }) {
-        if (!fs::exists(path))
+        if (!fs::exists(path, ec))
             continue;
 
         const bool is_deckard = path == fs::path("/run/deckardcharger/");
 
-        for (auto& p : fs::directory_iterator(path)) {
+        std::error_code iterator_ec;
+        for (fs::directory_iterator it(path, iterator_ec), end;
+             !iterator_ec && it != end; it.increment(iterator_ec)) {
+            auto& p = *it;
             string fileName = p.path().filename();
             if (batteryCount < battery_count_max &&
                 (is_deckard ? fileName.find("BAT") != std::string::npos : is_system_battery(p.path()))) {
@@ -39,6 +43,8 @@ void BatteryStats::numBattery() {
                 batteryCount += 1;
             }
         }
+        if (iterator_ec)
+            SPDLOG_DEBUG("Failed to iterate {}: {}", fs::path(path).string(), iterator_ec.message());
     }
 
     batt_count = batteryCount;
@@ -62,6 +68,7 @@ void BatteryStats::update() {
 
 float BatteryStats::getPercent()
 {
+    std::error_code ec;
     float charge_n = 0;
     float charge_f = 0;
 
@@ -80,7 +87,7 @@ float BatteryStats::getPercent()
         string energy_full = syspath + "/energy_full";
         string capacity = syspath + "/capacity";
 
-        if (fs::exists(charge_now)) {
+        if (fs::exists(charge_now, ec)) {
             std::ifstream input(charge_now);
             std::string line;
             if(std::getline(input, line)) {
@@ -92,7 +99,7 @@ float BatteryStats::getPercent()
             }
         }
 
-        else if (fs::exists(energy_now)) {
+        else if (fs::exists(energy_now, ec)) {
             std::ifstream input(energy_now);
             std::string line;
             if(std::getline(input, line)) {
@@ -134,8 +141,9 @@ static bool get_power_deckard(float& power) {
 }
 
 float BatteryStats::getPower() {
+    std::error_code ec;
     float power_w = 0.0f;
-    const bool deckard = fs::exists("/run/power-monitor/power/vph");
+    const bool deckard = fs::exists("/run/power-monitor/power/vph", ec);
     // the fuel gauge status flaps with the current sign while held near full
     const std::string deckard_status = read_line("/run/deckardcharger/battery_status");
     bool discharging = false;
@@ -164,7 +172,7 @@ float BatteryStats::getPower() {
             continue;
 
         // Prefer power_now (µW) when available.
-        if (fs::exists(power_now)) {
+        if (fs::exists(power_now, ec)) {
             std::ifstream input(power_now);
             std::string line;
             if (std::getline(input, line)) {
@@ -173,7 +181,7 @@ float BatteryStats::getPower() {
             continue;
         }
 
-        if (fs::exists(current_now) && fs::exists(voltage_now)) {
+        if (fs::exists(current_now, ec) && fs::exists(voltage_now, ec)) {
             float i_ua = 0.0f;
             float v_uv = 0.0f;
 
@@ -207,6 +215,7 @@ float BatteryStats::getPower() {
 }
 
 float BatteryStats::getTimeRemaining() {
+    std::error_code ec;
     float current = 0.0f;
     float charge = 0.0f;
 
@@ -218,13 +227,13 @@ float BatteryStats::getTimeRemaining() {
         string voltage_now = syspath + "/voltage_now";
         string power_now = syspath + "/power_now";
 
-        if (fs::exists(current_now)) {
+        if (fs::exists(current_now, ec)) {
             std::ifstream input(current_now);
             std::string line;
             if (std::getline(input, line)) {
                 current_now_vec.push_back(std::fabs(stof(line)));
             }
-        } else if (fs::exists(power_now) && fs::exists(voltage_now)) {
+        } else if (fs::exists(power_now, ec) && fs::exists(voltage_now, ec)) {
             float voltage = 0.0f;
             float power = 0.0f;
 
@@ -249,13 +258,13 @@ float BatteryStats::getTimeRemaining() {
             }
         }
 
-        if (fs::exists(charge_now)) {
+        if (fs::exists(charge_now, ec)) {
             std::ifstream input(charge_now);
             std::string line;
             if (std::getline(input, line)) {
                 charge += stof(line);
             }
-        } else if (fs::exists(energy_now) && fs::exists(voltage_now)) {
+        } else if (fs::exists(energy_now, ec) && fs::exists(voltage_now, ec)) {
             float energy = 0.0f;
             float voltage = 0.0f;
 
