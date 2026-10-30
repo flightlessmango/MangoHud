@@ -113,8 +113,12 @@ static void register_egl_surface(EGLDisplay dpy, EGLSurface surf, void* native_w
         return;
 
     if (!ipc) ipc = std::make_shared<IPCClient>(nullptr, Backend::EGL);
-    if (!wayland)
+    if (!wayland) {
+        EGL egl;
+        ipc->renderMinor = egl.renderer(dpy);
+        ipc->pEngineName = "OpenGL";
         wayland = std::make_unique<Wayland>(ipc);
+    }
     wayland->add_surface(surf, wl_surface, wl_display);
 }
 

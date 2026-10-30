@@ -209,8 +209,9 @@ EGL::EGL() {
     p_eglQueryDevicesEXT            = (PFNEGLQUERYDEVICESEXTPROC)real_eglGetProcAddress("eglQueryDevicesEXT");
 }
 
-int64_t EGL::renderer() {
-    EGLDisplay dpy = eglGetCurrentDisplay();
+int64_t EGL::renderer(EGLDisplay dpy) {
+    if (dpy == EGL_NO_DISPLAY)
+        dpy = eglGetCurrentDisplay();
     if (dpy == EGL_NO_DISPLAY)
         return -1;
 
@@ -446,10 +447,12 @@ OverlayGL::OverlayGL(Display* xdpy_, std::shared_ptr<IPCClient> ipc_) : xdpy(xdp
     else
         SPDLOG_DEBUG("OpenGL renderer: unknown");
 
-    ipc->renderMinor = renderer;
-    ipc->pEngineName = pEngineName;
-    if (const GLubyte* gpu_name = glGetString(GL_RENDERER))
-        ipc->gpuName = clean_gpu_name(reinterpret_cast<const char*>(gpu_name));
+    if (!ipc->waylandSurface) {
+        ipc->renderMinor = renderer;
+        ipc->pEngineName = pEngineName;
+        if (const GLubyte* gpu_name = glGetString(GL_RENDERER))
+            ipc->gpuName = clean_gpu_name(reinterpret_cast<const char*>(gpu_name));
+    }
     ipc->start(4);
 }
 

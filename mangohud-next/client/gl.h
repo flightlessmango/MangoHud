@@ -156,7 +156,7 @@ class EGL {
 public:
     EGL();
 
-    int64_t renderer();
+    int64_t renderer(EGLDisplay dpy = EGL_NO_DISPLAY);
     EGLDisplay import_dmabuf(const Fdinfo& fdinfo, GLuint& tex, EGLImageKHR& image, int f, Display* xdpy = nullptr);
 
     CtxRes* ctx() {
