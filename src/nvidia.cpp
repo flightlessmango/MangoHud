@@ -93,14 +93,16 @@ void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics, struct overla
         metrics->load = nvml_utilization.gpu;
 
         if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp] || (logger && logger->is_active())) {
-            unsigned int temp;
-            nvml->nvmlDeviceGetTemperature(device, NVML_TEMPERATURE_GPU, &temp);
+            unsigned int temp = 0;
+            if (nvml->nvmlDeviceGetTemperature(device, NVML_TEMPERATURE_GPU, &temp) != NVML_SUCCESS)
+                temp = 0;
             metrics->temp = temp;
         }
 
         if (params->enabled[OVERLAY_PARAM_ENABLED_vram] || (logger && logger->is_active())) {
-            struct nvmlMemory_st nvml_memory;
-            nvml->nvmlDeviceGetMemoryInfo(device, &nvml_memory);
+            struct nvmlMemory_st nvml_memory {};
+            if (nvml->nvmlDeviceGetMemoryInfo(device, &nvml_memory) != NVML_SUCCESS)
+                nvml_memory = {};
             metrics->memoryTotal = nvml_memory.total / (1024.f * 1024.f * 1024.f);
             metrics->sys_vram_used = nvml_memory.used / (1024.f * 1024.f * 1024.f);
         }
@@ -109,28 +111,37 @@ void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics, struct overla
             metrics->proc_vram_used = get_proc_vram() / (1024.f * 1024.f * 1024.f);
 
         if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock] || (logger && logger->is_active())) {
-            unsigned int core_clock;
-            nvml->nvmlDeviceGetClockInfo(device, NVML_CLOCK_GRAPHICS, &core_clock);
+            unsigned int core_clock = 0;
+            if (nvml->nvmlDeviceGetClockInfo(device, NVML_CLOCK_GRAPHICS, &core_clock) != NVML_SUCCESS)
+                core_clock = 0;
             metrics->CoreClock = core_clock;
         }
 
         if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_mem_clock] || (logger && logger->is_active())) {
-            unsigned int memory_clock;
-            nvml->nvmlDeviceGetClockInfo(device, NVML_CLOCK_MEM, &memory_clock);
+            unsigned int memory_clock = 0;
+            if (nvml->nvmlDeviceGetClockInfo(device, NVML_CLOCK_MEM, &memory_clock) != NVML_SUCCESS)
+                memory_clock = 0;
             metrics->MemClock = memory_clock;
         }
 
         if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_power] || (logger && logger->is_active())) {
-            unsigned int power, limit;
-            nvml->nvmlDeviceGetPowerUsage(device, &power);
-            nvml->nvmlDeviceGetPowerManagementLimit(device, &limit);
+            // Not every query is supported everywhere (e.g. the power
+            // management limit on laptop GPUs); never report an unset value.
+            unsigned int power = 0, limit = 0;
+            if (nvml->nvmlDeviceGetPowerUsage(device, &power) != NVML_SUCCESS)
+                power = 0;
+            if (nvml->nvmlDeviceGetPowerManagementLimit(device, &limit) != NVML_SUCCESS &&
+                (!nvml->nvmlDeviceGetEnforcedPowerLimit ||
+                 nvml->nvmlDeviceGetEnforcedPowerLimit(device, &limit) != NVML_SUCCESS))
+                limit = 0;
             metrics->powerUsage = power / 1000;
             metrics->powerLimit = limit / 1000;
         }
 
         if (params->enabled[OVERLAY_PARAM_ENABLED_throttling_status]) {
-            unsigned long long nvml_throttle_reasons;
-            nvml->nvmlDeviceGetCurrentClocksThrottleReasons(device, &nvml_throttle_reasons);
+            unsigned long long nvml_throttle_reasons = 0;
+            if (nvml->nvmlDeviceGetCurrentClocksThrottleReasons(device, &nvml_throttle_reasons) != NVML_SUCCESS)
+                nvml_throttle_reasons = 0;
             metrics->is_temp_throttled = (nvml_throttle_reasons & 0x0000000000000060LL) != 0;
             metrics->is_power_throttled = (nvml_throttle_reasons & 0x000000000000008CLL) != 0;
             metrics->is_other_throttled = (nvml_throttle_reasons & 0x0000000000000112LL) != 0;
@@ -139,8 +150,10 @@ void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics, struct overla
         }
 
         if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_fan] || (logger && logger->is_active())){
-            unsigned int fan_speed;
-            nvml->nvmlDeviceGetFanSpeed(device, &fan_speed);
+            // fails when the fans belong to the platform, not the GPU
+            unsigned int fan_speed = 0;
+            if (nvml->nvmlDeviceGetFanSpeed(device, &fan_speed) != NVML_SUCCESS)
+                fan_speed = 0;
             metrics->fan_speed = fan_speed;
             metrics->fan_rpm = false;
         }

@@ -226,6 +226,16 @@ bool libnvml_loader::Load(const std::string& library_name) {
     return false;
   }
 
+  // optional: only used as a fallback for the power limit
+#if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
+  nvmlDeviceGetEnforcedPowerLimit =
+      reinterpret_cast<decltype(this->nvmlDeviceGetEnforcedPowerLimit)>(
+          dlsym(library_, "nvmlDeviceGetEnforcedPowerLimit"));
+#endif
+#if defined(LIBRARY_LOADER_NVML_H_DT_NEEDED)
+  nvmlDeviceGetEnforcedPowerLimit = &::nvmlDeviceGetEnforcedPowerLimit;
+#endif
+
 #if defined(LIBRARY_LOADER_NVML_H_DLOPEN)
   nvmlUnitGetFanSpeedInfo =
       reinterpret_cast<decltype(this->nvmlUnitGetFanSpeedInfo)>(
@@ -300,6 +310,8 @@ void libnvml_loader::CleanUp(bool unload) {
   nvmlDeviceGetHandleByIndex_v2 = NULL;
   nvmlDeviceGetHandleByPciBusId_v2 = NULL;
   nvmlDeviceGetCurrentClocksThrottleReasons = NULL;
+  nvmlDeviceGetPowerManagementLimit = NULL;
+  nvmlDeviceGetEnforcedPowerLimit = NULL;
   nvmlUnitGetFanSpeedInfo = NULL;
   nvmlUnitGetHandleByIndex = NULL;
   nvmlDeviceGetFanSpeed = NULL;
