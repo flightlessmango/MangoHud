@@ -1,5 +1,7 @@
 #include <spdlog/spdlog.h>
 #include <thread>
+#include <cstring>
+#include <algorithm>
 #ifdef __linux__
 #include <sys/sysinfo.h>
 #endif
@@ -329,7 +331,8 @@ void AMDGPU::get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[ME
 			UPDATE_METRIC_MAX(is_other_throttled);
 
 			UPDATE_METRIC_MAX(fan_speed);
-			metrics.fan_rpm = true;
+			if (!fan_pwm_mode)
+				metrics.fan_rpm = true;
 
 			metrics.load = amdgpu_common_metrics.gpu_load_percent;
 			metrics.powerUsage = amdgpu_common_metrics.average_gfx_power_w;
@@ -352,7 +355,7 @@ void AMDGPU::get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[ME
 			metrics.is_other_throttled = amdgpu_common_metrics.is_other_throttled;
 
 			// Set only if gpu_metrics has value larger than 0, otherwise use hwmon
-			if (amdgpu_common_metrics.fan_speed > 0)
+			if (amdgpu_common_metrics.fan_speed > 0 && !fan_pwm_mode)
 				metrics.fan_speed = amdgpu_common_metrics.fan_speed;
 		}
 	}
@@ -384,13 +387,25 @@ void AMDGPU::metrics_polling_thread() {
 
 void AMDGPU::get_sysfs_metrics() {
     int64_t value = 0;
+	bool busy_from_sysfs = false;
 	if (sysfs_nodes.busy) {
 		rewind(sysfs_nodes.busy);
 		fflush(sysfs_nodes.busy);
 		int value = 0;
-		if (fscanf(sysfs_nodes.busy, "%d", &value) != 1)
+		if (fscanf(sysfs_nodes.busy, "%d", &value) == 1)
+			busy_from_sysfs = true;
+		else
 			value = 0;
 		metrics.load = value;
+	}
+
+	// gpu_busy_percent is unsupported on some GPUs (it exists but reading it
+	// fails): use the GRBM_STATUS register instead. Keep the previous value
+	// until the sampler has enough reads for a trustworthy percentage.
+	if (!busy_from_sysfs && grbm) {
+		int pct = 0;
+		if (grbm->percent(pct))
+			metrics.load = pct;
 	}
 
 	if (sysfs_nodes.memory_clock) {
@@ -437,13 +452,37 @@ void AMDGPU::get_sysfs_metrics() {
 		metrics.powerLimit = value / 1000000;
 	}
 
+	bool fan_rpm_ok = false;
 	if (sysfs_nodes.fan) {
 		rewind(sysfs_nodes.fan);
 		fflush(sysfs_nodes.fan);
-		if (fscanf(sysfs_nodes.fan, "%" PRId64, &value) != 1)
+		if (fscanf(sysfs_nodes.fan, "%" PRId64, &value) == 1)
+			fan_rpm_ok = true;
+		else
 			value = 0;
 		metrics.fan_speed = value;
 		metrics.fan_rpm = true;
+	}
+
+	// Some GPUs (e.g. Oland) don't support fan1_input but pwm1 works and gives
+	// a real duty cycle: show it as a percentage rather than "0 RPM".
+	if (!fan_rpm_ok && sysfs_nodes.fan_pwm) {
+		int64_t pwm = 0, pwm_max = 0;
+		rewind(sysfs_nodes.fan_pwm);
+		fflush(sysfs_nodes.fan_pwm);
+		if (fscanf(sysfs_nodes.fan_pwm, "%" PRId64, &pwm) == 1) {
+			if (sysfs_nodes.fan_pwm_max) {
+				rewind(sysfs_nodes.fan_pwm_max);
+				fflush(sysfs_nodes.fan_pwm_max);
+				if (fscanf(sysfs_nodes.fan_pwm_max, "%" PRId64, &pwm_max) != 1)
+					pwm_max = 0;
+			}
+			if (pwm_max <= 0)
+				pwm_max = 255;
+			metrics.fan_speed = int(pwm * 100 / pwm_max);
+			metrics.fan_rpm = false;
+			fan_pwm_mode = true;
+		}
 	}
 
 	if (sysfs_nodes.vram_total) {
@@ -545,9 +584,25 @@ AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id, std:
 			sysfs_nodes.temp = fopen((hwmon_path + dir + "/temp1_input").c_str(), "r");
 			sysfs_nodes.junction_temp = fopen((hwmon_path + dir + "/temp2_input").c_str(), "r");
 			sysfs_nodes.memory_temp = fopen((hwmon_path + dir + "/temp3_input").c_str(), "r");
-			sysfs_nodes.core_clock = fopen((hwmon_path + dir + "/freq1_input").c_str(), "r");
 			sysfs_nodes.gpu_voltage_soc = fopen((hwmon_path + dir + "/in0_input").c_str(), "r");
-			sysfs_nodes.memory_clock = fopen((hwmon_path + dir + "/freq2_input").c_str(), "r");
+
+			// freqN_label says which input is the core clock (sclk) and which
+			// is the memory clock (mclk); the order is not guaranteed. Without
+			// readable labels keep the usual freq1 = core, freq2 = memory.
+			std::string core_file = "freq1_input", mem_file = "freq2_input";
+			for (int n = 1; n <= 2; n++) {
+				std::string label = read_line(hwmon_path + dir + "/freq" + std::to_string(n) + "_label");
+				std::transform(label.begin(), label.end(), label.begin(), ::tolower);
+				const std::string input = "freq" + std::to_string(n) + "_input";
+				if (label.find("sclk") != std::string::npos || label.find("gfx") != std::string::npos ||
+				    label.find("core") != std::string::npos || label.find("shader") != std::string::npos)
+					core_file = input;
+				else if (label.find("mclk") != std::string::npos || label.find("mem") != std::string::npos ||
+				         label.find("uclk") != std::string::npos)
+					mem_file = input;
+			}
+			sysfs_nodes.core_clock = fopen((hwmon_path + dir + "/" + core_file).c_str(), "r");
+			sysfs_nodes.memory_clock = fopen((hwmon_path + dir + "/" + mem_file).c_str(), "r");
 
 			for (std::string p : { "power1_average", "power1_input" }) {
 				std::string sensor = hwmon_path + dir + "/" + p;
@@ -561,6 +616,38 @@ AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id, std:
 
 			sysfs_nodes.power_limit = fopen((hwmon_path + dir + "/power1_cap").c_str(), "r");
 			sysfs_nodes.fan = fopen((hwmon_path + dir + "/fan1_input").c_str(), "r");
+			sysfs_nodes.fan_pwm = fopen((hwmon_path + dir + "/pwm1").c_str(), "r");
+			sysfs_nodes.fan_pwm_max = fopen((hwmon_path + dir + "/pwm1_max").c_str(), "r");
+		}
+	}
+
+	// GPUs without gpu_metrics whose gpu_busy_percent is missing or unsupported
+	// (reading it fails, e.g. Southern Islands / Radeon R7 240): measure the load
+	// from the GRBM_STATUS register through the DRM render node.
+	if (!gpu_metrics_is_valid) {
+		bool busy_usable = false;
+		if (sysfs_nodes.busy) {
+			int v = 0;
+			busy_usable = fscanf(sysfs_nodes.busy, "%d", &v) == 1;
+			rewind(sysfs_nodes.busy);
+		}
+
+		if (!busy_usable) {
+			auto nodes = ls((device_path + "/drm").c_str(), "renderD", LS_DIRS);
+			std::sort(nodes.begin(), nodes.end());
+			if (nodes.empty()) {
+				SPDLOG_WARN("amdgpu {}: gpu_busy_percent is unusable and no render node was found; GPU load will read 0", pci_dev);
+			} else {
+				const std::string node = "/dev/dri/" + nodes.front();
+				grbm = std::make_unique<AMDGPUGrbm>(node);
+				if (grbm->valid()) {
+					SPDLOG_INFO("amdgpu {}: gpu_busy_percent unsupported, measuring GPU load from GRBM_STATUS via {}", pci_dev, node);
+				} else {
+					SPDLOG_WARN("amdgpu {}: gpu_busy_percent unsupported and GRBM_STATUS can't be read via {} ({}); GPU load will read 0. Is your user in the 'render' or 'video' group?",
+						pci_dev, node, strerror(grbm->error()));
+					grbm.reset();
+				}
+			}
 		}
 	}
 
