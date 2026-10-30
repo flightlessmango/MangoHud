@@ -1,5 +1,6 @@
 #include <set>
 #include "gpu.h"
+#include <cstdlib>
 #include "file_utils.h"
 #include "hud_elements.h"
 
@@ -93,6 +94,31 @@ GPUS::GPUS(const overlay_params* early_params) {
                 node_name, driver, vendor_id, device_id, pci_dev
             );
             total_active++;
+        }
+    }
+
+    // Gamescope sessions on multi-GPU machines (and Mesa's device-select
+    // layer users) name the GPU everything renders on, e.g. "10de:2c19" or
+    // "10de:2c19!". Without an explicit gpu_list/pci_dev, show only that GPU
+    // instead of idle ones that can't report much (like an iGPU that only
+    // drives a secondary display).
+    const char* vk_select = getenv("MESA_VK_DEVICE_SELECT");
+    unsigned vk_vendor = 0, vk_device = 0;
+    if (params->gpu_list.empty() && params->pci_dev.empty() && available_gpus.size() > 1 &&
+        vk_select && sscanf(vk_select, "%x:%x", &vk_vendor, &vk_device) == 2) {
+        for (auto& gpu : available_gpus) {
+            if (gpu->vendor_id == vk_vendor && gpu->device_id == vk_device) {
+                vk_selected_gpu = gpu;
+                if (total_active == 0) {
+                    gpu->is_active = true;
+                    total_active++;
+                }
+                SPDLOG_INFO(
+                    "MESA_VK_DEVICE_SELECT={}: showing only {} (pci_dev={})",
+                    vk_select, gpu->drm_node, gpu->pci_dev
+                );
+                break;
+            }
         }
     }
 

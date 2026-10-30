@@ -123,6 +123,9 @@ class GPU {
 class GPUS {
     public:
         std::vector<std::shared_ptr<GPU>> available_gpus;
+        // GPU named by MESA_VK_DEVICE_SELECT, shown alone unless the user
+        // selects GPUs with gpu_list or pci_dev
+        std::shared_ptr<GPU> vk_selected_gpu;
         std::mutex mutex;
 
         explicit GPUS(const overlay_params* early_params = nullptr);
@@ -169,8 +172,11 @@ class GPUS {
             std::lock_guard<std::mutex> lock(mutex);
             std::vector<std::shared_ptr<GPU>> vec;
 
-            if (params()->gpu_list.empty() && params()->pci_dev.empty())
+            if (params()->gpu_list.empty() && params()->pci_dev.empty()) {
+                if (vk_selected_gpu)
+                    return { vk_selected_gpu };
                 return available_gpus;
+            }
 
             if (!params()->gpu_list.empty()) {
                 for (unsigned index : params()->gpu_list) {
