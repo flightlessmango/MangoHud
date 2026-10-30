@@ -37,6 +37,7 @@ enum class SampleType : uint8_t {
 enum class OutputMode : uint8_t {
     App,
     Layer,
+    Inject,
 };
 
 struct Sample {

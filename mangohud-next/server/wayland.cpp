@@ -224,6 +224,8 @@ void Wayland::run()
             std::lock_guard lock(frame_m);
             if (active)
                 focused = active->client.lock();
+            if (focused && (!focused->active.load() || focused->output_mode != OutputMode::Layer))
+                focused.reset();
         }
         if (focused) {
             std::shared_ptr<Renderer::Resources> next;

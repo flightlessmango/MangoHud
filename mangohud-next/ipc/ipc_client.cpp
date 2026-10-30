@@ -50,12 +50,14 @@ int IPCClient::on_config(sd_bus_message* m, void* userdata, sd_bus_error*) {
     auto* self = static_cast<IPCClient*>(userdata);
     double fps_limit = 0;
     int layer_output = 0;
-    int r = sd_bus_message_read(m, "db", &fps_limit, &layer_output);
+    int inject_output = 0;
+    int r = sd_bus_message_read(m, "dbb", &fps_limit, &layer_output, &inject_output);
     if (r <= 0) {
         SPDLOG_ERROR("config parse: {} ({})", r, strerror(-r));
         return 0;
     }
 
+    self->inject_output_.store(inject_output != 0, std::memory_order_release);
     self->layer_output_.store(layer_output != 0, std::memory_order_release);
     {
         std::lock_guard lock(self->m);

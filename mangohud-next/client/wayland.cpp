@@ -669,7 +669,7 @@ void Wayland::run_thread(std::shared_ptr<surface_data> surf_data)
         if (!ipc->connected.load(std::memory_order_acquire)) {
             detach(surf_data);
         } else {
-            if (!ipc->layer_output() && ensure_overlay_data(surf_data)) {
+            if (!ipc->layer_output() && !ipc->inject_output() && ensure_overlay_data(surf_data)) {
                 update_import(surf_data);
                 present(surf_data);
             }

@@ -123,7 +123,7 @@ static void register_egl_surface(EGLDisplay dpy, EGLSurface surf, void* native_w
 }
 
 static bool present_wayland(EGLSurface surf) {
-    if (!wayland)
+    if (!wayland || ipc->inject_output())
         return false;
 
     ipc->add_to_queue(os_time_get_nano());

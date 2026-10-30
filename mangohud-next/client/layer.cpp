@@ -383,7 +383,7 @@ public:
         };
         if (!sc)
             return present(pPresentInfo);
-        if (wayland) {
+        if (wayland && !layer->ipc->inject_output()) {
             return present(pPresentInfo);
         }
 

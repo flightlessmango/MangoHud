@@ -231,7 +231,7 @@ public:
             update_surface_cache();
         }
 
-        if (ctx.get_global(display) && ipc && !ipc->layer_output())
+        if (ctx.get_global(display) && ipc && !ipc->layer_output() && !ipc->inject_output())
             ensure_overlay_data(surf_data);
     }
 
@@ -270,6 +270,8 @@ public:
 
     template <typename Surface>
     bool ensure_overlay(Surface surface) {
+        if (ipc->inject_output())
+            return false;
         if (ipc->layer_output() && thread.joinable())
             return true;
         auto surf_data = get_surface(surface);

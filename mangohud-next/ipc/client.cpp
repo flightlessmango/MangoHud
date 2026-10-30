@@ -41,16 +41,18 @@ static std::string resolve_wayland_display(pid_t pid, const char* display)
 static OutputMode configured_output_mode(MangoHudServer* server)
 {
     if (!server || !server->config)
-        return OutputMode::App;
+        return OutputMode::Layer;
 
     const auto& output = server->config->get<std::string>("output");
     if (output == "app")
         return OutputMode::App;
     if (output == "layer")
         return OutputMode::Layer;
+    if (output == "inject")
+        return OutputMode::Inject;
 
-    SPDLOG_ERROR("invalid output mode '{}', expected 'app' or 'layer'", output);
-    return OutputMode::App;
+    SPDLOG_ERROR("invalid output mode '{}', expected 'app', 'layer' or 'inject'", output);
+    return OutputMode::Layer;
 }
 
 Client::Client(pid_t pid_, IPCServer* ipc_, MangoHudServer* server_, sd_bus* bus_)
@@ -266,27 +268,42 @@ int Client::on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_erro
     self->vulkanDriver = vulkan_driver;
     self->gpuName = gpu_name;
     self->wayland_display = resolve_wayland_display(self->pid, wayland_display);
-    self->output_mode = gamescope_session ? OutputMode::Layer : configured_output_mode(self->server);
-    if (self->output_mode == OutputMode::Layer) {
-        if (self->wayland_display.empty()) {
-            SPDLOG_DEBUG("wayland output requested but client {} has no WAYLAND_DISPLAY", self->pid);
-            self->output_mode = OutputMode::App;
-        } else if (!(self->wayland = self->ensure_wayland())) {
-            SPDLOG_DEBUG("wayland output unavailable display={}, falling back to app output", self->wayland_display);
-            self->output_mode = OutputMode::App;
+    const auto client_wayland_display = self->wayland_display;
+    if (gamescope_session) {
+        self->output_mode = OutputMode::Layer;
+    } else {
+        const char* server_display = std::getenv("WAYLAND_DISPLAY");
+        self->wayland_display = server_display ? server_display : "";
+        self->output_mode = configured_output_mode(self->server);
+        if (self->output_mode == OutputMode::App && !wayland_surface) {
+            SPDLOG_DEBUG("client {} has no native Wayland surface, trying layer output", self->pid);
+            self->output_mode = OutputMode::Layer;
         }
     }
+    if (self->output_mode == OutputMode::Layer && !self->ensure_wayland()) {
+        if (gamescope_session) {
+            SPDLOG_ERROR("No usable Wayland output for client {}", self->pid);
+            self->set_dead();
+            return 0;
+        }
+        self->output_mode = wayland_surface ? OutputMode::App : OutputMode::Inject;
+        SPDLOG_DEBUG("server Wayland output unavailable, falling back to {} output",
+                     wayland_surface ? "app" : "inject");
+    }
+    if (self->output_mode == OutputMode::App)
+        self->wayland_display = client_wayland_display;
 
     SPDLOG_DEBUG("client {} output mode={} wayland_display={} gamescope_session={}",
                  self->pid,
-                 self->output_mode == OutputMode::Layer ? "layer" : "app",
+                 self->output_mode == OutputMode::Layer ? "layer" :
+                 self->output_mode == OutputMode::Inject ? "inject" : "app",
                  self->wayland_display, gamescope_session != 0);
 
     if (self->server && self->server->metrics)
         self->server->metrics->add_client_pid(self->pid);
     if (self->output_mode == OutputMode::Layer)
         render_minor = self->wayland->render_minor;
-    else if (wayland_surface) {
+    else if (self->output_mode == OutputMode::App && wayland_surface) {
         auto renderer = Wayland::render_device(self->wayland_display);
         if (renderer < 0) {
             SPDLOG_DEBUG("wayland: device feedback unavailable display={}, using application renderer",
@@ -498,8 +515,9 @@ void Client::send_config() {
             return r;
         }
 
-        r = sd_bus_message_append(msg, "db", fps_limit,
-                                  static_cast<int>(self->output_mode == OutputMode::Layer));
+        r = sd_bus_message_append(msg, "dbb", fps_limit,
+                                  static_cast<int>(self->output_mode == OutputMode::Layer),
+                                  static_cast<int>(self->output_mode == OutputMode::Inject));
         SPDLOG_DEBUG("sent fps_limit: {}", fps_limit);
 
         if (r < 0) {
