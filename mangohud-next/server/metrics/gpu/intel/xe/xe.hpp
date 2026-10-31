@@ -55,6 +55,17 @@ private:
 
     bool drm_available = false;
 
+    // Integrated GPUs have no hwmon (xe registers it only for discrete cards),
+    // so GPU power comes from the RAPL "uncore" powercap domain instead.
+    std::ifstream ifs_uncore_energy;
+    uint64_t uncore_max_range = 0;
+    uint64_t previous_uncore_energy = 0;
+    bool uncore_searched = false;
+
+    bool is_integrated();
+    void find_rapl_uncore();
+    float get_uncore_power_usage();
+
 protected:
     void pre_poll_overrides() override;
 
@@ -81,6 +92,7 @@ public:
     float   get_power_usage()                   override;
     float   get_power_limit()                   override;
 
+    bool    get_is_apu()                        override;
     // float   get_apu_cpu_power() override;    // Investigate
     // int     get_apu_cpu_temp() override;     // Investigate
 
