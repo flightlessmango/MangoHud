@@ -85,12 +85,8 @@ static ImVec4 SRGBtoBT2020(ImVec4 col)
         {0.0, 0.0, 0.0, 1.0}
     };
 
-    col.x = dot(to2020[0], col);
-    col.y = dot(to2020[1], col);
-    col.z = dot(to2020[2], col);
-    col.w = dot(to2020[3], col);
-
-    return col;
+    return ImVec4(dot(to2020[0], col), dot(to2020[1], col),
+                  dot(to2020[2], col), dot(to2020[3], col));
 }
 
 static ImVec4 LinearToPQ(ImVec4 col)
