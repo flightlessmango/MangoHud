@@ -65,25 +65,11 @@ int Nvidia::get_load() {
 }
 
 float Nvidia::get_vram_used() {
-    nvmlMemory_st nvml_memory;
-    
-    nvmlReturn_t ret = nvml->nvmlDeviceGetMemoryInfo(device, &nvml_memory);
-
-    if (ret != NVML_SUCCESS)
-        return 0;
-    
-    return nvml_memory.used / 1024.f / 1024.f / 1024.f;
+    return memory.used / 1024.f / 1024.f / 1024.f;
 }
 
 float Nvidia::get_memory_total() {
-    nvmlMemory_st nvml_memory;
-    
-    nvmlReturn_t ret = nvml->nvmlDeviceGetMemoryInfo(device, &nvml_memory);
-
-    if (ret != NVML_SUCCESS)
-        return 0;
-    
-    return nvml_memory.total / 1024.f / 1024.f / 1024.f;
+    return memory.total / 1024.f / 1024.f / 1024.f;
 }
 
 int Nvidia::get_memory_clock() {
@@ -142,32 +128,14 @@ float Nvidia::get_power_limit() {
 }
 
 bool Nvidia::get_is_power_throttled() {
-    unsigned long long throttle_reasons;
-    nvmlReturn_t ret = nvml->nvmlDeviceGetCurrentClocksThrottleReasons(device, &throttle_reasons);
-
-    if (ret != NVML_SUCCESS)
-        return 0;
-
     return (throttle_reasons & 0x000000000000008CLL) != 0;
 }
 
 bool Nvidia::get_is_temp_throttled() {
-    unsigned long long throttle_reasons;
-    nvmlReturn_t ret = nvml->nvmlDeviceGetCurrentClocksThrottleReasons(device, &throttle_reasons);
-
-    if (ret != NVML_SUCCESS)
-        return 0;
-
     return (throttle_reasons & 0x0000000000000060LL) != 0;
 }
 
 bool Nvidia::get_is_other_throttled() {
-    unsigned long long throttle_reasons;
-    nvmlReturn_t ret = nvml->nvmlDeviceGetCurrentClocksThrottleReasons(device, &throttle_reasons);
-
-    if (ret != NVML_SUCCESS)
-        return 0;
-
     return (throttle_reasons & 0x0000000000000112LL) != 0;
 }
 
@@ -187,10 +155,9 @@ bool Nvidia::get_fan_rpm() {
 }
 
 float Nvidia::get_process_vram_used(pid_t pid) {
-    const std::vector<nvmlProcessInfo_v1_t> info = get_processes();
     float used_memory = 0.f;
 
-    for (const nvmlProcessInfo_v1_t& proc : info) {
+    for (const nvmlProcessInfo_v1_t& proc : processes) {
         if (static_cast<pid_t>(proc.pid) != pid)
             continue;
 
@@ -199,4 +166,15 @@ float Nvidia::get_process_vram_used(pid_t pid) {
     }
 
     return used_memory;
+}
+
+void Nvidia::pre_poll_overrides() {
+    throttle_reasons = 0;
+    nvml->nvmlDeviceGetCurrentClocksThrottleReasons(device, &throttle_reasons);
+
+    memory = {};
+    if (nvml->nvmlDeviceGetMemoryInfo(device, &memory) != NVML_SUCCESS)
+        memory = {};
+
+    processes = get_processes();
 }
