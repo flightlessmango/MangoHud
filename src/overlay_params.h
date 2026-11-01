@@ -76,6 +76,8 @@ struct Tracepoint;
    OVERLAY_PARAM_BOOL(histogram)                     \
    OVERLAY_PARAM_BOOL(wine)                          \
    OVERLAY_PARAM_BOOL(gpu_load_change)               \
+   OVERLAY_PARAM_BOOL(gpu_temp_change)               \
+   OVERLAY_PARAM_BOOL(cpu_temp_change)               \
    OVERLAY_PARAM_BOOL(cpu_load_change)               \
    OVERLAY_PARAM_BOOL(core_load_change)              \
    OVERLAY_PARAM_BOOL(graphs)                        \
@@ -202,6 +204,10 @@ struct Tracepoint;
    OVERLAY_PARAM_CUSTOM(benchmark_percentiles)       \
    OVERLAY_PARAM_CUSTOM(help)                        \
    OVERLAY_PARAM_CUSTOM(gpu_load_value)              \
+   OVERLAY_PARAM_CUSTOM(gpu_temp_value)              \
+   OVERLAY_PARAM_CUSTOM(cpu_temp_value)              \
+   OVERLAY_PARAM_CUSTOM(gpu_temp_color)              \
+   OVERLAY_PARAM_CUSTOM(cpu_temp_color)              \
    OVERLAY_PARAM_CUSTOM(cpu_load_value)              \
    OVERLAY_PARAM_CUSTOM(gpu_load_color)              \
    OVERLAY_PARAM_CUSTOM(cpu_load_color)              \
@@ -318,6 +324,10 @@ struct overlay_params {
    std::vector<unsigned> cpu_load_color;
    std::vector<unsigned> gpu_load_value;
    std::vector<unsigned> cpu_load_value;
+   std::vector<unsigned> gpu_temp_color;
+   std::vector<unsigned> cpu_temp_color;
+   std::vector<unsigned> gpu_temp_value;
+   std::vector<unsigned> cpu_temp_value;
    std::vector<unsigned> fps_color;
    std::vector<unsigned> fps_value;
    unsigned media_player_color;
