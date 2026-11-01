@@ -44,6 +44,7 @@ vulkan_layer = shared_library(
     cpp_args: vulkan_wsi_args + ['-DVK_USE_PLATFORM_XCB_KHR'],
     include_directories: inc_common,
     install: true,
+    install_dir: libdir_mangohud,
     link_args: [
       '-static-libstdc++',
       '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version')),
