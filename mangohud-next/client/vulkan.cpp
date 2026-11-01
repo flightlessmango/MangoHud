@@ -6,9 +6,18 @@ bool OverlayVK::draw(VkSwapchainKHR swapchain, uint32_t img_idx, VkQueue q, VkPr
 {
     queue = q;
     sc = layer->get_swapchain_data(swapchain);
-    auto d = sc->d;
     if (!sc) return false;
-    if (!layer->ipc->connected.load()) return false;
+    auto ipc = layer->ipc;
+    if (!ipc->connected.load()) return false;
+    if (ipc->import_generation.load(std::memory_order_acquire) != import_generation) {
+        std::lock_guard lock(ipc->m);
+        import_generation = ipc->import_generation.load(std::memory_order_acquire);
+        if (!init_dmabufs(ipc->fdinfo)) {
+            dmabufs.clear();
+            ipc->send_import_failed();
+            return false;
+        }
+    }
     if (dmabufs.empty()) return false;
     if (current_slot < 0) current_slot = layer->ipc->next_frame();
 
@@ -19,7 +28,6 @@ bool OverlayVK::draw(VkSwapchainKHR swapchain, uint32_t img_idx, VkQueue q, VkPr
 }
 
 bool OverlayVK::init_dmabufs(Fdinfo& fdinfo) {
-    std::lock_guard lock(m);
     sc->d->DeviceWaitIdle(sc->d->Device);
     current_slot = -1;
     last_slot = -1;
