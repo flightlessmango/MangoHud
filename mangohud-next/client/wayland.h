@@ -176,6 +176,7 @@ struct surface_data {
     wl_surface* surface = nullptr;
     wl_event_queue* queue = nullptr;
     bool app_feedback_via_commit = false;
+    uint64_t hud_update_seq = 0;
     wl_surface* overlay_surf = nullptr;
     wl_subsurface* sub_surf = nullptr;
     wp_viewport* viewport = nullptr;

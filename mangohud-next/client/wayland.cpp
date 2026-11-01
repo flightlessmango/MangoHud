@@ -603,6 +603,10 @@ std::shared_ptr<shm_buffer> Wayland::present(const std::shared_ptr<surface_data>
     if (surf_data->buffers.empty())
         return nullptr;
 
+    const auto update_seq = ipc->hud_update_seq.load(std::memory_order_acquire);
+    if (surf_data->attached && surf_data->hud_update_seq == update_seq)
+        return nullptr;
+
     int idx = ipc->next_frame();
     if (idx < 0 || static_cast<size_t>(idx) >= surf_data->buffers.size())
         return nullptr;
@@ -632,6 +636,7 @@ std::shared_ptr<shm_buffer> Wayland::present(const std::shared_ptr<surface_data>
     wl_surface_commit(surf_data->overlay_surf);
     surf_data->flush_pending(true);
     surf_data->attached = true;
+    surf_data->hud_update_seq = update_seq;
 
     return slot;
 }

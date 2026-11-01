@@ -64,6 +64,8 @@ public:
     bool init();
     void stop();
 
+    std::atomic<uint64_t> hud_update_seq{1};
+
     void add_to_queue(uint64_t now) {
         static std::atomic<uint64_t> seq{0};
         add_to_queue(SampleType::Frame, seq.fetch_add(1, std::memory_order_relaxed), now);
@@ -72,6 +74,8 @@ public:
     void add_to_queue(SampleType type, uint64_t seq, uint64_t now) {
         if (is_incompatible())
             return;
+        if (type == SampleType::App)
+            hud_update_seq.fetch_add(1, std::memory_order_release);
         {
             std::shared_lock lock(samples_mtx);
             auto idx = samples_count.fetch_add(1, std::memory_order_relaxed);
