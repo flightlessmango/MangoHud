@@ -181,7 +181,7 @@ bool Wayland::ensure_overlay_data(const std::shared_ptr<surface_data>& surf_data
 
         wl_subsurface_set_position(surf_data->sub_surf, 0, 0);
         wl_subsurface_place_above(surf_data->sub_surf, surf_data->surface);
-        wl_subsurface_set_desync(surf_data->sub_surf);
+        wl_subsurface_set_sync(surf_data->sub_surf);
         surf_data->flush_pending(true);
         SPDLOG_DEBUG("wl overlay created: parent=0x{:x}, overlay=0x{:x}, subsurface=0x{:x}",
                      (uint64_t)surf_data->surface, (uint64_t)surf_data->overlay_surf,
