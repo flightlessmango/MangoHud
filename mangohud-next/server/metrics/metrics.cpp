@@ -129,6 +129,15 @@ void Metrics::update() {
         new_metrics["CPU"]["TEMP"] = {cpu_metrics.temp, "°C"};
         new_metrics["CPU"]["POWER"] = {(int)cpu_metrics.power, "W"};
 
+        auto core_metrics = cpu.get_core_info();
+
+        for (size_t i = 0; i < core_metrics.size(); i++) {
+            const std::string core_index = "CPU" + std::to_string(i);
+
+            new_metrics[core_index]["LOAD"] = {core_metrics[i].load, "%"};
+            new_metrics[core_index]["FREQ"] = {core_metrics[i].frequency, "MHz"};
+        }
+        
         auto ram_metrics = get_ram_info();
         for (auto& [k, v] : ram_metrics)
             new_metrics["RAM"][to_uppercase(k)] = {v, "GiB"};
