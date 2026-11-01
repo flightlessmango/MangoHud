@@ -107,12 +107,6 @@ Wayland::Wayland(IPCServer* ipc_, std::string display_name_)
     auto* globals = ctx.get_global(display);
     if (!globals || !globals->compositor || !layer_shell) {
         SPDLOG_DEBUG("wayland: failed to initialize globals");
-        if (layer_shell) {
-            zwlr_layer_shell_v1_destroy(layer_shell);
-            layer_shell = nullptr;
-        }
-        wl_display_disconnect(display);
-        display = nullptr;
         return;
     }
 
