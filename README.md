@@ -364,6 +364,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `cpu_load_color`                   | Set the colors for the gpu load change low, medium and high. e.g `cpu_load_color=0000FF,00FFFF,FF00FF` |
 | `cpu_load_value`                   | Set the values for medium and high load e.g `cpu_load_value=50,90`                    |
 | `cpu_mhz`                          | Show the CPUs current MHz                                                             |
+| `cpu_max_core_load`                | Display the load of the busiest CPU core next to the CPU load, colored by `cpu_load_change` |
 | `cpu_power`<br>`gpu_power`         | Display CPU/GPU draw in watts                                                         |
 | `cpu_temp`<br>`gpu_temp`<br>`gpu_junction_temp`<br>`gpu_mem_temp`           | Display current CPU/GPU temperature                                                  |
 | `cpu_custom_temp_sensor`           | Use custom hwmon sensor for cpu temperature. e.g `cpu_custom_temp_sensor=cpuss0_2,temp3_input`.|

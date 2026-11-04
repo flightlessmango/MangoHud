@@ -447,6 +447,25 @@ void HudElements::cpu_stats(){
             HUDElements.TextColored(HUDElements.colors.text, "%%");
         }
 
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_max_core_load]){
+            ImguiNextColumnOrNewRow();
+            int max_core_load = int(cpuStats.GetCPUDataTotal().max_core_load);
+            auto load_color = text_color;
+            if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_load_change]){
+                struct LOAD_DATA cpu_data = {
+                    HUDElements.colors.cpu_load_low,
+                    HUDElements.colors.cpu_load_med,
+                    HUDElements.colors.cpu_load_high,
+                    HUDElements.params->cpu_load_value[0],
+                    HUDElements.params->cpu_load_value[1]
+                };
+                load_color = change_on_load_temp(cpu_data, max_core_load);
+            }
+            right_aligned_text(load_color, HUDElements.ralign_width, "%d", max_core_load);
+            ImGui::SameLine(0, 1.0f);
+            HUDElements.TextColored(load_color, "%%");
+        }
+
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp]){
             ImguiNextColumnOrNewRow();
             if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit])
