@@ -13,12 +13,12 @@
 
 
 #define IS_VALID_METRIC(FIELD) (FIELD != 0xffff)
-void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
+bool AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	FILE *f;
     metrics_table_header header {};
 	f = fopen(gpu_metrics_path.c_str(), "rb");
 	if (!f)
-		return;
+		return false;
 
     size_t nread = fread(&header, 1, sizeof(header), f);
 
@@ -26,7 +26,7 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		SPDLOG_DEBUG("amdgpu metrics file '{}' may be corrupted (read {} bytes, need at least {})",
 			gpu_metrics_path, nread, sizeof(header));
 		fclose(f);
-		return;
+		return false;
 	}
 
     if (header.structure_size < sizeof(header)) {
@@ -34,7 +34,7 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
             "amdgpu metrics file '{}' has invalid structure_size {}",
             gpu_metrics_path, header.structure_size);
         fclose(f);
-        return;
+        return false;
     }
 
 	std::vector<uint8_t> buf(header.structure_size);
@@ -46,7 +46,7 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 		SPDLOG_DEBUG(
             "amdgpu metrics file '{}' short read (read {} bytes, expected {})",
             gpu_metrics_path, nread, buf.size());
-        return;
+        return false;
 	}
 
 	bool is_power=false, is_current=false, is_temp=false, is_other=false;
@@ -57,7 +57,7 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 				"amdgpu metrics file '{}' too small for gpu_metrics_v1_3 "
 				"(have {}, need {})",
 				gpu_metrics_path, buf.size(), sizeof(gpu_metrics_v1_3));
-			return;
+			return false;
 		}
 
 		const auto *amdgpu_metrics = reinterpret_cast<const gpu_metrics_v1_3 *>(buf.data());
@@ -101,7 +101,7 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 				header.content_revision >= 3 ? 3 : header.content_revision >= 2 ? 2 : 1,
 				buf.size(),
 				needed);
-			return;
+			return false;
 		}
 
 		const auto *amdgpu_metrics = reinterpret_cast<const gpu_metrics_v2_3 *>(buf.data());
@@ -193,7 +193,7 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 				"amdgpu metrics file '{}' too small for gpu_metrics_v3_0 "
 				"(have {}, need {})",
 				gpu_metrics_path, buf.size(), sizeof(gpu_metrics_v3_0));
-			return;
+			return false;
 		}
 		struct gpu_metrics_v3_0 *amdgpu_metrics = (struct gpu_metrics_v3_0 *) buf.data();
 		this->is_apu = true;
@@ -232,7 +232,6 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 				throttling->v3_power.store(false);
 				throttling->v3_thermal.store(false);
 			}
-			return;
 		} else {
 			uint32_t d_thm_core = V3_THROTTLING_DELTA(thm_core);
 			uint32_t d_thm_gfx  = V3_THROTTLING_DELTA(thm_gfx);
@@ -258,6 +257,8 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 				throttling->v3_thermal.store(is_temp);
 			}
 		}
+	} else {
+		return false;
 	}
 
 	/* Throttling: See
@@ -267,19 +268,22 @@ void AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
 	metrics->is_current_throttled = is_current;
 	metrics->is_temp_throttled    = is_temp;
 	metrics->is_other_throttled   = is_other;
+	return true;
 }
 
 void AMDGPU::get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT], bool &gpu_load_needs_dividing) {
 	while (!stop_thread) {
+		size_t sample_count = 0;
 		// Get all the samples
 		for (size_t cur_sample_id=0; cur_sample_id < METRICS_SAMPLE_COUNT; cur_sample_id++) {
-			if (gpu_metrics_is_valid)
-				get_instant_metrics(&metrics_buffer[cur_sample_id]);
-
-			// Detect and fix if the gpu load is reported in centipercent
-			if (gpu_load_needs_dividing || metrics_buffer[cur_sample_id].gpu_load_percent > 100){
-				gpu_load_needs_dividing = true;
-				metrics_buffer[cur_sample_id].gpu_load_percent /= 100;
+			struct amdgpu_common_metrics sample = {};
+			if (gpu_metrics_is_valid && get_instant_metrics(&sample)) {
+				// Detect and fix if the gpu load is reported in centipercent
+				if (gpu_load_needs_dividing || sample.gpu_load_percent > 100) {
+					gpu_load_needs_dividing = true;
+					sample.gpu_load_percent /= 100;
+				}
+				metrics_buffer[sample_count++] = sample;
 			}
 
 			// frequently check if thread should stop so we don't get stuck for 500ms
@@ -311,7 +315,7 @@ void AMDGPU::get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[ME
 		get_sysfs_metrics();
 		metrics.proc_vram_used = proc_vram_used;
 
-		if (gpu_metrics_is_valid) {
+		if (sample_count > 0) {
 			UPDATE_METRIC_AVERAGE(gpu_load_percent);
 			UPDATE_METRIC_AVERAGE_FLOAT(average_gfx_power_w);
 			UPDATE_METRIC_AVERAGE_FLOAT(average_cpu_power_w);
@@ -363,8 +367,7 @@ void AMDGPU::metrics_polling_thread() {
 	bool gpu_load_needs_dividing = false;  //some GPUs report load as centipercent
 
 	// Initial poll of the metrics, so that we have values to display as fast as possible
-	get_instant_metrics(&amdgpu_common_metrics);
-	if (amdgpu_common_metrics.gpu_load_percent > 100){
+	if (get_instant_metrics(&amdgpu_common_metrics) && amdgpu_common_metrics.gpu_load_percent > 100){
 		gpu_load_needs_dividing = true;
 		amdgpu_common_metrics.gpu_load_percent /= 100;
 	}

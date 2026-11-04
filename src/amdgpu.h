@@ -17,10 +17,10 @@
 
 #define NUM_HBM_INSTANCES 4
 #define TEMP_HOTSPOT_BIT 36ull
-#define UPDATE_METRIC_AVERAGE(FIELD) do { int value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer[s].FIELD; } amdgpu_common_metrics.FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
-#define UPDATE_METRIC_AVERAGE_FLOAT(FIELD) do { float value_sum = 0; for (size_t s=0; s < METRICS_SAMPLE_COUNT; s++) { value_sum += metrics_buffer[s].FIELD; } amdgpu_common_metrics.FIELD = value_sum / METRICS_SAMPLE_COUNT; } while(0)
-#define UPDATE_METRIC_MAX(FIELD) do { int cur_max = metrics_buffer[0].FIELD; for (size_t s=1; s < METRICS_SAMPLE_COUNT; s++) { cur_max = MAX(cur_max, metrics_buffer[s].FIELD); }; amdgpu_common_metrics.FIELD = cur_max; } while(0)
-#define UPDATE_METRIC_LAST(FIELD) do { amdgpu_common_metrics.FIELD = metrics_buffer[METRICS_SAMPLE_COUNT - 1].FIELD; } while(0)
+#define UPDATE_METRIC_AVERAGE(FIELD) do { int value_sum = 0; for (size_t s=0; s < sample_count; s++) { value_sum += metrics_buffer[s].FIELD; } amdgpu_common_metrics.FIELD = value_sum / sample_count; } while(0)
+#define UPDATE_METRIC_AVERAGE_FLOAT(FIELD) do { float value_sum = 0; for (size_t s=0; s < sample_count; s++) { value_sum += metrics_buffer[s].FIELD; } amdgpu_common_metrics.FIELD = value_sum / sample_count; } while(0)
+#define UPDATE_METRIC_MAX(FIELD) do { int cur_max = metrics_buffer[0].FIELD; for (size_t s=1; s < sample_count; s++) { cur_max = MAX(cur_max, metrics_buffer[s].FIELD); }; amdgpu_common_metrics.FIELD = cur_max; } while(0)
+#define UPDATE_METRIC_LAST(FIELD) do { amdgpu_common_metrics.FIELD = metrics_buffer[sample_count - 1].FIELD; } while(0)
 #ifdef _WIN32
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #endif
@@ -485,7 +485,7 @@ class AMDGPU {
 				thread.join();
 		}
 
-		void get_instant_metrics(struct amdgpu_common_metrics *metrics);
+		bool get_instant_metrics(struct amdgpu_common_metrics *metrics);
 		void get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[METRICS_SAMPLE_COUNT],
 								  bool &gpu_load_needs_dividing);
 
@@ -520,7 +520,7 @@ class AMDGPU {
 		gpu_metrics metrics;
 		pid_t pid = getpid();
 		LegacyFDInfoWrapper fdinfo;
-		struct amdgpu_common_metrics amdgpu_common_metrics;
+		struct amdgpu_common_metrics amdgpu_common_metrics = {};
 		struct gpu_metrics_v3_0 previous_metrics{};
 		#define V3_THROTTLING_DELTA(name) \
 		((amdgpu_metrics)->throttle_residency_##name - (previous_metrics).throttle_residency_##name)

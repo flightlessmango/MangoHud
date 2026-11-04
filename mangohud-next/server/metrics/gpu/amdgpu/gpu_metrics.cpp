@@ -24,7 +24,8 @@ bool AMDGPUMetricsBase::setup() {
 }
 
 void AMDGPUMetricsBase::poll() {
-    static std::vector<char> buf(max(sizeof(gpu_metrics_v1_3), sizeof(gpu_metrics_v2_4)));
+    valid = false;
+    std::vector<char> buf(max(sizeof(gpu_metrics_v1_3), sizeof(gpu_metrics_v2_4)));
     const metrics_table_header* header = reinterpret_cast<metrics_table_header*>(buf.data());
 
     if (!ifs_gpu_metrics.is_open()) return;
@@ -39,6 +40,12 @@ void AMDGPUMetricsBase::poll() {
         return;
     }
 
+    if (header->structure_size < sizeof(metrics_table_header) ||
+        header->structure_size > buf.size() ||
+        bytes_read < header->structure_size)
+        return;
+
+    metrics = {};
     uint64_t indep_throttle_status = 0;
 
     if (header->format_revision == 1) {
@@ -47,7 +54,8 @@ void AMDGPUMetricsBase::poll() {
 
         parse_metrics_v1_3(amdgpu_metrics);
 
-        indep_throttle_status = amdgpu_metrics->indep_throttle_status;
+        if (header->content_revision >= 3)
+            indep_throttle_status = amdgpu_metrics->indep_throttle_status;
 
         // RDNA 3 almost always shows the TEMP_HOTSPOT throtting flag,
         // so clear that bit
@@ -69,6 +77,7 @@ void AMDGPUMetricsBase::poll() {
     metrics.is_current_throttled    = ((indep_throttle_status >> 16) & 0xFF  ) != 0;
     metrics.is_temp_throttled       = ((indep_throttle_status >> 32) & 0xFFFF) != 0;
     metrics.is_other_throttled      = ((indep_throttle_status >> 56) & 0xFF  ) != 0;
+    valid = true;
 }
 
 bool AMDGPUMetricsBase::is_apu() const {

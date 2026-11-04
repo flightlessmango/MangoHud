@@ -25,7 +25,7 @@ void AMDGPU::pre_poll_overrides() {
 }
 
 int AMDGPU::get_load() {
-    if (metrics_available) {
+    if (metrics_available && gpu_metrics.valid) {
         // some GPUs report load as centipercent
         if (gpu_metrics.metrics.gpu_load_percent > 100)
             return gpu_metrics.metrics.gpu_load_percent / 100;
@@ -51,7 +51,7 @@ float AMDGPU::get_memory_total() {
 }
 
 int AMDGPU::get_memory_clock() {
-    if (metrics_available)
+    if (metrics_available && gpu_metrics.valid)
         return gpu_metrics.metrics.current_uclk_mhz;
     else
         return hwmon.get_sensor_value("memory_clock") / 1'000'000.f;
@@ -62,7 +62,7 @@ int AMDGPU::get_memory_temp() {
 }
 
 int AMDGPU::get_temperature() {
-    if (metrics_available) {
+    if (metrics_available && gpu_metrics.valid) {
         if (gpu_metrics.is_apu())
             return gpu_metrics.metrics.apu_cpu_temp_c;
         else
@@ -80,7 +80,7 @@ int AMDGPU::get_junction_temperature() {
 int AMDGPU::get_core_clock() {
     // If we are on VANGOGH (Steam Deck), then
     // always use core clock from GPU metrics.
-    if (metrics_available && (device_id == 0x1435 || device_id == 0x163f))
+    if (metrics_available && gpu_metrics.valid && (device_id == 0x1435 || device_id == 0x163f))
         return gpu_metrics.metrics.current_gfxclk_mhz;
     else
         return hwmon.get_sensor_value("frequency") / 1'000'000.f;
@@ -92,7 +92,7 @@ int AMDGPU::get_voltage() {
 
 float AMDGPU::get_power_usage() {
     // It's set to -1 if it's not available in gpu_metrics
-    if (metrics_available && gpu_metrics.metrics.average_gfx_power_w != -1.0f)
+    if (metrics_available && gpu_metrics.valid && gpu_metrics.metrics.average_gfx_power_w != -1.0f)
         return gpu_metrics.metrics.average_gfx_power_w;
     else {
         if (hwmon.is_open("average_power"))
@@ -114,49 +114,49 @@ bool AMDGPU::get_is_apu() {
 }
 
 float AMDGPU::get_apu_cpu_power() {
-    if (metrics_available)
+    if (metrics_available && gpu_metrics.valid)
         return gpu_metrics.metrics.average_cpu_power_w;
     else
         return 0.f;
 }
 
 int AMDGPU::get_apu_cpu_temp() {
-    if (metrics_available)
+    if (metrics_available && gpu_metrics.valid)
         return gpu_metrics.metrics.apu_cpu_temp_c;
     else
         return 0.f;
 }
 
 bool AMDGPU::get_is_power_throttled() {
-    if (metrics_available)
+    if (metrics_available && gpu_metrics.valid)
         return gpu_metrics.metrics.is_power_throttled;
     else
         return false;
 }
 
 bool AMDGPU::get_is_current_throttled() {
-    if (metrics_available)
+    if (metrics_available && gpu_metrics.valid)
         return gpu_metrics.metrics.is_current_throttled;
     else
         return false;
 }
 
 bool AMDGPU::get_is_temp_throttled() {
-    if (metrics_available)
+    if (metrics_available && gpu_metrics.valid)
         return gpu_metrics.metrics.is_temp_throttled;
     else
         return false;
 }
 
 bool AMDGPU::get_is_other_throttled() {
-    if (metrics_available)
+    if (metrics_available && gpu_metrics.valid)
         return gpu_metrics.metrics.is_other_throttled;
     else
         return false;
 }
 
 int AMDGPU::get_fan_speed() {
-    if (metrics_available)
+    if (metrics_available && gpu_metrics.valid)
         return gpu_metrics.metrics.fan_speed;
     else
         return hwmon.get_sensor_value("fan");

@@ -252,6 +252,7 @@ public:
     explicit AMDGPUMetricsBase(const std::string& drm_node);
     bool setup();
     void poll();
+    bool valid = false;
 	bool is_apu() const;
     amdgpu_common_metrics metrics = {};
 
