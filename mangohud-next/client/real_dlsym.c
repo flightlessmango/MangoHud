@@ -5,6 +5,7 @@
  */
 
 #include <dlfcn.h>
+#include <link.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -104,6 +105,22 @@ void *real_dlsym(void *handle, const char *symbol)
     if (print_dlsym)
         printf("dlsym(%p, %s) = %p\n", handle, symbol, result);
 
+    return result;
+}
+
+dlsym_func get_next_dlsym(void)
+{
+    static dlsym_func next;
+    dlsym_func result = __atomic_load_n(&next, __ATOMIC_ACQUIRE);
+    if (!result)
+    {
+        // Keep other interposers in the chain without reopening any libraries:
+        // even RTLD_NOLOAD can run constructors during loader initialization.
+        result = (dlsym_func)real_dlsym(RTLD_NEXT, "dlsym");
+        if (!result)
+            result = __dlsym;
+        __atomic_store_n(&next, result, __ATOMIC_RELEASE);
+    }
     return result;
 }
 

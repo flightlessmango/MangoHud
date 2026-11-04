@@ -166,9 +166,11 @@ CREATE_FWD(void*, eglGetPlatformDisplayEXT,
      const intptr_t* attrib_list),
      platform, native_display, attrib_list)
 CREATE_FWD(unsigned int, eglSwapBuffers, (void* dpy, void* surf), dpy, surf)
+CREATE_FWD(unsigned int, eglSwapInterval, (void* dpy, int interval), dpy, interval)
 CREATE_FWD(void*, eglGetProcAddress, (const char* procName), procName)
 CREATE_FWD(int, eglTerminate, (void *display), display)
 CREATE_FWD(unsigned int, eglDestroyContext, (void *dpy, void *ctx), dpy, ctx)
+CREATE_FWD(unsigned int, eglDestroySurface, (void *dpy, void *surf), dpy, surf)
 
 #undef CREATE_FWD
 #undef CREATE_FWD_VOID
@@ -188,7 +190,9 @@ static struct func_ptr hooks[] = {
     ADD_HOOK(glXSwapBuffersMscOML),
 #endif
     ADD_HOOK(eglDestroyContext),
+    ADD_HOOK(eglDestroySurface),
     ADD_HOOK(eglSwapBuffers),
+    ADD_HOOK(eglSwapInterval),
     ADD_HOOK(eglGetPlatformDisplay),
     ADD_HOOK(eglGetPlatformDisplayEXT),
     ADD_HOOK(eglGetDisplay),
@@ -200,6 +204,20 @@ static struct func_ptr hooks[] = {
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(arr) sizeof(arr)/sizeof(arr[0])
 #endif
+
+static void* find_hook(const char *name)
+{
+    if (!name)
+        return NULL;
+
+    for (unsigned i = 0; i < ARRAY_SIZE(hooks); i++)
+    {
+        if (!strcmp(hooks[i].name, name))
+            return hooks[i].ptr;
+    }
+
+    return NULL;
+}
 
 #include <stddef.h>
 
@@ -259,8 +277,13 @@ static void save_and_consume_real_dlerror()
     memcpy(error_override, recent_error, error_length + 1);
 }
 
-void* dlsym(void *handle, const char *name)
+MANGOHUD_DLSYM_ATTRIBUTES void* dlsym(void *handle, const char *name)
 {
+    void *hook = find_hook(name);
+
+    if (!hook)
+        MANGOHUD_MUSTTAIL return get_next_dlsym()(handle, name);
+
     save_and_consume_real_dlerror();
     // const char* dlsym_enabled = getenv("MANGOHUD_DLSYM");
     const char* dlsym_RTLD_DEFAULT_env = getenv("MANGOHUD_DLSYM_RTLD_DEFAULT_FIX");
@@ -310,15 +333,7 @@ void* dlsym(void *handle, const char *name)
     activate_override = fn_ptr != NULL;
 
     if (!is_angle && fn_ptr)
-    {
-        for (unsigned i = 0; i < ARRAY_SIZE(hooks); i++)
-        {
-            if (!strcmp(hooks[i].name, name))
-            {
-                return hooks[i].ptr;
-            }
-        }
-    }
+        return hook;
 
     return fn_ptr;
 }

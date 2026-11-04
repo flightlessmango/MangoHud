@@ -20,6 +20,12 @@
 using namespace std::chrono_literals;
 namespace fs = std::filesystem;
 
+#ifdef MANGOHUD_LEGACY
+// MangoHud legacy also has class named GPU, and linker resolves legacy's GPU destructor call
+// to next's GPU destructor which leads to SEGFAULT
+#define GPU NextGPU
+#endif
+
 class GPU {
 public:
     const std::string drm_node;
@@ -42,6 +48,11 @@ public:
     void add_pid(pid_t pid);
     void print_metrics();
     void start_thread_worker();
+    void request_polling();
+    void stop_polling();
+    void stop_polling_if_idle(std::chrono::steady_clock::time_point now,
+                              std::chrono::nanoseconds idle_timeout);
+    bool polling_active() const;
 
     virtual gpu_metrics_system_t get_system_metrics();
     virtual std::map<pid_t, gpu_metrics_process_t> get_process_metrics();
@@ -53,6 +64,8 @@ protected:
 
     std::thread worker_thread;
     const std::string worker_thread_name;
+    mutable std::mutex worker_mutex;
+    std::chrono::time_point<std::chrono::steady_clock> last_poll_request;
 
     std::chrono::time_point<std::chrono::steady_clock> previous_time;
     std::chrono::nanoseconds delta_time_ns;
@@ -95,21 +108,4 @@ protected:
     virtual int     get_process_load(pid_t pid)         { return 0; }
     virtual float   get_process_vram_used(pid_t pid)    { return 0.f; }
     virtual float   get_process_gtt_used(pid_t pid)     { return 0.f; }
-};
-
-class GPUS {
-private:
-    mutable std::mutex available_gpus_m;
-    std::vector<std::shared_ptr<GPU>> available_gpus;
-
-    std::string get_pci_device_address(const std::string& drm_card_path);
-    std::string get_driver(const std::string& drm_card_path);
-
-    const std::array<std::string, 7> supported_drivers = {
-        "amdgpu", "nvidia", "i915", "xe", "panfrost", "msm_dpu", "msm_drm"
-    };
-
-public:
-    GPUS();
-    std::vector<std::shared_ptr<GPU>> available() const;
 };

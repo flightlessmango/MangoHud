@@ -1,15 +1,31 @@
 #pragma once
 
-#include <string>
+#include <algorithm>
+#include <cerrno>
 #include <cstdint>
+#include <cstring>
 #include <deque>
+#include <memory>
+#include <mutex>
+#include <stdexcept>
+#include <string>
+#include <tuple>
 #include <type_traits>
 #include <utility>
+#include <vector>
 #include <unistd.h>
+
+#include <spdlog/spdlog.h>
 
 std::string read_line(const std::string& filename);
 bool ends_with(std::string s1, std::string s2, bool ignore_case = false);
 uint64_t try_stoull(const std::string& str);
+
+template <typename Container, typename Mutex>
+Container snapshot(const Container& source, Mutex& mutex) {
+    std::lock_guard lock(mutex);
+    return source;
+}
 
 class unique_fd {
 public:

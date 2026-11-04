@@ -1,6 +1,9 @@
 #include <iostream>
 #include <array>
 #include <unordered_map>
+#include <set>
+#include <iterator>
+#include <utility>
 #include <cstring>
 #include <dlfcn.h>
 #include <chrono>
@@ -144,6 +147,63 @@ EXPORT_C_(unsigned int) eglDestroyContext(void* dpy, void* ctx)
     return pfn_eglDestroyContext(dpy, ctx);
 }
 
+static unsigned int (*get_real_eglSwapInterval())(void*, int)
+{
+    static unsigned int (*pfn_eglSwapInterval)(void*, int) = nullptr;
+    if (!pfn_eglSwapInterval)
+        pfn_eglSwapInterval = reinterpret_cast<decltype(pfn_eglSwapInterval)>(get_egl_proc_address("eglSwapInterval"));
+    return pfn_eglSwapInterval;
+}
+
+// Surfaces gl_vsync has been applied to. Handles can be reused after a surface is destroyed, so
+// eglDestroySurface and eglTerminate drop their entries. Protected by global_lock.
+static std::set<std::pair<void*, void*>> egl_vsync_surfaces;
+
+EXPORT_C_(unsigned int) eglDestroySurface(void* dpy, void* surf);
+EXPORT_C_(unsigned int) eglDestroySurface(void* dpy, void* surf)
+{
+    static unsigned int (*pfn_eglDestroySurface)(void*, void*) = nullptr;
+    if (!pfn_eglDestroySurface)
+        pfn_eglDestroySurface = reinterpret_cast<decltype(pfn_eglDestroySurface)>(get_egl_proc_address("eglDestroySurface"));
+
+    {
+        ::scoped_lock lk(global_lock);
+        egl_vsync_surfaces.erase({dpy, surf});
+    }
+
+    return pfn_eglDestroySurface(dpy, surf);
+}
+
+// gl_vsync overrides the application's swap interval, like the GLX path.
+// The overlay params only exist once eglSwapBuffers has set up the context, so
+// calls made before the first swap pass through and are overridden by the swap.
+EXPORT_C_(unsigned int) eglSwapInterval(void* dpy, int interval);
+EXPORT_C_(unsigned int) eglSwapInterval(void* dpy, int interval)
+{
+    auto pfn_eglSwapInterval = get_real_eglSwapInterval();
+    if (!pfn_eglSwapInterval)
+        return 0;
+
+    if (!is_blacklisted()) {
+        static void* (*pfn_eglGetCurrentContext)() = nullptr;
+        if (!pfn_eglGetCurrentContext)
+            pfn_eglGetCurrentContext = reinterpret_cast<decltype(pfn_eglGetCurrentContext)>(get_egl_proc_address("eglGetCurrentContext"));
+
+        void* ctx = pfn_eglGetCurrentContext();
+        ::scoped_lock lk(global_lock);
+        auto it = gl_contexts.find(ctx);
+        // eglDestroyContext leaves null entries for contexts that never swapped.
+        if (ctx && it != gl_contexts.end() && it->second) {
+            // Negative means unset, EGL would clamp it to 0 (vsync off).
+            const int gl_vsync = get_params()->gl_vsync;
+            if (gl_vsync >= 0)
+                interval = gl_vsync;
+        }
+    }
+
+    return pfn_eglSwapInterval(dpy, interval);
+}
+
 EXPORT_C_(unsigned int) eglSwapBuffers(void* dpy, void* surf);
 EXPORT_C_(unsigned int) eglSwapBuffers(void* dpy, void* surf)
 {
@@ -165,6 +225,17 @@ EXPORT_C_(unsigned int) eglSwapBuffers(void* dpy, void* surf)
         if (!gl_ctx)
             gl_ctx = create_gl_context(ctx);
         imgui_create(gl_ctx, gl_wsi::GL_WSI_EGL);
+
+        // The swap interval belongs to the draw surface, not the context, so apply gl_vsync once per surface.
+        // This covers applications that never call eglSwapInterval and surfaces created after the first swap.
+        static void* (*pfn_eglGetCurrentSurface)(int readdraw) = nullptr;
+        if (!pfn_eglGetCurrentSurface)
+            pfn_eglGetCurrentSurface = reinterpret_cast<decltype(pfn_eglGetCurrentSurface)>(get_egl_proc_address("eglGetCurrentSurface"));
+        const int gl_vsync = get_params()->gl_vsync;
+        auto pfn_eglSwapInterval = get_real_eglSwapInterval();
+        if (ctx && gl_vsync >= 0 && pfn_eglSwapInterval && pfn_eglGetCurrentSurface(EGL_DRAW) == surf &&
+            egl_vsync_surfaces.emplace(dpy, surf).second)
+            pfn_eglSwapInterval(dpy, gl_vsync);
 
         int width=0, height=0;
         if (pfn_eglQuerySurface(dpy, surf, EGL_HEIGHT, &height) &&
@@ -273,6 +344,12 @@ EXPORT_C_(int) eglTerminate(void *display)
 
     ret = pfn_eglTerminate(display);
 
+    {
+        ::scoped_lock lk(global_lock);
+        for (auto it = egl_vsync_surfaces.begin(); it != egl_vsync_surfaces.end();)
+            it = it->first == display ? egl_vsync_surfaces.erase(it) : std::next(it);
+    }
+
 #ifdef HAVE_WAYLAND
     if (ret)
     {
@@ -288,14 +365,16 @@ struct func_ptr {
    void *ptr;
 };
 
-static std::array<const func_ptr, 7> name_to_funcptr_map = {{
+static std::array<const func_ptr, 9> name_to_funcptr_map = {{
 #define ADD_HOOK(fn) { #fn, (void *) fn }
     ADD_HOOK(eglDestroyContext),
+    ADD_HOOK(eglDestroySurface),
     ADD_HOOK(eglGetDisplay),
     ADD_HOOK(eglGetPlatformDisplay),
     ADD_HOOK(eglGetPlatformDisplayEXT),
     ADD_HOOK(eglGetProcAddress),
     ADD_HOOK(eglSwapBuffers),
+    ADD_HOOK(eglSwapInterval),
     ADD_HOOK(eglTerminate)
 #undef ADD_HOOK
 }};

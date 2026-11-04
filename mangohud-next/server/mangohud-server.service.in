@@ -1,0 +1,7 @@
+[Unit]
+Description=MangoHud Next server
+
+[Service]
+Type=dbus
+BusName=io.mangohud.socket
+ExecStart="@SERVER_EXECUTABLE@"

@@ -151,7 +151,7 @@ struct fan_sensor {
    std::string path;  // resolved hwmon sysfs path (e.g. .../fanN_input)
    int rpm = -1;      // last read value; -1 means unavailable
 };
-extern std::vector<fan_sensor> fan_sensors;   // "fan": Steam Deck APU fan
+extern std::vector<fan_sensor> fan_sensors;   // "fan": fan_custom_sensor entries
 extern std::vector<fan_sensor> cfan_sensors;  // "cfan": custom / Super I/O fan(s)
 extern int current_preset;
 extern std::vector<float> frametime_data;
@@ -164,8 +164,9 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
 void update_hud_info(struct swapchain_stats& sw_stats, const struct overlay_params& params, uint32_t vendorID);
 void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const struct overlay_params& params, uint32_t vendorID, uint64_t frametime_ns);
 void update_hw_info(const struct overlay_params& params, uint32_t vendorID);
+void update_fan();
 void init_cpu_stats(overlay_params& params);
-void check_keybinds(overlay_params& params);
+void check_keybinds(overlay_params& params, const char* keymap = nullptr);
 void init_system_info(void);
 void check_for_vkbasalt_and_gamemode();
 void create_fonts(ImFontAtlas* font_atlas, const overlay_params& params, ImFont*& small_font, ImFont*& text_font, ImFont*& secondary_font);
@@ -181,7 +182,6 @@ extern int global_control_client;
 #ifdef HAVE_DBUS
 void render_mpris_metadata(const overlay_params& params, mutexed_metadata& meta, uint64_t frame_timing);
 #endif
-void update_fan();
 void next_hud_position();
 void horizontal_separator(struct overlay_params& params);
 void RenderOutlinedText(const char* text, ImU32 textColor);

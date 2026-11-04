@@ -40,6 +40,8 @@ util_files = files(
   'mesa/util/os_time.c',
 )
 
+next_client_inc = include_directories('../mangohud-next/client')
+
 vklayer_files = files(
   'hud_elements.cpp',
   'overlay.cpp',
@@ -79,7 +81,7 @@ if is_unixy
     'iostats.cpp',
     'notify.cpp',
     'elfhacks.c',
-    'real_dlsym.c',
+    '../mangohud-next/client/real_dlsym.c',
     'pci_ids.cpp',
     'battery.cpp',
     'control.cpp',
@@ -205,8 +207,9 @@ mangohud_static_lib = static_library(
     windows_deps,
     implot_dep,
     mangohud_version_dep],
-  include_directories : [inc_common],
+  include_directories : [inc_common, next_client_inc],
   link_args : link_args,
+  link_with: mangohud_legacy_gpu_wrapper,
   install_dir : libdir_mangohud,
   install : false
 )
@@ -247,7 +250,7 @@ mangohud_opengl_shared_lib = shared_library(
     dep_vulkan_utility_libraries,
     windows_deps,
     implot_dep],
-  include_directories : [inc_common],
+  include_directories : [inc_common, next_client_inc],
   link_args : link_args,
   link_with: mangohud_static_lib,
   install_dir : libdir_mangohud,
@@ -283,6 +286,7 @@ if get_option('mangoapp')
       dep_x11,
       dep_wayland_client,
       glfw3_dep,
+      xi_dep,
       implot_dep
     ],
     include_directories : [inc_common],
@@ -306,7 +310,7 @@ if is_unixy
     'MangoHud_shim',
     files(
       'gl/shim.c',
-      'real_dlsym.c',
+      '../mangohud-next/client/real_dlsym.c',
       'elfhacks.c'
     ),
     dependencies : [
@@ -318,7 +322,7 @@ if is_unixy
     cpp_args : [
       pre_args
     ],
-    include_directories : [inc_common],
+    include_directories : [inc_common, next_client_inc],
     install_dir : libdir_mangohud,
     install: true
   )

@@ -65,121 +65,47 @@ int Nvidia::get_load() {
 }
 
 float Nvidia::get_vram_used() {
-    nvmlMemory_st nvml_memory;
-    
-    nvmlReturn_t ret = nvml->nvmlDeviceGetMemoryInfo(device, &nvml_memory);
-
-    if (ret != NVML_SUCCESS)
-        return 0;
-    
-    return nvml_memory.used / 1024.f / 1024.f / 1024.f;
+    return slow_metrics.vram_used;
 }
 
 float Nvidia::get_memory_total() {
-    nvmlMemory_st nvml_memory;
-    
-    nvmlReturn_t ret = nvml->nvmlDeviceGetMemoryInfo(device, &nvml_memory);
-
-    if (ret != NVML_SUCCESS)
-        return 0;
-    
-    return nvml_memory.total / 1024.f / 1024.f / 1024.f;
+    return slow_metrics.memory_total;
 }
 
 int Nvidia::get_memory_clock() {
-    uint32_t memory_clock;
-    
-    nvmlReturn_t ret = nvml->nvmlDeviceGetClockInfo(device, NVML_CLOCK_MEM, &memory_clock);
-
-    if (ret != NVML_SUCCESS)
-        return 0;
-    
-    return memory_clock;
+    return slow_metrics.memory_clock;
 }
 
 int Nvidia::get_temperature() {
-    uint32_t temperature = 0;
-    
-    nvmlReturn_t ret = nvml->nvmlDeviceGetTemperature(device, NVML_TEMPERATURE_GPU, &temperature);
-
-    if (ret != NVML_SUCCESS)
-        return 0;
-    
-    return temperature;
+    return slow_metrics.temperature;
 }
 
 int Nvidia::get_core_clock() {
-    uint32_t core_clock = 0;
-    
-    nvmlReturn_t ret = nvml->nvmlDeviceGetClockInfo(device, NVML_CLOCK_GRAPHICS, &core_clock);
-
-    if (ret != NVML_SUCCESS)
-        return 0;
-    
-    return core_clock;
+    return slow_metrics.core_clock;
 }
 
 float Nvidia::get_power_usage() {
-    uint32_t power_usage = 0;
-    
-    nvmlReturn_t ret = nvml->nvmlDeviceGetPowerUsage(device, &power_usage);
-
-    if (ret != NVML_SUCCESS)
-        return 0;
-    
-    return power_usage / 1000.f;
+    return slow_metrics.power_usage;
 }
 
 float Nvidia::get_power_limit() {
-    uint32_t power_limit = 0;
-    
-    nvmlReturn_t ret = nvml->nvmlDeviceGetPowerManagementLimit(device, &power_limit);
-
-    if (ret != NVML_SUCCESS)
-        return 0;
-    
-    return power_limit / 1000.f;
+    return slow_metrics.power_limit;
 }
 
 bool Nvidia::get_is_power_throttled() {
-    unsigned long long throttle_reasons;
-    nvmlReturn_t ret = nvml->nvmlDeviceGetCurrentClocksThrottleReasons(device, &throttle_reasons);
-
-    if (ret != NVML_SUCCESS)
-        return 0;
-
     return (throttle_reasons & 0x000000000000008CLL) != 0;
 }
 
 bool Nvidia::get_is_temp_throttled() {
-    unsigned long long throttle_reasons;
-    nvmlReturn_t ret = nvml->nvmlDeviceGetCurrentClocksThrottleReasons(device, &throttle_reasons);
-
-    if (ret != NVML_SUCCESS)
-        return 0;
-
     return (throttle_reasons & 0x0000000000000060LL) != 0;
 }
 
 bool Nvidia::get_is_other_throttled() {
-    unsigned long long throttle_reasons;
-    nvmlReturn_t ret = nvml->nvmlDeviceGetCurrentClocksThrottleReasons(device, &throttle_reasons);
-
-    if (ret != NVML_SUCCESS)
-        return 0;
-
     return (throttle_reasons & 0x0000000000000112LL) != 0;
 }
 
 int Nvidia::get_fan_speed() {
-    uint32_t fan_speed = 0;
-    
-    nvmlReturn_t ret = nvml->nvmlDeviceGetFanSpeed(device, &fan_speed);
-
-    if (ret != NVML_SUCCESS)
-        return 0;
-    
-    return fan_speed;
+    return slow_metrics.fan_speed;
 }
 
 bool Nvidia::get_fan_rpm() {
@@ -187,10 +113,9 @@ bool Nvidia::get_fan_rpm() {
 }
 
 float Nvidia::get_process_vram_used(pid_t pid) {
-    const std::vector<nvmlProcessInfo_v1_t> info = get_processes();
     float used_memory = 0.f;
 
-    for (const nvmlProcessInfo_v1_t& proc : info) {
+    for (const nvmlProcessInfo_v1_t& proc : processes) {
         if (static_cast<pid_t>(proc.pid) != pid)
             continue;
 
@@ -199,4 +124,38 @@ float Nvidia::get_process_vram_used(pid_t pid) {
     }
 
     return used_memory;
+}
+
+void Nvidia::pre_poll_overrides() {
+    throttle_reasons = 0;
+    nvml->nvmlDeviceGetCurrentClocksThrottleReasons(device, &throttle_reasons);
+
+    const auto now = std::chrono::steady_clock::now();
+    if (last_slow_poll != std::chrono::steady_clock::time_point{} &&
+        now - last_slow_poll < gpu_metrics_update_period)
+        return;
+
+    last_slow_poll = now;
+    slow_metrics = {};
+    nvmlMemory_st memory = {};
+    if (nvml->nvmlDeviceGetMemoryInfo(device, &memory) == NVML_SUCCESS) {
+        slow_metrics.vram_used = memory.used / 1024.f / 1024.f / 1024.f;
+        slow_metrics.memory_total = memory.total / 1024.f / 1024.f / 1024.f;
+    }
+
+    unsigned int value = 0;
+    if (nvml->nvmlDeviceGetClockInfo(device, NVML_CLOCK_MEM, &value) == NVML_SUCCESS)
+        slow_metrics.memory_clock = value;
+    if (nvml->nvmlDeviceGetTemperature(device, NVML_TEMPERATURE_GPU, &value) == NVML_SUCCESS)
+        slow_metrics.temperature = value;
+    if (nvml->nvmlDeviceGetClockInfo(device, NVML_CLOCK_GRAPHICS, &value) == NVML_SUCCESS)
+        slow_metrics.core_clock = value;
+    if (nvml->nvmlDeviceGetPowerUsage(device, &value) == NVML_SUCCESS)
+        slow_metrics.power_usage = value / 1000.f;
+    if (nvml->nvmlDeviceGetPowerManagementLimit(device, &value) == NVML_SUCCESS)
+        slow_metrics.power_limit = value / 1000.f;
+    if (nvml->nvmlDeviceGetFanSpeed(device, &value) == NVML_SUCCESS)
+        slow_metrics.fan_speed = value;
+
+    processes = get_processes();
 }

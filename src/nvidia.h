@@ -1,5 +1,6 @@
 #pragma once
 #include "gpu.h"
+#include <chrono>
 #ifdef HAVE_NVML
 #include "loaders/loader_nvml.h"
 #endif
@@ -93,6 +94,8 @@ class NVIDIA {
 
 #ifdef HAVE_NVML
         nvmlDevice_t device;
+        std::chrono::steady_clock::time_point last_slow_poll = {};
+        gpu_metrics cached_slow_metrics = {};
 
         std::vector<nvmlProcessInfo_v1_t> process_info = {};
 

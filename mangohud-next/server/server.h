@@ -1,16 +1,24 @@
 #pragma once
-#include <atomic>
-#include "ipc.h"
+#include <cstdint>
+#include <cstdlib>
+#include <string>
+#include <string_view>
+#include "../ipc/ipc.h"
 #include "metrics/metrics.h"
 #include "config.h"
+#include "wayland.h"
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/cfg/env.h>
+#include <memory>
 #include <unordered_map>
+
+class EglCtx;
 
 class MangoHudServer {
 public:
     std::shared_ptr<Config> config;
+    std::unique_ptr<Metrics> metrics;
 
     MangoHudServer() {
         auto name = std::string("\x1b[38;2;173;100;193m") + "MANGOHUD" + "\x1b[0m" +
@@ -18,29 +26,48 @@ public:
                     "\x1b[38;2;46;151;203m" + std::string("SERVER") + "\x1b[0m";
         logger = spdlog::stderr_color_mt(name);
         spdlog::set_default_logger(logger);
-        // TODO Don't force debug
+#ifdef DEBUG
         spdlog::set_level(spdlog::level::debug);
+#else
+        spdlog::set_level(spdlog::level::info);
+#endif
         spdlog::cfg::load_env_levels();
+        if (const char* level = std::getenv("MANGOHUD_LOG_LEVEL"))
+            spdlog::cfg::helpers::load_levels(level);
         config  = std::make_shared<Config>();
+        config->maybe_reload_config();
         ipc     = std::make_unique<IPCServer>(this);
         metrics = std::make_unique<Metrics>(*ipc, config);
+        ipc->start();
         loop();
     }
 
-    std::shared_ptr<VkCtx> vk(int renderer = -1);
+    std::shared_ptr<VkCtx> vk(int64_t renderer = -1);
+    std::shared_ptr<EglCtx> egl(int64_t renderer);
     std::vector<std::shared_ptr<GPU>> available_gpus() const;
+    std::shared_ptr<Wayland> wayland(std::string_view display);
+    std::vector<std::shared_ptr<Client>> clients_for_wayland(std::string_view display);
 
     ~MangoHudServer() {
-        stop.store(true);
+        std::vector<std::shared_ptr<Client>> clients;
+        {
+            std::lock_guard lock(ipc->clients_mtx);
+            clients = ipc->clients;
+        }
+        for (auto& client : clients)
+            client->stop_and_join();
+        metrics.reset();
+        waylands.clear();
+        ipc.reset();
     }
 
 private:
     std::unique_ptr<IPCServer> ipc;
-    std::unique_ptr<Metrics> metrics;
+    std::unordered_map<std::string, std::shared_ptr<Wayland>> waylands;
+    std::mutex waylands_m;
     std::shared_ptr<spdlog::logger> logger;
-    std::unordered_map<int, std::weak_ptr<VkCtx>> vk_ctx;
+    std::unordered_map<int64_t, std::weak_ptr<VkCtx>> vk_ctx;
     std::mutex vk_ctx_m;
-    std::atomic<bool> stop {false};
 
     void loop();
 };

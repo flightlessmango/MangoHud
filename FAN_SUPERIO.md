@@ -14,13 +14,13 @@ see the main [`README.md`](README.md).
 Stock MangoHud can only show two kinds of fan:
 
 - `gpu_fan` — the GPU's own fan (AMD RPM, or NVIDIA percentage)
-- `fan` — the **Steam Deck** APU fan only
+- `fan` — the platform fan on **Steam Deck** and **Steam Frame** only
 
 It has no way to read the **motherboard fan headers** (CPU fan, case fans, etc.).
 On a desktop those are wired to a Super I/O chip (Nuvoton, ITE, Fintek, …) which the
 kernel exposes through `hwmon`. This fork adds a dedicated **`cfan`** element that reads
 those chips, with optional manual sensor selection for multi-fan boards, while leaving
-the original **`fan`** element for the Steam Deck fan.
+the original **`fan`** element for the platform fan.
 
 ---
 
@@ -28,15 +28,15 @@ the original **`fan`** element for the Steam Deck fan.
 
 | Area | Upstream | This fork |
 |------|----------|-----------|
-| `fan` element | Steam Deck only | Steam Deck only (unchanged) |
+| `fan` element | Steam Deck / Steam Frame only | Same by default, or any hwmon sensor via `fan_custom_sensor` |
 | `cfan` element | n/a | **New** — auto-detected Super I/O chip fan |
 | Sensor selection | n/a | New `cfan_custom_sensor` option to pick exact chip + input(s) for `cfan` |
 | Multiple fans | n/a | Multiple labelled fans on `cfan` via `cfan_custom_sensor` |
 
 ### Touched source files
-- `src/overlay.cpp` — `find_active_fan_input()` helper and the rewritten `update_fan()`,
-  which now fills two lists: `fan_sensors` (Steam Deck) and `cfan_sensors`
-  (custom / Super I/O).
+- `src/overlay.cpp` — `find_active_fan_input()` helper and `update_fan()`, which fills
+  two lists: `fan_sensors` (`fan_custom_sensor`) and `cfan_sensors` (custom / Super I/O).
+  The default `fan` reading comes from upstream's `CPUStats::GetPlatformFanSpeed()`.
 - `src/overlay_params.cpp` / `.h` — the `cfan` boolean element plus the
   `fan_custom_sensor` / `cfan_custom_sensor` parameters and their shared parser
   (`parse_fan_custom_sensor`).
@@ -53,7 +53,7 @@ Two independent elements — enable either or both:
 
 | Element | Source | Label | Label color |
 |---------|--------|-------|-------------|
-| `fan`   | Steam Deck APU fan (`steamdeck_hwmon` → `fan1_input`) | `FAN` | `fan_color` |
+| `fan`   | Steam Deck / Steam Frame platform fan, or `fan_custom_sensor` | `FAN` (or your label) | `fan_color` |
 | `cfan`  | Custom / Super I/O chip fan(s) | `CFAN` (or your label) | `cfan_color` |
 
 Each element has its own label color, e.g. `cfan_color=00ff00` (defaults to the same
@@ -65,7 +65,7 @@ Each element has its own label color, e.g. `cfan_color=00ff00` (defaults to the 
 fan
 ```
 
-By default reads the Steam Deck's `steamdeck_hwmon` sensor. On other hardware you can
+By default reads the Steam Deck or Steam Frame platform fan. On other hardware you can
 point it at any hwmon sensor with `fan_custom_sensor` (same format as
 `cfan_custom_sensor`, described below):
 
@@ -152,7 +152,7 @@ If no Super I/O chip shows up, load the right kernel module (e.g.
 ## Troubleshooting
 
 - **Nothing shows:** run with `MANGOHUD_CONFIG=cfan` (or `fan`) and check the debug log —
-  `update_fan()` emits `fan: using ...` / `cfan: using ...` / `fan: no fan sensor found`
+  `update_fan()` emits `fan: using ...` / `cfan: using ...` / `fan: no custom or Super I/O fan sensor found`
   via `SPDLOG_DEBUG` (build/run with debug logging enabled).
 - **Wrong fan picked:** auto-detect grabbed the first spinning fan — switch to an
   explicit `cfan_custom_sensor`.

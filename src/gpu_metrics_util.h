@@ -1,5 +1,7 @@
 #pragma once
 #include <atomic>
+#include <fstream>
+#include <string>
 
 struct gpu_metrics {
     int load;
@@ -32,6 +34,14 @@ struct gpu_metrics {
           is_temp_throttled(false), is_other_throttled(false),
           gtt_used(0.0f), fan_speed(0), voltage(0), fan_rpm(false) {}
 };
+
+static inline bool drm_node_is_steam_frame(const std::string& drm_node)
+{
+    std::ifstream modalias("/sys/class/drm/" + drm_node + "/device/modalias");
+    std::string value;
+    std::getline(modalias, value);
+    return value.find("Cqcom,sm8650-dpu") != std::string::npos;
+}
 
 #define METRICS_UPDATE_PERIOD_MS 500
 #define METRICS_POLLING_PERIOD_MS 25

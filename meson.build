@@ -9,6 +9,8 @@ project('MangoHud',
 cc = meson.get_compiler('c')
 cpp = meson.get_compiler('cpp')
 
+add_global_arguments('-DFMT_CONSTEVAL=', language: 'cpp')
+
 prog_python = import('python').find_installation('python3', modules: ['mako'])
 null_dep = dependency('', required : false)
 vcs_tag_command = ['git', 'describe', '--tags', '--dirty=+']
@@ -92,7 +94,8 @@ foreach b : ['bswap32', 'bswap64', 'clz', 'clzll', 'ctz', 'expect', 'ffs',
   endif
 endforeach
 
-vulkan_wsi_args = []
+x11_wsi_args = []
+wayland_wsi_args = []
 vulkan_wsi_deps = []
 
 if is_unixy
@@ -109,17 +112,18 @@ else
 endif
 
 if dep_x11.found()
-  vulkan_wsi_args += ['-DVK_USE_PLATFORM_XLIB_KHR']
+  x11_wsi_args += ['-DVK_USE_PLATFORM_XLIB_KHR']
   vulkan_wsi_deps += dep_x11.partial_dependency(compile_args : true, includes : true)
 endif
 if dep_wayland_client.found()
-  vulkan_wsi_args += ['-DVK_USE_PLATFORM_WAYLAND_KHR']
+  wayland_wsi_args += ['-DVK_USE_PLATFORM_WAYLAND_KHR']
   vulkan_wsi_deps += dep_wayland_client
 endif
 
 if is_unixy and not dep_x11.found() and not dep_wayland_client.found()
   error('At least one of "with_x11" and "with_wayland" should be enabled')
 endif
+vulkan_wsi_args = x11_wsi_args + wayland_wsi_args
 
 inc_common = [
   include_directories('include'),
@@ -306,8 +310,26 @@ endif
 
 if get_option('mangoapp')
   glfw3_dep = dependency('glfw3')
+  xi_dep = dependency('xi')
 endif
 
+libdrm_dep = dependency('libdrm')
+tracefs_dep = dependency('libtracefs', required: false)
+gpu_tracefs_deps = []
+gpu_tracefs_args = []
+tracefs_links = false
+if tracefs_dep.found()
+  tracefs_links = cc.links('''
+    #include <tracefs.h>
+    int main(void) { return tracefs_tracing_dir() == 0; }
+  ''', dependencies: tracefs_dep, name: 'usable libtracefs')
+endif
+if tracefs_links
+  gpu_tracefs_deps += tracefs_dep
+  gpu_tracefs_args += '-DHAVE_TRACEFS_GPU_MEM'
+endif
+
+subdir('mangohud-next/legacy_gpu_wrapper')
 subdir('src')
 
 if get_option('include_doc')

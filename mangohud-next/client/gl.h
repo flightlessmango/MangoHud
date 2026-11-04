@@ -5,8 +5,6 @@
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include <GL/glx.h>
-#include <sys/ioctl.h>
-#include <linux/dma-buf.h>
 
 #include <cstdio>
 #include <cstring>
@@ -158,7 +156,7 @@ class EGL {
 public:
     EGL();
 
-    int64_t renderer();
+    int64_t renderer(EGLDisplay dpy = EGL_NO_DISPLAY);
     EGLDisplay import_dmabuf(const Fdinfo& fdinfo, GLuint& tex, EGLImageKHR& image, int f, Display* xdpy = nullptr);
 
     CtxRes* ctx() {
@@ -246,6 +244,7 @@ private:
     uint32_t w = 0;
     uint32_t h = 0;
     bool inited = false;
+    uint64_t imported_generation = 0;
 
     static GLuint compile_shader(GLenum type, const char *src);
     static GLuint link_program(GLuint vs, GLuint fs);
@@ -270,9 +269,10 @@ private:
     }
 
     void create_cache(CtxRes* r, int w, int h);
-    void sample_dmabuf(CtxRes* r, const Fdinfo& fdinfo, const GLState::state& saved, bool framebuffer_encodes_srgb);
+    void sample_dmabuf(CtxRes* r, const Fdinfo& fdinfo, int slot, const GLState::state& saved, bool framebuffer_encodes_srgb);
     void draw_dmabuf(CtxRes* r);
-    int release_fence(IPCClient* ipc, int dmabuf_fd, bool write = false);
+    int release_slot_to_server(IPCClient* ipc, int slot, int dmabuf_fd, bool write = false);
+    int release_fence(IPCClient* ipc, int slot, int dmabuf_fd, bool write = false);
     bool import_dmabuf(dmabuf* buf, int fd, int opaque) {
         bool imported = false;
         auto r = glx->ctx();

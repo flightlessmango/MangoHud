@@ -10,10 +10,14 @@ void HwmonBase::add_sensors(const std::vector<hwmon_sensor>& input_sensors)
 }
 
 void HwmonBase::find_sensors() {
+    std::error_code ec;
     SPDLOG_DEBUG("hwmon: checking \"{}\" directory", base_dir);
 
-    for (const auto &entry : fs::directory_iterator(base_dir)) {
-        if (!entry.is_regular_file())
+    std::error_code iterator_ec;
+    for (fs::directory_iterator it(base_dir, iterator_ec), end;
+         !iterator_ec && it != end; it.increment(iterator_ec)) {
+        const auto &entry = *it;
+        if (!entry.is_regular_file(ec))
             continue;
 
         std::string filename = entry.path().filename().string();
@@ -49,6 +53,8 @@ void HwmonBase::find_sensors() {
             break;
         }
     }
+    if (iterator_ec)
+        SPDLOG_DEBUG("Failed to iterate {}: {}", fs::path(base_dir).string(), iterator_ec.message());
 }
 
 void HwmonBase::open_sensors() {
@@ -76,14 +82,17 @@ void HwmonBase::open_sensors() {
 }
 
 std::string HwmonBase::find_hwmon_dir(const std::string& drm_node) {
+    std::error_code ec;
     std::string d = "/sys/class/drm/" + drm_node + "/device/hwmon";
 
-    if (!fs::exists(d)) {
+    if (!fs::exists(d, ec)) {
         SPDLOG_DEBUG("hwmon: hwmon directory \"{}\" doesn't exist", d);
         return "";
     }
 
-    auto dir_iterator = fs::directory_iterator(d);
+    auto dir_iterator = fs::directory_iterator(d, ec);
+    if (ec || dir_iterator == fs::directory_iterator())
+        return "";
     auto hwmon = dir_iterator->path().string();
 
     if (hwmon.empty()) {
@@ -95,34 +104,51 @@ std::string HwmonBase::find_hwmon_dir(const std::string& drm_node) {
 }
 
 std::string HwmonBase::find_hwmon_dir_by_name(const std::string& name) {
+    std::error_code ec;
     std::string d = "/sys/class/hwmon/";
 
-    if (!fs::exists(d)) {
+    if (!fs::exists(d, ec)) {
         SPDLOG_DEBUG("hwmon: hwmon directory doesn't exist (custom linux kernel?)");
         return "";
     }
 
-    for (const auto &entry : fs::directory_iterator(d)) {
+    std::error_code iterator_ec;
+    for (fs::directory_iterator it(d, iterator_ec), end;
+         !iterator_ec && it != end; it.increment(iterator_ec)) {
+        const auto &entry = *it;
         auto hwmon_dir = entry.path().string();
         auto hwmon_name = hwmon_dir + "/name";
+
+        SPDLOG_TRACE("Opening {}", hwmon_name);
 
         std::ifstream name_stream(hwmon_name);
         std::string name_content;
 
-        if (!name_stream.is_open())
+        if (!name_stream.is_open()) {
+            SPDLOG_TRACE("Failed to open {}", hwmon_name);
             continue;
+        }
 
         std::getline(name_stream, name_content);
 
         std::smatch matches;
         std::regex rx(name);
 
-        if (!std::regex_match(name_content, matches, rx))
+        if (!std::regex_search(name_content, matches, rx)) {
+            SPDLOG_TRACE(
+                "'{}' sensor name '{}' doesn't match regex '{}'",
+                hwmon_dir, name_content, name
+            );
             continue;
+        }
+
+        SPDLOG_TRACE("'{}' sensor name '{}' matches regex '{}'", hwmon_dir, name_content, name);
 
         // return the first sensor with specified name
         return hwmon_dir;
     }
+    if (iterator_ec)
+        SPDLOG_DEBUG("Failed to iterate {}: {}", fs::path(d).string(), iterator_ec.message());
 
     SPDLOG_DEBUG("failed to find hwmon dir \"{}\"", name);
     return "";

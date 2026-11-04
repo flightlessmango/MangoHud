@@ -30,6 +30,7 @@ std::string get_data_dir();
 std::string get_config_dir();
 bool lib_loaded(const std::string& lib, pid_t pid);
 std::string remove_parentheses(const std::string&);
+std::string clean_gpu_name(const std::string&);
 std::string to_lower(const std::string& str);
 std::unordered_set<std::string> find_render_nodes(pid_t pid);
 

@@ -9,15 +9,13 @@ namespace fs = std::filesystem;
 using namespace std::chrono_literals;
 
 FDInfoBase::FDInfoBase(const std::string& drm_node, const pid_t pid) : drm_node(drm_node), pid(pid) {
+    card_node = get_card_node();
     init();
 }
 
 void FDInfoBase::init()
 {
     std::vector<std::string> fds = find_fds();
-
-    fds_streams.clear();
-    fds_data.clear();
 
     open_fds(fds);
 
@@ -47,38 +45,45 @@ void FDInfoBase::poll() {
 }
 
 std::vector<std::string> FDInfoBase::find_fds() {
+    std::error_code ec;
     std::string dir = "/proc/" + std::to_string(pid) + "/fd";
     fs::path path = dir;
 
     SPDLOG_DEBUG("fd_dir = {}", dir);
 
-    if (!fs::exists(path)) {
-        SPDLOG_DEBUG("{} does not exist", path.string());
-        return {};
-    }
-
     std::vector<std::string> fds;
 
-    for (const auto& entry : fs::directory_iterator(path)) {
-        if (!entry.is_symlink())
-            continue;
+    try {
+        std::error_code iterator_ec;
+        for (fs::directory_iterator it(path, iterator_ec), end;
+             !iterator_ec && it != end; it.increment(iterator_ec)) {
+            const auto& entry = *it;
+            if (!entry.is_symlink(ec))
+                continue;
 
-        std::filesystem::path link;
+            std::filesystem::path link;
 
-        try {
-            link = fs::read_symlink(entry);
-        } catch(const std::filesystem::filesystem_error& ex) {
-            SPDLOG_TRACE("{}", ex.what());
-            continue;
+            try {
+                link = fs::read_symlink(entry, ec);
+                if (ec)
+                    continue;
+            } catch(const std::filesystem::filesystem_error& ex) {
+                SPDLOG_TRACE("{}", ex.what());
+                continue;
+            }
+
+            // comparison to both renderD* and card* is required because
+            // for some reason supertuxkart opens /dev/dri/card and not renderD
+            // inside podman container.
+            if (link.filename() != drm_node && link.filename() != card_node)
+                continue;
+
+            fds.push_back(entry.path().filename());
         }
-
-        // for some reason supertuxkart opens /dev/dri/card and not renderD
-        // inside podman container.
-        // this is only for testing, so remove it later
-        if (link.filename() != drm_node && link.string().substr(0, 13) != "/dev/dri/card")
-            continue;
-
-        fds.push_back(entry.path().filename());
+        if (iterator_ec)
+            SPDLOG_DEBUG("Failed to iterate {}: {}", fs::path(path).string(), iterator_ec.message());
+    } catch (const std::filesystem::filesystem_error& ex) {
+        SPDLOG_TRACE("failed to iterate {}: {}", path.string(), ex.what());
     }
 
     return fds;
@@ -87,14 +92,10 @@ std::vector<std::string> FDInfoBase::find_fds() {
 void FDInfoBase::open_fds(const std::vector<std::string>& fds) {
     // set of unique ids, dont open fds which contain
     // existing ids, because they will contain same data 
-    std::set<std::string> client_ids;
     size_t total = 0;
 
     for (const std::string& fd: fds) {
         fs::path p = "/proc/" + std::to_string(pid) + "/fdinfo/" + fd;
-
-        if (!fs::exists(p))
-            continue;
 
         std::ifstream file(p);
 
@@ -121,6 +122,35 @@ void FDInfoBase::open_fds(const std::vector<std::string>& fds) {
     SPDLOG_DEBUG("Received {} ids, opened {} unique ids", fds.size(), total);
 }
 
+std::string FDInfoBase::get_card_node() {
+    std::error_code ec;
+    const std::string device = "/sys/class/drm/" + drm_node + "/device/drm";
+
+    if (!std::filesystem::exists(device, ec)) {
+        SPDLOG_DEBUG("drm dir doesn't exist for {}", drm_node);
+        return "";
+    }
+
+    // Find first dir which starts with name "card"
+    std::error_code iterator_ec;
+    for (fs::directory_iterator it(device, iterator_ec), end;
+         !iterator_ec && it != end; it.increment(iterator_ec)) {
+        const auto& entry = *it;
+        std::filesystem::path path = entry.path();
+
+        if (path.filename().string().substr(0, 4) == "card") {
+            const std::string filename = path.filename();
+            SPDLOG_DEBUG("found card node for {}: {}", drm_node, filename);
+            return filename;
+        }
+    }
+    if (iterator_ec)
+        SPDLOG_DEBUG("Failed to iterate {}: {}", fs::path(device).string(), iterator_ec.message());
+
+    SPDLOG_DEBUG("didn't find card node for {}", drm_node);
+    return "";
+}
+
 void FDInfoWrapper::add_pid(pid_t pid) {
     std::unique_lock lock(pids_mutex);
 
@@ -131,6 +161,7 @@ void FDInfoWrapper::add_pid(pid_t pid) {
 }
 
 void FDInfoWrapper::poll_all() {
+    std::error_code ec;
     std::unique_lock lock(pids_mutex);
     std::set<pid_t> pids_to_delete;
 
@@ -140,7 +171,7 @@ void FDInfoWrapper::poll_all() {
 
         SPDLOG_TRACE("polling pid {}", pid);
 
-        if (!std::filesystem::exists("/proc/" + std::to_string(pid)))
+        if (!std::filesystem::exists("/proc/" + std::to_string(pid), ec))
             pids_to_delete.insert(pid);
         else
             data->poll();

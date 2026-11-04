@@ -3,24 +3,44 @@
 #include "../client/layer.h"
 #include "ipc_abi_hash.h"
 
+#include <chrono>
+#include <cstdlib>
+#include <spdlog/cfg/env.h>
+#include <linux/dma-buf.h>
+#include <sys/ioctl.h>
+#include <ranges>
+#include "file_utils.h"
+
 IPCClient::IPCClient(Layer* layer_, Backend api_) : layer(layer_), api(api_){
     auto console = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
     auto spdlog_sink = std::make_shared<spdlogSink>(this);
     logger = std::make_shared<spdlog::logger>("MANGOHUD", spdlog::sinks_init_list{console, spdlog_sink});
     spdlog::set_default_logger(logger);
+#ifdef DEBUG
     spdlog::set_level(spdlog::level::level_enum::debug);
+#else
+    spdlog::set_level(spdlog::level::level_enum::info);
+#endif
+    spdlog::cfg::load_env_levels();
+    if (const char* level = std::getenv("MANGOHUD_LOG_LEVEL"))
+        spdlog::cfg::helpers::load_levels(level);
     SPDLOG_DEBUG("init dbus client");
+    // Gamescope always sets GAMESCOPE_WAYLAND_DISPLAY for its nested compositor;
+    // WAYLAND_DISPLAY is set only with --expose-wayland.
+    const char* display = std::getenv("GAMESCOPE_WAYLAND_DISPLAY");
+    gamescopeSession = display && *display;
+    if (!display || !*display)
+        display = std::getenv("WAYLAND_DISPLAY");
+    if (display && *display)
+        waylandDisplay = display;
     wake_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
     work_eventfd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
 }
 
-void IPCClient::start(int64_t renderMinor_, std::string& pEngineName_,
-                      int image_count) {
+void IPCClient::start(int image_count) {
     if (thread.joinable())
         return;
 
-    renderMinor = renderMinor_;
-    pEngineName = pEngineName_;
     buffer_size = image_count;
     thread = std::thread([this] { bus_thread(); });
 }
@@ -29,12 +49,16 @@ int IPCClient::on_config(sd_bus_message* m, void* userdata, sd_bus_error*) {
     SPDLOG_DEBUG("got config");
     auto* self = static_cast<IPCClient*>(userdata);
     double fps_limit = 0;
-    int r = sd_bus_message_read(m, "d", &fps_limit);
-    if (r < 0) {
+    int layer_output = 0;
+    int inject_output = 0;
+    int r = sd_bus_message_read(m, "dbb", &fps_limit, &layer_output, &inject_output);
+    if (r <= 0) {
         SPDLOG_ERROR("config parse: {} ({})", r, strerror(-r));
         return 0;
     }
 
+    self->inject_output_.store(inject_output != 0, std::memory_order_release);
+    self->layer_output_.store(layer_output != 0, std::memory_order_release);
     {
         std::lock_guard lock(self->m);
         self->fps_limit = fps_limit;
@@ -45,9 +69,20 @@ int IPCClient::on_config(sd_bus_message* m, void* userdata, sd_bus_error*) {
 
 int IPCClient::on_incompatible(sd_bus_message* m, void* userdata, sd_bus_error*) {
     auto* self = static_cast<IPCClient*>(userdata);
+    incompatible.store(true);
     SPDLOG_ERROR("IPC ABI mismatch. Restart game/client and server.");
     self->connected.store(false);
     self->quit.store(true);
+    sd_event_exit(self->event, 0);
+    return 0;
+}
+
+int IPCClient::on_bus_disconnected(sd_bus_message* m, void* userdata, sd_bus_error*) {
+    (void)m;
+
+    auto* self = static_cast<IPCClient*>(userdata);
+    SPDLOG_DEBUG("IPC server disconnected");
+    self->connected.store(false);
     sd_event_exit(self->event, 0);
     return 0;
 }
@@ -114,17 +149,9 @@ int IPCClient::on_dmabuf(sd_bus_message* m, void* userdata, sd_bus_error*) {
     }
 
     {
-        if (self->layer) {
-            const bool import_success = self->layer->overlay_vk->init_dmabufs(fdinfo);
-            if (!import_success) {
-                self->send_import_failed();
-                return 0;
-            }
-        }
-
         std::lock_guard lock(self->m);
         self->fdinfo = std::move(fdinfo);
-        self->needs_import.store(true);
+        self->import_generation.fetch_add(1, std::memory_order_release);
     }
 
     return 0;
@@ -151,6 +178,10 @@ void IPCClient::disconnect_bus() {
     if (incompatible_slot) {
         sd_bus_slot_unref(incompatible_slot);
         incompatible_slot = nullptr;
+    }
+    if (disconnected_slot) {
+        sd_bus_slot_unref(disconnected_slot);
+        disconnected_slot = nullptr;
     }
 
     if (bus) {
@@ -243,6 +274,20 @@ bool IPCClient::connect_bus() {
         return false;
     }
 
+    std::string match_disconnected =
+        "type='signal',"
+        "sender='org.freedesktop.DBus.Local',"
+        "path='/org/freedesktop/DBus/Local',"
+        "interface='org.freedesktop.DBus.Local',"
+        "member='Disconnected'";
+
+    r = sd_bus_add_match(b, &disconnected_slot, match_disconnected.c_str(), &IPCClient::on_bus_disconnected, this);
+    if (r < 0) {
+        SPDLOG_ERROR("match disconnected: {} ({})", r, strerror(-r));
+        sd_bus_unref(b);
+        return false;
+    }
+
     r = sd_event_new(&event);
     if (r < 0) {
         SPDLOG_ERROR("sd_event_new {} ({})", r, strerror(-r));
@@ -270,9 +315,24 @@ bool IPCClient::connect_bus() {
 }
 
 void IPCClient::run_bus() {
-    int r = sd_event_loop(event);
-    if (r < 0 && !quit.load())
-        SPDLOG_ERROR("sd_event_loop {} ({})", r, strerror(-r));
+    using Clock = std::chrono::steady_clock;
+    auto next_flush = Clock::now();
+    while (!quit.load() && sd_event_get_state(event) != SD_EVENT_FINISHED) {
+        // Focus and samples must not depend on receiving rendered HUD frames.
+        // A posted flush wakes this loop itself; only schedule one per interval.
+        const auto now = Clock::now();
+        if (now >= next_flush) {
+            push_queue();
+            next_flush = now + std::chrono::milliseconds(10);
+        }
+        const auto timeout = std::chrono::duration_cast<std::chrono::microseconds>(next_flush - now);
+        int r = sd_event_run(event, timeout.count());
+        if (r < 0) {
+            if (!quit.load())
+                SPDLOG_ERROR("sd_event_run {} ({})", r, strerror(-r));
+            break;
+        }
+    }
 }
 
 void IPCClient::bus_thread() {
@@ -311,8 +371,8 @@ void IPCClient::stop() {
 bool IPCClient::on_connect() {
     post([this] {
         int r = 0;
-        sd_bus_message *m = nullptr;
-        r = sd_bus_message_new_signal(bus, &m, kObjPath, kIface, "on_connect");
+        sd_bus_message *msg = nullptr;
+        r = sd_bus_message_new_signal(bus, &msg, kObjPath, kIface, "on_connect");
         if (r < 0) {
             SPDLOG_ERROR("sd_bus_message_new_signal {} ({})", r, strerror(-r));
             return false;
@@ -322,26 +382,47 @@ bool IPCClient::on_connect() {
         uint64_t abi_hash = MANGOHUD_IPC_ABI_HASH;
 
         r = sd_bus_message_append(
-            m,
-            "tsxii",
+            msg,
+            "tsxiisssbb",
             abi_hash,
             pEngineName.c_str(),
             int64_t(renderMinor),
             (buffer_size),
-            raw_api
+            raw_api,
+            vulkanDriver.c_str(),
+            gpuName.c_str(),
+            waylandDisplay.c_str(),
+            static_cast<int>(gamescopeSession),
+            static_cast<int>(waylandSurface)
         );
 
-        r = sd_bus_send(bus, m, nullptr);
-        sd_bus_message_unref(m);
+        r = sd_bus_send(bus, msg, nullptr);
+        sd_bus_message_unref(msg);
 
         if (r < 0) {
             SPDLOG_ERROR("sd_bus_send {} ({})", r, strerror(-r));
             return false;
         }
 
-        std::lock_guard lock(sync_mtx);
-        for (int i = 0; i < buffer_size; i++)
-            frame_queue.push_back({i, unique_fd::adopt(-1)});
+        {
+            std::lock_guard lock(sync_mtx);
+            for (int i = 0; i < buffer_size; i++)
+                frame_queue.push_back({i, unique_fd::adopt(-1)});
+        }
+
+        uint32_t width = 0;
+        uint32_t height = 0;
+        {
+            std::lock_guard lock(m);
+            width = resolution_width;
+            height = resolution_height;
+        }
+
+        if (width && height && send_resolution_signal(width, height)) {
+            std::lock_guard lock(m);
+            sent_resolution_width = width;
+            sent_resolution_height = height;
+        }
 
         return true;
     });
@@ -350,17 +431,79 @@ bool IPCClient::on_connect() {
     return true;
 }
 
-int IPCClient::push_queue() {
-    std::deque<Sample> out;
-    {
-        std::lock_guard<std::mutex> lock(samples_mtx);
-        if (samples.empty() || !connected.load())
-            return 0;
-
-        out.swap(samples);
+bool IPCClient::send_resolution_signal(uint32_t width, uint32_t height) {
+    sd_bus_message* m = nullptr;
+    int r = sd_bus_message_new_signal(bus, &m, kObjPath, kIface, "resolution");
+    if (r < 0) {
+        SPDLOG_ERROR("resolution: new_signal {} ({})", r, strerror(-r));
+        return false;
     }
 
-    post([this, out = std::move(out)] {
+    r = sd_bus_message_append(m, "uu", width, height);
+    if (r < 0) {
+        SPDLOG_ERROR("resolution: append {} ({})", r, strerror(-r));
+        sd_bus_message_unref(m);
+        return false;
+    }
+
+    r = sd_bus_send(bus, m, nullptr);
+    sd_bus_message_unref(m);
+    if (r < 0) {
+        SPDLOG_ERROR("resolution: send {} ({})", r, strerror(-r));
+        return false;
+    }
+
+    return true;
+}
+
+void IPCClient::send_resolution(uint32_t width, uint32_t height) {
+    if (!width || !height)
+        return;
+
+    {
+        std::lock_guard lock(m);
+        resolution_width = width;
+        resolution_height = height;
+
+        if (!connected.load() ||
+            (sent_resolution_width == width && sent_resolution_height == height)) {
+            return;
+        }
+    }
+
+    post([this, width, height] {
+        if (!send_resolution_signal(width, height))
+            return;
+
+        std::lock_guard lock(m);
+        sent_resolution_width = width;
+        sent_resolution_height = height;
+    });
+}
+
+int IPCClient::push_queue() {
+    if (!connected.load())
+        return 0;
+
+    // Swap inside posted work so queued sends cannot reuse an in-flight buffer.
+    post([this] {
+        int count = 0;
+        uint64_t dropped = 0;
+        {
+            std::unique_lock lock(samples_mtx);
+            if (samples_count.load(std::memory_order_relaxed) == 0)
+                return 0;
+
+            std::swap(samples_active, samples_pending);
+            count = samples_count.exchange(0, std::memory_order_relaxed);
+            dropped = samples_dropped.exchange(0, std::memory_order_relaxed);
+        }
+
+        if (dropped != 0)
+            SPDLOG_ERROR("IPC sample queue overflow: dropped {} samples (capacity {})",
+                         dropped, samples_pending->size());
+
+        auto focused_seats = this->focused_seats.load();
         sd_bus_message* m = nullptr;
 
         int r = sd_bus_message_new_signal(bus, &m, kObjPath, kIface, "frame_samples");
@@ -369,15 +512,45 @@ int IPCClient::push_queue() {
             return r;
         }
 
-        r = sd_bus_message_open_container(m, 'a', "(tt)");
+        r = sd_bus_message_append(m, "b", static_cast<int>(x11_focused.load()));
+        if (r < 0) {
+            SPDLOG_ERROR("push_queue: append X11 focus {} ({})", r, strerror(-r));
+            sd_bus_message_unref(m);
+            return r;
+        }
+
+        r = sd_bus_message_open_container(m, 'a', "s");
+        if (r < 0) {
+            SPDLOG_ERROR("push_queue: open focused seats {} ({})", r, strerror(-r));
+            sd_bus_message_unref(m);
+            return r;
+        }
+
+        for (const auto& seat : *focused_seats) {
+            r = sd_bus_message_append(m, "s", seat.c_str());
+            if (r < 0) {
+                SPDLOG_ERROR("push_queue: append focused seat {} ({})", r, strerror(-r));
+                sd_bus_message_unref(m);
+                return r;
+            }
+        }
+
+        r = sd_bus_message_close_container(m);
+        if (r < 0) {
+            SPDLOG_ERROR("push_queue: close focused seats {} ({})", r, strerror(-r));
+            sd_bus_message_unref(m);
+            return r;
+        }
+
+        r = sd_bus_message_open_container(m, 'a', "(ytt)");
         if (r < 0) {
             SPDLOG_ERROR("push_queue: open_container {} ({})", r, strerror(-r));
             sd_bus_message_unref(m);
             return r;
         }
 
-        for (auto& [seq, now] : out) {
-            r = sd_bus_message_append(m, "(tt)", (uint64_t)seq, (uint64_t)now);
+        for (auto& [type, seq, now] : *samples_pending | std::views::take(count)) {
+            r = sd_bus_message_append(m, "(ytt)", (uint8_t)type, (uint64_t)seq, (uint64_t)now);
             if (r < 0) {
                 SPDLOG_ERROR("push_queue: append {} ({})", r, strerror(-r));
                 sd_bus_message_unref(m);
@@ -423,8 +596,7 @@ int IPCClient::request_fd_from_server() {
         return -1;
     }
 
-    static constexpr uint64_t kTimeoutUsec = 2ULL * 1000ULL * 1000ULL; // 2 s
-    r = sd_bus_call(bus_, m, kTimeoutUsec, nullptr, &reply);
+    r = sd_bus_call(bus_, m, 0, nullptr, &reply);
 
     if (r < 0) {
         SPDLOG_ERROR("sd_bus_call {} ({})", r, strerror(-r));
@@ -492,7 +664,7 @@ void IPCClient::send_import_failed() {
     {
         std::lock_guard lock(m);
         fdinfo = {};
-        needs_import.store(true);
+        import_generation.fetch_add(1, std::memory_order_release);
     }
 
     if (!bus)
@@ -540,10 +712,30 @@ int IPCClient::on_work_event(sd_event_source *s, int fd, uint32_t revents, void 
     return 0;
 }
 
-void IPCClient::frame_ready(uint32_t idx, int f) {
-    auto fd = unique_fd::adopt(f);
+unique_fd IPCClient::export_dmabuf_sync_file(int dmabuf_fd, bool write)
+{
+    dma_buf_export_sync_file data{};
+    data.flags = write ? DMA_BUF_SYNC_WRITE : DMA_BUF_SYNC_READ;
+    data.fd = -1;
+
+    if (ioctl(dmabuf_fd, DMA_BUF_IOCTL_EXPORT_SYNC_FILE, &data) != 0) {
+        SPDLOG_ERROR("DMA_BUF_IOCTL_EXPORT_SYNC_FILE failed: errno={}", errno);
+        return {};
+    }
+    if (data.fd < 0) {
+        SPDLOG_ERROR("DMA_BUF_IOCTL_EXPORT_SYNC_FILE returned invalid fd");
+        return {};
+    }
+    return unique_fd::adopt(data.fd);
+}
+
+void IPCClient::frame_ready(int idx, unique_fd fd) {
+    if (idx < 0 || !fd)
+        return;
+
     post([this, idx, fd = std::move(fd)]() {
-        int r = sd_bus_emit_signal(bus, kObjPath, kIface, "frame_ready", "uh", idx, fd.get());
+        int r = sd_bus_emit_signal(bus, kObjPath, kIface, "frame_ready", "uh",
+                                   static_cast<uint32_t>(idx), fd.get());
 
         if (r < 0) {
             SPDLOG_ERROR("sd_bus_emit_signal {} ({}) ObjPath: {} Iface: {}",
@@ -557,8 +749,9 @@ int IPCClient::on_frame(sd_bus_message* m, void* userdata, sd_bus_error*) {
     auto* self = static_cast<IPCClient*>(userdata);
 
     ready_frame frame;
+    uint32_t idx = 0;
     int fd;
-    int r = sd_bus_message_read(m, "uh", &frame.idx, &fd);
+    int r = sd_bus_message_read(m, "uh", &idx, &fd);
     if (r < 0) {
         SPDLOG_ERROR("sd_bus_message_read {} ({})", r, strerror(-r));
         if (fd >= 0)
@@ -566,8 +759,48 @@ int IPCClient::on_frame(sd_bus_message* m, void* userdata, sd_bus_error*) {
         return r;
     }
 
+    frame.idx = static_cast<int>(idx);
     frame.fd = unique_fd::dup(fd);
-    std::lock_guard lock(self->sync_mtx);
-    self->frame_queue.push_back(std::move(frame));
+    {
+        std::lock_guard lock(self->sync_mtx);
+        self->frame_queue.push_back(std::move(frame));
+    }
     return 0;
+}
+
+bool IPCClient::should_disable()
+{
+    static const bool disabled = [] {
+        auto name = get_wine_exe_name(true);
+        if (name.empty())
+            name = get_basename(get_exe_path());
+        sd_bus* bus = nullptr;
+        sd_bus_message* reply = nullptr;
+        int excluded = 0;
+        uint64_t server_hash = 0;
+        int result = sd_bus_open_user(&bus);
+        if (result >= 0)
+            result = sd_bus_call_method(bus, kBusName, kObjPath, kIface,
+                                       "preflight", nullptr, &reply,
+                                       "s", name.c_str());
+        if (result >= 0)
+            result = sd_bus_message_read(reply, "bt", &excluded, &server_hash);
+        sd_bus_message_unref(reply);
+        sd_bus_flush_close_unref(bus);
+        if (result <= 0) {
+            SPDLOG_ERROR("IPC preflight failed: {} ({}); disabling hud", result,
+                         result < 0 ? strerror(-result) : "invalid reply");
+            return true;
+        }
+        if (server_hash != MANGOHUD_IPC_ABI_HASH) {
+            incompatible.store(true);
+            SPDLOG_ERROR("IPC ABI mismatch: client=0x{:016x}, server=0x{:016x}. Restart game/client and server.",
+                         uint64_t(MANGOHUD_IPC_ABI_HASH), server_hash);
+            return true;
+        }
+        if (excluded)
+            SPDLOG_DEBUG("process '{}' is blacklisted in MangoHud Next", name);
+        return excluded != 0;
+    }();
+    return disabled || is_incompatible();
 }

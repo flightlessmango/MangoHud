@@ -40,9 +40,12 @@ struct wayland_display
     {
         wl_pressed_keys.clear();
         vk_surfaces.clear();
-        wl_seat_destroy(this->seat);
-        wl_keyboard_destroy(this->keyboard);
-        wl_event_queue_destroy(this->queue);
+        // The seat/keyboard/queue proxies belong to the app-owned wl_display
+        // and are destroyed in wayland_data_unref() while that display is still
+        // valid. Destroying them here would run after the app has already
+        // destroyed its wl_display when this static map is torn down at process
+        // exit, causing a use-after-free inside libwayland-client
+        // (wl_proxy_destroy on a freed display).
         if (this->keymap_xkb)
             xkb_keymap_unref(this->keymap_xkb);
         if (this->state_xkb)
@@ -254,7 +257,17 @@ void wayland_data_unref(struct wl_display *display, void *vk_surface)
     for (auto it = displays.begin(); it != displays.end(); it++)
     {
         if (it->second.ref == 0)
+        {
+            // the app is still running here, so the wl_display is alive and
+            // safe to destroy the proxies against
+            if (it->second.seat)
+                wl_seat_destroy(it->second.seat);
+            if (it->second.keyboard)
+                wl_keyboard_destroy(it->second.keyboard);
+            if (it->second.queue)
+                wl_event_queue_destroy(it->second.queue);
             it = displays.erase(it);
+        }
 
         if (it == displays.end())
             break;

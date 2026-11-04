@@ -12,6 +12,11 @@ private:
     bool init_nvml(const std::string& pci_dev);
 
     const std::vector<nvmlProcessInfo_v1_t> get_processes();
+    void pre_poll_overrides() override;
+    std::chrono::steady_clock::time_point last_slow_poll = {};
+    gpu_metrics_system_t slow_metrics = {};
+    std::vector<nvmlProcessInfo_v1_t> processes;
+    unsigned long long throttle_reasons = 0;
 
 public:
     Nvidia(

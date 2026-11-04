@@ -809,6 +809,7 @@ set_parameters_from_options(struct overlay_params *params)
       params->enabled[OVERLAY_PARAM_ENABLED_hide_fps_superscript] = 0;
       params->enabled[OVERLAY_PARAM_ENABLED_dynamic_frame_timing] = 0;
       params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_dx_api] = 0;
       params->enabled[OVERLAY_PARAM_ENABLED_duration] = false;
       params->enabled[OVERLAY_PARAM_ENABLED_core_bars] = false;
       params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = read_cfg;
@@ -840,7 +841,7 @@ set_parameters_from_options(struct overlay_params *params)
 
 static void
 parse_overlay_env(struct overlay_params *params,
-                  const char *env, bool use_existing_preset)
+                  const char *env, bool use_existing_preset, bool apply_preset = true)
 {
    const char *env_start = env;
 
@@ -859,7 +860,8 @@ parse_overlay_env(struct overlay_params *params,
       }
    }
 
-   presets(current_preset, params);
+   if (apply_preset)
+      presets(current_preset, params);
    env = env_start;
 
    while ((num = parse_string(env, key, value)) != 0) {
@@ -1088,7 +1090,7 @@ parse_overlay_config(struct overlay_params *params,
 
    if (env && read_cfg) {
       HUDElements.ordered_functions.clear();
-      parse_overlay_env(params, env, true);
+      parse_overlay_env(params, env, true, false);
    }
 
    // If fps_only param is enabled disable legacy_layout
@@ -1342,6 +1344,18 @@ void add_to_options(struct overlay_params *params, std::string option, std::stri
    params->options[option] = value;
 }
 
+// override an earlier option instead of adding a second HUD element for it
+static void set_option(struct overlay_params *params, const std::string& option, const std::string& value){
+   for (auto& o : HUDElements.options) {
+      if (o.first == option) {
+         o.second = value;
+         params->options[option] = value;
+         return;
+      }
+   }
+   add_to_options(params, option, value);
+}
+
 void presets(int preset, struct overlay_params *params, bool inherit) {
    if (!inherit && parse_preset_config(preset, params))
          return;
@@ -1425,6 +1439,7 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
          add_to_options(params, "present_mode", "0");
          add_to_options(params, "proc_vram", "0");
          add_to_options(params, "procmem", "0");
+         add_to_options(params, "cgroup_mem", "0");
          add_to_options(params, "display_server", "0");
          add_to_options(params, "gpu_efficiency", "0");
          add_to_options(params, "cpu_efficiency", "0");
@@ -1449,5 +1464,30 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
 
          break;
 
+   }
+
+   if (!gpus)
+      gpus = std::make_unique<GPUS>(params);
+
+   for (const auto& gpu : gpus->available_gpus) {
+      if (!gpu || !gpu->is_steam_frame())
+         continue;
+
+      add_to_options(params, "gpu_voltage", "0");
+      add_to_options(params, "gpu_power_limit", "0");
+      add_to_options(params, "gpu_efficiency", "0");
+      add_to_options(params, "gpu_fan", "0");
+      add_to_options(params, "gpu_junction_temp", "0");
+      if (!file_exists("/run/power-monitor/power/gfx"))
+         add_to_options(params, "gpu_power", "0");
+      add_to_options(params, "network", "");
+      if (preset == 4) {
+         add_to_options(params, "ram_temp", "0");
+         set_option(params, "cgroup_mem", "1");
+#ifdef HAVE_FEX
+         add_to_options(params, "fex_stats", "status+apptype+hotthreads+jitload+sigbus+smc+softfloat");
+#endif
+      }
+      break;
    }
 }

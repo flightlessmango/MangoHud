@@ -103,8 +103,6 @@ void init_spdlog()
 void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
 {
    auto real_params = get_params();
-   if (real_params->enabled[OVERLAY_PARAM_ENABLED_fan] || real_params->enabled[OVERLAY_PARAM_ENABLED_cfan])
-      update_fan();
    if (real_params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
       cpuStats.UpdateCPUData();
 
@@ -123,6 +121,10 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
    }
 
 #ifdef __linux__
+   if (real_params->enabled[OVERLAY_PARAM_ENABLED_fan])
+      cpuStats.UpdatePlatformFanSpeed();
+   if (real_params->enabled[OVERLAY_PARAM_ENABLED_fan] || real_params->enabled[OVERLAY_PARAM_ENABLED_cfan])
+      update_fan();
    if (real_params->enabled[OVERLAY_PARAM_ENABLED_battery])
       Battery_Stats.update();
    if (!real_params->device_battery.empty()) {
@@ -137,6 +139,8 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
       update_mem_temp();
    if (real_params->enabled[OVERLAY_PARAM_ENABLED_procmem])
       update_procmem();
+   if (real_params->enabled[OVERLAY_PARAM_ENABLED_cgroup_mem])
+      update_cgroup_mem();
    if (real_params->enabled[OVERLAY_PARAM_ENABLED_io_read] || real_params->enabled[OVERLAY_PARAM_ENABLED_io_write])
       getIoStats(g_io_stats);
 #endif
@@ -313,7 +317,8 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
 void update_hud_info(struct swapchain_stats& sw_stats, const struct overlay_params& params, uint32_t vendorID){
    uint64_t now = os_time_get_nano(); /* ns */
    uint64_t frametime_ns = now - sw_stats.last_present_time;
-   if (!get_params()->no_display || logger->is_active())
+   // autostart_log is started from update_hud_info_with_frametime(), so keep updating while it is pending
+   if (!get_params()->no_display || logger->is_active() || (get_params()->autostart_log && !logger->autostart_init))
       update_hud_info_with_frametime(sw_stats, params, vendorID, frametime_ns);
 }
 
@@ -943,8 +948,8 @@ void update_fan(){
    // Resolves the fan sensor(s) once and caches their sysfs paths, then
    // refreshes the RPM of each every call.
    //
-   //   fan_sensors  -> "fan" element:  fan_custom_sensor if set, otherwise the
-   //                   Steam Deck APU fan.
+   //   fan_sensors  -> "fan" element:  fan_custom_sensor only. Without it, the
+   //                   element uses CPUStats' platform fan instead.
    //   cfan_sensors -> "cfan" element: cfan_custom_sensor if set, otherwise a
    //                   auto-detected Super I/O chip (nct67xx/nct6799, it87xx, etc.).
    static bool checked = false;
@@ -956,23 +961,8 @@ void update_fan(){
       string path = "/sys/class/hwmon/";
       auto dirs = ls(path.c_str(), "hwmon", LS_DIRS);
 
-      // "fan": fan_custom_sensor if set, otherwise the Steam Deck APU fan.
-      auto fan_custom = get_params()->fan_custom_sensor;
-      if (!fan_custom.empty()){
-         resolve_custom_fan_sensors(fan_custom, dirs, path, fan_sensors, "FAN");
-      } else {
-         for (auto& dir : dirs) {
-            string dir_path = path + dir;
-            if (read_line(dir_path + "/name").find("steamdeck_hwmon") != string::npos){
-               fan_sensor fs;
-               fs.label = "FAN";
-               fs.path = dir_path + "/fan1_input";
-               fan_sensors.push_back(fs);
-               SPDLOG_DEBUG("fan: using Steam Deck sensor ({})", fs.path);
-               break;
-            }
-         }
-      }
+      // "fan": fan_custom_sensor entries, if any.
+      resolve_custom_fan_sensors(get_params()->fan_custom_sensor, dirs, path, fan_sensors, "FAN");
 
       // "cfan": cfan_custom_sensor if set, otherwise a Super I/O chip.
       auto cfan_custom = get_params()->cfan_custom_sensor;
@@ -1011,7 +1001,7 @@ void update_fan(){
       }
 
       if (fan_sensors.empty() && cfan_sensors.empty())
-         SPDLOG_DEBUG("fan: no fan sensor found");
+         SPDLOG_DEBUG("fan: no custom or Super I/O fan sensor found");
    }
 
    for (auto& s : fan_sensors){

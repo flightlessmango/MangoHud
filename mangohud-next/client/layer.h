@@ -1,5 +1,9 @@
 #pragma once
+#include <atomic>
+#include <shared_mutex>
 #include "vulkan.h"
+#include "frame_limiter.h"
+#include "presentation_timing.h"
 
 struct overlay_resources {
     std::shared_ptr<const vkroots::VkDeviceDispatch> d = nullptr;
@@ -84,6 +88,8 @@ struct overlay_resources {
     }
 };
 
+
+
 struct swapchain_data {
     std::shared_ptr<const vkroots::VkDeviceDispatch> d;
     VkFormat format = VK_FORMAT_UNDEFINED;
@@ -97,13 +103,21 @@ struct swapchain_data {
     VkRenderPass rp = VK_NULL_HANDLE;
     VkPipeline pipe = VK_NULL_HANDLE;
 
-    std::mutex m;
+    VkSurfaceKHR vk_surface;
+    frameLimiter limiter;
+#ifdef VK_EXT_present_timing
+    bool lsfg_is_present = false;
+    bool lsfg_requires_vsync = false;
+    presentation_timing timing;
+#endif
+
+    std::shared_mutex m;
     swapchain_data(std::shared_ptr<const vkroots::VkDeviceDispatch> d_) : d(d_) {}
     ~swapchain_data() {
         if (!d)
             return;
 
-        std::lock_guard lock(m);
+        std::unique_lock lock(m);
 
         d->DeviceWaitIdle(d->Device);
 
@@ -139,18 +153,25 @@ public:
     std::shared_ptr<IPCClient> ipc;
 
     std::shared_ptr<const vkroots::VkDeviceDispatch> d;
-    PFN_vkSetDeviceLoaderData loader_data = nullptr;
+    static inline std::atomic<PFN_vkSetDeviceLoaderData> set_device_loader_data = nullptr;
     PFN_vkSetDebugUtilsObjectNameEXT g_vkSetDebugUtilsObjectNameEXT = nullptr;
-    std::mutex swapchain_mtx;
+    std::shared_mutex swapchain_mtx;
     std::unordered_map<VkSwapchainKHR, std::shared_ptr<swapchain_data>> swapchains;
+    struct last_swapchain {
+        VkSwapchainKHR handle = VK_NULL_HANDLE;
+        std::shared_ptr<swapchain_data> data;
+    } cached_swapchain;
     std::shared_ptr<overlay_resources> ovl_res;
     std::unordered_map<VkQueue, uint32_t> queue_family;
     std::mutex q_family_mtx;
 
     Layer() {
         ipc = std::make_shared<IPCClient>(this, Backend::VULKAN);
-        overlay_vk = std::make_shared<OverlayVK>(this);
     }
+
+#ifdef VK_EXT_present_timing
+    PresentationTiming timing{*this};
+#endif
 
     void SetName(VkDevice device, VkObjectType type, uint64_t handle, const char* fmt, ...) {
         if (!g_vkSetDebugUtilsObjectNameEXT || handle == 0) {
@@ -173,28 +194,33 @@ public:
     }
 
     std::shared_ptr<swapchain_data> get_swapchain_data(VkSwapchainKHR swap) {
-        std::lock_guard lock(swapchain_mtx);
+        std::shared_lock lock(swapchain_mtx);
+        if (cached_swapchain.handle == swap)
+            return cached_swapchain.data;
+
         auto it = swapchains.find(swap);
         if (it != swapchains.end())
-                return it->second;
+            return it->second;
 
         SPDLOG_ERROR("No swapchain available, critical error");
         std::abort();
     }
 
-    void create_swapchain_data(VkSwapchainKHR* pSwapchain, const VkSwapchainCreateInfoKHR* pCreateInfo, const vkroots::VkDeviceDispatch* pDispatch) {
+    VkResult create_swapchain_data(VkSwapchainKHR* pSwapchain, const VkSwapchainCreateInfoKHR* pCreateInfo, const vkroots::VkDeviceDispatch* pDispatch) {
         auto d = std::make_shared<const vkroots::VkDeviceDispatch>(*pDispatch);
         auto sc = std::make_shared<swapchain_data>(d);
 
         sc->format = pCreateInfo->imageFormat;
         sc->extent = pCreateInfo->imageExtent;
         sc->colorspace = pCreateInfo->imageColorSpace;
+        sc->vk_surface = pCreateInfo->surface;
 
         uint32_t count = 0;
         VkResult r = pDispatch->GetSwapchainImagesKHR(pDispatch->Device, *pSwapchain, &count, nullptr);
         if (r != VK_SUCCESS || count == 0) {
             pDispatch->DestroySwapchainKHR(pDispatch->Device, *pSwapchain, nullptr);
             SPDLOG_ERROR("GetSwapchainImagesKHR {}", string_VkResult(r));
+            return (r == VK_SUCCESS) ? VK_ERROR_INITIALIZATION_FAILED : r;
         }
 
         sc->images.resize(count);
@@ -202,6 +228,7 @@ public:
         if (r != VK_SUCCESS) {
             pDispatch->DestroySwapchainKHR(pDispatch->Device, *pSwapchain, nullptr);
             SPDLOG_ERROR("GetSwapchainImagesKHR {}", string_VkResult(r));
+            return r;
         }
 
         sc->views.resize(count, VK_NULL_HANDLE);
@@ -222,6 +249,7 @@ public:
                     if (sc->views[j]) pDispatch->DestroyImageView(pDispatch->Device, sc->views[j], nullptr);
                 pDispatch->DestroySwapchainKHR(pDispatch->Device, *pSwapchain, nullptr);
                 SPDLOG_ERROR("CreateImageView {}", string_VkResult(r));
+                return r;
             }
         }
 
@@ -264,7 +292,8 @@ public:
         if (r != VK_SUCCESS) {
             for (auto v : sc->views) if (v) pDispatch->DestroyImageView(pDispatch->Device, v, nullptr);
             pDispatch->DestroySwapchainKHR(pDispatch->Device, *pSwapchain, nullptr);
-            SPDLOG_ERROR("CreateImageView {}", string_VkResult(r));
+            SPDLOG_ERROR("CreateRenderPass {}", string_VkResult(r));
+            return r;
         }
 
         sc->fb.resize(count, VK_NULL_HANDLE);
@@ -287,6 +316,7 @@ public:
                 for (auto v : sc->views) if (v) pDispatch->DestroyImageView(pDispatch->Device, v, nullptr);
                 pDispatch->DestroySwapchainKHR(pDispatch->Device, *pSwapchain, nullptr);
                 SPDLOG_ERROR("CreateFramebuffer {}", string_VkResult(r));
+                return r;
             }
         }
 
@@ -367,17 +397,25 @@ public:
         r = d->CreateGraphicsPipelines(d->Device, VK_NULL_HANDLE, 1, &gp, nullptr, &sc->pipe);
         if (r == VK_SUCCESS)
             SetName(d->Device, VK_OBJECT_TYPE_PIPELINE, uint64_t(sc->pipe), "mangohud_pipeline");
-        else
+        else {
+            for (auto fb : sc->fb) if (fb) pDispatch->DestroyFramebuffer(pDispatch->Device, fb, nullptr);
+            if (sc->rp) pDispatch->DestroyRenderPass(pDispatch->Device, sc->rp, nullptr);
+            for (auto v : sc->views) if (v) pDispatch->DestroyImageView(pDispatch->Device, v, nullptr);
+            pDispatch->DestroySwapchainKHR(pDispatch->Device, *pSwapchain, nullptr);
             SPDLOG_ERROR("CreateGraphicsPipelines {}", string_VkResult(r));
+            return r;
+        }
 
         {
-            std::lock_guard lock(swapchain_mtx);
+            std::unique_lock lock(swapchain_mtx);
             swapchains[*pSwapchain] = sc;
+            cached_swapchain = {*pSwapchain, sc};
         }
+        return VK_SUCCESS;
     }
 
     void init_overlay_resources(const VkSwapchainCreateInfoKHR* pCreateInfo, const vkroots::VkDeviceDispatch* pDispatch, uint32_t image_count);
-    void init_cmd(VkQueue queue) {
+    bool init_cmd(VkQueue queue) {
         auto d = ovl_res->d;
         uint32_t image_count = ovl_res->cmd_fences.size();
         if (ovl_res->cmd_pool == VK_NULL_HANDLE) {
@@ -410,13 +448,19 @@ public:
             if (r != VK_SUCCESS)
                 SPDLOG_ERROR("AllocateCommandBuffers {}", string_VkResult(r));
 
-            for (VkCommandBuffer cb : ovl_res->cmd)
-                loader_data(d->Device, cb);
-        }
-    }
+            auto loader_data = set_device_loader_data.load(std::memory_order_acquire);
+            if (!loader_data) {
+                SPDLOG_ERROR("vkSetDeviceLoaderData callback missing");
+                return false;
+            }
 
-    ~Layer() {
-        swapchains.clear();
+            for (VkCommandBuffer cb : ovl_res->cmd) {
+                VkResult loader_r = loader_data(d->Device, cb);
+                if (loader_r != VK_SUCCESS)
+                    SPDLOG_ERROR("vkSetDeviceLoaderData {}", string_VkResult(loader_r));
+            }
+        }
+        return true;
     }
 
 private:
@@ -433,4 +477,3 @@ private:
     }
 
 };
-

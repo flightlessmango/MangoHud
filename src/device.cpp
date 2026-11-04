@@ -39,7 +39,10 @@ void device_update(const struct overlay_params& params){
     switch_count = 0;
     bitdo_count = 0;
     shield_count = 0;
-    for (auto &p : fs::directory_iterator(path)) {
+    std::error_code iterator_ec;
+    for (fs::directory_iterator it(path, iterator_ec), end;
+         !iterator_ec && it != end; it.increment(iterator_ec)) {
+        auto &p = *it;
         string fileName = p.path().filename();
 //Gamepads
         if (std::find(params.device_battery.begin(), params.device_battery.end(), "gamepad") != params.device_battery.end()){
@@ -93,10 +96,13 @@ void device_update(const struct overlay_params& params){
             }
          }
     }
+    if (iterator_ec)
+        SPDLOG_DEBUG("Failed to iterate {}: {}", fs::path(path).string(), iterator_ec.message());
 }
 
 
 void device_info () {
+    std::error_code ec;
     std::unique_lock<std::mutex> l(device_lock);
     device_count = 0;
     device_data.clear();
@@ -193,7 +199,7 @@ void device_info () {
                  device_data[device_count].is_charging = true;
         }
         //Get device Battery
-        if (fs::exists(capacity)) {
+        if (fs::exists(capacity, ec)) {
             if (std::getline(input_capacity, line)) {
                 device_data[device_count].battery_percent = line;
                 device_data[device_count].report_percent = true;

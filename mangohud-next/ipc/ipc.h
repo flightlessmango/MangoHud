@@ -1,5 +1,9 @@
 #pragma once
+#if defined(HAVE_LIBSYSTEMD)
 #include <systemd/sd-bus.h>
+#elif defined(HAVE_LIBELOGIND)
+#include <elogind/sd-bus.h>
+#endif
 #include <cstdint>
 #include <vector>
 #include <drm/drm_fourcc.h>
@@ -8,12 +12,13 @@
 #include <mutex>
 #include <unordered_map>
 #include <memory>
+#include <string_view>
 #include <numeric>
 #include <spdlog/spdlog.h>
 #include "mesa/os_time.h"
 #include "../server/common/table_structs.h"
-#include "../render/shared.h"
 #include "client.h"
+#include "protocol.h"
 
 class MangoHudServer;
 class IPCServer {
@@ -26,7 +31,11 @@ public:
 
     IPCServer(MangoHudServer *server_);
 
+    void start();
+    bool should_stop();
+    void record_server_request();
     void prune_clients();
+    std::shared_ptr<Client> focused_client(std::string_view display);
     ~IPCServer();
 
 private:
@@ -35,10 +44,11 @@ private:
     sd_id128_t server_id;
     std::thread thread;
     std::atomic<bool> stop {false};
+    int64_t server_request_time = 0;
+    int64_t idle_since = 0;
     std::mutex q_mtx;
     std::deque<sd_bus_message*> msgs;
     std::deque<std::pair<std::string, int>> fences;
-    std::deque<clientRes*> dmabufs;
     std::deque<std::string> dmabuf_q;
     std::mutex dmabuf_m;
     std::deque<std::string> configs;
@@ -47,5 +57,8 @@ private:
     void socket_thread();
     int make_socket(const std::string &path);
     void dbus_thread();
+    static int on_preflight(sd_bus_message* m, void* userdata, sd_bus_error* ret_error);
     static int on_request_fd(sd_bus_message *m, void *userdata, sd_bus_error*);
+    static int on_get_clients(sd_bus_message *m, void *userdata, sd_bus_error*);
+    static int on_get_system(sd_bus_message *m, void *userdata, sd_bus_error*);
 };

@@ -64,10 +64,6 @@ static ImVec2 window_size;
 static bool inited = false;
 overlay_params params {};
 
-// seems to quit by itself though
-static std::unique_ptr<notify_thread, std::function<void(notify_thread *)>>
-    stop_it(&notifier, [](notify_thread *n){ stop_notifier(*n); });
-
 void imgui_init()
 {
     if (cfg_inited)

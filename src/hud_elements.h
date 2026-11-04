@@ -38,6 +38,10 @@ class HudElements{
         int table_columns_count = 0;
         pid_t g_gamescopePid = -1;
         int g_fsrUpscale = -1;
+        std::string g_upscaler = "LINEAR";
+        std::string g_wantedUpscaler = "SCALING";
+        bool g_upscaling = false;
+        bool g_upscalerSharpens = false;
         int g_fsrSharpness = -1;
         Clock::time_point last_exec;
         std::vector<std::pair<std::string, std::string>> options;
@@ -54,6 +58,7 @@ class HudElements{
         uint32_t vendorID;
         int hdr_status = 0;
         int refresh = 0;
+        float scanout_refresh = 0.f;
         unsigned int vsync = 10;
 
         enum display_servers {
@@ -83,6 +88,7 @@ class HudElements{
         static void proc_vram();
         static void ram();
         static void procmem();
+        static void cgroup_mem();
         static void fps();
         static void engine_version();
         static void gpu_name();

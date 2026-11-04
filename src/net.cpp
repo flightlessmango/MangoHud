@@ -2,12 +2,16 @@
 #include "hud_elements.h"
 
 Net::Net() {
+    std::error_code ec;
     auto params = get_params();
     should_reset = false;
     fs::path net_dir(NETDIR);
-    if (fs::exists(net_dir) && fs::is_directory(net_dir)) {
-        for (const auto& entry : fs::directory_iterator(net_dir)) {
-            if (fs::is_directory(entry.status())) {
+    if (fs::is_directory(net_dir, ec)) {
+        std::error_code iterator_ec;
+        for (fs::directory_iterator it(net_dir, iterator_ec), end;
+             !iterator_ec && it != end; it.increment(iterator_ec)) {
+            const auto& entry = *it;
+            if (entry.is_directory(ec)) {
                 auto val = entry.path().filename().string();
                 if (val == "lo")
                     continue;
@@ -21,6 +25,8 @@ Net::Net() {
                 }
             }
         }
+        if (iterator_ec)
+            SPDLOG_DEBUG("Failed to iterate {}: {}", fs::path(net_dir).string(), iterator_ec.message());
     }
     
     if (interfaces.empty())

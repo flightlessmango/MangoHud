@@ -5,7 +5,7 @@ A Vulkan and OpenGL overlay for monitoring FPS, temperatures, CPU/GPU load and m
 ![Example gif showing a standard performance readout with frametimes](assets/overlay_example.gif)
 
 > **Fork note:** This fork adds **Super I/O fan support**. The `fan` element shows the
-> Steam Deck fan, and a new **`cfan`** element shows motherboard / Super I/O chip fans
+> Steam Deck or Steam Frame fan by default, and a new **`cfan`** element shows motherboard / Super I/O chip fans
 > (Nuvoton, ITE, Fintek, Winbond, SMSC) via `hwmon`, with `cfan_custom_sensor` for manual
 > selection and `cfan_color` for its label color. See [`FAN_SUPERIO.md`](FAN_SUPERIO.md)
 > for full details.
@@ -84,7 +84,7 @@ Install necessary development packages.
 - GBM (libgbm-dev)
 - libdrm (libdrm-dev)
 - libcap (libcap-dev)
-- libsystemd (libsystemd-dev)
+- sd-bus (libsystemd-dev, or elogind on non-systemd distributions)
 - yaml-cpp (libyaml-cpp-dev)
 - X11 (libx11-dev)
 - XNVCtrl (libxnvctrl-dev), optional, use `-Dwith_xnvctrl=disabled` option with `meson` to disable
@@ -325,7 +325,9 @@ If you start the game from the terminal with MangoHud enabled (for example by st
 
 You can find an example config in /usr/share/doc/mangohud
 
-[GOverlay](https://github.com/benjamimgois/goverlay) is a GUI application that can be used to manage the config
+[GOverlay](https://github.com/benjamimgois/goverlay) Qt GUI for configuring MangoHud.
+
+[MangoJuice](https://github.com/radiolamp/mangojuice) GTK GUI for configuring MangoHud.
 
 ---
 
@@ -358,6 +360,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `bicubic`                          | Force bicubic filtering                                                               |
 | `blacklist`                        | Add a program to the blacklist. e.g `blacklist=vkcube,WatchDogs2.exe`                 |
 | `cellpadding_y`                    | Set the vertical cellpadding, default is `-0.085` |
+| `cgroup_mem`                       | Display memory used by the app's cgroup when it runs in a systemd app unit (`app.slice/app-*`). It includes everything in that cgroup, such as the launcher if they share one: anon + shmem, which includes GPU buffers on shmem-backed drivers (e.g. msm, i915 iGPU) but not TTM ones (e.g. amdgpu) |
 | `control=`                         | Sets up a unix socket with a specific name that can be connected to with mangohud-control.<br>I.e. `control=mangohud` or `control=mangohud-%p` (`%p` will be replaced by process id)    |
 | `core_load_change`                 | Change the colors of cpu core loads, uses the same data from `cpu_load_value` and `cpu_load_change` |
 | `core_load`                        | Display load & frequency per core                                                     |
@@ -383,7 +386,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `engine_version`                   | Display OpenGL or vulkan and vulkan-based render engine's version                     |
 | `exec`                             | Display output of bash command in next column, e.g. `custom_text=/home` , `exec=df -h /home \| tail -n 1`. Only works with `legacy_layout=0` |
 | `exec_name`                        | Display current exec name                                                             |
-| `fan`                              | Shows fan rpm. Auto-detects the Steam Deck fan, or uses `fan_custom_sensor` if set. |
+| `fan`                              | Shows fan rpm. Auto-detects the Steam Deck or Steam Frame fan, or uses `fan_custom_sensor` if set. |
 | `fan_custom_sensor`                | Selects the hwmon sensor(s) used by `fan`. One or more `chip,input[,label]` entries separated by `;`. e.g `fan_custom_sensor=nct6799,fan2_input` or `fan_custom_sensor=nct6799,fan2_input,CPU;nct6799,fan7_input,GPU`. |
 | `cfan`                             | Shows custom / Super I/O fan rpm. Auto-detects a Super I/O chip (e.g. nct6799) and picks the first spinning fan, or uses `cfan_custom_sensor` if set. |
 | `cfan_custom_sensor`                | Selects the hwmon sensor(s) used by `cfan`. Same `chip,input[,label]` format as `fan_custom_sensor`, separated by `;`. e.g `cfan_custom_sensor=nct6799,fan2_input,RAD;nct6799,fan4_input,BTM`. |
@@ -411,7 +414,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `frame_count`                      | Display frame count                                                                   |
 | `frametime`                        | Display frametime next to FPS text                                                    |
 | `frame_timing_detailed`            | Display frame timing in a more detailed chart                                         |
-| `fsr`                              | Display the status of FSR (only works in gamescope)                                   |
+| `fsr`                              | Display the status of gamescope's upscaler (FSR, NIS, SGSR, etc.)                     |
 | `hdr`                              | Display the status of HDR (only works in gamescope)                                   |
 | `refresh_rate`                     | Display the current refresh rate (only works in gamescope)                            |
 | `full`                             | Enable most of the toggleable parameters (currently excludes `histogram`)             |
@@ -570,6 +573,7 @@ Example output:
 		<th colspan="2">Intel Discrete</th>
 		<th>Intel Integrated</th>
 		<th>Panfrost/Panthor driver</th>
+		<th colspan="2">Qualcomm</th>
 	</tr>
 	<tr>
 		<th></th>
@@ -579,9 +583,13 @@ Example output:
 		<th>xe</th>
 		<th>i915/xe</th>
 		<th></th>
+		<th>msm_drm (kgsl)</th>
+		<th>msm_dpu</th>
 	</tr>
 	<tr>
 		<td>Usage%</td>
+		<td>🟢</td>
+		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
@@ -597,11 +605,15 @@ Example output:
 		<td>🟢</td>
 		<td>🔴</td>
 		<td>🟢</td>
+		<td>🟢</td>
+		<td>🟢</td>
 	</tr>
 	<tr>
 		<td>Junction Temperature</td>
 		<td>🔴</td>
 		<td>🟢</td>
+		<td>🔴</td>
+		<td>🔴</td>
 		<td>🔴</td>
 		<td>🔴</td>
 		<td>🔴</td>
@@ -615,6 +627,8 @@ Example output:
 		<td>🟢</td>
 		<td>🔴</td>
 		<td>🔴</td>
+		<td>🔴</td>
+		<td>🔴</td>
 	</tr>
 	<tr>
 		<td>Process VRAM</td>
@@ -623,6 +637,8 @@ Example output:
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
+		<td>🟢</td>
+		<td>🔴</td>
 		<td>🟢</td>
 	</tr>
 	<tr>
@@ -633,9 +649,13 @@ Example output:
 		<td>🔴</td>
 		<td>🔴</td>
 		<td>🔴</td>
+		<td>🔴</td>
+		<td>🔴</td>
 	</tr>
 	<tr>
 		<td>Total VRAM</td>
+		<td>🟢</td>
+		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🔴</td>
@@ -651,6 +671,8 @@ Example output:
 		<td>🔴</td>
 		<td>🔴</td>
 		<td>🔴</td>
+		<td>🔴</td>
+		<td>🔴</td>
 	</tr>
 	<tr>
 		<td>Core Clock</td>
@@ -660,6 +682,8 @@ Example output:
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
+		<td>🟢</td>
+		<td>🔴</td>
 	</tr>
 	<tr>
 		<td>Power Usage</td>
@@ -667,6 +691,8 @@ Example output:
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
+		<td>🔴</td>
+		<td>🔴</td>
 		<td>🔴</td>
 		<td>🔴</td>
 	</tr>
@@ -678,6 +704,8 @@ Example output:
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🔴</td>
+		<td>🔴</td>
+		<td>🔴</td>
 	</tr>
 	<tr>
 		<td>Fan Speed</td>
@@ -687,6 +715,8 @@ Example output:
 		<td>🟢</td>
 		<td>🔴</td>
 		<td>🔴</td>
+		<td>🔴</td>
+		<td>🔴</td>
 	</tr>
 	<tr>
 		<td>Voltage</td>
@@ -694,6 +724,8 @@ Example output:
 		<td>🟢</td>
 		<td>🟢</td>
 		<td>🟢</td>
+		<td>🔴</td>
+		<td>🔴</td>
 		<td>🔴</td>
 		<td>🔴</td>
 	</tr>
@@ -712,3 +744,6 @@ Example output:
 #### Panfrost and Panthor notes
 - GPU usage requires `echo N | sudo tee /sys/class/drm/renderD*/device/profiling`
   - Where N is a number, 1 for panfrost and 3 for panthor.
+
+#### Qualcomm notes
+- GPU usage on `msm_dpu` shows usage of the current process, not total system usage

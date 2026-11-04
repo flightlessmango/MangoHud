@@ -1,65 +1,118 @@
 #pragma once
-#include <systemd/sd-bus.h>
+#include <array>
 #include <deque>
 #include "imgui.h"
 #include <atomic>
 #include <thread>
 #include <string>
+#include <utility>
+#include <vector>
+#include <memory>
 #include <mutex>
+#include <shared_mutex>
 #include <future>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/base_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/pattern_formatter.h>
 #include "client.h"
+#include "protocol.h"
 
 class spdlogSink;
 class Layer;
+
+struct Fdinfo {
+    uint64_t modifier = 0;
+    uint32_t dmabuf_offset = 0;
+    uint32_t stride = 0;
+    uint32_t fourcc = 0;
+    uint64_t plane_size = 0;
+
+    uint32_t w = 0;
+    uint32_t h = 0;
+
+    uint64_t opaque_size = 0;
+    uint64_t opaque_offset = 0;
+
+    std::vector<unique_fd> dmabuf_buffer;
+    std::vector<unique_fd> opaque_buffer;
+    std::vector<unique_fd> semaphores;
+};
+
 class IPCClient {
 public:
-    std::atomic<bool> needs_import{false};
+    std::atomic<uint64_t> import_generation{0};
     std::atomic<bool> connected{false};
     std::mutex m;
     Fdinfo fdinfo;
-    float fps_limit = 0;
-    int64_t renderMinor = 0;
+    std::atomic<float> fps_limit{0};
+    int64_t renderMinor = -1;
     std::string pEngineName;
+    std::string vulkanDriver;
+    std::string gpuName;
+    std::string waylandDisplay;
+    bool inject_output() const { return inject_output_.load(std::memory_order_acquire); }
+    bool layer_output() const { return layer_output_.load(std::memory_order_acquire); }
+    bool gamescopeSession = false;
+    bool waylandSurface = false;
     int buffer_size = 0;
 
     IPCClient(Layer* layer_ = nullptr, Backend api_ = Backend::NONE);
 
-    void start(int64_t renderMinor, std::string& pEngineName, int image_count);
+    void start(int image_count);
 
     bool init();
     void stop();
 
+    std::atomic<uint64_t> hud_update_seq{1};
+
     void add_to_queue(uint64_t now) {
-        {
-            static uint64_t seq;
-            std::unique_lock lock(samples_mtx);
-            samples.push_back({seq, now});
-            seq++;
-        }
+        static std::atomic<uint64_t> seq{0};
+        add_to_queue(SampleType::Frame, seq.fetch_add(1, std::memory_order_relaxed), now);
+    }
 
-        if (last_push == 0) {
-            last_push = now;
+    void add_to_queue(SampleType type, uint64_t seq, uint64_t now) {
+        if (is_incompatible())
             return;
-        }
-
-        if (now - last_push >= 4'000'000) {
-            push_queue();
-            // wake_up_fd(wake_fd);
-            last_push = now;
+        if (type == SampleType::App)
+            hud_update_seq.fetch_add(1, std::memory_order_release);
+        {
+            std::shared_lock lock(samples_mtx);
+            auto idx = samples_count.fetch_add(1, std::memory_order_relaxed);
+            if (idx >= static_cast<int>(samples_active->size())) {
+                samples_count.fetch_sub(1, std::memory_order_relaxed);
+                samples_dropped.fetch_add(1, std::memory_order_relaxed);
+                return;
+            }
+            samples_active->at(idx) = {type, seq, now};
         }
     }
 
-    void drain_queue();
-    int push_queue();
+    std::atomic<bool> x11_focused{false};
+
+    bool set_focused_seats(std::vector<std::string> seats) {
+        auto current = focused_seats.load();
+        if (current && *current == seats)
+            return false;
+
+        focused_seats.store(std::make_shared<const std::vector<std::string>>(std::move(seats)));
+        return true;
+    }
+
+    static bool should_disable();
+    static bool is_incompatible() { return incompatible.load(); }
     bool on_connect();
+    void send_resolution(uint32_t width, uint32_t height);
     void send_spdlog(const int level, const char* file, const int line, const std::string& text);
     void send_import_failed();
     void send_semaphores(std::vector<int> sema);
-    void frame_ready(uint32_t idx, int fd);
+    static unique_fd export_dmabuf_sync_file(int dmabuf_fd, bool write = false);
+    void frame_ready(int idx, unique_fd fd);
+    void clear_frames() {
+        std::lock_guard lock(sync_mtx);
+        frame_queue.clear();
+    }
+
     int next_frame() {
         std::lock_guard lock(sync_mtx);
         if (frame_queue.empty())
@@ -79,13 +132,23 @@ public:
     }
 
 private:
+    std::atomic<bool> layer_output_{true};
+    std::atomic<bool> inject_output_{false};
     Layer* layer;
     Backend api = Backend::NONE;
 
+    inline static std::atomic<bool> incompatible{false};
     std::atomic<bool> quit{false};
     std::thread thread;
-    std::deque<Sample> samples;
-    std::mutex samples_mtx;
+    using SampleBuffer = std::array<Sample, 10'000>;
+    SampleBuffer samples[2];
+    SampleBuffer* samples_active = &samples[0];
+    SampleBuffer* samples_pending = &samples[1];
+    std::atomic<int> samples_count{0};
+    std::atomic<uint64_t> samples_dropped{0};
+    std::shared_mutex samples_mtx;
+    std::atomic<std::shared_ptr<const std::vector<std::string>>> focused_seats{
+        std::make_shared<const std::vector<std::string>>()};
     std::mutex sync_mtx;
     std::atomic<bool> stop_wait {false};
     std::thread wait_thread;
@@ -97,9 +160,9 @@ private:
     sd_bus_slot* config_slot = nullptr;
     sd_bus_slot* frame_slot = nullptr;
     sd_bus_slot* incompatible_slot = nullptr;
+    sd_bus_slot* disconnected_slot = nullptr;
     int wake_fd = -1;
     int socket_fd = -1;
-    uint64_t last_push = 0;
     std::shared_ptr<spdlog::logger> logger;
     std::deque<ready_frame> frame_queue;
     int work_eventfd = -1;
@@ -107,16 +170,24 @@ private:
     std::queue<std::packaged_task<void()>> work_q;
     sd_event* event = nullptr;
     sd_event_source* work_src = nullptr;
+    uint32_t resolution_width = 0;
+    uint32_t resolution_height = 0;
+    uint32_t sent_resolution_width = 0;
+    uint32_t sent_resolution_height = 0;
 
     static int on_dmabuf(sd_bus_message* m, void* userdata, sd_bus_error* ret_error);
     static int on_config(sd_bus_message* m, void* userdata, sd_bus_error* ret_error);
     static int on_frame(sd_bus_message* m, void* userdata, sd_bus_error*);
     static int on_incompatible(sd_bus_message* m, void* userdata, sd_bus_error*);
+    static int on_bus_disconnected(sd_bus_message* m, void* userdata, sd_bus_error*);
     void bus_thread();
     static int on_server_owner_changed(sd_bus_message* m, void* userdata, sd_bus_error*);
     bool connect_bus();
     void disconnect_bus();
     void run_bus();
+    // Posted IPC work drains one buffer while producers fill the other.
+    int push_queue();
+    bool send_resolution_signal(uint32_t width, uint32_t height);
     int request_fd_from_server();
     static int on_work_event(sd_event_source *s, int fd, uint32_t revents, void *userdata);
     template <class F>

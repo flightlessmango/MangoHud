@@ -4,6 +4,7 @@
 
   <name>MangoHud</name>
   <summary>Vulkan/OpenGL overlay for monitoring FPS, temperatures, CPU/GPU load and more</summary>
+  <summary xml:lang="ru">Оверлей для Vulkan и OpenGL: FPS, температуры, загрузка CPU/GPU и не только</summary>
   <developer_name>FlightlessMango</developer_name>
   <icon type="stock">io.github.flightlessmango.mangohud</icon>
 
@@ -12,15 +13,18 @@
 
   <description>
     <p>A modification of the Mesa Vulkan overlay, including GUI improvements with HUD configuration, temperature reporting, and logging capabilities. Includes a script (mangohud) to start it on any OpenGL or Vulkan application.</p>
+    <p xml:lang="ru">MangoHud вырос из оверлея Mesa Vulkan: к нему добавились настройка состава HUD, показ температур и ведение журнала. В комплекте идёт скрипт mangohud — он включает оверлей в любом приложении OpenGL или Vulkan.</p>
   </description>
 
   <screenshots>
     <screenshot type="default">
       <caption>Example</caption>
+      <caption xml:lang="ru">Пример</caption>
       <image>https://raw.githubusercontent.com/flightlessmango/MangoHud/master/assets/overlay_example.gif</image>
     </screenshot>
     <screenshot>
       <caption>Log uploading walkthrough</caption>
+      <caption xml:lang="ru">Как выгрузить журнал</caption>
       <image>https://raw.githubusercontent.com/flightlessmango/MangoHud/master/assets/log_upload_example.gif</image>
     </screenshot>
   </screenshots>

@@ -6,12 +6,28 @@
 #include <GL/glext.h>
 #include <GL/glx.h>
 #include <drm/drm_fourcc.h>
+#include <cstdlib>
+#include <iterator>
 
 GLX::GLX() {
     p_glCreateMemoryObjectsEXT = (PFNGLCREATEMEMORYOBJECTSEXTPROC)glx_gp("glCreateMemoryObjectsEXT");
     p_glDeleteMemoryObjectsEXT = (PFNGLDELETEMEMORYOBJECTSEXTPROC)glx_gp("glDeleteMemoryObjectsEXT");
     p_glImportMemoryFdEXT      = (PFNGLIMPORTMEMORYFDEXTPROC)glx_gp("glImportMemoryFdEXT");
     p_glTexStorageMem2DEXT     = (PFNGLTEXSTORAGEMEM2DEXTPROC)glx_gp("glTexStorageMem2DEXT");
+}
+
+static int64_t render_minor_from_path(const std::string& path) {
+    auto pos = path.rfind("renderD");
+    if (pos == std::string::npos)
+        return -1;
+
+    const char* begin = path.c_str() + pos + 7;
+    char* end = nullptr;
+    long minor = std::strtol(begin, &end, 10);
+    if (begin == end || (end && *end != '\0') || minor < 0)
+        return -1;
+
+    return minor;
 }
 
 bool GLX::import_dmabuf(const Fdinfo& fdinfo, GLuint& tex, GLuint& memobj, int f) {
@@ -193,26 +209,32 @@ EGL::EGL() {
     p_eglQueryDevicesEXT            = (PFNEGLQUERYDEVICESEXTPROC)real_eglGetProcAddress("eglQueryDevicesEXT");
 }
 
-int64_t EGL::renderer() {
-    EGLDisplay dpy = eglGetCurrentDisplay();
+int64_t EGL::renderer(EGLDisplay dpy) {
     if (dpy == EGL_NO_DISPLAY)
-        return 1;
+        dpy = eglGetCurrentDisplay();
+    if (dpy == EGL_NO_DISPLAY)
+        return -1;
 
+    if (!p_eglQueryDisplayAttribEXT || !p_eglQueryDeviceStringEXT)
+        return -1;
 
     if (!eglInitialize(dpy, NULL, NULL)) {
         printf("eglInitialize failed, err=0x%04x\n", eglGetError());
-        return 1;
+        return -1;
     }
 
     EGLAttrib dev_attrib = 0;
     if (!p_eglQueryDisplayAttribEXT(dpy, EGL_DEVICE_EXT, &dev_attrib)) {
         printf("eglQueryDisplayAttribEXT(EGL_DEVICE_EXT) failed, err=0x%04x\n", eglGetError());
-        return 1;
+        return -1;
     }
 
     EGLDeviceEXT dev = (EGLDeviceEXT)dev_attrib;
     const char *render = p_eglQueryDeviceStringEXT(dev, EGL_DRM_RENDER_NODE_FILE_EXT);
-    return atoi(strrchr(render, 'D') + 1);
+    if (!render)
+        return -1;
+
+    return render_minor_from_path(render);
 }
 
 EGLDisplay EGL::import_dmabuf(const Fdinfo& fdinfo, GLuint& tex, EGLImageKHR& image, int f, Display* xdpy) {
@@ -412,18 +434,26 @@ bool EGL::display_supports_modifier(EGLDisplay dpy, uint32_t fourcc, uint64_t mo
 }
 
 OverlayGL::OverlayGL(Display* xdpy_, std::shared_ptr<IPCClient> ipc_) : xdpy(xdpy_), ipc(ipc_) {
-    SPDLOG_INFO("OpenGL overlay init");
+    SPDLOG_DEBUG("OpenGL overlay init");
     glx = std::make_unique<GLX>();
     egl = std::make_unique<EGL>();
-    auto nodes = find_render_nodes(-1);
-    int renderer = -1;
-    for (auto node : nodes) {
-        renderer = atoi(strrchr(node.c_str(), 'D') + 1);
-        SPDLOG_DEBUG("OpenGL renderer: {}", renderer);
-    }
 
-    std::string node = *nodes.begin();
-    ipc->start(renderer, pEngineName, 4);
+    int64_t renderer = -1;
+    if (!xdpy)
+        renderer = egl->renderer();
+
+    if (renderer >= 0)
+        SPDLOG_DEBUG("OpenGL renderer: renderD{} (egl)", renderer);
+    else
+        SPDLOG_DEBUG("OpenGL renderer: unknown");
+
+    if (!ipc->waylandSurface) {
+        ipc->renderMinor = renderer;
+        ipc->pEngineName = pEngineName;
+        if (const GLubyte* gpu_name = glGetString(GL_RENDERER))
+            ipc->gpuName = clean_gpu_name(reinterpret_cast<const char*>(gpu_name));
+    }
+    ipc->start(4);
 }
 
 CtxRes* OverlayGL::get_ctx() {
@@ -465,20 +495,30 @@ void OverlayGL::draw() {
     GLState s;
     CtxRes* c = nullptr;
     c = get_ctx();
-    if (ipc->needs_import.load()) {
+    uint64_t generation = ipc->import_generation.load(std::memory_order_acquire);
+    bool do_import = generation != imported_generation;
+    if (do_import) {
         if (!c)
             return;
 
-        {
-            std::lock_guard lock(ipc->m);
+        std::lock_guard lock(ipc->m);
+        generation = ipc->import_generation.load(std::memory_order_acquire);
+        if (generation != imported_generation) {
             fdinfo = std::move(ipc->fdinfo);
             ipc->fdinfo = {};
+        } else {
+            do_import = false;
         }
+    }
+
+    if (do_import) {
+        current_slot = -1;
 
         if (fdinfo.dmabuf_buffer.empty()) {
+            ipc->clear_frames();
             c->dmabufs.clear();
-            current_slot = -1;
             inited = false;
+            imported_generation = generation;
             return;
         }
 
@@ -488,15 +528,19 @@ void OverlayGL::draw() {
             if (!import_dmabuf(buf.get(), fdinfo.dmabuf_buffer[i], fdinfo.opaque_buffer[i])) {
                 c->dmabufs.clear();
                 fdinfo = {};
-                current_slot = -1;
                 inited = false;
+                ipc->clear_frames();
                 ipc->send_import_failed();
                 return;
             }
             c->dmabufs.push_back(std::move(buf));
         }
-        ipc->needs_import.store(false);
+        ipc->clear_frames();
+        imported_generation = generation;
         inited = true;
+
+        for (int slot = 0; slot < std::ssize(fdinfo.dmabuf_buffer); slot++)
+            release_slot_to_server(ipc.get(), slot, fdinfo.dmabuf_buffer[slot].get());
     }
 
     if (!inited)
@@ -506,13 +550,14 @@ void OverlayGL::draw() {
         current_slot = ipc->next_frame();
 
     if (current_slot >= 0) {
+        const int slot = current_slot;
         const bool dst_encodes_srgb = framebuffer_encodes_srgb(s.saved.fbo);
         glDisable(GL_FRAMEBUFFER_SRGB);
-        sample_dmabuf(c, fdinfo, s.saved, dst_encodes_srgb);
+        sample_dmabuf(c, fdinfo, slot, s.saved, dst_encodes_srgb);
         // Do not remove this dma-buf fd dependency yet: GL uses it only to export
         // the release fence when the image itself came from an opaque fd.
         // TODO: split GL release fencing from image transport.
-        release_fence(ipc.get(), fdinfo.dmabuf_buffer[current_slot].get());
+        release_fence(ipc.get(), slot, fdinfo.dmabuf_buffer[slot].get());
     }
 
     if (!c)
@@ -522,6 +567,14 @@ void OverlayGL::draw() {
     const int surfH = s.saved.viewport[3];
     if (surfW <= 0 || surfH <= 0)
         return;
+
+    static int lastSurfW = 0;
+    static int lastSurfH = 0;
+    if (surfW != lastSurfW || surfH != lastSurfH) {
+        ipc->send_resolution(static_cast<uint32_t>(surfW), static_cast<uint32_t>(surfH));
+        lastSurfW = surfW;
+        lastSurfH = surfH;
+    }
 
     glBindFramebuffer(GL_FRAMEBUFFER, s.saved.fbo);
     glViewport(s.saved.viewport[0], s.saved.viewport[1], s.saved.viewport[2], s.saved.viewport[3]);
@@ -676,7 +729,7 @@ void OverlayGL::create_cache(CtxRes* r, int w, int h) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void OverlayGL::sample_dmabuf(CtxRes* r, const Fdinfo& fdinfo, const GLState::state& saved, bool framebuffer_encodes_srgb) {
+void OverlayGL::sample_dmabuf(CtxRes* r, const Fdinfo& fdinfo, int slot, const GLState::state& saved, bool framebuffer_encodes_srgb) {
     create_cache(r, (int)fdinfo.w, (int)fdinfo.h);
 
     glBindFramebuffer(GL_FRAMEBUFFER, r->cache_fbo);
@@ -694,7 +747,7 @@ void OverlayGL::sample_dmabuf(CtxRes* r, const Fdinfo& fdinfo, const GLState::st
     if (r->uDecodeSRGBLoc >= 0) glUniform1i(r->uDecodeSRGBLoc, framebuffer_encodes_srgb);
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, r->dmabufs[current_slot]->tex);
+    glBindTexture(GL_TEXTURE_2D, r->dmabufs[slot]->tex);
 
     // Fullscreen quad into cache
     const float verts[] = {
@@ -715,27 +768,21 @@ void OverlayGL::sample_dmabuf(CtxRes* r, const Fdinfo& fdinfo, const GLState::st
     glViewport(saved.viewport[0], saved.viewport[1], saved.viewport[2], saved.viewport[3]);
 }
 
-int OverlayGL::release_fence(IPCClient* ipc, int dmabuf_fd, bool write) {
-    if (!ipc || dmabuf_fd < 0) return -1;
+int OverlayGL::release_slot_to_server(IPCClient* ipc, int slot, int dmabuf_fd, bool write) {
+    if (!ipc || slot < 0 || dmabuf_fd < 0) return -1;
 
     glFlush();
 
-    dma_buf_export_sync_file data{};
-    data.flags = write ? DMA_BUF_SYNC_WRITE : DMA_BUF_SYNC_READ;
-    data.fd = -1;
-
-    if (ioctl(dmabuf_fd, DMA_BUF_IOCTL_EXPORT_SYNC_FILE, &data) != 0) {
-        const int err = errno;
-        SPDLOG_ERROR("DMA_BUF_IOCTL_EXPORT_SYNC_FILE failed: errno={}", err);
+    auto fd = IPCClient::export_dmabuf_sync_file(dmabuf_fd, write);
+    if (!fd)
         return -1;
-    }
 
-    if (data.fd < 0) {
-        SPDLOG_ERROR("DMA_BUF_IOCTL_EXPORT_SYNC_FILE returned invalid fd");
-        return -1;
-    }
-
-    ipc->frame_ready(current_slot, data.fd);
-    current_slot = -1;
+    ipc->frame_ready(slot, std::move(fd));
     return 0;
+}
+
+int OverlayGL::release_fence(IPCClient* ipc, int slot, int dmabuf_fd, bool write) {
+    int ret = release_slot_to_server(ipc, slot, dmabuf_fd, write);
+    current_slot = -1;
+    return ret;
 }

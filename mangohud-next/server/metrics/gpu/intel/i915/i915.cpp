@@ -131,7 +131,10 @@ void Intel_i915::find_gt_dir() {
     std::string gt_dir;
 
     // Find first dir which starts with name "card"
-    for (const auto& entry : fs::directory_iterator(device)) {
+    std::error_code iterator_ec;
+    for (fs::directory_iterator it(device, iterator_ec), end;
+         !iterator_ec && it != end; it.increment(iterator_ec)) {
+        const auto& entry = *it;
         std::filesystem::path path = entry.path();
 
         if (path.filename().string().substr(0, 4) == "card") {
@@ -139,6 +142,8 @@ void Intel_i915::find_gt_dir() {
             break;
         }
     }
+    if (iterator_ec)
+        SPDLOG_DEBUG("Failed to iterate {}: {}", fs::path(device).string(), iterator_ec.message());
 
     if (gt_dir.empty()) {
         SPDLOG_WARN("failed to find gt dir. gpu clock and throttling status will not work");
@@ -174,10 +179,11 @@ void Intel_i915::load_throttle_reasons(
     std::string throttle_folder, std::vector<std::string> throttle_reasons,
     std::vector<std::ifstream>& ifs_throttle_reason
 ) {
+    std::error_code ec;
     for (const auto& throttle_reason : throttle_reasons) {
         std::string throttle_path = throttle_folder + throttle_reason;
 
-        if (!fs::exists(throttle_path)) {
+        if (!fs::exists(throttle_path, ec)) {
             SPDLOG_WARN(
                 "Throttle file {} not found",
                 throttle_path

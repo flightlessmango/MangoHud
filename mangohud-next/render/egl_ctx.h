@@ -1,5 +1,5 @@
 #pragma once
-#pragma once
+#include <cstdint>
 #define EGL_EGLEXT_PROTOTYPES 1
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
@@ -11,13 +11,13 @@ class ImGuiEGL;
 class EglCtx {
 public:
     EGLDisplay dpy = EGL_NO_DISPLAY;
-    int renderer = -1;
-    std::shared_ptr<ImGuiCtx> imgui;
+    int64_t renderer = -1;
 
-    explicit EglCtx(int renderer = -1, std::shared_ptr<ImGuiCtx> imgui = nullptr);
-    bool init_client(clientRes* r, int buffer_size);
-    void destroy_client(clientRes* r);
-    int submit(clientRes* r, int idx);
+    explicit EglCtx(int64_t renderer = -1);
+    bool init_client(std::vector<BufferSet>& buffers, uint32_t w, uint32_t h, int buffer_size);
+    void destroy_client(std::vector<BufferSet>& buffers);
+    int submit(std::vector<BufferSet>& buffers, uint32_t w, uint32_t h, Resolution& size,
+               int idx, std::shared_ptr<HudConfig> hud, std::mutex& hud_m);
 
     ~EglCtx();
 
@@ -32,10 +32,11 @@ private:
     PFNEGLCREATESYNCKHRPROC p_eglCreateSyncKHR = nullptr;
     PFNEGLQUERYDMABUFMODIFIERSEXTPROC p_eglQueryDmaBufModifiersEXT = nullptr;
     std::mutex m;
+    std::shared_ptr<ImGuiCtx> imgui;
 
     int pick_device();
     bool choose_config(uint32_t format, EGLConfig* out);
     std::vector<uint64_t> get_modifiers(EGLDisplay dpy, uint32_t fourcc);
-    bool init_dmabuf(clientRes* r, dmabuf_t& dmabuf);
+    bool init_dmabuf(uint32_t w, uint32_t h, dmabuf_t& dmabuf);
     void destroy_dmabuf_res(dmabuf_t& dmabuf);
 };

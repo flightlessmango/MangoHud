@@ -1,4 +1,7 @@
 #pragma once
+#include <algorithm>
+#include <cstdint>
+#include <chrono>
 #include <mutex>
 #include <deque>
 #include <string>
@@ -8,135 +11,198 @@
 #include <queue>
 #include <memory>
 #include <future>
-#include <systemd/sd-bus.h>
-#include "../render/shared.h"
+#include <vector>
+#include <utility>
+#include "../render/renderer.h"
+#include "protocol.h"
 #include <poll.h>
+#if defined(HAVE_LIBSYSTEMD)
+#include <systemd/sd-bus.h>
+#elif defined(HAVE_LIBELOGIND)
+#include <elogind/sd-bus.h>
+#endif
 #include <sys/eventfd.h>
 
 constexpr size_t   FT_MAX = 200;
 constexpr uint64_t KEEP_NS = 500000000ULL;
 
+enum class SampleType : uint8_t {
+    Frame,
+    Refresh,
+    Hud,
+    App,
+    Count,
+};
+
+enum class OutputMode : uint8_t {
+    App,
+    Layer,
+    Inject,
+};
+
 struct Sample {
+    SampleType type = SampleType::Frame;
     uint64_t seq;
     uint64_t t_ns;
 };
 
-struct Fdinfo {
-    uint64_t modifier = 0;
-    uint32_t dmabuf_offset = 0;
-    uint32_t stride = 0;
-    uint32_t fourcc = 0;
-    uint64_t plane_size = 0;
-
-    uint32_t w = 0;
-    uint32_t h = 0;
-
-    uint64_t opaque_size = 0;
-    uint64_t opaque_offset = 0;
-
-    std::vector<unique_fd> dmabuf_buffer;
-    std::vector<unique_fd> opaque_buffer;
-    std::vector<unique_fd> semaphores;
-};
-
-class IPCServer;
-class MangoHudServer;
-
-struct RenderMethod {
-    ExportMethod export_method = EXPORT_NONE;
-    std::shared_ptr<GPU> gpu;
-};
-
-class Renderer {
+struct SampleStats {
 public:
-    Renderer(MangoHudServer* server, clientRes* r_, int render_minor, int buffer_size);
-    unique_fd render(slot_t* buf, int idx);
-    void consumer_import_failed();
-
-    ~Renderer();
-
-private:
-    std::shared_ptr<VkCtx> vk;
-    std::shared_ptr<EglCtx> egl;
-    std::shared_ptr<ImGuiCtx> imgui;
     mutable std::mutex m;
-    RenderMethod method;
-    MangoHudServer* server;
-    clientRes* r;
-    int render_minor;
-    int buffer_size;
-    size_t method_idx = 0;
-    std::vector<RenderMethod> methods;
-
-    bool configure(RenderMethod next_method);
-    bool configure_current_or_advance();
-    bool advance_method();
-    std::vector<RenderMethod> build_methods() const;
-    RenderMethod current_method() const;
-    int producer_renderer() const;
-    bool init_vk();
-    bool init_egl();
-    void reset_resources();
-};
-
-class Client {
-public:
-    pid_t pid;
-    std::mutex m;
-    std::condition_variable cv;
-    std::shared_ptr<hudTable> table;
     std::deque<Sample> samples;
-    std::mutex samples_m;
-    std::deque<float> frametimes;
-    std::string name;
-    uint64_t n_frames = 0;
+    std::vector<float> frametimes = std::vector<float>(FT_MAX, 0.0f);
+    uint64_t n_samples = 0;
     uint64_t last_fps_update = 0;
     uint64_t seq_last = 0, t_last = 0;
     uint64_t dropped = 0;
     double previous_fps = 0;
+    std::pair<float, float> previous_minmax_frametime{0.0f, 0.0f};
     bool have_prev = false;
-    std::string pEngineName;
-    int64_t renderMinor = 0;
-    std::shared_ptr<clientRes> resources;
-    IPCServer* ipc;
-    MangoHudServer* server;
-    sd_bus* bus;
-    sd_bus_slot* slot;
-    std::atomic<bool> active {true};
-    std::deque<ready_frame> frame_queue;
-    std::atomic<bool> stop {false};
 
-    Client(pid_t pid_, IPCServer* ipc_, MangoHudServer* server_, sd_bus* bus_)
-           : pid(pid_), frametimes(200, 0.0f), resources(std::make_shared<clientRes>()),
-           ipc(ipc_), server(server_), bus(bus_) {}
+    void add_sample(SampleType type, uint64_t seq, uint64_t t_ns) {
+        std::lock_guard lock(m);
+        if (have_prev) {
+            if (seq <= seq_last || t_ns <= t_last)
+                return;
 
-    float avg_fps_from_samples() {
-        std::lock_guard lock(samples_m);
-        if (samples.size() < 2) return previous_fps;
+            uint64_t dt_ns = t_ns - t_last;
+            uint64_t dseq  = seq - seq_last;
+
+            if (dseq > 1)
+                dropped += (dseq - 1);
+
+            double ft_ms = (double)dt_ns / (double)dseq / 1e6;
+            frametimes.push_back(ft_ms);
+            if (frametimes.size() > FT_MAX)
+                frametimes.erase(frametimes.begin());
+        } else {
+            have_prev = true;
+        }
+
+        last_sample_received = std::chrono::steady_clock::now();
+        samples.push_back({type, seq, t_ns});
+        while (samples.size() > 2 && (t_ns - samples.front().t_ns) > KEEP_NS)
+            samples.pop_front();
+
+        t_last = t_ns;
+        seq_last = seq;
+        n_samples++;
+    }
+
+    float avg_fps() {
+        std::lock_guard lock(m);
+        update_stats();
+        return previous_fps;
+    }
+
+    float avg_frametime() {
+        float fps = avg_fps();
+        return fps > 0 ? 1000.f / fps : 0.f;
+    }
+
+    std::pair<float, float> minmax_frametime() {
+        std::lock_guard lock(m);
+        update_stats();
+        return previous_minmax_frametime;
+    }
+
+    std::vector<float> frametimes_copy() const {
+        std::lock_guard lock(m);
+        return frametimes;
+    }
+
+private:
+    std::chrono::steady_clock::time_point last_sample_received{};
+
+    void update_stats() {
+        if (have_prev && std::chrono::steady_clock::now() - last_sample_received >
+                         std::chrono::nanoseconds(KEEP_NS)) {
+            previous_fps = 0;
+            previous_minmax_frametime = {0.0f, 0.0f};
+            last_fps_update = 0;
+            have_prev = false;
+            samples.clear();
+            return;
+        }
+        if (samples.size() < 2) return;
 
         const auto& b = samples.back();
 
         if (last_fps_update != 0 &&
-            (b.t_ns - last_fps_update) < 500000000ULL) {
-            return previous_fps;
+            (b.t_ns - last_fps_update) < KEEP_NS) {
+            return;
         }
 
         const auto& a = samples.front();
         uint64_t dseq = b.seq - a.seq;
         uint64_t dt   = b.t_ns - a.t_ns;
-        if (dseq == 0 || dt == 0) return previous_fps;
+        if (dseq == 0 || dt == 0) return;
 
         previous_fps = (float)(1e9 * (double)dseq / (double)dt);
+        float min = 0.0f, max = 0.0f;
+        for (size_t i = 1; i < samples.size(); ++i) {
+            const auto& prev = samples[i - 1];
+            const auto& current = samples[i];
+            const float ft_ms = (double)(current.t_ns - prev.t_ns) /
+                                (double)(current.seq - prev.seq) / 1e6;
+            if (i == 1 || ft_ms < min)
+                min = ft_ms;
+            max = std::max(max, ft_ms);
+        }
+        previous_minmax_frametime = {min, max};
         last_fps_update = b.t_ns;
-        return previous_fps;
+    }
+};
+
+class IPCServer;
+class MangoHudServer;
+class Wayland;
+
+class Client {
+public:
+    pid_t pid;
+    std::mutex m;
+    std::vector<SampleStats> samples{static_cast<size_t>(SampleType::Count)};
+    std::string name;
+    std::string pEngineName;
+    std::string vulkanDriver;
+    std::string gpuName;
+    uint32_t resolutionWidth = 0;
+    uint32_t resolutionHeight = 0;
+    std::vector<std::string> focused_seats;
+    bool x11_focused = false;
+    std::string wayland_display;
+    OutputMode output_mode = OutputMode::App;
+    std::unique_ptr<Renderer> renderer;
+    std::shared_ptr<Wayland> wayland;
+    IPCServer* ipc;
+    MangoHudServer* server;
+    sd_bus* bus;
+    sd_bus_slot* slot;
+    std::atomic<bool> active {true};
+    std::atomic<uint64_t> hud_seq{0};
+    std::atomic<bool> stop {false};
+
+    Client(pid_t pid_, IPCServer* ipc_, MangoHudServer* server_, sd_bus* bus_);
+
+    bool focused() const {
+        return x11_focused || !focused_seats.empty();
+    }
+
+    SampleStats& stats_for(SampleType type) {
+        auto idx = static_cast<size_t>(type);
+        if (idx >= samples.size())
+            idx = static_cast<size_t>(SampleType::Frame);
+        return samples[idx];
     }
 
     void init(std::shared_ptr<Client>& shared);
-    void send_dmabuf();
+    void send_dmabuf(const std::vector<BufferSet>& buffers, uint32_t width, uint32_t height,
+                     ExportMethod method);
     void send_config();
     static int on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_error);
     void set_dead();
-    void frame_ready(uint32_t idx, unique_fd fd);
+    void frame_ready(int idx, unique_fd fd, std::shared_ptr<Renderer::Resources> resources);
     void stop_and_join();
 
     ~Client();
@@ -145,11 +211,10 @@ private:
     std::thread thread;
     sd_bus_slot* handshake_slot = nullptr;
     sd_bus_slot* frame_samples_slot = nullptr;
+    sd_bus_slot* resolution_slot = nullptr;
     sd_bus_slot* spdlog_slot = nullptr;
     sd_bus_slot* frame_slot = nullptr;
     sd_bus_slot* import_failed_slot = nullptr;
-    std::mutex frame_m;
-    std::thread run_t;
     sd_event* event = nullptr;
     sd_event_source* stop_src = nullptr;
     sd_event_source* work_src = nullptr;
@@ -158,24 +223,19 @@ private:
     std::mutex work_mtx;
     std::queue<std::packaged_task<void()>> work_q;
     std::shared_ptr<spdlog::logger> logger;
-    int buffer_size;
     std::weak_ptr<Client> self_weak;
-    std::unique_ptr<Renderer> renderer;
 
-    static inline const sd_bus_vtable vtable[] = {
-        SD_BUS_VTABLE_START(0),
-        SD_BUS_VTABLE_END
-    };
-
-    bool ready_frame_blocking();
-    void queue_frame();
     void dbus_thread();
-    void run();
-    int try_acquire_buffer();
+    void send_dmabuf_ipc(const std::vector<BufferSet>& buffers, uint32_t width, uint32_t height,
+                         ExportMethod method);
+    void send_dmabuf_wayland(const std::vector<BufferSet>& buffers, uint32_t width, uint32_t height,
+                             ExportMethod method);
+    std::shared_ptr<Wayland> ensure_wayland();
     void setup_handshake(std::string member, sd_bus_slot** slot,
                          sd_bus_message_handler_t callback, std::shared_ptr<Client>& shared);
 
     static int frame_samples(sd_bus_message* m, void* userdata, sd_bus_error*);
+    static int resolution(sd_bus_message* m, void* userdata, sd_bus_error*);
     static int spdlog_msg(sd_bus_message* m, void* userdata, sd_bus_error*);
     static int on_frame(sd_bus_message* m, void* userdata, sd_bus_error*);
     static int on_import_failed(sd_bus_message* m, void* userdata, sd_bus_error*);

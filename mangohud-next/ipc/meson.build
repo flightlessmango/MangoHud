@@ -1,4 +1,14 @@
-systemd_dep = dependency('libsystemd')
+sdbus_lib_dep = dependency('libsystemd', required: false)
+if sdbus_lib_dep.found()
+  sdbus_args = ['-DHAVE_LIBSYSTEMD']
+else
+  sdbus_lib_dep = dependency('libelogind')
+  sdbus_args = ['-DHAVE_LIBELOGIND']
+endif
+sdbus_dep = declare_dependency(
+  dependencies: [sdbus_lib_dep],
+  compile_args: sdbus_args,
+)
 
 ipc_inc = include_directories('.')
 
@@ -6,6 +16,7 @@ ipc_abi_inputs = files(
   'client.h',
   'ipc.h',
   'ipc_client.h',
+  'protocol.h',
   'client.cpp',
   'ipc.cpp',
   'ipc_client.cpp',
@@ -29,7 +40,7 @@ ipc_lib = static_library(
         'ipc_client.cpp',
         'client.cpp'),
   ipc_abi_hash,
-  dependencies: [systemd_dep,
+  dependencies: [sdbus_dep,
                  spdlog_dep,
                  dearimgui_dep,
                  implot_dep,
@@ -39,10 +50,12 @@ ipc_lib = static_library(
                  vkroots_dep,
                  mangohud_version_dep,
                  dep_vulkan_utility_libraries],
+  cpp_args: wayland_wsi_args,
   include_directories: [inc_common],
 )
 
 ipc_dep = declare_dependency(
   link_with: ipc_lib,
   include_directories: [ipc_inc],
+  dependencies: [sdbus_dep],
 )

@@ -5,7 +5,6 @@
 
 class i915_drm_base {
 private:
-    bool has_cap_perfmon = false;
     int card_fd = 0;
     uint64_t total_memory = 0;
     uint64_t free_memory = 0;

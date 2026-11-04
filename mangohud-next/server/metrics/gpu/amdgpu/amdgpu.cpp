@@ -58,7 +58,7 @@ int AMDGPU::get_memory_clock() {
 }
 
 int AMDGPU::get_memory_temp() {
-    return hwmon.get_sensor_value("memory_temp");
+    return std::round(hwmon.get_sensor_value("memory_temp") / 1'000.f);
 }
 
 int AMDGPU::get_temperature() {
@@ -74,7 +74,7 @@ int AMDGPU::get_temperature() {
 }
 
 int AMDGPU::get_junction_temperature() {
-    return hwmon.get_sensor_value("junction_temp");
+    return std::round(hwmon.get_sensor_value("junction_temp") / 1'000.f);
 }
 
 int AMDGPU::get_core_clock() {
@@ -103,7 +103,7 @@ float AMDGPU::get_power_usage() {
 }
 
 float AMDGPU::get_power_limit() {
-    return hwmon.get_sensor_value("power_limit");
+    return hwmon.get_sensor_value("power_limit") / 1'000'000.f;
 }
 
 bool AMDGPU::get_is_apu() {

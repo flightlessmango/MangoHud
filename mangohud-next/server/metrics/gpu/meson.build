@@ -1,9 +1,7 @@
-libdrm_dep = dependency('libdrm')
-libcap_dep = dependency('libcap')
-
 gpu_lib = static_library(
     'gpu',
     files('gpu.cpp',
+          'gpus.cpp',
           'amdgpu/amdgpu.cpp',
           'amdgpu/gpu_metrics.cpp',
           'intel/i915/i915.cpp',
@@ -13,9 +11,15 @@ gpu_lib = static_library(
           'msm/dpu.cpp',
           'msm/kgsl.cpp',
           'nvidia/nvidia.cpp',
-          'nvidia/nvml_loader.cpp'),
-    include_directories: '../',
+          'nvidia/nvml_loader.cpp',
+          'panthor.cpp',
+          'panfrost.cpp'),
+    include_directories: [
+        '../',
+        '../../../../src'
+    ],
+    cpp_args: gpu_tracefs_args,
     dependencies: [libdrm_dep,
-                   libcap_dep,
-                   spdlog_dep]
+                   spdlog_dep,
+                   gpu_tracefs_deps]
 )

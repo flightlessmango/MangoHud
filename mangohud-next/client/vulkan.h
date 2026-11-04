@@ -116,7 +116,6 @@ public:
     OverlayVK(Layer* layer_) : layer(layer_) {}
 
     bool draw(VkSwapchainKHR swapchain, uint32_t img_idx, VkQueue queue, VkPresentInfoKHR pi);
-    bool init_dmabufs(Fdinfo& fdinfo);
 
     ~OverlayVK() {
         for (auto& b : dmabufs)
@@ -129,9 +128,11 @@ private:
     int last_slot = -1;
     std::deque<int> frame_queue;
     bool inited = false;
+    uint64_t import_generation = 0;
     std::shared_ptr<swapchain_data> sc;
     VkQueue queue;
 
+    bool init_dmabufs(Fdinfo& fdinfo);
     VkResult import_dmabuf(dmabuf_ext* buf, unique_fd& import_fd, Fdinfo& fdinfo);
     VkResult copy_dmabuf_to_cache(VkQueue queue, int img_idx, VkPresentInfoKHR pi);
     void cache_descriptor_set(std::shared_ptr<dmabuf_ext>& buf);

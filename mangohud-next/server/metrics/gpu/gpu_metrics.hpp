@@ -1,6 +1,9 @@
 #pragma once
 
+#include <array>
 #include <atomic>
+#include <chrono>
+#include <cstddef>
 
 struct gpu_metrics_process_t {
     int     load;
@@ -38,6 +41,67 @@ struct gpu_metrics_system_t {
     int     fan_speed;
     bool    fan_rpm;
 };
+
+constexpr std::chrono::milliseconds gpu_metrics_update_period{500};
+constexpr std::chrono::milliseconds gpu_metrics_polling_period{25};
+constexpr size_t gpu_metrics_sample_count = gpu_metrics_update_period / gpu_metrics_polling_period;
+
+using SystemMetricsBuffer = std::array<gpu_metrics_system_t, gpu_metrics_sample_count>;
+using ProcessMetricsBuffer = std::array<gpu_metrics_process_t, gpu_metrics_sample_count>;
+
+#define AVERAGE(FIELD, T)                                               \
+    do {                                                                \
+        T value_sum = {};                                               \
+        for (size_t s = 0; s < samples; s++)                            \
+            value_sum += metrics_buffer[s].FIELD;                       \
+        metrics.FIELD = value_sum / static_cast<T>(samples);            \
+    } while(0)
+
+#define MAX(FIELD)                                                       \
+    do {                                                                \
+        auto value = metrics_buffer[0].FIELD;                           \
+        for (size_t s = 1; s < samples; s++)                            \
+            value = value > metrics_buffer[s].FIELD ? value : metrics_buffer[s].FIELD; \
+        metrics.FIELD = value;                                          \
+    } while(0)
+
+inline gpu_metrics_system_t average_system_metrics(const SystemMetricsBuffer& metrics_buffer, size_t samples) {
+    gpu_metrics_system_t metrics = {};
+
+    AVERAGE(load, int);
+    MAX(vram_used);
+    MAX(gtt_used);
+    AVERAGE(memory_total, float);
+    AVERAGE(memory_clock, int);
+    AVERAGE(memory_temp, int);
+    AVERAGE(temperature, int);
+    AVERAGE(junction_temperature, int);
+    AVERAGE(core_clock, int);
+    AVERAGE(voltage, int);
+    AVERAGE(power_usage, float);
+    AVERAGE(power_limit, float);
+    MAX(is_apu);
+    AVERAGE(apu_cpu_power, float);
+    AVERAGE(apu_cpu_temp, int);
+    MAX(is_power_throttled);
+    MAX(is_current_throttled);
+    MAX(is_temp_throttled);
+    MAX(is_other_throttled);
+    MAX(fan_speed);
+    MAX(fan_rpm);
+
+    return metrics;
+}
+
+inline gpu_metrics_process_t average_process_metrics(const ProcessMetricsBuffer& metrics_buffer, size_t samples) {
+    gpu_metrics_process_t metrics = {};
+
+    AVERAGE(load, int);
+    MAX(vram_used);
+    MAX(gtt_used);
+
+    return metrics;
+}
 
 struct gpu_t {
     bool is_active;

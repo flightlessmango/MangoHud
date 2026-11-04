@@ -291,15 +291,25 @@ void AMDGPU::get_samples_and_copy(struct amdgpu_common_metrics metrics_buffer[ME
 
 		if (stop_thread) break;
 
-        std::unique_lock<std::mutex> lock(metrics_mutex);
-        cond_var.wait(lock, [this]() { return !paused || stop_thread; });
+		std::unique_lock<std::mutex> lock(metrics_mutex);
+		cond_var.wait(lock, [this]() { return !paused || stop_thread; });
+		lock.unlock();
+
+#ifndef TEST_ONLY
+		if (HUDElements.g_gamescopePid > 0 && HUDElements.g_gamescopePid != pid) {
+			pid = HUDElements.g_gamescopePid;
+			fdinfo.add_pid(pid);
+		}
+#endif
+
+		fdinfo.poll_all();
+		float proc_vram_used = fdinfo.get_memory_used(pid, "drm-memory-vram");
+
+		lock.lock();
 		// do one pass of metrics from sysfs nodes
 		// then we replace with GPU metrics if it's available
 		get_sysfs_metrics();
-
-#ifndef TEST_ONLY
-		metrics.proc_vram_used = fdinfo_helper->amdgpu_helper_get_proc_vram();
-#endif
+		metrics.proc_vram_used = proc_vram_used;
 
 		if (gpu_metrics_is_valid) {
 			UPDATE_METRIC_AVERAGE(gpu_load_percent);
@@ -506,7 +516,9 @@ void AMDGPU::get_sysfs_metrics() {
 	}
 }
 
-AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id) {
+AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id, std::string drm_node)
+: fdinfo(drm_node) {
+	std::error_code ec;
 	this->pci_dev = pci_dev;
 	this->device_id = device_id;
 	this->vendor_id = vendor_id;
@@ -528,7 +540,7 @@ AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id) {
 	sysfs_nodes.gtt_used = fopen((device_path + "/mem_info_gtt_used").c_str(), "r");
 
 	const std::string hwmon_path = device_path + "/hwmon/";
-	if (fs::exists(hwmon_path)){
+	if (fs::exists(hwmon_path, ec)){
 		const auto dirs = ls(hwmon_path.c_str(), "hwmon", LS_DIRS);
 		for (const auto& dir : dirs) {
 			sysfs_nodes.temp = fopen((hwmon_path + dir + "/temp1_input").c_str(), "r");
@@ -541,7 +553,7 @@ AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id) {
 			for (std::string p : { "power1_average", "power1_input" }) {
 				std::string sensor = hwmon_path + dir + "/" + p;
 
-				if (!fs::exists(sensor))
+				if (!fs::exists(sensor, ec))
 					continue;
 
 				sysfs_nodes.power_usage = fopen(sensor.c_str(), "r");
@@ -553,11 +565,9 @@ AMDGPU::AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id) {
 		}
 	}
 
-	throttling = std::make_shared<Throttling>(0x1002);
-#ifndef TEST_ONLY
-	fdinfo_helper = std::make_unique<GPU_fdinfo>("amdgpu", pci_dev, "", /*called_from_amdgpu_cpp=*/ true);
-#endif
+	fdinfo.add_pid(pid);
 
+	throttling = std::make_shared<Throttling>(0x1002);
 	thread = std::thread(&AMDGPU::metrics_polling_thread, this);
 	pthread_setname_np(thread.native_handle(), "mangohud-amdgpu");
 }
