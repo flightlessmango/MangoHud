@@ -10,16 +10,9 @@ struct overlay_resources {
     VkSampler sampler = VK_NULL_HANDLE;
     VkDescriptorSetLayout dsl = VK_NULL_HANDLE;
     VkPipelineLayout pl = VK_NULL_HANDLE;
-    VkDescriptorPool dp = VK_NULL_HANDLE;
 
     VkShaderModule vs = VK_NULL_HANDLE;
     VkShaderModule fs = VK_NULL_HANDLE;
-
-    VkCommandPool cmd_pool = VK_NULL_HANDLE;
-    std::vector<VkCommandBuffer> cmd;
-    std::vector<VkFence> cmd_fences;
-
-    std::vector<VkSemaphore> overlay_done;
 
     std::mutex m;
     overlay_resources(std::shared_ptr<const vkroots::VkDeviceDispatch> d_) : d(d_) {}
@@ -28,11 +21,6 @@ struct overlay_resources {
         if (!d) return;
 
         d->DeviceWaitIdle(d->Device);
-
-        if (dp) {
-            d->DestroyDescriptorPool(d->Device, dp, nullptr);
-            dp = VK_NULL_HANDLE;
-        }
 
         if (pl) {
             d->DestroyPipelineLayout(d->Device, pl, nullptr);
@@ -58,33 +46,6 @@ struct overlay_resources {
             d->DestroyShaderModule(d->Device, fs, nullptr);
             fs = VK_NULL_HANDLE;
         }
-
-        if (!cmd_fences.empty()) {
-            for (auto& fence : cmd_fences) {
-                if (fence)
-                    d->DestroyFence(d->Device, fence, nullptr);
-
-                fence = VK_NULL_HANDLE;
-            }
-
-        }
-
-        if (cmd_pool && !cmd.empty()) {
-            d->FreeCommandBuffers(d->Device, cmd_pool,
-                                         (uint32_t)cmd.size(), cmd.data());
-            for (auto& c : cmd)
-                c = VK_NULL_HANDLE;
-        }
-
-        if (cmd_pool) {
-            d->DestroyCommandPool(d->Device, cmd_pool, nullptr);
-            cmd_pool = VK_NULL_HANDLE;
-        }
-
-        for (auto& sema : overlay_done) {
-            d->DestroySemaphore(d->Device, sema, nullptr);
-            sema = VK_NULL_HANDLE;
-        }
     }
 };
 
@@ -99,6 +60,8 @@ struct swapchain_data {
     std::vector<VkImage> images;
     std::vector<VkImageView> views;
     std::vector<VkFramebuffer> fb;
+    std::vector<overlay_frame> frames;
+    bool frames_initialized = false;
 
     VkRenderPass rp = VK_NULL_HANDLE;
     VkPipeline pipe = VK_NULL_HANDLE;
@@ -120,6 +83,19 @@ struct swapchain_data {
         std::unique_lock lock(m);
 
         d->DeviceWaitIdle(d->Device);
+
+        for (auto& frame : frames) {
+            if (frame.hud) {
+                frame.hud->cached->release_use(&frame);
+                frame.hud.reset();
+            }
+            if (frame.fence)
+                d->DestroyFence(d->Device, frame.fence, nullptr);
+            if (frame.done)
+                d->DestroySemaphore(d->Device, frame.done, nullptr);
+            if (frame.cmd_pool)
+                d->DestroyCommandPool(d->Device, frame.cmd_pool, nullptr);
+        }
 
         for (auto& framebuf : fb) {
             if (framebuf)
@@ -223,6 +199,7 @@ public:
             return (r == VK_SUCCESS) ? VK_ERROR_INITIALIZATION_FAILED : r;
         }
 
+        sc->frames.resize(count);
         sc->images.resize(count);
         r = pDispatch->GetSwapchainImagesKHR(pDispatch->Device, *pSwapchain, &count, sc->images.data());
         if (r != VK_SUCCESS) {
@@ -415,51 +392,77 @@ public:
     }
 
     void init_overlay_resources(const VkSwapchainCreateInfoKHR* pCreateInfo, const vkroots::VkDeviceDispatch* pDispatch, uint32_t image_count);
-    bool init_cmd(VkQueue queue) {
-        auto d = ovl_res->d;
-        uint32_t image_count = ovl_res->cmd_fences.size();
-        if (ovl_res->cmd_pool == VK_NULL_HANDLE) {
-            VkCommandPoolCreateInfo pci{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
-            pci.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-            {
-                std::lock_guard lock(q_family_mtx);
-                auto it = queue_family.find(queue);
-                if (it != queue_family.end())
-                    pci.queueFamilyIndex = it->second;
-            }
-            VkResult r = d->CreateCommandPool(d->Device, &pci, nullptr, &ovl_res->cmd_pool);
-            if (r != VK_SUCCESS)
-                SPDLOG_ERROR("CreateCommandPool {}", string_VkResult(r));
+    bool init_frames(swapchain_data& sc, VkQueue queue) {
+        if (sc.frames_initialized)
+            return true;
+        auto d = sc.d;
+        uint32_t queue_family_index = 0;
+        {
+            std::lock_guard lock(q_family_mtx);
+            auto it = queue_family.find(queue);
+            if (it != queue_family.end())
+                queue_family_index = it->second;
         }
 
-        if (ovl_res->cmd.size() != image_count) {
-            VkResult r = d->ResetCommandPool(d->Device, ovl_res->cmd_pool, 0);
-            if (r != VK_SUCCESS)
-                SPDLOG_ERROR("ResetCommandPool {}", string_VkResult(r));
-
-            ovl_res->cmd.assign(image_count, VK_NULL_HANDLE);
-
-            VkCommandBufferAllocateInfo ai{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-            ai.commandPool = ovl_res->cmd_pool;
-            ai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-            ai.commandBufferCount = image_count;
-
-            r = d->AllocateCommandBuffers(d->Device, &ai, ovl_res->cmd.data());
-            if (r != VK_SUCCESS)
-                SPDLOG_ERROR("AllocateCommandBuffers {}", string_VkResult(r));
-
-            auto loader_data = set_device_loader_data.load(std::memory_order_acquire);
-            if (!loader_data) {
-                SPDLOG_ERROR("vkSetDeviceLoaderData callback missing");
-                return false;
-            }
-
-            for (VkCommandBuffer cb : ovl_res->cmd) {
-                VkResult loader_r = loader_data(d->Device, cb);
-                if (loader_r != VK_SUCCESS)
-                    SPDLOG_ERROR("vkSetDeviceLoaderData {}", string_VkResult(loader_r));
-            }
+        auto loader_data = set_device_loader_data.load(std::memory_order_acquire);
+        if (!loader_data) {
+            SPDLOG_ERROR("vkSetDeviceLoaderData callback missing");
+            return false;
         }
+
+        for (size_t i = 0; i < sc.frames.size(); ++i) {
+            auto& frame = sc.frames[i];
+            if (!frame.cmd_pool) {
+                VkCommandPoolCreateInfo pci{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+                pci.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+                pci.queueFamilyIndex = queue_family_index;
+                VkResult r = d->CreateCommandPool(d->Device, &pci, nullptr, &frame.cmd_pool);
+                if (r != VK_SUCCESS) {
+                    SPDLOG_ERROR("CreateCommandPool {}", string_VkResult(r));
+                    return false;
+                }
+            }
+            if (!frame.cmd) {
+                VkCommandBufferAllocateInfo ai{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+                ai.commandPool = frame.cmd_pool;
+                ai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+                ai.commandBufferCount = 1;
+                VkResult r = d->AllocateCommandBuffers(d->Device, &ai, &frame.cmd);
+                if (r != VK_SUCCESS) {
+                    SPDLOG_ERROR("AllocateCommandBuffers {}", string_VkResult(r));
+                    return false;
+                }
+                r = loader_data(d->Device, frame.cmd);
+                if (r != VK_SUCCESS) {
+                    d->FreeCommandBuffers(d->Device, frame.cmd_pool, 1, &frame.cmd);
+                    frame.cmd = VK_NULL_HANDLE;
+                    SPDLOG_ERROR("vkSetDeviceLoaderData {}", string_VkResult(r));
+                    return false;
+                }
+            }
+            if (!frame.fence) {
+                VkFenceCreateInfo fci{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+                fci.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+                VkResult r = d->CreateFence(d->Device, &fci, nullptr, &frame.fence);
+                if (r != VK_SUCCESS) {
+                    SPDLOG_ERROR("CreateFence {}", string_VkResult(r));
+                    return false;
+                }
+            }
+            SetName(d->Device, VK_OBJECT_TYPE_FENCE, uint64_t(frame.fence),
+                    "mangohud_overlay_cmd_fence_%zu", i);
+            if (!frame.done) {
+                VkSemaphoreCreateInfo si{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+                VkResult r = d->CreateSemaphore(d->Device, &si, nullptr, &frame.done);
+                if (r != VK_SUCCESS) {
+                    SPDLOG_ERROR("CreateSemaphore {}", string_VkResult(r));
+                    return false;
+                }
+            }
+            SetName(d->Device, VK_OBJECT_TYPE_SEMAPHORE, uint64_t(frame.done),
+                    "mangohud_overlay_done_semaphore_%zu", i);
+        }
+        sc.frames_initialized = true;
         return true;
     }
 

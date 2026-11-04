@@ -2,42 +2,93 @@
 #include "layer.h"
 #include "../utils/mesa/os_time.h"
 
-bool OverlayVK::draw(VkSwapchainKHR swapchain, uint32_t img_idx, VkQueue q, VkPresentInfoKHR pi)
+overlay_hud_frame OverlayVK::prepare_hud_frame(overlay_frame& frame)
 {
-    queue = q;
-    sc = layer->get_swapchain_data(swapchain);
-    if (!sc) return false;
-    auto ipc = layer->ipc;
-    if (!ipc->connected.load()) return false;
-    if (ipc->import_generation.load(std::memory_order_acquire) != import_generation) {
-        std::lock_guard lock(ipc->m);
-        import_generation = ipc->import_generation.load(std::memory_order_acquire);
-        if (!init_dmabufs(ipc->fdinfo)) {
-            dmabufs.clear();
-            ipc->send_import_failed();
-            return false;
-        }
+    std::lock_guard lock(selection_m);
+    if (frame.import_generation != import_generation) {
+        frame.pending_slot = -1;
+        frame.import_generation = import_generation;
     }
-    if (dmabufs.empty()) return false;
-    if (current_slot < 0) current_slot = layer->ipc->next_frame();
+    if (dmabufs.empty()) return {};
+    if (frame.pending_slot < 0)
+        frame.pending_slot = layer->ipc->next_frame();
 
-    if (copy_dmabuf_to_cache(queue, img_idx, pi) != VK_SUCCESS)
-        return false;
+    const int slot = frame.pending_slot >= 0 ? frame.pending_slot : last_slot;
+    if (slot < 0 || static_cast<size_t>(slot) >= dmabufs.size())
+        return {};
 
-    return true;
+    return {dmabufs[slot], slot, frame.pending_slot >= 0};
 }
 
-bool OverlayVK::init_dmabufs(Fdinfo& fdinfo) {
+bool OverlayVK::draw(const swapchain_data* sc, overlay_frame& frame,
+                     uint32_t img_idx, VkQueue queue, VkPresentInfoKHR pi)
+{
+    const auto ready = sc->d->WaitForFences(sc->d->Device, 1, &frame.fence, VK_TRUE, 100'000'000);
+    if (ready != VK_SUCCESS)
+        return false;
+
+    auto ipc = layer->ipc;
+    if (!ipc->connected.load())
+        return false;
+
+    std::shared_lock resources_lock(m);
+    if (ipc->import_generation.load(std::memory_order_acquire) != import_generation) {
+        resources_lock.unlock();
+        {
+            std::unique_lock import_lock(m);
+            std::lock_guard lock(ipc->m);
+            const auto generation = ipc->import_generation.load(std::memory_order_acquire);
+            if (generation != import_generation) {
+                import_generation = generation;
+                if (!init_dmabufs(sc, ipc->fdinfo)) {
+                    dmabufs.clear();
+                    ipc->send_import_failed();
+                    return false;
+                }
+            }
+        }
+        resources_lock.lock();
+    }
+    if (frame.hud) {
+        frame.hud->cached->release_use(&frame);
+        frame.hud.reset();
+    }
+    auto hud = prepare_hud_frame(frame);
+    if (!hud.buffer)
+        return false;
+
+    std::unique_lock write_lock(hud.buffer->m, std::defer_lock);
+    std::shared_lock read_lock(hud.buffer->m, std::defer_lock);
+    if (hud.refresh_cache) {
+        write_lock.lock();
+    } else {
+        read_lock.lock();
+        if (!hud.buffer->cached || !hud.buffer->cached->valid) {
+            read_lock.unlock();
+            write_lock.lock();
+        }
+    }
+    if (!hud.buffer->cached || !hud.buffer->cached->image)
+        return false;
+    hud.refresh_cache |= !hud.buffer->cached->valid;
+    if (hud.refresh_cache && !hud.buffer->image)
+        return false;
+    if (hud.buffer->cached->wait_for_use(queue, hud.refresh_cache) != VK_SUCCESS)
+        return false;
+    return copy_dmabuf_to_cache(sc, frame, hud, queue, img_idx, pi) == VK_SUCCESS;
+}
+
+bool OverlayVK::init_dmabufs(const swapchain_data* sc, Fdinfo& fdinfo) {
     sc->d->DeviceWaitIdle(sc->d->Device);
-    current_slot = -1;
     last_slot = -1;
     dmabufs.clear();
     for (auto [i, fd] : enumerate(fdinfo.dmabuf_buffer)) {
         dmabufs.push_back(std::make_shared<dmabuf_ext>(sc->d));
-        if (import_dmabuf(dmabufs.back().get(), fd, fdinfo) != VK_SUCCESS)
+        if (import_dmabuf(sc, dmabufs.back().get(), fd, fdinfo) != VK_SUCCESS)
             return false;
 
-        cache_descriptor_set(dmabufs.back());
+        if (!cache_descriptor_set(sc, dmabufs.back()))
+            return false;
     }
 
     std::vector<unique_fd> fences;
@@ -55,22 +106,33 @@ bool OverlayVK::init_dmabufs(Fdinfo& fdinfo) {
     return true;
 }
 
-void OverlayVK::cache_descriptor_set(std::shared_ptr<dmabuf_ext>& buf) {
+bool OverlayVK::cache_descriptor_set(const swapchain_data* sc, std::shared_ptr<dmabuf_ext>& buf) {
     auto cached = buf->cached;
     cached->ovl_res = layer->ovl_res;
     if (cached->ds)
-        return;
+        return true;
 
+    VkDescriptorPoolSize size{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1};
+    VkDescriptorPoolCreateInfo pool{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
+    pool.maxSets = 1;
+    pool.poolSizeCount = 1;
+    pool.pPoolSizes = &size;
+    VkResult r = sc->d->CreateDescriptorPool(sc->d->Device, &pool, nullptr, &cached->dp);
+    if (r != VK_SUCCESS) {
+        SPDLOG_ERROR("CreateDescriptorPool {}", string_VkResult(r));
+        return false;
+    }
     VkDescriptorSetAllocateInfo as{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
-    as.descriptorPool = cached->ovl_res->dp;
+    as.descriptorPool = cached->dp;
     as.descriptorSetCount = 1;
     as.pSetLayouts = &cached->ovl_res->dsl;
 
-    VkResult r = sc->d->AllocateDescriptorSets(sc->d->Device, &as, &cached->ds);
+    r = sc->d->AllocateDescriptorSets(sc->d->Device, &as, &cached->ds);
     if (r == VK_SUCCESS) {
         layer->SetName(sc->d->Device, VK_OBJECT_TYPE_DESCRIPTOR_SET, uint64_t(cached->ds), "mangohud_cached_descriptor_set");
     } else {
         SPDLOG_ERROR("AllocateDescriptorSets {}", string_VkResult(r));
+        return false;
     }
 
     VkDescriptorImageInfo di{};
@@ -87,9 +149,10 @@ void OverlayVK::cache_descriptor_set(std::shared_ptr<dmabuf_ext>& buf) {
     wd.pImageInfo = &di;
 
     sc->d->UpdateDescriptorSets(sc->d->Device, 1, &wd, 0, nullptr);
+    return true;
 }
 
-uint32_t OverlayVK::find_mem_type_import(VkImage image, int fd) {
+uint32_t OverlayVK::find_mem_type_import(const swapchain_data* sc, VkImage image, int fd) {
     VkImageMemoryRequirementsInfo2 info2{
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2,
         .image = image,
@@ -119,7 +182,7 @@ uint32_t OverlayVK::find_mem_type_import(VkImage image, int fd) {
     return UINT32_MAX;
 }
 
-uint32_t OverlayVK::find_mem_type_image(uint32_t type_bits, VkMemoryPropertyFlags want) {
+uint32_t OverlayVK::find_mem_type_image(const swapchain_data* sc, uint32_t type_bits, VkMemoryPropertyFlags want) {
     VkPhysicalDeviceMemoryProperties mp{};
     sc->d->pPhysicalDeviceDispatch->pInstanceDispatch
         ->GetPhysicalDeviceMemoryProperties(sc->d->PhysicalDevice, &mp);
@@ -134,7 +197,7 @@ uint32_t OverlayVK::find_mem_type_image(uint32_t type_bits, VkMemoryPropertyFlag
     return UINT32_MAX;
 }
 
-VkResult OverlayVK::import_dmabuf(dmabuf_ext* buf, unique_fd& fd, Fdinfo& fdinfo) {
+VkResult OverlayVK::import_dmabuf(const swapchain_data* sc, dmabuf_ext* buf, unique_fd& fd, Fdinfo& fdinfo) {
     auto d = sc->d;
 
     VkSubresourceLayout plane{};
@@ -167,7 +230,16 @@ VkResult OverlayVK::import_dmabuf(dmabuf_ext* buf, unique_fd& fd, Fdinfo& fdinfo
     ici.samples = VK_SAMPLE_COUNT_1_BIT;
     ici.tiling = VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT;
     ici.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-    ici.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    std::vector<uint32_t> families;
+    for (const auto& info : d->DeviceQueueInfos) {
+        if (std::find(families.begin(), families.end(), info.queueFamilyIndex) == families.end())
+            families.push_back(info.queueFamilyIndex);
+    }
+    ici.sharingMode = families.size() > 1 ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE;
+    if (families.size() > 1) {
+        ici.queueFamilyIndexCount = families.size();
+        ici.pQueueFamilyIndices = families.data();
+    }
     ici.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
     buf->d = d;
@@ -226,7 +298,7 @@ VkResult OverlayVK::import_dmabuf(dmabuf_ext* buf, unique_fd& fd, Fdinfo& fdinfo
     if (import_fd < 0)
         return VK_ERROR_INITIALIZATION_FAILED;
 
-    uint32_t mt = find_mem_type_import(buf->image, import_fd);
+    uint32_t mt = find_mem_type_import(sc, buf->image, import_fd);
     if (mt == UINT32_MAX)
         return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 
@@ -269,7 +341,7 @@ VkResult OverlayVK::import_dmabuf(dmabuf_ext* buf, unique_fd& fd, Fdinfo& fdinfo
     mai.pNext = nullptr;
     mai.allocationSize = req.size;
 
-    uint32_t mt_cached = find_mem_type_image(req.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    uint32_t mt_cached = find_mem_type_image(sc, req.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     if (mt_cached == UINT32_MAX)
         return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 
@@ -379,7 +451,7 @@ static void layout_to_access_stage(VkImageLayout layout,
     }
 }
 
-void OverlayVK::transition_image(VkCommandBuffer cmd, VkImage image,
+void OverlayVK::transition_image(const swapchain_data* sc, VkCommandBuffer cmd, VkImage image,
                                  VkImageLayout old_layout, VkImageLayout new_layout)
 {
     if (old_layout == new_layout)
@@ -411,7 +483,7 @@ void OverlayVK::transition_image(VkCommandBuffer cmd, VkImage image,
                           1, &b);
 }
 
-void OverlayVK::cache_to_transfer_dst(VkCommandBuffer cmd, VkImage image, VkImageLayout old_layout)
+void OverlayVK::cache_to_transfer_dst(const swapchain_data* sc, VkCommandBuffer cmd, VkImage image, VkImageLayout old_layout)
 {
     if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
         return;
@@ -439,7 +511,7 @@ void OverlayVK::cache_to_transfer_dst(VkCommandBuffer cmd, VkImage image, VkImag
                               0, 0, nullptr, 0, nullptr, 1, &b);
 }
 
-void OverlayVK::cache_to_shader_read(VkCommandBuffer cmd, VkImage image, VkImageLayout old_layout)
+void OverlayVK::cache_to_shader_read(const swapchain_data* sc, VkCommandBuffer cmd, VkImage image, VkImageLayout old_layout)
 {
     if (old_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
         return;
@@ -467,82 +539,31 @@ void OverlayVK::cache_to_shader_read(VkCommandBuffer cmd, VkImage image, VkImage
                               0, 0, nullptr, 0, nullptr, 1, &b);
 }
 
-VkResult OverlayVK::copy_dmabuf_to_cache(VkQueue queue, int img_idx, VkPresentInfoKHR pi)
+void OverlayVK::update_hud_cache(const swapchain_data* sc, VkCommandBuffer cmd, const dmabuf_ext* buf)
 {
-    int slot = -1;
-    bool refresh_cache = false;
+    transition_image(sc, cmd, buf->image, buf->layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-    if (current_slot >= 0) {
-        slot = current_slot;
-        refresh_cache = true;
-    } else if (last_slot >= 0) {
-        slot = last_slot;
-    }
+    cache_to_transfer_dst(sc, cmd, buf->cached->image, buf->cached->layout);
 
-    if (slot >= 0 && dmabufs[slot] && dmabufs[slot]->cached && !dmabufs[slot]->cached->valid) {
-        refresh_cache = true;
-    }
+    VkImageCopy region{};
+    region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.srcSubresource.layerCount = 1;
+    region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.dstSubresource.layerCount = 1;
+    region.extent.width = buf->width;
+    region.extent.height = buf->height;
+    region.extent.depth = 1;
 
-    if (slot < 0)
-        return VK_NOT_READY;
+    sc->d->CmdCopyImage(cmd,
+                    buf->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                    buf->cached->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    1, &region);
 
-    auto& buf = dmabufs[slot];
-    if (!buf || !buf->cached || buf->cached->image == VK_NULL_HANDLE)
-        return VK_ERROR_INITIALIZATION_FAILED;
+    cache_to_shader_read(sc, cmd, buf->cached->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+}
 
-    if (refresh_cache && buf->image == VK_NULL_HANDLE)
-        return VK_ERROR_INITIALIZATION_FAILED;
-
-    auto& fence = layer->ovl_res->cmd_fences[img_idx];
-    auto& cmd = layer->ovl_res->cmd[img_idx];
-
-    VkResult r = sc->d->WaitForFences(sc->d->Device, 1, &fence, VK_FALSE, 100'000'000);
-    if (r != VK_SUCCESS) return r;
-    r = sc->d->ResetFences(sc->d->Device, 1, &fence);
-    if (r != VK_SUCCESS) return r;
-
-    r = sc->d->ResetCommandBuffer(cmd, 0);
-    if (r != VK_SUCCESS) return r;
-
-    VkCommandBufferBeginInfo bi{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-    bi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    r = sc->d->BeginCommandBuffer(cmd, &bi);
-    if (r != VK_SUCCESS) return r;
-
-    if (refresh_cache)
-    {
-        transition_image(cmd, buf->image, buf->layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-        buf->layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-
-        cache_to_transfer_dst(cmd, buf->cached->image, buf->cached->layout);
-        buf->cached->layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-
-        VkImageCopy region{};
-        region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        region.srcSubresource.layerCount = 1;
-        region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        region.dstSubresource.layerCount = 1;
-        region.extent.width = buf->width;
-        region.extent.height = buf->height;
-        region.extent.depth = 1;
-
-        sc->d->CmdCopyImage(cmd,
-                        buf->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                        buf->cached->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                        1, &region);
-
-        cache_to_shader_read(cmd, buf->cached->image, buf->cached->layout);
-        buf->cached->layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        last_slot = slot;
-        buf->cached->valid = true;
-    } else {
-        if (buf->cached->layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-            transition_image(cmd, buf->cached->image, buf->cached->layout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-            buf->cached->layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        }
-    }
-
+void OverlayVK::draw_hud_cache(const swapchain_data* sc, VkCommandBuffer cmd, int img_idx, const dmabuf_ext* buf)
+{
     VkRenderPassBeginInfo rpbi{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
     rpbi.renderPass = sc->rp;
     rpbi.framebuffer = sc->fb[img_idx];
@@ -568,6 +589,30 @@ VkResult OverlayVK::copy_dmabuf_to_cache(VkQueue queue, int img_idx, VkPresentIn
     sc->d->CmdPushConstants(cmd, layer->ovl_res->pl, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(pc), &pc);
     sc->d->CmdDraw(cmd, 3, 1, 0, 0);
     sc->d->CmdEndRenderPass(cmd);
+}
+
+VkResult OverlayVK::copy_dmabuf_to_cache(const swapchain_data* sc, overlay_frame& frame,
+                                       const overlay_hud_frame& hud, VkQueue queue, int img_idx, VkPresentInfoKHR pi)
+{
+    const auto& buf = hud.buffer;
+    const int slot = hud.slot;
+    const bool refresh_cache = hud.refresh_cache;
+
+    const auto fence = frame.fence;
+    const auto cmd = frame.cmd;
+
+    VkResult r = sc->d->ResetCommandBuffer(cmd, 0);
+    if (r != VK_SUCCESS) return r;
+
+    VkCommandBufferBeginInfo bi{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    bi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    r = sc->d->BeginCommandBuffer(cmd, &bi);
+    if (r != VK_SUCCESS) return r;
+
+    if (refresh_cache)
+        update_hud_cache(sc, cmd, buf.get());
+    draw_hud_cache(sc, cmd, img_idx, buf.get());
 
     r = sc->d->EndCommandBuffer(cmd);
     if (r != VK_SUCCESS) return r;
@@ -587,18 +632,34 @@ VkResult OverlayVK::copy_dmabuf_to_cache(VkQueue queue, int img_idx, VkPresentIn
     if (refresh_cache)
         signals[signal_count++] = buf->cached->semaphore;
 
-    signals[signal_count++] = layer->ovl_res->overlay_done[img_idx];
+    signals[signal_count++] = frame.done;
 
     si.signalSemaphoreCount = signal_count;
     si.pSignalSemaphores = signals;
 
     si.commandBufferCount = 1;
     si.pCommandBuffers = &cmd;
+    r = sc->d->ResetFences(sc->d->Device, 1, &fence);
+    if (r != VK_SUCCESS) return r;
     r = sc->d->QueueSubmit(queue, 1, &si, fence);
-    if (r != VK_SUCCESS)
+    if (r != VK_SUCCESS) {
         SPDLOG_ERROR("QueueSubmit {}", string_VkResult(r));
+        return r;
+    }
 
+    frame.hud = buf;
+    {
+        std::lock_guard lock(buf->cached->uses_m);
+        buf->cached->uses.push_back({&frame, queue, refresh_cache});
+    }
     if (refresh_cache) {
+        buf->layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        buf->cached->layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        buf->cached->valid = true;
+        {
+            std::lock_guard lock(selection_m);
+            last_slot = slot;
+        }
         int fd = -1;
         VkSemaphoreGetFdInfoKHR gi{ VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR };
         gi.semaphore = buf->cached->semaphore;
@@ -610,8 +671,30 @@ VkResult OverlayVK::copy_dmabuf_to_cache(VkQueue queue, int img_idx, VkPresentIn
         }
     }
 
-    current_slot = -1;
+    frame.pending_slot = -1;
     return r;
+}
+
+VkResult cached_image::wait_for_use(VkQueue queue, bool updating)
+{
+    std::lock_guard lock(uses_m);
+    for (const auto& pending : uses) {
+        if (pending.queue == queue || (!updating && !pending.writing))
+            continue;
+        const auto fence = pending.frame->fence;
+        VkResult r = d->WaitForFences(d->Device, 1, &fence, VK_TRUE, 100'000'000);
+        if (r != VK_SUCCESS)
+            return r;
+    }
+    return VK_SUCCESS;
+}
+
+void cached_image::release_use(const overlay_frame* frame)
+{
+    std::lock_guard lock(uses_m);
+    std::erase_if(uses, [&](const use& pending) {
+        return pending.frame == frame;
+    });
 }
 
 cached_image::~cached_image() {
@@ -637,8 +720,9 @@ cached_image::~cached_image() {
         semaphore = VK_NULL_HANDLE;
     }
 
-    if (ds) {
-        d->FreeDescriptorSets(d->Device, ovl_res->dp, 1, &ds);
+    if (dp) {
+        d->DestroyDescriptorPool(d->Device, dp, nullptr);
+        dp = VK_NULL_HANDLE;
         ds = VK_NULL_HANDLE;
     }
 }

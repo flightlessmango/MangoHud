@@ -387,10 +387,13 @@ public:
             return present(pPresentInfo);
         }
 
-        if (!layer->overlay_vk) layer->overlay_vk = std::make_shared<OverlayVK>(layer.get());
-
-        if (!layer->init_cmd(queue))
-            return present(pPresentInfo);
+        std::shared_ptr<OverlayVK> overlay;
+        {
+            std::lock_guard lock(layer->ovl_res->m);
+            if (!layer->overlay_vk)
+                layer->overlay_vk = std::make_shared<OverlayVK>(layer.get());
+            overlay = layer->overlay_vk;
+        }
 
         uint32_t swapchain_image_count = 0;
         pDispatch->GetSwapchainImagesKHR(pDispatch->Device, pPresentInfo->pSwapchains[0], &swapchain_image_count, nullptr);
@@ -415,19 +418,22 @@ public:
         }
 
         layer->ipc->start(swapchain_image_count);
-        bool drew;
-        {
-            std::lock_guard lock(layer->overlay_vk->m);
-            drew = layer->overlay_vk->draw(pPresentInfo->pSwapchains[0], imageIndex, queue, pi);
+        std::shared_lock frame_lock(sc->m);
+        if (!sc->frames_initialized) {
+            frame_lock.unlock();
+            {
+                std::unique_lock init_lock(sc->m);
+                if (!layer->init_frames(*sc, queue))
+                    return present(pPresentInfo);
+            }
+            frame_lock.lock();
         }
+        auto& frame = sc->frames[imageIndex];
+        const bool drew = overlay->draw(sc.get(), frame, imageIndex, queue, pi);
         if (!drew)
             return present(pPresentInfo);
 
-        VkSemaphore signal;
-        {
-            std::lock_guard lock(layer->overlay_vk->m);
-            signal = layer->ovl_res->overlay_done[imageIndex];
-        }
+        VkSemaphore signal = frame.done;
 
         VkPresentInfoKHR pi2 = *pPresentInfo;
         pi2.waitSemaphoreCount = 1;
@@ -639,23 +645,6 @@ void Layer::init_overlay_resources(const VkSwapchainCreateInfoKHR* pCreateInfo, 
         SetName(d->Device, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, uint64_t(ovl_res->dsl), "mangohud_descriptor_set_layout");
     }
 
-    if (!ovl_res->dp) {
-        VkDescriptorPoolSize ps{};
-        ps.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        ps.descriptorCount = image_count * 2; // * 2 because we need one per cache as well
-
-        VkDescriptorPoolCreateInfo dpci{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-        dpci.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-        dpci.maxSets = image_count * 2;
-        dpci.poolSizeCount = 1;
-        dpci.pPoolSizes = &ps;
-
-        VkResult r = d->CreateDescriptorPool(d->Device, &dpci, nullptr, &ovl_res->dp);
-        if (r != VK_SUCCESS)
-            SPDLOG_ERROR("CreateDescriptorPool {}", string_VkResult(r));
-        SetName(d->Device, VK_OBJECT_TYPE_DESCRIPTOR_POOL, uint64_t(ovl_res->dp), "mangohud_descriptor_pool");
-    }
-
     if (!ovl_res->pl) {
         VkPushConstantRange pcr{};
         pcr.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -672,36 +661,5 @@ void Layer::init_overlay_resources(const VkSwapchainCreateInfoKHR* pCreateInfo, 
         if (r != VK_SUCCESS)
             SPDLOG_ERROR("CreatePipelineLayout {}", string_VkResult(r));
         SetName(d->Device, VK_OBJECT_TYPE_PIPELINE_LAYOUT, uint64_t(ovl_res->pl), "mangohud_pipeline_layout");
-    }
-
-    ovl_res->cmd_fences.resize(image_count);
-    for (size_t i = 0; i < image_count; i++) {
-        if (ovl_res->cmd_fences[i] == VK_NULL_HANDLE) {
-            VkFenceCreateInfo fci{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-            fci.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-            VkResult r = d->CreateFence(d->Device, &fci, nullptr, &ovl_res->cmd_fences[i]);
-            if (r != VK_SUCCESS) {
-                d->DestroyFence(d->Device, ovl_res->cmd_fences[i], nullptr);
-                ovl_res->cmd_fences[i] = VK_NULL_HANDLE;
-                SPDLOG_ERROR("CreateFence {}", string_VkResult(r));
-            }
-            SetName(d->Device, VK_OBJECT_TYPE_FENCE, (uint64_t)ovl_res->cmd_fences[i],
-                    "mangohud_overlay_cmd_fence_%zu", i);
-        }
-    }
-
-    ovl_res->overlay_done.resize(image_count);
-    for (size_t i = 0; i < image_count; ++i) {
-        auto& sema = ovl_res->overlay_done[i];
-        if (sema == VK_NULL_HANDLE) {
-            VkSemaphoreCreateInfo si{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-            VkResult r = d->CreateSemaphore(d->Device, &si, nullptr, &sema);
-            if (r != VK_SUCCESS)
-                SPDLOG_ERROR("CreateSemaphore {}", string_VkResult(r));
-
-            SetName(d->Device, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)sema,
-                    "mangohud_overlay_done_semaphore_%zu", i);
-        }
     }
 }
