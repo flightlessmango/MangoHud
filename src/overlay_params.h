@@ -81,6 +81,7 @@ struct Tracepoint;
    OVERLAY_PARAM_BOOL(graphs)                        \
    OVERLAY_PARAM_BOOL(legacy_layout)                 \
    OVERLAY_PARAM_BOOL(cpu_mhz)                       \
+   OVERLAY_PARAM_BOOL(cpu_max_core_load)             \
    OVERLAY_PARAM_BOOL(frametime)                     \
    OVERLAY_PARAM_BOOL(frame_count)                   \
    OVERLAY_PARAM_BOOL(resolution)                    \

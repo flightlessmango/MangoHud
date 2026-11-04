@@ -241,6 +241,11 @@ bool CPUStats::UpdateCPUData()
     if (cpu_count < m_cpuData.size())
         m_cpuData.resize(cpu_count);
 
+    m_cpuDataTotal.max_core_load = 0;
+    for (const auto& data : m_cpuData)
+        if (data.percent > m_cpuDataTotal.max_core_load)
+            m_cpuDataTotal.max_core_load = data.percent;
+
     m_cpuPeriod = (double)m_cpuData[0].totalPeriod / m_cpuData.size();
     m_updatedCPUs = true;
     return ret;

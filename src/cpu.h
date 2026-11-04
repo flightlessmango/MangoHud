@@ -45,6 +45,7 @@ typedef struct CPUData_ {
    int mhz;
    int temp;
    int cpu_mhz;
+   float max_core_load;
    float power;
 
    std::string label = "unknown";
