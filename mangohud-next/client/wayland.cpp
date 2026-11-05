@@ -173,7 +173,7 @@ bool Wayland::ensure_overlay_data(const std::shared_ptr<surface_data>& surf_data
         if (globals->fractional_scale_manager) {
             surf_data->fractional_scale =
                 wp_fractional_scale_manager_v1_get_fractional_scale(
-                    globals->fractional_scale_manager, surf_data->surface);
+                    globals->fractional_scale_manager, surf_data->overlay_surf);
             wl_proxy_set_queue(reinterpret_cast<wl_proxy*>(surf_data->fractional_scale), globals->queue);
             wp_fractional_scale_v1_add_listener(
                 surf_data->fractional_scale, &fractional_scale_listener, surf_data.get());
