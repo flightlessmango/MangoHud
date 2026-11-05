@@ -1220,10 +1220,16 @@ parse_overlay_config(struct overlay_params *params,
       config_cv.notify_one();
    }
 
+   auto prev_params = g_params.load(std::memory_order_acquire);
    auto snapshot = std::make_shared<overlay_params>(*params);
    g_params.store(std::move(snapshot), std::memory_order_release);
 
-   fps_limiter = std::make_unique<fpsLimiter>(params->fps_limit_method ? false : true);
+   // a preset switch keeps the limit picked with toggle_fps_limit, unless the preset changes fps_limit
+   size_t fps_limits_idx = 0;
+   if (use_existing_preset && fps_limiter && prev_params && prev_params->fps_limit == params->fps_limit)
+      fps_limits_idx = fps_limiter->limit_index();
+
+   fps_limiter = std::make_unique<fpsLimiter>(params->fps_limit_method ? false : true, fps_limits_idx);
 
    if (!gpus)
       gpus = std::make_unique<GPUS>();
