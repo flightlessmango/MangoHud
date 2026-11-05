@@ -131,13 +131,24 @@ void Metrics::update() {
 
         auto core_metrics = cpu.get_core_info();
 
+        if (!core_metrics.empty()) {
+            const auto max_core = std::max_element(
+                core_metrics.begin(), core_metrics.end(),
+                [](const auto& a, const auto& b) {
+                    return a.load < b.load;
+                }
+            );
+
+            new_metrics["CPU"]["MAX_LOAD"] = {max_core->load, "%"};
+        }
+
         for (size_t i = 0; i < core_metrics.size(); i++) {
             const std::string core_index = "CPU" + std::to_string(i);
 
             new_metrics[core_index]["LOAD"] = {core_metrics[i].load, "%"};
             new_metrics[core_index]["FREQ"] = {core_metrics[i].frequency, "MHz"};
         }
-        
+
         auto ram_metrics = get_ram_info();
         for (auto& [k, v] : ram_metrics)
             new_metrics["RAM"][to_uppercase(k)] = {v, "GiB"};
