@@ -100,6 +100,11 @@ public:
         return fps > 0 ? 1000.f / fps : 0.f;
     }
 
+    uint64_t frame_count() const {
+        std::lock_guard lock(m);
+        return n_samples ? seq_last + 1 : 0;
+    }
+
     std::pair<float, float> minmax_frametime() {
         std::lock_guard lock(m);
         update_stats();

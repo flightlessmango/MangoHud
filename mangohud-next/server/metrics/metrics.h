@@ -12,7 +12,7 @@
 #include "../../ipc/ipc.h"
 #include "../../render/colors.h"
 
-using MetricValue = std::variant<int, float, std::vector<float>, std::string>;
+using MetricValue = std::variant<int, uint64_t, float, std::vector<float>, std::string>;
 struct Metric {
     std::optional<MetricValue> val;
     std::string unit;
