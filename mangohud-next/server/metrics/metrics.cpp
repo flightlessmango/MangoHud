@@ -203,6 +203,7 @@ void Metrics::update_client() {
             metrics["REFRESH_FRAMETIMES"] = {refresh_stats.frametimes_copy()};
             metrics["APP_FRAMETIMES"] = {app_stats.frametimes_copy()};
             metrics["HUD_FRAMETIMES"] = {hud_stats.frametimes_copy()};
+            metrics["FRAME_COUNT"] = {frame_stats.frame_count()};
         }
 
         {
@@ -432,6 +433,16 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
                     format_into(out.text, "%i", i_value);
                 }
 
+                if (metric.val && std::holds_alternative<uint64_t>(*metric.val)) {
+                    const uint64_t i_value = std::get<uint64_t>(*metric.val);
+
+                    if (vc.unit_override)
+                        out.unit = vc.unit;
+                    else
+                        out.unit = metric.unit;
+
+                    out.text = std::to_string(i_value);
+                }
                 truncate_text(out.text, out.style.truncate);
                 parsed_row.push_back(std::move(out));
                 continue;
@@ -466,6 +477,8 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
                     if (std::holds_alternative<int>(*metric.val))
                         return static_cast<float>(std::get<int>(*metric.val));
 
+                    if (std::holds_alternative<uint64_t>(*metric.val))
+                        return static_cast<float>(std::get<uint64_t>(*metric.val));
                     return fallback;
                 };
 
