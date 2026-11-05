@@ -95,14 +95,15 @@ value: [CPU, LOAD]
 value: [GPU, 0, LOAD]
 ```
 
-Single-name references, such as `FPS`, use metrics from the current application. Two-item references use a metric group and key, such as `[CPU, LOAD]`. GPU metrics are indexed, so use the three-item form, such as `[GPU, 0, LOAD]`.
+Single-name references, such as FPS, use metrics from the current application. Two-item references use a metric group and key, such as `[RAM, USED]`. GPU metrics are indexed, so use the three-item form, such as `[GPU, 0, LOAD]`. CPU metrics support both aggregate and per-core references. Per-core references use a three-item form like GPU metrics `[CPU, 0, FREQ]`, while aggregate metrics use the two-item references such as `[CPU, LOAD]`.
 
 Available metrics currently include:
 
 | Reference | Keys |
 | --- | --- |
 | `[GPU, index, KEY]` | `LOAD`, `VRAM_USED`, `GTT_USED`, `VRAM_TOTAL`, `VRAM_CLOCK`, `VRAM_TEMP`, `TEMP`, `JUNCTION_TEMP`, `CORE_CLOCK`, `VOLTAGE`, `POWER`, `POWER_LIMIT`, `FAN_SPEED` |
-| `[CPU, KEY]` | `LOAD`, `FREQ`, `TEMP`, `POWER` |
+| `[CPU, index, KEY]` | `LOAD`, `FREQ` |
+| `[CPU, KEY]` | `LOAD`, `MAX_LOAD`, `FREQ`, `TEMP`, `POWER` |
 | `[RAM, KEY]` | `USED`, `TOTAL`, `SWAP_USED` |
 | `KEY` | `ENGINE_NAME`, `GPU_NAME`, `VULKAN_DRIVER`, `RESOLUTION`, `FPS`, `FRAMETIME`, `FRAMETIME_MIN`, `FRAMETIME_MAX`, `FRAMETIMES`, `REFRESH_FPS`, `REFRESH_FRAMETIME`, `REFRESH_FRAMETIME_MIN`, `REFRESH_FRAMETIME_MAX`, `REFRESH_FRAMETIMES`, `APP_FPS`, `APP_FRAMETIME`, `APP_FRAMETIME_MIN`, `APP_FRAMETIME_MAX`, `APP_FRAMETIMES`, `HUD_FPS`, `HUD_FRAMETIME`, `HUD_FRAMETIME_MIN`, `HUD_FRAMETIME_MAX`, `HUD_FRAMETIMES` |
 
@@ -111,7 +112,8 @@ milliseconds over the same roughly 500 ms sample window as `FPS` and `FRAMETIME`
 All numeric frame statistics refresh together every 500 ms of sample time. They
 return `0` until two samples establish an interval. The `APP_`, `HUD_`, and
 `REFRESH_` variants use their respective sample windows. Graphs retain a separate
-200-interval history, including initial zero padding.
+200-interval history, including initial zero padding. `FRAME_COUNT` reports the
+cumulative number of rendered frames received by the server.
 
 ```yaml
 hud_table:
