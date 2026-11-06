@@ -54,6 +54,13 @@ struct ValueCell {
     CellStyle style;
 };
 
+struct FormatCell {
+    std::string format;
+    std::vector<MetricRef> values;
+    std::string color;
+    CellStyle style;
+};
+
 struct GraphCell {
     MetricRef ref;
     std::string graph;
@@ -107,7 +114,7 @@ struct TableCell {
     CellStyle style;
 };
 
-using Cell = std::variant<TextCell, ValueCell, GraphCell, ProgressCell, ExecCell, SeparatorCell, TableCell>;
+using Cell = std::variant<TextCell, ValueCell, FormatCell, GraphCell, ProgressCell, ExecCell, SeparatorCell, TableCell>;
 using MaybeCell = std::optional<Cell>;
 
 struct hudTable {

@@ -74,6 +74,7 @@ Each entry in `hud.windows` defines one hud window.
 | --- | --- | --- | --- |
 | Text | `text` | `color`, `font_size`, `font_scale`, `truncate` | Static text. |
 | Value | `value` | `unit`, `color`, `precision`, `font_size`, `font_scale`, `truncate` | Metric value. If `unit` is omitted, the metric's default unit is used. Float values use one decimal by default. |
+| Format | `format`, `values` | `color`, `font_size`, `font_scale`, `truncate`, `align`, `colspan` | Multiple metrics composed into a single cell using a printf-style template. |
 | Graph | `graph` | none currently used | Graph data. Supports `FRAMETIMES`, `REFRESH_FRAMETIMES`, `APP_FRAMETIMES`, and `HUD_FRAMETIMES`. |
 | Exec | `exec` | `unit`, `color`, `font_size`, `font_scale`, `truncate` | Output of a shell command. |
 
@@ -84,6 +85,26 @@ Color values are `RRGGBB` or `RRGGBBAA` hex strings, with an optional leading `#
 `truncate` limits displayed text to a maximum character count. Truncated text ends with `...` when there is room.
 
 `precision` controls decimal places for floating-point values. It defaults to `1`; set `precision: 0` to round to a whole number.
+
+## Formatted Cells
+
+Use `format` with an ordered list of metric references in `values` to combine
+values and literal text into one cell:
+
+```yaml
+hud_table:
+  rows:
+    - - text: RAM
+      - format: "%.1f / %.1f GiB"
+        values: [[RAM, USED], [RAM, TOTAL]]
+        align: right
+```
+
+This displays `7.2 / 31.0 GiB` in one cell. Units and punctuation are written
+in the template; metric units are not appended automatically. The template uses
+printf syntax. `values` uses the same references as `value` cells.
+An unavailable metric leaves the cell empty. Invalid templates or incompatible
+argument types display `[format error]`.
 
 ## Metric References
 

@@ -6,10 +6,34 @@
 #include <algorithm>
 #include <sys/stat.h>
 #include <spdlog/fmt/bundled/format.h>
+#include <spdlog/fmt/bundled/args.h>
+#include <spdlog/fmt/bundled/printf.h>
 #include "../common/json.h"
 #include "../common/table_structs.h"
 #include "../common/helpers.hpp"
 #include "string_utils.h"
+
+static std::string format_metrics(const std::string& format, const std::vector<Metric>& values) {
+    fmt::dynamic_format_arg_store<fmt::printf_context> args;
+    for (const auto& metric : values) {
+        if (!metric.val)
+            return {};
+        if (const auto* value = std::get_if<int>(&*metric.val))
+            args.push_back(*value);
+        else if (const auto* value = std::get_if<float>(&*metric.val))
+            args.push_back(*value);
+        else if (const auto* value = std::get_if<std::string>(&*metric.val))
+            args.push_back(*value);
+        else
+            return {};
+    }
+
+    try {
+        return fmt::vsprintf(fmt::string_view(format), args);
+    } catch (const fmt::format_error&) {
+        return "[format error]";
+    }
+}
 
 static void replace_all(std::string& text, std::string_view from, std::string_view to) {
     std::size_t pos = 0;
@@ -403,6 +427,18 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
                 out.style = tc.style;
                 truncate_text(out.text, out.style.truncate);
 
+                parsed_row.push_back(std::move(out));
+                continue;
+            }
+
+            if (const auto* fc = std::get_if<FormatCell>(&c)) {
+                out.vec = color.get(fc->color);
+                out.style = fc->style;
+                std::vector<Metric> values;
+                for (const auto& ref : fc->values)
+                    values.push_back(get(ref.a.c_str(), ref.b.c_str(), pid));
+                out.text = format_metrics(fc->format, values);
+                truncate_text(out.text, out.style.truncate);
                 parsed_row.push_back(std::move(out));
                 continue;
             }
