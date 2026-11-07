@@ -20,6 +20,8 @@ static std::string format_metrics(const std::string& format, const std::vector<M
             return {};
         if (const auto* value = std::get_if<int>(&*metric.val))
             args.push_back(*value);
+        else if (const auto* value = std::get_if<uint64_t>(&*metric.val))
+            args.push_back(*value);
         else if (const auto* value = std::get_if<float>(&*metric.val))
             args.push_back(*value);
         else if (const auto* value = std::get_if<std::string>(&*metric.val))
