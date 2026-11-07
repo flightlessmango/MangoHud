@@ -146,6 +146,13 @@ extern std::string wineVersion;
 extern std::deque<logData> graph_data;
 extern double min_frametime, max_frametime;
 extern bool steam_focused;
+struct fan_sensor {
+   std::string label; // display label, e.g. "FAN", "FAN1", or a user-provided name
+   std::string path;  // resolved hwmon sysfs path (e.g. .../fanN_input)
+   int rpm = -1;      // last read value; -1 means unavailable
+};
+extern std::vector<fan_sensor> fan_sensors;   // "fan": fan_custom_sensor entries
+extern std::vector<fan_sensor> cfan_sensors;  // "cfan": custom / Super I/O fan(s)
 extern int current_preset;
 extern std::vector<float> frametime_data;
 
@@ -157,6 +164,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
 void update_hud_info(struct swapchain_stats& sw_stats, const struct overlay_params& params, uint32_t vendorID);
 void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const struct overlay_params& params, uint32_t vendorID, uint64_t frametime_ns);
 void update_hw_info(const struct overlay_params& params, uint32_t vendorID);
+void update_fan();
 void init_cpu_stats(overlay_params& params);
 void check_keybinds(overlay_params& params, const char* keymap = nullptr);
 void init_system_info(void);
