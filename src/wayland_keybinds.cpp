@@ -1,11 +1,12 @@
 #include <cstdint>
 #include <cstring>
-#include <set>
 #include <unistd.h>
 #include <map>
 #include <mutex>
 #include <shared_mutex>
 #include <spdlog/spdlog.h>
+#include <vector>
+#include <algorithm>
 #include <wayland-client.h>
 #include <xkbcommon/xkbcommon.h>
 #include <sys/mman.h>
@@ -27,7 +28,7 @@ struct wayland_display
     struct xkb_keymap *keymap_xkb;
     struct xkb_state *state_xkb;
     std::map<void*, wl_surface*> vk_surfaces;
-    std::set<KeySym> wl_pressed_keys;
+    std::map<xkb_keycode_t, std::vector<KeySym>> wl_pressed_keys;
 
     wayland_display()
     {
@@ -116,6 +117,29 @@ static void wl_keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard, uint
     close(fd);
 }
 
+static void wl_update_key(wayland_display *wayland, xkb_keycode_t keycode, bool pressed)
+{
+    if (!pressed)
+    {
+        wayland->wl_pressed_keys.erase(keycode);
+        return;
+    }
+
+    // Every level, not just the current one: with Shift held, 6 reads as asciicircum.
+    // Kept per keycode so a release drops exactly what its press added.
+    std::vector<KeySym> &syms = wayland->wl_pressed_keys[keycode];
+    syms.clear();
+    xkb_layout_index_t layout = xkb_state_key_get_layout(wayland->state_xkb, keycode);
+    xkb_level_index_t levels = xkb_keymap_num_levels_for_key(wayland->keymap_xkb, keycode, layout);
+
+    for (xkb_level_index_t level = 0; level < levels; level++)
+    {
+        const xkb_keysym_t *level_syms;
+        int count = xkb_keymap_key_get_syms_by_level(wayland->keymap_xkb, keycode, layout, level, &level_syms);
+        syms.insert(syms.end(), level_syms, level_syms + count);
+    }
+}
+
 static void wl_keyboard_enter(void *data, struct wl_keyboard *wl_keyboard, uint32_t serial, struct wl_surface *surface, struct wl_array *keys)
 {
     if (!data) return;
@@ -126,11 +150,7 @@ static void wl_keyboard_enter(void *data, struct wl_keyboard *wl_keyboard, uint3
 
     uint32_t *key;
     wl_array_for_each(key, keys)
-    {
-        xkb_keycode_t keycode = *key + 8;
-        xkb_keysym_t keysym = xkb_state_key_get_one_sym(wayland->state_xkb, keycode);
-        wayland->wl_pressed_keys.insert(keysym);
-    }
+        wl_update_key(wayland, *key + 8, true);
 }
 
 static void wl_keyboard_leave(void *data, struct wl_keyboard *wl_keyboard, uint32_t serial, struct wl_surface *surface)
@@ -147,11 +167,7 @@ static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard, uint32_
 
     if (!wayland->state_xkb) return;
 
-    xkb_keycode_t keycode = key + 8;
-    xkb_keysym_t keysym = xkb_state_key_get_one_sym(wayland->state_xkb, keycode);
-
-    if (state) wayland->wl_pressed_keys.insert(keysym);
-    else wayland->wl_pressed_keys.erase(keysym);
+    wl_update_key(wayland, key + 8, state);
 }
 
 static void wl_keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard, uint32_t serial,
@@ -321,8 +337,12 @@ bool wayland_has_keys_pressed(const std::vector<KeySym>& keys)
     for (const auto& display : displays)
     {
         for (const KeySym& k : keys)
-            if (display.second.wl_pressed_keys.count(k))
-                counter[display.first]++;
+            for (const auto& key : display.second.wl_pressed_keys)
+                if (std::find(key.second.begin(), key.second.end(), k) != key.second.end())
+                {
+                    counter[display.first]++;
+                    break;
+                }
     }
 
     /* if any of the displays has count == keys.size
