@@ -312,21 +312,11 @@ EXPORT_C_(void*) eglGetDisplay( void* native_display )
     ret = pfn_eglGetDisplay(native_display);
 
 #ifdef HAVE_WAYLAND
-    try
+    if (native_display && ret &&
+        *(const void**)native_display == &wl_display_interface)
     {
-        void** display_ptr = (void**)native_display;
-        if (native_display && ret)
-        {
-            wl_interface* iface = (wl_interface*)*display_ptr;
-            if (iface && strcmp(iface->name, wl_display_interface.name) == 0)
-            {
-                HUDElements.display_server = HUDElements.display_servers::WAYLAND;
-                init_wayland_data((struct wl_display*)native_display, ret);
-            }
-        }
-    }
-    catch(...)
-    {
+        HUDElements.display_server = HUDElements.display_servers::WAYLAND;
+        init_wayland_data((struct wl_display*)native_display, ret);
     }
 #endif
 
