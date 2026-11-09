@@ -252,15 +252,15 @@ HudLayout layout_hud(const hudTable& table, Font& fonts) {
                 reserve_overrides[c + std::min(std::max(1, style.colspan), cols - c) - 1] = true;
         }
     std::vector<std::vector<MeasuredCell>> rows;
-    std::vector<float> gaps(cols, table.col_gap);
+    std::vector<float> gaps(cols, table.col_gap), separator_widths(cols);
+    std::vector<float> left_insets(cols), right_insets(cols);
     std::vector<float> widths(cols), heights, unit_widths(cols), value_widths(cols),
         column_insets(cols);
     for (const auto& row : table.rows) {
         auto& cells = rows.emplace_back();
-        float height = 0.0f, left = 0.0f;
+        float height = 0.0f;
         for (int c = 0; c < cols && c < static_cast<int>(row.size());) {
             if (!row[c]) {
-                left = 0.0f;
                 ++c;
                 continue;
             }
@@ -271,23 +271,12 @@ HudLayout layout_hud(const hudTable& table, Font& fonts) {
                 gap = std::max(gap, text_bounds(run.text, run.font, run.font_size).GetWidth() +
                                         outline_space * 2.0f);
             }
-            cell.left = left;
             const auto& style = hud_cell_style(*cell.layout.cell);
-            left = 0.0f;
-            if (style.separator) {
-                const float half_width =
-                    (style.separator_thickness + hud_outline * 2.0f + 1.0f) * 0.5f;
-                cell.right = std::ceil(half_width + 0.5f);
-                left = std::ceil(std::max(0.0f, half_width - 0.5f - table.col_gap));
-            }
-            const float inset = cell.padding * 2.0f + cell.left + cell.right;
+            if (style.separator)
+                separator_widths[c + cell.span - 1] =
+                    std::max(separator_widths[c + cell.span - 1],
+                             (style.separator_thickness + hud_outline * 2.0f + 1.0f) * 0.5f);
             height = std::max(height, cell.minimum.y + cell.padding * 2.0f);
-            if (cell.span == 1) {
-                widths[c] = std::max(widths[c], cell.minimum.x + inset);
-                column_insets[c] = std::max(column_insets[c], inset);
-                if (cell.numeric)
-                    value_widths[c] = std::max(value_widths[c], cell.value_width);
-            }
             if (cell.span == 1 || style.align == CellAlign::Right ||
                 (style.align == CellAlign::Default && c > 0))
                 unit_widths[c + cell.span - 1] =
@@ -297,6 +286,27 @@ HudLayout layout_hud(const hudTable& table, Font& fonts) {
         }
         heights.push_back(height);
     }
+    for (int c = 0; c < cols; c++) {
+        if (separator_widths[c] == 0.0f)
+            continue;
+        right_insets[c] = std::ceil(separator_widths[c] + 0.5f);
+        if (c + 1 < cols)
+            left_insets[c + 1] =
+                std::ceil(std::max(0.0f, separator_widths[c] - 0.5f - gaps[c]));
+    }
+    for (auto& row : rows)
+        for (auto& cell : row) {
+            cell.left = left_insets[cell.column];
+            cell.right = right_insets[cell.column + cell.span - 1];
+            if (cell.span != 1)
+                continue;
+            const int c = cell.column;
+            const float inset = cell.padding * 2.0f + cell.left + cell.right;
+            widths[c] = std::max(widths[c], cell.minimum.x + inset);
+            column_insets[c] = std::max(column_insets[c], inset);
+            if (cell.numeric)
+                value_widths[c] = std::max(value_widths[c], cell.value_width);
+        }
     for (int c = 0; c < cols; c++)
         if (unit_widths[c] > 0.0f)
             widths[c] =
