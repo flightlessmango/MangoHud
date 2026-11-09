@@ -63,6 +63,7 @@ struct ValueCell {
 
 struct FormatCell {
     std::string format;
+    std::string unit;
     std::vector<MetricRef> values;
     std::string color;
     CellStyle style;

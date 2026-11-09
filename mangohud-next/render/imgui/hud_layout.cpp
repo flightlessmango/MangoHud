@@ -191,7 +191,7 @@ static void position_text(MeasuredCell& cell, float unit_slot = 0.0f) {
     const float y = layout.content.Min.y + (layout.content.GetHeight() - cell.text_size.y) * 0.5f;
     for (auto& run : layout.text)
         run.pos += ImVec2(x, y);
-    if (style.align == CellAlign::Default && cell.column > 0 && cell.numeric) {
+    if (align == CellAlign::Right && cell.numeric) {
         auto& value = layout.text[0];
         const auto bounds = text_bounds(value.text, value.font, value.font_size);
         const float right =
@@ -258,10 +258,13 @@ HudLayout layout_hud(const hudTable& table, Font& fonts) {
             if (cell.span == 1) {
                 widths[c] = std::max(widths[c], cell.minimum.x + inset);
                 column_insets[c] = std::max(column_insets[c], inset);
-                unit_widths[c] = std::max(unit_widths[c], cell.unit_width);
                 if (cell.numeric)
                     value_widths[c] = std::max(value_widths[c], cell.value_width);
             }
+            if (cell.span == 1 || style.align == CellAlign::Right ||
+                (style.align == CellAlign::Default && c > 0))
+                unit_widths[c + cell.span - 1] =
+                    std::max(unit_widths[c + cell.span - 1], cell.unit_width);
             c += cell.span;
             cells.push_back(std::move(cell));
         }
@@ -279,8 +282,14 @@ HudLayout layout_hud(const hudTable& table, Font& fonts) {
                 float available = table.col_gap * (span - 1);
                 for (int c = cell.column; c < cell.column + span; c++)
                     available += widths[c];
-                const float required =
-                    cell.minimum.x + cell.padding * 2.0f + cell.left + cell.right;
+                const auto align = hud_cell_style(*cell.layout.cell).align;
+                const float unit = unit_widths[cell.column + span - 1];
+                float minimum = cell.minimum.x;
+                if (cell.numeric &&
+                    (align == CellAlign::Right || (align == CellAlign::Default && cell.column > 0)))
+                    minimum = std::max(minimum,
+                                       cell.value_width + (unit > 0.0f ? unit_gap + unit : 0.0f));
+                const float required = minimum + cell.padding * 2.0f + cell.left + cell.right;
                 widths[cell.column + span - 1] += std::max(0.0f, required - available);
             }
     std::vector<float> x(cols + 1, 0.0f);
@@ -305,7 +314,8 @@ HudLayout layout_hud(const hudTable& table, Font& fonts) {
                                           layout.content.GetCenter().y - cell.minimum.y * 0.5f);
                 layout.progress = {start, {layout.content.Max.x, start.y + cell.minimum.y}};
             }
-            position_text(cell, std::max(unit_widths[cell.column], cell.unit_width));
+            position_text(cell,
+                          std::max(unit_widths[cell.column + cell.span - 1], cell.unit_width));
             if (layout.separator)
                 layout.separator->Translate({layout.bounds.Max.x - 1.0f,
                                              y + (height - layout.separator->GetHeight()) * 0.5f});

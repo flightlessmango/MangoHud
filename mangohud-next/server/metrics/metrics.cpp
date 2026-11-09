@@ -13,11 +13,13 @@
 #include "../common/helpers.hpp"
 #include "string_utils.h"
 
-static std::string format_metrics(const std::string& format, const std::vector<Metric>& values) {
+static TextCell format_metrics(const FormatCell& cell, const std::vector<Metric>& values) {
+    TextCell out;
+    out.style = cell.style;
     fmt::dynamic_format_arg_store<fmt::printf_context> args;
     for (const auto& metric : values) {
         if (!metric.val)
-            return {};
+            return out;
         if (const auto* value = std::get_if<int>(&*metric.val))
             args.push_back(*value);
         else if (const auto* value = std::get_if<uint64_t>(&*metric.val))
@@ -27,14 +29,16 @@ static std::string format_metrics(const std::string& format, const std::vector<M
         else if (const auto* value = std::get_if<std::string>(&*metric.val))
             args.push_back(*value);
         else
-            return {};
+            return out;
     }
 
     try {
-        return fmt::vsprintf(fmt::string_view(format), args);
+        out.text = fmt::vsprintf(fmt::string_view(cell.format), args);
+        out.unit = cell.unit;
     } catch (const fmt::format_error&) {
-        return "[format error]";
+        out.text = "[format error]";
     }
+    return out;
 }
 
 static void replace_all(std::string& text, std::string_view from, std::string_view to) {
@@ -434,12 +438,11 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
             }
 
             if (const auto* fc = std::get_if<FormatCell>(&c)) {
-                out.vec = color.get(fc->color);
-                out.style = fc->style;
                 std::vector<Metric> values;
                 for (const auto& ref : fc->values)
                     values.push_back(get(ref.a.c_str(), ref.b.c_str(), pid));
-                out.text = format_metrics(fc->format, values);
+                out = format_metrics(*fc, values);
+                out.vec = color.get(fc->color);
                 truncate_text(out.text, out.style.truncate);
                 parsed_row.push_back(std::move(out));
                 continue;

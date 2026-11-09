@@ -118,14 +118,17 @@ values and literal text into one cell:
 hud_table:
   rows:
     - - text: RAM
-      - format: "%.1f / %.1f GiB"
+      - format: "%.1f / %.1f"
+        unit: GiB
         values: [[RAM, USED], [RAM, TOTAL]]
         align: right
 ```
 
-This displays `7.2 / 31.0 GiB` in one cell. Units and punctuation are written
-in the template; metric units are not appended automatically. The template uses
-printf syntax. `values` uses the same references as `value` cells.
+This displays `7.2 / 31.0 GiB` in one cell. The template uses printf syntax.
+`values` uses the same references as `value` cells. The optional `unit` appends
+one unit after the complete formatted text, using the same sizing and placement
+as value cells. Metric units are not appended automatically. Units written
+inside the template remain ordinary text.
 An unavailable metric leaves the cell empty. Invalid templates or incompatible
 argument types display `[format error]`.
 

@@ -273,6 +273,8 @@ static bool parse_table_node(hudTable& table, YAML::Node table_node, int font_si
             if (cell["format"]) {
                 FormatCell fc;
                 fc.format = cell["format"].as<std::string>();
+                if (cell["unit"])
+                    fc.unit = cell["unit"].as<std::string>();
                 if (!cell["values"] || !cell["values"].IsSequence())
                     throw std::runtime_error("format cell values must be a list of metric references");
                 for (const auto& value : cell["values"])
