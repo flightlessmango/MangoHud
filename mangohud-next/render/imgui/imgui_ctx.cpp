@@ -1,1002 +1,171 @@
-#include <deque>
-#include <unistd.h>
-#include <math.h>
-#include "backends/imgui_impl_opengl3.h"
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui_ctx.h"
-#include "imgui.h"
+#include "hud_layout.h"
 #include "imgui_internal.h"
-#include "font/font.h"
-#include "../server/config.h"
+#include "backends/imgui_impl_opengl3.h"
 #include "vk.h"
 #include "egl.h"
-std::mutex init_m;
-static constexpr float hud_cell_padding_x = 0.0f;
-static constexpr float hud_cell_padding_y = 2.0f;
-static constexpr float outline_padding_x = 1.5f;
-static constexpr float unit_gap = 1.0f;
-static constexpr float graph_plot_height = 50.0f;
 
-ImGuiCtx::ImGuiCtx() {
-    std::lock_guard lock(init_m);
-};
+#include <algorithm>
+#include <cmath>
+
+static void draw_text(const HudText& run, ImVec2 origin) {
+    if (run.text.empty())
+        return;
+    auto& draw = *ImGui::GetWindowDrawList();
+    const auto pos = origin + run.pos;
+    const auto* begin = run.text.data();
+    const auto* end = begin + run.text.size();
+    const auto outline = IM_COL32(0, 0, 0, 255);
+    for (const auto offset : {ImVec2{-hud_outline, 0}, ImVec2{hud_outline, 0},
+                              ImVec2{0, -hud_outline}, ImVec2{0, hud_outline}})
+        draw.AddText(run.font, run.font_size, pos + offset, outline, begin, end);
+    draw.AddText(run.font, run.font_size, pos, ImGui::ColorConvertFloat4ToU32(run.color), begin,
+                 end);
+}
+
+static void draw_graph(const TextCell& cell, const ImRect& content, ImVec2 origin) {
+    ImGui::SetCursorScreenPos(origin + content.Min);
+    ImGui::PushID(&cell);
+    const ImVec2 size{content.GetWidth(), std::min(content.GetHeight(), 50.0f)};
+    if (size.x > 0.0f && size.y > 0.0f) {
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {0, 0});
+        if (ImGui::BeginChild("graph", size, false,
+                              ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground)) {
+            ImPlot::PushStyleVar(ImPlotStyleVar_PlotPadding, {0, 0});
+            ImPlot::PushStyleColor(ImPlotCol_PlotBg, {0, 0, 0, 0});
+            ImPlot::PushStyleColor(ImPlotCol_FrameBg, {0, 0, 0, 0});
+            if (ImPlot::BeginPlot("frametimes", size,
+                                  ImPlotFlags_CanvasOnly | ImPlotFlags_NoInputs)) {
+                ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoDecorations,
+                                  ImPlotAxisFlags_NoDecorations);
+                ImPlot::SetupAxisScale(
+                    ImAxis_Y1, [](double v, void*) { return std::min(v, 49.9); },
+                    [](double v, void*) { return v; });
+                ImPlot::SetupAxesLimits(0, 200, 0, 50, ImGuiCond_Always);
+                ImPlot::SetNextLineStyle({0, 1, 0, 1}, 2);
+                ImPlot::PlotLine("frametime", cell.data.data(), cell.data.size());
+                ImPlot::EndPlot();
+            }
+            ImPlot::PopStyleColor(2);
+            ImPlot::PopStyleVar();
+        }
+        ImGui::EndChild();
+        ImGui::PopStyleVar();
+    }
+    ImGui::PopID();
+}
+
+static void draw_content(const HudLayout& layout, ImVec2 origin) {
+    auto& draw = *ImGui::GetWindowDrawList();
+    for (const auto& row : layout.rows)
+        for (const auto& cell : row.cells) {
+            if (const auto* progress = std::get_if<ProgressCell>(cell.cell)) {
+                auto bar = cell.progress;
+                bar.Translate(origin);
+                const float range = progress->max_value - progress->min_value;
+                const float fraction =
+                    range == 0.0f
+                        ? 0.0f
+                        : std::clamp((progress->value - progress->min_value) / range, 0.0f, 1.0f);
+                bar.Max.x = bar.Min.x + bar.GetWidth() * fraction;
+                if (bar.GetWidth() > 0.0f && bar.GetHeight() > 0.0f)
+                    draw.AddRectFilled(bar.Min, bar.Max,
+                                       ImGui::ColorConvertFloat4ToU32(progress->vec));
+            }
+            for (const auto& run : cell.text)
+                draw_text(run, origin);
+            if (cell.nested)
+                draw_content(*cell.nested, origin + cell.content.Min);
+            if (const auto* text = std::get_if<TextCell>(cell.cell); text && !text->data.empty())
+                draw_graph(*text, cell.content, origin);
+            if (layout.debug) {
+                draw.AddRect(cell.bounds.Min + origin, cell.bounds.Max + origin,
+                             IM_COL32(255, 220, 0, 255));
+                draw.AddRect(cell.content.Min + origin, cell.content.Max + origin,
+                             IM_COL32(0, 220, 255, 255));
+            }
+        }
+}
+
+static void draw_separators(const HudLayout& layout, ImVec2 origin) {
+    auto& draw = *ImGui::GetWindowDrawList();
+    for (const auto& row : layout.rows)
+        for (const auto& cell : row.cells) {
+            if (cell.nested)
+                draw_separators(*cell.nested, origin + cell.content.Min);
+            if (!cell.separator)
+                continue;
+            const auto& line = *cell.separator;
+            const auto& style = hud_cell_style(*cell.cell);
+            draw.AddLine(origin + line.Min, origin + line.Max, IM_COL32(0, 0, 0, 255),
+                         style.separator_thickness + hud_outline * 2.0f);
+            draw.AddLine(origin + line.Min, origin + line.Max,
+                         ImGui::ColorConvertFloat4ToU32(style.separator_vec),
+                         style.separator_thickness);
+        }
+}
+
+static void fill_background(ImRect bounds, const ImRect& clip, ImVec4 color) {
+    bounds.ClipWith(clip);
+    if (color.w > 0.0f && bounds.GetWidth() > 0.0f && bounds.GetHeight() > 0.0f) {
+        const auto origin = ImGui::GetWindowPos();
+        ImGui::GetWindowDrawList()->AddRectFilled(bounds.Min + origin, bounds.Max + origin,
+                                                  ImGui::ColorConvertFloat4ToU32(color));
+    }
+}
+
+static void draw_backgrounds(const HudLayout& layout, ImVec2 origin, ImVec4 inherited,
+                             const ImRect& clip, bool fill_rows = false) {
+    for (const auto& row : layout.rows) {
+        auto strip = row.bounds;
+        if (fill_rows)
+            strip.Max.x = layout.size.x;
+        strip.Translate(origin);
+        strip.ClipWith(clip);
+        if (strip.GetWidth() <= 0.0f || strip.GetHeight() <= 0.0f)
+            continue;
+        float x = strip.Min.x;
+        for (const auto& cell : row.cells) {
+            auto bounds = cell.bounds;
+            bounds.Translate(origin);
+            if (bounds.Min.x >= strip.Max.x)
+                break;
+            fill_background({{x, strip.Min.y}, {bounds.Min.x, strip.Max.y}}, strip, inherited);
+            fill_background({{bounds.Min.x, bounds.Max.y}, {bounds.Max.x, strip.Max.y}}, strip,
+                            inherited);
+            const auto& style = hud_cell_style(*cell.cell);
+            auto color = style.background_color.empty() ? inherited : style.background_vec;
+            if (const auto* progress = std::get_if<ProgressCell>(cell.cell))
+                color = progress->background_vec;
+            if (cell.nested && cell.nested->size.x > 0.0f && cell.nested->size.y > 0.0f) {
+                const ImRect inner(origin + cell.content.Min,
+                                   origin + cell.content.Min + cell.nested->size);
+                fill_background({bounds.Min, {bounds.Max.x, inner.Min.y}}, strip, color);
+                fill_background({{bounds.Min.x, inner.Max.y}, bounds.Max}, strip, color);
+                fill_background({{bounds.Min.x, inner.Min.y}, {inner.Min.x, inner.Max.y}}, strip,
+                                color);
+                fill_background({{inner.Max.x, inner.Min.y}, {bounds.Max.x, inner.Max.y}}, strip,
+                                color);
+                auto child_clip = inner;
+                child_clip.ClipWith(strip);
+                draw_backgrounds(*cell.nested, inner.Min, color, child_clip, true);
+            } else
+                fill_background(bounds, strip, color);
+            x = bounds.Max.x;
+        }
+        fill_background({{x, strip.Min.y}, strip.Max}, strip, inherited);
+    }
+}
 
 void ImGuiCtx::init_vk(VkCtx* vk_) {
-    if (vk)
-        return;
-
-    vk = std::make_shared<ImGuiVK>(vk_, this);
+    if (!vk)
+        vk = std::make_shared<ImGuiVK>(vk_, this);
 }
 
 void ImGuiCtx::init_egl() {
-    if (egl)
-        return;
-
-    egl = std::make_shared<ImGuiEGL>(this);
-}
-
-void ImGuiCtx::right_aligned(const ImVec4& col, float off_x, const char* fmt, ...) {
-    ImVec2 pos = ImGui::GetCursorPos();
-    char buffer[32]{};
-
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(buffer, sizeof(buffer), fmt, args);
-    va_end(args);
-
-    ImVec2 sz = ImGui::CalcTextSize(buffer);
-    float pad_r = std::ceil(outline_padding_x);
-    ImGui::SetCursorPosX(pos.x + off_x - (sz.x + pad_r));
-    RenderOutlinedText(col, buffer);
-}
-
-uint32_t ImGuiCtx::calculate_width(const HudLayout& L, const HudWindow& window) {
-    float total = L.content_size.x;
-
-    total += window.padding * 2.0f;
-    total += std::ceil(outline_padding_x) * 2.0f;
-
-    return (uint32_t)std::ceil(total);
-}
-
-uint32_t ImGuiCtx::calculate_height(const HudLayout& L, const HudWindow& window) {
-    float total = L.content_size.y;
-
-    total += window.padding * 2.0f;
-
-    return (uint32_t)std::ceil(total);
-}
-
-static inline double TransformForward_Custom(double v, void*) {
-    if (v > 50)
-        v = 49.9;
-
-    return v;
-}
-
-static inline double TransformInverse_Custom(double v, void*) {
-   return v;
-}
-
-static float style_font_size(const hudTable& table, const CellStyle& style) {
-    if (style.font_size > 0.0f)
-        return style.font_size;
-
-    return table.font_size * style.font_scale;
-}
-
-static float unit_font_size(const hudTable& table, const TextCell& tc) {
-    return style_font_size(table, tc.style) / 2.0f;
-}
-
-static void prepare_table_fonts(const hudTable& table, Font* fonts) {
-    fonts->get(table.font_size);
-    fonts->get(table.font_size / 2.0f);
-
-    for (const auto& row : table.rows) {
-        for (const auto& opt : row) {
-            if (!opt)
-                continue;
-
-            const auto* tc = std::get_if<TextCell>(&*opt);
-            if (tc) {
-                fonts->get(style_font_size(table, tc->style));
-                fonts->get(unit_font_size(table, *tc));
-                continue;
-            }
-
-            const auto* pc = std::get_if<ProgressCell>(&*opt);
-            if (pc) {
-                fonts->get(style_font_size(table, pc->style));
-                fonts->get(style_font_size(table, pc->style) / 2.0f);
-                continue;
-            }
-
-            const auto* sc = std::get_if<SeparatorCell>(&*opt);
-            if (sc) {
-                fonts->get(style_font_size(table, sc->style));
-                continue;
-            }
-
-            const auto* nested = std::get_if<TableCell>(&*opt);
-            if (nested && nested->table)
-                prepare_table_fonts(*nested->table, fonts);
-        }
-    }
-}
-
-static ImVec2 outlined_text_size_current_font(const char* text) {
-    ImVec2 size = ImGui::CalcTextSize(text);
-    size.x += std::ceil(outline_padding_x) * 2.0f;
-    size.y += std::ceil(outline_padding_x) * 2.0f;
-    return size;
-}
-
-static ImVec2 raw_text_size(const hudTable& table, const CellStyle& style, const std::string& text, Font* fonts) {
-    if (text.empty())
-        return {};
-
-    ImGui::PushFont(fonts->get(style_font_size(table, style)));
-    ImVec2 size = ImGui::CalcTextSize(text.c_str());
-    ImGui::PopFont();
-    return size;
-}
-
-static ImVec2 text_size(const hudTable& table, const CellStyle& style, const std::string& text, Font* fonts) {
-    if (text.empty())
-        return {};
-
-    ImGui::PushFont(fonts->get(style_font_size(table, style)));
-    ImVec2 size = outlined_text_size_current_font(text.c_str());
-    ImGui::PopFont();
-    return size;
-}
-
-static ImVec2 text_layout_size(const hudTable& table, const CellStyle& style, const std::string& text, Font* fonts) {
-    ImVec2 size = text_size(table, style, text, fonts);
-    if (style.truncate <= 0)
-        return size;
-
-    const std::string reserve(static_cast<std::size_t>(style.truncate), '0');
-    const ImVec2 reserve_size = text_size(table, style, reserve, fonts);
-    size.x = std::max(size.x, reserve_size.x);
-    size.y = std::max(size.y, reserve_size.y);
-    return size;
-}
-
-static ImVec2 raw_text_layout_size(const hudTable& table, const CellStyle& style, const std::string& text, Font* fonts) {
-    ImVec2 size = raw_text_size(table, style, text, fonts);
-    if (style.truncate <= 0)
-        return size;
-
-    const std::string reserve(static_cast<std::size_t>(style.truncate), '0');
-    const ImVec2 reserve_size = raw_text_size(table, style, reserve, fonts);
-    size.x = std::max(size.x, reserve_size.x);
-    size.y = std::max(size.y, reserve_size.y);
-    return size;
-}
-
-static bool is_numeric_text(const std::string& text) {
-    if (text.empty())
-        return false;
-
-    bool digit = false;
-    for (char c : text) {
-        if (c >= '0' && c <= '9') {
-            digit = true;
-            continue;
-        }
-        if (c == '.' || c == '-' || c == '+')
-            continue;
-        return false;
-    }
-
-    return digit;
-}
-
-static ImVec2 raw_reserved_numeric_size(const hudTable& table, const TextCell& tc, Font* fonts) {
-    if (!tc.unit.empty() || !is_numeric_text(tc.text))
-        return {};
-
-    return text_size(table, tc.style, "00000", fonts);
-}
-
-static float text_left_bearing(const char* text, ImFont* font, float size) {
-    if (!text || !text[0])
-        return 0.0f;
-
-    unsigned int c = 0;
-    if (ImTextCharFromUtf8(&c, text, nullptr) <= 0)
-        return 0.0f;
-
-    const ImFontGlyph* glyph = font->FindGlyph((ImWchar)c);
-    if (!glyph)
-        return 0.0f;
-
-    return glyph->X0 * (size / font->FontSize);
-}
-
-struct TextYBounds {
-    float min = 0.0f;
-    float max = 0.0f;
-};
-
-struct TextXBounds {
-    float min = 0.0f;
-    float max = 0.0f;
-};
-
-static TextXBounds text_x_bounds(const char* text, ImFont* font, float size) {
-    TextXBounds bounds;
-    if (!text || !text[0])
-        return bounds;
-
-    const float scale = size / font->FontSize;
-    float x = 0.0f;
-    bool found = false;
-    const char* s = text;
-    while (*s) {
-        unsigned int c = 0;
-        const int bytes = ImTextCharFromUtf8(&c, s, nullptr);
-        if (bytes <= 0)
-            break;
-        s += bytes;
-
-        const ImFontGlyph* glyph = font->FindGlyph((ImWchar)c);
-        if (!glyph)
-            continue;
-
-        if (glyph->Visible) {
-            const float x0 = x + glyph->X0 * scale;
-            const float x1 = x + glyph->X1 * scale;
-            if (!found) {
-                bounds.min = x0;
-                bounds.max = x1;
-                found = true;
-            } else {
-                bounds.min = std::min(bounds.min, x0);
-                bounds.max = std::max(bounds.max, x1);
-            }
-        }
-
-        x += glyph->AdvanceX * scale;
-    }
-
-    if (!found) {
-        bounds.min = 0.0f;
-        bounds.max = ImGui::CalcTextSize(text).x;
-    }
-
-    return bounds;
-}
-
-static TextYBounds text_y_bounds(const char* text, ImFont* font, float size) {
-    TextYBounds bounds;
-    if (!text || !text[0])
-        return bounds;
-
-    const float scale = size / font->FontSize;
-    bool found = false;
-    const char* s = text;
-    while (*s) {
-        unsigned int c = 0;
-        const int bytes = ImTextCharFromUtf8(&c, s, nullptr);
-        if (bytes <= 0)
-            break;
-        s += bytes;
-
-        if (c < 32)
-            continue;
-
-        const ImFontGlyph* glyph = font->FindGlyph((ImWchar)c);
-        if (!glyph || !glyph->Visible)
-            continue;
-
-        const float y0 = glyph->Y0 * scale;
-        const float y1 = glyph->Y1 * scale;
-        if (!found) {
-            bounds.min = y0;
-            bounds.max = y1;
-            found = true;
-        } else {
-            bounds.min = std::min(bounds.min, y0);
-            bounds.max = std::max(bounds.max, y1);
-        }
-    }
-
-    if (!found) {
-        bounds.min = 0.0f;
-        bounds.max = size;
-    }
-
-    return bounds;
-}
-
-static TextYBounds font_y_bounds(ImFont* font, float size) {
-    return text_y_bounds("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZacefhiklmnrstuvwxz", font, size);
-}
-
-static TextYBounds style_y_bounds(const hudTable& table, const CellStyle& style, Font* fonts) {
-    const float size = style_font_size(table, style);
-    return font_y_bounds(fonts->get(size), size);
-}
-
-static TextYBounds text_y_bounds(const hudTable& table, const TextCell& tc, Font* fonts) {
-    const float size = style_font_size(table, tc.style);
-    return text_y_bounds(tc.text.c_str(), fonts->get(size), size);
-}
-
-static TextYBounds unit_y_bounds(const hudTable& table, const TextCell& tc, Font* fonts) {
-    if (tc.unit.empty())
-        return {};
-
-    const float size = tc.unit == "%" ? style_font_size(table, tc.style) : unit_font_size(table, tc);
-    return font_y_bounds(fonts->get(size), size);
-}
-
-static ImVec2 reserved_value_size(const hudTable& table, const TextCell& tc, Font* fonts) {
-    if (tc.unit.empty())
-        return {};
-
-    ImGui::PushFont(fonts->get(style_font_size(table, tc.style)));
-    ImVec2 size = outlined_text_size_current_font((tc.unit == "%" || tc.unit == "W" || tc.unit == "GiB") ? "100" : "00000");
-    ImGui::PopFont();
-    return size;
-}
-
-static float cell_height(const hudTable& table, const TextCell& tc, Font* fonts) {
-    const TextYBounds value = style_y_bounds(table, tc.style, fonts);
-    const TextYBounds unit = unit_y_bounds(table, tc, fonts);
-    return std::max(value.max - value.min, unit.max - unit.min) + std::ceil(outline_padding_x) * 2.0f;
-}
-
-static float progress_text(const hudTable& table, const ProgressCell& pc,
-                           const std::string& text, Font* fonts, void (*draw)(ImVec4, const char*) = nullptr) {
-    const float size = style_font_size(table, pc.style);
-    const ImVec2 origin = ImGui::GetCursorPos();
-    const auto bounds = font_y_bounds(fonts->get(size), size);
-    float width = 0.0f;
-    auto run = [&](const std::string& value, float run_size) {
-        ImFont* font = fonts->get(run_size);
-        ImGui::PushFont(font);
-        if (draw) {
-            const auto run_bounds = font_y_bounds(font, run_size);
-            ImGui::SetCursorPos(ImVec2(origin.x + width, origin.y + bounds.min - run_bounds.min));
-            draw(ImVec4(1, 1, 1, 1), value.c_str());
-        }
-        width += ImGui::CalcTextSize(value.c_str()).x;
-        ImGui::PopFont();
-    };
-    std::size_t start = 0;
-    for (;;) {
-        const auto pos = text.find("{unit}", start);
-        run(text.substr(start, pos == std::string::npos ? pos : pos - start), size);
-        if (pos == std::string::npos)
-            break;
-        run(pc.unit, pc.unit == "%" ? size : size / 2.0f);
-        start = pos + 6;
-    }
-    return width;
-}
-
-static float progress_height(const hudTable& table, const ProgressCell& pc, Font* fonts) {
-    const std::string& text = pc.layout_text.empty() ? pc.text : pc.layout_text;
-    if (text.empty())
-        return std::max(6.0f, table.font_size * 0.6f);
-
-    const float size = style_font_size(table, pc.style);
-    const TextYBounds bounds = font_y_bounds(fonts->get(size), size);
-    return bounds.max - bounds.min + std::ceil(outline_padding_x) * 2.0f;
-}
-
-static float separator_width(const SeparatorCell& sc) {
-    return std::ceil(outline_padding_x) * 2.0f + std::max(1.0f, sc.thickness);
-}
-
-static float separator_height(const hudTable& table, const SeparatorCell& sc, Font* fonts) {
-    const TextYBounds bounds = style_y_bounds(table, sc.style, fonts);
-    return bounds.max - bounds.min + std::ceil(outline_padding_x) * 2.0f;
-}
-
-static HudLayout build_table_layout(hudTable* table, Font* fonts);
-
-static int cell_colspan(const Cell& cell) {
-    return std::visit([](const auto& c) {
-        return std::max(1, c.style.colspan);
-    }, cell);
-}
-
-static float spanned_width(const HudLayout& L, int start_col, int colspan) {
-    if (start_col < 0 || start_col >= L.cols)
-        return 0.0f;
-
-    const int end_col = std::min(L.cols - 1, start_col + std::max(1, colspan) - 1);
-    const HudBox& start = L.col_boxes[start_col];
-    const HudBox& end = L.col_boxes[end_col];
-    return std::max(0.0f, end.pos.x + end.size.x - start.pos.x);
-}
-
-static ImVec2 nested_table_size(hudTable& table, Font* fonts) {
-    HudLayout layout = build_table_layout(&table, fonts);
-    return {
-        layout.content_size.x + hud_cell_padding_x,
-        layout.content_size.y + hud_cell_padding_y,
-    };
-}
-
-static float row_height(hudTable& table, const std::vector<MaybeCell>& row, Font* fonts) {
-    float height = 0.0f;
-
-    for (const auto& opt : row) {
-        if (!opt)
-            continue;
-
-        const auto* tc = std::get_if<TextCell>(&*opt);
-        if (!tc) {
-            if (std::get_if<SeparatorCell>(&*opt)) {
-                height = std::max(height, separator_height(table, std::get<SeparatorCell>(*opt), fonts));
-                continue;
-            }
-
-            const auto* pc = std::get_if<ProgressCell>(&*opt);
-            if (pc) {
-                height = std::max(height, progress_height(table, *pc, fonts));
-                continue;
-            }
-
-            const auto* nested = std::get_if<TableCell>(&*opt);
-            if (nested && nested->table) {
-                height = std::max(height, nested_table_size(*nested->table, fonts).y);
-            }
-            continue;
-        }
-
-        if (!tc->data.empty()) {
-            height = std::max(height, graph_plot_height);
-            continue;
-        }
-
-        height = std::max(height, cell_height(table, *tc, fonts));
-    }
-
-    return height;
-}
-
-void ImGuiCtx::draw_value_with_unit(int col_index,
-                                   const TextCell& tc,
-                                   const ImVec4& unit_col,
-                                   const HudLayout& L,
-                                   Font* fonts,
-                                   const hudTable& table,
-                                   float row_h,
-                                   float cell_w,
-                                   bool numeric_align) {
-    const ImVec2 base = ImGui::GetCursorPos();
-    const float text_font_sz = style_font_size(table, tc.style);
-    const ImVec2 value_sz = raw_text_size(table, tc.style, tc.text, fonts);
-    const TextYBounds value_y = text_y_bounds(table, tc, fonts);
-    const TextYBounds value_font_y = style_y_bounds(table, tc.style, fonts);
-    const TextYBounds unit_y = unit_y_bounds(table, tc, fonts);
-    const float outline_pad = std::ceil(outline_padding_x);
-    const float font_box_h = value_font_y.max - value_font_y.min + outline_pad * 2.0f;
-    const float text_y = base.y + (row_h - font_box_h) * 0.5f + outline_pad - value_font_y.min;
-    const float value_top_y = text_y + value_y.min;
-    const float unit_pos_y = value_top_y - unit_y.min;
-
-    if (tc.style.align != CellAlign::Default) {
-        ImFont* font = fonts->get(text_font_sz);
-        TextXBounds x_bounds = text_x_bounds(tc.text.c_str(), font, text_font_sz);
-        ImFont* unit_font = nullptr;
-        const float unit_x = value_sz.x + unit_gap;
-        if (!tc.unit.empty()) {
-            const float unit_size = tc.unit == "%" ? text_font_sz : unit_font_size(table, tc);
-            unit_font = fonts->get(unit_size);
-            const TextXBounds unit_bounds = text_x_bounds(tc.unit.c_str(), unit_font, unit_size);
-            x_bounds.min = std::min(x_bounds.min, unit_x + unit_bounds.min);
-            x_bounds.max = std::max(x_bounds.max, unit_x + unit_bounds.max);
-        }
-        const float visual_w = x_bounds.max - x_bounds.min;
-        float text_x = base.x - x_bounds.min;
-
-        if (tc.style.align == CellAlign::Center)
-            text_x = base.x + (cell_w - visual_w) * 0.5f - x_bounds.min;
-        else if (tc.style.align == CellAlign::Right)
-            text_x = base.x + cell_w - std::ceil(outline_padding_x) - x_bounds.max;
-
-        ImGui::SetCursorPos(ImVec2(text_x, text_y));
-        ImGui::PushFont(font);
-        RenderOutlinedText(tc.vec, tc.text.c_str());
-        ImGui::PopFont();
-        if (unit_font) {
-            ImGui::SetCursorPos(ImVec2(text_x + unit_x, unit_pos_y));
-            ImGui::PushFont(unit_font);
-            RenderOutlinedText(unit_col, tc.unit.c_str());
-            ImGui::PopFont();
-        }
-        ImGui::SetCursorPos(ImVec2(base.x, base.y + row_h));
-        return;
-    }
-
-    if (col_index == 0 && !numeric_align) {
-        ImFont* font = fonts->get(text_font_sz);
-        const float text_x = base.x - text_left_bearing(tc.text.c_str(), font, text_font_sz);
-        ImGui::SetCursorPos(ImVec2(text_x, text_y));
-        ImGui::PushFont(font);
-        RenderOutlinedText(tc.vec, tc.text.c_str());
-        ImGui::PopFont();
-        if (!tc.unit.empty()) {
-            ImGui::SetCursorPos(ImVec2(text_x + value_sz.x + unit_gap, unit_pos_y));
-
-            if (tc.unit == "%") {
-                ImGui::PushFont(fonts->get(text_font_sz));
-                RenderOutlinedText(unit_col, tc.unit.c_str());
-                ImGui::PopFont();
-            } else {
-                ImGui::PushFont(fonts->get(unit_font_size(table, tc)));
-                RenderOutlinedText(unit_col, tc.unit.c_str());
-                ImGui::PopFont();
-            }
-        }
-
-        ImGui::SetCursorPos(ImVec2(base.x, base.y + row_h));
-        return;
-    }
-
-    if (tc.unit.empty()) {
-        ImFont* font = fonts->get(text_font_sz);
-        const ImVec2 reserved_sz = raw_reserved_numeric_size(table, tc, fonts);
-        const float value_w = std::max(value_sz.x, reserved_sz.x);
-        const float align_w = std::max(cell_w, value_w);
-        const float text_x = base.x + align_w - outline_pad - value_sz.x - text_left_bearing(tc.text.c_str(), font, text_font_sz);
-        ImGui::SetCursorPos(ImVec2(text_x, text_y));
-        ImGui::PushFont(font);
-        RenderOutlinedText(tc.vec, tc.text.c_str());
-        ImGui::PopFont();
-        ImGui::SetCursorPos(ImVec2(base.x, base.y + row_h));
-        return;
-    }
-
-    const float cell_left = base.x;
-    if (cell_w <= 0.0f)
-        cell_w = ImGui::GetContentRegionAvail().x;
-
-    const float unit_start_x = cell_left + (cell_w - outline_pad - L.max_unit_w[col_index]);
-    const float value_right_x = unit_start_x - unit_gap;
-    const float value_w = L.max_value_w[col_index];
-    const float value_left_x = value_right_x - value_w;
-
-    ImFont* value_font = fonts->get(text_font_sz);
-    const float value_x = value_left_x + value_w - outline_pad - value_sz.x - text_left_bearing(tc.text.c_str(), value_font, text_font_sz);
-    ImGui::SetCursorPos(ImVec2(value_x, text_y));
-    ImGui::PushFont(value_font);
-    RenderOutlinedText(tc.vec, tc.text.c_str());
-    ImGui::PopFont();
-
-    if (!tc.unit.empty()) {
-        ImGui::SetCursorPos(ImVec2(unit_start_x + outline_pad, unit_pos_y));
-        if (tc.unit == "%") {
-            ImGui::PushFont(fonts->get(text_font_sz));
-            RenderOutlinedText(unit_col, tc.unit.c_str());
-            ImGui::PopFont();
-        } else {
-            ImGui::PushFont(fonts->get(unit_font_size(table, tc)));
-            RenderOutlinedText(unit_col, tc.unit.c_str());
-            ImGui::PopFont();
-        }
-    }
-
-    ImGui::SetCursorPos(ImVec2(base.x, base.y + row_h));
-}
-
-void ImGuiCtx::draw_graph_plot(const TextCell& tc, float width) {
-    ImGui::PushID(&tc);
-    if (ImGui::BeginChild("my_child_window", ImVec2(width, graph_plot_height), false, ImGuiWindowFlags_NoDecoration)) {
-        if (ImPlot::BeginPlot("My Plot", ImVec2(width, graph_plot_height), ImPlotFlags_CanvasOnly | ImPlotFlags_NoInputs)) {
-            ImPlotStyle& implot_style = ImPlot::GetStyle();
-            implot_style.Colors[ImPlotCol_PlotBg]      = ImVec4(0.92f, 0.92f, 0.95f, 0.00f);
-            implot_style.Colors[ImPlotCol_AxisGrid]    = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
-            implot_style.Colors[ImPlotCol_AxisTick]    = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
-            implot_style.Colors[ImPlotCol_FrameBg]     = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
-            implot_style.PlotPadding.x = 0;
-            ImPlotAxisFlags ax_flags_x = ImPlotAxisFlags_NoDecorations;
-            ImPlotAxisFlags ax_flags_y = ImPlotAxisFlags_NoDecorations;
-            ImPlot::SetupAxes(nullptr, nullptr, ax_flags_x, ax_flags_y);
-            ImPlot::SetupAxisScale(ImAxis_Y1, TransformForward_Custom, TransformInverse_Custom);
-            ImPlot::SetupAxesLimits(0, 200, 0, 50, ImGuiCond_Always);
-            ImPlot::SetNextLineStyle(ImVec4(0,1,0,1), 2);
-            ImPlot::PlotLine("frametime line", tc.data.data(), tc.data.size());
-            ImPlot::EndPlot();
-        }
-    }
-    ImGui::EndChild();
-    ImGui::PopID();
-}
-
-void ImGuiCtx::draw_progress_bar(const ProgressCell& pc, Font* fonts, const hudTable& table, float width, float height) {
-    const ImVec2 local_pos = ImGui::GetCursorPos();
-    const float bar_h = progress_height(table, pc, fonts);
-    float bar_y = local_pos.y + (height - bar_h) * 0.5f;
-    float text_x = 0.0f;
-    float text_y = 0.0f;
-    ImFont* text_font = nullptr;
-
-    if (!pc.text.empty()) {
-        const float font_size = style_font_size(table, pc.style);
-        text_font = fonts->get(font_size);
-        const float text_width = progress_text(table, pc, pc.text, fonts);
-        const float outline_pad = std::ceil(outline_padding_x);
-        const float outlined_text_w = text_width + outline_pad * 2.0f;
-        const TextYBounds bounds = font_y_bounds(text_font, font_size);
-        const float text_h = bounds.max - bounds.min + outline_pad * 2.0f;
-
-        text_x = local_pos.x + (width - outlined_text_w) * 0.5f + outline_pad;
-        text_y = local_pos.y + (height - text_h) * 0.5f + outline_pad - bounds.min;
-        bar_y = text_y + bounds.min - outline_pad + (text_h - bar_h) * 0.5f;
-    }
-
-    ImGui::SetCursorPos(ImVec2(local_pos.x, bar_y));
-    const ImVec2 screen_pos = ImGui::GetCursorScreenPos();
-    const float range = pc.max_value - pc.min_value;
-    float fraction = range == 0.0f ? 0.0f : (pc.value - pc.min_value) / range;
-    fraction = std::max(0.0f, std::min(1.0f, fraction));
-
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    const ImVec2 end = ImVec2(screen_pos.x + width, screen_pos.y + bar_h);
-    const ImVec2 fill_end = ImVec2(screen_pos.x + width * fraction, screen_pos.y + bar_h);
-    draw_list->AddRectFilled(screen_pos, end, ImGui::ColorConvertFloat4ToU32(pc.background_vec));
-    draw_list->AddRectFilled(screen_pos, fill_end, ImGui::ColorConvertFloat4ToU32(pc.vec));
-
-    if (!pc.text.empty()) {
-        ImGui::SetCursorPos(ImVec2(text_x, text_y));
-        progress_text(table, pc, pc.text, fonts, RenderOutlinedText);
-    }
-
-    ImGui::SetCursorPos(ImVec2(local_pos.x, local_pos.y + height));
-}
-
-static void draw_separator(const SeparatorCell& sc, const hudTable& table, Font* fonts, float width, float row_height) {
-    if (row_height <= 0.0f)
-        return;
-
-    const float height = separator_height(table, sc, fonts);
-    const TextYBounds bounds = style_y_bounds(table, sc.style, fonts);
-    const float content_h = bounds.max - bounds.min;
-    const float outline_pad = std::ceil(outline_padding_x);
-    const ImVec2 screen_pos = ImGui::GetCursorScreenPos();
-    const float x = screen_pos.x + width * 0.5f;
-    const float y0 = screen_pos.y + (row_height - height) * 0.5f + outline_pad;
-    const float y1 = y0 + content_h;
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    const ImU32 outline = ImGui::ColorConvertFloat4ToU32(ImVec4(0, 0, 0, 1));
-    const ImU32 color = ImGui::ColorConvertFloat4ToU32(sc.vec);
-
-    draw_list->AddLine(ImVec2(x - outline_padding_x, y0), ImVec2(x - outline_padding_x, y1), outline, sc.thickness);
-    draw_list->AddLine(ImVec2(x + outline_padding_x, y0), ImVec2(x + outline_padding_x, y1), outline, sc.thickness);
-    draw_list->AddLine(ImVec2(x, y0 - outline_padding_x), ImVec2(x, y1 - outline_padding_x), outline, sc.thickness);
-    draw_list->AddLine(ImVec2(x, y0 + outline_padding_x), ImVec2(x, y1 + outline_padding_x), outline, sc.thickness);
-    draw_list->AddLine(ImVec2(x, y0), ImVec2(x, y1), color, sc.thickness);
-
-    const ImVec2 local_pos = ImGui::GetCursorPos();
-    ImGui::SetCursorPos(ImVec2(local_pos.x, local_pos.y + row_height));
-}
-
-static ImVec2 local_to_screen(const ImVec2& pos) {
-    const ImVec2 cursor = ImGui::GetCursorPos();
-    ImGui::SetCursorPos(pos);
-    const ImVec2 screen = ImGui::GetCursorScreenPos();
-    ImGui::SetCursorPos(cursor);
-    return screen;
-}
-
-static void draw_background(bool enabled, const ImRect& bounds) {
-    if (!enabled || bounds.Max.x <= bounds.Min.x || bounds.Max.y <= bounds.Min.y)
-        return;
-
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    ImVec4 color = ImGui::GetStyleColorVec4(ImGuiCol_WindowBg);
-    color.w = 0.5f;
-    draw_list->ChannelsSetCurrent(0);
-    draw_list->AddRectFilled(bounds.Min, bounds.Max, ImGui::ColorConvertFloat4ToU32(color));
-    draw_list->ChannelsSetCurrent(1);
-}
-
-static void draw_debug_cell_box(bool enabled, const ImRect& bounds) {
-    if (!enabled)
-        return;
-
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    ImRect content_bounds = bounds;
-    content_bounds.Min.x += hud_cell_padding_x;
-    content_bounds.Max.x = std::max(content_bounds.Min.x, content_bounds.Max.x);
-
-    draw_list->AddRect(bounds.Min, bounds.Max, IM_COL32(255, 220, 0, 255));
-    draw_list->AddRect(content_bounds.Min, content_bounds.Max, IM_COL32(0, 220, 255, 255));
-}
-
-static void draw_debug_separator_center(bool enabled, const ImVec2& raw_pos, const ImVec2& raw_size) {
-    if (!enabled)
-        return;
-
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    const ImVec2 raw_min = local_to_screen(raw_pos);
-    const float x = raw_min.x + raw_size.x * 0.5f;
-    draw_list->AddLine(ImVec2(x, raw_min.y), ImVec2(x, raw_min.y + raw_size.y), IM_COL32(255, 0, 255, 255));
-}
-
-static HudLayout build_table_layout(hudTable* table, Font* fonts) {
-    HudLayout L{};
-    L.cols = table->cols;
-    L.max_cell_w.assign(L.cols, 0.0f);
-    L.max_value_w.assign(L.cols, 0.0f);
-    L.max_unit_w.assign(L.cols, 0.0f);
-    L.col_boxes.resize(L.cols);
-
-    float max_col0_w = 0.0f;
-    std::vector<float> col0_span_widths(L.cols, 0.0f);
-    std::vector<bool> separator_cols(L.cols, false);
-    std::vector<float> separator_col_widths(L.cols, 0.0f);
-
-    for (const auto& row : table->rows) {
-        if (!row.empty() && row[0].has_value()) {
-            const Cell& v0 = *row[0];
-            if (const auto* tc0 = std::get_if<TextCell>(&v0)) {
-                float w = 0.0f;
-                const float font_size = style_font_size(*table, tc0->style);
-                w += text_layout_size(*table, tc0->style, tc0->text, fonts).x;
-
-                if (!tc0->unit.empty()) {
-                    w += unit_gap;
-
-                    if (tc0->unit == "%") {
-                        ImGui::PushFont(fonts->get(font_size));
-                        w += outlined_text_size_current_font(tc0->unit.c_str()).x;
-                        ImGui::PopFont();
-                    } else {
-                        ImGui::PushFont(fonts->get(unit_font_size(*table, *tc0)));
-                        w += outlined_text_size_current_font(tc0->unit.c_str()).x;
-                        ImGui::PopFont();
-                    }
-                }
-
-                if (tc0->style.colspan > 1 && L.cols > 0) {
-                    const int end_col = std::min(L.cols, tc0->style.colspan) - 1;
-                    col0_span_widths[end_col] = std::max(col0_span_widths[end_col], w);
-                } else if (w > max_col0_w)
-                    max_col0_w = w;
-            } else if (const auto* pc0 = std::get_if<ProgressCell>(&v0)) {
-                const std::string& text = pc0->layout_text.empty() ? pc0->text : pc0->layout_text;
-                const float w = std::max(100.0f, progress_text(*table, *pc0, text, fonts) + std::ceil(outline_padding_x) * 2.0f);
-                if (w > max_col0_w)
-                    max_col0_w = w;
-            } else if (const auto* nested = std::get_if<TableCell>(&v0); nested && nested->table) {
-                const ImVec2 size = nested_table_size(*nested->table, fonts);
-                if (size.x > max_col0_w)
-                    max_col0_w = size.x;
-            }
-        }
-
-        // Other columns: track maximum unit width per column
-        for (int c = 0; c < L.cols && c < (int)row.size(); c++) {
-            const auto& opt = row[c];
-            if (!opt)
-                continue;
-
-            const Cell& v = *opt;
-            if (std::get_if<SeparatorCell>(&v)) {
-                separator_cols[c] = true;
-                const float w = separator_width(std::get<SeparatorCell>(v));
-                if (w > separator_col_widths[c])
-                    separator_col_widths[c] = w;
-                continue;
-            }
-
-            const auto* tc = std::get_if<TextCell>(&v);
-            if (!tc) {
-                const auto* pc = std::get_if<ProgressCell>(&v);
-                if (pc) {
-                    const std::string& text = pc->layout_text.empty() ? pc->text : pc->layout_text;
-                    const float w = std::max(100.0f, progress_text(*table, *pc, text, fonts) + std::ceil(outline_padding_x) * 2.0f);
-                    if (w > L.max_cell_w[c])
-                        L.max_cell_w[c] = w;
-                    continue;
-                }
-
-                const auto* nested = std::get_if<TableCell>(&v);
-                if (nested && nested->table) {
-                    const ImVec2 size = nested_table_size(*nested->table, fonts);
-                    if (size.x > L.max_cell_w[c])
-                        L.max_cell_w[c] = size.x;
-                }
-                continue;
-            }
-
-            const ImVec2 value_sz = tc->unit.empty()
-                ? raw_text_layout_size(*table, tc->style, tc->text, fonts)
-                : text_layout_size(*table, tc->style, tc->text, fonts);
-            float value_w = value_sz.x;
-            if (tc->unit.empty()) {
-                const ImVec2 reserved_sz = raw_reserved_numeric_size(*table, *tc, fonts);
-                value_w = std::max(value_w, reserved_sz.x);
-                if (value_w > L.max_cell_w[c])
-                    L.max_cell_w[c] = value_w;
-                continue;
-            }
-
-            const ImVec2 reserved_sz = reserved_value_size(*table, *tc, fonts);
-            value_w = std::max(value_w, reserved_sz.x);
-            if (value_w > L.max_value_w[c])
-                L.max_value_w[c] = value_w;
-
-            float uw = 0.0f;
-            if (tc->unit == "%") {
-                ImGui::PushFont(fonts->get(style_font_size(*table, tc->style)));
-                uw = outlined_text_size_current_font(tc->unit.c_str()).x;
-                ImGui::PopFont();
-            } else {
-                ImGui::PushFont(fonts->get(unit_font_size(*table, *tc)));
-                uw = outlined_text_size_current_font(tc->unit.c_str()).x;
-                ImGui::PopFont();
-            }
-
-            if (uw > L.max_unit_w[c])
-                L.max_unit_w[c] = uw;
-        }
-    }
-
-    for (int c = 0; c < L.cols; c++) {
-        if (separator_cols[c]) {
-            L.col_boxes[c].size.x = separator_col_widths[c];
-        } else if (c == 0) {
-            L.col_boxes[c].size.x = max_col0_w;
-        } else {
-            const bool has_units = (L.max_unit_w[c] > 0.0f);
-            const float unit_w = L.max_value_w[c] + (has_units ? (unit_gap + L.max_unit_w[c]) : 0.0f);
-            L.col_boxes[c].size.x = std::max(L.max_cell_w[c], unit_w);
-        }
-    }
-
-    // Fit shorter spans first so wider spans include any earlier column growth.
-    float spanned_w = 0.0f;
-    for (int c = 0; c < L.cols; c++) {
-        spanned_w += L.col_boxes[c].size.x + (c > 0 ? table->col_gap : 0.0f);
-        const float extra = std::max(0.0f, col0_span_widths[c] - spanned_w);
-        L.col_boxes[c].size.x += extra;
-        spanned_w += extra;
-    }
-
-    float x = 0.0f;
-    for (int c = 0; c < L.cols; c++) {
-        L.col_boxes[c].pos.x = x;
-        x += L.col_boxes[c].size.x + table->col_gap;
-    }
-
-    L.row_boxes.resize(table->rows.size());
-    float y = 0.0f;
-    for (std::size_t r = 0; r < table->rows.size(); r++) {
-        L.row_boxes[r].pos.y = y;
-        L.row_boxes[r].size.y = row_height(*table, table->rows[r], fonts);
-        y += L.row_boxes[r].size.y + table->row_gap;
-    }
-
-    for (const HudBox& col : L.col_boxes)
-        if (col.size.x > 0.0f)
-            L.content_size.x = std::max(L.content_size.x, col.pos.x + col.size.x);
-    if (L.content_size.x > 0.0f)
-        L.content_size.x += hud_cell_padding_x * 2.0f;
-    if (!L.row_boxes.empty()) {
-        const HudBox& last = L.row_boxes.back();
-        L.content_size.y = hud_cell_padding_y + last.pos.y + last.size.y + hud_cell_padding_y;
-    }
-
-    return L;
-}
-
-HudLayout ImGuiCtx::build_layout(hudTable* table, Font* fonts) {
-    return build_table_layout(table, fonts);
-}
-
-void ImGuiCtx::draw_table(hudTable& table, Font* fonts, const HudLayout& layout, bool background, bool first_col_numeric) {
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    const bool split_channels = background;
-    if (split_channels) {
-        draw_list->ChannelsSplit(2);
-        draw_list->ChannelsSetCurrent(1);
-    }
-    ImVec4 white = ImVec4(1, 1, 1, 1);
-
-    ImGui::PushFont(fonts->get(table.font_size));
-    ralign_width = ImGui::CalcTextSize("00000").x;
-    ImGui::PopFont();
-
-    const ImVec2 cursor_origin = ImGui::GetCursorPos();
-    const ImVec2 origin = ImVec2(cursor_origin.x + std::ceil(outline_padding_x), cursor_origin.y);
-    // Include the window's configured padding in the background on every side.
-    // Nested tables share this fill so translucent backgrounds never overlap.
-    if (background && !layout.col_boxes.empty() && !layout.row_boxes.empty()) {
-        const ImVec2 start = ImGui::GetWindowPos();
-        const ImVec2 size = ImGui::GetWindowSize();
-        draw_background(true, ImRect(start, ImVec2(start.x + size.x, start.y + size.y)));
-    }
-    ImGui::PushID(&table);
-    for (std::size_t r = 0; r < table.rows.size(); r++) {
-        auto& row = table.rows[r];
-        const float row_h = layout.row_boxes[r].size.y;
-        const float row_y = origin.y + layout.row_boxes[r].pos.y + hud_cell_padding_y;
-
-        for (int c = 0; c < layout.cols; c++) {
-            if (c >= (int)row.size() || !row[c])
-                continue;
-
-            Cell& cell = *row[c];
-            const int colspan = cell_colspan(cell);
-            const float raw_cell_x = origin.x + layout.col_boxes[c].pos.x;
-            const float cell_x = raw_cell_x + hud_cell_padding_x;
-            const float cell_w = spanned_width(layout, c, colspan);
-            const ImVec2 cell_min = local_to_screen(ImVec2(raw_cell_x, row_y));
-            const ImRect bounds(cell_min, ImVec2(cell_min.x + cell_w, cell_min.y + row_h));
-            draw_debug_cell_box(table.debug_cell_boxes, bounds);
-            ImGui::SetCursorPos(ImVec2(cell_x, row_y));
-
-            if (auto* nested = std::get_if<TableCell>(&cell); nested && nested->table) {
-                HudLayout nested_layout = build_table_layout(nested->table.get(), fonts);
-                const float nested_y = row_y + hud_cell_padding_y;
-                float nested_x = cell_x;
-                if (c > 0) {
-                    const float pad_r = std::ceil(outline_padding_x);
-                    const float parent_unit_x = cell_x + cell_w - pad_r - layout.max_unit_w[c];
-                    const float nested_unit_x = hud_cell_padding_x + nested_layout.col_boxes[0].size.x - pad_r - nested_layout.max_unit_w[0];
-                    nested_x = parent_unit_x - nested_unit_x;
-                }
-
-                ImGui::SetCursorPos(ImVec2(nested_x, nested_y));
-                draw_table(*nested->table, fonts, nested_layout, false, c > 0);
-                continue;
-            }
-
-            if (auto* pc = std::get_if<ProgressCell>(&cell)) {
-                draw_progress_bar(*pc, fonts, table, std::max(0.0f, cell_w - hud_cell_padding_x), row_h);
-                continue;
-            }
-
-            if (auto* sc = std::get_if<SeparatorCell>(&cell)) {
-                const float separator_x = raw_cell_x + hud_cell_padding_x * 0.5f;
-                const float separator_w = spanned_width(layout, c, colspan);
-                ImGui::SetCursorPos(ImVec2(separator_x, row_y));
-                draw_debug_separator_center(table.debug_cell_boxes, ImVec2(separator_x, row_y), ImVec2(separator_w, row_h));
-                draw_separator(*sc, table, fonts, separator_w, row_h);
-                continue;
-            }
-
-            auto* tc = std::get_if<TextCell>(&cell);
-            if (!tc)
-                continue;
-
-            if (!tc->data.empty()) {
-                ImGui::SetCursorPos(ImVec2(cell_x, row_y));
-                draw_graph_plot(*tc, std::max(0.0f, cell_w - hud_cell_padding_x));
-                continue;
-            }
-
-            draw_value_with_unit(c, *tc, white, layout, fonts, table, row_h, cell_w, first_col_numeric && c == 0);
-        }
-    }
-    ImGui::PopID();
-    ImGui::SetCursorPos(ImVec2(cursor_origin.x, cursor_origin.y + layout.content_size.y));
-    if (split_channels)
-        draw_list->ChannelsMerge();
-}
-
-void ImGuiCtx::begin_window(const HudWindow& window, ImVec2 size, const char* name) {
-    ImGui::SetNextWindowSize(size);
-    ImGui::SetNextWindowPos(window.position, ImGuiCond_Always);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(window.padding, window.padding));
-
-    ImGuiWindowFlags w_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground;
-    ImGui::Begin(name, nullptr, w_flags);
-}
-
-void ImGuiCtx::end_window() {
-    ImGui::End();
-    ImGui::PopStyleVar();
+    if (!egl)
+        egl = std::make_shared<ImGuiEGL>(this);
 }
 
 bool ImGuiCtx::draw(uint32_t w, uint32_t h, Resolution& size, BufferSet* buf, Backend backend,
@@ -1030,11 +199,10 @@ bool ImGuiCtx::draw(uint32_t w, uint32_t h, Resolution& size, BufferSet* buf, Ba
     ImGui::SetCurrentContext(imgui);
     ImPlot::SetCurrentContext(implot);
     for (auto& window : windows)
-        prepare_table_fonts(window.table, fonts);
+        prepare_hud_fonts(window.table, *fonts);
 
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = {float(w), float(h)};
-
 
     ImGui::NewFrame();
     if (backend == Backend::EGL)
@@ -1044,14 +212,24 @@ bool ImGuiCtx::draw(uint32_t w, uint32_t h, Resolution& size, BufferSet* buf, Ba
     float max_y = 0.0f;
     for (std::size_t i = 0; i < windows.size(); i++) {
         HudWindow& window = windows[i];
-        HudLayout layout = build_layout(&window.table, fonts);
-        const uint32_t window_w = calculate_width(layout, window);
-        const uint32_t window_h = calculate_height(layout, window);
+        const auto layout = layout_hud(window.table, *fonts);
+        const uint32_t window_w = std::ceil(layout.size.x);
+        const uint32_t window_h = std::ceil(layout.size.y);
         const std::string name = "HUD##" + std::to_string(i);
-
-        begin_window(window, {float(window_w), float(window_h)}, name.c_str());
-        draw_table(window.table, fonts, layout, window.background);
-        end_window();
+        ImGui::SetNextWindowSize({float(window_w), float(window_h)});
+        ImGui::SetNextWindowPos(window.position, ImGuiCond_Always);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {0, 0});
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
+        ImGui::Begin(name.c_str(), nullptr,
+                     ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground);
+        const auto origin = ImGui::GetWindowPos();
+        auto background = ImGui::GetStyleColorVec4(ImGuiCol_WindowBg);
+        background.w = window.background ? 0.5f : 0.0f;
+        draw_backgrounds(layout, {}, background, ImRect({}, layout.size));
+        draw_content(layout, origin);
+        draw_separators(layout, origin);
+        ImGui::End();
+        ImGui::PopStyleVar(2);
 
         max_x = std::max(max_x, window.position.x + (float)window_w);
         max_y = std::max(max_y, window.position.y + (float)window_h);
@@ -1073,33 +251,7 @@ bool ImGuiCtx::draw(uint32_t w, uint32_t h, Resolution& size, BufferSet* buf, Ba
     return true;
 }
 
-void ImGuiCtx::RenderOutlinedText(ImVec4 textColor, const char* text) {
-    if (!text || !text[0]) return;
-
-    ImDrawList* dl = ImGui::GetWindowDrawList();
-    ImFont* font = ImGui::GetFont();
-
-    float fontSize = ImGui::GetFontSize();
-
-    ImVec2 pos = ImGui::GetCursorScreenPos();
-
-    ImU32 tc = ImGui::ColorConvertFloat4ToU32(textColor);
-
-    float t = outline_padding_x;
-    ImU32 oc = ImGui::ColorConvertFloat4ToU32(ImVec4(0, 0, 0, 1));
-
-    dl->AddText(font, fontSize, ImVec2(pos.x - t, pos.y),     oc, text);
-    dl->AddText(font, fontSize, ImVec2(pos.x + t, pos.y),     oc, text);
-    dl->AddText(font, fontSize, ImVec2(pos.x,     pos.y - t), oc, text);
-    dl->AddText(font, fontSize, ImVec2(pos.x,     pos.y + t), oc, text);
-
-    dl->AddText(font, fontSize, pos, tc, text);
-
-    ImVec2 sz = outlined_text_size_current_font(text);
-    ImGui::Dummy({sz.x, sz.y});
-}
-
-void ImGuiCtx::teardown() {
+ImGuiCtx::~ImGuiCtx() {
     vk.reset();
     egl.reset();
 }

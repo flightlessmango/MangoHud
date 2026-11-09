@@ -29,6 +29,13 @@ enum class CellAlign {
 };
 
 struct CellStyle {
+    float padding = -1.0f;
+    bool separator = false;
+    std::string separator_color = "FFFFFF";
+    ImVec4 separator_vec = {1.0f, 1.0f, 1.0f, 1.0f};
+    float separator_thickness = 1.0f;
+    std::string background_color;
+    ImVec4 background_vec = {0.0f, 0.0f, 0.0f, 0.0f};
     float font_size = 0.0f;
     float font_scale = 1.0f;
     int colspan = 1;
@@ -100,13 +107,6 @@ struct ExecCell {
     CellStyle style;
 };
 
-struct SeparatorCell {
-    std::string color;
-    ImVec4 vec;
-    float thickness = 1.0f;
-    CellStyle style;
-};
-
 struct hudTable;
 
 struct TableCell {
@@ -114,10 +114,11 @@ struct TableCell {
     CellStyle style;
 };
 
-using Cell = std::variant<TextCell, ValueCell, FormatCell, GraphCell, ProgressCell, ExecCell, SeparatorCell, TableCell>;
+using Cell = std::variant<TextCell, ValueCell, FormatCell, GraphCell, ProgressCell, ExecCell, TableCell>;
 using MaybeCell = std::optional<Cell>;
 
 struct hudTable {
+    float padding = 0.0f;
     int cols = 0;
     int font_size = 24;
     float col_gap = 8.0f;
@@ -128,7 +129,6 @@ struct hudTable {
 
 struct HudWindow {
     bool background = true;
-    float padding = 8.0f;
     ImVec2 position = {10.0f, 10.0f};
     hudTable table;
 };

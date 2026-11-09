@@ -27,9 +27,9 @@ options:
 hud:
   windows:
     - position: [10, 10]
-      padding: 8
       background: true
       table:
+        padding: 8
         col_gap: 8
         rows:
           - [ {text: GPU}, {value: [GPU, 0, LOAD]} ]
@@ -54,8 +54,7 @@ Each entry in `hud.windows` defines one hud window.
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `position` | `[x, y]` | `[10, 10]` | Window position in pixels. |
-| `padding` | number | `8` | Padding around the table content. |
-| `background` | boolean | `true` | Draw backgrounds behind cells, including cells with empty content. `null` cells stay transparent. |
+| `background` | boolean | `true` | Fill each row through its last cell with content, including leading and internal blanks. Trailing blanks and empty rows stay transparent. |
 | `table` | map | required | Table layout for this window. |
 
 ## Hud Table
@@ -64,6 +63,7 @@ Each entry in `hud.windows` defines one hud window.
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
+| `padding` | number | `0` | Default padding inside each cell, on all four sides. |
 | `col_gap` | number | `8` | Horizontal spacing between columns. |
 | `row_gap` | number | `-2` | Vertical spacing between rows. Negative values tighten rows. |
 | `debug_cell_boxes` | boolean | `false` | Draw debug outlines for table cells. |
@@ -79,6 +79,29 @@ Each entry in `hud.windows` defines one hud window.
 | Exec | `exec` | `unit`, `color`, `font_size`, `font_scale`, `truncate` | Output of a shell command. |
 
 Color values are `RRGGBB` or `RRGGBBAA` hex strings, with an optional leading `#`. When `color` is omitted, the default is white.
+
+`background_color` sets a cell's background using the same hex color format.
+When set, it replaces the default row background in that cell, including
+`colspan`. The alpha channel controls transparency, including fully transparent
+`00000000`.
+Cell backgrounds include cell padding. The default background fills gaps.
+For progress cells, it continues to set the unfilled bar background.
+
+`padding` on a cell overrides the table default. Set `padding: 0` and
+`col_gap: 0` for adjacent cells to meet at their shared boundary. Padding adds
+space inside cell backgrounds; gaps add space between cells.
+
+`separator: true` draws a vertical line on the cell's right boundary, without
+adding a column. For `colspan`, it follows the full span.
+Use `separator_color` (default white) and `separator_thickness` (default `1`)
+to override its appearance. Its thickness, outline, and antialiasing reserve
+space on both sides of the boundary; cell padding applies beyond that space.
+Attach it to a content cell instead of adding a standalone separator cell:
+
+```yaml
+- value: [CPU, FREQ]
+  separator: true
+```
 
 `font_size` sets an exact size for a cell. `font_scale` scales the HUD default font size for that cell. If both are set, `font_size` is used.
 

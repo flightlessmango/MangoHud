@@ -393,7 +393,6 @@ void Metrics::populate_tables(const std::vector<std::shared_ptr<Client>>& client
         for (auto& window : local.windows) {
             HudWindow out_window;
             out_window.background = window.background;
-            out_window.padding = window.padding;
             out_window.position = window.position;
             assign_values(&window.table, client->pid, &out_window.table);
             out.windows.push_back(std::move(out_window));
@@ -406,6 +405,7 @@ void Metrics::populate_tables(const std::vector<std::shared_ptr<Client>>& client
 void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
     render_table->rows.clear();
     render_table->cols = t->cols;
+    render_table->padding = t->padding;
     render_table->font_size = t->font_size;
     render_table->col_gap = t->col_gap;
     render_table->row_gap = t->row_gap;
@@ -595,14 +595,6 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
                 continue;
             }
 
-            if (std::holds_alternative<SeparatorCell>(c)) {
-                auto& sc = std::get<SeparatorCell>(c);
-                SeparatorCell out_separator = sc;
-                out_separator.vec = color.get(sc.color);
-                parsed_row.push_back(Cell{std::move(out_separator)});
-                continue;
-            }
-
             if (std::holds_alternative<TableCell>(c)) {
                 auto& tc = std::get<TableCell>(c);
                 if (!tc.table)
@@ -616,6 +608,16 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
                 continue;
             }
 
+        }
+        for (auto& cell : parsed_row) {
+            if (!cell)
+                continue;
+            std::visit([&](auto& value) {
+                if (!value.style.background_color.empty())
+                    value.style.background_vec = color.get(value.style.background_color);
+                if (value.style.separator)
+                    value.style.separator_vec = color.get(value.style.separator_color);
+            }, *cell);
         }
         render_table->rows.push_back(std::move(parsed_row));
     }

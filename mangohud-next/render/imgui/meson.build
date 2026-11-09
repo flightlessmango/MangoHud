@@ -2,7 +2,7 @@ subdir('font')
 
 mangohud_imgui = static_library(
     'mangohud_imgui',
-    files('imgui_ctx.cpp'),
+    files('imgui_ctx.cpp', 'hud_layout.cpp'),
     dependencies: [dearimgui_dep, spdlog_dep, vkbootstrap_dep, implot_dep],
     include_directories: inc_common
 )

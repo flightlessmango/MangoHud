@@ -1,6 +1,7 @@
 #include <yaml-cpp/yaml.h>
 #include <string_view>
 #include <cstdint>
+#include <cmath>
 #include <spdlog/spdlog.h>
 #include <filesystem>
 
@@ -25,6 +26,19 @@ static bool validate_table(const YAML::Node& table) {
     if (!rows.IsSequence()) {
         SPDLOG_ERROR("rows is not a list");
         return false;
+    }
+
+    if (const auto padding = table["padding"]) {
+        try {
+            const float value = padding.as<float>();
+            if (!std::isfinite(value) || value < 0.0f) {
+                SPDLOG_ERROR("table padding must be a finite non-negative number");
+                return false;
+            }
+        } catch (const YAML::BadConversion&) {
+            SPDLOG_ERROR("table padding must be a number");
+            return false;
+        }
     }
 
     const auto cols = table["cols"];
@@ -84,22 +98,6 @@ static bool validate_yaml(const YAML::Node& doc) {
                     background.as<bool>();
                 } catch (const YAML::BadConversion&) {
                     SPDLOG_ERROR("hud window background must be a boolean");
-                    return false;
-                }
-            }
-            const auto padding = window["padding"];
-            if (padding && !padding.IsScalar()) {
-                SPDLOG_ERROR("hud window padding must be a number");
-                return false;
-            }
-            if (padding) {
-                try {
-                    if (padding.as<float>() < 0.0f) {
-                        SPDLOG_ERROR("hud window padding cannot be negative");
-                        return false;
-                    }
-                } catch (const YAML::BadConversion&) {
-                    SPDLOG_ERROR("hud window padding must be a number");
                     return false;
                 }
             }
@@ -203,6 +201,20 @@ static CellAlign parse_cell_align(const YAML::Node& cell) {
 
 static CellStyle parse_cell_style(const YAML::Node& cell) {
     CellStyle style;
+    if (cell["padding"]) {
+        style.padding = cell["padding"].as<float>();
+        if (!std::isfinite(style.padding) || style.padding < 0.0f)
+            throw std::runtime_error("cell padding must be a finite non-negative number");
+    }
+    if (cell["separator"])
+        style.separator = cell["separator"].as<bool>();
+    if (cell["separator_color"])
+        style.separator_color = cell["separator_color"].as<std::string>();
+    if (cell["separator_thickness"])
+        style.separator_thickness = std::max(1.0f, cell["separator_thickness"].as<float>());
+
+    if (cell["background_color"])
+        style.background_color = cell["background_color"].as<std::string>();
 
     if (cell["font_size"])
         style.font_size = cell["font_size"].as<float>();
@@ -237,18 +249,6 @@ static bool parse_table_node(hudTable& table, YAML::Node table_node, int font_si
         for (auto cell : row) {
             if (cell.IsNull()) {
                 parsed_row.push_back(std::nullopt);
-                continue;
-            }
-
-            if (cell["separator"]) {
-                SeparatorCell sc;
-                sc.color = cell["color"] ? cell["color"].as<std::string>() : default_cell_color;
-                if (cell["thickness"])
-                    sc.thickness = std::max(1.0f, cell["thickness"].as<float>());
-                sc.style = parse_cell_style(cell);
-
-                parsed_row.push_back(Cell{sc});
-                append_colspan_placeholders(parsed_row, sc.style);
                 continue;
             }
 
@@ -347,6 +347,7 @@ static bool parse_table_node(hudTable& table, YAML::Node table_node, int font_si
     }
 
     table.cols = cols;
+    table.padding = table_node["padding"] ? table_node["padding"].as<float>() : 0.0f;
     if (table_node["col_gap"])
         table.col_gap = std::max(0.0f, table_node["col_gap"].as<float>());
     if (table_node["row_gap"])
@@ -367,8 +368,6 @@ bool Config::parse_table_yaml(HudConfig& hud, YAML::Node doc) {
             HudWindow window;
             if (window_node["background"])
                 window.background = window_node["background"].as<bool>();
-            if (window_node["padding"])
-                window.padding = window_node["padding"].as<float>();
             if (window_node["position"])
                 window.position = {window_node["position"][0].as<float>(), window_node["position"][1].as<float>()};
             parse_table_node(window.table, window_node["table"], font_size);
