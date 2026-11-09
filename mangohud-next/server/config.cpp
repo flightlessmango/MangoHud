@@ -206,8 +206,12 @@ static CellStyle parse_cell_style(const YAML::Node& cell) {
         if (!std::isfinite(style.padding) || style.padding < 0.0f)
             throw std::runtime_error("cell padding must be a finite non-negative number");
     }
-    if (cell["separator"])
-        style.separator = cell["separator"].as<bool>();
+    if (const auto separator = cell["separator"]) {
+        if (!separator.IsScalar())
+            throw std::runtime_error("separator must be a boolean or string");
+        if (separator.Tag() == "!" || !YAML::convert<bool>::decode(separator, style.separator))
+            style.separator_text = separator.as<std::string>();
+    }
     if (cell["separator_color"])
         style.separator_color = cell["separator_color"].as<std::string>();
     if (cell["separator_thickness"])

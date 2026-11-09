@@ -28,6 +28,7 @@ struct HudCellLayout {
     std::vector<HudText> text;
     ImRect progress{0, 0, 0, 0};
     std::optional<ImRect> separator;
+    std::optional<HudText> separator_text;
     std::unique_ptr<HudLayout> nested;
 };
 

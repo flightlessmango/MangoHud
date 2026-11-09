@@ -75,7 +75,15 @@ static MeasuredCell measure_cell(const Cell& cell, int column, int cols, const h
     measured.span = std::min(std::max(1, style.colspan), cols - column);
     measured.padding = style.padding >= 0.0f ? style.padding : table.padding;
     measured.layout.cell = &cell;
-    measured.has_content = !style.background_color.empty() || style.separator;
+    measured.has_content = !style.background_color.empty() || style.separator ||
+                           !style.separator_text.empty();
+    if (!style.separator_text.empty() && column + measured.span < cols) {
+        auto* font = fonts.get(size);
+        const auto bounds = text_bounds(style.separator_text, font, size);
+        measured.layout.separator_text = HudText{style.separator_text, font, size,
+                                                 {-bounds.Min.x, -bounds.Min.y},
+                                                 style.separator_vec};
+    }
     if (style.separator) {
         const float height = font_bounds(fonts.get(size), size).GetHeight();
         measured.layout.separator = ImRect(0, 0, 0, height);
@@ -171,6 +179,12 @@ static MeasuredCell measure_cell(const Cell& cell, int column, int cols, const h
         for (const auto& row : measured.layout.nested->rows)
             measured.has_content |= row.bounds.GetWidth() > 0.0f;
     }
+    if (measured.layout.separator_text) {
+        const auto& run = *measured.layout.separator_text;
+        measured.minimum.y = std::max(measured.minimum.y,
+                                      text_bounds(run.text, run.font, run.font_size).GetHeight() +
+                                          outline_space * 2.0f);
+    }
     return measured;
 }
 
@@ -232,6 +246,7 @@ HudLayout layout_hud(const hudTable& table, Font& fonts) {
     result.debug = table.debug_cell_boxes;
     const int cols = std::max(0, table.cols);
     std::vector<std::vector<MeasuredCell>> rows;
+    std::vector<float> gaps(cols, table.col_gap);
     std::vector<float> widths(cols), heights, unit_widths(cols), value_widths(cols),
         column_insets(cols);
     for (const auto& row : table.rows) {
@@ -244,6 +259,12 @@ HudLayout layout_hud(const hudTable& table, Font& fonts) {
                 continue;
             }
             auto cell = measure_cell(*row[c], c, cols, table, fonts);
+            if (cell.layout.separator_text) {
+                const auto& run = *cell.layout.separator_text;
+                auto& gap = gaps[c + cell.span - 1];
+                gap = std::max(gap, text_bounds(run.text, run.font, run.font_size).GetWidth() +
+                                        outline_space * 2.0f);
+            }
             cell.left = left;
             const auto& style = hud_cell_style(*cell.layout.cell);
             left = 0.0f;
@@ -279,9 +300,9 @@ HudLayout layout_hud(const hudTable& table, Font& fonts) {
             for (auto& cell : row) {
                 if (cell.span != span)
                     continue;
-                float available = table.col_gap * (span - 1);
+                float available = 0.0f;
                 for (int c = cell.column; c < cell.column + span; c++)
-                    available += widths[c];
+                    available += widths[c] + (c + 1 < cell.column + span ? gaps[c] : 0.0f);
                 const auto align = hud_cell_style(*cell.layout.cell).align;
                 const float unit = unit_widths[cell.column + span - 1];
                 float minimum = cell.minimum.x;
@@ -294,8 +315,8 @@ HudLayout layout_hud(const hudTable& table, Font& fonts) {
             }
     std::vector<float> x(cols + 1, 0.0f);
     for (int c = 0; c < cols; c++)
-        x[c + 1] = x[c] + widths[c] + table.col_gap;
-    result.size.x = cols ? x.back() - table.col_gap : 0.0f;
+        x[c + 1] = x[c] + widths[c] + gaps[c];
+    result.size.x = cols ? x.back() - gaps.back() : 0.0f;
     float y = 0.0f;
     for (std::size_t r = 0; r < rows.size(); r++) {
         auto& out = result.rows.emplace_back();
@@ -304,7 +325,8 @@ HudLayout layout_hud(const hudTable& table, Font& fonts) {
         out.bounds = {0.0f, y, 0.0f, y + step};
         for (auto& cell : rows[r]) {
             auto& layout = cell.layout;
-            const float width = x[cell.column + cell.span] - x[cell.column] - table.col_gap;
+            const float width =
+                x[cell.column + cell.span] - x[cell.column] - gaps[cell.column + cell.span - 1];
             layout.bounds = {x[cell.column], y, x[cell.column] + width, y + height};
             layout.content = {layout.bounds.Min + ImVec2(cell.padding + cell.left, cell.padding),
                               layout.bounds.Max - ImVec2(cell.padding + cell.right, cell.padding)};
@@ -316,11 +338,19 @@ HudLayout layout_hud(const hudTable& table, Font& fonts) {
             }
             position_text(cell,
                           std::max(unit_widths[cell.column + cell.span - 1], cell.unit_width));
+            if (layout.separator_text) {
+                auto& run = *layout.separator_text;
+                const auto bounds = text_bounds(run.text, run.font, run.font_size);
+                run.pos += ImVec2(layout.bounds.Max.x +
+                                      (gaps[cell.column + cell.span - 1] - bounds.GetWidth()) * 0.5f,
+                                  y + (height - bounds.GetHeight()) * 0.5f);
+                out.bounds.Max.x = layout.bounds.Max.x + gaps[cell.column + cell.span - 1];
+            }
             if (layout.separator)
                 layout.separator->Translate({layout.bounds.Max.x - 1.0f,
                                              y + (height - layout.separator->GetHeight()) * 0.5f});
             if (cell.has_content)
-                out.bounds.Max.x = x[cell.column] + width;
+                out.bounds.Max.x = std::max(out.bounds.Max.x, x[cell.column] + width);
             out.cells.push_back(std::move(layout));
         }
         y = out.bounds.Max.y;

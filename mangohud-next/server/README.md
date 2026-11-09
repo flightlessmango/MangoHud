@@ -91,17 +91,10 @@ For progress cells, it continues to set the unfilled bar background.
 `col_gap: 0` for adjacent cells to meet at their shared boundary. Padding adds
 space inside cell backgrounds; gaps add space between cells.
 
-`separator: true` draws a vertical line on the cell's right boundary, without
-adding a column. For `colspan`, it follows the full span.
-Use `separator_color` (default white) and `separator_thickness` (default `1`)
-to override its appearance. Its thickness, outline, and antialiasing reserve
-space on both sides of the boundary; cell padding applies beyond that space.
-Attach it to a content cell instead of adding a standalone separator cell:
-
-```yaml
-- value: [CPU, FREQ]
-  separator: true
-```
+`separator: true` draws a line at the cell's right edge. A string such as
+`separator: "/"` is centered between cells, with space reserved to fit it.
+Use `separator_color` (default white) and `separator_thickness` (lines only,
+default `1`) to customize it.
 
 `font_size` sets an exact size for a cell. `font_scale` scales the HUD default font size for that cell. If both are set, `font_size` is used.
 

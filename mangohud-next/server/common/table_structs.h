@@ -31,6 +31,7 @@ enum class CellAlign {
 struct CellStyle {
     float padding = -1.0f;
     bool separator = false;
+    std::string separator_text;
     std::string separator_color = "FFFFFF";
     ImVec4 separator_vec = {1.0f, 1.0f, 1.0f, 1.0f};
     float separator_thickness = 1.0f;

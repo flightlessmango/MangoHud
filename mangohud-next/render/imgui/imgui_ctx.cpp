@@ -94,6 +94,8 @@ static void draw_separators(const HudLayout& layout, ImVec2 origin) {
         for (const auto& cell : row.cells) {
             if (cell.nested)
                 draw_separators(*cell.nested, origin + cell.content.Min);
+            if (cell.separator_text)
+                draw_text(*cell.separator_text, origin);
             if (!cell.separator)
                 continue;
             const auto& line = *cell.separator;
