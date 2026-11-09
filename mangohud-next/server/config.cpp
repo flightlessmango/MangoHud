@@ -232,6 +232,11 @@ static CellStyle parse_cell_style(const YAML::Node& cell) {
     if (cell["truncate"])
         style.truncate = std::max(0, cell["truncate"].as<int>());
 
+    if (cell["value_reserve"] && (cell["value"] || cell["format"])) {
+        style.value_reserve = std::max(0, cell["value_reserve"].as<int>());
+        style.value_reserve_override = true;
+    }
+
     style.align = parse_cell_align(cell);
 
     return style;

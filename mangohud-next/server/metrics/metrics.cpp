@@ -615,6 +615,10 @@ void Metrics::assign_values(hudTable* t, pid_t pid, hudTable* render_table) {
         for (auto& cell : parsed_row) {
             if (!cell)
                 continue;
+            if (auto* text = std::get_if<TextCell>(&*cell);
+                text && !text->style.value_reserve_override &&
+                (text->unit == "%" || text->unit == "W" || text->unit == "GiB"))
+                text->style.value_reserve = 3;
             std::visit([&](auto& value) {
                 if (!value.style.background_color.empty())
                     value.style.background_vec = color.get(value.style.background_color);

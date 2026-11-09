@@ -91,6 +91,11 @@ For progress cells, it continues to set the unfilled bar background.
 `col_gap: 0` for adjacent cells to meet at their shared boundary. Padding adds
 space inside cell backgrounds; gaps add space between cells.
 
+`value_reserve` sets the minimum character space for a value or format cell,
+excluding its unit, to reduce resizing as values change. Set `0` to reserve
+only the content’s actual width. Explicit reservations override automatic
+reservations in the same column; all cells still fit their content.
+
 `separator: true` draws a line at the cell's right edge. A string such as
 `separator: "/"` is centered between cells, with space reserved to fit it.
 Use `separator_color` (default white) and `separator_thickness` (lines only,

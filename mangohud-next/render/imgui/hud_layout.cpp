@@ -66,7 +66,7 @@ struct MeasuredCell {
 };
 
 static MeasuredCell measure_cell(const Cell& cell, int column, int cols, const hudTable& table,
-                                 Font& fonts) {
+                                 Font& fonts, const std::vector<bool>& reserve_overrides) {
     MeasuredCell measured;
     measured.column = column;
     const auto& style = hud_cell_style(cell);
@@ -123,17 +123,14 @@ static MeasuredCell measure_cell(const Cell& cell, int column, int cols, const h
             measured.numeric = !text->unit.empty() ||
                                (text->text.find_first_of("0123456789") != std::string::npos &&
                                 text->text.find_first_not_of("0123456789.+-") == std::string::npos);
-            if (style.truncate > 0) {
-                const std::string reserve(style.truncate, '0');
-                measured.value_width = std::max(measured.value_width, advance(reserve, font, size) +
-                                                                          outline_space * 2.0f);
-            }
-            if (!text->unit.empty() || (column > 0 && measured.numeric)) {
-                const std::string_view reserve =
-                    text->unit == "%" || text->unit == "W" || text->unit == "GiB" ? "100" : "00000";
-                measured.value_width = std::max(measured.value_width, advance(reserve, font, size) +
-                                                                          outline_space * 2.0f);
-            }
+            const bool reserve_value = style.value_reserve_override ||
+                                       (!reserve_overrides[column + measured.span - 1] &&
+                                        (!text->unit.empty() || (column > 0 && measured.numeric)));
+            const int reserve = std::max(reserve_value ? style.value_reserve : 0, style.truncate);
+            if (reserve > 0)
+                measured.value_width = std::max(measured.value_width,
+                                               advance("0", font, size) * reserve +
+                                                   outline_space * 2.0f);
             measured.minimum = measured.text_size;
             measured.minimum.x =
                 std::max(measured.minimum.x,
@@ -245,6 +242,15 @@ HudLayout layout_hud(const hudTable& table, Font& fonts) {
     HudLayout result;
     result.debug = table.debug_cell_boxes;
     const int cols = std::max(0, table.cols);
+    std::vector<bool> reserve_overrides(cols);
+    for (const auto& row : table.rows)
+        for (int c = 0; c < cols && c < static_cast<int>(row.size()); c++) {
+            if (!row[c])
+                continue;
+            const auto& style = hud_cell_style(*row[c]);
+            if (style.value_reserve_override)
+                reserve_overrides[c + std::min(std::max(1, style.colspan), cols - c) - 1] = true;
+        }
     std::vector<std::vector<MeasuredCell>> rows;
     std::vector<float> gaps(cols, table.col_gap);
     std::vector<float> widths(cols), heights, unit_widths(cols), value_widths(cols),
@@ -258,7 +264,7 @@ HudLayout layout_hud(const hudTable& table, Font& fonts) {
                 ++c;
                 continue;
             }
-            auto cell = measure_cell(*row[c], c, cols, table, fonts);
+            auto cell = measure_cell(*row[c], c, cols, table, fonts, reserve_overrides);
             if (cell.layout.separator_text) {
                 const auto& run = *cell.layout.separator_text;
                 auto& gap = gaps[c + cell.span - 1];

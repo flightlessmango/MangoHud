@@ -41,6 +41,8 @@ struct CellStyle {
     float font_scale = 1.0f;
     int colspan = 1;
     int truncate = 0;
+    int value_reserve = 4;
+    bool value_reserve_override = false;
     CellAlign align = CellAlign::Default;
 };
 
