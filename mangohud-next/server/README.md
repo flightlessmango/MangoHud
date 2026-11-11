@@ -45,7 +45,23 @@ The config file is watched while MangoHud Next is running. Changes are reloaded 
 | --- | --- | --- | --- |
 | `font_size` | integer | `24` | HUD font size. Currently parsed by the config system for renderer use. |
 | `fps_limit` | number | `0` | FPS limit sent to connected clients. `0` disables the limiter. |
+| `no_display` | boolean | `false` | Hide all HUD windows on the server. Recreate the buffer pool, publish transparent frames, then pause HUD rendering while metrics continue. |
 | `output` | string | `layer` | `layer`: Wayland layer-shell; `app`: application Wayland subsurface; `inject`: graphics API injection. Plain X11 falls back to `inject`. Gamescope always uses `layer`. |
+
+## HUD Visibility over D-Bus
+
+Hide or show the HUD while the server is running:
+
+```sh
+busctl --user call io.mangohud.socket /io/mangohud/socket io.mangohud.socket1 hide_hud b true
+busctl --user call io.mangohud.socket /io/mangohud/socket io.mangohud.socket1 hide_hud b false
+```
+
+Toggle visibility (returns whether the HUD is now hidden):
+
+```sh
+busctl --user call io.mangohud.socket /io/mangohud/socket io.mangohud.socket1 toggle_hud
+```
 
 ## Hud Windows
 

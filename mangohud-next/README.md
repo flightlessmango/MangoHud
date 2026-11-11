@@ -21,6 +21,12 @@ Runtime metric snapshots can be requested from the server as JSON:
 - `mangohud-next get_system` returns the current server-side system metrics, including GPU polling state when GPU metrics are present.
 - `mangohud-next get_clients` returns the current connected client metrics and process ids.
 
+Control HUD visibility:
+
+- `mangohud-next hide_hud` hides the HUD.
+- `mangohud-next show_hud` shows the HUD.
+- `mangohud-next toggle_hud` toggles visibility and returns `b true` when hidden or `b false` when visible.
+
 ## Configuration
 
 Configuration is documented in [server/README.md](server/README.md).

@@ -35,6 +35,7 @@ public:
     struct Resources;
     void frame_ready(int idx, unique_fd fd, std::shared_ptr<Resources> source = {});
     void set_hud(HudConfig next);
+    void set_hidden(bool hidden);
 
     struct Resources {
         MangoHudServer* server = nullptr;
@@ -79,11 +80,14 @@ private:
         std::shared_ptr<Resources> source;
     };
     std::deque<QueuedFrame> frame_queue;
+    bool hidden = false;
 
     bool apply_method(ExportMethod method);
     bool apply_method_or_next(ExportMethod method);
     bool resize(const Resolution& size, ExportMethod method);
     void run();
+    bool hide_hud();
+    unique_fd render_frame(int idx, Resolution& size, std::shared_ptr<HudConfig> frame_hud);
     void process_frame(QueuedFrame queued);
     void send_dmabuf();
 };

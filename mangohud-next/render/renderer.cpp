@@ -122,6 +122,7 @@ Renderer::Renderer(MangoHudServer* server_, Client* client_, int64_t render_mino
       render_minor(render_minor_),
       buffer_size(buffer_size_)
 {
+    hidden = server->config->hide_hud.load();
     apply_method_or_next(default_method);
     thread = std::thread([this] { run(); });
 }
@@ -154,6 +155,17 @@ void Renderer::frame_ready(int idx, unique_fd fd, std::shared_ptr<Resources> sou
     if (idx < 0)
         return;
 
+    std::lock_guard resources_lock(m);
+    if (!resources || idx >= std::ssize(resources->buffers) || (source && source != resources))
+        return;
+    if (hidden) {
+        auto& ready = resources->render_fences[idx];
+        if (ready)
+            client->frame_ready(idx, std::move(ready), resources);
+        return;
+    }
+    if (!source)
+        source = resources;
     {
         std::lock_guard lock(frame_m);
         frame_queue.push_back({{idx, std::move(fd)}, std::move(source)});
@@ -165,6 +177,15 @@ void Renderer::set_hud(HudConfig next)
 {
     std::lock_guard lock(hud_m);
     *hud = std::move(next);
+}
+
+void Renderer::set_hidden(bool next)
+{
+    std::lock_guard lock(m);
+    if (hidden == next)
+        return;
+    hidden = next;
+    apply_method_or_next(resources ? resources->method : default_method);
 }
 
 std::shared_ptr<Renderer::Resources> Renderer::get_resources()
@@ -183,7 +204,13 @@ bool Renderer::apply_method(ExportMethod method)
         return false;
     }
 
+    {
+        std::lock_guard lock(frame_m);
+        frame_queue.clear();
+    }
     resources = std::move(next);
+    if (hidden && !hide_hud())
+        return false;
     send_dmabuf();
     return true;
 }
@@ -234,8 +261,10 @@ void Renderer::run()
                 return stop.load(std::memory_order_acquire) || !frame_queue.empty();
             });
 
-            if (frame_queue.empty())
+            if (stop.load(std::memory_order_acquire))
                 return;
+            if (frame_queue.empty())
+                continue;
 
             frame = std::move(frame_queue.front());
             frame_queue.pop_front();
@@ -243,6 +272,34 @@ void Renderer::run()
 
         process_frame(std::move(frame));
     }
+}
+
+bool Renderer::hide_hud()
+{
+    auto blank = std::make_shared<HudConfig>();
+    blank->windows.clear();
+    for (int idx = 0; idx < std::ssize(resources->buffers); ++idx) {
+        Resolution size{w, h};
+        auto fd = render_frame(idx, size, blank);
+        if (!fd)
+            return false;
+        resources->render_fences[idx] = std::move(fd);
+    }
+    return true;
+}
+
+unique_fd Renderer::render_frame(int idx, Resolution& size, std::shared_ptr<HudConfig> frame_hud)
+{
+    const auto method = resources->method;
+    if (method == DMABUF_VULKAN || method == OPAQUE_VULKAN) {
+        if (resources->vk && resources->vk->submit(resources->buffers, w, h, size, idx,
+                                                  method == OPAQUE_VULKAN, frame_hud, hud_m))
+            return unique_fd::adopt(resources->vk->get_fence_fd(resources->buffers[idx].sync.fence));
+    } else if (method == DMABUF_EGL && resources->egl) {
+        return unique_fd::adopt(resources->egl->submit(resources->buffers, w, h, size, idx,
+                                                       frame_hud, hud_m));
+    }
+    return {};
 }
 
 void Renderer::process_frame(QueuedFrame queued)
@@ -271,49 +328,15 @@ void Renderer::process_frame(QueuedFrame queued)
         resources->render_fences[frame.idx] = {};
     }
 
-    unique_fd fd;
     const auto method = resources->method;
-    auto submit_vulkan = [&](ExportMethod method) {
-        if (!resources->vk)
-            return false;
-
-        const bool use_opaque = method == OPAQUE_VULKAN;
-        Resolution size{w, h};
-        if (!resources->vk->submit(resources->buffers, w, h, size, frame.idx,
-                                   use_opaque, hud, hud_m)) {
-            if (!resize(size, method))
-                apply_method_or_next(method);
-
-            return false;
-        }
-
-        fd = unique_fd::adopt(resources->vk->get_fence_fd(resources->buffers[frame.idx].sync.fence));
-        if (fd && frame.idx < std::ssize(resources->render_fences))
-            resources->render_fences[frame.idx] = unique_fd::dup(fd.get());
-
-        return true;
-    };
-
-    if (method == DMABUF_VULKAN || method == OPAQUE_VULKAN) {
-        if (!submit_vulkan(method))
-            return;
-    } else if (method == DMABUF_EGL) {
-        if (!resources->egl)
-            return;
-
-        Resolution size{w, h};
-        int fence_fd = resources->egl->submit(resources->buffers, w, h, size, frame.idx, hud, hud_m);
-        if (fence_fd < 0) {
-            if (resize(size, method))
-                return;
-
+    Resolution size{w, h};
+    auto fd = render_frame(frame.idx, size, hud);
+    if (!fd) {
+        if (!resize(size, method))
             apply_method_or_next(method);
-            return;
-        }
-
-        fd = unique_fd::adopt(fence_fd);
+        return;
     }
-
-    if (fd)
-        client->frame_ready(frame.idx, std::move(fd), resources);
+    if (resources->vk)
+        resources->render_fences[frame.idx] = unique_fd::dup(fd.get());
+    client->frame_ready(frame.idx, std::move(fd), resources);
 }

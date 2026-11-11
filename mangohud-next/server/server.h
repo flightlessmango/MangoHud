@@ -47,6 +47,7 @@ public:
     std::vector<std::shared_ptr<GPU>> available_gpus() const;
     std::shared_ptr<Wayland> wayland(std::string_view display);
     std::vector<std::shared_ptr<Client>> clients_for_wayland(std::string_view display);
+    void update_visibility();
 
     ~MangoHudServer() {
         std::vector<std::shared_ptr<Client>> clients;

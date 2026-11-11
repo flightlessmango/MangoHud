@@ -17,6 +17,7 @@
 #include "common/table_structs.h"
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <sys/stat.h>
 
 #ifdef Bool
@@ -44,6 +45,7 @@ class Config {
 public:
     std::mutex m;
     std::shared_ptr<HudConfig> hud;
+    std::atomic<bool> hide_hud{false};
 
     Config() {
         config_path = get_config_dir() + "/MangoHud/MangoHud.yml";
@@ -60,6 +62,7 @@ public:
             options_[std::string(key)] = spec.val;
 
         load_yaml(doc);
+        hide_hud.store(get<bool>("no_display"));
         inited = true;
     }
 
@@ -165,6 +168,7 @@ private:
         {"blacklist", Spec{StringList, std::vector<std::string>{}}},
         {"font_size", Spec{Int, 24}},
         {"fps_limit", Spec{Double, 0.0}},
+        {"no_display", Spec{Bool, false}},
         {"output", Spec{String, std::string("layer")}},
         {"remember_focus", Spec{Bool, false}},
     };

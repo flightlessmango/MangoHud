@@ -3,6 +3,7 @@
 #include "stdio.h"
 #include "egl_ctx.h"
 #include "vulkan_ctx.h"
+#include "../render/renderer.h"
 #include <cstdlib>
 #include <utility>
 
@@ -18,6 +19,7 @@ int main() {
 void MangoHudServer::loop() {
     while (!ipc->should_stop()) {
         if (config->maybe_reload_config()) {
+            update_visibility();
             std::vector<std::shared_ptr<Client>> clients;
             {
                 std::lock_guard lock(ipc->clients_mtx);
@@ -28,6 +30,19 @@ void MangoHudServer::loop() {
         }
 
         sleep(1);
+    }
+}
+
+void MangoHudServer::update_visibility() {
+    std::vector<std::shared_ptr<Client>> clients;
+    {
+        std::lock_guard lock(ipc->clients_mtx);
+        clients = ipc->clients;
+    }
+    for (auto& client : clients) {
+        std::lock_guard lock(client->m);
+        if (client->renderer)
+            client->renderer->set_hidden(config->hide_hud.load());
     }
 }
 

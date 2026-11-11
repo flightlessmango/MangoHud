@@ -23,9 +23,13 @@ if [ "$1" = "--version" ]; then
 fi
 
 if [ "@mangohud_env@" = "MANGOHUD_NEXT" ]; then
-    mangohud_next_dbus_json() {
-        reply=$(busctl --user call io.mangohud.socket /io/mangohud/socket io.mangohud.socket1 "$1") || exit $?
+    mangohud_next_dbus() {
+        reply=$(busctl --user call io.mangohud.socket /io/mangohud/socket io.mangohud.socket1 "$@") || return $?
         case "$reply" in
+            "") ;;
+            "b true"|"b false")
+                printf '%s\n' "$reply"
+                ;;
             s\ \"*\")
                 reply=${reply#s \"}
                 reply=${reply%\"}
@@ -40,12 +44,28 @@ if [ "@mangohud_env@" = "MANGOHUD_NEXT" ]; then
     }
 
     case "$1" in
-        get_system)
-            mangohud_next_dbus_json get_system
+        hide_hud|show_hud)
+            if [ "$#" -ne 1 ]; then
+                printf 'Usage: %s %s\n' "$0" "$1" >&2
+                exit 1
+            fi
+            hidden=true
+            if [ "$1" = "show_hud" ]; then
+                hidden=false
+            fi
+            mangohud_next_dbus hide_hud b "$hidden"
             exit $?
             ;;
-        get_clients)
-            mangohud_next_dbus_json get_clients
+        toggle_hud)
+            if [ "$#" -ne 1 ]; then
+                printf 'Usage: %s toggle_hud\n' "$0" >&2
+                exit 1
+            fi
+            mangohud_next_dbus toggle_hud
+            exit $?
+            ;;
+        get_system|get_clients)
+            mangohud_next_dbus "$1"
             exit $?
             ;;
     esac
