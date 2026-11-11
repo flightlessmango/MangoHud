@@ -3,6 +3,7 @@
 #include <deque>
 #include "imgui.h"
 #include <atomic>
+#include <chrono>
 #include <thread>
 #include <string>
 #include <utility>
@@ -46,6 +47,7 @@ public:
     std::mutex m;
     Fdinfo fdinfo;
     std::atomic<float> fps_limit{0};
+    std::atomic<uint32_t> refresh_ns{7'000'000};
     int64_t renderMinor = -1;
     std::string pEngineName;
     std::string vulkanDriver;
@@ -111,6 +113,7 @@ public:
     void clear_frames() {
         std::lock_guard lock(sync_mtx);
         frame_queue.clear();
+        last_hud_frame = {};
     }
 
     int next_frame() {
@@ -119,8 +122,13 @@ public:
             return -1;
 
         if (sync_fd_signaled(frame_queue.front().fd.get())) {
+            const auto now = std::chrono::steady_clock::now();
+            if (now - last_hud_frame <
+                std::chrono::nanoseconds(refresh_ns.load(std::memory_order_relaxed)))
+                return -1;
             int idx = frame_queue.front().idx;
             frame_queue.pop_front();
+            last_hud_frame = now;
             return idx;
         }
 
@@ -149,6 +157,7 @@ private:
     std::atomic<std::shared_ptr<const std::vector<std::string>>> focused_seats{
         std::make_shared<const std::vector<std::string>>()};
     std::mutex sync_mtx;
+    std::chrono::steady_clock::time_point last_hud_frame{};
     std::atomic<bool> stop_wait {false};
     std::thread wait_thread;
 

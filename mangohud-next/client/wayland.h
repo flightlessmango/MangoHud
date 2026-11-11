@@ -359,7 +359,6 @@ private:
 
     std::thread thread;
     std::atomic<bool> quit{false};
-    std::atomic<uint32_t> refresh_ns{0};
     inline static constexpr uint32_t max_commit_app_feedback_pending = 8;
     inline static constexpr uint32_t max_sampled_app_feedback_pending = 256;
     std::atomic<uint32_t> app_feedback_pending{0};

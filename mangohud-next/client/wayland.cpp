@@ -341,14 +341,14 @@ void Wayland::on_presentation_feedback_presented(void* data, struct wp_presentat
         }
 
         if (auto ipc = feedback_data->ipc.lock()) {
+            if (refresh > 0)
+                ipc->refresh_ns.store(refresh, std::memory_order_relaxed);
             auto sample_seq = refresh > 0 ? presented_ns / refresh : seq;
             ipc->add_to_queue(SampleType::Refresh, sample_seq, presented_ns);
             if (app_sample)
                 ipc->add_to_queue(SampleType::App, app_sample_seq, presented_ns);
         }
         if (feedback_data->wayland) {
-            if (refresh > 0)
-                feedback_data->wayland->refresh_ns.store(refresh, std::memory_order_release);
             feedback_data->wayland->set_presentation_focus(true, os_time_get_nano());
         }
     }
@@ -689,10 +689,8 @@ void Wayland::run_thread(std::shared_ptr<surface_data> surf_data)
             break;
 
         std::chrono::nanoseconds sleep = std::chrono::milliseconds(100);
-        if (ipc->connected.load(std::memory_order_acquire)) {
-            auto refresh = refresh_ns.load(std::memory_order_acquire);
-            sleep = refresh > 0 ? std::chrono::nanoseconds(refresh) : std::chrono::milliseconds(7);
-        }
+        if (ipc->connected.load(std::memory_order_acquire))
+            sleep = std::chrono::nanoseconds(ipc->refresh_ns.load(std::memory_order_relaxed));
         std::this_thread::sleep_for(sleep);
     }
 }
