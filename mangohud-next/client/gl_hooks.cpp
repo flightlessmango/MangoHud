@@ -100,7 +100,7 @@ static void register_egl_surface(EGLDisplay dpy, EGLSurface surf, void* native_w
     if (platform == EGL_PLATFORM_X11_KHR) {
         auto window = platform_window ? *static_cast<Window*>(native_window)
                                      : static_cast<Window>(reinterpret_cast<uintptr_t>(native_window));
-        if (!ipc) ipc = std::make_shared<IPCClient>(nullptr, Backend::EGL);
+        if (!ipc) ipc = std::make_shared<IPCClient>(Backend::EGL);
         if (!x11) x11 = std::make_unique<X11>(ipc);
         auto* display = reinterpret_cast<Display*>(get_egl_display(dpy));
         x11->set_window(window, display ? DisplayString(display) : nullptr);
@@ -112,7 +112,7 @@ static void register_egl_surface(EGLDisplay dpy, EGLSurface surf, void* native_w
     if (!wl_surface || !wl_display)
         return;
 
-    if (!ipc) ipc = std::make_shared<IPCClient>(nullptr, Backend::EGL);
+    if (!ipc) ipc = std::make_shared<IPCClient>(Backend::EGL);
     if (!wayland) {
         EGL egl;
         ipc->renderMinor = egl.renderer(dpy);
@@ -132,7 +132,7 @@ static bool present_wayland(EGLSurface surf) {
 
 static void mangohud(Display *dpy = nullptr, GLXDrawable drawable = 0) {
     auto api = dpy ? Backend::GLX : Backend::EGL;
-    if (!ipc) ipc = std::make_shared<IPCClient>(nullptr, api);
+    if (!ipc) ipc = std::make_shared<IPCClient>(api);
     if (dpy && drawable) {
         if (!x11) x11 = std::make_unique<X11>(ipc);
         Window window = drawable;

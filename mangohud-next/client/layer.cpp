@@ -475,7 +475,10 @@ public:
         const bool destroy_layer = layer && layer->ovl_res && layer->ovl_res->d && layer->ovl_res->d->Device == device;
         d->DeviceWaitIdle(device);
         if (destroy_layer) {
+            auto ipc = layer->ipc;
+            // Drop device resources while keeping the ipc connection alive.
             layer.reset();
+            layer = std::make_unique<Layer>(std::move(ipc));
         }
 
 #ifdef VK_EXT_present_timing

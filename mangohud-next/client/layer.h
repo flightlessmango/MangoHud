@@ -141,9 +141,8 @@ public:
     std::unordered_map<VkQueue, uint32_t> queue_family;
     std::mutex q_family_mtx;
 
-    Layer() {
-        ipc = std::make_shared<IPCClient>(this, Backend::VULKAN);
-    }
+    explicit Layer(std::shared_ptr<IPCClient> client = {})
+        : ipc(client ? std::move(client) : std::make_shared<IPCClient>(Backend::VULKAN)) {}
 
 #ifdef VK_EXT_present_timing
     PresentationTiming timing{*this};

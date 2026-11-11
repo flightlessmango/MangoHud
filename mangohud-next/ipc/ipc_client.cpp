@@ -11,7 +11,7 @@
 #include <ranges>
 #include "file_utils.h"
 
-IPCClient::IPCClient(Layer* layer_, Backend api_) : layer(layer_), api(api_){
+IPCClient::IPCClient(Backend api_) : api(api_){
     auto console = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
     auto spdlog_sink = std::make_shared<spdlogSink>(this);
     logger = std::make_shared<spdlog::logger>("MANGOHUD", spdlog::sinks_init_list{console, spdlog_sink});

@@ -57,7 +57,7 @@ public:
     bool waylandSurface = false;
     int buffer_size = 0;
 
-    IPCClient(Layer* layer_ = nullptr, Backend api_ = Backend::NONE);
+    explicit IPCClient(Backend api_ = Backend::NONE);
 
     void start(int image_count);
 
@@ -134,7 +134,6 @@ public:
 private:
     std::atomic<bool> layer_output_{true};
     std::atomic<bool> inject_output_{false};
-    Layer* layer;
     Backend api = Backend::NONE;
 
     inline static std::atomic<bool> incompatible{false};
