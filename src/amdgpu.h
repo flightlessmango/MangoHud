@@ -480,7 +480,12 @@ class AMDGPU {
     	AMDGPU(std::string pci_dev, uint32_t device_id, uint32_t vendor_id, std::string drm_node);
 
 		~AMDGPU() {
-			stop_thread = true;
+			{
+				// see ~GPU_fdinfo(): wake a paused sampler
+				std::lock_guard<std::mutex> lock(metrics_mutex);
+				stop_thread = true;
+			}
+			cond_var.notify_all();
 			if (thread.joinable())
 				thread.join();
 		}
