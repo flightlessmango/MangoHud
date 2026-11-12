@@ -32,6 +32,7 @@ overlay_spv = []
 foreach s : ['overlay.frag', 'overlay.vert']
   overlay_spv += custom_target(
     s + '.spv.h', input : s, output : s + '.spv.h',
+    depend_files : files('../mangohud-next/client/colors.glsl'),
     command : [glslang, '-V', '-x', '-o', '@OUTPUT@', '@INPUT@'])
 endforeach
 

@@ -163,7 +163,7 @@ void imgui_create(gl_context *ctx, const gl_wsi plat)
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
-    HUDElements.convert_colors(false, params);
+    HUDElements.convert_colors(params);
 
     glGetIntegerv (GL_VIEWPORT, last_vp.v);
     glGetIntegerv (GL_SCISSOR_BOX, last_sb.v);

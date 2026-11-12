@@ -126,9 +126,8 @@ class HudElements{
         static void ftrace();
 
         void convert_colors(const struct overlay_params& params);
-        void convert_colors(bool do_conv, const struct overlay_params& params);
         struct hud_colors {
-            bool convert, update;
+            bool update;
             ImVec4 cpu,
                 gpu,
                 vram,

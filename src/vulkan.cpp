@@ -159,6 +159,8 @@ struct swapchain_data {
    VkSwapchainKHR swapchain;
    unsigned width, height;
    VkFormat format;
+   VkColorSpaceKHR colorspace;
+   uint32_t transfer_function;
 
    std::vector<VkImage> images;
    std::vector<VkImageView> image_views;
@@ -252,6 +254,7 @@ vk_find_next_struct(void **chain, VkStructureType type) {
 /**/
 
 static void shutdown_swapchain_font(struct swapchain_data*);
+static void update_swapchain_colors(struct swapchain_data* data);
 
 static VkLayerInstanceCreateInfo *get_instance_chain_info(const VkInstanceCreateInfo *pCreateInfo,
                                                           VkLayerFunction func)
@@ -1025,6 +1028,10 @@ static struct overlay_draw *render_swapchain_display(struct swapchain_data *data
                                        VK_SHADER_STAGE_VERTEX_BIT,
                                        sizeof(float) * 2, sizeof(float) * 2, translate);
 
+   device_data->vtable.CmdPushConstants(draw->command_buffer, data->pipeline_layout,
+                                       VK_SHADER_STAGE_FRAGMENT_BIT,
+                                       sizeof(float) * 4, sizeof(data->transfer_function), &data->transfer_function);
+
    // Render the command lists:
    int vtx_offset = 0;
    int idx_offset = 0;
@@ -1220,15 +1227,18 @@ static void setup_swapchain_data_pipeline(struct swapchain_data *data)
    /* Constants: we are using 'vec2 offset' and 'vec2 scale' instead of a full
     * 3d projection matrix
     */
-   VkPushConstantRange push_constants[1] = {};
+   VkPushConstantRange push_constants[2] = {};
    push_constants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
    push_constants[0].offset = sizeof(float) * 0;
    push_constants[0].size = sizeof(float) * 4;
+   push_constants[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+   push_constants[1].offset = sizeof(float) * 4;
+   push_constants[1].size = sizeof(uint32_t);
    VkPipelineLayoutCreateInfo layout_info = {};
    layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
    layout_info.setLayoutCount = 1;
    layout_info.pSetLayouts = &data->descriptor_layout;
-   layout_info.pushConstantRangeCount = 1;
+   layout_info.pushConstantRangeCount = 2;
    layout_info.pPushConstantRanges = push_constants;
    VK_CHECK(device_data->vtable.CreatePipelineLayout(device_data->device,
                                                      &layout_info,
@@ -1343,68 +1353,11 @@ static void setup_swapchain_data_pipeline(struct swapchain_data *data)
 //      update_image_descriptor(data, data->font_image_view[0], data->descriptor_set);
 }
 
-static void convert_colors_vk(VkFormat format, VkColorSpaceKHR colorspace, struct swapchain_stats& sw_stats, struct overlay_params& params)
+static void update_swapchain_colors(struct swapchain_data* data)
 {
-   /* TODO: Support more colorspacess */
-   switch (colorspace) {
-      case VK_COLOR_SPACE_HDR10_ST2084_EXT:
-         params.transfer_function = PQ;
-         break;
-      case VK_COLOR_SPACE_HDR10_HLG_EXT:
-         params.transfer_function = HLG;
-         break;
-      case VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT:
-         params.transfer_function = SRGB;
-         break;
-      /* use no conversion for rest of the colorspaces */
-      default:
-         params.transfer_function = NONE;
-         break;
-   }
-
-   if (params.transfer_function == NONE)
-   {
-      switch (format) {
-         case VK_FORMAT_R8_SRGB:
-         case VK_FORMAT_R8G8_SRGB:
-         case VK_FORMAT_R8G8B8_SRGB:
-         case VK_FORMAT_B8G8R8_SRGB:
-         case VK_FORMAT_R8G8B8A8_SRGB:
-         case VK_FORMAT_B8G8R8A8_SRGB:
-         case VK_FORMAT_A8B8G8R8_SRGB_PACK32:
-         case VK_FORMAT_BC1_RGB_SRGB_BLOCK:
-         case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
-         case VK_FORMAT_BC2_SRGB_BLOCK:
-         case VK_FORMAT_BC3_SRGB_BLOCK:
-         case VK_FORMAT_BC7_SRGB_BLOCK:
-         case VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK:
-         case VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK:
-         case VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_4x4_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_5x4_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_5x5_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_6x5_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_6x6_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_8x5_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_8x6_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_8x8_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_10x5_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_10x6_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_10x8_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_10x10_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_12x10_SRGB_BLOCK:
-         case VK_FORMAT_ASTC_12x12_SRGB_BLOCK:
-         case VK_FORMAT_PVRTC1_2BPP_SRGB_BLOCK_IMG:
-         case VK_FORMAT_PVRTC1_4BPP_SRGB_BLOCK_IMG:
-         case VK_FORMAT_PVRTC2_2BPP_SRGB_BLOCK_IMG:
-         case VK_FORMAT_PVRTC2_4BPP_SRGB_BLOCK_IMG:
-            params.transfer_function = SRGB;
-            break;
-         default: break;
-      }
-   }
-
-   HUDElements.convert_colors(params.transfer_function != NONE, params);
+   data->transfer_function = convert_colors_vk(data->format, data->colorspace);
+   if (data->colorspace == VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT)
+      data->transfer_function = SRGB;
 }
 
 static void setup_swapchain_data(struct swapchain_data *data,
@@ -1414,6 +1367,7 @@ static void setup_swapchain_data(struct swapchain_data *data,
    data->width = pCreateInfo->imageExtent.width;
    data->height = pCreateInfo->imageExtent.height;
    data->format = pCreateInfo->imageFormat;
+   data->colorspace = pCreateInfo->imageColorSpace;
 
    if (!data->imgui_contexts.imgui)
       data->imgui_contexts = create_imgui_contexts(data->font_atlas);
@@ -1422,7 +1376,8 @@ static void setup_swapchain_data(struct swapchain_data *data,
 
    ImGui::GetIO().IniFilename = NULL;
    ImGui::GetIO().DisplaySize = ImVec2((float)data->width, (float)data->height);
-   convert_colors_vk(pCreateInfo->imageFormat, pCreateInfo->imageColorSpace, data->sw_stats, device_data->instance->params);
+   update_swapchain_colors(data);
+   HUDElements.convert_colors(device_data->instance->params);
 
    /* Render pass */
    VkAttachmentDescription attachment_desc = {};

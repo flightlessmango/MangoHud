@@ -35,94 +35,6 @@
 
 using namespace std;
 
-// Cut from https://github.com/ocornut/imgui/pull/2943
-// Probably move to ImGui
-static float SRGBToLinear(float in)
-{
-    if (in <= 0.04045f)
-        return in / 12.92f;
-    else
-        return powf((in + 0.055f) / 1.055f, 2.4f);
-}
-
-static ImVec4 SRGBToLinear(ImVec4 col)
-{
-    col.x = SRGBToLinear(col.x);
-    col.y = SRGBToLinear(col.y);
-    col.z = SRGBToLinear(col.z);
-    // Alpha component is already linear
-
-    return col;
-}
-
-static float LinearToPQ(float in)
-{
-    const float m1 = 0.1593017578125f;
-    const float m2 = 78.84375f;
-    const float c1 = 0.8359375f;
-    const float c2 = 18.8515625f;
-    const float c3 = 18.6875f;
-    /* target 200 cd/m^2 as our maximum rather than 10000 cd/m^2 */
-    const float targetL = 200.f;
-    const float maxL = 10000.0f;
-
-    in = powf(in * (targetL / maxL), m1);
-    in = (c1 + c2 * in) / (1.0f + c3 * in);
-    return powf(in, m2);
-}
-
-static double dot(const ImVec4& a, const ImVec4& b)
-{
-    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
-}
-
-static ImVec4 SRGBtoBT2020(ImVec4 col)
-{
-    const ImVec4 to2020[4] = {
-        {0.627392, 0.32903, 0.0432691, 0.0},
-        {0.0691229, 0.9195232, 0.0113204, 0.0},
-        {0.0164229, 0.088042, 0.8956166, 0.0},
-        {0.0, 0.0, 0.0, 1.0}
-    };
-
-    return ImVec4(dot(to2020[0], col), dot(to2020[1], col),
-                  dot(to2020[2], col), dot(to2020[3], col));
-}
-
-static ImVec4 LinearToPQ(ImVec4 col)
-{
-    col = SRGBtoBT2020(col);
-
-    col.x = LinearToPQ(col.x);
-    col.y = LinearToPQ(col.y);
-    col.z = LinearToPQ(col.z);
-
-    return col;
-}
-
-static float LinearToHLG(float in)
-{
-    const float a = 0.17883277f;
-    const float b = 0.28466892f;
-    const float c = 0.55991073f;
-
-    if (in <= 1.0f/12.0f)
-        return sqrtf(3.0f * in);
-    else
-        return a * logf(12.0f * in - b) + c;
-}
-
-static ImVec4 LinearToHLG(ImVec4 col)
-{
-    col = SRGBtoBT2020(col);
-
-    col.x = LinearToHLG(col.x);
-    col.y = LinearToHLG(col.y);
-    col.z = LinearToHLG(col.z);
-
-    return col;
-}
-
 template<typename T, typename R = float>
 R format_units(T value, const char*& unit)
 {
@@ -143,21 +55,6 @@ void HudElements::convert_colors(const struct overlay_params& params)
     auto convert = [&params](unsigned color) -> ImVec4 {
         ImVec4 fc = ImGui::ColorConvertU32ToFloat4(color);
         fc.w = params.alpha;
-        if (HUDElements.colors.convert)
-        {
-            switch (params.transfer_function)
-            {
-                case PQ:
-                    fc = SRGBToLinear(fc);
-                    return LinearToPQ(fc);
-                case HLG:
-                    fc = SRGBToLinear(fc);
-                    return LinearToHLG(fc);
-                case SRGB:
-                    return SRGBToLinear(fc);
-                default: break;
-            }
-        }
         return fc;
     };
 
@@ -194,12 +91,6 @@ void HudElements::convert_colors(const struct overlay_params& params)
     style.CellPadding.y = params.cellpadding_y * real_font_size.y;
     style.WindowRounding = params.round_corners;
     style.AntiAliasedLines = false;
-}
-
-void HudElements::convert_colors(bool do_conv, const struct overlay_params& params)
-{
-    HUDElements.colors.convert = do_conv;
-    convert_colors(params);
 }
 
 void HudElements::TextColored(ImVec4 col, const char *fmt, ...){
