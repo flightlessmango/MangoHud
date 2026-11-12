@@ -70,22 +70,29 @@ void xe_drm_base::poll() {
         return;
     }
 
+    has_vram = false;
+
     for (uint8_t i = 0; i < regions->num_mem_regions; i++) {
         drm_xe_mem_region mr = regions->mem_regions[i];
 
-        if (mr.mem_class != DRM_XE_MEM_REGION_CLASS_VRAM)
+        if (mr.mem_class == DRM_XE_MEM_REGION_CLASS_SYSMEM) {
+            sysmem_total = mr.total_size;
+            sysmem_used  = mr.used;
+            continue;
+        }
+
+        if (mr.mem_class != DRM_XE_MEM_REGION_CLASS_VRAM || has_vram)
             continue;
 
+        has_vram = true;
         total_memory = mr.total_size;
         used_memory  = mr.used;
 
         SPDLOG_TRACE("total_memory = {} MiB", total_memory / 1024.f / 1024.f);
         SPDLOG_TRACE("used_memory  = {} MiB", used_memory / 1024.f / 1024.f);
-
-        break;
     }
 
-    return;
+    free(ptr);
 }
 
 uint64_t xe_drm_base::get_total_memory() const {
@@ -94,6 +101,18 @@ uint64_t xe_drm_base::get_total_memory() const {
 
 uint64_t xe_drm_base::get_used_memory() const {
     return used_memory;
+}
+
+bool xe_drm_base::has_vram_region() const {
+    return has_vram;
+}
+
+uint64_t xe_drm_base::get_sysmem_total() const {
+    return sysmem_total;
+}
+
+uint64_t xe_drm_base::get_sysmem_used() const {
+    return sysmem_used;
 }
 
 xe_drm::xe_drm() {}
