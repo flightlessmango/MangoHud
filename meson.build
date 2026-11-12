@@ -337,6 +337,10 @@ if get_option('include_doc')
 endif
 
 if get_option('tests').enabled()
+  test('gamesir battery helper', prog_python,
+    args: ['-m', 'unittest', 'discover', '-s',
+      meson.project_source_root() / 'tests', '-p', 'test_gamesir_battery.py'])
+
   # cmocka_dep = dependency('cmocka', fallback: ['cmocka', 'cmocka_dep'])
 
   # e = executable('amdgpu', 'tests/test_amdgpu.cpp',
