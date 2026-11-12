@@ -3,6 +3,9 @@
 #include <set>
 #include <unistd.h>
 #include <map>
+#include <mutex>
+#include <shared_mutex>
+#include <spdlog/spdlog.h>
 #include <wayland-client.h>
 #include <xkbcommon/xkbcommon.h>
 #include <sys/mman.h>
@@ -23,7 +26,7 @@ struct wayland_display
     struct wl_keyboard *keyboard;
     struct xkb_keymap *keymap_xkb;
     struct xkb_state *state_xkb;
-    std::set<void *> vk_surfaces;
+    std::map<void*, wl_surface*> vk_surfaces;
     std::set<KeySym> wl_pressed_keys;
 
     wayland_display()
@@ -54,6 +57,7 @@ struct wayland_display
 };
 
 std::map<struct wl_display *, wayland_display> displays;
+static std::shared_mutex displays_mutex;
 
 // fixes wl_array_for_each with C++
 #ifdef wl_array_for_each
@@ -195,15 +199,43 @@ static void seat_handle_capabilities(void *data, struct wl_seat *seat, uint32_t 
 
 void update_wl_queue()
 {
+    std::unique_lock<std::shared_mutex> lock(displays_mutex);
     for (const auto& display : displays)
         wl_display_dispatch_queue_pending(display.first, display.second.queue);
 }
 
+overlay_transfer_function wayland_surface_color(void* vk_surface)
+{
+    using Query = int (*)(const void*);
+    static auto query = reinterpret_cast<Query>(real_dlsym(RTLD_DEFAULT, "mangohud_wayland_surface_color"));
+    std::shared_lock<std::shared_mutex> lock(displays_mutex);
+    wl_surface* surface = nullptr;
+    for (const auto& display : displays) {
+        auto it = display.second.vk_surfaces.find(vk_surface);
+        if (it != display.second.vk_surfaces.end()) {
+            surface = it->second;
+            break;
+        }
+    }
+    if (!surface)
+        return NONE;
+    if (!query) {
+        static std::once_flag warning;
+        std::call_once(warning, [] {
+            SPDLOG_WARN("Cannot detect pass-through color space; use mangohud %command% to enable Wayland color detection.");
+        });
+        return NONE;
+    }
+    return static_cast<overlay_transfer_function>(query(surface));
+}
+
 // Track vk_surface for reference counting
-void init_wayland_data(struct wl_display *display, void *vk_surface)
+void init_wayland_data(struct wl_display *display, void *vk_surface, struct wl_surface* surface)
 {
     if (!display)
         return;
+
+    std::unique_lock<std::shared_mutex> lock(displays_mutex);
 
     if (!wl_handle)
         wl_handle = real_dlopen("libwayland-client.so.0", RTLD_LAZY);
@@ -214,11 +246,11 @@ void init_wayland_data(struct wl_display *display, void *vk_surface)
 
     // if we already have the display then just increase its reference count
     // and add its vk_surface
-    if (has_wayland_display(display))
+    if (displays.find(display) != displays.end())
     {
         displays[display].ref++;
         if (vk_surface)
-            displays[display].vk_surfaces.insert(vk_surface);
+            displays[display].vk_surfaces[vk_surface] = surface;
         return;
     }
 
@@ -226,7 +258,7 @@ void init_wayland_data(struct wl_display *display, void *vk_surface)
     displays[display].ref = 1;
     displays[display].queue = wl_display_create_queue(display);
     if (vk_surface)
-        displays[display].vk_surfaces.insert(vk_surface);
+        displays[display].vk_surfaces[vk_surface] = surface;
     struct wl_display *display_wrapped = (struct wl_display*)wl_proxy_create_wrapper(display);
     wl_proxy_set_queue((struct wl_proxy*)display_wrapped, displays[display].queue);
     struct wl_registry *registry = wl_display_get_registry(display_wrapped);
@@ -239,16 +271,18 @@ void init_wayland_data(struct wl_display *display, void *vk_surface)
 
 void wayland_data_unref(struct wl_display *display, void *vk_surface)
 {
-    if (has_wayland_display(display))
+    std::unique_lock<std::shared_mutex> lock(displays_mutex);
+    if (displays.find(display) != displays.end())
     {
         displays[display].ref--;
+        displays[display].vk_surfaces.erase(vk_surface);
     }
     // use the VkSurface to remove reference count
     else if (vk_surface)
     {
         for (auto& display : displays)
         {
-            if (display.second.vk_surfaces.count(vk_surface))
+            if (display.second.vk_surfaces.erase(vk_surface))
                 display.second.ref--;
         }
     }
@@ -276,11 +310,13 @@ void wayland_data_unref(struct wl_display *display, void *vk_surface)
 
 bool has_wayland_display(struct wl_display *display)
 {
+    std::shared_lock<std::shared_mutex> lock(displays_mutex);
     return displays.find(display) != displays.end();
 }
 
 bool wayland_has_keys_pressed(const std::vector<KeySym>& keys)
 {
+    std::shared_lock<std::shared_mutex> lock(displays_mutex);
     std::map<struct wl_display *, size_t> counter;
     for (const auto& display : displays)
     {

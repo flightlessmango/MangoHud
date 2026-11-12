@@ -55,6 +55,7 @@
 #include "pci_ids.h"
 #if defined(HAVE_WAYLAND)
 #include "wayland_hook.h"
+#include "wayland_color.h"
 #endif
 #include "real_dlsym.h"
 #include "file_utils.h"
@@ -161,6 +162,8 @@ struct swapchain_data {
    VkFormat format;
    VkColorSpaceKHR colorspace;
    uint32_t transfer_function;
+   HDR::State hdr_state;
+   VkSurfaceKHR surface;
 
    std::vector<VkImage> images;
    std::vector<VkImageView> image_views;
@@ -552,6 +555,13 @@ static void compute_swapchain_display(struct swapchain_data *data)
 
    auto saved_imgui_context = get_current_imgui_contexts();
    make_imgui_contexts_current(data->imgui_contexts);
+
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+   if (data->colorspace == VK_COLOR_SPACE_PASS_THROUGH_EXT)
+      update_swapchain_colors(data);
+#endif
+
+   HUDElements.hdr_status = static_cast<int>(data->hdr_state);
 
    if (HUDElements.colors.update)
       HUDElements.convert_colors(instance_data->params);
@@ -1355,9 +1365,18 @@ static void setup_swapchain_data_pipeline(struct swapchain_data *data)
 
 static void update_swapchain_colors(struct swapchain_data* data)
 {
+   data->hdr_state = HDR::from_colorspace(data->colorspace);
    data->transfer_function = convert_colors_vk(data->format, data->colorspace);
    if (data->colorspace == VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT)
       data->transfer_function = SRGB;
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+   else if (data->colorspace == VK_COLOR_SPACE_PASS_THROUGH_EXT) {
+      const auto transfer = wayland_surface_color((void*)data->surface);
+      data->hdr_state = transfer == NONE ? HDR::State::Unknown : HDR::State::On;
+      if (transfer != NONE)
+         data->transfer_function = transfer;
+   }
+#endif
 }
 
 static void setup_swapchain_data(struct swapchain_data *data,
@@ -1368,6 +1387,7 @@ static void setup_swapchain_data(struct swapchain_data *data,
    data->height = pCreateInfo->imageExtent.height;
    data->format = pCreateInfo->imageFormat;
    data->colorspace = pCreateInfo->imageColorSpace;
+   data->surface = pCreateInfo->surface;
 
    if (!data->imgui_contexts.imgui)
       data->imgui_contexts = create_imgui_contexts(data->font_atlas);
@@ -2331,7 +2351,7 @@ static VkResult overlay_CreateWaylandSurfaceKHR(
    HUDElements.display_server = HUDElements.display_servers::WAYLAND;
    ret = instance_data->vtable.CreateWaylandSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
    if (ret == VK_SUCCESS)
-      init_wayland_data(pCreateInfo->display, (void *) *pSurface);
+      init_wayland_data(pCreateInfo->display, (void *) *pSurface, pCreateInfo->surface);
    return ret;
 }
 

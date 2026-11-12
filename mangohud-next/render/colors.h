@@ -1,7 +1,9 @@
 #pragma once
+#include <vulkan/vulkan.h>
 #include "imgui.h"
 #include <unordered_map>
 #include <stdint.h>
+#include <mutex>
 #include <math.h>
 #include <spdlog/spdlog.h>
 
@@ -70,6 +72,42 @@ public:
 private:
     std::unordered_map<uint32_t, ImVec4> cache;
     std::mutex m;
+};
+
+class HDR {
+public:
+    enum class State : int32_t { Unknown = -1, Off = 0, On = 1 };
+
+    constexpr HDR(State state = State::Unknown) : state(state) {}
+
+    constexpr const char* status() const {
+        switch (state) {
+        case State::On: return "ON";
+        case State::Off: return "OFF";
+        default: return "UNKNOWN";
+        }
+    }
+
+    static constexpr State from_colorspace(VkColorSpaceKHR colorspace) {
+        switch (colorspace) {
+        case VK_COLOR_SPACE_HDR10_ST2084_EXT:
+        case VK_COLOR_SPACE_HDR10_HLG_EXT:
+        case VK_COLOR_SPACE_DOLBYVISION_EXT:
+        case VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT:
+        case VK_COLOR_SPACE_EXTENDED_SRGB_NONLINEAR_EXT:
+            return State::On;
+        case VK_COLOR_SPACE_SRGB_NONLINEAR_KHR:
+        case VK_COLOR_SPACE_DISPLAY_P3_NONLINEAR_EXT:
+        case VK_COLOR_SPACE_BT709_NONLINEAR_EXT:
+        case VK_COLOR_SPACE_ADOBERGB_NONLINEAR_EXT:
+            return State::Off;
+        default:
+            return State::Unknown;
+        }
+    }
+
+private:
+    State state;
 };
 
 enum overlay_transfer_function {

@@ -210,6 +210,13 @@ static void* find_hook(const char *name)
     if (!name)
         return NULL;
 
+#ifdef HAVE_WAYLAND_COLOR_TRACKING
+    extern void* mangohud_find_wayland_ptr(const char* name);
+    void* wayland_hook = mangohud_find_wayland_ptr(name);
+    if (wayland_hook)
+        return wayland_hook;
+#endif
+
     for (unsigned i = 0; i < ARRAY_SIZE(hooks); i++)
     {
         if (!strcmp(hooks[i].name, name))

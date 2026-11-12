@@ -307,6 +307,15 @@ mangoapp = executable(
 )
 endif
 if is_unixy
+  shim_files = []
+  shim_deps = [dep_dl]
+  shim_args = pre_args
+  if get_option('with_wayland').enabled() and dep_wayland_client.version().version_compare('>=1.24')
+    shim_files += files('gl/wayland_color.cpp')
+    shim_args += '-DHAVE_WAYLAND_COLOR_TRACKING'
+    shim_deps += [dep_wayland_client, dep_pthread, spdlog_dep,
+                  dearimgui_dep.partial_dependency(compile_args: true, includes: true)]
+  endif
   mangohud_shim = shared_library(
     'MangoHud_shim',
     files(
@@ -314,14 +323,13 @@ if is_unixy
       '../mangohud-next/client/real_dlsym.c',
       'elfhacks.c'
     ),
-    dependencies : [
-      dep_dl
-    ],
+    shim_files,
+    dependencies : shim_deps,
     c_args : [
-      pre_args
+      shim_args
     ],
     cpp_args : [
-      pre_args
+      shim_args
     ],
     include_directories : [inc_common, next_client_inc],
     install_dir : libdir_mangohud,
