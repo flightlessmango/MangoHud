@@ -7,6 +7,7 @@
 #include <deque>
 #include <memory>
 #include <mutex>
+#include <shared_mutex>
 #include <stdexcept>
 #include <string>
 #include <tuple>
@@ -14,6 +15,7 @@
 #include <utility>
 #include <vector>
 #include <unistd.h>
+#include <unordered_map>
 
 #include <spdlog/spdlog.h>
 
@@ -151,3 +153,132 @@ bool same_elements(std::vector<T> a, std::vector<T> b) {
 
     return a == b;
 }
+
+template <typename T>
+class Collection {
+public:
+    Collection() = default;
+
+    void add(T value) {
+        add(std::make_shared<T>(std::move(value)));
+    }
+
+    void add(T value, int key) {
+        add(std::make_shared<T>(std::move(value)), key);
+    }
+
+    void add(std::shared_ptr<T> value) {
+        if (value == nullptr) {
+            SPDLOG_ERROR("Collection: cannot add null value");
+            return;
+        }
+
+        std::lock_guard lock(m);
+        if (storage == Storage::Map) {
+            SPDLOG_ERROR("Collection: storage type is already map, cannot add value without key");
+            return;
+        }
+
+        if (std::ranges::find(vec, value) != vec.end())
+            return;
+
+        vec.push_back(std::move(value));
+        storage = Storage::Vec;
+    }
+
+    void add(std::shared_ptr<T> value, int key) {
+        if (value == nullptr) {
+            SPDLOG_ERROR("Collection: cannot add null value");
+            return;
+        }
+
+        std::lock_guard lock(m);
+        if (storage == Storage::Vec) {
+            SPDLOG_ERROR("Collection: storage type is already vector, cannot add key-value pair");
+            return;
+        }
+        map.try_emplace(key, std::move(value));
+        storage = Storage::Map;
+    }
+
+    template <typename Member, typename Value>
+    void remove(Member T::*member, const Value& value) {
+        std::lock_guard lock(m);
+        if (storage == Storage::Map) {
+            SPDLOG_ERROR("Collection: storage type is already map, cannot remove value without key");
+            return;
+        }
+        std::erase_if(vec, [&](const auto& item) {
+            return (*item).*member == value;
+        });
+    }
+
+    void remove(int key) {
+        std::lock_guard lock(m);
+        if (storage == Storage::Vec) {
+            SPDLOG_ERROR("Collection: storage type is already vector, cannot remove key-value pair");
+            return;
+        }
+        map.erase(key);
+    }
+
+    template <typename Member, typename Value>
+    std::shared_ptr<T> fetch(Member T::*member, const Value& value) {
+        std::shared_ptr<T> result = nullptr;
+
+        std::shared_lock lock(m);
+        if (storage == Storage::Map) {
+            SPDLOG_ERROR("Collection: storage type is already map, cannot fetch value without key");
+            return result;
+        }
+
+        for (const auto& item : vec)
+            if ((*item).*member == value) {
+                if (result) {
+                    SPDLOG_ERROR("Collection: multiple items found with the same member value");
+                    return nullptr;
+                }
+                result = item;
+            }
+
+        return result;
+    }
+
+    template <typename Member, typename Value>
+    std::shared_ptr<T> fetch_any(Member T::*member, const Value& value) {
+
+        std::shared_lock lock(m);
+        if (storage == Storage::Map) {
+            SPDLOG_ERROR("Collection: storage type is already map, cannot fetch value without key");
+            return nullptr;
+        }
+
+        for (const auto& item : vec)
+            if ((*item).*member == value)
+                return item;
+
+        return nullptr;
+    }
+
+    std::shared_ptr<T> fetch(int key) {
+        std::shared_lock lock(m);
+        if (storage == Storage::Vec) {
+            SPDLOG_ERROR("Collection: storage type is already vector, cannot fetch key-value pair");
+            return nullptr;
+        }
+
+        auto it = map.find(key);
+        if (it != map.end())
+            return it->second;
+
+        return nullptr;
+    }
+
+private:
+    std::shared_mutex m;
+    std::vector<std::shared_ptr<T>> vec;
+    std::unordered_map<int, std::shared_ptr<T>> map;
+
+    enum class Storage { Unset, Vec, Map};
+    Storage storage = Storage::Unset;
+};
