@@ -41,12 +41,13 @@ class fpsLimiter {
         bool use_early;
         bool active = false;
 
-        fpsLimiter(bool use_early) : use_early(use_early) {
+        fpsLimiter(bool use_early, size_t idx = 0) : use_early(use_early) {
             auto& fps_limit = get_params()->fps_limit;
             if (fps_limit.empty())
                 return;
 
             active = true;
+            fps_limits_idx = idx < fps_limit.size() ? idx : 0;
 
             float tar = fps_limit[fps_limits_idx];
             target = tar <= 0.0f ? 0 : int64_t(1'000'000'000.0f / tar);
@@ -76,6 +77,10 @@ class fpsLimiter {
             auto next_target = v[fps_limits_idx];
             target = next_target <= 0.0f ? 0 : int64_t(1'000'000'000.0f / next_target);
             SPDLOG_DEBUG("Changed fps limit to {}", next_target);
+        }
+
+        size_t limit_index() const {
+            return fps_limits_idx;
         }
 
         int current_limit() {
