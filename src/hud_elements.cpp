@@ -136,6 +136,15 @@ static void ImguiNextColumnOrNewRow(int column = -1)
 static bool ImGuiTextOverflow(const char* text) {
     return ImGui::CalcTextSize(text).x > ImGui::CalcItemWidth() + HUDElements.ralign_width / 2;
 }
+
+// Distinguish an omitted text option, which uses the default label, from an
+// explicitly empty value. Quoted empty values are preserved as two quote characters.
+static bool option_is_explicitly_empty(const struct overlay_params& params, const char* option) {
+    const auto it = params.options.find(option);
+    return it != params.options.end() &&
+    (it->second.empty() || it->second == "\"\"");
+}
+
 // This function is only used in battery and battery is not used in windows builds
 // Battery should probably be reworked to not use this func since nothing else needs it
 #ifdef __linux__
@@ -170,11 +179,16 @@ void HudElements::version(){
 
 void HudElements::gpu_stats(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats] && gpus){
+        const bool hide_gpu_label = option_is_explicitly_empty(*HUDElements.params, "gpu_text");
+
         for (auto& gpu : gpus->selected_gpus()) {
             ImguiNextColumnFirstItem();
-            HUDElements.TextColored(HUDElements.colors.gpu, "%s", gpu->gpu_text().c_str());
 
-            ImguiNextColumnOrNewRow();
+            if (!hide_gpu_label) {
+                HUDElements.TextColored(HUDElements.colors.gpu, "%s", gpu->gpu_text().c_str());
+                ImguiNextColumnOrNewRow();
+            }
+
             auto text_color = HUDElements.colors.text;
             if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_gpu_load_change]){
                 struct LOAD_DATA gpu_data = {
@@ -308,14 +322,20 @@ void HudElements::gpu_stats(){
 void HudElements::cpu_stats(){
     if(HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats]){
         ImguiNextColumnFirstItem();
-        const char* cpu_text;
-        if (HUDElements.params->cpu_text.empty())
-            cpu_text = "CPU";
-        else
-            cpu_text = HUDElements.params->cpu_text.c_str();
 
-        HUDElements.TextColored(HUDElements.colors.cpu, "%s", cpu_text);
-        ImguiNextColumnOrNewRow();
+        const bool hide_cpu_label = option_is_explicitly_empty(*HUDElements.params, "cpu_text");
+
+        if (!hide_cpu_label) {
+            const char* cpu_text;
+            if (HUDElements.params->cpu_text.empty())
+                cpu_text = "CPU";
+            else
+                cpu_text = HUDElements.params->cpu_text.c_str();
+
+            HUDElements.TextColored(HUDElements.colors.cpu, "%s", cpu_text);
+            ImguiNextColumnOrNewRow();
+        }
+
         auto text_color = HUDElements.colors.text;
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_cpu_load_change]){
             int cpu_load_percent = int(cpuStats.GetCPUDataTotal().percent);
@@ -761,9 +781,13 @@ void HudElements::cgroup_mem()
 void HudElements::fps(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_only]){
         ImguiNextColumnFirstItem();
-        HUDElements.TextColored(HUDElements.colors.engine, "%s", engine_name(*HUDElements.sw_stats));
 
-        ImguiNextColumnOrNewRow();
+        const bool hide_fps_label = option_is_explicitly_empty(*HUDElements.params, "fps_text");
+
+        if (!hide_fps_label) {
+            HUDElements.TextColored(HUDElements.colors.engine, "%s", engine_name(*HUDElements.sw_stats));
+            ImguiNextColumnOrNewRow();
+        }
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_color_change]){
             int fps = int(HUDElements.sw_stats->fps);
             struct LOAD_DATA fps_data = {
@@ -781,9 +805,9 @@ void HudElements::fps(){
         }
         ImGui::SameLine(0, 1.0f);
         // horizontal mode already shows "FPS" as the engine label
-        bool horizontal_fps_label = HUDElements.params->fps_text.empty() &&
-                                    HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] &&
-                                    !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names];
+        bool horizontal_fps_label = (HUDElements.params->fps_text.empty() || hide_fps_label) &&
+                                     HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] &&
+                                     !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names];
         if(!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hide_fps_superscript] && !horizontal_fps_label){
             ImGui::PushFont(HUDElements.sw_stats->font_small);
             HUDElements.TextColored(HUDElements.colors.text, "FPS");
