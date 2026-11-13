@@ -14,8 +14,8 @@ private:
     std::string get_pci_device_address(const std::string& drm_card_path);
     std::string get_driver(const std::string& drm_card_path);
 
-    const std::array<std::string, 7> supported_drivers = {
-        "amdgpu", "nvidia", "i915", "xe", "panfrost", "msm_dpu", "msm_drm"
+    const std::array<std::string, 8> supported_drivers = {
+        "amdgpu", "nvidia", "i915", "xe", "panfrost", "msm_dpu", "msm_drm", "adreno"
     };
 
 public:

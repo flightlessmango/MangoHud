@@ -196,6 +196,27 @@ std::ifstream MSM_DPU::open_thermal_zone(const std::string& type) {
 std::ifstream MSM_DPU::open_core_clock() {
     std::error_code ec;
     std::ifstream file;
+    const fs::path device = fs::path("/sys/class/drm") / drm_node / "device";
+    const fs::path device_devfreq = device / "devfreq";
+    std::error_code device_ec;
+    for (fs::directory_iterator it(device_devfreq, device_ec), end;
+         !device_ec && it != end; it.increment(device_ec)) {
+        const fs::path cur_freq = it->path() / "cur_freq";
+        file.open(cur_freq);
+        if (file.is_open()) {
+            SPDLOG_INFO("devfreq: using gpu clock input: {}", cur_freq.string());
+            return file;
+        }
+        file.clear();
+    }
+    if (device_ec)
+        SPDLOG_DEBUG("Failed to iterate {}: {}", device_devfreq.string(), device_ec.message());
+
+    // Only a combined GPU/KMS device needs to search outside its DRM device.
+    const fs::path driver = fs::read_symlink(device / "driver", ec);
+    if (ec || driver.filename() != "msm_dpu")
+        return file;
+
     const fs::path sysfs_devfreq = "/sys/class/devfreq";
 
     if (!fs::exists(sysfs_devfreq, ec))

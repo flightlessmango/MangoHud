@@ -101,7 +101,7 @@ GPUS::GPUS() {
             gpu = std::make_shared<Panfrost>(drm_node, pci_dev, vendor_id, device_id);
         } else if (driver == "panthor") {
             gpu = std::make_shared<Panthor>(drm_node, pci_dev, vendor_id, device_id);
-        } else if (driver == "msm_dpu") {
+        } else if (driver == "msm_dpu" || driver == "adreno") {
             gpu = std::make_shared<MSM_DPU>(drm_node, pci_dev, vendor_id, device_id);
         } else if (driver == "msm_drm") {
             gpu = std::make_shared<MSM_KGSL>(drm_node, pci_dev, vendor_id, device_id);
