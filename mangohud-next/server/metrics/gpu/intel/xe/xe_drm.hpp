@@ -8,6 +8,9 @@ private:
     int card_fd = 0;
     uint64_t total_memory = 0;
     uint64_t used_memory = 0;
+    uint64_t sys_total_memory = 0;
+    uint64_t sys_used_memory = 0;
+    bool has_vram = false;
 
 public:
     xe_drm_base();

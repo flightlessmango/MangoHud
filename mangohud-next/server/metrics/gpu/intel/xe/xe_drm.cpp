@@ -73,9 +73,16 @@ void xe_drm_base::poll() {
     for (uint8_t i = 0; i < regions->num_mem_regions; i++) {
         drm_xe_mem_region mr = regions->mem_regions[i];
 
+        if (mr.mem_class == DRM_XE_MEM_REGION_CLASS_SYSMEM) {
+            sys_total_memory = mr.total_size;
+            sys_used_memory  = mr.used;
+            continue;
+        }
+
         if (mr.mem_class != DRM_XE_MEM_REGION_CLASS_VRAM)
             continue;
 
+        has_vram     = true;
         total_memory = mr.total_size;
         used_memory  = mr.used;
 
@@ -88,12 +95,14 @@ void xe_drm_base::poll() {
     return;
 }
 
+// Integrated GPUs have no VRAM region: their buffers are in system memory,
+// so report what the GPU has placed there instead.
 uint64_t xe_drm_base::get_total_memory() const {
-    return total_memory;
+    return has_vram ? total_memory : sys_total_memory;
 }
 
 uint64_t xe_drm_base::get_used_memory() const {
-    return used_memory;
+    return has_vram ? used_memory : sys_used_memory;
 }
 
 xe_drm::xe_drm() {}
