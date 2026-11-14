@@ -85,7 +85,7 @@ void xe_drm_base::poll() {
         break;
     }
 
-    return;
+    free(ptr);
 }
 
 uint64_t xe_drm_base::get_total_memory() const {
