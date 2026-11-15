@@ -112,6 +112,7 @@ class HudElements{
         static void device_battery();
         static void frame_count();
         static void fan();
+        static void cfan();
         static void throttling_status();
         static void exec_name();
         static void duration();
@@ -134,6 +135,8 @@ class HudElements{
                 ram,
                 swap,
                 engine,
+                fan,
+                cfan,
                 io,
                 frametime,
                 background,
