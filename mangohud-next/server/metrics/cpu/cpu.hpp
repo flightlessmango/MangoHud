@@ -19,6 +19,7 @@ public:
     bool is_initialized() { return _is_initialized; }
 
     virtual float get_power_usage() = 0;
+    virtual float get_uncore_power_usage() { return 0.f; }
     virtual ~CPUPower() = default;
 };
 
