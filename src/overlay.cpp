@@ -1,6 +1,8 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include <cstring>
+#include <string>
 #include <thread>
 #include <condition_variable>
 #include <spdlog/spdlog.h>
@@ -30,8 +32,10 @@
 #include "ftrace.h"
 
 #ifdef __linux__
-#include <libgen.h>
+#include <link.h>
 #include <unistd.h>
+#include <sys/sysinfo.h>
+#include <sys/utsname.h>
 #endif
 
 namespace fs = ghc::filesystem;
@@ -764,100 +768,179 @@ struct pci_bus {
    int func;
 };
 
+static std::string parse_value_from_file(std::ifstream& file, const std::string& key, const std::string& separator) {
+   std::string line;
+
+   while (std::getline(file, line)) {
+      const auto position = line.find(separator);
+      if (std::string::npos == position) continue;
+
+      auto current_key = line.substr(0, position); trim(current_key);
+      auto current_value = line.substr(position + separator.size()); trim(current_value);
+
+      if (current_key == key && !current_value.empty())
+         return current_value;
+   }
+   return std::string();
+}
+
+static void strip_parenthesized_blocks(std::string& s) {
+   std::size_t pos = 0;
+   while (std::string::npos != (pos = s.find('(', pos))) {
+      const auto end = s.find(')', pos + 1);
+      if (end == std::string::npos) break;
+      s.erase(pos, end - pos + 1);
+   }
+
+   while (std::string::npos != s.find("  "))
+      s.replace(s.find("  "), 2, " ");
+
+   trim(s);
+}
+
 #ifdef __linux__
-static void parse_proton_version(std::string wineProcess, std::string postfix)
-{
+struct wine_build_search {
+   bool found_ntdll = false;
+   std::string version;
+};
+
+static bool is_printable_ascii(char c) {
+   return c >= 0x20 && c <= 0x7e;
+}
+
+// Find the first "wine-<digit>..." C string. wine_build is not necessarily
+// preceded by NUL (it may follow a table in .rodata), so only require that it
+// does not continue a printable string and is printable up to its NUL.
+static std::string scan_wine_build(const char* data, size_t size) {
+   static const char prefix[] = "wine-";
+   const size_t prefix_len = sizeof(prefix) - 1;
+   const size_t max_len = 64;
+
+   for (size_t i = 0; i + prefix_len < size; i++) {
+      if (i > 0 && is_printable_ascii(data[i - 1]))
+         continue;
+      if (memcmp(data + i, prefix, prefix_len) != 0)
+         continue;
+      if (data[i + prefix_len] < '0' || data[i + prefix_len] > '9')
+         continue;
+
+      const size_t limit = std::min(max_len, size - i);
+      const char* end = static_cast<const char*>(memchr(data + i, '\0', limit));
+      if (end && std::all_of(data + i, end, is_printable_ascii))
+         return std::string(data + i, end);
+   }
+   return std::string();
+}
+
+// Wine's unix-side ntdll.so embeds wine_build ("wine-X.Y...") in a read-only
+// segment. Reading it from the already mapped module avoids spawning wine.
+static int find_wine_build(struct dl_phdr_info* info, size_t, void* opaque) {
+   auto& search = *static_cast<wine_build_search*>(opaque);
+   const char* name = info->dlpi_name ? info->dlpi_name : "";
+   const size_t name_len = strlen(name);
+   const char suffix[] = "/ntdll.so";
+   const size_t suffix_len = sizeof(suffix) - 1;
+   if (name_len < suffix_len || strcmp(name + name_len - suffix_len, suffix) != 0)
+      return 0;
+
+   search.found_ntdll = true;
+   for (int i = 0; i < info->dlpi_phnum; i++) {
+      const auto& phdr = info->dlpi_phdr[i];
+      if (phdr.p_type != PT_LOAD || !(phdr.p_flags & PF_R) || (phdr.p_flags & (PF_W | PF_X)))
+         continue;
+
+      const char* data = reinterpret_cast<const char*>(info->dlpi_addr + phdr.p_vaddr);
+      search.version = scan_wine_build(data, phdr.p_memsz);
+      if (!search.version.empty())
+         break;
+   }
+   return 1;
+}
+
+static std::string parse_proton_version(const std::string& path) {
    stringstream ss;
-   ss << dirname((char*)wineProcess.c_str()) << postfix;
-   string protonVersion = ss.str();
-   ss.str(""); ss.clear();
-   ss << read_line(protonVersion);
-   std::getline(ss, wineVersion, ' '); // skip first number string
-   std::getline(ss, wineVersion, ' ');
-   trim(wineVersion);
+   string version;
+   ss << read_line(path);
+   std::getline(ss, version, ' '); // skip first number string
+   std::getline(ss, version, ' ');
+   trim(version);
+   if (version.empty())
+      return version;
+
    string toReplace = "proton-";
-   size_t pos = wineVersion.find(toReplace);
+   size_t pos = version.find(toReplace);
    if (pos != std::string::npos) {
       // If found replace
-      wineVersion.replace(pos, toReplace.length(), "Proton ");
+      version.replace(pos, toReplace.length(), "Proton ");
    }
    else {
       // If not found insert for non official proton builds
-      wineVersion.insert(0, "Proton ");
+      version.insert(0, "Proton ");
    }
+   return version;
 }
 #endif
 
 void init_system_info(){
    #ifdef __linux__
-      const char* ld_preload = getenv("LD_PRELOAD");
-      if (ld_preload)
-         unsetenv("LD_PRELOAD");
-
-      ram =  exec("sed -n 's/^MemTotal: *\\([0-9]*\\).*/\\1/p' /proc/meminfo");
-      trim(ram);
-      cpu =  exec("sed -n 's/^model name.*: \\(.*\\)/\\1/p' /proc/cpuinfo | sed 's/([^)]*)//g' | tail -n1");
-      trim(cpu);
-      kernel = exec("uname -r");
-      trim(kernel);
-      os = exec("sed -n 's/PRETTY_NAME=\\(.*\\)/\\1/p' /etc/os-release");
-      os.erase(remove(os.begin(), os.end(), '\"' ), os.end());
-      trim(os);
-      cpusched = read_line("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
-
-      const char* mangohud_recursion = getenv("MANGOHUD_RECURSION");
-      if (!mangohud_recursion) {
-         setenv("MANGOHUD_RECURSION", "1", 1);
-         // driver = exec("glxinfo -B | sed -n 's/^OpenGL version.*: \\(.*\\)/\\1/p' | sed 's/([^)]*)//g;s/  / /g'");
-         // trim(driver);
-         unsetenv("MANGOHUD_RECURSION");
+      struct sysinfo info_buf;
+      if (0 == sysinfo(&info_buf)) {
+         auto ram_bytes = static_cast<unsigned long long>(info_buf.totalram) * info_buf.mem_unit;
+         ram = std::to_string(ram_bytes >> 10);
       } else {
-         driver = "MangoHud glxinfo recursion detected";
+         ram.clear();
       }
+
+      struct utsname uts_buf;
+      if (0 == uname(&uts_buf)) {
+         kernel = uts_buf.release;
+      } else {
+         kernel.clear();
+      }
+
+      std::ifstream cpuinfo("/proc/cpuinfo");
+      cpu = parse_value_from_file(cpuinfo, "model name", ":");
+      strip_parenthesized_blocks(cpu);
+
+      std::ifstream osrel("/etc/os-release");
+      os = parse_value_from_file(osrel, "PRETTY_NAME", "=");
+      os.erase(std::remove(os.begin(), os.end(), '\"' ), os.end());
+
+      cpusched = read_line("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
 
 // Get WINE version
 
       wineProcess = get_exe_path();
-      auto n = wineProcess.find_last_of('/');
-      string preloader = wineProcess.substr(n + 1);
-      if (preloader == "wine-preloader" || preloader == "wine64-preloader") {
+      wine_build_search wine_search;
+      dl_iterate_phdr(find_wine_build, &wine_search);
+      if (wine_search.found_ntdll) {
          // Check if using Proton
+         string dir = wineProcess.substr(0, wineProcess.find_last_of('/'));
+         string protonVersion;
+         bool proton = true;
          if (wineProcess.find("/dist/bin/wine") != std::string::npos
             || wineProcess.find("/files/bin/wine") != std::string::npos
             || wineProcess.find("/dist/bin-wow64/wine") != std::string::npos
             || wineProcess.find("/files/bin-wow64/wine") != std::string::npos)
-         {
-            parse_proton_version(wineProcess, "/../../version");
-         }
+            protonVersion = parse_proton_version(dir + "/../../version");
          else if (wineProcess.find("/files/lib/wine") != std::string::npos)
-         {
-            parse_proton_version(wineProcess, "/../../../../version");
-         }
-         else {
-            char *dir = dirname((char*)wineProcess.c_str());
-            stringstream findVersion;
-            if (preloader == "wine-preloader")
-               findVersion << "\"" << dir << "/wine\" --version";
-            else
-               findVersion << "\"" << dir << "/wine64\" --version";
-            const char *wine_env = getenv("WINELOADERNOEXEC");
-            if (wine_env)
-               unsetenv("WINELOADERNOEXEC");
-            wineVersion = exec(findVersion.str());
-            trim(wineVersion);
-            SPDLOG_DEBUG("WINE version: {}", wineVersion);
-            if (wine_env)
-               setenv("WINELOADERNOEXEC", wine_env, 1);
-         }
+            protonVersion = parse_proton_version(dir + "/../../../../version");
+         else
+            proton = false;
+
+         if (!protonVersion.empty())
+            wineVersion = protonVersion;
+         else if (proton && !wine_search.version.empty())
+            wineVersion = "Proton " + wine_search.version;
+         else
+            wineVersion = wine_search.version;
+         SPDLOG_DEBUG("WINE version: {}", wineVersion);
       }
       else {
            wineVersion = "";
       }
 
       check_for_vkbasalt_and_gamemode();
-
-      if (ld_preload)
-         setenv("LD_PRELOAD", ld_preload, 1);
 
       SPDLOG_DEBUG("Ram:{}", ram);
       SPDLOG_DEBUG("Cpu:{}", cpu);
