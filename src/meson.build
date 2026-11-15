@@ -85,6 +85,7 @@ if is_unixy
     'iostats.cpp',
     'iostats_linux.cpp',
     'notify.cpp',
+    'notify_linux.cpp',
     'elfhacks.c',
     '../mangohud-next/client/real_dlsym.c',
     'pci_ids.cpp',
