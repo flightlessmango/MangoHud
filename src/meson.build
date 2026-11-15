@@ -81,6 +81,7 @@ if is_unixy
     'cpu.cpp',
     'cpu_common.cpp',
     'memory.cpp',
+    'memory_common.cpp',
     'iostats.cpp',
     'notify.cpp',
     'elfhacks.c',

@@ -13,11 +13,6 @@
 #include "hud_elements.h"
 #include "string_utils.h"
 
-float memused, memmax, swapused;
-int mem_temp = -1;
-uint64_t proc_mem_resident, proc_mem_shared, proc_mem_virt;
-uint64_t cgroup_mem_used;
-
 void update_meminfo() {
     std::ifstream file("/proc/meminfo");
     std::map<std::string, float> meminfo;
