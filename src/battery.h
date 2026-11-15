@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <vector>
 
 static constexpr int battery_count_max = 2;
 
