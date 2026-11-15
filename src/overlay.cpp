@@ -723,7 +723,14 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
 
       if(logger->is_active())
          ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(data.main_window_pos.x + window_size.x - 15, data.main_window_pos.y + 15), 10, real_params->engine_color, 20);
-      window_size = ImVec2(window_size.x, ImGui::GetCursorPosY() + 11.0f);
+      float bottom = 11.0f;
+      if (real_params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]) {
+         // end at the last line box; imgui's rounding puts descenders up to 2 font px below it
+         bottom = 2.0f * real_params->font_scale - ImGui::GetStyle().ItemSpacing.y - ImMin(ImGui::GetStyle().CellPadding.y, 0.0f);
+         if (real_params->enabled[OVERLAY_PARAM_ENABLED_text_outline] && real_params->text_outline_thickness > 0.0f)
+            bottom += ceilf(real_params->text_outline_thickness);
+      }
+      window_size = ImVec2(window_size.x, ImGui::GetCursorPosY() + bottom);
       ImGui::End();
       if((now - logger->last_log_end()) < 12s && !logger->is_active())
          render_benchmark(data, params, window_size, height, now);
