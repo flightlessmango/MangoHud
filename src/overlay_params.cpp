@@ -50,6 +50,7 @@ std::mutex config_mtx;
 std::condition_variable config_cv;
 bool config_ready = false;
 static std::atomic<std::shared_ptr<overlay_params>> g_params;
+std::unique_ptr<GPUS> gpus = nullptr;
 std::shared_ptr<fpsLimiter> fps_limiter;
 
 #if __cplusplus >= 201703L
