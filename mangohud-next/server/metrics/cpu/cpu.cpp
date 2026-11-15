@@ -179,6 +179,7 @@ void CPU::poll_power_usage() {
 
     power_usage->poll();
     info.power = power_usage->get_power_usage();
+    info.uncore_power = power_usage->get_uncore_power_usage();
 }
 
 void CPU::poll_temperature() {

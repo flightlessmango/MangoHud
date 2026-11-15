@@ -168,6 +168,7 @@ void Metrics::update() {
         new_metrics["CPU"]["FREQ"] = {cpu_metrics.frequency, "MHz"};
         new_metrics["CPU"]["TEMP"] = {cpu_metrics.temp, "°C"};
         new_metrics["CPU"]["POWER"] = {(int)cpu_metrics.power, "W"};
+        new_metrics["CPU"]["UNCORE_POWER"] = {(int)cpu_metrics.uncore_power, "W"};
 
         auto core_metrics = cpu.get_core_info();
 

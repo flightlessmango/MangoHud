@@ -170,9 +170,13 @@ Available metrics currently include:
 | --- | --- |
 | `[GPU, index, KEY]` | `LOAD`, `VRAM_USED`, `GTT_USED`, `VRAM_TOTAL`, `VRAM_CLOCK`, `VRAM_TEMP`, `TEMP`, `JUNCTION_TEMP`, `CORE_CLOCK`, `VOLTAGE`, `POWER`, `POWER_LIMIT`, `FAN_SPEED`, `PROCESS_LOAD`, `PROCESS_VRAM_USED`, `PROCESS_GTT_USED` |
 | `[CPU, index, KEY]` | `LOAD`, `FREQ` |
-| `[CPU, KEY]` | `LOAD`, `MAX_LOAD`, `FREQ`, `TEMP`, `POWER` |
+| `[CPU, KEY]` | `LOAD`, `MAX_LOAD`, `FREQ`, `TEMP`, `POWER`, `UNCORE_POWER` |
 | `[RAM, KEY]` | `USED`, `TOTAL`, `SWAP_USED` |
 | `KEY` | `ENGINE_NAME`, `GPU_NAME`, `VULKAN_DRIVER`, `HDR`, `RESOLUTION`, `FPS`, `FRAMETIME`, `FRAMETIME_MIN`, `FRAMETIME_MAX`, `FRAMETIMES`, `REFRESH_FPS`, `REFRESH_FRAMETIME`, `REFRESH_FRAMETIME_MIN`, `REFRESH_FRAMETIME_MAX`, `REFRESH_FRAMETIMES`, `APP_FPS`, `APP_FRAMETIME`, `APP_FRAMETIME_MIN`, `APP_FRAMETIME_MAX`, `APP_FRAMETIMES`, `HUD_FPS`, `HUD_FRAMETIME`, `HUD_FRAMETIME_MIN`, `HUD_FRAMETIME_MAX`, `HUD_FRAMETIMES` |
+
+`UNCORE_POWER` reads the uncore domain of the RAPL package counter (power
+plane 1). On Intel CPUs with integrated graphics, that domain covers the GPU, so
+a layout can label it as GPU power.
 
 `FRAMETIME_MIN` and `FRAMETIME_MAX` report the minimum and maximum frametime in
 milliseconds over the same roughly 500 ms sample window as `FPS` and `FRAMETIME`.
