@@ -83,6 +83,7 @@ if is_unixy
     'memory.cpp',
     'memory_common.cpp',
     'iostats.cpp',
+    'iostats_linux.cpp',
     'notify.cpp',
     'elfhacks.c',
     '../mangohud-next/client/real_dlsym.c',
