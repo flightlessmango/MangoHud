@@ -594,6 +594,11 @@ static bool find_fallback_input(const std::string& path, const char* input_prefi
         return false;
 
     std::sort(files.begin(), files.end());
+    // ls() matches by prefix, so "temp1" also lists temp10_input, which sorts before temp1_input
+    auto exact = std::find(files.begin(), files.end(), std::string(input_prefix) + "_input");
+    if (exact != files.end())
+        std::iter_swap(files.begin(), exact);
+
     for (auto& file : files) {
         if (!ends_with(file, "_input"))
             continue;
