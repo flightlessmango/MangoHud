@@ -46,6 +46,15 @@ extern "C" {
 # define __elf32
 #endif
 
+/* glibc provides ElfW() in <link.h>, other libcs do not */
+#ifndef ElfW
+# ifdef __elf64
+#  define ElfW(type) Elf64_##type
+# else
+#  define ElfW(type) Elf32_##type
+# endif
+#endif
+
 #ifdef __elf64
 # define ELFW_R_SYM ELF64_R_SYM
 # define ElfW_Sword Elf64_Sxword
