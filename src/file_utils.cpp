@@ -6,13 +6,10 @@
 #include <dirent.h>
 #include <limits.h>
 #include <fstream>
+#include <sstream>
 #include <cstring>
 #include <string>
 #include <spdlog/spdlog.h>
-
-#ifndef PROCDIR
-#define PROCDIR "/proc"
-#endif
 
 std::string read_line(const std::string& filename)
 {
@@ -36,7 +33,7 @@ std::string get_basename(const std::string&& path)
     return path;
 }
 
-#ifdef __linux__
+#ifndef _WIN32
 std::vector<std::string> ls(const char* root, const char* prefix, LS_FLAGS flags)
 {
     std::vector<std::string> list;
@@ -110,28 +107,27 @@ std::string read_symlink(const std::string&& link)
     return read_symlink(link.c_str());
 }
 
-std::string get_exe_path()
-{
-    return read_symlink(PROCDIR "/self/exe");
-}
-
 std::string get_wine_exe_name(bool keep_ext)
 {
     const std::string exe_path = get_exe_path();
-    if (!ends_with(exe_path, "wine-preloader") && !ends_with(exe_path, "wine64-preloader")) {
+    if (!is_wine_loader(get_basename(std::string(exe_path)))) {
         return std::string();
     }
 
-    std::string line = read_line(PROCDIR "/self/comm"); // max 16 characters though
+    std::string line = get_proc_comm(); // max 16 characters though
     if (ends_with(line, ".exe", true))
     {
         auto dot = keep_ext ? std::string::npos : line.find_last_of('.');
         return line.substr(0, dot);
     }
 
-    std::ifstream cmdline(PROCDIR "/self/cmdline");
+    std::istringstream cmdline(get_proc_cmdline());
     // Iterate over arguments (separated by NUL byte).
     while (std::getline(cmdline, line, '\0')) {
+        // skip the Wine loader itself
+        if (is_wine_loader(get_basename(std::string(line))))
+            continue;
+
         auto n = std::string::npos;
         if (!line.empty()
             && ((n = line.find_last_of("/\\")) != std::string::npos)
@@ -185,33 +181,6 @@ std::string get_config_dir()
     return path;
 }
 
-bool lib_loaded(const std::string& lib, pid_t pid) {
-
-   std::string who = pid != -1 ? std::to_string(pid) : "self";
-   auto paths = { fs::path("/proc") / who / "map_files",
-            fs::path("/proc") / who / "fd" };
-    for (const auto& path : paths) {
-        try {
-            std::error_code iterator_ec;
-            for (fs::directory_iterator it(path, iterator_ec), end;
-                 !iterator_ec && it != end; it.increment(iterator_ec)) {
-                const auto& p = *it;
-                auto file = p.path().string();
-                auto sym = read_symlink(file.c_str());
-                if (to_lower(sym).find(lib) != std::string::npos) {
-                    return true;
-                }
-            }
-            if (iterator_ec)
-                SPDLOG_DEBUG("Failed to iterate {}: {}", fs::path(path).string(), iterator_ec.message());
-        }
-        catch (const fs::filesystem_error& e) {
-            SPDLOG_DEBUG("failed to iterate {}: {}", path.string(), e.what());
-        }
-    }
-    return false;
-}
-
 std::string remove_parentheses(const std::string& text) {
     // Remove parentheses and text between them
     std::regex pattern("\\([^)]*\\)");
@@ -225,4 +194,4 @@ std::string to_lower(const std::string& str) {
     return lowered;
 }
 
-#endif // __linux__
+#endif // !_WIN32

@@ -77,6 +77,7 @@ endif
 
 if is_unixy
   vklayer_files += files(
+    'file_utils_linux.cpp',
     'cpu.cpp',
     'memory.cpp',
     'iostats.cpp',
