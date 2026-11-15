@@ -79,6 +79,7 @@ if is_unixy
   vklayer_files += files(
     'file_utils_linux.cpp',
     'cpu.cpp',
+    'cpu_common.cpp',
     'memory.cpp',
     'iostats.cpp',
     'notify.cpp',
