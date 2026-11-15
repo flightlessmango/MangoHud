@@ -130,6 +130,7 @@ typedef struct core_info_t {
    int frequency  = 0;
    int temp       = 0;
    float power    = 0.f;
+   float uncore_power = 0.f;
 } cpu_info_t;
 
 struct mangohud_message {
