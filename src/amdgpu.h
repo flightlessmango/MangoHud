@@ -526,7 +526,7 @@ class AMDGPU {
 		#define V3_THROTTLING_DELTA(name) \
 		((amdgpu_metrics)->throttle_residency_##name - (previous_metrics).throttle_residency_##name)
 
-		// Platform backend (amdgpu_linux.cpp)
+		// Platform backend (amdgpu_linux.cpp, amdgpu_freebsd.cpp)
 		void platform_init(const std::string& drm_node);
 		void get_sysfs_metrics();
 		void metrics_polling_thread();
