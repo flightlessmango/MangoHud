@@ -9,7 +9,7 @@
 
 namespace fs = ghc::filesystem;
 
-// Platform backend (net_linux.cpp)
+// Platform backend (net_linux.cpp, net_getifaddrs.cpp)
 // Names of the non-loopback network interfaces.
 std::vector<std::string> net_list_interfaces();
 // Cumulative bytes transmitted/received by an interface.
