@@ -12,6 +12,7 @@ class BatteryStats{
         float getTimeRemaining();
         std::string battPath[battery_count_max];
         float current_watt = 0;
+        float charge_watt = 0;
         float current_percent = 0;
         float remaining_time = 0;
         std::string current_status;

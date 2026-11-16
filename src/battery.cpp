@@ -143,6 +143,7 @@ static bool get_power_deckard(float& power) {
 float BatteryStats::getPower() {
     std::error_code ec;
     float power_w = 0.0f;
+    float charge_w = 0.0f;
     const bool deckard = fs::exists("/run/power-monitor/power/vph", ec);
     // the fuel gauge status flaps with the current sign while held near full
     const std::string deckard_status = read_line("/run/deckardcharger/battery_status");
@@ -164,19 +165,21 @@ float BatteryStats::getPower() {
         }
 
         // idle batteries report Not charging or Full, e.g. on dual-battery laptops
-        if (state[i] != "Discharging")
+        const bool charging = state[i] == "Charging";
+        if (state[i] != "Discharging" && !charging)
             continue;
 
-        discharging = true;
+        discharging |= !charging;
         if (deckard)
             continue;
 
+        float& sum = charging ? charge_w : power_w;
         // Prefer power_now (µW) when available.
         if (fs::exists(power_now, ec)) {
             std::ifstream input(power_now);
             std::string line;
             if (std::getline(input, line)) {
-                power_w += std::fabs(stof(line)) / 1000000.0f;
+                sum += std::fabs(stof(line)) / 1000000.0f;
             }
             continue;
         }
@@ -200,10 +203,11 @@ float BatteryStats::getPower() {
                 }
             }
 
-            power_w += (std::fabs(i_ua) * std::fabs(v_uv)) * 1e-12f;
+            sum += (std::fabs(i_ua) * std::fabs(v_uv)) * 1e-12f;
         }
     }
 
+    charge_watt = charge_w;
     if (!discharging)
         return 0.0f;
 

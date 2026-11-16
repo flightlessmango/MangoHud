@@ -1177,19 +1177,27 @@ void HudElements::battery(){
                 ImGui::SameLine(0,1.0f);
                 HUDElements.TextColored(HUDElements.colors.text, "%%");
             }
-            if (Battery_Stats.current_watt != 0) {
-                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_watt]){
+            auto watt_text = [](float watt) {
+                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact] && watt >= 10.0f)
+                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", watt);
+                else
+                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", watt);
+                ImGui::SameLine(0,1.0f);
+                ImGui::PushFont(HUDElements.sw_stats->font_small);
+                HUDElements.TextColored(HUDElements.colors.text, "W");
+                ImGui::PopFont();
+            };
+            const bool plugged = Battery_Stats.current_watt == 0;
+            if (plugged) {
+                ImguiNextColumnOrNewRow();
+                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_PLUG);
+            }
+            if (!plugged || Battery_Stats.charge_watt != 0) {
+                if (!plugged && HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_watt]){
                     ImguiNextColumnOrNewRow();
-                    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact] && Battery_Stats.current_watt >= 10.0f)
-                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", Battery_Stats.current_watt);
-                    else
-                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.1f", Battery_Stats.current_watt);
-                    ImGui::SameLine(0,1.0f);
-                    ImGui::PushFont(HUDElements.sw_stats->font_small);
-                    HUDElements.TextColored(HUDElements.colors.text, "W");
-                    ImGui::PopFont();
+                    watt_text(Battery_Stats.current_watt);
                 }
-                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_time]) {
+                if (plugged ? HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_watt] : HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery_time]) {
                     float hours;
                     float minutes;
                     minutes = std::modf(Battery_Stats.remaining_time, &hours);
@@ -1202,7 +1210,7 @@ void HudElements::battery(){
                         ImGui::NextColumn();
                         ImGui::PushFont(HUDElements.sw_stats->font_small);
                         ImGuiTableSetColumnIndex(0);
-                        HUDElements.TextColored(HUDElements.colors.text, "%s", "Remaining Time");
+                        HUDElements.TextColored(HUDElements.colors.text, "%s", plugged ? "Charge Rate" : "Remaining Time");
                         ImGui::PopFont();
                         ImGuiTableSetColumnIndex(2);
                     } else {
@@ -1214,11 +1222,11 @@ void HudElements::battery(){
                     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact])
                         ImGuiTableSetColumnIndex(0);
 
-                    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", time_buffer);
+                    if (plugged)
+                        watt_text(Battery_Stats.charge_watt);
+                    else
+                        right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", time_buffer);
                 }
-            } else {
-                ImguiNextColumnOrNewRow();
-                right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", ICON_FK_PLUG);
             }
         }
 
