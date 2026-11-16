@@ -45,7 +45,7 @@ class GPU {
                 if (
                     driver == "i915" || driver == "xe" ||
                     driver == "panfrost" || driver == "panthor" ||
-                    driver == "msm_dpu" || driver == "msm_drm"
+                    driver == "msm_dpu" || driver == "msm_drm" || driver == "adreno"
                 )
                     fdinfo = std::make_unique<GPU_fdinfo>(driver, pci_dev, drm_node, device_id, vendor_id);
         }
@@ -201,8 +201,8 @@ class GPUS {
         std::string get_pci_device_address(const std::string& drm_card_path);
         std::string get_driver(const std::string& node);
 
-        const std::array<std::string, 8> supported_drivers = {
-            "amdgpu", "nvidia", "i915", "xe", "panfrost", "panthor", "msm_dpu", "msm_drm"
+        const std::array<std::string, 9> supported_drivers = {
+            "amdgpu", "nvidia", "i915", "xe", "panfrost", "panthor", "msm_dpu", "msm_drm", "adreno"
         };
 };
 
