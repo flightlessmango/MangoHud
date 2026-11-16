@@ -53,6 +53,7 @@ vklayer_files = files(
   'logging.cpp',
   'config.cpp',
   'gpu.cpp',
+  'gpu_linux.cpp',
   'blacklist.cpp',
   'file_utils.cpp',
   'nvidia.cpp',
