@@ -93,6 +93,7 @@ if is_unixy
     'control.cpp',
     'device.cpp',
     'net.cpp',
+    'net_linux.cpp',
     'shell.cpp',
     'ftrace.cpp',
   )
