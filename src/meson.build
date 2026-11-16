@@ -58,7 +58,8 @@ vklayer_files = files(
   'file_utils.cpp',
   'nvidia.cpp',
   'gpu_fdinfo.cpp',
-  'amdgpu.cpp'
+  'amdgpu.cpp',
+  'amdgpu_linux.cpp'
 )
 
 opengl_files  = []
