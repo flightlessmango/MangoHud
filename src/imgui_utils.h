@@ -2,7 +2,7 @@
 
 #include <imgui.h>
 
-#ifdef __linux__
+#ifndef _WIN32
 #include <implot.h>
 #endif
 

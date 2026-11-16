@@ -29,7 +29,7 @@
 #include "fex.h"
 #include "ftrace.h"
 
-#ifdef __linux__
+#ifndef _WIN32
 #include <libgen.h>
 #include <unistd.h>
 #endif
@@ -104,7 +104,7 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
    if (real_params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
       cpuStats.UpdateCPUData();
 
-#ifdef __linux__
+#ifndef _WIN32
       if (real_params->enabled[OVERLAY_PARAM_ENABLED_core_load] || real_params->enabled[OVERLAY_PARAM_ENABLED_cpu_mhz] || logger->is_active())
          cpuStats.UpdateCoreMhz();
       if (real_params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp] || logger->is_active() || real_params->enabled[OVERLAY_PARAM_ENABLED_graphs])
@@ -118,7 +118,7 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
          gpus->get_metrics();
    }
 
-#ifdef __linux__
+#ifndef _WIN32
    if (real_params->enabled[OVERLAY_PARAM_ENABLED_fan])
       cpuStats.UpdatePlatformFanSpeed();
    if (real_params->enabled[OVERLAY_PARAM_ENABLED_battery])
@@ -148,7 +148,7 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
       currentLogData.gpu_vram_used = gpus->active_gpu()->metrics.sys_vram_used;
       currentLogData.gpu_power = gpus->active_gpu()->metrics.powerUsage;
    }
-#ifdef __linux__
+#ifndef _WIN32
    currentLogData.ram_used = memused;
    currentLogData.swap_used = swapused;
    currentLogData.process_rss = proc_mem_resident / float((2 << 29)); // GiB, consistent w/ other mem stats
@@ -266,7 +266,7 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
       hw_update_thread->update(&params, vendorID);
 
       if (fpsmetrics) fpsmetrics->update_thread();
-#ifdef __linux__
+#ifndef _WIN32
       if (HUDElements.net) HUDElements.net->update();
 #endif
 
@@ -738,7 +738,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
 
 void init_cpu_stats(overlay_params& params)
 {
-#ifdef __linux__
+#ifndef _WIN32
    auto& enabled = params.enabled;
    enabled[OVERLAY_PARAM_ENABLED_cpu_stats] = cpuStats.Init()
                            && enabled[OVERLAY_PARAM_ENABLED_cpu_stats];
@@ -754,7 +754,7 @@ struct pci_bus {
    int func;
 };
 
-#ifdef __linux__
+#ifndef _WIN32
 static void parse_proton_version(std::string wineProcess, std::string postfix)
 {
    stringstream ss;
@@ -859,7 +859,7 @@ void init_system_info(){
 }
 
 void check_for_vkbasalt_and_gamemode() {
-#ifdef __linux__
+#ifndef _WIN32
    static bool checked = false;
    if (checked)
       return;
