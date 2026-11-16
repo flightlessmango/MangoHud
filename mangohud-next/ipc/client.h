@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include "../render/colors.h"
 #include <cstdint>
 #include <chrono>
 #include <mutex>
@@ -174,6 +175,7 @@ public:
     std::string gpuName;
     uint32_t resolutionWidth = 0;
     uint32_t resolutionHeight = 0;
+    HDR hdr;
     std::vector<std::string> focused_seats;
     bool x11_focused = false;
     std::string wayland_display;

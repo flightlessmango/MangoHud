@@ -308,6 +308,12 @@ public:
                                                  max_sampled_app_feedback_pending);
     }
 
+    template <typename Surface>
+    wl_surface* native_surface(Surface key) {
+        auto data = get_surface(key);
+        return data ? data->surface : nullptr;
+    }
+
 private:
     // Updated under surf_m's unique lock; readers share the single-surface fast path.
     void update_surface_cache() {

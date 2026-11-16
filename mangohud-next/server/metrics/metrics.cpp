@@ -213,6 +213,7 @@ void Metrics::update_client() {
             metrics["ENGINE_NAME"] = {engine_name(client->pEngineName)};
             metrics["GPU_NAME"] = {client->gpuName};
             metrics["VULKAN_DRIVER"] = {client->vulkanDriver};
+            metrics["HDR"] = {client->hdr.status()};
             metrics["FOCUSED"] = {client->focused() ? "true" : "false"};
             metrics["FOCUSED_SEATS"] = {join_strings(client->focused_seats, ",")};
             if (client->resolutionWidth && client->resolutionHeight)

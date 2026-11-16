@@ -16,6 +16,7 @@ ipc_abi_inputs = files(
   'client.h',
   'ipc.h',
   'ipc_client.h',
+  '../render/colors.h',
   'protocol.h',
   'client.cpp',
   'ipc.cpp',

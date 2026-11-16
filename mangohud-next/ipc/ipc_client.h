@@ -105,6 +105,7 @@ public:
     static bool is_incompatible() { return incompatible.load(); }
     bool on_connect();
     void send_resolution(uint32_t width, uint32_t height);
+    void set_hdr_status(HDR::State status) { hdr_status.store(status); }
     void send_spdlog(const int level, const char* file, const int line, const std::string& text);
     void send_import_failed();
     void send_semaphores(std::vector<int> sema);
@@ -182,6 +183,7 @@ private:
     uint32_t resolution_height = 0;
     uint32_t sent_resolution_width = 0;
     uint32_t sent_resolution_height = 0;
+    std::atomic<HDR::State> hdr_status{HDR::State::Unknown};
 
     static int on_dmabuf(sd_bus_message* m, void* userdata, sd_bus_error* ret_error);
     static int on_config(sd_bus_message* m, void* userdata, sd_bus_error* ret_error);

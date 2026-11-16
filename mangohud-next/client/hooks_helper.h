@@ -3,6 +3,9 @@
 #include <array>
 #include <cstdarg>
 #include <cstring>
+#include <mutex>
+#include <string>
+#include <unordered_map>
 #include <dlfcn.h>
 #include <wayland-client.h>
 #include "real_dlsym.h"
@@ -12,6 +15,16 @@ using marshal_array_flags_fn = wl_proxy* (*)(wl_proxy*, uint32_t,
                                              uint32_t, uint32_t,
                                              wl_argument*);
 using get_interface_fn = const wl_interface* (*)(wl_proxy*);
+
+inline std::mutex wl_interfaces_m;
+inline std::unordered_map<std::string, const wl_interface*> wl_interfaces;
+
+inline void wl_marshal_register_interface(const wl_interface* interface) {
+    if (interface && interface->name) {
+        std::lock_guard lock(wl_interfaces_m);
+        wl_interfaces[interface->name] = interface;
+    }
+}
 
 inline marshal_array_flags_fn wl_marshal_real_array_flags()
 {
@@ -45,6 +58,13 @@ inline const wl_interface* wl_marshal_proxy_interface_for(wl_proxy* proxy)
     auto* proxy_class = wl_proxy_get_class(proxy);
     if (!proxy_class)
         return nullptr;
+
+    {
+        std::lock_guard lock(wl_interfaces_m);
+        auto it = wl_interfaces.find(proxy_class);
+        if (it != wl_interfaces.end())
+            return it->second;
+    }
 
     static constexpr std::array core_interfaces{
         &wl_display_interface,
@@ -126,11 +146,13 @@ inline size_t wl_marshal_arguments_from_va_list(const wl_message* message,
     return count;
 }
 
+using marshal_observer_fn = void (*)(const wl_interface*, const wl_message*, wl_proxy*, wl_proxy*, const wl_argument*);
+
 inline wl_proxy* wl_marshal_forward_flags(marshal_array_flags_fn real,
                                           wl_proxy* proxy, uint32_t opcode,
                                           const wl_interface* interface,
                                           uint32_t version, uint32_t flags,
-                                          va_list args_in)
+                                          va_list args_in, marshal_observer_fn observer = nullptr)
 {
     const wl_message* message = nullptr;
     auto* proxy_interface = wl_marshal_proxy_interface_for(proxy);
@@ -139,5 +161,10 @@ inline wl_proxy* wl_marshal_forward_flags(marshal_array_flags_fn real,
 
     std::array<wl_argument, 20> args;
     auto argc = wl_marshal_arguments_from_va_list(message, args_in, args.data(), args.size());
-    return real(proxy, opcode, interface, version, flags, argc ? args.data() : nullptr);
+    auto* result = real(proxy, opcode, interface, version, flags, argc ? args.data() : nullptr);
+    if (result)
+        wl_marshal_register_interface(interface);
+    if (observer)
+        observer(proxy_interface, message, proxy, result, argc ? args.data() : nullptr);
+    return result;
 }

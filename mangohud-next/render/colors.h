@@ -82,8 +82,8 @@ public:
 
     constexpr const char* status() const {
         switch (state) {
-        case State::On: return "ON";
-        case State::Off: return "OFF";
+        case State::On: return "HDR";
+        case State::Off: return "SDR";
         default: return "UNKNOWN";
         }
     }

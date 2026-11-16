@@ -512,9 +512,11 @@ int IPCClient::push_queue() {
             return r;
         }
 
-        r = sd_bus_message_append(m, "b", static_cast<int>(x11_focused.load()));
+        // TODO: Separate focus and HDR status updates from frame samples to keep frame messages lightweight.
+        r = sd_bus_message_append(m, "bi", static_cast<int>(x11_focused.load()),
+                                  static_cast<int32_t>(hdr_status.load()));
         if (r < 0) {
-            SPDLOG_ERROR("push_queue: append X11 focus {} ({})", r, strerror(-r));
+            SPDLOG_ERROR("push_queue: append focus and HDR status {} ({})", r, strerror(-r));
             sd_bus_message_unref(m);
             return r;
         }

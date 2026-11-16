@@ -166,7 +166,7 @@ Available metrics currently include:
 | `[CPU, index, KEY]` | `LOAD`, `FREQ` |
 | `[CPU, KEY]` | `LOAD`, `MAX_LOAD`, `FREQ`, `TEMP`, `POWER` |
 | `[RAM, KEY]` | `USED`, `TOTAL`, `SWAP_USED` |
-| `KEY` | `ENGINE_NAME`, `GPU_NAME`, `VULKAN_DRIVER`, `RESOLUTION`, `FPS`, `FRAMETIME`, `FRAMETIME_MIN`, `FRAMETIME_MAX`, `FRAMETIMES`, `REFRESH_FPS`, `REFRESH_FRAMETIME`, `REFRESH_FRAMETIME_MIN`, `REFRESH_FRAMETIME_MAX`, `REFRESH_FRAMETIMES`, `APP_FPS`, `APP_FRAMETIME`, `APP_FRAMETIME_MIN`, `APP_FRAMETIME_MAX`, `APP_FRAMETIMES`, `HUD_FPS`, `HUD_FRAMETIME`, `HUD_FRAMETIME_MIN`, `HUD_FRAMETIME_MAX`, `HUD_FRAMETIMES` |
+| `KEY` | `ENGINE_NAME`, `GPU_NAME`, `VULKAN_DRIVER`, `HDR`, `RESOLUTION`, `FPS`, `FRAMETIME`, `FRAMETIME_MIN`, `FRAMETIME_MAX`, `FRAMETIMES`, `REFRESH_FPS`, `REFRESH_FRAMETIME`, `REFRESH_FRAMETIME_MIN`, `REFRESH_FRAMETIME_MAX`, `REFRESH_FRAMETIMES`, `APP_FPS`, `APP_FRAMETIME`, `APP_FRAMETIME_MIN`, `APP_FRAMETIME_MAX`, `APP_FRAMETIMES`, `HUD_FPS`, `HUD_FRAMETIME`, `HUD_FRAMETIME_MIN`, `HUD_FRAMETIME_MAX`, `HUD_FRAMETIMES` |
 
 `FRAMETIME_MIN` and `FRAMETIME_MAX` report the minimum and maximum frametime in
 milliseconds over the same roughly 500 ms sample window as `FPS` and `FRAMETIME`.
@@ -176,11 +176,14 @@ return `0` until two samples establish an interval. The `APP_`, `HUD_`, and
 200-interval history, including initial zero padding. `FRAME_COUNT` reports the
 cumulative number of rendered frames received by the server.
 
+`HDR` reports the application's color space as `HDR`, `SDR`, or `UNKNOWN`.
+
 ```yaml
 hud_table:
   rows:
     - [ {text: "Min frametime"}, {value: FRAMETIME_MIN, precision: 2} ]
     - [ {text: "Max frametime"}, {value: FRAMETIME_MAX, precision: 2} ]
+    - [ {text: HDR}, {value: HDR} ]
 ```
 
 Some single-name references are backed by small shell commands:

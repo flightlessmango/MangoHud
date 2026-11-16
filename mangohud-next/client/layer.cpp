@@ -10,6 +10,8 @@
 #include "file_utils.h"
 #include "wayland.h"
 #include "x11.h"
+#include "../render/colors.h"
+#include "wayland_color.h"
 
 
 static char pendingEngineName[VK_MAX_DESCRIPTION_SIZE]{};
@@ -227,6 +229,12 @@ public:
     }
 };
 
+static HDR::State surface_hdr_status(VkColorSpaceKHR colorspace, VkSurfaceKHR surface) {
+    if (colorspace == VK_COLOR_SPACE_PASS_THROUGH_EXT && wayland)
+        return wayland_color_tracker.status(wayland->native_surface(surface));
+    return HDR::from_colorspace(colorspace);
+}
+
 class VkDeviceOverrides {
 public:
 #ifdef VK_EXT_present_timing
@@ -320,6 +328,7 @@ public:
         layer->timing.init_swapchain(pDispatch, device, *pSwapchain, sc, timing_config);
 #endif
         layer->ipc->send_resolution(pCreateInfo->imageExtent.width, pCreateInfo->imageExtent.height);
+        layer->ipc->set_hdr_status(surface_hdr_status(pCreateInfo->imageColorSpace, pCreateInfo->surface));
 
         layer->g_vkSetDebugUtilsObjectNameEXT =
         reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(
@@ -359,6 +368,8 @@ public:
     {
         auto sc = layer && pPresentInfo->swapchainCount > 0
             ? layer->get_swapchain_data(pPresentInfo->pSwapchains[0]) : nullptr;
+        if (sc)
+            layer->ipc->set_hdr_status(surface_hdr_status(sc->colorspace, sc->vk_surface));
         bool feedback = false;
 #ifdef VK_EXT_present_timing
         feedback = PresentationTiming::check_present(sc, pPresentInfo);

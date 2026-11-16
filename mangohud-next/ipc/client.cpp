@@ -545,9 +545,10 @@ int Client::frame_samples(sd_bus_message* m, void* userdata, sd_bus_error* ret_e
         return 0;
 
     int x11_focused = 0;
-    int r = sd_bus_message_read(m, "b", &x11_focused);
-    if (r <= 0) {
-        SPDLOG_ERROR("frame_samples: missing X11 focus ({})", r);
+    int32_t hdr_status = -1;
+    int r = sd_bus_message_read(m, "bi", &x11_focused, &hdr_status);
+    if (r <= 0 || hdr_status < -1 || hdr_status > 1) {
+        SPDLOG_ERROR("frame_samples: invalid focus or HDR status ({})", r);
         return r < 0 ? r : -EINVAL;
     }
     std::vector<std::string> focused_seats;
@@ -585,6 +586,7 @@ int Client::frame_samples(sd_bus_message* m, void* userdata, sd_bus_error* ret_e
     std::lock_guard client_lock(self->m);
     self->focused_seats = std::move(focused_seats);
     self->x11_focused = x11_focused;
+    self->hdr = HDR{static_cast<HDR::State>(hdr_status)};
     for (;;) {
         uint8_t type_raw = 0;
         uint64_t seq = 0, t_ns = 0;

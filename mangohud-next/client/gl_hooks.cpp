@@ -21,6 +21,7 @@
 #include "wayland.h"
 #include "x11.h"
 #include "frame_limiter.h"
+#include "wayland_color.h"
 
 std::unique_ptr<OverlayGL> overlay;
 std::shared_ptr<IPCClient> ipc;
@@ -33,6 +34,14 @@ std::unordered_map<wl_egl_window*, wl_surface*> wl_egl_windows;
 std::mutex egl_displays_m;
 std::unordered_map<EGLDisplay, wl_display*> egl_displays;
 static std::unordered_map<EGLDisplay, EGLenum> egl_platforms;
+static void observe_color_request(const wl_interface* iface, const wl_message* message,
+                                  wl_proxy* proxy, wl_proxy* result, const wl_argument* args) {
+    if (!iface || !message)
+        return;
+    const std::string_view name = iface->name;
+    if (name == "wl_surface" || name.starts_with("wp_color_") || name.starts_with("wp_image_description"))
+        wayland_color_tracker.observe(name, message->name, proxy, result, args);
+}
 
 static void limit_fps() {
     if (!ipc)
@@ -126,6 +135,8 @@ static bool present_wayland(EGLSurface surf) {
     if (!wayland || ipc->inject_output())
         return false;
 
+    ipc->set_hdr_status(wayland_color_tracker.status(wayland->native_surface(surf)));
+
     ipc->add_to_queue(os_time_get_nano());
     return wayland->ensure_overlay(surf);
 }
@@ -133,6 +144,8 @@ static bool present_wayland(EGLSurface surf) {
 static void mangohud(Display *dpy = nullptr, GLXDrawable drawable = 0) {
     auto api = dpy ? Backend::GLX : Backend::EGL;
     if (!ipc) ipc = std::make_shared<IPCClient>(api);
+    if (dpy)
+        ipc->set_hdr_status(HDR::State::Unknown);
     if (dpy && drawable) {
         if (!x11) x11 = std::make_unique<X11>(ipc);
         Window window = drawable;
@@ -364,6 +377,7 @@ EXPORT_C_(void) wl_display_disconnect(wl_display* display) {
         return real_wl_display_disconnect(display);
 
     reset_wayland();
+    wayland_color_tracker.clear();
     real_wl_display_disconnect(display);
 }
 
@@ -556,7 +570,7 @@ EXPORT_C_(wl_proxy*) wl_proxy_marshal_flags(wl_proxy* proxy, uint32_t opcode,
     va_list args_in;
     va_start(args_in, flags);
     auto* result = wl_marshal_forward_flags(real, proxy, opcode, interface,
-                                            version, flags, args_in);
+                                            version, flags, args_in, IPCClient::should_disable() ? nullptr : observe_color_request);
     va_end(args_in);
 
     return result;
@@ -575,7 +589,14 @@ EXPORT_C_(wl_proxy*) wl_proxy_marshal_array_flags(wl_proxy* proxy, uint32_t opco
     if (wl_marshal_is_surface_commit(proxy, opcode) && wayland)
         wayland->request_commit_presentation_feedback(proxy);
 
-    return real ? real(proxy, opcode, interface, version, flags, args) : nullptr;
+    const auto* proxy_interface = wl_marshal_proxy_interface_for(proxy);
+    const auto* message = proxy_interface && opcode < static_cast<uint32_t>(proxy_interface->method_count)
+        ? &proxy_interface->methods[opcode] : nullptr;
+    auto* result = real ? real(proxy, opcode, interface, version, flags, args) : nullptr;
+    if (result)
+        wl_marshal_register_interface(interface);
+    observe_color_request(proxy_interface, message, proxy, result, args);
+    return result;
 }
 
 EXPORT_C_(__eglMustCastToProperFunctionPointerType) eglGetProcAddress(const char* procName)
