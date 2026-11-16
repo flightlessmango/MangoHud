@@ -6,7 +6,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
-#ifdef __linux__
+#ifndef _WIN32
 #include <wordexp.h>
 #include <unistd.h>
 #endif
