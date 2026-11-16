@@ -1004,5 +1004,3 @@ void CPUStats::get_cpu_cores_types_arm() {
         }
     }
 }
-
-CPUStats cpuStats;
