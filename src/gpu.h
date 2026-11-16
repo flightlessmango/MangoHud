@@ -17,7 +17,7 @@
 #include "gpu_metrics_util.h"
 #include "gpu_fdinfo.h"
 
-// A GPU as found by the platform backend (gpu_linux.cpp)
+// A GPU as found by the platform backend (gpu_linux.cpp, gpu_freebsd.cpp)
 struct gpu_device {
     std::string node;       // DRM render node name, e.g. "renderD128" (may be empty)
     std::string driver;     // kernel driver name, e.g. "amdgpu", "nvidia"
