@@ -92,3 +92,5 @@ bool CPUStats::Reinit()
     m_inited = false;
     return Init();
 }
+
+CPUStats cpuStats;
