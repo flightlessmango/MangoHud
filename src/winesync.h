@@ -18,7 +18,12 @@ class WineSync {
 
         pid_t pid;
         std::string method = "NONE";
+#ifdef __linux__
         bool inside_wine = true;
+#else
+        // esync, fsync and ntsync only exist on Linux
+        bool inside_wine = false;
+#endif
     public:
         void determine_sync_variant() {
 #ifdef __linux__
