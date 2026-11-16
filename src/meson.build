@@ -94,6 +94,7 @@ if is_unixy
     'device.cpp',
     'net.cpp',
     'net_linux.cpp',
+    'system_info_linux.cpp',
     'shell.cpp',
     'ftrace.cpp',
   )
