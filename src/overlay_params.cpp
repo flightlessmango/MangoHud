@@ -19,6 +19,7 @@
 #include <cctype>
 #include <array>
 #include <atomic>
+#include <memory>
 #include <functional>
 #include <spdlog/spdlog.h>
 #include <vulkan/vulkan_core.h>
@@ -49,7 +50,24 @@ std::unique_ptr<fpsMetrics> fpsmetrics;
 std::mutex config_mtx;
 std::condition_variable config_cv;
 bool config_ready = false;
+
+#ifdef __cpp_lib_atomic_shared_ptr
 static std::atomic<std::shared_ptr<overlay_params>> g_params;
+#else
+// Not every standard library implements std::atomic<std::shared_ptr<T>> (e.g. libc++)
+class AtomicParams {
+public:
+    void store(std::shared_ptr<overlay_params> p, std::memory_order order = std::memory_order_seq_cst) {
+        std::atomic_store_explicit(&ptr, std::move(p), order);
+    }
+    std::shared_ptr<overlay_params> load(std::memory_order order = std::memory_order_seq_cst) const {
+        return std::atomic_load_explicit(&ptr, order);
+    }
+private:
+    std::shared_ptr<overlay_params> ptr;
+};
+static AtomicParams g_params;
+#endif
 std::shared_ptr<fpsLimiter> fps_limiter;
 
 #if __cplusplus >= 201703L
