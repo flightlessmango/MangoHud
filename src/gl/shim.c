@@ -16,41 +16,74 @@
 static void* handle = NULL;
 static bool mangoHudLoaded = false;
 
-#ifdef __GLIBC__
 static inline void
 free_indirect(char **p)
 {
     free(*p);
 }
 
-static bool load_adjacent_opengl_lib(void)
+// Path of this shared library as it was loaded
+static const char *get_own_path(void)
 {
-    __attribute__((cleanup(free_indirect))) char *location = NULL;
-    __attribute__((cleanup(free_indirect))) char *lib = NULL;
     Dl_info info = {};
-    void *extra_info = NULL;
 
     // The first argument can be any symbol in this shared library,
     // mangoHudLoaded is a convenient one
+#ifdef RTLD_DL_LINKMAP
+    void *extra_info = NULL;
+
     if (!dladdr1(&mangoHudLoaded, &info, &extra_info, RTLD_DL_LINKMAP))
     {
         fprintf(stderr, "shim: Unable to find my own location: %s\n", dlerror());
-        return false;
+        return NULL;
     }
 
     const struct link_map *map = extra_info;
     if (map == NULL)
     {
         fprintf(stderr, "shim: Unable to find my own location: NULL link_map\n");
-        return false;
+        return NULL;
     }
     if (map->l_name == NULL)
     {
         fprintf(stderr, "shim: Unable to find my own location: NULL l_name\n");
+        return NULL;
+    }
+
+    return map->l_name;
+#else
+    // No dladdr1() outside of glibc (BSDs, musl)
+    if (!dladdr(&mangoHudLoaded, &info))
+    {
+        fprintf(stderr, "shim: Unable to find my own location: %s\n", dlerror());
+        return NULL;
+    }
+    if (info.dli_fname == NULL)
+    {
+        fprintf(stderr, "shim: Unable to find my own location: NULL dli_fname\n");
+        return NULL;
+    }
+
+    return info.dli_fname;
+#endif
+}
+
+static bool load_adjacent_opengl_lib(void)
+{
+    __attribute__((cleanup(free_indirect))) char *location = NULL;
+    __attribute__((cleanup(free_indirect))) char *lib = NULL;
+
+    const char *own_path = get_own_path();
+    if (own_path == NULL)
+        return false;
+
+    location = realpath(own_path, NULL);
+    if (location == NULL)
+    {
+        fprintf(stderr, "shim: Unable to find my own location: realpath: %s\n", strerror(errno));
         return false;
     }
 
-    location = realpath(map->l_name, NULL);
     char *slash = strrchr(location, '/');
 
     if (slash == NULL)
@@ -77,7 +110,6 @@ static bool load_adjacent_opengl_lib(void)
 
     return true;
 }
-#endif
 
 // Load MangoHud after EGL/GLX functions have been intercepted
 static void loadMangoHud(void);
@@ -110,13 +142,11 @@ static void loadMangoHud() {
         }
     }
 
-#ifdef __GLIBC__
     if (load_adjacent_opengl_lib())
     {
         mangoHudLoaded = true;
         return;
     }
-#endif
 
     if (!mangoHudLoaded)
     {
