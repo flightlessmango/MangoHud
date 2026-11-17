@@ -1005,9 +1005,9 @@ void HudElements::frame_timing(){
                 ImGui::Text("Thermal throttling");
             }
         }
+#endif
         ImGui::PopFont();
         ImGui::PopStyleColor();
-#endif
     }
 }
 
