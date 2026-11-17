@@ -220,8 +220,9 @@ if not cpp.has_header_symbol('version', '_LIBCPP_VERSION')
   link_args += cc.get_supported_link_arguments(['-static-libstdc++'])
 endif
 if is_freebsd
-  # lld refuses version scripts naming symbols that aren't defined
-  link_args += cc.get_supported_link_arguments(['-Wl,--undefined-version'])
+  # lld refuses version scripts naming symbols that aren't defined, and libc
+  # skips the thread_local destructors of an unloaded library, so keep it loaded
+  link_args += cc.get_supported_link_arguments(['-Wl,--undefined-version', '-Wl,-z,nodelete'])
 endif
 # meson fails to check version-script so just force add
 link_args += '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version'))
