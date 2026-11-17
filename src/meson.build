@@ -214,7 +214,11 @@ if is_unixy
   endif
 endif
 
-link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL', '-lGL', '-static-libstdc++'])
+link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL', '-lGL'])
+# libc++ is not libstdc++, clang only warns that the flag is unused
+if not cpp.has_header_symbol('version', '_LIBCPP_VERSION')
+  link_args += cc.get_supported_link_arguments(['-static-libstdc++'])
+endif
 if is_freebsd
   # lld refuses version scripts naming symbols that aren't defined
   link_args += cc.get_supported_link_arguments(['-Wl,--undefined-version'])
