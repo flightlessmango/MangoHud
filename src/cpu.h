@@ -51,6 +51,19 @@ typedef struct CPUData_ {
    std::string label = "unknown";
 } CPUData;
 
+// Fills the per-interval fields of cpuData from cumulative tick counters
+void calculateCPUData(CPUData& cpuData,
+    unsigned long long int usertime,
+    unsigned long long int nicetime,
+    unsigned long long int systemtime,
+    unsigned long long int idletime,
+    unsigned long long int ioWait,
+    unsigned long long int irq,
+    unsigned long long int softIrq,
+    unsigned long long int steal,
+    unsigned long long int guest,
+    unsigned long long int guestnice);
+
 enum {
    CPU_POWER_K10TEMP,
    CPU_POWER_ZENPOWER,
@@ -58,7 +71,8 @@ enum {
    CPU_POWER_RAPL,
    CPU_POWER_AMDGPU,
    CPU_POWER_XGENE,
-   CPU_POWER_DECKARD
+   CPU_POWER_DECKARD,
+   CPU_POWER_CPUCTL
 };
 
 struct CPUPowerData {

@@ -1,41 +1,26 @@
 #include <chrono>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/inotify.h>
+#include <cstring>
 #include <spdlog/spdlog.h>
 #include "config.h"
 #include "notify.h"
 
-#define EVENT_SIZE  ( sizeof (struct inotify_event) )
-#define EVENT_BUF_LEN     ( 1024 * ( EVENT_SIZE + 16 ) )
-
 static void fileChanged(notify_thread *nt) {
-    int length, i = 0;
-    char buffer[EVENT_BUF_LEN];
     overlay_params local_params = *nt->params;
 
     while (!nt->quit.load()) {
-        length = read( nt->fd, buffer, EVENT_BUF_LEN );
-        while (i < length) {
-            struct inotify_event *event =
-                (struct inotify_event *) &buffer[i];
-            i += EVENT_SIZE + event->len;
-            if (event->mask & IN_MODIFY || event->mask & IN_DELETE_SELF) {
-                // In the case of IN_DELETE_SELF, some editors may do a save-to-temp-file/delete-original/move-temp-file
-                // so sleep a little to let file to be replaced
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                parse_overlay_config(&local_params, getenv("MANGOHUD_CONFIG"), false);
-                if ((event->mask & IN_DELETE_SELF) || (nt->params->config_file_path != local_params.config_file_path)) {
-                    SPDLOG_DEBUG("Watching config file: {}", local_params.config_file_path.c_str());
-                    inotify_rm_watch(nt->fd, nt->wd);
-                    nt->wd = inotify_add_watch(nt->fd, local_params.config_file_path.c_str(), IN_MODIFY | IN_DELETE_SELF);
-                }
-                std::lock_guard<std::mutex> lk(nt->mutex);
-                *nt->params = local_params;
+        const unsigned events = notify_poll(*nt);
+        if (events) {
+            // With NOTIFY_REMOVED, some editors may do a save-to-temp-file/delete-original/move-temp-file
+            // so sleep a little to let file to be replaced
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            parse_overlay_config(&local_params, getenv("MANGOHUD_CONFIG"), false);
+            if ((events & NOTIFY_REMOVED) || (nt->params->config_file_path != local_params.config_file_path)) {
+                SPDLOG_DEBUG("Watching config file: {}", local_params.config_file_path.c_str());
+                notify_watch(*nt, local_params.config_file_path.c_str());
             }
+            std::lock_guard<std::mutex> lk(nt->mutex);
+            *nt->params = local_params;
         }
-        i = 0;
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
@@ -43,16 +28,11 @@ static void fileChanged(notify_thread *nt) {
 bool start_notifier(notify_thread& nt)
 {
     nt.quit.store(false);
-    nt.fd = inotify_init1(IN_NONBLOCK);
-    if (nt.fd < 0) {
-        SPDLOG_ERROR("inotify_init1 failed: {}", strerror(errno));
+    if (!notify_open(nt))
         return false;
-    }
 
-    nt.wd = inotify_add_watch(nt.fd, nt.params->config_file_path.c_str(), IN_MODIFY | IN_DELETE_SELF);
-    if (nt.wd < 0) {
-        close(nt.fd);
-        nt.fd = -1;
+    if (!notify_watch(nt, nt.params->config_file_path.c_str())) {
+        notify_close(nt);
         return false;
     }
 
@@ -68,10 +48,5 @@ notify_thread::~notify_thread()
     if (thread.joinable())
         thread.join();
 
-    if (fd < 0)
-        return;
-
-    inotify_rm_watch(fd, wd);
-    close(fd);
-    fd = -1;
+    notify_close(*this);
 }

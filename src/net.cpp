@@ -1,69 +1,31 @@
 #include "net.h"
+#include <algorithm>
 #include "hud_elements.h"
 
 Net::Net() {
-    std::error_code ec;
     auto params = get_params();
     should_reset = false;
-    fs::path net_dir(NETDIR);
-    if (fs::is_directory(net_dir, ec)) {
-        std::error_code iterator_ec;
-        for (fs::directory_iterator it(net_dir, iterator_ec), end;
-             !iterator_ec && it != end; it.increment(iterator_ec)) {
-            const auto& entry = *it;
-            if (entry.is_directory(ec)) {
-                auto val = entry.path().filename().string();
-                if (val == "lo")
-                    continue;
-
-                if (!params->network.empty() && params->network.front() == "1") {
-                    interfaces.push_back({entry.path().filename().string(), 0, 0});
-                } else if (!params->network.empty()){
-                    auto it = std::find(params->network.begin(), params->network.end(), val);
-                    if (it != params->network.end())
-                        interfaces.push_back({entry.path().filename().string(), 0, 0});
-                }
-            }
-        }
-        if (iterator_ec)
-            SPDLOG_DEBUG("Failed to iterate {}: {}", fs::path(net_dir).string(), iterator_ec.message());
+    for (const auto& val : net_list_interfaces()) {
+        if (params->network.empty())
+            continue;
+        if (params->network.front() == "1" ||
+            std::find(params->network.begin(), params->network.end(), val) != params->network.end())
+            interfaces.push_back({val, 0, 0});
     }
-    
+
     if (interfaces.empty())
         SPDLOG_ERROR("Network: couldn't find any interfaces");
-}
-
-long long safe_stoll(const std::string& str, long long default_value);
-long long safe_stoll(const std::string& str, long long default_value = 0) {
-    if (str.empty()) {
-        SPDLOG_DEBUG("tx or rx returned an empty string");
-        return default_value;
-    }
-
-    try {
-        return std::stoll(str);
-    } catch (const std::invalid_argument& e) {
-        SPDLOG_DEBUG("stoll invalid argument");
-    } catch (const std::out_of_range& e) {
-        SPDLOG_DEBUG("stoll out of range");
-    }
-    return default_value;
 }
 
 void Net::update() {
     if (!interfaces.empty()) {
         for (auto& iface : interfaces) {
-            // path to tx_bytes and rx_bytes
-            std::string txfile = (NETDIR + iface.name + TXFILE);
-            std::string rxfile = (NETDIR + iface.name + RXFILE);
-            
             // amount of bytes at previous update
             uint64_t prevTx = iface.txBytes;
             uint64_t prevRx = iface.rxBytes;
             
             // current amount of bytes
-            iface.txBytes = safe_stoll(read_line(txfile));
-            iface.rxBytes = safe_stoll(read_line(rxfile));
+            net_read_counters(iface.name, iface.txBytes, iface.rxBytes);
 
             auto now = std::chrono::steady_clock::now();
             // calculate the bytes per second since last update

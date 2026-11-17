@@ -53,11 +53,13 @@ vklayer_files = files(
   'logging.cpp',
   'config.cpp',
   'gpu.cpp',
+  'gpu_linux.cpp',
   'blacklist.cpp',
   'file_utils.cpp',
   'nvidia.cpp',
   'gpu_fdinfo.cpp',
-  'amdgpu.cpp'
+  'amdgpu.cpp',
+  'amdgpu_linux.cpp'
 )
 
 opengl_files  = []
@@ -77,10 +79,15 @@ endif
 
 if is_unixy
   vklayer_files += files(
+    'file_utils_linux.cpp',
     'cpu.cpp',
+    'cpu_common.cpp',
     'memory.cpp',
+    'memory_common.cpp',
     'iostats.cpp',
+    'iostats_linux.cpp',
     'notify.cpp',
+    'notify_linux.cpp',
     'elfhacks.c',
     '../mangohud-next/client/real_dlsym.c',
     'pci_ids.cpp',
@@ -88,6 +95,8 @@ if is_unixy
     'control.cpp',
     'device.cpp',
     'net.cpp',
+    'net_linux.cpp',
+    'system_info_linux.cpp',
     'shell.cpp',
     'ftrace.cpp',
   )
