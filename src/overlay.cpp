@@ -801,7 +801,7 @@ void init_system_info(){
       wineProcess = get_exe_path();
       auto n = wineProcess.find_last_of('/');
       string preloader = wineProcess.substr(n + 1);
-      if (preloader == "wine-preloader" || preloader == "wine64-preloader") {
+      if (is_wine_loader(preloader)) {
          // Check if using Proton
          if (wineProcess.find("/dist/bin/wine") != std::string::npos
             || wineProcess.find("/files/bin/wine") != std::string::npos
@@ -817,10 +817,12 @@ void init_system_info(){
          else {
             char *dir = dirname((char*)wineProcess.c_str());
             stringstream findVersion;
-            if (preloader == "wine-preloader")
-               findVersion << "\"" << dir << "/wine\" --version";
-            else
-               findVersion << "\"" << dir << "/wine64\" --version";
+            // "wine64-preloader" -> "wine64"; a loader without the suffix is used as is
+            string loader = preloader;
+            const string suffix = "-preloader";
+            if (loader.size() > suffix.size() && loader.compare(loader.size() - suffix.size(), suffix.size(), suffix) == 0)
+               loader.erase(loader.size() - suffix.size());
+            findVersion << "\"" << dir << "/" << loader << "\" --version";
             const char *wine_env = getenv("WINELOADERNOEXEC");
             if (wine_env)
                unsetenv("WINELOADERNOEXEC");
