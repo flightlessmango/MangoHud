@@ -20,9 +20,10 @@ GPUS::GPUS(const overlay_params* early_params) {
                 std::find(std::begin(supported_drivers), std::end(supported_drivers), driver);
 
             if (d == std::end(supported_drivers)) {
+                // Backends that don't go through DRM nodes only know the PCI address
                 SPDLOG_WARN(
                     "node \"{}\" is using driver \"{}\" which is unsupported by MangoHud. Skipping...",
-                    node_name, driver
+                    node_name.empty() ? dev.pci_dev : node_name, driver
                 );
                 continue;
             }
