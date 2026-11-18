@@ -512,6 +512,29 @@ static bool get_cpu_power_xgene(CPUPowerData* cpuPowerData, float& power) {
     return true;
 }
 
+static bool get_cpu_power_ibmpowernv(CPUPowerData* cpuPowerData, float& power) {
+    CPUPowerData_ibmpowernv* powerData_ibmpowernv = (CPUPowerData_ibmpowernv*)cpuPowerData;
+    if (powerData_ibmpowernv->powerFiles.empty())
+        return false;
+
+    uint64_t total = 0;
+    for (auto file : powerData_ibmpowernv->powerFiles) {
+        rewind(file);
+        fflush(file);
+
+        uint64_t powerValue = 0;
+        if (fscanf(file, "%" SCNu64, &powerValue) != 1)
+            return false;
+
+        total += powerValue;
+    }
+
+    // microwatts
+    power = (float) total / 1000000.0f;
+
+    return true;
+}
+
 static bool get_cpu_power_deckard(float& power) {
     std::string value = read_line("/run/power-monitor/power/cores_total");
     if (value.empty())
@@ -549,6 +572,9 @@ bool CPUStats::UpdateCpuPower() {
             break;
         case CPU_POWER_DECKARD:
             if (!get_cpu_power_deckard(power)) return false;
+            break;
+        case CPU_POWER_IBMPOWERNV:
+            if (!get_cpu_power_ibmpowernv(m_cpuPowerData.get(), power)) return false;
             break;
         default:
             return false;
@@ -919,6 +945,28 @@ static CPUPowerData_xgene* init_cpu_power_data_xgene(const std::string path) {
     return powerData.release();
 }
 
+static CPUPowerData_ibmpowernv* init_cpu_power_data_ibmpowernv(const std::string path) {
+    auto powerData = std::make_unique<CPUPowerData_ibmpowernv>();
+    std::vector<std::string> inputs;
+
+    // the whole-chip sensor is labeled "Chip 0 " (with the trailing space),
+    // next to "Chip 0 Vdd" and "Chip 0 Vdn" for its rails
+    find_inputs(path, "power", std::regex("Chip \\d+ ?"), inputs);
+    for (auto& input : inputs) {
+        FILE* file = fopen(input.c_str(), "r");
+        if (!file)
+            continue;
+
+        SPDLOG_DEBUG("hwmon: using input: {}", input);
+        powerData->powerFiles.push_back(file);
+    }
+
+    if (powerData->powerFiles.empty())
+        return nullptr;
+
+    return powerData.release();
+}
+
 bool CPUStats::InitCpuPowerData() {
     if(m_cpuPowerData != nullptr)
         return true;
@@ -951,6 +999,9 @@ bool CPUStats::InitCpuPowerData() {
             break;
         } else if (name == "apm_xgene") {
             cpuPowerData = (CPUPowerData*)init_cpu_power_data_xgene(path);
+            break;
+        } else if (name == "ibmpowernv") {
+            cpuPowerData = (CPUPowerData*)init_cpu_power_data_ibmpowernv(path);
             break;
         }
     }

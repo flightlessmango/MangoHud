@@ -58,7 +58,8 @@ enum {
    CPU_POWER_RAPL,
    CPU_POWER_AMDGPU,
    CPU_POWER_XGENE,
-   CPU_POWER_DECKARD
+   CPU_POWER_DECKARD,
+   CPU_POWER_IBMPOWERNV
 };
 
 struct CPUPowerData {
@@ -168,6 +169,20 @@ struct CPUPowerData_deckard : public CPUPowerData {
    CPUPowerData_deckard() {
       this->source = CPU_POWER_DECKARD;
    };
+};
+
+struct CPUPowerData_ibmpowernv : public CPUPowerData {
+   CPUPowerData_ibmpowernv() {
+      this->source = CPU_POWER_IBMPOWERNV;
+   };
+
+   ~CPUPowerData_ibmpowernv() {
+      for (auto file : this->powerFiles)
+         fclose(file);
+   };
+
+   // one per chip (socket)
+   std::vector<FILE*> powerFiles;
 };
 
 class CPUStats
