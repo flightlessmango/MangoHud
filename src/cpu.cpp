@@ -604,6 +604,31 @@ static bool find_fallback_input(const std::string& path, const char* input_prefi
     return false;
 }
 
+// Like find_input(), but collects every readable input whose label matches
+static void find_inputs(const std::string& path, const char* input_prefix, const std::regex& name, std::vector<std::string>& inputs)
+{
+    auto files = ls(path.c_str(), input_prefix, LS_FILES);
+    std::sort(files.begin(), files.end());
+    for (auto& file : files) {
+        if (!ends_with(file, "_label"))
+            continue;
+
+        if (!std::regex_match(read_line(path + "/" + file), name))
+            continue;
+
+        auto uscore = file.find_first_of("_");
+        if (uscore == std::string::npos)
+            continue;
+
+        file.erase(uscore, std::string::npos);
+        std::string input = path + "/" + file + "_input";
+        //9 characters should not overflow the 32-bit int
+        int value = 0;
+        if (try_stoi(value, read_line(input).substr(0, 9)) && value > 0)
+            inputs.push_back(input);
+    }
+}
+
 static void check_thermal_zones(std::string& path, std::string& input) {
     std::error_code ec;
     std::string sysfs_thermal = "/sys/class/thermal/";
@@ -718,6 +743,24 @@ bool CPUStats::GetCpuFile() {
         } else if (name == "apm_xgene") {
             find_input(path, "temp", input, "SoC Temperature");
             break;
+        } else if (name == "ibmpowernv") {
+            // IBM POWER (OPAL) has no package sensor, only one per core
+            // (e.g. "Chip 0 Core 4"), so average them
+            std::vector<std::string> inputs;
+            find_inputs(path, "temp", std::regex("(Chip \\d+ )?Core \\d+(-\\d+)?"), inputs);
+            for (auto& temp_input : inputs) {
+                FILE* file = fopen(temp_input.c_str(), "r");
+                if (!file)
+                    continue;
+
+                SPDLOG_DEBUG("hwmon: using cpu temp input: {}", temp_input);
+                m_cpuTempFiles.push_back(file);
+            }
+
+            if (!m_cpuTempFiles.empty())
+                return true;
+
+            path.clear();
         } else {
             path.clear();
         }
