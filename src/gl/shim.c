@@ -9,6 +9,12 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+// FreeBSD's RTLD_DEEPBIND makes the layer bind libc++ data (ctype<char>::id)
+// to its own copy instead of the executable's, which breaks iostreams with
+// std::bad_cast in C++ games.
+#ifdef __FreeBSD__
+#undef RTLD_DEEPBIND
+#endif
 #ifndef RTLD_DEEPBIND
 #define RTLD_DEEPBIND 0
 #endif
