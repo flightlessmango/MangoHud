@@ -513,6 +513,7 @@ class AMDGPU {
 		std::thread thread;
 		struct amdgpu_files sysfs_nodes = {};
 		bool gpu_metrics_is_valid = false;
+		std::shared_ptr<void> platform; // backend private data
 		std::condition_variable cond_var;
 		std::atomic<bool> stop_thread{false};
         std::atomic<bool> paused{false};
@@ -525,6 +526,8 @@ class AMDGPU {
 		#define V3_THROTTLING_DELTA(name) \
 		((amdgpu_metrics)->throttle_residency_##name - (previous_metrics).throttle_residency_##name)
 
+		// Platform backend (amdgpu_linux.cpp, amdgpu_freebsd.cpp)
+		void platform_init(const std::string& drm_node);
 		void get_sysfs_metrics();
 		void metrics_polling_thread();
 };

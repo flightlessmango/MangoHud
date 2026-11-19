@@ -20,7 +20,7 @@
 #include <IconsForkAwesome.h>
 #include "version.h"
 #include "blacklist.h"
-#ifdef __linux__
+#ifndef _WIN32
 #include "implot.h"
 #endif
 #include "amdgpu.h"
@@ -138,7 +138,7 @@ static bool ImGuiTextOverflow(const char* text) {
 }
 // This function is only used in battery and battery is not used in windows builds
 // Battery should probably be reworked to not use this func since nothing else needs it
-#ifdef __linux__
+#ifndef _WIN32
 static void ImGuiTableSetColumnIndex(int column)
 {
     ImGui::TableSetColumnIndex(std::max(0, std::min(column, ImGui::TableGetColumnCount() - 1)));
@@ -657,7 +657,7 @@ void HudElements::proc_vram() {
 }
 
 void HudElements::ram(){
-#ifdef __linux__
+#ifndef _WIN32
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram] ||
         (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_ram_temp] && mem_temp > -1)) {
         ImguiNextColumnFirstItem();
@@ -703,7 +703,7 @@ void HudElements::ram(){
 
 void HudElements::procmem()
 {
-#ifdef __linux__
+#ifndef _WIN32
     const char* unit = nullptr;
 
     if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_procmem])
@@ -740,7 +740,7 @@ void HudElements::procmem()
 
 void HudElements::cgroup_mem()
 {
-#ifdef __linux__
+#ifndef _WIN32
     const char* unit = nullptr;
     uint64_t used = cgroup_mem_used;
 
@@ -944,7 +944,7 @@ void HudElements::frame_timing(){
                                     NULL, min_time, max_time,
                                     ImVec2(width, height));
             } else {
-#ifndef __linux__
+#ifdef _WIN32
                 ImGui::PlotLines(hash, get_time_stat, HUDElements.sw_stats,
                                 ARRAY_SIZE(HUDElements.sw_stats->frames_stats), 0,
                                 NULL, min_time, max_time,
@@ -1005,9 +1005,9 @@ void HudElements::frame_timing(){
                 ImGui::Text("Thermal throttling");
             }
         }
+#endif
         ImGui::PopFont();
         ImGui::PopStyleColor();
-#endif
     }
 }
 
@@ -1147,7 +1147,7 @@ void HudElements::vkbasalt(){
 }
 
 void HudElements::battery(){
-#ifdef __linux__
+#ifndef _WIN32
     if (Battery_Stats.batt_count > 0) {
         if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_battery]) {
             ImguiNextColumnFirstItem();
@@ -1319,7 +1319,7 @@ void HudElements::gamescope_frame_timing(){
 
 void HudElements::device_battery()
 {
-#ifdef __linux__
+#ifndef _WIN32
     std::unique_lock<std::mutex> l(device_lock);
     if (!HUDElements.params->device_battery.empty()) {
         if (device_found) {
@@ -1531,7 +1531,7 @@ void HudElements::graphs(){
         HUDElements.min = 0;
         HUDElements.TextColored(HUDElements.colors.engine, "%s", "VRAM");
     }
-#ifdef __linux__
+#ifndef _WIN32
     if (value == "ram"){
 
         for (auto& it : graph_data){
@@ -1660,7 +1660,7 @@ void HudElements::present_mode() {
 }
 
 void HudElements::network() {
-#ifdef __linux__
+#ifndef _WIN32
     if (HUDElements.net && HUDElements.net->should_reset)
         HUDElements.net.reset(new Net);
 
@@ -2081,7 +2081,7 @@ void HudElements::legacy_elements(const overlay_params* temp_params){
 }
 
 void HudElements::update_exec(){
-#ifdef __linux__
+#ifndef _WIN32
     // TODO: exec needs a rewrite using as using fork() is not safe in multithread.
     // We should probably use posix_spawn instead.
     // This currently stalls games using feral launcher.

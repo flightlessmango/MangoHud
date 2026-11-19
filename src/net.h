@@ -9,17 +9,11 @@
 
 namespace fs = ghc::filesystem;
 
-#ifndef NETDIR
-#define NETDIR "/sys/class/net/"
-#endif
-
-#ifndef TXFILE
-#define TXFILE "/statistics/tx_bytes"
-#endif
-
-#ifndef RXFILE
-#define RXFILE "/statistics/rx_bytes"
-#endif
+// Platform backend (net_linux.cpp, net_getifaddrs.cpp)
+// Names of the non-loopback network interfaces.
+std::vector<std::string> net_list_interfaces();
+// Cumulative bytes transmitted/received by an interface.
+void net_read_counters(const std::string& name, uint64_t& tx, uint64_t& rx);
 
 class Net {
     public:

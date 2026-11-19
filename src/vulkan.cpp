@@ -59,7 +59,7 @@
 #endif
 #include "real_dlsym.h"
 #include "file_utils.h"
-#ifdef __linux__
+#ifndef _WIN32
 #include <dlfcn.h>
 #include "implot.h"
 #endif
@@ -537,7 +537,7 @@ static void snapshot_swapchain_frame(struct swapchain_data *data)
    struct instance_data *instance_data = device_data->instance;
    update_hud_info(data->sw_stats, instance_data->params, device_data->properties.vendorID);
    check_keybinds(instance_data->params);
-#ifdef __linux__
+#ifndef _WIN32
    if (instance_data->params.control >= 0) {
       control_client_check(instance_data->params.control, instance_data->control_client, gpu.c_str());
       process_control_socket(instance_data->control_client, instance_data->params);
@@ -1696,7 +1696,7 @@ static VkResult overlay_CreateSwapchainKHR(
 
    std::string deviceName = prop.deviceName;
    if (!is_blacklisted()) {
-#ifdef __linux__
+#ifndef _WIN32
       swapchain_data->sw_stats.gpuName = remove_parentheses(deviceName);
 #endif
    }
@@ -2159,7 +2159,7 @@ static VkResult overlay_CreateDevice(
          SPDLOG_DEBUG("{} overlay queue from family {}",
                       queues.private_queue ? "Reserved" : "Synchronizing shared",
                       device_data->graphic_queue->family_index);
-#ifdef __linux__
+#ifndef _WIN32
       gpu = device_data->properties.deviceName;
       SPDLOG_DEBUG("gpu: {}", gpu);
 #endif
@@ -2270,7 +2270,7 @@ static VkResult overlay_CreateInstance(
    }
 
    if (!is_blacklisted()) {
-#ifdef __linux__
+#ifndef _WIN32
       init_system_info();
       instance_data->notifier.params = &instance_data->params;
       start_notifier(instance_data->notifier);

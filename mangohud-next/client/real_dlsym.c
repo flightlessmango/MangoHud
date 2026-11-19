@@ -26,6 +26,10 @@ static void get_real_functions()
     const char* libs[] = {
 #if defined(__GLIBC__)
         "*libdl.so*",
+#elif defined(__FreeBSD__) || defined(__DragonFly__)
+        // libc only has dlopen()/dlsym() stubs, the real ones are in rtld.
+        // The pattern also matches the 32-bit ld-elf32.so.1.
+        "*ld-elf*.so*",
 #endif
         "*libc.so*",
         "*libc.*.so*",

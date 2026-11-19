@@ -22,12 +22,18 @@ bool dir_exists(const std::string& path);
 std::string read_symlink(const char * link);
 std::string read_symlink(const std::string&& link);
 std::string get_basename(const std::string&& path); //prefix so it doesn't conflict libgen
-std::string get_exe_path();
 std::string get_wine_exe_name(bool keep_ext = false);
 std::string get_home_dir();
 std::string get_data_dir();
 std::string get_config_dir();
-bool lib_loaded(const std::string& lib, pid_t pid);
+
+// Per-platform, implemented in file_utils_<os>.cpp
+std::string get_exe_path();
+std::string get_proc_comm();    // process name, 15-16 characters at most
+std::string get_proc_cmdline(); // arguments separated by NUL bytes
+bool is_wine_loader(const std::string& name); // name of the executable, not the path
+bool lib_loaded(const std::string& lib, pid_t pid); // pid -1 is this process
+
 std::string remove_parentheses(const std::string&);
 std::string to_lower(const std::string& str);
 
