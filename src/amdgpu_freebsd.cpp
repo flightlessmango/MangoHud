@@ -39,20 +39,27 @@ std::string find_render_node(const std::string& pci_dev) {
 
 	std::vector<drmDevicePtr> devices(n);
 	n = drmGetDevices2(0, devices.data(), n);
+	if (n <= 0)
+		return "";
 
 	std::string node;
 	for (int i = 0; i < n; i++) {
 		const drmDevicePtr d = devices[i];
-		if (d->bustype != DRM_BUS_PCI || !(d->available_nodes & (1 << DRM_NODE_RENDER)))
+		if (d->bustype != DRM_BUS_PCI || !d->businfo.pci)
 			continue;
-		if (d->businfo.pci->domain == domain && d->businfo.pci->bus == bus &&
-		    d->businfo.pci->dev == dev && d->businfo.pci->func == func) {
+		if (d->businfo.pci->domain != domain || d->businfo.pci->bus != bus ||
+		    d->businfo.pci->dev != dev || d->businfo.pci->func != func)
+			continue;
+
+		// The render node is enough for libdrm_amdgpu, but use the primary
+		// one if that's all the driver provides
+		if (d->available_nodes & (1 << DRM_NODE_RENDER))
 			node = d->nodes[DRM_NODE_RENDER];
-			break;
-		}
+		else if (d->available_nodes & (1 << DRM_NODE_PRIMARY))
+			node = d->nodes[DRM_NODE_PRIMARY];
+		break;
 	}
-	if (n > 0)
-		drmFreeDevices(devices.data(), n);
+	drmFreeDevices(devices.data(), n);
 	return node;
 }
 
@@ -83,7 +90,14 @@ void AMDGPU::platform_init(const std::string& drm_node) {
 	}
 
 	platform = h;
-	gpu_metrics_is_valid = true; // sensors are available
+
+	// Only poll the sensors if the kernel answers at least one of them
+	uint32_t v;
+	gpu_metrics_is_valid = query_sensor(h->dev, AMDGPU_INFO_SENSOR_GPU_LOAD, v) ||
+	                       query_sensor(h->dev, AMDGPU_INFO_SENSOR_GFX_SCLK, v) ||
+	                       query_sensor(h->dev, AMDGPU_INFO_SENSOR_GPU_TEMP, v);
+	if (!gpu_metrics_is_valid)
+		SPDLOG_WARN("amdgpu: {} doesn't report any sensor", path);
 }
 
 bool AMDGPU::get_instant_metrics(struct amdgpu_common_metrics *metrics) {
