@@ -46,6 +46,7 @@ static  std::vector<std::string> blacklist {
     "iexplore.exe",
     "InsurgencyEAC.exe",
     "KanvasLauncher.exe",
+    "LanSlayer_Launcher.exe",
     "Launcher", //Paradox Interactive Launcher
     "LeagueClient.exe",
     "LeagueClientUxRender.exe",
