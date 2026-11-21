@@ -361,49 +361,33 @@ void position_layer(struct swapchain_stats& data, const struct overlay_params& p
       margin = 0.0f;
 
    ImGui::SetNextWindowBgAlpha(real_params->background_alpha);
-   ImGui::SetNextWindowSize(window_size, ImGuiCond_Always);
+   // Width 0 lets ImGui fit the horizontal HUD to its content
+   bool fit_width = real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && !real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal_stretch];
+   ImGui::SetNextWindowSize(ImVec2(fit_width ? 0.0f : window_size.x, window_size.y), ImGuiCond_Always);
    switch (real_params->position) {
    case LAYER_POSITION_TOP_LEFT:
-      data.main_window_pos = ImVec2(margin + real_params->offset_x, margin + real_params->offset_y);
-      ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
+      ImGui::SetNextWindowPos(ImVec2(margin + real_params->offset_x, margin + real_params->offset_y), ImGuiCond_Always);
       break;
    case LAYER_POSITION_TOP_RIGHT:
-      data.main_window_pos = ImVec2(width - window_size.x - margin + real_params->offset_x, margin + real_params->offset_y);
-      ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
+      ImGui::SetNextWindowPos(ImVec2(width - margin + real_params->offset_x, margin + real_params->offset_y), ImGuiCond_Always, ImVec2(1.0f, 0.0f));
       break;
    case LAYER_POSITION_MIDDLE_LEFT:
-      data.main_window_pos = ImVec2(margin + params.offset_x, height / 2 - window_size.y / 2 - margin + real_params->offset_y);
-      ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
+      ImGui::SetNextWindowPos(ImVec2(margin + params.offset_x, height / 2 - window_size.y / 2 - margin + real_params->offset_y), ImGuiCond_Always);
       break;
    case LAYER_POSITION_MIDDLE_RIGHT:
-      data.main_window_pos = ImVec2(width - window_size.x - margin + real_params->offset_x, height / 2 - window_size.y / 2 - margin + real_params->offset_y);
-      ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
+      ImGui::SetNextWindowPos(ImVec2(width - margin + real_params->offset_x, height / 2 - window_size.y / 2 - margin + real_params->offset_y), ImGuiCond_Always, ImVec2(1.0f, 0.0f));
       break;
    case LAYER_POSITION_BOTTOM_LEFT:
-      data.main_window_pos = ImVec2(margin +real_params->offset_x, height - window_size.y - margin + real_params->offset_y);
-      ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
+      ImGui::SetNextWindowPos(ImVec2(margin +real_params->offset_x, height - window_size.y - margin + real_params->offset_y), ImGuiCond_Always);
       break;
    case LAYER_POSITION_BOTTOM_RIGHT:
-      data.main_window_pos = ImVec2(width - window_size.x - margin + real_params->offset_x, height - window_size.y - margin + real_params->offset_y);
-      ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
+      ImGui::SetNextWindowPos(ImVec2(width - margin + real_params->offset_x, height - window_size.y - margin + real_params->offset_y), ImGuiCond_Always, ImVec2(1.0f, 0.0f));
       break;
    case LAYER_POSITION_TOP_CENTER:
-      if (real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && !real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal_stretch]) {
-         float content_width = ( real_params->table_columns  * 64);
-         data.main_window_pos = ImVec2((width / 2) - (window_size.x / 2) - content_width, margin +  real_params->offset_y);
-      }
-      else
-         data.main_window_pos = ImVec2((width / 2) - (window_size.x / 2), margin + real_params->offset_y);
-      ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
+      ImGui::SetNextWindowPos(ImVec2(width / 2.0f + real_params->offset_x, margin + real_params->offset_y), ImGuiCond_Always, ImVec2(0.5f, 0.0f));
       break;
    case LAYER_POSITION_BOTTOM_CENTER:
-      if (real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && !real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal_stretch]) {
-         float content_width = (real_params->table_columns  * 64);
-         data.main_window_pos = ImVec2((width / 2) - (window_size.x / 2) - content_width,  height - window_size.y - margin + real_params->offset_y);
-      }
-      else
-         data.main_window_pos = ImVec2((width / 2) - (window_size.x / 2), height - window_size.y - margin + real_params->offset_y);
-      ImGui::SetNextWindowPos(data.main_window_pos, ImGuiCond_Always);
+      ImGui::SetNextWindowPos(ImVec2(width / 2.0f + real_params->offset_x, height - window_size.y - margin + real_params->offset_y), ImGuiCond_Always, ImVec2(0.5f, 0.0f));
       break;
    case LAYER_POSITION_COUNT:
       break;
@@ -698,6 +682,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
 
    if (!real_params->no_display && !steam_focused && get_params()->table_columns){
       ImGui::Begin("Main", &gui_open, ImGuiWindowFlags_NoDecoration);
+      data.main_window_pos = ImGui::GetWindowPos();
       if (ImGui::BeginTable("hud", real_params->table_columns, table_flags )) {
          HUDElements.place = 0;
          for (auto& func : HUDElements.ordered_functions){
@@ -712,12 +697,10 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
          if (real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
             if (HUDElements.table_columns_count > 0 && HUDElements.table_columns_count < 65 )
                real_params->table_columns = HUDElements.table_columns_count;
-            if(!real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal_stretch]) {
-               float content_width = ImGui::GetContentRegionAvail().x - (real_params->table_columns * 64);
-               window_size = ImVec2(content_width, real_params->height);
-            }
          }
          ImGui::EndTable();
+         if (real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && !real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal_stretch])
+            window_size = ImVec2(ImGui::GetWindowWidth(), real_params->height);
          HUDElements.table_columns_count = 0;
       }
 
