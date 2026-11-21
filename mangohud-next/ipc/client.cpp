@@ -41,7 +41,7 @@ static std::string resolve_wayland_display(pid_t pid, const char* display)
 static OutputMode configured_output_mode(MangoHudServer* server)
 {
     if (!server || !server->config)
-        return OutputMode::Layer;
+        return OutputMode::App;
 
     const auto& output = server->config->get<std::string>("output");
     if (output == "app")
@@ -52,7 +52,7 @@ static OutputMode configured_output_mode(MangoHudServer* server)
         return OutputMode::Inject;
 
     SPDLOG_ERROR("invalid output mode '{}', expected 'app', 'layer' or 'inject'", output);
-    return OutputMode::Layer;
+    return OutputMode::App;
 }
 
 Client::Client(pid_t pid_, IPCServer* ipc_, MangoHudServer* server_, sd_bus* bus_)

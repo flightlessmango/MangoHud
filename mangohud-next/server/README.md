@@ -28,7 +28,7 @@ The config file is YAML. `options` is optional. A layout can be defined as `hud.
 options:
   font_size: 24
   fps_limit: 0.0
-  output: layer
+  output: app
 
 hud:
   windows:
@@ -52,7 +52,7 @@ The config file is watched while MangoHud Next is running. Changes are reloaded 
 | `font_size` | integer | `24` | HUD font size. Currently parsed by the config system for renderer use. |
 | `fps_limit` | number | `0` | FPS limit sent to connected clients. `0` disables the limiter. |
 | `no_display` | boolean | `false` | Hide all HUD windows on the server. Recreate the buffer pool, publish transparent frames, then pause HUD rendering while metrics continue. |
-| `output` | string | `layer` | `layer`: Wayland layer-shell; `app`: application Wayland subsurface; `inject`: graphics API injection. Plain X11 falls back to `inject`. Gamescope always uses `layer`. |
+| `output` | string | `app` | `layer`: Wayland layer-shell; `app`: application Wayland subsurface; `inject`: graphics API injection. Plain X11 falls back to `inject`. Gamescope always uses `layer`. |
 
 ## HUD Visibility over D-Bus
 
@@ -218,7 +218,7 @@ Some single-name references are backed by small shell commands:
 options:
   font_size: 24
   fps_limit: 0.0
-  output: layer
+  output: app
 
 hud_table:
   rows:

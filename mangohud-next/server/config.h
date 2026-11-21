@@ -169,7 +169,7 @@ private:
         {"font_size", Spec{Int, 24}},
         {"fps_limit", Spec{Double, 0.0}},
         {"no_display", Spec{Bool, false}},
-        {"output", Spec{String, std::string("layer")}},
+        {"output", Spec{String, std::string("app")}},
         {"remember_focus", Spec{Bool, false}},
     };
 
