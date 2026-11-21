@@ -14,6 +14,12 @@ If `XDG_CONFIG_HOME` is not set, the fallback path is:
 
 If the file does not exist, or if the HUD table is invalid, MangoHud Next falls back to the built-in default table in `server/config.h`.
 
+## Server Lifetime
+
+The server stays running by default when started manually. Pass `--stop-on-idle`
+to exit after five seconds without clients or server requests. The systemd
+service and D-Bus activation entry pass `--stop-on-idle`.
+
 ## Configuration Format
 
 The config file is YAML. `options` is optional. A layout can be defined as `hud.windows`, or as `hud_table` for a single default window.

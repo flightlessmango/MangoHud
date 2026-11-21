@@ -1,4 +1,4 @@
 [D-BUS Service]
 Name=io.mangohud.socket
-Exec="@SERVER_EXECUTABLE@"
+Exec="@SERVER_EXECUTABLE@" --stop-on-idle
 SystemdService=mangohud-server.service

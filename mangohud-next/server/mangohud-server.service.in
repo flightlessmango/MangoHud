@@ -4,4 +4,4 @@ Description=MangoHud Next server
 [Service]
 Type=dbus
 BusName=io.mangohud.socket
-ExecStart="@SERVER_EXECUTABLE@"
+ExecStart="@SERVER_EXECUTABLE@" --stop-on-idle

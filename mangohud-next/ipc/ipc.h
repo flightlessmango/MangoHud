@@ -32,7 +32,7 @@ public:
     IPCServer(MangoHudServer *server_);
 
     void start();
-    bool should_stop();
+    bool should_stop(bool stop_on_idle);
     void record_server_request();
     void prune_clients();
     std::shared_ptr<Client> focused_client(std::string_view display);

@@ -20,7 +20,7 @@ public:
     std::shared_ptr<Config> config;
     std::unique_ptr<Metrics> metrics;
 
-    MangoHudServer() {
+    explicit MangoHudServer(bool stop_on_idle = false) {
         auto name = std::string("\x1b[38;2;173;100;193m") + "MANGOHUD" + "\x1b[0m" +
                     " " +
                     "\x1b[38;2;46;151;203m" + std::string("SERVER") + "\x1b[0m";
@@ -39,7 +39,7 @@ public:
         ipc     = std::make_unique<IPCServer>(this);
         metrics = std::make_unique<Metrics>(*ipc, config);
         ipc->start();
-        loop();
+        loop(stop_on_idle);
     }
 
     std::shared_ptr<VkCtx> vk(int64_t renderer = -1);
@@ -70,5 +70,5 @@ private:
     std::unordered_map<int64_t, std::weak_ptr<VkCtx>> vk_ctx;
     std::mutex vk_ctx_m;
 
-    void loop();
+    void loop(bool stop_on_idle);
 };

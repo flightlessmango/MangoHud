@@ -5,19 +5,34 @@
 #include "vulkan_ctx.h"
 #include "../render/renderer.h"
 #include <cstdlib>
+#include <cstring>
 #include <utility>
 
-int main() {
+int main(int argc, char** argv) {
+  bool stop_on_idle = false;
+  for (int i = 1; i < argc; ++i) {
+    if (strcmp(argv[i], "--stop-on-idle") == 0) {
+      stop_on_idle = true;
+    } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
+      printf("Usage: %s [--stop-on-idle]\n"
+             "  --stop-on-idle  Exit after five seconds without clients or server requests\n", argv[0]);
+      return 0;
+    } else {
+      fprintf(stderr, "Unknown argument: %s\n", argv[i]);
+      return 1;
+    }
+  }
+
   // Prevent the MangoHud client from injecting into the server.
   setenv("DISABLE_MANGOHUD_NEXT", "1", 1);
   unsetenv("MANGOHUD_NEXT");
   unsetenv("LD_PRELOAD");
-  MangoHudServer();
+  MangoHudServer server(stop_on_idle);
   return 0;
 }
 
-void MangoHudServer::loop() {
-    while (!ipc->should_stop()) {
+void MangoHudServer::loop(bool stop_on_idle) {
+    while (!ipc->should_stop(stop_on_idle)) {
         if (config->maybe_reload_config()) {
             update_visibility();
             std::vector<std::shared_ptr<Client>> clients;

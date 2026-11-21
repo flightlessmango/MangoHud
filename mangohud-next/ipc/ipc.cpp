@@ -34,14 +34,14 @@ void IPCServer::start() {
     thread = std::thread(&IPCServer::dbus_thread, this);
 }
 
-bool IPCServer::should_stop() {
+bool IPCServer::should_stop(bool stop_on_idle) {
     if (stop.load())
         return true;
 
     prune_clients();
     std::lock_guard lock(clients_mtx);
     const auto now = os_time_get_nano();
-    if (!clients.empty()) {
+    if (!stop_on_idle || !clients.empty()) {
         idle_since = now;
         return false;
     }
