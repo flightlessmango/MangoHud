@@ -88,6 +88,9 @@ void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics, struct overla
             return;
         }
 
+        if (response != NVML_SUCCESS)
+            nvml_utilization = {};
+
         const auto now = std::chrono::steady_clock::now();
         if (last_slow_poll == std::chrono::steady_clock::time_point{} ||
             now - last_slow_poll >= std::chrono::milliseconds(METRICS_UPDATE_PERIOD_MS)) {
@@ -99,13 +102,15 @@ void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics, struct overla
 
             if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_temp] || log_active) {
                 unsigned int temp = 0;
-                nvml->nvmlDeviceGetTemperature(device, NVML_TEMPERATURE_GPU, &temp);
+                if (nvml->nvmlDeviceGetTemperature(device, NVML_TEMPERATURE_GPU, &temp) != NVML_SUCCESS)
+                    temp = 0;
                 cached_slow_metrics.temp = temp;
             }
 
             if (params->enabled[OVERLAY_PARAM_ENABLED_vram] || log_active) {
                 struct nvmlMemory_st nvml_memory = {};
-                nvml->nvmlDeviceGetMemoryInfo(device, &nvml_memory);
+                if (nvml->nvmlDeviceGetMemoryInfo(device, &nvml_memory) != NVML_SUCCESS)
+                    nvml_memory = {};
                 cached_slow_metrics.memoryTotal = nvml_memory.total / (1024.f * 1024.f * 1024.f);
                 cached_slow_metrics.sys_vram_used = nvml_memory.used / (1024.f * 1024.f * 1024.f);
             }
@@ -115,27 +120,32 @@ void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics, struct overla
 
             if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_core_clock] || log_active) {
                 unsigned int core_clock = 0;
-                nvml->nvmlDeviceGetClockInfo(device, NVML_CLOCK_GRAPHICS, &core_clock);
+                if (nvml->nvmlDeviceGetClockInfo(device, NVML_CLOCK_GRAPHICS, &core_clock) != NVML_SUCCESS)
+                    core_clock = 0;
                 cached_slow_metrics.CoreClock = core_clock;
             }
 
             if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_mem_clock] || log_active) {
                 unsigned int memory_clock = 0;
-                nvml->nvmlDeviceGetClockInfo(device, NVML_CLOCK_MEM, &memory_clock);
+                if (nvml->nvmlDeviceGetClockInfo(device, NVML_CLOCK_MEM, &memory_clock) != NVML_SUCCESS)
+                    memory_clock = 0;
                 cached_slow_metrics.MemClock = memory_clock;
             }
 
             if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_power] || log_active) {
                 unsigned int power = 0, limit = 0;
-                nvml->nvmlDeviceGetPowerUsage(device, &power);
-                nvml->nvmlDeviceGetPowerManagementLimit(device, &limit);
+                if (nvml->nvmlDeviceGetPowerUsage(device, &power) != NVML_SUCCESS)
+                    power = 0;
+                if (nvml->nvmlDeviceGetPowerManagementLimit(device, &limit) != NVML_SUCCESS)
+                    limit = 0;
                 cached_slow_metrics.powerUsage = power / 1000;
                 cached_slow_metrics.powerLimit = limit / 1000;
             }
 
             if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_fan] || log_active){
                 unsigned int fan_speed = 0;
-                nvml->nvmlDeviceGetFanSpeed(device, &fan_speed);
+                if (nvml->nvmlDeviceGetFanSpeed(device, &fan_speed) != NVML_SUCCESS)
+                    fan_speed = 0;
                 cached_slow_metrics.fan_speed = fan_speed;
                 cached_slow_metrics.fan_rpm = false;
             }
@@ -152,7 +162,8 @@ void NVIDIA::get_instant_metrics_nvml(struct gpu_metrics *metrics, struct overla
 
         if (params->enabled[OVERLAY_PARAM_ENABLED_throttling_status]) {
             unsigned long long nvml_throttle_reasons = 0;
-            nvml->nvmlDeviceGetCurrentClocksThrottleReasons(device, &nvml_throttle_reasons);
+            if (nvml->nvmlDeviceGetCurrentClocksThrottleReasons(device, &nvml_throttle_reasons) != NVML_SUCCESS)
+                nvml_throttle_reasons = 0;
             metrics->is_temp_throttled = (nvml_throttle_reasons & 0x0000000000000060LL) != 0;
             metrics->is_power_throttled = (nvml_throttle_reasons & 0x000000000000008CLL) != 0;
             metrics->is_other_throttled = (nvml_throttle_reasons & 0x0000000000000112LL) != 0;
