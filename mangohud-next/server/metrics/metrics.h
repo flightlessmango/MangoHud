@@ -53,6 +53,7 @@ private:
     Exec exec;
     MetricTable metrics;
     MetricTable client_metrics;
+    std::unordered_map<pid_t, MetricTable> client_gpu_metrics;
 
     void populate_tables(const std::vector<std::shared_ptr<Client>>& clients);
     void assign_values(hudTable* t, pid_t pid, hudTable* render_table);

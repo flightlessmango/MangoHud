@@ -129,6 +129,8 @@ void Metrics::add_client_pid(pid_t pid) {
 void Metrics::update() {
     while (!stop.load()) {
         MetricTable new_metrics;
+        std::unordered_map<pid_t, MetricTable> new_gpu_metrics;
+        const auto clients = snapshot(ipc.clients, ipc.clients_mtx);
         const auto now = std::chrono::steady_clock::now();
         for (const auto& [i, gpu] : enumerate(gpus.available())) {
             gpu->stop_polling_if_idle(now, std::chrono::seconds(3));
@@ -150,6 +152,14 @@ void Metrics::update() {
             new_metrics[gpu_index]["POWER"] = {(int)gpu_metrics.power_usage, "W"};
             new_metrics[gpu_index]["POWER_LIMIT"] = {(int)gpu_metrics.power_limit, "W"};
             new_metrics[gpu_index]["FAN_SPEED"] = {gpu_metrics.fan_speed, gpu_metrics.fan_rpm ? "RPM" : "%"};
+
+            for (const auto& client : clients) {
+                const auto process = gpu->get_process_metrics(client->pid);
+                auto& process_metrics = new_gpu_metrics[client->pid][gpu_index];
+                process_metrics["PROCESS_LOAD"] = {process.load, "%"};
+                process_metrics["PROCESS_VRAM_USED"] = {process.vram_used, "GiB"};
+                process_metrics["PROCESS_GTT_USED"] = {process.gtt_used, "GiB"};
+            }
         }
 
         cpu.poll();
@@ -186,6 +196,7 @@ void Metrics::update() {
         {
             std::lock_guard lock(m);
             new_metrics.swap(metrics);
+            new_gpu_metrics.swap(client_gpu_metrics);
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -315,7 +326,21 @@ std::string Metrics::clients_json_snapshot() {
         append_json_value(out, std::stoll(client->first));
         out += ",\"metrics\":";
         out += metrics_to_json(client->second);
-        out.push_back('}');
+        out += ",\"gpus\":{";
+        if (auto it = client_gpu_metrics.find(std::stoll(client->first)); it != client_gpu_metrics.end()) {
+            std::vector<std::string> groups;
+            for (const auto& [group, metrics] : it->second)
+                groups.push_back(group);
+            std::sort(groups.begin(), groups.end());
+            for (const auto& group : groups) {
+                if (group != groups.front())
+                    out.push_back(',');
+                append_json_string(out, group);
+                out.push_back(':');
+                out += metrics_to_json(it->second.at(group));
+            }
+        }
+        out += "}}";
     }
     out += "]}";
 
@@ -351,6 +376,13 @@ Metric Metrics::get(const char* a, const char* b, const pid_t pid = 0)
     }
 
     std::lock_guard<std::mutex> lock(m);
+
+    if (auto client = client_gpu_metrics.find(pid); client != client_gpu_metrics.end()) {
+        if (auto group = client->second.find(a); group != client->second.end()) {
+            if (auto metric = group->second.find(b); metric != group->second.end())
+                return metric->second;
+        }
+    }
 
     const auto* outer = &metrics;
     std::string str = std::to_string(pid);

@@ -168,7 +168,7 @@ Available metrics currently include:
 
 | Reference | Keys |
 | --- | --- |
-| `[GPU, index, KEY]` | `LOAD`, `VRAM_USED`, `GTT_USED`, `VRAM_TOTAL`, `VRAM_CLOCK`, `VRAM_TEMP`, `TEMP`, `JUNCTION_TEMP`, `CORE_CLOCK`, `VOLTAGE`, `POWER`, `POWER_LIMIT`, `FAN_SPEED` |
+| `[GPU, index, KEY]` | `LOAD`, `VRAM_USED`, `GTT_USED`, `VRAM_TOTAL`, `VRAM_CLOCK`, `VRAM_TEMP`, `TEMP`, `JUNCTION_TEMP`, `CORE_CLOCK`, `VOLTAGE`, `POWER`, `POWER_LIMIT`, `FAN_SPEED`, `PROCESS_LOAD`, `PROCESS_VRAM_USED`, `PROCESS_GTT_USED` |
 | `[CPU, index, KEY]` | `LOAD`, `FREQ` |
 | `[CPU, KEY]` | `LOAD`, `MAX_LOAD`, `FREQ`, `TEMP`, `POWER` |
 | `[RAM, KEY]` | `USED`, `TOTAL`, `SWAP_USED` |

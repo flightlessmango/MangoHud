@@ -163,7 +163,8 @@ std::map<pid_t, gpu_metrics_process_t> GPU::get_process_metrics() {
 gpu_metrics_process_t GPU::get_process_metrics(const size_t pid) {
     SPDLOG_TRACE("GPU get_process_metrics");
     std::unique_lock lock(process_metrics_mutex);
-    return process_metrics[pid];
+    const auto it = process_metrics.find(pid);
+    return it != process_metrics.end() ? it->second : gpu_metrics_process_t{};
 }
 
 void GPU::print_metrics() {
