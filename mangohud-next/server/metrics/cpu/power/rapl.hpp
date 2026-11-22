@@ -7,14 +7,19 @@ class RAPL : public CPUPower, private Hwmon {
 private:
     const std::string rapl_path = "/sys/class/powercap/intel-rapl:0";
     const std::vector<hwmon_sensor> sensors = { { "energy", "energy_uj" } };
-    uint64_t previous_usage = 0;
+    struct Counter {
+        uint64_t previous = 0;
+        uint64_t max_range = 0;
+        bool primed = false;
+    };
+    Counter package_counter;
 
-    // Uncore domain of the package. On CPUs with integrated graphics, most of it is the GPU.
+    // RAPL uncore domain; its scope depends on the hardware.
     HwmonBase uncore;
-    uint64_t previous_uncore_usage = 0;
+    Counter uncore_counter;
 
     void find_uncore();
-    float get_power(uint64_t total_usage, uint64_t& previous);
+    float get_power(uint64_t total_usage, Counter& counter);
 
 protected:
     void pre_poll_overrides() override;

@@ -174,9 +174,8 @@ Available metrics currently include:
 | `[RAM, KEY]` | `USED`, `TOTAL`, `SWAP_USED` |
 | `KEY` | `ENGINE_NAME`, `GPU_NAME`, `VULKAN_DRIVER`, `HDR`, `RESOLUTION`, `FPS`, `FRAMETIME`, `FRAMETIME_MIN`, `FRAMETIME_MAX`, `FRAMETIMES`, `REFRESH_FPS`, `REFRESH_FRAMETIME`, `REFRESH_FRAMETIME_MIN`, `REFRESH_FRAMETIME_MAX`, `REFRESH_FRAMETIMES`, `APP_FPS`, `APP_FRAMETIME`, `APP_FRAMETIME_MIN`, `APP_FRAMETIME_MAX`, `APP_FRAMETIMES`, `HUD_FPS`, `HUD_FRAMETIME`, `HUD_FRAMETIME_MIN`, `HUD_FRAMETIME_MAX`, `HUD_FRAMETIMES` |
 
-`UNCORE_POWER` reads the uncore domain of the RAPL package counter (power
-plane 1). On Intel CPUs with integrated graphics, that domain covers the GPU, so
-a layout can label it as GPU power.
+`UNCORE_POWER` reports power from the RAPL domain named `uncore`. Its scope
+depends on the hardware; it should not be assumed to represent GPU-only power.
 
 `FRAMETIME_MIN` and `FRAMETIME_MAX` report the minimum and maximum frametime in
 milliseconds over the same roughly 500 ms sample window as `FPS` and `FRAMETIME`.

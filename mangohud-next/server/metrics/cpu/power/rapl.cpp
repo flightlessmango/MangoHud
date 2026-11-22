@@ -1,4 +1,3 @@
-#include <limits>
 #include <spdlog/spdlog.h>
 #include "rapl.hpp"
 
@@ -14,6 +13,9 @@ RAPL::RAPL() {
         SPDLOG_WARN("Failed to open \"{}\".", rapl_path);
         return;
     }
+
+    std::ifstream range_file(hwmon.base_dir + "/max_energy_range_uj");
+    range_file >> package_counter.max_range;
 
     _is_initialized = true;
     find_uncore();
@@ -36,6 +38,8 @@ void RAPL::find_uncore() {
 
         uncore.base_dir = entry.path().string();
         uncore.setup(sensors);
+        std::ifstream range_file(uncore.base_dir + "/max_energy_range_uj");
+        range_file >> uncore_counter.max_range;
 
         if (!uncore.is_open("energy"))
             SPDLOG_DEBUG("Failed to open \"{}/energy_uj\".", uncore.base_dir);
@@ -50,30 +54,35 @@ void RAPL::pre_poll_overrides() {
 }
 
 float RAPL::get_power_usage() {
-    return get_power(hwmon.get_sensor_value("energy"), previous_usage);
+    return get_power(hwmon.get_sensor_value("energy"), package_counter);
 }
 
 float RAPL::get_uncore_power_usage() {
     if (!uncore.is_open("energy"))
         return 0.f;
 
-    return get_power(uncore.get_sensor_value("energy"), previous_uncore_usage);
+    return get_power(uncore.get_sensor_value("energy"), uncore_counter);
 }
 
-float RAPL::get_power(uint64_t total_usage, uint64_t& previous) {
-    if (previous == 0 || total_usage == previous) {
-        previous = total_usage;
+float RAPL::get_power(uint64_t total_usage, Counter& counter) {
+    const auto previous = counter.previous;
+    counter.previous = total_usage;
+    if (!counter.primed) {
+        counter.primed = true;
         return 0.f;
     }
 
-    float usage = total_usage - previous;
-    usage /= std::chrono::duration_cast<std::chrono::milliseconds>(delta_time_ns).count();
-    usage /= 1'000.f;
-
-    previous = total_usage;
-
-    if (usage == std::numeric_limits<float>::infinity())
+    uint64_t delta = 0;
+    if (total_usage >= previous)
+        delta = total_usage - previous;
+    else if (counter.max_range > previous && total_usage < counter.max_range)
+        delta = counter.max_range - previous + total_usage;
+    else
         return 0.f;
 
-    return usage;
+    const double elapsed_us = std::chrono::duration<double, std::micro>(delta_time_ns).count();
+    if (elapsed_us <= 0)
+        return 0.f;
+
+    return static_cast<float>(delta / elapsed_us);
 }
