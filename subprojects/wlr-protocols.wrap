@@ -1,8 +1,8 @@
-[wrap-git]
-directory = wlr-protocols
-url = https://gitlab.freedesktop.org/wlroots/wlr-protocols.git
-revision = bf4fc79abc359eea5a0edec0ac6d4a2b2955f82a
-depth = 1
+[wrap-file]
+directory = wlr-protocols-bf4fc79abc359eea5a0edec0ac6d4a2b2955f82a
+source_url = https://gitlab.freedesktop.org/wlroots/wlr-protocols/-/archive/bf4fc79abc359eea5a0edec0ac6d4a2b2955f82a/wlr-protocols-bf4fc79abc359eea5a0edec0ac6d4a2b2955f82a.tar.gz
+source_filename = wlr-protocols-bf4fc79abc359eea5a0edec0ac6d4a2b2955f82a.tar.gz
+source_hash = 9e0fd2be5ba7c84b81acdd086f84c2da2c2b5e4946a17bda3e9850c62e14057f
 patch_directory = wlr-protocols
 
 [provide]
