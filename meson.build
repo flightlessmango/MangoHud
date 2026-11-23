@@ -1,6 +1,6 @@
 project('MangoHud',
   ['c', 'cpp'],
-  version : 'v0.8.4',
+  version : 'v0.8.5-rc1',
   license : 'MIT',
   meson_version: '>=1.7.0',
   default_options : ['buildtype=release', 'c_std=c99', 'cpp_std=c++20', 'warning_level=2']
