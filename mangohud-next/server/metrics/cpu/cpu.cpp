@@ -19,7 +19,6 @@ CPU::CPU() {
         SPDLOG_WARN("failed to open cpu info file. cpu frequency will not work.");
 
     power_usage = init_power_usage();
-    temperature.find_temperature_sensor();
 }
 
 std::unique_ptr<CPUPower> CPU::init_power_usage() {
@@ -195,34 +194,81 @@ void CPUPower::poll() {
     pre_poll_overrides();
 }
 
+static std::string regex_escape(const std::string& str) {
+    static const std::regex special(R"([.^$|()\[\]{}*+?\\])");
+    return std::regex_replace(str, special, R"(\$&)");
+}
+
+bool CPUTemp::try_sensor(
+    const std::string& name, const std::string& name_regex, const hwmon_sensor& s
+) {
+    std::string hwmon_dir = hwmon.find_hwmon_dir_by_name(name_regex);
+
+    if (hwmon_dir.empty())
+        return false;
+
+    std::vector<hwmon_sensor> try_sensors = { {
+        .generic_name = "temperature",
+        .filename     = s.filename,
+        .label        = s.label
+    } };
+
+    hwmon.base_dir = hwmon_dir;
+    hwmon.setup(try_sensors);
+
+    if (!hwmon.is_open("temperature"))
+        return false;
+
+    SPDLOG_INFO(
+        "Using {} ({}) for cpu temperature", name, hwmon.get_sensor_path("temperature")
+    );
+
+    return true;
+}
+
 void CPUTemp::find_temperature_sensor() {
-    for (const cpu_temp_sensor& p : sensors) {
-        const std::string& name = p.name;
-        const hwmon_sensor& s = p.sensor;
+    found_sensor = false;
+    const std::string custom = custom_sensor.value_or("");
 
-        std::string hwmon_dir = hwmon.find_hwmon_dir_by_name(name);
+    if (!custom.empty()) {
+        size_t pos = custom.find(',');
 
-        if (hwmon_dir.empty())
-            continue;
+        if (pos != std::string::npos) {
+            std::string name  = custom.substr(0, pos);
+            std::string input = custom.substr(pos + 1);
 
-        std::vector<hwmon_sensor> try_sensors = { {
-            .generic_name = "temperature",
-            .filename     = s.filename,
-            .label        = s.label
-        } };
+            // like the legacy option, "temp1" and "temp1_input" both mean temp1_input;
+            // only *_input files hold a reading (temp1_label would throw in poll_sensors)
+            if (input.ends_with("_input"))
+                input.resize(input.size() - 6);
 
-        hwmon.base_dir = hwmon_dir;
-        hwmon.setup(try_sensors);
+            input = regex_escape(input) + "_input";
 
-        if (hwmon.is_open("temperature")) {
-            SPDLOG_INFO(
-                "Using {} ({}) for cpu temperature", name, hwmon.get_sensor_path("temperature")
-            );
-
-            found_sensor = true;
-            return;
+            // find_hwmon_dir_by_name() searches, so anchor it or "cpuss0_2" also matches "cpuss0_21"
+            found_sensor = try_sensor(name, "^" + regex_escape(name) + "$", { .filename = input });
+            if (found_sensor)
+                return;
         }
+
+        SPDLOG_WARN(
+            "cpu_custom_temp_sensor \"{}\" not found, expected <hwmon name>,<input file>",
+            custom
+        );
     }
+
+    for (const cpu_temp_sensor& p : sensors) {
+        found_sensor = try_sensor(p.name, p.name, p.sensor);
+        if (found_sensor)
+            return;
+    }
+}
+
+void CPUTemp::set_custom_sensor(const std::string& value) {
+    if (value == custom_sensor)
+        return;
+
+    custom_sensor = value;
+    find_temperature_sensor();
 }
 
 int CPUTemp::get_temperature() {

@@ -49,6 +49,7 @@ The config file is watched while MangoHud Next is running. Changes are reloaded 
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
+| `cpu_custom_temp_sensor` | string | `""` | Read CPU temperature from this hwmon sensor instead of auto-detecting one, as `<hwmon name>,<input file>`, e.g. `cpuss0_2,temp3_input`. Falls back to auto-detection if it isn't found. |
 | `font_size` | integer | `24` | HUD font size. Currently parsed by the config system for renderer use. |
 | `fps_limit` | number | `0` | FPS limit sent to connected clients. `0` disables the limiter. |
 | `no_display` | boolean | `false` | Hide all HUD windows on the server. Recreate the buffer pool, publish transparent frames, then pause HUD rendering while metrics continue. |

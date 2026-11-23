@@ -162,6 +162,13 @@ void Metrics::update() {
             }
         }
 
+        std::string cpu_temp_sensor;
+        {
+            std::lock_guard lock(cfg->m);
+            cpu_temp_sensor = cfg->get<std::string>("cpu_custom_temp_sensor");
+        }
+
+        cpu.set_custom_temp_sensor(cpu_temp_sensor);
         cpu.poll();
         auto cpu_metrics = cpu.get_info();
         new_metrics["CPU"]["LOAD"] = {cpu_metrics.load, "%"};

@@ -166,6 +166,7 @@ private:
 
     static inline const std::unordered_map<std::string_view, Spec> possible_ = {
         {"blacklist", Spec{StringList, std::vector<std::string>{}}},
+        {"cpu_custom_temp_sensor", Spec{String, std::string()}},
         {"font_size", Spec{Int, 24}},
         {"fps_limit", Spec{Double, 0.0}},
         {"no_display", Spec{Bool, false}},
