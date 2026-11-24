@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
+if (( EUID == 0 )); then
+    echo "Run this script as your normal user; it will use sudo when needed." >&2
+    exit 1
+fi
+
 # Import the variables for dependencies
 source ./build_deps.sh
 
@@ -200,33 +205,30 @@ release() {
 }
 
 uninstall() {
-    [ "$UID" -eq 0 ] || exec $SU_CMD bash "$0" uninstall
-    rm -rfv "/usr/lib/mangohud"
-    rm -rfv "/usr/share/doc/mangohud"
-    rm -fv "/usr/share/man/man1/mangohud.1"
-    rm -fv "/usr/share/vulkan/implicit_layer.d/mangohud.json"
-    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.json"
-    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json"
-    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json"
-    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud-next.x86.json"
-    rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud-next.x86_64.json"
-    rm -fv "/usr/bin/mangohud"
-    rm -fv "/usr/bin/mangohud-next"
-    rm -fv "/usr/bin/mangohud-server"
-    rm -fv "/usr/share/dbus-1/services/io.mangohud.socket.service"
-    rm -fv "/usr/share/systemd/user/mangohud-server.service"
-    rm -fv "/usr/bin/mangoplot"
-    rm -fv "/usr/bin/mangohud.x86"
+    $SU_CMD rm -rfv "/usr/lib/mangohud"
+    $SU_CMD rm -rfv "/usr/share/doc/mangohud"
+    $SU_CMD rm -fv "/usr/share/man/man1/mangohud.1"
+    $SU_CMD rm -fv "/usr/share/vulkan/implicit_layer.d/mangohud.json"
+    $SU_CMD rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.json"
+    $SU_CMD rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json"
+    $SU_CMD rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json"
+    $SU_CMD rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud-next.x86.json"
+    $SU_CMD rm -fv "/usr/share/vulkan/implicit_layer.d/MangoHud-next.x86_64.json"
+    $SU_CMD rm -fv "/usr/bin/mangohud"
+    $SU_CMD rm -fv "/usr/bin/mangohud-next"
+    $SU_CMD rm -fv "/usr/bin/mangohud-server"
+    $SU_CMD rm -fv "/usr/share/dbus-1/services/io.mangohud.socket.service"
+    $SU_CMD rm -fv "/usr/share/systemd/user/mangohud-server.service"
+    $SU_CMD rm -fv "/usr/bin/mangoplot"
+    $SU_CMD rm -fv "/usr/bin/mangohud.x86"
 }
 
 install() {
     rm -rf "$HOME/.local/share/MangoHud/"
     rm -f "$HOME/.local/share/vulkan/implicit_layer.d/"{mangohud32.json,mangohud64.json}
 
-    [ "$UID" -eq 0 ] || mkdir -pv "${CONFIG_DIR}"
-    [ "$UID" -eq 0 ] || build
-    [ "$UID" -eq 0 ] || exec $SU_CMD bash "$0" install
-
+    mkdir -pv "${CONFIG_DIR}"
+    build
     uninstall
 
     DEFAULTLIB=lib32
@@ -244,62 +246,68 @@ install() {
     fi
 
     echo DEFAULTLIB: $DEFAULTLIB
-    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud.so /usr/lib/mangohud/lib64/libMangoHud.so
-    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud_opengl.so /usr/lib/mangohud/lib64/libMangoHud_opengl.so
-    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud_shim.so /usr/lib/mangohud/lib64/libMangoHud_shim.so
-    /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud-next.so /usr/lib/mangohud/lib64/libMangoHud-next.so
+    $SU_CMD /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud.so /usr/lib/mangohud/lib64/libMangoHud.so
+    $SU_CMD /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud_opengl.so /usr/lib/mangohud/lib64/libMangoHud_opengl.so
+    $SU_CMD /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud_shim.so /usr/lib/mangohud/lib64/libMangoHud_shim.so
+    $SU_CMD /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib64/libMangoHud-next.so /usr/lib/mangohud/lib64/libMangoHud-next.so
     if [ "$MACHINE" = "x86_64" ]; then
-      /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud.so /usr/lib/mangohud/lib32/libMangoHud.so
-      /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud_opengl.so /usr/lib/mangohud/lib32/libMangoHud_opengl.so
-      /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud_shim.so /usr/lib/mangohud/lib32/libMangoHud_shim.so
-      /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud-next.so /usr/lib/mangohud/lib32/libMangoHud-next.so
+      $SU_CMD /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud.so /usr/lib/mangohud/lib32/libMangoHud.so
+      $SU_CMD /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud_opengl.so /usr/lib/mangohud/lib32/libMangoHud_opengl.so
+      $SU_CMD /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud_shim.so /usr/lib/mangohud/lib32/libMangoHud_shim.so
+      $SU_CMD /usr/bin/install -Dvm644 ./build/release/usr/lib/mangohud/lib32/libMangoHud-next.so /usr/lib/mangohud/lib32/libMangoHud-next.so
     fi
 
-    /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json
-    /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86.json
-    /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud-next.x86_64.json /usr/share/vulkan/implicit_layer.d/MangoHud-next.x86_64.json
-    /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud-next.x86.json /usr/share/vulkan/implicit_layer.d/MangoHud-next.x86.json
-    /usr/bin/install -Dvm644 ./build/release/usr/share/man/man1/mangohud.1 /usr/share/man/man1/mangohud.1
-    /usr/bin/install -Dvm644 ./build/release/usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
-    /usr/bin/install -vm755  ./build/release/usr/bin/mangohud /usr/bin/mangohud
-    /usr/bin/install -vm755  ./build/release/usr/bin/mangohud-next /usr/bin/mangohud-next
-    /usr/bin/install -vm755  ./build/release/usr/bin/mangohud-server /usr/bin/mangohud-server
-    /usr/bin/install -Dvm644 ./build/release/usr/share/dbus-1/services/io.mangohud.socket.service /usr/share/dbus-1/services/io.mangohud.socket.service
-    /usr/bin/install -Dvm644 ./build/release/usr/share/systemd/user/mangohud-server.service /usr/share/systemd/user/mangohud-server.service
-    /usr/bin/install -vm755  ./build/release/usr/bin/mangoplot /usr/bin/mangoplot
+    $SU_CMD /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86_64.json
+    $SU_CMD /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud.x86.json /usr/share/vulkan/implicit_layer.d/MangoHud.x86.json
+    $SU_CMD /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud-next.x86_64.json /usr/share/vulkan/implicit_layer.d/MangoHud-next.x86_64.json
+    $SU_CMD /usr/bin/install -Dvm644 ./build/release/usr/share/vulkan/implicit_layer.d/MangoHud-next.x86.json /usr/share/vulkan/implicit_layer.d/MangoHud-next.x86.json
+    $SU_CMD /usr/bin/install -Dvm644 ./build/release/usr/share/man/man1/mangohud.1 /usr/share/man/man1/mangohud.1
+    $SU_CMD /usr/bin/install -Dvm644 ./build/release/usr/share/doc/mangohud/MangoHud.conf.example /usr/share/doc/mangohud/MangoHud.conf.example
+    $SU_CMD /usr/bin/install -vm755  ./build/release/usr/bin/mangohud /usr/bin/mangohud
+    $SU_CMD /usr/bin/install -vm755  ./build/release/usr/bin/mangohud-next /usr/bin/mangohud-next
+    $SU_CMD /usr/bin/install -vm755  ./build/release/usr/bin/mangohud-server /usr/bin/mangohud-server
+    $SU_CMD /usr/bin/install -Dvm644 ./build/release/usr/share/dbus-1/services/io.mangohud.socket.service /usr/share/dbus-1/services/io.mangohud.socket.service
+    $SU_CMD /usr/bin/install -Dvm644 ./build/release/usr/share/systemd/user/mangohud-server.service /usr/share/systemd/user/mangohud-server.service
+    $SU_CMD /usr/bin/install -vm755  ./build/release/usr/bin/mangoplot /usr/bin/mangoplot
 
-    ln -sv $DEFAULTLIB /usr/lib/mangohud/lib
+    $SU_CMD ln -sv $DEFAULTLIB /usr/lib/mangohud/lib
 
     # FIXME get the triplet somehow
-    ln -sv lib64 /usr/lib/mangohud/x86_64
-    ln -sv lib64 /usr/lib/mangohud/x86_64-linux-gnu
-    ln -sv . /usr/lib/mangohud/lib64/x86_64
-    ln -sv . /usr/lib/mangohud/lib64/x86_64-linux-gnu
+    $SU_CMD ln -sv lib64 /usr/lib/mangohud/x86_64
+    $SU_CMD ln -sv lib64 /usr/lib/mangohud/x86_64-linux-gnu
+    $SU_CMD ln -sv . /usr/lib/mangohud/lib64/x86_64
+    $SU_CMD ln -sv . /usr/lib/mangohud/lib64/x86_64-linux-gnu
 
-    ln -sv lib32 /usr/lib/mangohud/i686
-    ln -sv lib32 /usr/lib/mangohud/i386-linux-gnu
-    ln -sv lib32 /usr/lib/mangohud/i686-linux-gnu
+    $SU_CMD ln -sv lib32 /usr/lib/mangohud/i686
+    $SU_CMD ln -sv lib32 /usr/lib/mangohud/i386-linux-gnu
+    $SU_CMD ln -sv lib32 /usr/lib/mangohud/i686-linux-gnu
 
-    mkdir -p /usr/lib/mangohud/tls
-    ln -sv ../lib64 /usr/lib/mangohud/tls/x86_64
-    ln -sv ../lib32 /usr/lib/mangohud/tls/i686
+    $SU_CMD mkdir -p /usr/lib/mangohud/tls
+    $SU_CMD ln -sv ../lib64 /usr/lib/mangohud/tls/x86_64
+    $SU_CMD ln -sv ../lib32 /usr/lib/mangohud/tls/i686
 
     # Some distros search in $prefix/x86_64-linux-gnu/tls/x86_64 etc instead
     if [ ! -e /usr/lib/mangohud/lib/i386-linux-gnu ]; then
-        ln -sv ../lib32 /usr/lib/mangohud/lib/i386-linux-gnu
+        $SU_CMD ln -sv ../lib32 /usr/lib/mangohud/lib/i386-linux-gnu
     fi
     if [ ! -e /usr/lib/mangohud/lib/i686-linux-gnu ]; then
-        ln -sv ../lib32 /usr/lib/mangohud/lib/i686-linux-gnu
+        $SU_CMD ln -sv ../lib32 /usr/lib/mangohud/lib/i686-linux-gnu
     fi
     if [ ! -e /usr/lib/mangohud/lib/x86_64-linux-gnu ]; then
-        ln -sv ../lib64 /usr/lib/mangohud/lib/x86_64-linux-gnu
+        $SU_CMD ln -sv ../lib64 /usr/lib/mangohud/lib/x86_64-linux-gnu
     fi
 
     # $LIB can be "lib/tls/x86_64"?
-    ln -sv ../tls /usr/lib/mangohud/lib/tls
+    $SU_CMD ln -sv ../tls /usr/lib/mangohud/lib/tls
 
     #ln -sv lib64 /usr/lib/mangohud/aarch64-linux-gnu
     #ln -sv lib64 /usr/lib/mangohud/arm-linux-gnueabihf
+
+    if command -v systemctl &> /dev/null && systemctl --user show-environment &> /dev/null; then
+        if ! systemctl --user daemon-reload; then
+            echo "Warning: could not reload user services. Run 'systemctl --user daemon-reload' in your user session." >&2
+        fi
+    fi
 
     echo "MangoHud Installed"
 }
