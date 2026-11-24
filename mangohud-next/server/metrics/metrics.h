@@ -8,6 +8,7 @@
 #include "../config.h"
 #include "gpu/gpus.hpp"
 #include "cpu/cpu.hpp"
+#include "battery.hpp"
 #include "exec.h"
 #include "../../ipc/ipc.h"
 #include "../../render/colors.h"
@@ -45,6 +46,7 @@ private:
     IPCServer& ipc;
     GPUS gpus;
     CPU cpu;
+    Battery battery;
     std::mutex m;
     std::thread thread;
     std::thread client_thread;

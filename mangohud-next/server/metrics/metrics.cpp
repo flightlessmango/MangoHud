@@ -4,6 +4,7 @@
 #include <string_view>
 #include <cctype>
 #include <algorithm>
+#include <cmath>
 #include <sys/stat.h>
 #include <spdlog/fmt/bundled/format.h>
 #include <spdlog/fmt/bundled/args.h>
@@ -194,6 +195,20 @@ void Metrics::update() {
         auto ram_metrics = get_ram_info();
         for (auto& [k, v] : ram_metrics)
             new_metrics["RAM"][to_uppercase(k)] = {v, "GiB"};
+
+        if (auto battery_metrics = battery.poll()) {
+            auto& group = new_metrics["BATTERY"];
+            if (battery_metrics->percent >= 0)
+                group["PERCENT"] = {(int)std::lround(battery_metrics->percent), "%"};
+            if (!battery_metrics->status.empty())
+                group["STATUS"] = {battery_metrics->status};
+            if (battery_metrics->power > 0)
+                group["POWER"] = {battery_metrics->power, "W"};
+            if (battery_metrics->time_remaining > 0) {
+                const int minutes = (int)std::lround(battery_metrics->time_remaining * 60);
+                group["TIME_REMAINING"] = {fmt::format("{:02}:{:02}", minutes / 60, minutes % 60)};
+            }
+        }
 
         {
             std::lock_guard lock(m);

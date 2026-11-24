@@ -3,7 +3,8 @@ subdir('gpu')
 
 metrics_lib = static_library(
     'metrics',
-    files('exec.cpp',
+    files('battery.cpp',
+          'exec.cpp',
           'fdinfo.cpp',
           'hwmon.cpp',
           'memory.cpp',

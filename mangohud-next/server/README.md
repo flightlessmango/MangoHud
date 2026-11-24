@@ -173,6 +173,7 @@ Available metrics currently include:
 | `[CPU, index, KEY]` | `LOAD`, `FREQ` |
 | `[CPU, KEY]` | `LOAD`, `MAX_LOAD`, `FREQ`, `TEMP`, `POWER`, `UNCORE_POWER` |
 | `[RAM, KEY]` | `USED`, `TOTAL`, `SWAP_USED` |
+| `[BATTERY, KEY]` | `PERCENT`, `STATUS`, `POWER`, `TIME_REMAINING` |
 | `KEY` | `ENGINE_NAME`, `VULKAN_DRIVER`, `HDR`, `RESOLUTION`, `FPS`, `FRAMETIME`, `FRAMETIME_MIN`, `FRAMETIME_MAX`, `FRAMETIMES`, `REFRESH_FPS`, `REFRESH_FRAMETIME`, `REFRESH_FRAMETIME_MIN`, `REFRESH_FRAMETIME_MAX`, `REFRESH_FRAMETIMES`, `APP_FPS`, `APP_FRAMETIME`, `APP_FRAMETIME_MIN`, `APP_FRAMETIME_MAX`, `APP_FRAMETIMES`, `HUD_FPS`, `HUD_FRAMETIME`, `HUD_FRAMETIME_MIN`, `HUD_FRAMETIME_MAX`, `HUD_FRAMETIMES` |
 
 `NAME` uses `amdgpu.ids` for AMD and NVML for NVIDIA, falling back to `pci.ids`
@@ -180,6 +181,17 @@ or the device IDs.
 
 `UNCORE_POWER` reports power from the RAPL domain named `uncore`. Its scope
 depends on the hardware; it should not be assumed to represent GPU-only power.
+
+`BATTERY` covers the system batteries; peripheral batteries, such as a
+gamepad's, are left out. Without a battery the metrics are unavailable. With
+several batteries, `PERCENT` is their combined charge; it is unavailable while
+none of their charge, energy or capacity files can be read. `STATUS` is the
+battery status, such as `Charging`, `Discharging`, `Full` or `Not charging`.
+`POWER` is the discharge rate in watts (on the Steam Frame, the system rail
+plus backlight power from its power monitor) and `TIME_REMAINING` the
+estimated time left as `HH:MM`, from the current averaged over about 12
+seconds. Both are only available while discharging, so their cells stay empty
+on AC power.
 
 `FRAMETIME_MIN` and `FRAMETIME_MAX` report the minimum and maximum frametime in
 milliseconds over the same roughly 500 ms sample window as `FPS` and `FRAMETIME`.
