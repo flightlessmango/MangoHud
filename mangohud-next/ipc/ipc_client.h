@@ -23,6 +23,7 @@ class spdlogSink;
 class Layer;
 
 struct Fdinfo {
+    uint64_t generation = 0;
     uint64_t modifier = 0;
     uint32_t dmabuf_offset = 0;
     uint32_t stride = 0;
@@ -110,15 +111,19 @@ public:
     void send_import_failed();
     void send_semaphores(std::vector<int> sema);
     static unique_fd export_dmabuf_sync_file(int dmabuf_fd, bool write = false);
-    void frame_ready(int idx, unique_fd fd);
+    void frame_ready(int idx, unique_fd fd, uint64_t generation);
     void clear_frames() {
         std::lock_guard lock(sync_mtx);
         frame_queue.clear();
         last_hud_frame = {};
     }
 
-    int next_frame() {
+    int next_frame(uint64_t generation) {
         std::lock_guard lock(sync_mtx);
+        if (generation != import_generation.load(std::memory_order_acquire))
+            return -1;
+        while (!frame_queue.empty() && frame_queue.front().generation != generation)
+            frame_queue.pop_front();
         if (frame_queue.empty())
             return -1;
 

@@ -547,7 +547,7 @@ void OverlayGL::draw() {
         return;
 
     if (current_slot == -1)
-        current_slot = ipc->next_frame();
+        current_slot = ipc->next_frame(imported_generation);
 
     if (current_slot >= 0) {
         const int slot = current_slot;
@@ -777,7 +777,7 @@ int OverlayGL::release_slot_to_server(IPCClient* ipc, int slot, int dmabuf_fd, b
     if (!fd)
         return -1;
 
-    ipc->frame_ready(slot, std::move(fd));
+    ipc->frame_ready(slot, std::move(fd), imported_generation);
     return 0;
 }
 

@@ -187,6 +187,7 @@ public:
     sd_bus* bus;
     sd_bus_slot* slot;
     std::atomic<bool> active {true};
+    std::atomic<uint64_t> buffer_generation{0};
     std::atomic<uint64_t> hud_seq{0};
     std::atomic<bool> stop {false};
 
@@ -205,7 +206,7 @@ public:
 
     void init(std::shared_ptr<Client>& shared);
     void send_dmabuf(const std::vector<BufferSet>& buffers, uint32_t width, uint32_t height,
-                     ExportMethod method);
+                     ExportMethod method, uint64_t generation);
     void send_config();
     static int on_connect(sd_bus_message* m, void* userdata, sd_bus_error* ret_error);
     void set_dead();
@@ -234,7 +235,7 @@ private:
 
     void dbus_thread();
     void send_dmabuf_ipc(const std::vector<BufferSet>& buffers, uint32_t width, uint32_t height,
-                         ExportMethod method);
+                         ExportMethod method, uint64_t generation);
     void send_dmabuf_wayland(const std::vector<BufferSet>& buffers, uint32_t width, uint32_t height,
                              ExportMethod method);
     std::shared_ptr<Wayland> ensure_wayland();

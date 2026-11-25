@@ -344,14 +344,14 @@ int Client::resolution(sd_bus_message* m, void* userdata, sd_bus_error*) {
 }
 
 void Client::send_dmabuf(const std::vector<BufferSet>& buffers, uint32_t width, uint32_t height,
-                         ExportMethod method)
+                         ExportMethod method, uint64_t generation)
 {
     if (output_mode == OutputMode::Layer) {
         send_dmabuf_wayland(buffers, width, height, method);
         return;
     }
 
-    send_dmabuf_ipc(buffers, width, height, method);
+    send_dmabuf_ipc(buffers, width, height, method, generation);
 }
 
 void Client::send_dmabuf_wayland(const std::vector<BufferSet>& buffers, uint32_t width, uint32_t height,
@@ -371,7 +371,7 @@ void Client::send_dmabuf_wayland(const std::vector<BufferSet>& buffers, uint32_t
 }
 
 void Client::send_dmabuf_ipc(const std::vector<BufferSet>& buffers, uint32_t width, uint32_t height,
-                             ExportMethod method)
+                             ExportMethod method, uint64_t generation)
 {
     if (buffers.empty()) {
         SPDLOG_ERROR("renderer: failed to export buffers, no buffers available");
@@ -413,7 +413,7 @@ void Client::send_dmabuf_ipc(const std::vector<BufferSet>& buffers, uint32_t wid
     if (!self)
         return;
 
-    post([self, modifier, offset, stride, fourcc, plane_size, opaque_size,
+    post([self, generation, modifier, offset, stride, fourcc, plane_size, opaque_size,
           opaque_offset, resolution, fds = std::move(fds)]() {
         SPDLOG_DEBUG("sending dmabuf");
         sd_bus_message* msg = nullptr;
@@ -426,7 +426,8 @@ void Client::send_dmabuf_ipc(const std::vector<BufferSet>& buffers, uint32_t wid
 
         ret = sd_bus_message_append(
             msg,
-            "tuuutttuu",
+            "ttuuutttuu",
+            generation,
             modifier,
             offset,
             stride,
@@ -766,9 +767,9 @@ void Client::frame_ready(int idx, unique_fd fd, std::shared_ptr<Renderer::Resour
         return;
     }
 
-    post([self, idx, fd = std::move(fd)]() {
-        int r = sd_bus_emit_signal(self->bus, kObjPath, kIface, "frame_ready", "uh",
-                                   static_cast<uint32_t>(idx), fd.get());
+    post([self, idx, resources = std::move(resources), fd = std::move(fd)]() {
+        int r = sd_bus_emit_signal(self->bus, kObjPath, kIface, "frame_ready", "uht",
+                                   static_cast<uint32_t>(idx), fd.get(), resources->generation);
         if (r < 0) {
             SPDLOG_ERROR("sd_bus_emit_signal {} ({})", r, strerror(-r));
             return r;
@@ -800,15 +801,22 @@ int Client::on_frame(sd_bus_message* m, void* userdata, sd_bus_error*) {
         return 0;
 
     uint32_t idx = 0;
-    int fd;
-    int r = sd_bus_message_read(m, "uh", &idx, &fd);
-    if (r < 0) {
+    int fd = -1;
+    uint64_t generation = 0;
+    int r = sd_bus_message_read(m, "uht", &idx, &fd, &generation);
+    if (r <= 0) {
         SPDLOG_ERROR("sd_bus_call_method {} ({})", r, strerror(-r));
         return r;
     }
 
-    if (self->renderer)
-        self->renderer->frame_ready(static_cast<int>(idx), unique_fd::dup(fd));
+    if (self->renderer) {
+        auto resources = self->renderer->get_resources();
+        if (!resources || resources->generation != generation) {
+            SPDLOG_DEBUG("Ignoring released buffer from old pool: generation={} idx={}", generation, idx);
+            return 0;
+        }
+        self->renderer->frame_ready(static_cast<int>(idx), unique_fd::dup(fd), std::move(resources));
+    }
     return 0;
 }
 

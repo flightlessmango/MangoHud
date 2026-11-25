@@ -94,7 +94,8 @@ int IPCClient::on_dmabuf(sd_bus_message* m, void* userdata, sd_bus_error*) {
 
     int r = sd_bus_message_read(
         m,
-        "tuuutttuu",
+        "ttuuutttuu",
+        &fdinfo.generation,
         &fdinfo.modifier,
         &fdinfo.dmabuf_offset,
         &fdinfo.stride,
@@ -149,9 +150,13 @@ int IPCClient::on_dmabuf(sd_bus_message* m, void* userdata, sd_bus_error*) {
     }
 
     {
-        std::lock_guard lock(self->m);
+        std::scoped_lock lock(self->m, self->sync_mtx);
+        const auto generation = fdinfo.generation;
         self->fdinfo = std::move(fdinfo);
-        self->import_generation.fetch_add(1, std::memory_order_release);
+        self->frame_queue.clear();
+        self->last_hud_frame = {};
+        self->import_generation.store(generation, std::memory_order_release);
+        SPDLOG_DEBUG("Received HUD pool: generation={}", generation);
     }
 
     return 0;
@@ -731,13 +736,13 @@ unique_fd IPCClient::export_dmabuf_sync_file(int dmabuf_fd, bool write)
     return unique_fd::adopt(data.fd);
 }
 
-void IPCClient::frame_ready(int idx, unique_fd fd) {
+void IPCClient::frame_ready(int idx, unique_fd fd, uint64_t generation) {
     if (idx < 0 || !fd)
         return;
 
-    post([this, idx, fd = std::move(fd)]() {
-        int r = sd_bus_emit_signal(bus, kObjPath, kIface, "frame_ready", "uh",
-                                   static_cast<uint32_t>(idx), fd.get());
+    post([this, idx, generation, fd = std::move(fd)]() {
+        int r = sd_bus_emit_signal(bus, kObjPath, kIface, "frame_ready", "uht",
+                                   static_cast<uint32_t>(idx), fd.get(), generation);
 
         if (r < 0) {
             SPDLOG_ERROR("sd_bus_emit_signal {} ({}) ObjPath: {} Iface: {}",
@@ -752,12 +757,10 @@ int IPCClient::on_frame(sd_bus_message* m, void* userdata, sd_bus_error*) {
 
     ready_frame frame;
     uint32_t idx = 0;
-    int fd;
-    int r = sd_bus_message_read(m, "uh", &idx, &fd);
-    if (r < 0) {
+    int fd = -1;
+    int r = sd_bus_message_read(m, "uht", &idx, &fd, &frame.generation);
+    if (r <= 0) {
         SPDLOG_ERROR("sd_bus_message_read {} ({})", r, strerror(-r));
-        if (fd >= 0)
-            close(fd);
         return r;
     }
 
@@ -765,6 +768,10 @@ int IPCClient::on_frame(sd_bus_message* m, void* userdata, sd_bus_error*) {
     frame.fd = unique_fd::dup(fd);
     {
         std::lock_guard lock(self->sync_mtx);
+        if (frame.generation != self->import_generation.load(std::memory_order_acquire)) {
+            SPDLOG_DEBUG("Ignoring ready buffer from old pool: generation={} idx={}", frame.generation, idx);
+            return 0;
+        }
         self->frame_queue.push_back(std::move(frame));
     }
     return 0;

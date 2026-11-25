@@ -11,7 +11,7 @@ overlay_hud_frame OverlayVK::prepare_hud_frame(overlay_frame& frame)
     }
     if (dmabufs.empty()) return {};
     if (frame.pending_slot < 0)
-        frame.pending_slot = layer->ipc->next_frame();
+        frame.pending_slot = layer->ipc->next_frame(import_generation);
 
     const int slot = frame.pending_slot >= 0 ? frame.pending_slot : last_slot;
     if (slot < 0 || static_cast<size_t>(slot) >= dmabufs.size())
@@ -101,7 +101,7 @@ bool OverlayVK::init_dmabufs(const swapchain_data* sc, Fdinfo& fdinfo) {
 
     layer->ipc->clear_frames();
     for (size_t i = 0; i < fences.size(); i++)
-        layer->ipc->frame_ready(i, std::move(fences[i]));
+        layer->ipc->frame_ready(i, std::move(fences[i]), fdinfo.generation);
 
     return true;
 }
@@ -667,7 +667,7 @@ VkResult OverlayVK::copy_dmabuf_to_cache(const swapchain_data* sc, overlay_frame
 
         VkResult gr = sc->d->GetSemaphoreFdKHR(sc->d->Device, &gi, &fd);
         if (gr == VK_SUCCESS && fd >= 0) {
-            layer->ipc->frame_ready(slot, unique_fd::adopt(fd));
+            layer->ipc->frame_ready(slot, unique_fd::adopt(fd), frame.import_generation);
         }
     }
 

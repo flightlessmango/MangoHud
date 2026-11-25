@@ -208,6 +208,7 @@ bool Renderer::apply_method(ExportMethod method)
         std::lock_guard lock(frame_m);
         frame_queue.clear();
     }
+    next->generation = client->buffer_generation.fetch_add(1, std::memory_order_relaxed) + 1;
     resources = std::move(next);
     if (hidden && !hide_hud())
         return false;
@@ -246,7 +247,7 @@ void Renderer::send_dmabuf()
     if (!client || !resources)
         return;
 
-    client->send_dmabuf(resources->buffers, w, h, resources->method);
+    client->send_dmabuf(resources->buffers, w, h, resources->method, resources->generation);
 }
 
 void Renderer::run()

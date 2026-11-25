@@ -395,7 +395,7 @@ void Wayland::release_to_server(shm_buffer* buf)
     if (!fd)
         return;
 
-    buf->ipc->frame_ready(buf->idx, std::move(fd));
+    buf->ipc->frame_ready(buf->idx, std::move(fd), buf->generation);
 }
 
 void Wayland::buffer_release(void* data, wl_buffer*)
@@ -508,6 +508,7 @@ void Wayland::update_import(const std::shared_ptr<surface_data>& surf_data)
         std::shared_ptr<shm_buffer> buf = std::make_shared<shm_buffer>();
         buf->ipc = ipc.get();
         buf->idx = idx;
+        buf->generation = generation;
         buf->dmabuf_fd = unique_fd::adopt(dup(dmabuf.get()));
         buf->width = fdinfo.w;
         buf->height = fdinfo.h;
@@ -607,7 +608,7 @@ std::shared_ptr<shm_buffer> Wayland::present(const std::shared_ptr<surface_data>
     if (surf_data->attached && surf_data->hud_update_seq == update_seq)
         return nullptr;
 
-    int idx = ipc->next_frame();
+    int idx = ipc->next_frame(imported_generation);
     if (idx < 0 || static_cast<size_t>(idx) >= surf_data->buffers.size())
         return nullptr;
 

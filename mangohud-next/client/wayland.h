@@ -27,6 +27,7 @@ struct shm_buffer {
 
     IPCClient* ipc = nullptr;
     int idx = -1;
+    uint64_t generation = 0;
     unique_fd dmabuf_fd;
     int modifier = 0;
     int width = 0;

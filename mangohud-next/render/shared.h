@@ -64,6 +64,7 @@ struct Resolution {
 struct ready_frame {
     int idx = -1;
     unique_fd fd;
+    uint64_t generation = 0;
 };
 
 struct gbmBuffer {
