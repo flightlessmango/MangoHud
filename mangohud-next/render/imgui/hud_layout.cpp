@@ -115,7 +115,7 @@ static MeasuredCell measure_cell(const Cell& cell, int column, int cols, const h
                 const auto pos = ImVec2(runs[0].pos.x + value.Max.x + unit_gap - unit.Min.x,
                                         runs[0].pos.y + glyph_bounds(text->text, font, size).Min.y -
                                             unit_reference.Min.y);
-                runs.push_back({text->unit, unit_font, unit_size, pos, {1, 1, 1, 1}});
+                runs.push_back({text->unit, unit_font, unit_size, pos, text->vec});
                 measured.text_size.x = pos.x + unit.Max.x + outline_space;
                 measured.text_size.y =
                     std::max(measured.text_size.y, pos.y + unit_reference.Max.y + outline_space);
