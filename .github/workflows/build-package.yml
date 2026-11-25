@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
       - name: Install build tools
         run: |
           set -x
@@ -22,20 +22,13 @@ jobs:
             pkgconf
           command -v glslangValidator && glslangValidator --version
           command -v pkg-config && pkg-config --version
-      - name: Prepare Artifact Git Info
-        shell: bash
+      - name: Install Meson
         run: |
-          echo "##[set-output name=branch;]${GITHUB_REF#refs/heads/}"
-          ARTIFACT_NAME="commit-$(git rev-parse --short "$GITHUB_SHA")"
-          if [ ${{ github.event_name == 'pull_request' }} ]; then
-            echo "##[set-output name=short-sha;]$(git rev-parse --short "${{ github.event.pull_request.head.sha }}")"
-            if [ ! -z "${{ github.event.pull_request.number }}" ]; then
-              ARTIFACT_NAME="pr-${{ github.event.pull_request.number }}-commit-$(git rev-parse --short "${{ github.event.pull_request.head.sha }}")"
-            fi
-          else
-            echo "##[set-output name=short-sha;]$(git rev-parse --short "$GITHUB_SHA")"
-          fi
-          echo "##[set-output name=artifact-metadata;]$ARTIFACT_NAME"
+          MESON_MIN_VERSION="$(sed -n "s/.*meson_version:[[:space:]]*'>=\([^']*\)'.*/\1/p" meson.build)"
+          python3 -m pip install --user --break-system-packages "meson>=${MESON_MIN_VERSION}"
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          meson --version
       - name: Build and package
         run: |
           ./build-source.sh
@@ -53,6 +46,6 @@ jobs:
         uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
-          name: MangoHud-${{steps.git-vars.outputs.artifact-metadata}}
-          path: ${{runner.workspace}}/MangoHud/build/MangoHud-*tar.gz
+          name: MangoHud-${{ github.ref_name }}
+          path: build/MangoHud-*tar.gz
           retention-days: 30

@@ -9,10 +9,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
-      - name: Run build-source.sh
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v7
+      - name: Install build tools
         run: |
           set -x
           sudo apt update
@@ -24,6 +22,17 @@ jobs:
           sudo apt -o Acquire::Queue-Mode=access -y install \
             $DEPS_NO_I386 \
             hub
+      - name: Install Meson
+        run: |
+          MESON_MIN_VERSION="$(sed -n "s/.*meson_version:[[:space:]]*'>=\([^']*\)'.*/\1/p" meson.build)"
+          python3 -m pip install --user --break-system-packages "meson>=${MESON_MIN_VERSION}"
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          meson --version
+      - name: Run build-source.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
           ./build-source.sh
           assets=()
           for asset in ./MangoHud-*-Source*.tar.*; do
@@ -36,6 +45,6 @@ jobs:
         uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
-          name: MangoHud-${{steps.git-vars.outputs.artifact-metadata}}
-          path: ${{runner.workspace}}/MangoHud/build/MangoHud-*tar.gz
+          name: MangoHud-${{ github.ref_name }}-Source
+          path: MangoHud-*-Source*.tar.*
           retention-days: 30

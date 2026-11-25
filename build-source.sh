@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 VERSION=$(git describe --tags --dirty)
 NAME=MangoHud-${VERSION}
@@ -21,15 +22,15 @@ mv sourcedir/meson-dist/*.tar.xz ${TAR_NAME}
 mkdir ${NAME}
 tar -xf ${TAR_NAME} --strip 1 -C ${NAME}
 # nvml.h is not DFSG compliant
-rm ${NAME}/include/nvml.h
+rm -f ${NAME}/include/nvml.h ${NAME}/mangohud-next/server/metrics/gpu/nvidia/nvml.h
 # minhook not needed
-rm -r ${NAME}/modules/minhook
+rm -rf ${NAME}/modules/minhook
 # spdlog from system
-rm -r ${NAME}/subprojects/spdlog-*
+rm -rf ${NAME}/subprojects/spdlog-*
 # nlohmann_json from system
-rm -r ${NAME}/subprojects/nlohmann_json-*
+rm -rf ${NAME}/subprojects/nlohmann_json-*
 # remove some vulkan clutter
-rm -r ${NAME}/subprojects/Vulkan-Headers-*/cmake ${NAME}/subprojects/Vulkan-Headers-*/BUILD.gn
+rm -rf ${NAME}/subprojects/Vulkan-Headers-*/cmake ${NAME}/subprojects/Vulkan-Headers-*/BUILD.gn
 # remove some dear imgui clutter
 rm -rf ${NAME}/subprojects/imgui-*/examples
 # compress new sources
