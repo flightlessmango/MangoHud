@@ -85,6 +85,8 @@ extern float frametime;
 extern logData currentLogData;
 
 std::string exec(std::string command);
+// Fill os, cpu, kernel, ram, cpusched (platform backend)
+void get_system_info();
 void autostart_log(int sleep);
 
 #endif //MANGOHUD_LOGGING_H
