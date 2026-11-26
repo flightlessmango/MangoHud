@@ -59,6 +59,9 @@ bool libnvml_loader::load() {
     LOAD_NVML_FUNCTION(nvmlDeviceGetFanSpeed);
     LOAD_NVML_FUNCTION(nvmlDeviceGetGraphicsRunningProcesses);
 
+    nvmlDeviceGetName = reinterpret_cast<decltype(nvmlDeviceGetName)>(
+        dlsym(library_, "nvmlDeviceGetName"));
+
     loaded_ = true;
     return true;
 }
@@ -75,6 +78,7 @@ void libnvml_loader::unload() {
 
     nvmlInit_v2 = nullptr;
     nvmlShutdown = nullptr;
+    nvmlDeviceGetName = nullptr;
     nvmlDeviceGetUtilizationRates = nullptr;
     nvmlDeviceGetTemperature = nullptr;
     nvmlDeviceGetPciInfo_v3 = nullptr;

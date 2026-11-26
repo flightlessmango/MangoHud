@@ -7,6 +7,21 @@ Nvidia::Nvidia(
     GPU(drm_node, pci_dev, vendor_id, device_id, "gpu-nvidia"
 ) {
     nvml_available = init_nvml(pci_dev);
+    if (nvml_available) {
+        if (!nvml->nvmlDeviceGetName) {
+            SPDLOG_WARN("NVIDIA {}: nvmlDeviceGetName unavailable, using fallback name '{}'", pci_dev, name);
+        } else {
+            char device_name[NVML_DEVICE_NAME_V2_BUFFER_SIZE] = {};
+            const auto result = nvml->nvmlDeviceGetName(device, device_name, sizeof(device_name));
+            if (result != NVML_SUCCESS)
+                SPDLOG_WARN("NVIDIA {}: nvmlDeviceGetName failed: {}, using fallback name '{}'",
+                            pci_dev, nvml->nvmlErrorString(result), name);
+            else if (!device_name[0])
+                SPDLOG_WARN("NVIDIA {}: nvmlDeviceGetName returned an empty name, using fallback name '{}'", pci_dev, name);
+            else
+                name = device_name;
+        }
+    }
 }
 
 bool Nvidia::init_nvml(const std::string& pci_dev) {

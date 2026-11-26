@@ -17,6 +17,7 @@ public:
 
     decltype(&::nvmlInit_v2) nvmlInit_v2;
     decltype(&::nvmlShutdown) nvmlShutdown;
+    decltype(&::nvmlDeviceGetName) nvmlDeviceGetName = nullptr;
     decltype(&::nvmlDeviceGetUtilizationRates) nvmlDeviceGetUtilizationRates;
     decltype(&::nvmlDeviceGetTemperature) nvmlDeviceGetTemperature;
     decltype(&::nvmlDeviceGetPciInfo_v3) nvmlDeviceGetPciInfo_v3;

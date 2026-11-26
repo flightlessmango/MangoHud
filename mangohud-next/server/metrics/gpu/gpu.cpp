@@ -1,8 +1,79 @@
 #include <algorithm>
 #include <cstdlib>
+#include <iomanip>
+#include <sstream>
 
 #include "gpu.hpp"
 #include "../fdinfo.hpp"
+
+static std::string pci_device_name(std::istream& ids, uint16_t vendor, uint16_t device) {
+    std::string line;
+    bool matching_vendor = false;
+    while (std::getline(ids, line)) {
+        if (line.empty() || line[0] == '#')
+            continue;
+        if (line[0] != '\t') {
+            unsigned id = 0;
+            std::istringstream entry(line);
+            if (!(entry >> std::hex >> id))
+                continue;
+            if (matching_vendor)
+                break;
+            matching_vendor = id == vendor;
+        } else if (matching_vendor && line.size() > 1 && line[1] != '\t') {
+            unsigned id = 0;
+            std::istringstream entry(line);
+            if (!(entry >> std::hex >> id) || id != device)
+                continue;
+            std::string name;
+            std::getline(entry >> std::ws, name);
+            return name;
+        }
+    }
+    return {};
+}
+
+static std::string amdgpu_device_name(std::istream& ids, uint16_t device, unsigned revision) {
+    std::string line;
+    while (std::getline(ids, line)) {
+        unsigned entry_device = 0, entry_revision = 0;
+        char separator = 0;
+        std::istringstream entry(line);
+        if (!(entry >> std::hex >> entry_device >> separator) || separator != ',')
+            continue;
+        if (!(entry >> std::hex >> entry_revision >> separator) || separator != ',')
+            continue;
+        if (entry_device != device || entry_revision != revision)
+            continue;
+        std::string name;
+        std::getline(entry >> std::ws, name);
+        return name;
+    }
+    return {};
+}
+
+static std::string gpu_name(uint16_t vendor, uint16_t device, const std::string& drm_node) {
+    if (vendor == 0x1002) {
+        unsigned revision = 0;
+        std::ifstream revision_file("/sys/class/drm/" + drm_node + "/device/revision");
+        if (revision_file >> std::hex >> revision) {
+            std::ifstream ids("/usr/share/libdrm/amdgpu.ids");
+            if (auto name = amdgpu_device_name(ids, device, revision); !name.empty())
+                return name;
+        }
+    }
+    for (const char* path : {"/usr/share/hwdata/pci.ids", "/usr/share/misc/pci.ids"}) {
+        std::ifstream ids(path);
+        if (auto name = pci_device_name(ids, vendor, device); !name.empty())
+            return name;
+    }
+    if (!vendor && !device)
+        return drm_node;
+    std::ostringstream name;
+    name << std::hex << std::setfill('0') << std::setw(4) << vendor
+         << ':' << std::setw(4) << device;
+    return name.str();
+}
 
 void GPU::check_pids_existence() {
     std::error_code ec;
@@ -128,6 +199,7 @@ GPU::GPU(
     uint16_t vendor_id, uint16_t device_id, const std::string& thread_name
 ) : drm_node(drm_node), pci_dev(pci_dev), vendor_id(vendor_id),
     device_id(device_id), render_minor(render_minor_from_node(drm_node)),
+    name(gpu_name(vendor_id, device_id, drm_node)),
     worker_thread_name(thread_name) {}
 
 int GPU::renderer() const {

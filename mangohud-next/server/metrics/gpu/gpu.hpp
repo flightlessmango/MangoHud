@@ -33,6 +33,7 @@ public:
     const uint16_t vendor_id;
     const uint16_t device_id;
     const int render_minor;
+    std::string name;
     std::mutex system_metrics_mutex, process_metrics_mutex;
 
     // whether gpu is main one

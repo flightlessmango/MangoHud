@@ -133,12 +133,13 @@ void Metrics::update() {
         const auto clients = snapshot(ipc.clients, ipc.clients_mtx);
         const auto now = std::chrono::steady_clock::now();
         for (const auto& [i, gpu] : enumerate(gpus.available())) {
+            const std::string gpu_index = "GPU" + std::to_string(i);
+            new_metrics[gpu_index]["NAME"] = {gpu->name};
             gpu->stop_polling_if_idle(now, std::chrono::seconds(3));
             if (!gpu->polling_active())
                 continue;
 
             auto gpu_metrics = gpu->get_system_metrics();
-            std::string gpu_index = "GPU" + std::to_string(i);
             new_metrics[gpu_index]["LOAD"] = {gpu_metrics.load, "%"};
             new_metrics[gpu_index]["VRAM_USED"] = {gpu_metrics.vram_used, "GiB"};
             new_metrics[gpu_index]["GTT_USED"] = {gpu_metrics.gtt_used, "GiB"};
@@ -223,7 +224,6 @@ void Metrics::update_client() {
             auto& hud_stats = client->stats_for(SampleType::Hud);
 
             metrics["ENGINE_NAME"] = {engine_name(client->pEngineName)};
-            metrics["GPU_NAME"] = {client->gpuName};
             metrics["VULKAN_DRIVER"] = {client->vulkanDriver};
             metrics["HDR"] = {client->hdr.status()};
             metrics["FOCUSED"] = {client->focused() ? "true" : "false"};
@@ -370,7 +370,7 @@ Metric Metrics::get(const char* a, const char* b, const pid_t pid = 0)
     }
 
     size_t gpu_index = 0;
-    if (parse_gpu_index(a, gpu_index)) {
+    if (std::strcmp(b, "NAME") != 0 && parse_gpu_index(a, gpu_index)) {
         auto available_gpus = gpus.available();
         if (gpu_index < available_gpus.size())
             available_gpus[gpu_index]->request_polling();
