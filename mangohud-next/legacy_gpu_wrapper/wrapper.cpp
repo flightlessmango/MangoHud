@@ -16,7 +16,7 @@ struct LegacyGPUWrapper::Impl {
             gpu = std::make_unique<Intel_i915>(drm_node, pci_dev, vendor_id, device_id);
         } else if (driver == "xe") {
             gpu = std::make_unique<Intel_xe>(drm_node, pci_dev, vendor_id, device_id);
-        } else if (driver == "msm_dpu") {
+        } else if (driver == "msm_dpu" || driver == "adreno") {
             gpu = std::make_unique<MSM_DPU>(drm_node, pci_dev, vendor_id, device_id);
         } else if (driver == "msm_drm") {
             gpu = std::make_unique<MSM_KGSL>(drm_node, pci_dev, vendor_id, device_id);
