@@ -23,6 +23,13 @@ ImFont* Font::add_font(float font_size) {
         return nullptr;
     }
 
+    // Merge ForkAwesome glyphs
+    ImFontConfig merge_config = {};
+    merge_config.MergeMode = true;
+    static const ImWchar fa_ranges[] = { ICON_MIN_FK, ICON_MAX_FK, 0 };
+    font_atlas->AddFontFromMemoryCompressedBase85TTF(
+        forkawesome_compressed_data_base85, font_size, &merge_config, fa_ranges);
+
     fonts.push_back({font_size, font});
     if (recreate_fonts_texture)
         recreate_fonts_texture();
