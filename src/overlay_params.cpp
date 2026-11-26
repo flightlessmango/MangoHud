@@ -18,7 +18,6 @@
 #include <algorithm>
 #include <cctype>
 #include <array>
-#include <atomic>
 #include <functional>
 #include <spdlog/spdlog.h>
 #include <vulkan/vulkan_core.h>
@@ -50,6 +49,7 @@ std::mutex config_mtx;
 std::condition_variable config_cv;
 bool config_ready = false;
 static std::shared_ptr<overlay_params> g_params;
+static std::mutex params_mtx;
 std::unique_ptr<GPUS> gpus = nullptr;
 std::shared_ptr<fpsLimiter> fps_limiter;
 
@@ -1219,9 +1219,13 @@ parse_overlay_config(struct overlay_params *params,
       config_cv.notify_one();
    }
 
-   auto prev_params = std::atomic_load_explicit(&g_params, std::memory_order_acquire);
    auto snapshot = std::make_shared<overlay_params>(*params);
-   std::atomic_store_explicit(&g_params, std::move(snapshot), std::memory_order_release);
+   std::shared_ptr<overlay_params> prev_params;
+   {
+      std::lock_guard<std::mutex> lock(params_mtx);
+      prev_params = std::move(g_params);
+      g_params = std::move(snapshot);
+   }
 
    // a preset switch keeps the limit picked with toggle_fps_limit, unless the preset changes fps_limit
    size_t fps_limits_idx = 0;
@@ -1245,7 +1249,11 @@ parse_overlay_config(struct overlay_params *params,
 
 std::shared_ptr<overlay_params> get_params() {
     for (;;) {
-        auto p = std::atomic_load_explicit(&g_params, std::memory_order_acquire);
+        std::shared_ptr<overlay_params> p;
+        {
+            std::lock_guard<std::mutex> lock(params_mtx);
+            p = g_params;
+        }
         if (p) return p;
         std::this_thread::sleep_for(std::chrono::milliseconds(25));
     }
