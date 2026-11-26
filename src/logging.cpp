@@ -362,8 +362,6 @@ void Logger::calculate_benchmark_data(){
   for (auto& point : m_log_array)
     fps_values.push_back(point.frametime);
 
-  benchmark.percentile_data.clear();
-
   std::vector<std::string> metrics {"0.97", "avg", "0.01", "0.001"};
   std::unique_ptr<fpsMetrics> fpsmetrics;
   auto params = get_params();
@@ -371,9 +369,7 @@ void Logger::calculate_benchmark_data(){
     metrics = params->fps_metrics;
     
   fpsmetrics = std::make_unique<fpsMetrics>(metrics, fps_values);
-  auto metrics_copy = fpsmetrics->copy_metrics();
-  for (auto& metric : metrics_copy)
-    benchmark.percentile_data.push_back({metric.display_name, metric.value});
+  benchmark.metrics = fpsmetrics->copy_metrics();
 
   fpsmetrics.reset();
 }
