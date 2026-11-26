@@ -63,6 +63,8 @@ prepare() {
   cp -rvt "subprojects/Vulkan-Utility-Libraries-1.4.346" -- "subprojects/packagefiles/vulkan-utility-libraries/"*
   ln -sv "$srcdir/vkroots" subprojects
   cp -rvt "subprojects/vkroots" -- "subprojects/packagefiles/vkroots/"*
+  git -C subprojects/vkroots apply "$PWD/subprojects/packagefiles/vkroots-shared-lock.patch" \
+    "$PWD/subprojects/packagefiles/vkroots-queue-flags.patch"
   ln -sv "$srcdir/vk-bootstrap" subprojects
   cp -rvt "subprojects/vk-bootstrap" -- "subprojects/packagefiles/vk-bootstrap/"*
   ln -sv "$srcdir/implot-0.16" subprojects

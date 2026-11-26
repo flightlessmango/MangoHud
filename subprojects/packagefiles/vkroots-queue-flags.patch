@@ -1,0 +1,78 @@
+diff --git a/gen/inc/vkroots_dispatches.h b/gen/inc/vkroots_dispatches.h
+--- a/gen/inc/vkroots_dispatches.h
++++ b/gen/inc/vkroots_dispatches.h
+@@ -25,7 +25,16 @@
+       const auto &queueInfo = pCreateInfo->pQueueCreateInfos[i];
+       for (uint32_t j = 0; j < queueInfo.queueCount; j++) {
+         VkQueue queue;
+-        deviceDispatch->GetDeviceQueue(device, queueInfo.queueFamilyIndex, j, &queue);
++        if (queueInfo.flags == 0) {
++          deviceDispatch->GetDeviceQueue(device, queueInfo.queueFamilyIndex, j, &queue);
++        } else {
++          VkDeviceQueueInfo2 info = {};
++          info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2;
++          info.flags = queueInfo.flags;
++          info.queueFamilyIndex = queueInfo.queueFamilyIndex;
++          info.queueIndex = j;
++          deviceDispatch->GetDeviceQueue2(device, &info, &queue);
++        }
+
+         QueueDispatches.insert(queue, RawPointer(deviceDispatch));
+       }
+@@ -64,7 +73,16 @@
+     for (const auto& queueInfo : deviceDispatch->DeviceQueueInfos) {
+       for (uint32_t i = 0; i < queueInfo.queueCount; i++) {
+         VkQueue queue;
+-        deviceDispatch->GetDeviceQueue(device, queueInfo.queueFamilyIndex, i, &queue);
++        if (queueInfo.flags == 0) {
++          deviceDispatch->GetDeviceQueue(device, queueInfo.queueFamilyIndex, i, &queue);
++        } else {
++          VkDeviceQueueInfo2 info = {};
++          info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2;
++          info.flags = queueInfo.flags;
++          info.queueFamilyIndex = queueInfo.queueFamilyIndex;
++          info.queueIndex = i;
++          deviceDispatch->GetDeviceQueue2(device, &info, &queue);
++        }
+         QueueDispatches.remove(queue);
+       }
+     }
+diff --git a/vkroots.h b/vkroots.h
+--- a/vkroots.h
++++ b/vkroots.h
+@@ -16663,7 +16663,16 @@
+       const auto &queueInfo = pCreateInfo->pQueueCreateInfos[i];
+       for (uint32_t j = 0; j < queueInfo.queueCount; j++) {
+         VkQueue queue;
+-        deviceDispatch->GetDeviceQueue(device, queueInfo.queueFamilyIndex, j, &queue);
++        if (queueInfo.flags == 0) {
++          deviceDispatch->GetDeviceQueue(device, queueInfo.queueFamilyIndex, j, &queue);
++        } else {
++          VkDeviceQueueInfo2 info = {};
++          info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2;
++          info.flags = queueInfo.flags;
++          info.queueFamilyIndex = queueInfo.queueFamilyIndex;
++          info.queueIndex = j;
++          deviceDispatch->GetDeviceQueue2(device, &info, &queue);
++        }
+
+         QueueDispatches.insert(queue, RawPointer(deviceDispatch));
+       }
+@@ -16702,7 +16711,16 @@
+     for (const auto& queueInfo : deviceDispatch->DeviceQueueInfos) {
+       for (uint32_t i = 0; i < queueInfo.queueCount; i++) {
+         VkQueue queue;
+-        deviceDispatch->GetDeviceQueue(device, queueInfo.queueFamilyIndex, i, &queue);
++        if (queueInfo.flags == 0) {
++          deviceDispatch->GetDeviceQueue(device, queueInfo.queueFamilyIndex, i, &queue);
++        } else {
++          VkDeviceQueueInfo2 info = {};
++          info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2;
++          info.flags = queueInfo.flags;
++          info.queueFamilyIndex = queueInfo.queueFamilyIndex;
++          info.queueIndex = i;
++          deviceDispatch->GetDeviceQueue2(device, &info, &queue);
++        }
+         QueueDispatches.remove(queue);
+       }
+     }
