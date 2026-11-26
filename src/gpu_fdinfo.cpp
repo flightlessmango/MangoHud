@@ -21,9 +21,11 @@ GPU_fdinfo::GPU_fdinfo(
 
 void GPU_fdinfo::main_thread()
 {
+    std::unique_lock<std::mutex> lock(metrics_mutex);
     while (!stop_thread) {
-        std::unique_lock<std::mutex> lock(metrics_mutex);
         cond_var.wait(lock, [this]() { return !paused || stop_thread; });
+        if (stop_thread)
+            break;
 
 #ifndef TEST_ONLY
         if (HUDElements.g_gamescopePid > 0 && HUDElements.g_gamescopePid != pid) {
@@ -74,8 +76,7 @@ void GPU_fdinfo::main_thread()
             metrics.gtt_used, metrics.fan_speed, metrics.voltage, metrics.fan_rpm
         );
 
-        std::this_thread::sleep_for(
-            std::chrono::milliseconds(METRICS_UPDATE_PERIOD_MS)
-        );
+        cond_var.wait_for(lock, std::chrono::milliseconds(METRICS_UPDATE_PERIOD_MS),
+                          [this]() { return stop_thread || paused; });
     }
 }

@@ -50,13 +50,19 @@ public:
 
     void pause()
     {
-        paused = true;
+        {
+            std::lock_guard<std::mutex> lock(metrics_mutex);
+            paused = true;
+        }
         cond_var.notify_one();
     }
 
     void resume()
     {
-        paused = false;
+        {
+            std::lock_guard<std::mutex> lock(metrics_mutex);
+            paused = false;
+        }
         cond_var.notify_one();
     }
 };
