@@ -123,6 +123,8 @@ static MeasuredCell measure_cell(const Cell& cell, int column, int cols, const h
             measured.numeric = !text->unit.empty() ||
                                (text->text.find_first_of("0123456789") != std::string::npos &&
                                 text->text.find_first_not_of("0123456789.+-") == std::string::npos);
+            if (measured.numeric)
+                measured.value_width = advance(text->text, font, size) + outline_space * 2.0f;
             const bool reserve_value = style.value_reserve_override ||
                                        (!reserve_overrides[column + measured.span - 1] &&
                                         (!text->unit.empty() || (column > 0 && measured.numeric)));
@@ -204,10 +206,9 @@ static void position_text(MeasuredCell& cell, float unit_slot = 0.0f) {
         run.pos += ImVec2(x, y);
     if (align == CellAlign::Right && cell.numeric) {
         auto& value = layout.text[0];
-        const auto bounds = text_bounds(value.text, value.font, value.font_size);
         const float right =
             layout.content.Max.x - outline_space - (unit_slot > 0.0f ? unit_slot + unit_gap : 0.0f);
-        value.pos.x = right - bounds.Max.x;
+        value.pos.x = right - advance(value.text, value.font, value.font_size);
         if (layout.text.size() == 2) {
             auto& unit = layout.text[1];
             const auto unit_bounds = text_bounds(unit.text, unit.font, unit.font_size);
