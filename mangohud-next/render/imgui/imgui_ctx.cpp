@@ -209,8 +209,9 @@ bool ImGuiCtx::draw(uint32_t w, uint32_t h, Resolution& size, BufferSet* buf, Ba
     }
     ImGui::SetCurrentContext(imgui);
     ImPlot::SetCurrentContext(implot);
+    ImVec2 font_extent{};
     for (auto& window : windows)
-        prepare_hud_fonts(window.table, *fonts);
+        font_extent = ImMax(font_extent, prepare_hud_fonts(window.table, *fonts));
 
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = {float(w), float(h)};
@@ -246,8 +247,11 @@ bool ImGuiCtx::draw(uint32_t w, uint32_t h, Resolution& size, BufferSet* buf, Ba
         max_y = std::max(max_y, window.position.y + (float)window_h);
     }
 
-    if (!windows.empty())
-        size = {(uint32_t)std::ceil(max_x), (uint32_t)std::ceil(max_y)};
+    // Leave room for small layout changes without reallocating the buffers.
+    if (max_x > w)
+        size.w = static_cast<uint32_t>(std::ceil(max_x + font_extent.x * 4.0f));
+    if (max_y > h)
+        size.h = static_cast<uint32_t>(std::ceil(max_y + font_extent.y * 4.0f));
 
     ImGui::Render();
 

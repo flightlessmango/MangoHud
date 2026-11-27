@@ -223,7 +223,8 @@ const CellStyle& hud_cell_style(const Cell& cell) {
     return *std::visit([](const auto& value) -> const CellStyle* { return &value.style; }, cell);
 }
 
-void prepare_hud_fonts(const hudTable& table, Font& fonts) {
+ImVec2 prepare_hud_fonts(const hudTable& table, Font& fonts) {
+    ImVec2 extent{};
     for (const auto& row : table.rows)
         for (const auto& cell : row) {
             if (!cell)
@@ -231,11 +232,13 @@ void prepare_hud_fonts(const hudTable& table, Font& fonts) {
             const auto& style = hud_cell_style(*cell);
             const float size =
                 style.font_size > 0.0f ? style.font_size : table.font_size * style.font_scale;
-            fonts.get(size);
+            auto* font = fonts.get(size);
             fonts.get(size / 2.0f);
+            extent = ImMax(extent, {font->GetCharAdvance('0') * size / font->FontSize, size});
             if (const auto* nested = std::get_if<TableCell>(&*cell); nested && nested->table)
-                prepare_hud_fonts(*nested->table, fonts);
+                extent = ImMax(extent, prepare_hud_fonts(*nested->table, fonts));
         }
+    return extent;
 }
 
 HudLayout layout_hud(const hudTable& table, Font& fonts) {

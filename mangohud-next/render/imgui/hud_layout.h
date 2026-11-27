@@ -45,5 +45,5 @@ struct HudLayout {
 };
 
 const CellStyle& hud_cell_style(const Cell& cell);
-void prepare_hud_fonts(const hudTable& table, Font& fonts);
+ImVec2 prepare_hud_fonts(const hudTable& table, Font& fonts);
 HudLayout layout_hud(const hudTable& table, Font& fonts);
