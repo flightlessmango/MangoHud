@@ -511,10 +511,13 @@ static bool render(GLFWwindow* window, overlay_params& real_params) {
     int w, h;
     glfwGetWindowSize(window, &w, &h);
     window_size_changed = w != window_size.x || h != window_size.y;
-    if (real_params.enabled[OVERLAY_PARAM_ENABLED_horizontal])
     // trying to reduce height will break direct scanout in some cases
-    // just leave it for now, we'll revisit it in server
-    glfwSetWindowSize(window, screenWidth, screenHeight);
+    // just leave it for now, we'll revisit it in server.
+    // The output size arrives with gamescope's first message; until then it
+    // is 0x0, which X rejects with BadValue, and Xlib's default error
+    // handler exits the process.
+    if (real_params.enabled[OVERLAY_PARAM_ENABLED_horizontal] && screenWidth && screenHeight)
+        glfwSetWindowSize(window, screenWidth, screenHeight);
 
     ImGui::EndFrame();
 
