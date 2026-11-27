@@ -99,7 +99,7 @@ Each entry in `hud.windows` defines one hud window.
 | Format | `format`, `values` | `color`, `font_size`, `font_scale`, `truncate`, `align`, `colspan` | Multiple metrics composed into a single cell using a printf-style template. |
 | Graph | `graph` | none currently used | Graph data. Supports `FRAMETIMES`, `REFRESH_FRAMETIMES`, `APP_FRAMETIMES`, and `HUD_FRAMETIMES`. |
 | Exec | `exec` | `unit`, `color`, `font_size`, `font_scale`, `truncate` | Output of a shell command. |
-| Icon | `icon_name` | `color`, `font_size`, `font_scale`, `truncate` | Displays icon, see [ICONS.md](ICONS.md) for a list of icons |
+| Icon | `icon` | `color`, `font_size`, `font_scale`, `truncate` | Displays icon, see [ICONS.md](ICONS.md) for a list of icons |
 
 Color values are `RRGGBB` or `RRGGBBAA` hex strings, with an optional leading `#`. When `color` is omitted, the default is white.
 
