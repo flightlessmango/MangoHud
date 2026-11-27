@@ -220,10 +220,9 @@ void update_wl_queue()
         wl_display_dispatch_queue_pending(display.first, display.second.queue);
 }
 
-overlay_transfer_function wayland_surface_color(void* vk_surface)
+overlay_transfer_function wayland_surface_color(void* vk_surface, HDR::State& hdr_status)
 {
-    using Query = int (*)(const void*);
-    static auto query = reinterpret_cast<Query>(real_dlsym(RTLD_DEFAULT, "mangohud_wayland_surface_color"));
+    hdr_status = HDR::State::Unknown;
     std::shared_lock<std::shared_mutex> lock(displays_mutex);
     wl_surface* surface = nullptr;
     for (const auto& display : displays) {
@@ -235,14 +234,14 @@ overlay_transfer_function wayland_surface_color(void* vk_surface)
     }
     if (!surface)
         return NONE;
-    if (!query) {
-        static std::once_flag warning;
-        std::call_once(warning, [] {
-            SPDLOG_WARN("Cannot detect pass-through color space; use mangohud %command% to enable Wayland color detection.");
-        });
-        return NONE;
-    }
-    return static_cast<overlay_transfer_function>(query(surface));
+#if defined(HAVE_WAYLAND_COLOR_TRACKING) && defined(MANGOHUD_VULKAN_COLOR_TRACKING)
+    int status;
+    const auto transfer = mangohud_wayland_surface_color(surface, &status);
+    hdr_status = static_cast<HDR::State>(status);
+    return static_cast<overlay_transfer_function>(transfer);
+#else
+    return NONE;
+#endif
 }
 
 // Track vk_surface for reference counting

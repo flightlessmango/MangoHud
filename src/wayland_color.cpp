@@ -1,10 +1,15 @@
-#include "../wayland_color.h"
-#include "../../mangohud-next/client/hooks_helper.h"
-#include "../../mangohud-next/server/common/helpers.hpp"
+#include "wayland_color.h"
+#include "../mangohud-next/client/hooks_helper.h"
+#include "../mangohud-next/server/common/helpers.hpp"
 #include <string>
 #include <mutex>
 
 namespace {
+void* wayland_symbol(const char* name)
+{
+    static void* library = real_dlopen("libwayland-client.so.0", RTLD_NOW | RTLD_LOCAL);
+    return library ? real_dlsym(library, name) : nullptr;
+}
 struct Proxy {
     wl_proxy* proxy = nullptr;
     wl_display* display = nullptr;
@@ -39,7 +44,7 @@ wl_proxy* marshal_wayland(wl_proxy* proxy, uint32_t opcode,
                           const wl_interface* interface, uint32_t version,
                           uint32_t flags, wl_argument* args)
 {
-    auto real = wl_marshal_real_array_flags();
+    static auto real = reinterpret_cast<marshal_array_flags_fn>(wayland_symbol("wl_proxy_marshal_array_flags"));
     if (!real)
         return nullptr;
     auto& s = state();
@@ -91,74 +96,21 @@ static wl_proxy* marshal_wayland_va(wl_proxy* proxy, uint32_t opcode,
     return marshal_wayland(proxy, opcode, interface, version, flags, count ? args.data() : nullptr);
 }
 
-EXPORT_C_(wl_proxy*) wl_proxy_marshal_flags(wl_proxy* proxy, uint32_t opcode,
-                                            const wl_interface* interface,
-                                            uint32_t version, uint32_t flags, ...)
+EXPORT_C_(wl_proxy*) mangohud_wl_marshal_va(wl_proxy* proxy, uint32_t opcode,
+    const wl_interface* interface, uint32_t version, uint32_t flags, va_list args)
 {
-    va_list args;
-    va_start(args, flags);
-    auto* result = marshal_wayland_va(proxy, opcode, interface, version, flags, args);
-    va_end(args);
-    return result;
+    return marshal_wayland_va(proxy, opcode, interface, version, flags, args);
 }
 
-EXPORT_C_(wl_proxy*) wl_proxy_marshal_array_flags(wl_proxy* proxy, uint32_t opcode,
-                                                  const wl_interface* interface,
-                                                  uint32_t version, uint32_t flags,
-                                                  wl_argument* args)
+EXPORT_C_(wl_proxy*) mangohud_wl_marshal_array(wl_proxy* proxy, uint32_t opcode,
+    const wl_interface* interface, uint32_t version, uint32_t flags, wl_argument* args)
 {
     return marshal_wayland(proxy, opcode, interface, version, flags, args);
 }
 
-EXPORT_C_(void) wl_proxy_marshal(wl_proxy* proxy, uint32_t opcode, ...)
+EXPORT_C_(void) mangohud_wl_proxy_destroy(wl_proxy* proxy)
 {
-    va_list args;
-    va_start(args, opcode);
-    marshal_wayland_va(proxy, opcode, nullptr, wl_proxy_get_version(proxy), 0, args);
-    va_end(args);
-}
-
-EXPORT_C_(void) wl_proxy_marshal_array(wl_proxy* proxy, uint32_t opcode, wl_argument* args)
-{
-    marshal_wayland(proxy, opcode, nullptr, wl_proxy_get_version(proxy), 0, args);
-}
-
-EXPORT_C_(wl_proxy*) wl_proxy_marshal_constructor(wl_proxy* proxy, uint32_t opcode,
-                                                  const wl_interface* interface, ...)
-{
-    va_list args;
-    va_start(args, interface);
-    auto* result = marshal_wayland_va(proxy, opcode, interface, wl_proxy_get_version(proxy), 0, args);
-    va_end(args);
-    return result;
-}
-
-EXPORT_C_(wl_proxy*) wl_proxy_marshal_constructor_versioned(wl_proxy* proxy, uint32_t opcode,
-    const wl_interface* interface, uint32_t version, ...)
-{
-    va_list args;
-    va_start(args, version);
-    auto* result = marshal_wayland_va(proxy, opcode, interface, version, 0, args);
-    va_end(args);
-    return result;
-}
-
-EXPORT_C_(wl_proxy*) wl_proxy_marshal_array_constructor(wl_proxy* proxy, uint32_t opcode,
-    wl_argument* args, const wl_interface* interface)
-{
-    return marshal_wayland(proxy, opcode, interface, wl_proxy_get_version(proxy), 0, args);
-}
-
-EXPORT_C_(wl_proxy*) wl_proxy_marshal_array_constructor_versioned(wl_proxy* proxy, uint32_t opcode,
-    wl_argument* args, const wl_interface* interface, uint32_t version)
-{
-    return marshal_wayland(proxy, opcode, interface, version, 0, args);
-}
-
-
-EXPORT_C_(void) wl_proxy_destroy(wl_proxy* proxy)
-{
-    static auto real = reinterpret_cast<decltype(&wl_proxy_destroy)>(real_dlsym(RTLD_NEXT, "wl_proxy_destroy"));
+    static auto real = reinterpret_cast<decltype(&wl_proxy_destroy)>(wayland_symbol("wl_proxy_destroy"));
     auto& s = state();
     std::lock_guard lock(s.mutex);
     if (s.original(proxy) == proxy)
@@ -167,9 +119,9 @@ EXPORT_C_(void) wl_proxy_destroy(wl_proxy* proxy)
     real(proxy);
 }
 
-EXPORT_C_(void*) wl_proxy_create_wrapper(void* proxy)
+EXPORT_C_(void*) mangohud_wl_proxy_create_wrapper(void* proxy)
 {
-    static auto real = reinterpret_cast<decltype(&wl_proxy_create_wrapper)>(real_dlsym(RTLD_NEXT, "wl_proxy_create_wrapper"));
+    static auto real = reinterpret_cast<decltype(&wl_proxy_create_wrapper)>(wayland_symbol("wl_proxy_create_wrapper"));
     auto& s = state();
     std::lock_guard lock(s.mutex);
     auto* wrapper = static_cast<wl_proxy*>(real(proxy));
@@ -183,18 +135,18 @@ EXPORT_C_(void*) wl_proxy_create_wrapper(void* proxy)
     return wrapper;
 }
 
-EXPORT_C_(void) wl_proxy_wrapper_destroy(void* proxy)
+EXPORT_C_(void) mangohud_wl_proxy_wrapper_destroy(void* proxy)
 {
-    static auto real = reinterpret_cast<decltype(&wl_proxy_wrapper_destroy)>(real_dlsym(RTLD_NEXT, "wl_proxy_wrapper_destroy"));
+    static auto real = reinterpret_cast<decltype(&wl_proxy_wrapper_destroy)>(wayland_symbol("wl_proxy_wrapper_destroy"));
     auto& s = state();
     std::lock_guard lock(s.mutex);
     s.proxies.remove(&Proxy::proxy, static_cast<wl_proxy*>(proxy));
     real(proxy);
 }
 
-EXPORT_C_(void) wl_display_disconnect(wl_display* display)
+EXPORT_C_(void) mangohud_wl_display_disconnect(wl_display* display)
 {
-    static auto real = reinterpret_cast<decltype(&wl_display_disconnect)>(real_dlsym(RTLD_NEXT, "wl_display_disconnect"));
+    static auto real = reinterpret_cast<decltype(&wl_display_disconnect)>(wayland_symbol("wl_display_disconnect"));
     auto& s = state();
     std::lock_guard lock(s.mutex);
     while (auto item = s.proxies.fetch_any(&Proxy::display, display)) {
@@ -207,28 +159,10 @@ EXPORT_C_(void) wl_display_disconnect(wl_display* display)
     real(display);
 }
 
-EXPORT_C_(int) mangohud_wayland_surface_color(const void* surface)
+EXPORT_C_(int) mangohud_wayland_surface_color(const void* surface, int* hdr_status)
 {
     auto& s = state();
     std::lock_guard lock(s.mutex);
+    *hdr_status = static_cast<int>(s.colors.status(surface));
     return static_cast<int>(s.colors.color(surface));
-}
-
-EXPORT_C_(void*) mangohud_find_wayland_ptr(const char* name)
-{
-#define HOOK(fn) if (strcmp(name, #fn) == 0) return reinterpret_cast<void*>(fn)
-    HOOK(wl_proxy_marshal_flags);
-    HOOK(wl_proxy_marshal_array_flags);
-    HOOK(wl_proxy_marshal);
-    HOOK(wl_proxy_marshal_array);
-    HOOK(wl_proxy_marshal_constructor);
-    HOOK(wl_proxy_marshal_constructor_versioned);
-    HOOK(wl_proxy_marshal_array_constructor);
-    HOOK(wl_proxy_marshal_array_constructor_versioned);
-    HOOK(wl_proxy_destroy);
-    HOOK(wl_proxy_create_wrapper);
-    HOOK(wl_proxy_wrapper_destroy);
-    HOOK(wl_display_disconnect);
-#undef HOOK
-    return nullptr;
 }

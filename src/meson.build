@@ -175,10 +175,20 @@ link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z
 # meson fails to check version-script so just force add
 link_args += '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version'))
 
+if is_unixy and get_option('with_wayland').enabled() and dep_wayland_client.version().version_compare('>=1.24')
+  pre_args += '-DHAVE_WAYLAND_COLOR_TRACKING'
+  vulkan_color_files = files('wayland_color.cpp')
+  shim_wayland_dep = dep_wayland_client.partial_dependency(compile_args: true, includes: true)
+else
+  vulkan_color_files = []
+  shim_wayland_dep = declare_dependency()
+endif
+
 mangohud_static_lib = static_library(
   'MangoHud',
   mangohud_version,
   files('vulkan.cpp'),
+  vulkan_color_files,
   util_files,
   vk_enum_to_str,
   vk_dispatch_table,
@@ -190,6 +200,7 @@ mangohud_static_lib = static_library(
     vulkan_wsi_args
     ],
   cpp_args : [
+    '-DMANGOHUD_VULKAN_COLOR_TRACKING',
     pre_args,
     vulkan_wsi_args
     ],
@@ -307,29 +318,17 @@ mangoapp = executable(
 )
 endif
 if is_unixy
-  shim_files = []
-  shim_deps = [dep_dl]
-  shim_args = pre_args
-  if get_option('with_wayland').enabled() and dep_wayland_client.version().version_compare('>=1.24')
-    shim_files += files('gl/wayland_color.cpp')
-    shim_args += '-DHAVE_WAYLAND_COLOR_TRACKING'
-    shim_deps += [dep_wayland_client, dep_pthread, spdlog_dep,
-                  dearimgui_dep.partial_dependency(compile_args: true, includes: true)]
-  endif
   mangohud_shim = shared_library(
     'MangoHud_shim',
     files(
       'gl/shim.c',
+      'gl/wayland_shim.c',
       '../mangohud-next/client/real_dlsym.c',
       'elfhacks.c'
     ),
-    shim_files,
-    dependencies : shim_deps,
+    dependencies : [dep_dl, shim_wayland_dep],
     c_args : [
-      shim_args
-    ],
-    cpp_args : [
-      shim_args
+      pre_args
     ],
     include_directories : [inc_common, next_client_inc],
     install_dir : libdir_mangohud,

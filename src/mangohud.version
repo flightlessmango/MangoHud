@@ -1,6 +1,8 @@
 # in base
 {
   global:
+    mangohud_wl_*;
+    mangohud_wayland_surface_color;
     overlay_GetInstanceProcAddr;
     overlay_GetDeviceProcAddr;
     vkNegotiateLoaderLayerInterfaceVersion;

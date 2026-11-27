@@ -1371,8 +1371,7 @@ static void update_swapchain_colors(struct swapchain_data* data)
       data->transfer_function = SRGB;
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
    else if (data->colorspace == VK_COLOR_SPACE_PASS_THROUGH_EXT) {
-      const auto transfer = wayland_surface_color((void*)data->surface);
-      data->hdr_state = transfer == NONE ? HDR::State::Unknown : HDR::State::On;
+      const auto transfer = wayland_surface_color((void*)data->surface, data->hdr_state);
       if (transfer != NONE)
          data->transfer_function = transfer;
    }
