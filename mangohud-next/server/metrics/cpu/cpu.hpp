@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <fstream>
+#include <optional>
 #include "../gpu/gpu_metrics.hpp"
 #include "../hwmon.hpp"
 
@@ -44,8 +45,13 @@ private:
     };
 
     bool found_sensor = false;
-public:
+    // unset until Metrics applies the config, so the first pick already honours it
+    std::optional<std::string> custom_sensor;
+
+    bool try_sensor(const std::string& name, const std::string& name_regex, const hwmon_sensor& s);
     void find_temperature_sensor();
+public:
+    void set_custom_sensor(const std::string& value);
     int get_temperature();
     virtual ~CPUTemp() {};
 };
@@ -80,6 +86,7 @@ public:
     CPU();
 
     void poll();
+    void set_custom_temp_sensor(const std::string& value) { temperature.set_custom_sensor(value); }
     virtual void pre_poll_overrides() {}
     cpu_info_t get_info();
     std::vector<core_info_t> get_core_info();
