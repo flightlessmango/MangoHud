@@ -76,7 +76,7 @@ Each entry in `hud.windows` defines one hud window.
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `position` | `[x, y]` | `[10, 10]` | Window position in pixels. |
-| `background` | boolean | `true` | Fill each row through its last cell with content, including leading and internal blanks. Trailing blanks and empty rows stay transparent. |
+| `background` | boolean | `true` | Enable the default table background. |
 | `table` | map | required | Table layout for this window. |
 
 ## Hud Table
@@ -88,6 +88,7 @@ Each entry in `hud.windows` defines one hud window.
 | `padding` | number | `0` | Default padding inside each cell, on all four sides. |
 | `col_gap` | number | `8` | Horizontal spacing between columns. |
 | `row_gap` | number | `-2` | Vertical spacing between rows. Negative values tighten rows. |
+| `trim_background` | boolean | `false` | Stop the background at the last cell with content in each row. Leading and internal blanks are still filled. By default, the background extends to the full table width. |
 | `debug_cell_boxes` | boolean | `false` | Draw debug outlines for table cells. |
 
 `rows` is a list of rows. Each row is a YAML list of cells. A cell can be `null` or one of these maps:

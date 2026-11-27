@@ -44,6 +44,15 @@ static bool validate_table(const YAML::Node& table) {
         }
     }
 
+    if (const auto trim_background = table["trim_background"]) {
+        try {
+            trim_background.as<bool>();
+        } catch (const YAML::BadConversion&) {
+            SPDLOG_ERROR("table trim_background must be a boolean");
+            return false;
+        }
+    }
+
     const auto cols = table["cols"];
     if (cols && !cols.IsScalar()) {
         SPDLOG_ERROR("cols must be a scalar integer");
@@ -384,6 +393,8 @@ static bool parse_table_node(hudTable& table, YAML::Node table_node, int font_si
         table.row_gap = table_node["row_gap"].as<float>();
     if (table_node["debug_cell_boxes"])
         table.debug_cell_boxes = table_node["debug_cell_boxes"].as<bool>();
+    if (table_node["trim_background"])
+        table.trim_background = table_node["trim_background"].as<bool>();
     return true;
 }
 

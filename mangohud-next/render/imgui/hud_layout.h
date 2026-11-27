@@ -41,6 +41,7 @@ struct HudLayout {
     ImVec2 size{};
     std::vector<HudRowLayout> rows;
     bool debug = false;
+    bool trim_background = false;
 };
 
 const CellStyle& hud_cell_style(const Cell& cell);

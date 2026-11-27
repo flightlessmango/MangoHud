@@ -128,6 +128,7 @@ struct hudTable {
     float col_gap = 8.0f;
     float row_gap = -2.0f;
     bool debug_cell_boxes = false;
+    bool trim_background = false;
     std::vector<std::vector<MaybeCell>> rows;
 };
 

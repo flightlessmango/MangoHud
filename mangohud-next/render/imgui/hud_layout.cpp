@@ -241,6 +241,7 @@ void prepare_hud_fonts(const hudTable& table, Font& fonts) {
 HudLayout layout_hud(const hudTable& table, Font& fonts) {
     HudLayout result;
     result.debug = table.debug_cell_boxes;
+    result.trim_background = table.trim_background;
     const int cols = std::max(0, table.cols);
     std::vector<bool> reserve_overrides(cols);
     for (const auto& row : table.rows)

@@ -118,10 +118,10 @@ static void fill_background(ImRect bounds, const ImRect& clip, ImVec4 color) {
 }
 
 static void draw_backgrounds(const HudLayout& layout, ImVec2 origin, ImVec4 inherited,
-                             const ImRect& clip, bool fill_rows = false) {
+                             const ImRect& clip) {
     for (const auto& row : layout.rows) {
         auto strip = row.bounds;
-        if (fill_rows)
+        if (!layout.trim_background)
             strip.Max.x = layout.size.x;
         strip.Translate(origin);
         strip.ClipWith(clip);
@@ -151,7 +151,7 @@ static void draw_backgrounds(const HudLayout& layout, ImVec2 origin, ImVec4 inhe
                                 color);
                 auto child_clip = inner;
                 child_clip.ClipWith(strip);
-                draw_backgrounds(*cell.nested, inner.Min, color, child_clip, true);
+                draw_backgrounds(*cell.nested, inner.Min, color, child_clip);
             } else
                 fill_background(bounds, strip, color);
             x = bounds.Max.x;
