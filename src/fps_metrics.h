@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <iomanip>
 #include <spdlog/spdlog.h>
+#include "string_utils.h"
 
 struct metric_t {
     std::string name;
@@ -66,7 +67,7 @@ class fpsMetrics {
                     it->value = avg;
                 } else {
                     try {
-                        float val = std::stof(it->name);
+                        float val = parse_float(it->name);
                         if (val <= 0.0f || val >= 1.0f) {
                             SPDLOG_DEBUG("Failed to use fps metric, it's out of range {}", it->name);
                             it = metrics.erase(it);
