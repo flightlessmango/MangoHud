@@ -339,7 +339,7 @@ HudLayout layout_hud(const hudTable& table, Font& fonts) {
         auto& out = result.rows.emplace_back();
         const float height = heights[r];
         const float step = r + 1 == rows.size() ? height : std::max(0.0f, height + table.row_gap);
-        out.bounds = {0.0f, y, 0.0f, y + step};
+        out.bounds = {0.0f, y, 0.0f, y + height};
         for (auto& cell : rows[r]) {
             auto& layout = cell.layout;
             const float width =
@@ -370,8 +370,8 @@ HudLayout layout_hud(const hudTable& table, Font& fonts) {
                 out.bounds.Max.x = std::max(out.bounds.Max.x, x[cell.column] + width);
             out.cells.push_back(std::move(layout));
         }
-        y = out.bounds.Max.y;
+        result.size.y = std::max(result.size.y, out.bounds.Max.y);
+        y += step;
     }
-    result.size.y = y;
     return result;
 }

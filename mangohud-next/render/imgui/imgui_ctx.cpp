@@ -119,44 +119,53 @@ static void fill_background(ImRect bounds, const ImRect& clip, ImVec4 color) {
 
 static void draw_backgrounds(const HudLayout& layout, ImVec2 origin, ImVec4 inherited,
                              const ImRect& clip) {
+    float previous_width = 0.0f;
+    float previous_bottom = layout.rows.empty() ? 0.0f : layout.rows.front().bounds.Min.y;
     for (const auto& row : layout.rows) {
-        auto strip = row.bounds;
+        auto bounds = row.bounds;
         if (!layout.trim_background)
-            strip.Max.x = layout.size.x;
-        strip.Translate(origin);
-        strip.ClipWith(clip);
-        if (strip.GetWidth() <= 0.0f || strip.GetHeight() <= 0.0f)
-            continue;
-        float x = strip.Min.x;
-        for (const auto& cell : row.cells) {
-            auto bounds = cell.bounds;
-            bounds.Translate(origin);
-            if (bounds.Min.x >= strip.Max.x)
-                break;
-            fill_background({{x, strip.Min.y}, {bounds.Min.x, strip.Max.y}}, strip, inherited);
-            fill_background({{bounds.Min.x, bounds.Max.y}, {bounds.Max.x, strip.Max.y}}, strip,
-                            inherited);
-            const auto& style = hud_cell_style(*cell.cell);
-            auto color = style.background_color.empty() ? inherited : style.background_vec;
-            if (const auto* progress = std::get_if<ProgressCell>(cell.cell))
-                color = progress->background_vec;
-            if (cell.nested && cell.nested->size.x > 0.0f && cell.nested->size.y > 0.0f) {
-                const ImRect inner(origin + cell.content.Min,
-                                   origin + cell.content.Min + cell.nested->size);
-                fill_background({bounds.Min, {bounds.Max.x, inner.Min.y}}, strip, color);
-                fill_background({{bounds.Min.x, inner.Max.y}, bounds.Max}, strip, color);
-                fill_background({{bounds.Min.x, inner.Min.y}, {inner.Min.x, inner.Max.y}}, strip,
-                                color);
-                fill_background({{inner.Max.x, inner.Min.y}, {bounds.Max.x, inner.Max.y}}, strip,
-                                color);
-                auto child_clip = inner;
-                child_clip.ClipWith(strip);
-                draw_backgrounds(*cell.nested, inner.Min, color, child_clip);
-            } else
-                fill_background(bounds, strip, color);
-            x = bounds.Max.x;
+            bounds.Max.x = layout.size.x;
+        const float split = std::min(previous_width, bounds.Max.x);
+        for (auto strip : {ImRect(0.0f, previous_bottom, split, bounds.Max.y),
+                           ImRect(split, bounds.Min.y, bounds.Max.x, bounds.Max.y)}) {
+            strip.Translate(origin);
+            strip.ClipWith(clip);
+            if (strip.GetWidth() <= 0.0f || strip.GetHeight() <= 0.0f)
+                continue;
+            float x = strip.Min.x;
+            for (const auto& cell : row.cells) {
+                auto bounds = cell.bounds;
+                bounds.Translate(origin);
+                bounds.Min.y = strip.Min.y;
+                if (bounds.Min.x >= strip.Max.x)
+                    break;
+                fill_background({{x, strip.Min.y}, {bounds.Min.x, strip.Max.y}}, strip, inherited);
+                fill_background({{bounds.Min.x, bounds.Max.y}, {bounds.Max.x, strip.Max.y}}, strip,
+                                inherited);
+                const auto& style = hud_cell_style(*cell.cell);
+                auto color = style.background_color.empty() ? inherited : style.background_vec;
+                if (const auto* progress = std::get_if<ProgressCell>(cell.cell))
+                    color = progress->background_vec;
+                if (cell.nested && cell.nested->size.x > 0.0f && cell.nested->size.y > 0.0f) {
+                    const ImRect inner(origin + cell.content.Min,
+                                       origin + cell.content.Min + cell.nested->size);
+                    fill_background({bounds.Min, {bounds.Max.x, inner.Min.y}}, strip, color);
+                    fill_background({{bounds.Min.x, inner.Max.y}, bounds.Max}, strip, color);
+                    fill_background({{bounds.Min.x, inner.Min.y}, {inner.Min.x, inner.Max.y}}, strip,
+                                    color);
+                    fill_background({{inner.Max.x, inner.Min.y}, {bounds.Max.x, inner.Max.y}}, strip,
+                                    color);
+                    auto child_clip = inner;
+                    child_clip.ClipWith(strip);
+                    draw_backgrounds(*cell.nested, inner.Min, color, child_clip);
+                } else
+                    fill_background(bounds, strip, color);
+                x = bounds.Max.x;
+            }
+            fill_background({{x, strip.Min.y}, strip.Max}, strip, inherited);
         }
-        fill_background({{x, strip.Min.y}, strip.Max}, strip, inherited);
+        previous_width = bounds.Max.x;
+        previous_bottom = bounds.Max.y;
     }
 }
 
