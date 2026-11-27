@@ -90,11 +90,11 @@ public:
     std::atomic<bool> x11_focused{false};
 
     bool set_focused_seats(std::vector<std::string> seats) {
-        auto current = focused_seats.load();
-        if (current && *current == seats)
+        std::lock_guard lock(focused_seats_mtx);
+        if (focused_seats == seats)
             return false;
 
-        focused_seats.store(std::make_shared<const std::vector<std::string>>(std::move(seats)));
+        focused_seats = std::move(seats);
         return true;
     }
 
@@ -156,8 +156,8 @@ private:
     std::atomic<int> samples_count{0};
     std::atomic<uint64_t> samples_dropped{0};
     std::shared_mutex samples_mtx;
-    std::atomic<std::shared_ptr<const std::vector<std::string>>> focused_seats{
-        std::make_shared<const std::vector<std::string>>()};
+    std::mutex focused_seats_mtx;
+    std::vector<std::string> focused_seats;
     std::mutex sync_mtx;
     std::chrono::steady_clock::time_point last_hud_frame{};
     std::atomic<bool> stop_wait {false};

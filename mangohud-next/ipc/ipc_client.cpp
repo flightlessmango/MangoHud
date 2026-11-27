@@ -508,7 +508,7 @@ int IPCClient::push_queue() {
             SPDLOG_ERROR("IPC sample queue overflow: dropped {} samples (capacity {})",
                          dropped, samples_pending->size());
 
-        auto focused_seats = this->focused_seats.load();
+        const auto focused_seats = snapshot(this->focused_seats, focused_seats_mtx);
         sd_bus_message* m = nullptr;
 
         int r = sd_bus_message_new_signal(bus, &m, kObjPath, kIface, "frame_samples");
@@ -533,7 +533,7 @@ int IPCClient::push_queue() {
             return r;
         }
 
-        for (const auto& seat : *focused_seats) {
+        for (const auto& seat : focused_seats) {
             r = sd_bus_message_append(m, "s", seat.c_str());
             if (r < 0) {
                 SPDLOG_ERROR("push_queue: append focused seat {} ({})", r, strerror(-r));
