@@ -1,5 +1,6 @@
 #include <yaml-cpp/yaml.h>
 #include <string_view>
+#include <unordered_map>
 #include <cstdint>
 #include <cmath>
 #include <spdlog/spdlog.h>
@@ -8,6 +9,8 @@
 #include "config.h"
 #include "common/table_structs.h"
 #include "string_utils.h"
+#include "IconsForkAwesome.h"
+#include "icon_lookup.h"
 
 static constexpr const char* default_cell_color = "FFFFFFFF";
 static constexpr const char* default_progress_background_color = "303030FF";
@@ -349,6 +352,22 @@ static bool parse_table_node(hudTable& table, YAML::Node table_node, int font_si
                 parse_table_node(*tc.table, cell["table"], font_size);
                 parsed_row.push_back(Cell{tc});
                 append_colspan_placeholders(parsed_row, tc.style);
+                continue;
+            }
+
+            if (cell["icon"]) {
+                const std::string icon_name = cell["icon"].as<std::string>();
+                const std::string_view icon = lookup_icon(icon_name);
+                TextCell ic;
+                if (!icon.empty()) {
+                    ic.text = std::string(icon);
+                    ic.color = cell["color"] ? cell["color"].as<std::string>() : default_cell_color;
+                    ic.style = parse_cell_style(cell);
+                } else {
+                    SPDLOG_WARN("unknown icon name '{}'", icon_name);  // logs the actual name
+                }
+                parsed_row.push_back(Cell{ic});
+                append_colspan_placeholders(parsed_row, ic.style);
                 continue;
             }
         }
