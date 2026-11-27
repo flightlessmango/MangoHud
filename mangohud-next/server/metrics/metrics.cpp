@@ -13,6 +13,7 @@
 #include "../common/table_structs.h"
 #include "../common/helpers.hpp"
 #include "string_utils.h"
+#include "IconsForkAwesome.h"
 
 static TextCell format_metrics(const FormatCell& cell, const std::vector<Metric>& values) {
     TextCell out;
@@ -198,10 +199,21 @@ void Metrics::update() {
 
         if (auto battery_metrics = battery.poll()) {
             auto& group = new_metrics["BATTERY"];
-            if (battery_metrics->percent >= 0)
-                group["PERCENT"] = {(int)std::lround(battery_metrics->percent), "%"};
-            if (!battery_metrics->status.empty())
+            if (battery_metrics->percent >= 0) {
+                const int percent = (int)std::lround(battery_metrics->percent);
+                group["PERCENT"] = {percent, "%"};
+                // Same steps as the legacy battery_icon
+                group["ICON"] = {std::string(percent <= 33 ? ICON_FK_BATTERY_QUARTER :
+                                             percent <= 66 ? ICON_FK_BATTERY_HALF :
+                                             percent <= 97 ? ICON_FK_BATTERY_THREE_QUARTERS :
+                                                             ICON_FK_BATTERY_FULL)};
+            }
+            if (!battery_metrics->status.empty()) {
                 group["STATUS"] = {battery_metrics->status};
+                // The legacy HUD shows a plug where power and time go while on AC
+                if (battery_metrics->status != "Discharging")
+                    group["AC_ICON"] = {std::string(ICON_FK_PLUG)};
+            }
             if (battery_metrics->power > 0)
                 group["POWER"] = {battery_metrics->power, "W"};
             if (battery_metrics->time_remaining > 0) {

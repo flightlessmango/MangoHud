@@ -17,5 +17,5 @@ metrics_lib = static_library(
                   ipc_dep],
     link_with: [cpu_lib,
                 gpu_lib],
-    include_directories: utils_inc
+    include_directories: [utils_inc, inc_common]
 )
