@@ -2227,6 +2227,9 @@ static VkResult overlay_CreateInstance(
       else if (engineName == "SDLGPU")
          engine = SDL;
 
+      else if (engineName == "wgpu-hal")
+         engine = WGPU;
+
       else
          engine = VULKAN;
    }
