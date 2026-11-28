@@ -297,7 +297,7 @@ void Logger::stop_logging() {
     SPDLOG_INFO("Can't write summary because m_log_files is empty");
 
   clear_log_data();
-#ifdef __linux__
+#ifndef _WIN32
   control_client_check(get_params()->control, global_control_client, gpu.c_str());
   const char * cmd = "LoggingFinished";
   control_send(global_control_client, cmd, strlen(cmd), 0, 0);

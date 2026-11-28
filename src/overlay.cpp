@@ -29,7 +29,7 @@
 #include "fex.h"
 #include "ftrace.h"
 
-#ifdef __linux__
+#ifndef _WIN32
 #include <libgen.h>
 #include <unistd.h>
 #endif
@@ -104,7 +104,7 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
    if (real_params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats] || logger->is_active()) {
       cpuStats.UpdateCPUData();
 
-#ifdef __linux__
+#ifndef _WIN32
       if (real_params->enabled[OVERLAY_PARAM_ENABLED_core_load] || real_params->enabled[OVERLAY_PARAM_ENABLED_cpu_mhz] || logger->is_active())
          cpuStats.UpdateCoreMhz();
       if (real_params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp] || logger->is_active() || real_params->enabled[OVERLAY_PARAM_ENABLED_graphs])
@@ -118,7 +118,7 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
          gpus->get_metrics();
    }
 
-#ifdef __linux__
+#ifndef _WIN32
    if (real_params->enabled[OVERLAY_PARAM_ENABLED_fan])
       cpuStats.UpdatePlatformFanSpeed();
    if (real_params->enabled[OVERLAY_PARAM_ENABLED_battery])
@@ -148,7 +148,7 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
       currentLogData.gpu_vram_used = gpus->active_gpu()->metrics.sys_vram_used;
       currentLogData.gpu_power = gpus->active_gpu()->metrics.powerUsage;
    }
-#ifdef __linux__
+#ifndef _WIN32
    currentLogData.ram_used = memused;
    currentLogData.swap_used = swapused;
    currentLogData.process_rss = proc_mem_resident / float((2 << 29)); // GiB, consistent w/ other mem stats
@@ -266,7 +266,7 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
       hw_update_thread->update(&params, vendorID);
 
       if (fpsmetrics) fpsmetrics->update_thread();
-#ifdef __linux__
+#ifndef _WIN32
       if (HUDElements.net) HUDElements.net->update();
 #endif
 
@@ -738,7 +738,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
 
 void init_cpu_stats(overlay_params& params)
 {
-#ifdef __linux__
+#ifndef _WIN32
    auto& enabled = params.enabled;
    enabled[OVERLAY_PARAM_ENABLED_cpu_stats] = cpuStats.Init()
                            && enabled[OVERLAY_PARAM_ENABLED_cpu_stats];
@@ -754,7 +754,7 @@ struct pci_bus {
    int func;
 };
 
-#ifdef __linux__
+#ifndef _WIN32
 static void parse_proton_version(std::string wineProcess, std::string postfix)
 {
    stringstream ss;
@@ -779,21 +779,12 @@ static void parse_proton_version(std::string wineProcess, std::string postfix)
 #endif
 
 void init_system_info(){
-   #ifdef __linux__
+   #ifndef _WIN32
       const char* ld_preload = getenv("LD_PRELOAD");
       if (ld_preload)
          unsetenv("LD_PRELOAD");
 
-      ram =  exec("sed -n 's/^MemTotal: *\\([0-9]*\\).*/\\1/p' /proc/meminfo");
-      trim(ram);
-      cpu =  exec("sed -n 's/^model name.*: \\(.*\\)/\\1/p' /proc/cpuinfo | sed 's/([^)]*)//g' | tail -n1");
-      trim(cpu);
-      kernel = exec("uname -r");
-      trim(kernel);
-      os = exec("sed -n 's/PRETTY_NAME=\\(.*\\)/\\1/p' /etc/os-release");
-      os.erase(remove(os.begin(), os.end(), '\"' ), os.end());
-      trim(os);
-      cpusched = read_line("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
+      get_system_info();
 
       const char* mangohud_recursion = getenv("MANGOHUD_RECURSION");
       if (!mangohud_recursion) {
@@ -859,7 +850,7 @@ void init_system_info(){
 }
 
 void check_for_vkbasalt_and_gamemode() {
-#ifdef __linux__
+#ifndef _WIN32
    static bool checked = false;
    if (checked)
       return;

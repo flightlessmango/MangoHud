@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <spdlog/spdlog.h>
 #include <imgui.h>
-#ifdef __linux__
+#ifndef _WIN32
 #include <implot.h>
 #endif
 #include "imgui_utils.h"
