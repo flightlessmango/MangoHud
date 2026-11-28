@@ -70,7 +70,7 @@ class HudElements{
 
         display_servers display_server = UNKNOWN;
         std::unique_ptr<Net> net = nullptr;
-#ifdef __linux__
+#ifndef _WIN32
         std::unique_ptr<Shell> shell = nullptr;
 #endif
 

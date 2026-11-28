@@ -1,6 +1,7 @@
 glslang = find_program('glslang', 'glslangValidator')
 
-if get_option('dynamic_string_tokens')
+# Only glibc and musl expand $LIB; other rtlds (FreeBSD, ...) take it literally
+if get_option('dynamic_string_tokens') and host_machine.system() == 'linux'
   ld_prefix = get_option('prefix') + '/\$LIB/'
 else
   ld_prefix = join_paths(get_option('prefix') ,get_option('libdir')) + '/'
@@ -57,8 +58,37 @@ vklayer_files = files(
   'file_utils.cpp',
   'nvidia.cpp',
   'gpu_fdinfo.cpp',
-  'amdgpu.cpp'
+  'amdgpu.cpp',
 )
+
+# Platform backends: the common part of each module is in the files above and
+# below, the part that talks to the OS is <module>_<os>.cpp. Linux (also used
+# on cygwin and gnu) keeps the original names. Porting to another Unix means
+# adding those files, the BSDs share notify_kqueue.cpp and net_getifaddrs.cpp.
+fs = import('fs')
+backend_modules = ['gpu', 'amdgpu', 'file_utils', 'cpu', 'memory', 'iostats', 'battery', 'system_info']
+platform_deps = []
+if is_unixy and not ['linux', 'cygwin', 'gnu'].contains(host_machine.system())
+  foreach m : backend_modules
+    f = '@0@_@1@.cpp'.format(m, host_machine.system())
+    if not fs.exists(f)
+      error('No @0@ backend for @1@: src/@2@ is missing'.format(m, host_machine.system(), f))
+    endif
+    vklayer_files += files(f)
+  endforeach
+  vklayer_files += files('notify_kqueue.cpp', 'net_getifaddrs.cpp')
+else
+  vklayer_files += files(
+    'gpu_linux.cpp',
+    'amdgpu_linux.cpp',
+  )
+endif
+if is_freebsd
+  # sysfs doesn't exist, AMD GPUs are queried through libdrm_amdgpu
+  platform_deps += [libdrm_dep, dependency('libdrm_amdgpu')]
+  # kvm_getswapinfo()
+  platform_deps += cc.find_library('kvm')
+endif
 
 opengl_files  = []
 if ['windows', 'mingw'].contains(host_machine.system())
@@ -77,20 +107,32 @@ endif
 
 if is_unixy
   vklayer_files += files(
-    'cpu.cpp',
-    'memory.cpp',
+    'cpu_common.cpp',
+    'memory_common.cpp',
     'iostats.cpp',
     'notify.cpp',
     'elfhacks.c',
     '../mangohud-next/client/real_dlsym.c',
     'pci_ids.cpp',
-    'battery.cpp',
     'control.cpp',
     'device.cpp',
     'net.cpp',
     'shell.cpp',
     'ftrace.cpp',
   )
+
+  if ['linux', 'cygwin', 'gnu'].contains(host_machine.system())
+    vklayer_files += files(
+      'file_utils_linux.cpp',
+      'cpu.cpp',
+      'memory.cpp',
+      'iostats_linux.cpp',
+      'notify_linux.cpp',
+      'battery.cpp',
+      'net_linux.cpp',
+      'system_info_linux.cpp',
+    )
+  endif
 
   if get_option('with_fex')
     pre_args += '-DHAVE_FEX'
@@ -129,7 +171,8 @@ if is_unixy
       error('XNVCtrl also needs \'with_x11\'')
     endif
 
-    xnvctrl_h_found = cc.has_header('NVCtrl/NVCtrl.h')
+    # dep_x11 also provides the include path of systems that don't search /usr/local
+    xnvctrl_h_found = cc.has_header('NVCtrl/NVCtrl.h', dependencies: dep_x11)
     if not xnvctrl_h_found
       error('NVCtrl.h was not found. Disable with \'-Dwith_xnvctrl=disabled\' if gpu stats by XNVCtrl are not needed.')
     endif
@@ -171,7 +214,16 @@ if is_unixy
   endif
 endif
 
-link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL', '-lGL', '-static-libstdc++'])
+link_args = cc.get_supported_link_arguments(['-Wl,-Bsymbolic-functions', '-Wl,-z,relro', '-Wl,--exclude-libs,ALL', '-lGL'])
+# libc++ is not libstdc++, clang only warns that the flag is unused
+if not cpp.has_header_symbol('version', '_LIBCPP_VERSION')
+  link_args += cc.get_supported_link_arguments(['-static-libstdc++'])
+endif
+if is_freebsd
+  # lld refuses version scripts naming symbols that aren't defined, and libc
+  # skips the thread_local destructors of an unloaded library, so keep it loaded
+  link_args += cc.get_supported_link_arguments(['-Wl,--undefined-version', '-Wl,-z,nodelete'])
+endif
 # meson fails to check version-script so just force add
 link_args += '-Wl,--version-script,@0@'.format(join_paths(meson.current_source_dir(), 'mangohud.version'))
 
@@ -218,6 +270,7 @@ mangohud_static_lib = static_library(
     dep_vulkan_utility_libraries,
     windows_deps,
     implot_dep,
+    platform_deps,
     mangohud_version_dep],
   include_directories : [inc_common, next_client_inc],
   link_args : link_args,
@@ -261,7 +314,8 @@ mangohud_opengl_shared_lib = shared_library(
     vulkan_headers_dep,
     dep_vulkan_utility_libraries,
     windows_deps,
-    implot_dep],
+    implot_dep,
+    platform_deps],
   include_directories : [inc_common, next_client_inc],
   link_args : link_args,
   link_with: mangohud_static_lib,
@@ -299,7 +353,8 @@ if get_option('mangoapp')
       dep_wayland_client,
       glfw3_dep,
       xi_dep,
-      implot_dep
+      implot_dep,
+      platform_deps
     ],
     include_directories : [inc_common],
     install_tag : 'mangoapp',
