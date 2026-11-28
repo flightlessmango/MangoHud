@@ -6,6 +6,7 @@
 #include "forkawesome.h"
 #include "font_default.h"
 #include "font.h"
+#include "distro_icons.h"
 
 static bool same_font_size(float a, float b) {
     return std::fabs(a - b) < 0.001f;
@@ -23,12 +24,29 @@ ImFont* Font::add_font(float font_size) {
         return nullptr;
     }
 
-    // Merge ForkAwesome glyphs
+    // Merge ForkAwesome + font awesome glyphs
     ImFontConfig merge_config = {};
     merge_config.MergeMode = true;
-    static const ImWchar fa_ranges[] = { ICON_MIN_FK, ICON_MAX_FK, 0 };
+
+    static const ImWchar fk_ranges[] = { ICON_MIN_FK, ICON_MAX_FK, 0 };
+    merge_config.GlyphMinAdvanceX = 13.0f;
     font_atlas->AddFontFromMemoryCompressedBase85TTF(
-        forkawesome_compressed_data_base85, font_size, &merge_config, fa_ranges);
+        forkawesome_compressed_data_base85, font_size, &merge_config, fk_ranges);
+
+    //add fontawesome linux distro icons missing from forkawesome
+    static const ImWchar distro_ranges[] = {
+        0xe62b, 0xe62b, // opensuse
+        0xf789, 0xf789, // centos
+        0xf798, 0xf798, // fedora
+        0xf7bc, 0xf7bc, // redhat
+        0xf7df, 0xf7df, // ubuntu
+        0,
+    };
+    font_atlas->AddFontFromMemoryCompressedTTF(distro_icons_compressed_data,
+        distro_icons_compressed_size,
+        font_size,
+        &merge_config,
+        distro_ranges);
 
     fonts.push_back({font_size, font});
     if (recreate_fonts_texture)

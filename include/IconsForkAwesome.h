@@ -352,7 +352,6 @@
 #define ICON_FK_APPLE "\xef\x85\xb9"	// U+f179
 #define ICON_FK_WINDOWS "\xef\x85\xba"	// U+f17a
 #define ICON_FK_ANDROID "\xef\x85\xbb"	// U+f17b
-#define ICON_FK_LINUX "\xef\x85\xbc"	// U+f17c
 #define ICON_FK_DRIBBBLE "\xef\x85\xbd"	// U+f17d
 #define ICON_FK_SKYPE "\xef\x85\xbe"	// U+f17e
 #define ICON_FK_FOURSQUARE "\xef\x86\x80"	// U+f180
@@ -709,7 +708,7 @@
 #define ICON_FK_ARCHIVE_ORG "\xef\x8b\xbc"	// U+f2fc
 #define ICON_FK_FREEDOMBOX "\xef\x8b\xbd"	// U+f2fd
 #define ICON_FK_FACEBOOK_MESSENGER "\xef\x8b\xbe"	// U+f2fe
-#define ICON_FK_DEBIAN "\xef\x8b\xbf"	// U+f2ff
+
 #define ICON_FK_MASTODON_SQUARE "\xef\x8c\x80"	// U+f300
 #define ICON_FK_TIPEEE "\xef\x8c\x81"	// U+f301
 #define ICON_FK_REACT "\xef\x8c\x82"	// U+f302
@@ -742,7 +741,6 @@
 #define ICON_FK_GITEA "\xef\x8c\x9f"	// U+f31f
 #define ICON_FK_FILE_EPUB "\xef\x8c\xa1"	// U+f321
 #define ICON_FK_PYTHON "\xef\x8c\xa2"	// U+f322
-#define ICON_FK_ARCHLINUX "\xef\x8c\xa3"	// U+f323
 #define ICON_FK_PLEROMA "\xef\x8c\xa4"	// U+f324
 #define ICON_FK_UNSPLASH "\xef\x8c\xa5"	// U+f325
 #define ICON_FK_HACKSTER "\xef\x8c\xa6"	// U+f326
@@ -802,4 +800,14 @@
 #define ICON_FK_SKETCHFAB "\xef\x8d\x9b"	// U+f35b
 #define ICON_FK_TEX "\xef\x8d\x9c"	// U+f35c
 #define ICON_FK_TEXTPATTERN "\xef\x8d\x9d"	// U+f35d
-#define ICON_FK_UNITY "\xef\x8d\x9e"	// U+f35e 
+#define ICON_FK_UNITY "\xef\x8d\x9e"	// U+f35e
+
+//  DISTRO ICONS
+#define ICON_FK_LINUX "\xef\x85\xbc"	// U+f17c
+#define ICON_FK_ARCHLINUX "\xef\x8c\xa3"	// U+f323
+#define ICON_FK_DEBIAN "\xef\x8b\xbf"	// U+f2ff
+#define ICON_FA_FEDORA "\xef\x9e\x98"	// U+f798
+#define ICON_FA_OPENSUSE "\xee\x98\xab"	// U+e62b
+#define ICON_FA_UBUNTU "\xef\x9f\x9f"	// U+f7df
+#define ICON_FA_REDHAT "\xef\x9e\xbc"	// U+f7bc
+#define ICON_FA_CENTOS "\xef\x9e\x89"	// U+f789

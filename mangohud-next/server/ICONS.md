@@ -2,8 +2,21 @@
 
 Full icon set: [Fork Awesome Icons](https://forkaweso.me/Fork-Awesome/icons/)
 
+## Distro icons
 | Name | Macro |
-|------|--------|
+| ----- | ----- |
+| linux | `ICON_FK_LINUX` |
+| arch | `ICON_FK_ARCHLINUX` |
+| debian | `ICON_FK_DEBIAN` |
+| fedora | `ICON_FA_FEDORA` |
+| suse | `ICON_FA_OPENSUSE` |
+| ubuntu | `ICON_FA_UBUNTU` |
+| redhat | `ICON_FA_REDHAT` |
+| centos | `ICON_FA_CENTOS` |
+
+## Miscellaneous icons
+| Name | Macro |
+| ----- | ----- |
 | glass | `ICON_FK_GLASS` |
 | music | `ICON_FK_MUSIC` |
 | search | `ICON_FK_SEARCH` |
@@ -349,7 +362,6 @@ Full icon set: [Fork Awesome Icons](https://forkaweso.me/Fork-Awesome/icons/)
 | apple | `ICON_FK_APPLE` |
 | windows | `ICON_FK_WINDOWS` |
 | android | `ICON_FK_ANDROID` |
-| linux | `ICON_FK_LINUX` |
 | dribbble | `ICON_FK_DRIBBBLE` |
 | skype | `ICON_FK_SKYPE` |
 | foursquare | `ICON_FK_FOURSQUARE` |
@@ -706,7 +718,6 @@ Full icon set: [Fork Awesome Icons](https://forkaweso.me/Fork-Awesome/icons/)
 | archive_org | `ICON_FK_ARCHIVE_ORG` |
 | freedombox | `ICON_FK_FREEDOMBOX` |
 | facebook_messenger | `ICON_FK_FACEBOOK_MESSENGER` |
-| debian | `ICON_FK_DEBIAN` |
 | mastodon_square | `ICON_FK_MASTODON_SQUARE` |
 | tipeee | `ICON_FK_TIPEEE` |
 | react | `ICON_FK_REACT` |
@@ -739,7 +750,6 @@ Full icon set: [Fork Awesome Icons](https://forkaweso.me/Fork-Awesome/icons/)
 | gitea | `ICON_FK_GITEA` |
 | file_epub | `ICON_FK_FILE_EPUB` |
 | python | `ICON_FK_PYTHON` |
-| arch | `ICON_FK_ARCHLINUX` |
 | pleroma | `ICON_FK_PLEROMA` |
 | unsplash | `ICON_FK_UNSPLASH` |
 | hackster | `ICON_FK_HACKSTER` |

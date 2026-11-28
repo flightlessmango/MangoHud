@@ -799,11 +799,14 @@ std::string_view lookup_icon(std::string_view name) {
         {"sketchfab", ICON_FK_SKETCHFAB},
         {"tex", ICON_FK_TEX},
         {"textpattern", ICON_FK_TEXTPATTERN},
-        {"unity", ICON_FK_UNITY}
+        {"unity", ICON_FK_UNITY},
+        {"fedora", ICON_FA_FEDORA},
+        {"suse", ICON_FA_OPENSUSE},
+        {"ubuntu", ICON_FA_UBUNTU},
+        {"redhat", ICON_FA_REDHAT},
+        {"centos", ICON_FA_CENTOS},
     };
 
     auto it = table.find(name);
-    if (it == table.end())
-        return {};
-    return it->second;
+    return it != table.end() ? it->second : std::string_view{};
 }
